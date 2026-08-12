@@ -1,0 +1,58 @@
+{
+  "kind": "node",
+  "type_key": "era.service.merge_task_result",
+  "display_name": "合并步骤结果",
+  "category": "步骤执行",
+  "description": "合并任务结算、通知、诊断及可选连续处理 stateUpdate，推进索引并报告步骤是否全部消费。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.task.result",
+        "cardinality": "exactly_one",
+        "display_name": "任务结果"
+      },
+      {
+        "type": "era.batch.execution.state",
+        "cardinality": "exactly_one",
+        "display_name": "当前批次执行状态"
+      }
+    ],
+    "provides": [
+      {
+        "key": "execution_state_next",
+        "type": "era.batch.execution.state.next",
+        "display_name": "下一执行状态"
+      },
+      {
+        "key": "step_done",
+        "type": "era.step.done",
+        "display_name": "全部步骤已消费"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {"era.task.result":["输入：任务结果。"],"era.batch.execution.state":["输入：当前批次执行状态。"]},
+    "output_semantics": {"execution_state_next":["输出：下一执行状态。"],"step_done":["输出：全部步骤已消费。"]}
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/step/merge_task_result.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.protocol"
+  ],
+  "capabilities": []
+}

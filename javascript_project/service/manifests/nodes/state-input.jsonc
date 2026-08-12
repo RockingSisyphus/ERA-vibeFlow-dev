@@ -1,0 +1,48 @@
+{
+  "kind": "node",
+  "type_key": "era.service.state_input",
+  "display_name": "读取携带状态",
+  "category": "服务迭代",
+  "description": "无损转发外层永久循环携带的当前服务状态。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.service.state",
+        "cardinality": "exactly_one",
+        "display_name": "服务状态"
+      }
+    ],
+    "provides": [
+      {
+        "key": "service_state_current",
+        "type": "era.service.state.current",
+        "display_name": "当前服务状态"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {"era.service.state":["输入：服务状态。"]},
+    "output_semantics": {"service_state_current":["输出：当前服务状态。"]}
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/iteration/state_input.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.protocol"
+  ],
+  "capabilities": []
+}

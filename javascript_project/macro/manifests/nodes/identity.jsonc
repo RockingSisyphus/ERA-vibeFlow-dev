@@ -1,0 +1,42 @@
+{
+  "kind": "node",
+  "type_key": "era.macro.identity",
+  "display_name": "保留非宏文本",
+  "category": "宏处理",
+  "description": "未发现 ERA 宏时原样输出输入字符串。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.macro.substring.checked",
+        "cardinality": "exactly_one",
+        "display_name": "已检查的宏文本片段"
+      }
+    ],
+    "provides": [
+      {
+        "key": "macro.replacement.identity",
+        "type": "era.macro.replacement.candidate",
+        "display_name": "原样替换候选"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {"era.macro.substring.checked":["输入：已检查的宏文本片段。"]},
+    "output_semantics": {"macro.replacement.identity":["输出：原样替换候选。"]}
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": ["browser", "node"],
+      "source": {
+        "kind": "file",
+        "ref": "nodes/identity.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [],
+  "capabilities": []
+}

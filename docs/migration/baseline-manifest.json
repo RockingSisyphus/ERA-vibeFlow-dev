@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "captured_at": "2026-07-30T23:56:45+08:00",
+  "source": {
+    "path": "/home/example/projects/ERA-EfficientRollbackArchitecture",
+    "pre_freeze_head": "7cce0aec8c789a024279ebe38e4418547b38cf9e",
+    "pre_freeze_tracked_diff_sha256": "325d98b62e82e37f145e536e33c9e26b6d2df58618763bd20c8eae6f8e2ccef0",
+    "pre_freeze_untracked_manifest_sha256": "e32dc7e3ec3ad127c789971d45d6338562b4e713d456984ff25f446248cf57b0",
+    "pre_freeze_status_sha256": "55ba74dddddb91685416ca732e73aed4b1023a39fd7d27bbcdb1721516711ecb",
+    "commit": "11f9c7d9c7881afa264ed27953a69120c0a7d21e",
+    "tree": "7712d1f459bc24c614808ea8839a5935d2c293d3",
+    "tag": "era-vibeflow-baseline-v1",
+    "tag_object": "013a7a30cfb649216e608deaccaacf21d846c353"
+  },
+  "toolchain": {
+    "node": "24.18.0",
+    "pnpm": "10.34.5",
+    "npm": "10.9.7",
+    "typescript": "6.0.3",
+    "webpack": "5.109.0"
+  },
+  "compatibility": {
+    "silly_tavern": "1.18.0",
+    "tavern_helper": "4.8.19"
+  },
+  "hashes": {
+    "pnpm_lock_sha256": "c8e68a89edacbbf46be44e637fadcdd2fa1105e883084942d36356a098702780",
+    "package_json_sha256": "956ff3e6789fe77f06f59615dd2fcc79dfec3f2ab7a9b802ea16430cb8cf676c",
+    "quality_baseline_sha256": "9020d5962708db10e34738beb272ecedb471b6c59d026b6d9f712947d334ed85",
+    "tests_tree_sha256": "5923cbdfbd55f60f627fd523d9e62c9df6ad1265c72293ab63999782acee87db",
+    "era_source_tree_sha256": "b35d9dfc1ae79541d8a6801b34fd2e1a5b50f6744b942dea0fcbe90a941c1d33"
+  },
+  "g0": {
+    "verify_exit_code": 0,
+    "test_files_passed": 12,
+    "tests_passed": 89,
+    "quality_known": 383,
+    "quality_new": 0,
+    "quality_worsened": 0,
+    "production_build_exit_code": 0
+  },
+  "excluded_generated_paths": [
+    "dist/SwipeAwaitDemo/"
+  ]
+}
+

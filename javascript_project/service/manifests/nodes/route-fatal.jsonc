@@ -1,0 +1,46 @@
+{
+  "kind": "node",
+  "type_key": "era.service.route_fatal",
+  "display_name": "路由致命结果",
+  "category": "批次发布",
+  "description": "根据已发送批次帧的致命标记选择继续服务或终止。",
+  "version": "1.0.0",
+  "flow_kind": "decision",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.batch.fatal",
+        "cardinality": "exactly_one",
+        "display_name": "批次致命标记"
+      }
+    ],
+    "provides": [
+      {
+        "key": "fatal_route",
+        "type": "era.fatal.route",
+        "display_name": "致命结果路由"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {"era.batch.fatal":["输入：批次致命标记。"]},
+    "output_semantics": {"fatal_route":["输出：致命结果路由。"]}
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/publish/route_fatal.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [],
+  "capabilities": []
+}

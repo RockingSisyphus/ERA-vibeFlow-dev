@@ -1,0 +1,148 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.transport.event.raw",
+  "representation": "json",
+  "display_name": "ERA 传输原始事件",
+  "description": "宿主送入服务 Port 的完整带标签事件；定时器来源只能使用内部收集定时器类型。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "allOf": [
+      {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "source": {
+                "enum": [
+                  "tavern",
+                  "ui",
+                  "era-api"
+                ]
+              }
+            },
+            "required": [
+              "source"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "source": {
+                "const": "timer"
+              },
+              "type": {
+                "const": "era.service.collection_timer"
+              }
+            },
+            "required": [
+              "source",
+              "type"
+            ]
+          }
+        ]
+      }
+    ],
+    "properties": {
+      "schemaVersion": {
+        "const": 1
+      },
+      "eventId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "sequence": {
+        "type": "integer",
+        "minimum": 1
+      },
+      "type": {
+        "type": "string",
+        "minLength": 1
+      },
+      "occurredAt": {
+        "type": "number"
+      },
+      "source": {
+        "type": "string",
+        "enum": [
+          "tavern",
+          "ui",
+          "era-api",
+          "timer"
+        ]
+      },
+      "args": {
+        "type": "array",
+        "items": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "const": "json"
+                },
+                "value": {}
+              },
+              "required": [
+                "kind",
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "const": "undefined"
+                }
+              },
+              "required": [
+                "kind"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "const": "host-ref"
+                },
+                "token": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "refKind": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "kind",
+                "token",
+                "refKind"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        }
+      },
+      "encodedBytes": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 262144
+      }
+    },
+    "required": [
+      "schemaVersion",
+      "eventId",
+      "sequence",
+      "type",
+      "occurredAt",
+      "source",
+      "args",
+      "encodedBytes"
+    ],
+    "additionalProperties": false
+  }
+}
+

@@ -1,0 +1,4 @@
+{"kind":"node","type_key":"era.api.prepare_update_path","display_name":"构造路径更新指令","category":"外部 API","description":"把 era:updateByPath 请求转换为候选 VariableEdit 嵌套对象。","version":"1.0.0","flow_kind":"process","contract":{"requires":[{"type":"era.api.write.request","cardinality":"exactly_one","display_name":"写入请求"}],"provides":[{"key":"update_path_directive","type":"era.api.write.directive","display_name":"路径更新指令"}],"params_schema":{},"params_defaults":{},
+    "input_semantics": {"era.api.write.request":["输入：写入请求。"]},
+    "output_semantics": {"update_path_directive":["输出：路径更新指令。"]}
+  },"implementations":[{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/api/prepare_update_by_path.ts","export":"run"}}],"base_libs":["era.service.api_write_engine"],"capabilities":[]}

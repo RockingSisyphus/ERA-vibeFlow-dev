@@ -1,0 +1,204 @@
+{
+  "type_key": "era.api.query",
+  "display_name": "ERA 查询 API 路由",
+  "description": "显式选择五个公开查询，经两个只读 Capability 获取上下文，再由快照纯函数形成兼容通知。",
+  "requires": [
+    {
+      "type": "era.api.request",
+      "cardinality": "exactly_one",
+      "display_name": "规范化 API 请求"
+    }
+  ],
+  "provides": [
+    {
+      "key": "query_api_result",
+      "type": "era.task.result.merged",
+      "display_name": "查询 API 结果"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "api_request",
+        "type": "era.api.request",
+        "display_name": "规范化 API 请求",
+        "required": true
+      }
+    ],
+    "max_steps": 24,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.service.terminal",
+        "display_name": "查询 API 开始",
+        "description": "开始一次只读查询。"
+      },
+      {
+        "id": "route_query",
+        "type_used": "era.api.route_query",
+        "display_name": "选择五个查询操作",
+        "description": "按公开事件名选择当前变量、MK 单点/区间或消息 ID 单点/区间查询。"
+      },
+      {
+        "id": "get_current_vars",
+        "type_used": "era.api.get_current_vars",
+        "display_name": "选择当前变量查询（era:getCurrentVars）",
+        "description": "保留原始请求并标记 getCurrentVars 查询类型。"
+      },
+      {
+        "id": "get_snapshot_at_mk",
+        "type_used": "era.api.get_snapshot_at_mk",
+        "display_name": "选择 MK 单点查询（era:getSnapshotAtMk）",
+        "description": "保留原始请求并标记 getSnapshotAtMk 查询类型。",
+        "similar_to": {
+          "node": "get_current_vars",
+          "relationship": "variant",
+          "reason": "五个选择器有意共享纯适配结构，仅查询类型字面量不同。"
+        }
+      },
+      {
+        "id": "get_snapshots_between_mks",
+        "type_used": "era.api.get_snapshots_between_mks",
+        "display_name": "选择 MK 区间查询（era:getSnapshotsBetweenMks）",
+        "description": "保留原始请求并标记 getSnapshotsBetweenMks 查询类型。",
+        "similar_to": {
+          "node": "get_current_vars",
+          "relationship": "variant",
+          "reason": "五个选择器有意共享纯适配结构，仅查询类型字面量不同。"
+        }
+      },
+      {
+        "id": "get_snapshot_at_mid",
+        "type_used": "era.api.get_snapshot_at_mid",
+        "display_name": "选择消息 ID 单点查询（era:getSnapshotAtMId）",
+        "description": "保留原始请求并标记 getSnapshotAtMId 查询类型。",
+        "similar_to": {
+          "node": "get_current_vars",
+          "relationship": "variant",
+          "reason": "五个选择器有意共享纯适配结构，仅查询类型字面量不同。"
+        }
+      },
+      {
+        "id": "get_snapshots_between_mids",
+        "type_used": "era.api.get_snapshots_between_mids",
+        "display_name": "选择消息 ID 区间查询（era:getSnapshotsBetweenMIds）",
+        "description": "保留原始请求并标记 getSnapshotsBetweenMIds 查询类型。",
+        "similar_to": {
+          "node": "get_current_vars",
+          "relationship": "variant",
+          "reason": "五个选择器有意共享纯适配结构，仅查询类型字面量不同。"
+        }
+      },
+      {
+        "id": "read_query_variables",
+        "type_used": "era.api.read_query_variables",
+        "display_name": "只读获取 ERA 变量上下文",
+        "description": "仅调用 variables.read，读取 chat 级 stat_data 与 ERAMetaData；不调用 commit。"
+      },
+      {
+        "id": "read_query_messages",
+        "type_used": "era.api.read_query_messages",
+        "display_name": "只读获取严格消息上下文",
+        "description": "仅以 projection=era-active-message-v1 调用 messages.read_context，读取严格消息 DTO 列表；不传递 Date、swipes_info、附件或宿主对象，也不更新内容或刷新。"
+      },
+      {
+        "id": "execute_snapshot_query",
+        "type_used": "era.api.execute_snapshot_query",
+        "display_name": "执行严格快照纯查询",
+        "description": "只消费严格消息 DTO 与变量结果，通过统一无原型可移植 JSON codec 构造快照、completed settlement 与 era:queryResult，未知键不使用普通属性赋值。"
+      },
+      {
+        "id": "merge_query_result",
+        "type_used": "era.api.merge_query_result",
+        "display_name": "导出查询中间结果",
+        "description": "把唯一快照查询任务结果转换为上层 API 使用的中间结果类型。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.service.terminal",
+        "display_name": "查询 API 结束",
+        "description": "结束一次只读查询 API 操作。"
+      }
+    ],
+    "edges": [
+      ["start", "route_query"],
+      {
+        "from": "route_query",
+        "to": "get_current_vars",
+        "when": "query_route == 'get-current-vars'"
+      },
+      {
+        "from": "route_query",
+        "to": "get_snapshot_at_mk",
+        "when": "query_route == 'get-snapshot-at-mk'"
+      },
+      {
+        "from": "route_query",
+        "to": "get_snapshots_between_mks",
+        "when": "query_route == 'get-snapshots-between-mks'"
+      },
+      {
+        "from": "route_query",
+        "to": "get_snapshot_at_mid",
+        "when": "query_route == 'get-snapshot-at-mid'"
+      },
+      {
+        "from": "route_query",
+        "to": "get_snapshots_between_mids",
+        "when": "query_route == 'get-snapshots-between-mids'"
+      },
+      ["get_current_vars", "read_query_variables"],
+      ["get_snapshot_at_mk", "read_query_variables"],
+      ["get_snapshots_between_mks", "read_query_variables"],
+      ["get_snapshot_at_mid", "read_query_variables"],
+      ["get_snapshots_between_mids", "read_query_variables"],
+      {
+        "from": "read_query_variables",
+        "to": "read_query_messages",
+        "transfer": false
+      },
+      {
+        "from": "get_current_vars",
+        "to": "execute_snapshot_query",
+        "schedule": false
+      },
+      {
+        "from": "get_snapshot_at_mk",
+        "to": "execute_snapshot_query",
+        "schedule": false
+      },
+      {
+        "from": "get_snapshots_between_mks",
+        "to": "execute_snapshot_query",
+        "schedule": false
+      },
+      {
+        "from": "get_snapshot_at_mid",
+        "to": "execute_snapshot_query",
+        "schedule": false
+      },
+      {
+        "from": "get_snapshots_between_mids",
+        "to": "execute_snapshot_query",
+        "schedule": false
+      },
+      {
+        "from": "read_query_variables",
+        "to": "execute_snapshot_query",
+        "schedule": false
+      },
+      ["read_query_messages", "execute_snapshot_query"],
+      ["execute_snapshot_query", "merge_query_result"],
+      ["merge_query_result", "end"]
+    ],
+    "outputs": [
+      {
+        "type": "era.task.result.merged",
+        "cardinality": "exactly_one",
+        "display_name": "查询 API 结果",
+        "as": "queryApiResult"
+      }
+    ]
+  }
+}

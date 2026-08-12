@@ -1,0 +1,58 @@
+{
+  "kind": "node",
+  "type_key": "era.service.reduce_collection",
+  "display_name": "归约事件集",
+  "category": "服务迭代",
+  "description": "按候选基线归约 100/500/1500ms 收集窗口、生成边界、dry-run、组合、绝对截止定时器、迟到 token 和 128 条/2MiB 有界事件集。",
+  "version": "1.1.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.service.state.current",
+        "cardinality": "exactly_one",
+        "display_name": "当前服务状态"
+      },
+      {
+        "type": "era.transport.event",
+        "cardinality": "exactly_one",
+        "display_name": "已校验传输事件"
+      }
+    ],
+    "provides": [
+      {
+        "key": "collection_reduction",
+        "type": "era.collection.reduction",
+        "display_name": "事件集归约结果"
+      },
+      {
+        "key": "collection_control",
+        "type": "era.collection.control",
+        "display_name": "事件集控制"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {"era.service.state.current":["输入：当前服务状态。"],"era.transport.event":["输入：已校验传输事件。"]},
+    "output_semantics": {"collection_reduction":["输出：事件集归约结果。"],"collection_control":["输出：事件集控制。"]}
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/iteration/reduce_collection.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.protocol"
+  ],
+  "capabilities": []
+}

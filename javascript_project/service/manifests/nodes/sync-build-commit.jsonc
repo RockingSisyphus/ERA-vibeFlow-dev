@@ -1,0 +1,18 @@
+{
+  "kind": "node",
+  "type_key": "era.sync.build_commit",
+  "display_name": "构造同步逻辑提交",
+  "category": "同步事务",
+  "description": "把提交工作项转换为消息先行、变量后置的有序请求；无提交工作项原样穿过。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [{"type": "era.sync.logical_result", "cardinality": "exactly_one", "display_name": "同步逻辑结果"}],
+    "provides": [{"key": "sync_commit_request", "type": "era.tavern.commit.request", "display_name": "同步提交请求"}],
+    "params_schema": {}, "params_defaults": {},
+    "input_semantics": {"era.sync.logical_result":["输入：同步逻辑结果。"]},
+    "output_semantics": {"sync_commit_request":["输出：同步提交请求。"]}
+  },
+  "implementations": [{"language": "typescript", "targets": ["browser", "node"], "completion": "immediate", "source": {"kind": "file", "ref": "nodes/sync/build_sync_commit.ts", "export": "run"}}],
+  "base_libs": ["era.service.sync_transaction"], "capabilities": []
+}

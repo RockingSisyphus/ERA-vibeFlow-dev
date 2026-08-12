@@ -1,0 +1,32 @@
+{
+  "kind": "node",
+  "type_key": "era.api.route",
+  "display_name": "ERA 十三个公开 API 路由",
+  "category": "API 路由",
+  "description": "直接读取 execute 步骤的 canonical API task 与 planned sources，保留 tagged args、原始 detail 和来源关系，并选择四类 API 语义。",
+  "version": "1.0.0",
+  "flow_kind": "decision",
+  "contract": {
+    "requires": [
+      {"type": "era.step.request.routed", "cardinality": "exactly_one", "display_name": "已路由步骤"},
+      {"type": "era.batch.execution.state", "cardinality": "exactly_one", "display_name": "当前批次执行状态"}
+    ],
+    "provides": [
+      {"key": "api_request", "type": "era.api.request", "display_name": "规范化 API 请求"},
+      {"key": "api_route", "type": "era.api.route", "display_name": "API 路由"},
+      {"key": "api_execution_state", "type": "era.batch.execution.state", "display_name": "API 批次执行状态"}
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {"era.step.request.routed":["输入：已路由步骤。"],"era.batch.execution.state":["输入：当前批次执行状态。"]},
+    "output_semantics": {"api_request":["输出：规范化 API 请求。"],"api_route":["输出：API 路由。"],"api_execution_state":["输出：API 批次执行状态。"]}
+  },
+  "implementations": [{
+    "language": "typescript",
+    "targets": ["browser", "node"],
+    "completion": "immediate",
+    "source": {"kind": "file", "ref": "nodes/api/route_api.ts", "export": "run"}
+  }],
+  "base_libs": ["era.service.protocol"],
+  "capabilities": []
+}

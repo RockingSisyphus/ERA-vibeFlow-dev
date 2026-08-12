@@ -1,0 +1,53 @@
+{
+  "kind": "node",
+  "type_key": "era.tasks.dispatch",
+  "display_name": "分派领域任务",
+  "category": "步骤执行",
+  "description": "按严格 PlannedStep 的稳定任务类别显式路由初始化、同步、API、更新 MK 或忽略步骤。",
+  "version": "1.0.0",
+  "flow_kind": "decision",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.step.request",
+        "cardinality": "exactly_one",
+        "display_name": "已选步骤"
+      }
+    ],
+    "provides": [
+      {
+        "key": "routed_step",
+        "type": "era.step.request.routed",
+        "display_name": "已路由步骤"
+      },
+      {
+        "key": "task_route",
+        "type": "era.task.route",
+        "display_name": "任务路由"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {"era.step.request":["输入：已选步骤。"]},
+    "output_semantics": {"routed_step":["输出：已路由步骤。"],"task_route":["输出：任务路由。"]}
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/step/dispatch_task.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.protocol"
+  ],
+  "capabilities": []
+}

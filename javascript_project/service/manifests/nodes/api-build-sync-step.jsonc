@@ -1,0 +1,18 @@
+{
+  "kind": "node",
+  "type_key": "era.api.build_sync_step",
+  "display_name": "构造 API 因果同步步骤",
+  "category": "外部 API",
+  "description": "从已校验的提交后消息快照与不可变处理身份构造 reason=api-write 的标准同步步骤。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [{"type": "era.api.write.post_commit.context", "cardinality": "exactly_one", "display_name": "提交后同步上下文"}],
+    "provides": [{"key": "routed_step", "type": "era.step.request.routed", "display_name": "API 因果同步步骤"}],
+    "params_schema": {}, "params_defaults": {},
+    "input_semantics": {"era.api.write.post_commit.context":["输入：通过读回一致性校验的提交后同步上下文。"]},
+    "output_semantics": {"routed_step":["输出：API 因果同步步骤。"]}
+  },
+  "implementations": [{"language": "typescript", "targets": ["browser", "node"], "completion": "immediate", "source": {"kind": "file", "ref": "nodes/api/build_api_sync_step.ts", "export": "run"}}],
+  "base_libs": [], "capabilities": []
+}

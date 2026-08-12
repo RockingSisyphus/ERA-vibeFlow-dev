@@ -1,0 +1,31 @@
+{
+  "kind": "node",
+  "type_key": "era.api.prepare_execution_context",
+  "display_name": "准备 ERA API 执行上下文",
+  "category": "逻辑提交",
+  "description": "同时保留规范化 API 请求与批次执行状态，供写事务或强制同步的后续共享同步节点使用。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {"type": "era.api.request", "cardinality": "exactly_one", "display_name": "规范化 API 请求"},
+      {"type": "era.batch.execution.state", "cardinality": "exactly_one", "display_name": "当前批次执行状态"}
+    ],
+    "provides": [
+      {"key": "api_context_request", "type": "era.api.request", "display_name": "API 执行请求"},
+      {"key": "api_context_state", "type": "era.batch.execution.state", "display_name": "API 执行批次状态"}
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {"era.api.request":["输入：规范化 API 请求。"],"era.batch.execution.state":["输入：当前批次执行状态。"]},
+    "output_semantics": {"api_context_request":["输出：API 执行请求。"],"api_context_state":["输出：API 执行批次状态。"]}
+  },
+  "implementations": [{
+    "language": "typescript",
+    "targets": ["browser", "node"],
+    "completion": "immediate",
+    "source": {"kind": "file", "ref": "nodes/api/prepare_write_context.ts", "export": "run"}
+  }],
+  "base_libs": ["era.service.protocol"],
+  "capabilities": []
+}

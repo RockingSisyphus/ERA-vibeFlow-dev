@@ -1,0 +1,159 @@
+/**
+ * @file ERA 变量框架 - 变量删除模块
+ * @description
+ * 该模块负责处理 `<VariableDelete>` 指令，实现对已存在变量的删除，并生成相应的 `EditLog`。
+ *
+ * **设计理念**:
+ * - **指令驱动**: 递归行为由指令对象的结构驱动。空对象 `{}` 表示删除当前节点，非空对象表示递归删除子节点。
+ * - **安全第一**: 删除是破坏性操作，因此引入了 `$meta.necessary` 权限机制来防止误删。
+ *   - `self`: 保护当前节点不被直接删除。
+ *   - `children`: 保护所有直属子节点不被删除。
+ *   - `all`: 保护当前节点及其所有后代节点不被删除。
+ * - **精确豁免**: `necessary` 的保护只有在删除指令明确指向 `necessary` 属性自身时才会被绕过。
+ * - **原子性日志**: 为每一次删除生成单一、精确的 `EditLog`，确保操作可完全回滚。
+ */
+'use strict';
+
+import { Logger } from '../../utils/log';
+
+const logger = new Logger();
+
+/**
+ * **【递归删除】**
+ * 实现了 `<VariableDelete>` 的核心逻辑，其行为由指令 `patchObj` 的结构驱动。
+ *
+ * @param {any} statData - 状态数据对象 (即 `stat_data`)。
+ * @param {string} basePath - 当前递归层级的基础路径。
+ * @param {any} patchObj - 从指令中解析出的、与 `basePath` 对应的部分。
+ * @param {any[]} editLog - 用于收集变更记录的日志数组。
+ */
+function applyDeleteAtLevel(statData: any, basePath: string, patchObj: any, editLog: any[]) {
+  // --- 1. 入口守卫和状态获取 ---
+  const currentNodeInVars = basePath ? _.get(statData, basePath) : statData;
+
+  if (currentNodeInVars === undefined) {
+    logger.warn('applyDeleteAtLevel', `VariableDelete 跳过：路径不存在 -> ${basePath || '(root)'}`, {
+      basePath,
+      patchObj,
+    });
+    return;
+  }
+
+  const necessary = _.get(currentNodeInVars, ['$meta', 'necessary']);
+
+  // 精确判断豁免条件
+  const metaPatch = _.get(patchObj, '$meta');
+  const isBypassingProtection =
+    // 场景1: 指令要删除整个 $meta 对象
+    (_.isPlainObject(metaPatch) && _.isEmpty(metaPatch)) ||
+    // 场景2: 指令明确要删除 $meta.necessary 键
+    _.has(patchObj, ['$meta', 'necessary']);
+
+  // --- 2. 判断意图：递归删除子节点 vs 删除当前节点 ---
+  if (_.isPlainObject(patchObj) && !_.isEmpty(patchObj)) {
+    // **意图：递归删除子节点**
+
+    // 权限检查：如果节点受 'all' 保护，且指令不满足豁免条件，则禁止深入。
+    if (necessary === 'all' && !isBypassingProtection) {
+      logger.warn(
+        'applyDeleteAtLevel',
+        `VariableDelete 失败：路径 <${basePath}> 受 "necessary: all" 保护，其子节点无法被删除。`,
+        { basePath, patchObj, currentNodeInVars },
+      );
+      return;
+    }
+
+    // 权限通过，或存在豁免，继续向内递归。
+    for (const key of Object.keys(patchObj)) {
+      const fullPath = basePath ? `${basePath}.${key}` : key;
+      const subPatchObj = patchObj[key];
+
+      // 新增：检查 'children' 保护
+      // 这会阻止直接删除受保护节点的直属子节点。
+      if (necessary === 'children' && _.isPlainObject(subPatchObj) && _.isEmpty(subPatchObj)) {
+        // 豁免条件：允许通过特定指令删除 '$meta' 来解除保护。
+        if (key === '$meta' && isBypassingProtection) {
+          // 明确意图是移除保护，允许操作继续。
+        } else {
+          logger.warn(
+            'applyDeleteAtLevel',
+            `VariableDelete 失败：父路径 <${
+              basePath || '(root)'
+            }> 受 "necessary: children" 保护，其直属子节点 <${key}> 无法被删除。`,
+            { basePath, key, patchObj, currentNodeInVars },
+          );
+          continue; // 跳过此子节点的删除，继续处理下一个。
+        }
+      }
+
+      applyDeleteAtLevel(statData, fullPath, subPatchObj, editLog);
+    }
+    return; // 子节点处理完毕，返回。
+  }
+
+  // --- 3. 执行删除当前节点 ---
+  // (能走到这里，说明 patchObj 是空对象、非对象或 null)
+  // **意图：删除当前节点 `basePath`**
+
+  // 权限检查：'self' 或 'all' 都会阻止当前节点的直接删除。
+  // 直接删除节点的意图无法豁免保护，必须通过递归意图删除 '$meta' 来解除保护。
+  if (necessary === 'self' || necessary === 'all') {
+    logger.warn(
+      'applyDeleteAtLevel',
+      `VariableDelete 失败：路径 <${basePath}> 受 "necessary: ${necessary}" 保护，无法被直接删除。`,
+      { basePath, patchObj, currentNodeInVars },
+    );
+    return;
+  }
+
+  // 根节点（basePath 为 ''）不应被删除。
+  if (basePath === '') {
+    logger.error('applyDeleteAtLevel', 'VariableDelete 失败：不允许删除根对象。', {
+      patchObj,
+    });
+    return;
+  }
+
+  // 执行原子性删除
+  const valOld = _.cloneDeep(currentNodeInVars);
+  _.unset(statData, basePath);
+  editLog.push({ op: 'delete', path: basePath, value_old: valOld });
+  logger.debug('applyDeleteAtLevel', `成功删除节点: ${basePath}`);
+}
+
+/**
+ * **【纯函数】** 处理所有 `<VariableDelete>` 指令块。
+ *
+ * @param {any[]} allDeletes - 从消息中解析出的所有 delete 指令对象。
+ * @param {any} initialStat - 操作开始前的初始 `stat_data` 状态。
+ * @returns {Promise<{ finalStat: any, editLog: any[] }>} - 返回一个包含操作完成后的最终状态和生成的编辑日志的对象。
+ */
+export async function processDeleteBlocks(
+  allDeletes: any[],
+  initialStat: any,
+): Promise<{ finalStat: any; editLog: any[] }> {
+  if (!allDeletes || allDeletes.length === 0) {
+    return { finalStat: initialStat, editLog: [] };
+  }
+
+  const currentStat = _.cloneDeep(initialStat);
+  const editLog: any[] = [];
+
+  for (const deleteRoot of allDeletes) {
+    if (!_.isPlainObject(deleteRoot) || _.isEmpty(deleteRoot)) continue;
+    try {
+      logger.debug('processDeleteBlocks', `处理 deleteRoot: ${JSON.stringify(deleteRoot)}`);
+      // 从根路径开始递归
+      applyDeleteAtLevel(currentStat, '', deleteRoot, editLog);
+    } catch (e: any) {
+      logger.error('processDeleteBlocks', `处理 deleteRoot 失败: ${e?.message || e}`, {
+        error: e,
+        deleteRoot,
+        currentStat,
+      });
+    }
+  }
+
+  logger.debug('processDeleteBlocks', '所有 VariableDelete 操作完成');
+  return { finalStat: currentStat, editLog };
+}

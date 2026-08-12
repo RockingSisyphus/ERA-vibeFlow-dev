@@ -1,0 +1,18 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.task.route",
+  "representation": "json",
+  "display_name": "ERA 任务路由",
+  "description": "显式区分初始化、同步、API、MK 更新与忽略步骤。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "string",
+    "enum": [
+      "initialize",
+      "sync",
+      "api",
+      "update-mk",
+      "ignore"
+    ]
+  }
+}

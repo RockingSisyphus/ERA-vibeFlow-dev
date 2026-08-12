@@ -1,0 +1,11 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.batch.fatal",
+  "representation": "json",
+  "display_name": "ERA·批次·致命状态",
+  "description": "定义“ERA·批次·致命状态”的数据结构与校验约束。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "boolean"
+  }
+}

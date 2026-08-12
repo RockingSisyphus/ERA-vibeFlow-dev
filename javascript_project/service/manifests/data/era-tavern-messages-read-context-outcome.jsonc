@@ -1,0 +1,46 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.tavern.messages.read_context.outcome",
+  "representation": "json",
+  "display_name": "ERA 消息读取结果封装",
+  "description": "在严格 Capability 投影外层记录成功值或带类型读取失败，供领域任务普通失败结算。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "oneOf": [
+      {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["ok", "value"],
+        "properties": {
+          "ok": { "const": true },
+          "value": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["schemaVersion", "messages"],
+            "properties": {
+              "schemaVersion": { "const": 2 },
+              "messages": { "type": "array" }
+            }
+          }
+        }
+      },
+      {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["ok", "error"],
+        "properties": {
+          "ok": { "const": false },
+          "error": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["code", "message"],
+            "properties": {
+              "code": { "type": "string", "minLength": 1 },
+              "message": { "type": "string" }
+            }
+          }
+        }
+      }
+    ]
+  }
+}

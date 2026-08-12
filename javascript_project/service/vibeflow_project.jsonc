@@ -1,0 +1,23 @@
+{
+  "project_target": "javascript",
+  "descriptors": {
+    "nodes": ["manifests/nodes"],
+    "base_lib": ["manifests/base_lib"],
+    "data_schemas": ["manifests/data"],
+    "capabilities": ["manifests/capabilities"],
+    "host_extensions": ["manifests/host_extensions"]
+  },
+  "javascript": {
+    "package_root": ".",
+    "external_packages": []
+  },
+  "quality_enabled": true,
+  "architecture": {
+    "documents": [
+      {
+        "workflow": "configs/era.service.jsonc",
+        "document": "ARCHITECTURE.jsonc"
+      }
+    ]
+  }
+}

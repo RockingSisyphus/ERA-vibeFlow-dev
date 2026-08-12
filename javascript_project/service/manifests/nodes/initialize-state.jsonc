@@ -1,0 +1,42 @@
+{
+  "kind": "node",
+  "type_key": "era.service.initialize_state",
+  "display_name": "初始化服务状态",
+  "category": "服务生命周期",
+  "description": "创建空事件集、零迭代、空定时器和空连续 MK 的严格有界状态。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [],
+    "provides": [
+      {
+        "key": "service_state_initial",
+        "type": "era.service.state",
+        "display_name": "初始服务状态"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {},
+    "output_semantics": {"service_state_initial":["输出：初始服务状态。"]}
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/lifecycle/initialize_state.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.protocol"
+  ],
+  "capabilities": []
+}

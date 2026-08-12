@@ -1,0 +1,19 @@
+{
+  "kind": "node",
+  "type_key": "era.api.read_committed_messages",
+  "display_name": "读取已提交消息快照",
+  "category": "宿主只读边界",
+  "description": "在消息追加确认后重新读取 era-active-message-v1 严格投影，不复用写入前快照。",
+  "version": "1.0.0",
+  "flow_kind": "data_store",
+  "contract": {
+    "requires": [{"type": "era.api.write.append.result", "cardinality": "exactly_one", "display_name": "已确认消息追加"}],
+    "provides": [{"key": "committed_messages_raw", "type": "era.tavern.messages.read_context.outcome", "display_name": "提交后严格消息读取结果"}],
+    "params_schema": {}, "params_defaults": {},
+    "input_semantics": {"era.api.write.append.result": ["输入：已确认提交的消息追加结果。"]},
+    "output_semantics": {"committed_messages_raw": ["输出：提交后严格消息快照或带类型读取失败。"]}
+  },
+  "implementations": [{"language": "typescript", "targets": ["browser"], "completion": "suspend", "source": {"kind": "file", "ref": "nodes/api/read_committed_messages.ts", "export": "run"}}],
+  "base_libs": [],
+  "capabilities": [{"id": "era.tavern.messages", "operations": ["read_context"]}]
+}

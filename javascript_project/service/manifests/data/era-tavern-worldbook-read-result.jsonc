@@ -1,0 +1,12 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.tavern.worldbook.read.result",
+  "representation": "json",
+  "display_name": "ERA·酒馆·世界书·读取·结果",
+  "description": "定义“ERA·酒馆·世界书·读取·结果”的数据结构与校验约束。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": true
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.macro.replacement.internal",
+  "representation": "json",
+  "display_name": "内部宏替换结果",
+  "description": "适配为节点集输出契约之前的重建字符串。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "string"
+  }
+}

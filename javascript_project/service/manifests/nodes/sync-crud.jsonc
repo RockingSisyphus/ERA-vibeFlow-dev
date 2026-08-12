@@ -1,0 +1,18 @@
+{
+  "kind": "node",
+  "type_key": "era.task.crud_write",
+  "display_name": "确认 CRUD 同步结果",
+  "category": "同步规划",
+  "description": "保留纯引擎已计算的 CRUD 状态与编辑日志候选，进入统一逻辑提交边界。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [{"type": "era.sync.work", "cardinality": "exactly_one", "display_name": "同步工作项"}],
+    "provides": [{"key": "crud_logical_result", "type": "era.sync.logical_result", "display_name": "同步逻辑结果"}],
+    "params_schema": {}, "params_defaults": {},
+    "input_semantics": {"era.sync.work":["输入：同步工作项。"]},
+    "output_semantics": {"crud_logical_result":["输出：同步逻辑结果。"]}
+  },
+  "implementations": [{"language": "typescript", "targets": ["browser", "node"], "completion": "immediate", "source": {"kind": "file", "ref": "nodes/sync/confirm_crud.ts", "export": "run"}}],
+  "base_libs": ["era.service.sync_transaction"], "capabilities": []
+}

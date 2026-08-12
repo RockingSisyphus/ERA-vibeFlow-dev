@@ -1,0 +1,4 @@
+{"kind":"node","type_key":"era.initialize.build_commit","display_name":"构造初始化提交","category":"初始化事务","description":"把资源变更固定为有序、幂等的 Capability 动作列表。","version":"1.0.0","flow_kind":"process","contract":{"requires":[{"type":"era.initialize.changes","cardinality":"exactly_one","display_name":"资源变更"}],"provides":[{"key":"resource_commit_request","type":"era.initialize.commit.request","display_name":"资源提交请求"}],"params_schema":{},"params_defaults":{},
+    "input_semantics": {"era.initialize.changes":["输入：资源变更。"]},
+    "output_semantics": {"resource_commit_request":["输出：资源提交请求。"]}
+  },"implementations":[{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/initialize/build_initialization_commit.ts","export":"run"}}],"base_libs":[],"capabilities":[]}

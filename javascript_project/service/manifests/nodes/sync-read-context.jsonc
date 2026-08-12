@@ -1,0 +1,30 @@
+{
+  "kind": "node",
+  "type_key": "era.tavern.sync_read",
+  "display_name": "读取 Tavern 同步上下文",
+  "category": "同步宿主边界",
+  "description": "消费统一派发上下文中的严格消息投影，仅补读聊天变量，并把读取失败收敛为带类型同步上下文。",
+  "version": "1.0.0",
+  "flow_kind": "data_store",
+  "contract": {
+    "requires": [
+      {"type": "era.step.request.routed", "cardinality": "exactly_one", "display_name": "已路由步骤"},
+      {"type": "era.batch.execution.state", "cardinality": "exactly_one", "display_name": "当前批次执行状态"}
+    ],
+    "provides": [{"key": "sync_context", "type": "era.sync.context", "display_name": "同步上下文"}],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {"era.step.request.routed":["输入：已路由步骤。"],"era.batch.execution.state":["输入：当前批次执行状态。"]},
+    "output_semantics": {"sync_context":["输出：同步上下文。"]}
+  },
+  "implementations": [{
+    "language": "typescript",
+    "targets": ["browser"],
+    "completion": "suspend",
+    "source": {"kind": "file", "ref": "nodes/sync/read_sync_context.ts", "export": "run"}
+  }],
+  "base_libs": ["era.service.sync_transaction"],
+  "capabilities": [
+    {"id": "era.tavern.variables", "operations": ["read"]}
+  ]
+}

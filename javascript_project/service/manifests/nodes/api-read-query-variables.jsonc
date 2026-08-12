@@ -1,0 +1,19 @@
+{
+  "kind": "node",
+  "type_key": "era.api.read_query_variables",
+  "display_name": "只读获取 ERA 变量上下文",
+  "category": "宿主只读边界",
+  "description": "仅调用 variables.read 读取 chat 级 stat_data 与 ERAMetaData；捕获读取错误供兼容结果处理。",
+  "version": "1.0.0",
+  "flow_kind": "data_store",
+  "contract": {
+    "requires": [{"type": "era.api.query.request", "cardinality": "exactly_one", "display_name": "已选择查询"}],
+    "provides": [{"key": "query_variables_raw", "type": "era.tavern.variables.read.result", "display_name": "原始变量读取结果"}],
+    "params_schema": {}, "params_defaults": {},
+    "input_semantics": {"era.api.query.request":["输入：已选择查询。"]},
+    "output_semantics": {"query_variables_raw":["输出：原始变量读取结果。"]}
+  },
+  "implementations": [{"language": "typescript", "targets": ["browser"], "completion": "suspend", "source": {"kind": "file", "ref": "nodes/api/read_query_variables.ts", "export": "run"}}],
+  "base_libs": [],
+  "capabilities": [{"id": "era.tavern.variables", "operations": ["read"]}]
+}

@@ -1,0 +1,23 @@
+{
+  "kind": "node",
+  "type_key": "era.api.route_write",
+  "display_name": "选择六个 ERA 写入 API",
+  "category": "外部 API",
+  "description": "按公开事件名选择对象插入、对象更新、路径插入、路径更新、对象删除或路径删除，并保留完整请求。",
+  "version": "1.0.0",
+  "flow_kind": "decision",
+  "contract": {
+    "requires": [{"type": "era.api.request", "cardinality": "exactly_one", "display_name": "规范化 API 请求"}],
+    "provides": [
+      {"key": "write_request", "type": "era.api.write.request", "display_name": "写入请求"},
+      {"key": "write_route", "type": "era.api.write.route", "display_name": "写入路由"}
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {"era.api.request":["输入：规范化 API 请求。"]},
+    "output_semantics": {"write_request":["输出：写入请求。"],"write_route":["输出：写入路由。"]}
+  },
+  "implementations": [{"language": "typescript", "targets": ["browser", "node"], "completion": "immediate", "source": {"kind": "file", "ref": "nodes/api/route_write_api.ts", "export": "run"}}],
+  "base_libs": [],
+  "capabilities": []
+}

@@ -1,0 +1,1 @@
+{"kind":"data_schema","type_key":"era.dispatch.preparation.plan","representation":"json","display_name":"ERA 派发准备计划","description":"声明消息和元数据的幂等预提交计划。","schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":true}}

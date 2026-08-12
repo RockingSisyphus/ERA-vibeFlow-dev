@@ -1,0 +1,42 @@
+{
+  "kind": "node",
+  "type_key": "era.macro.format_values",
+  "display_name": "格式化宏值",
+  "category": "宏处理",
+  "description": "按基线规则格式化解析值，并按原始位置一次性重建字符串。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.macro.resolved_occurrences",
+        "cardinality": "exactly_one",
+        "display_name": "已解析宏匹配项"
+      }
+    ],
+    "provides": [
+      {
+        "key": "macro.replacement.internal",
+        "type": "era.macro.replacement.internal",
+        "display_name": "内部宏替换结果"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {"era.macro.resolved_occurrences":["输入：已解析宏匹配项。"]},
+    "output_semantics": {"macro.replacement.internal":["输出：内部宏替换结果。"]}
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": ["browser", "node"],
+      "source": {
+        "kind": "file",
+        "ref": "nodes/format_values.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": ["era.macro.runtime"],
+  "capabilities": []
+}

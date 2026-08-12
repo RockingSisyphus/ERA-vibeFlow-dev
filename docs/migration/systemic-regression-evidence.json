@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-08-09",
+  "policy": {
+    "usesHistoricalArtifactForTesting": false,
+    "automaticOldNewComparison": false,
+    "note": "本文件只固定当前新版问题 Artifact 与既有不可发布 bundle 的身份；旧版测试结果不参与运行时判断。"
+  },
+  "currentHarnessArtifact": {
+    "path": "/home/example/projects/ERA-Test-Harness-vibeflow-20260808/artifacts/st-run-20260808T16233625-b4b7d92a0579",
+    "runId": "st-run-20260808T16233625-b4b7d92a0579",
+    "selectedPaths": 234,
+    "recordingStatus": "completed",
+    "evaluationStatus": "not_requested",
+    "suiteManifestBytes": 1773480,
+    "suiteManifestSha256": "b989f1efec980c625855ac4d4a3d69e072c43bec9456f181011dad7002ad5894"
+  },
+  "blockedBundle": {
+    "path": "reports/release/v1/era-vibeflow-production.js",
+    "bytes": 5551202,
+    "sha256": "4a89ad2a1d74881a7c955bc9997bb1252ba25664e02950fdc15c4289e6bf87c1"
+  },
+  "confirmedCurrentFailures": [
+    {
+      "code": "ERA_SYNC_PLAN_FAILED",
+      "representativePath": "SEM-INS-001",
+      "summary": "Tavern swipes_info 中的 Date 对象穿过宽松消息边界，严格同步克隆拒绝非 JSON 对象。"
+    },
+    {
+      "code": "ERA_PLACEHOLDER_SYNC_PATH_MISSING",
+      "representativePath": "API-BOUND-001",
+      "summary": "普通同步路径未共享候选 dispatcher 的 MK 后占位符与 affected 刷新语义。"
+    },
+    {
+      "code": "ERA_API_CONSECUTIVE_COUNT_ADVANCED",
+      "representativePath": "API-BOUND-003",
+      "summary": "API 复用共享同步时错误推进连续 MK carry。"
+    },
+    {
+      "code": "ERA_RESERVED_KEY_COMPATIBILITY",
+      "representativePath": "API-BOUND-011",
+      "summary": "公开对象 payload 的保留键结果尚未以无原型安全 codec 兼容。"
+    }
+  ]
+}

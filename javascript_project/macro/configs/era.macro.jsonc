@@ -1,0 +1,115 @@
+{
+  "host_extensions": [],
+  "global_config": {
+    "config": {},
+    "allow_config_override": false
+  },
+  "nodeset_imports": [
+    {
+      "path": "nodesets/replace_all.jsonc"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "sync",
+    "inputs": [
+      {
+        "key": "substring",
+        "type": "era.macro.substring",
+        "display_name": "宏文本片段",
+        "required": true
+      },
+      {
+        "key": "storedStat",
+        "type": "era.macro.stored_stat",
+        "display_name": "已存 ERA 状态",
+        "required": true
+      }
+    ],
+    "max_steps": 32,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.macro.terminal",
+        "display_name": "开始宏解析",
+        "description": "启动一次同步、无副作用的 ERA 宏解析调用。"
+      },
+      {
+        "id": "quick_check",
+        "type_used": "era.macro.quick_check",
+        "display_name": "检测 ERA 宏",
+        "description": "检查传入片段是否包含 ERA 或 ERA-withmeta 宏，并无损转发两个公开输入。"
+      },
+      {
+        "id": "identity",
+        "type_used": "era.macro.identity",
+        "display_name": "保留非宏文本",
+        "description": "快速检测未发现 ERA 宏时，原样返回文本片段。"
+      },
+      {
+        "id": "build_snapshot",
+        "type_used": "era.macro.build_snapshot",
+        "display_name": "构建宏快照",
+        "description": "仅反转义一次已存状态，生成含元数据和不含元数据两种视图，并显式保留状态缺失标记。"
+      },
+      {
+        "id": "replace_all",
+        "type_used": "era.macro.replace_all",
+        "display_name": "替换全部 ERA 宏",
+        "description": "调用已实现的纯替换节点集，处理文本片段中的全部 ERA 宏。"
+      },
+      {
+        "id": "output_join",
+        "type_used": "era.macro.output_join",
+        "display_name": "选择宏结果",
+        "description": "安全接收唯一激活的原样或渲染候选，并输出稳定的公开替换结果。",
+        "join_policy": "safe_any"
+      },
+      {
+        "id": "end",
+        "type_used": "era.macro.terminal",
+        "display_name": "结束宏解析",
+        "description": "同步替换结果选定后结束流程。"
+      }
+    ],
+    "edges": [
+      [
+        "start",
+        "quick_check"
+      ],
+      {
+        "from": "quick_check",
+        "to": "identity",
+        "when": "macro.contains == false"
+      },
+      {
+        "from": "quick_check",
+        "to": "build_snapshot",
+        "when": "macro.contains == true"
+      },
+      [
+        "build_snapshot",
+        "replace_all"
+      ],
+      [
+        "identity",
+        "output_join"
+      ],
+      [
+        "replace_all",
+        "output_join"
+      ],
+      [
+        "output_join",
+        "end"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.macro.replacement",
+        "cardinality": "exactly_one",
+        "display_name": "宏替换结果",
+        "as": "replacement"
+      }
+    ]
+  }
+}

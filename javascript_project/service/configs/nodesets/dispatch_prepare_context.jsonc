@@ -1,0 +1,174 @@
+{
+  "type_key": "era.dispatch.prepare_context",
+  "display_name": "ERA 统一任务上下文准备",
+  "description": "在领域任务路由前统一分类任务上下文，读取严格酒馆消息投影，规划并提交 MK 与状态占位符，最后把 EraDispatchContextV2 和显式任务来源封装进已准备步骤。",
+  "requires": [
+    {
+      "type": "era.step.request",
+      "cardinality": "exactly_one",
+      "display_name": "已选规划步骤"
+    },
+    {
+      "type": "era.batch.execution.state",
+      "cardinality": "exactly_one",
+      "display_name": "当前批次执行状态"
+    }
+  ],
+  "provides": [
+    {
+      "key": "prepared_routed_step",
+      "type": "era.step.request.routed",
+      "display_name": "已准备路由步骤"
+    },
+    {
+      "key": "prepared_task_route",
+      "type": "era.task.route",
+      "display_name": "已准备任务路由"
+    },
+    {
+      "key": "prepared_execution_state",
+      "type": "era.batch.execution.state",
+      "display_name": "已准备批次状态"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "selected_step",
+        "type": "era.step.request",
+        "display_name": "已选规划步骤",
+        "required": true
+      },
+      {
+        "key": "execution_state",
+        "type": "era.batch.execution.state",
+        "display_name": "当前批次执行状态",
+        "required": true
+      }
+    ],
+    "max_steps": 18,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.service.terminal",
+        "display_name": "统一准备启动",
+        "description": "启动一次任务执行前的共享上下文准备。"
+      },
+      {
+        "id": "classify_context",
+        "type_used": "era.dispatch.classify_context",
+        "display_name": "分类任务与上下文",
+        "description": "验证 PlannedStep，确定 initialize、sync、api、update-mk 或 ignore 路由，并将 context:none、latest-message、latest-message-with-mk 映射为明确准备模式。"
+      },
+      {
+        "id": "build_no_host_context",
+        "type_used": "era.dispatch.build_no_host_context",
+        "display_name": "构造无宿主上下文",
+        "description": "为 context:none 和 ignore 任务构造无消息写入的派发结果，不调用任何 Tavern Capability。"
+      },
+      {
+        "id": "read_canonical_context",
+        "type_used": "era.dispatch.read_canonical_context",
+        "display_name": "读取严格酒馆上下文",
+        "description": "使用 projection=era-active-message-v1 读取 canonical 消息 DTO、聊天元数据和脚本占位符设置；Date、swipes_info 与宿主对象不得跨边界。"
+      },
+      {
+        "id": "plan_message_preparation",
+        "type_used": "era.dispatch.plan_message_preparation",
+        "display_name": "规划 MK 与占位符",
+        "description": "按上下文模式确保当前消息 MK，为启用设置的非用户文本幂等追加占位符，并生成携带 affected 刷新的统一预提交计划。"
+      },
+      {
+        "id": "preserve_prepared_context",
+        "type_used": "era.dispatch.preserve_prepared_context",
+        "display_name": "保留已准备上下文",
+        "description": "在消息文本和 ERAMetaData 已匹配时形成无写入准备结果，保持所有未知元数据和 SelectedMks 的 null 位置。"
+      },
+      {
+        "id": "commit_preparation",
+        "type_used": "era.dispatch.commit_preparation",
+        "display_name": "提交 MK 与占位符准备",
+        "description": "先以 affected 刷新确认当前文本写入，再提交并回读完整 ERAMetaData；部分写入或结果未知立即标为 fatal。"
+      },
+      {
+        "id": "finalize_dispatch_context",
+        "type_used": "era.dispatch.finalize_context",
+        "display_name": "生成统一派发上下文",
+        "description": "合并互斥准备结果，把含不可变 processing message/MK 的 EraDispatchContextV2 与显式 dispatch class 封装进已准备步骤，并输出任务路由和原批次状态。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.service.terminal",
+        "display_name": "统一准备结束",
+        "description": "结束任务执行前的共享上下文准备。"
+      }
+    ],
+    "edges": [
+      [
+        "start",
+        "classify_context"
+      ],
+      {
+        "from": "classify_context",
+        "to": "build_no_host_context",
+        "when": "context_route == 'none'"
+      },
+      {
+        "from": "classify_context",
+        "to": "read_canonical_context",
+        "when": "context_route == 'read'"
+      },
+      [
+        "read_canonical_context",
+        "plan_message_preparation"
+      ],
+      {
+        "from": "plan_message_preparation",
+        "to": "preserve_prepared_context",
+        "when": "precommit_route == 'no-op'"
+      },
+      {
+        "from": "plan_message_preparation",
+        "to": "commit_preparation",
+        "when": "precommit_route == 'commit'"
+      },
+      [
+        "build_no_host_context",
+        "finalize_dispatch_context"
+      ],
+      [
+        "preserve_prepared_context",
+        "finalize_dispatch_context"
+      ],
+      [
+        "commit_preparation",
+        "finalize_dispatch_context"
+      ],
+      [
+        "finalize_dispatch_context",
+        "end"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.step.request.routed",
+        "cardinality": "exactly_one",
+        "display_name": "已准备路由步骤",
+        "as": "preparedRoutedStep"
+      },
+      {
+        "type": "era.task.route",
+        "cardinality": "exactly_one",
+        "display_name": "已准备任务路由",
+        "as": "preparedTaskRoute"
+      },
+      {
+        "type": "era.batch.execution.state",
+        "cardinality": "exactly_one",
+        "display_name": "已准备批次状态",
+        "as": "preparedExecutionState"
+      }
+    ]
+  }
+}

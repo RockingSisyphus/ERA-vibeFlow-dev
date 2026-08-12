@@ -1,0 +1,28 @@
+{
+  "kind": "node",
+  "type_key": "era.tavern.mk_commit",
+  "display_name": "按逻辑边界提交消息密钥",
+  "category": "消息密钥宿主边界",
+  "description": "严格先确认消息文本写入及受影响消息刷新，再提交并回读 ERAMetaData；消息失败不写变量，消息已写后的变量失败或未知结果进入 fatal。",
+  "version": "1.0.0",
+  "flow_kind": "data_store",
+  "contract": {
+    "requires": [{"type": "era.mk.commit.request", "cardinality": "exactly_one", "display_name": "MK 提交请求"}],
+    "provides": [{"key": "mk_commit_outcome", "type": "era.mk.commit.result", "display_name": "MK 提交结果"}],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {"era.mk.commit.request":["输入：MK 提交请求。"]},
+    "output_semantics": {"mk_commit_outcome":["输出：MK 提交结果。"]}
+  },
+  "implementations": [{
+    "language": "typescript",
+    "targets": ["browser"],
+    "completion": "suspend",
+    "source": {"kind": "file", "ref": "nodes/update_mk/commit_mk.ts", "export": "run"}
+  }],
+  "base_libs": ["era.service.types"],
+  "capabilities": [
+    {"id": "era.tavern.messages", "operations": ["update_content"]},
+    {"id": "era.tavern.variables", "operations": ["commit", "read"]}
+  ]
+}

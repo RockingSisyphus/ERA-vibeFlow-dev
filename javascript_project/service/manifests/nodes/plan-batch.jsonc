@@ -1,0 +1,48 @@
+{
+  "kind": "node",
+  "type_key": "era.service.plan_batch",
+  "display_name": "规划领域事件批次",
+  "category": "批次执行",
+  "description": "使用 ERA 纯事件规划器直接生成严格有界 execute/ignore PlannedStep，完整保留 task、sources、reason 与全部来源事件。",
+  "version": "1.1.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.collection.reduction",
+        "cardinality": "exactly_one",
+        "display_name": "事件集归约结果"
+      }
+    ],
+    "provides": [
+      {
+        "key": "batch_plan",
+        "type": "era.batch.plan",
+        "display_name": "批次计划"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {"era.collection.reduction":["输入：事件集归约结果。"]},
+    "output_semantics": {"batch_plan":["输出：批次计划。"]}
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/batch/plan_batch.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.protocol"
+  ],
+  "capabilities": []
+}

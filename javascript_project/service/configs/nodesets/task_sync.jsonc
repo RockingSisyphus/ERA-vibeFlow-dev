@@ -1,0 +1,160 @@
+{
+  "type_key": "era.task.sync",
+  "display_name": "ERA 同步任务",
+  "description": "运行共享同步路径，处理普通协调、full/latest/auto 修复、rollbackTo 定向同步和 CRUD 写入。",
+  "requires": [
+    {
+      "type": "era.step.request.routed",
+      "cardinality": "exactly_one",
+      "display_name": "已路由步骤"
+    },
+    {
+      "type": "era.batch.execution.state",
+      "cardinality": "exactly_one",
+      "display_name": "当前批次执行状态"
+    }
+  ],
+  "provides": [
+    {
+      "key": "sync_task_result",
+      "type": "era.task.result",
+      "display_name": "同步结果"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "routed_step",
+        "type": "era.step.request.routed",
+        "display_name": "已路由步骤",
+        "required": true
+      },
+      {
+        "key": "execution_state",
+        "type": "era.batch.execution.state",
+        "display_name": "当前批次执行状态",
+        "required": true
+      }
+    ],
+    "max_steps": 24,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.service.terminal",
+        "display_name": "同步启动",
+        "description": "启动一次共享同步任务。"
+      },
+      {
+        "id": "read_sync_context",
+        "type_used": "era.tavern.sync_read",
+        "display_name": "读取 Tavern 同步上下文",
+        "description": "消费已准备步骤内的 EraDispatchContextV2，并仅补读变量和编辑日志；消息快照与不可变 processing message/MK 必须来自严格派发上下文。"
+      },
+      {
+        "id": "plan_sync",
+        "type_used": "era.sync.plan",
+        "display_name": "规划共享同步",
+        "description": "以 EraDispatchContextV2 的不可变 processing message/MK 作为当前任务唯一身份，使用当前严格消息快照规划无操作、统一安全 CRUD 或协调；API 固定公开计数为 1 且不改变 carry。"
+      },
+      {
+        "id": "no_sync_change",
+        "type_used": "era.sync.no_change",
+        "display_name": "保留已同步状态",
+        "description": "保留精确的当前状态和通知身份，并构造无操作逻辑结果。"
+      },
+      {
+        "id": "crud_write",
+        "type_used": "era.task.crud_write",
+        "display_name": "应用 CRUD 指令",
+        "description": "确认纯引擎已经应用插入、更新或删除指令，并保留逻辑提交候选。"
+      },
+      {
+        "id": "compute_reconciliation",
+        "type_used": "era.sync.compute",
+        "display_name": "计算协调结果",
+        "description": "以纯计算方式生成普通、full、latest、auto 或 rollbackTo 的状态与编辑日志变更，不写入宿主。"
+      },
+      {
+        "id": "build_commit_request",
+        "type_used": "era.sync.build_commit",
+        "display_name": "构造逻辑提交",
+        "description": "依据显式 dispatch class 构造有序的状态、元数据和编辑日志提交请求，不再从 reason 推断连续计数，并区分无操作与必需写入。"
+      },
+      {
+        "id": "validate_commit_candidate",
+        "type_used": "era.sync.validate_commit_candidate",
+        "display_name": "校验同步提交候选",
+        "description": "在任何消息或变量 Capability 写入前校验 processing MK、公开 payload、连续状态和 TaskResult 候选合同，阻止空 MK 或无效状态越过提交边界。"
+      },
+      {
+        "id": "build_sync_contract_failure",
+        "type_used": "era.sync.build_contract_failure",
+        "display_name": "构造同步提交合同失败",
+        "description": "在未执行 Capability 写入时把无效提交候选转换为普通 failed 结果；API 已先写消息的场景由外层 finalizer 统一升级 fatal。"
+      },
+      {
+        "id": "commit_variables",
+        "type_used": "era.tavern.variables_commit",
+        "display_name": "提交 Tavern 变量",
+        "description": "通过挂起式变量 Capability 执行有序逻辑提交，并将部分写入或未知写入报告为致命错误。"
+      },
+      {
+        "id": "build_sync_notification",
+        "type_used": "era.sync.build_notification",
+        "display_name": "构造同步结果",
+        "description": "仅在提交确认后按候选顺序构造结算及锁外 writeDone/apiWrite 通知，并保持 API 前后的连续状态 carry 完全相同。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.service.terminal",
+        "display_name": "同步结束",
+        "description": "结束一次共享同步任务。"
+      }
+    ],
+    "edges": [
+      ["start", "read_sync_context"],
+      ["read_sync_context", "plan_sync"],
+      {
+        "from": "plan_sync",
+        "to": "no_sync_change",
+        "when": "sync_route == 'no-op'"
+      },
+      {
+        "from": "plan_sync",
+        "to": "crud_write",
+        "when": "sync_route == 'crud'"
+      },
+      {
+        "from": "plan_sync",
+        "to": "compute_reconciliation",
+        "when": "sync_route == 'reconcile'"
+      },
+      ["no_sync_change", "build_commit_request"],
+      ["crud_write", "build_commit_request"],
+      ["compute_reconciliation", "build_commit_request"],
+      ["build_commit_request", "validate_commit_candidate"],
+      {
+        "from": "validate_commit_candidate",
+        "to": "commit_variables",
+        "when": "commit_validation_route == 'valid'"
+      },
+      {
+        "from": "validate_commit_candidate",
+        "to": "build_sync_contract_failure",
+        "when": "commit_validation_route == 'failed'"
+      },
+      ["commit_variables", "build_sync_notification"],
+      ["build_sync_notification", "end"],
+      ["build_sync_contract_failure", "end"]
+    ],
+    "outputs": [
+      {
+        "type": "era.task.result",
+        "cardinality": "exactly_one",
+        "display_name": "同步结果",
+        "as": "syncTaskResult"
+      }
+    ]
+  }
+}

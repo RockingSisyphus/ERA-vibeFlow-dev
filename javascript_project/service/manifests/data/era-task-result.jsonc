@@ -1,0 +1,315 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.task.result",
+  "representation": "json",
+  "display_name": "ERA 任务结果",
+  "description": "单个领域步骤的固定状态、来源结算、锁外通知与诊断。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "status": {
+        "type": "string",
+        "enum": [
+          "committed",
+          "no-op",
+          "failed",
+          "fatal"
+        ]
+      },
+      "settlements": {
+        "type": "array",
+        "maxItems": 128,
+        "items": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "eventId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "sequence": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "status": {
+                  "const": "completed"
+                },
+                "taskId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "relation": {
+                  "type": "string",
+                  "enum": [
+                    "primary",
+                    "combined",
+                    "coalesced"
+                  ]
+                },
+                "value": {}
+              },
+              "required": [
+                "eventId",
+                "sequence",
+                "status",
+                "taskId",
+                "relation"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "eventId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "sequence": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "status": {
+                  "const": "ignored"
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "eventId",
+                "sequence",
+                "status",
+                "reason"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "eventId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "sequence": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "status": {
+                  "const": "failed"
+                },
+                "error": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "category": {
+                      "type": "string",
+                      "enum": [
+                        "input",
+                        "domain",
+                        "tavern",
+                        "cancelled"
+                      ]
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "category",
+                    "retryable"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "eventId",
+                "sequence",
+                "status",
+                "error"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "eventId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "sequence": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "status": {
+                  "const": "cancelled"
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "eventId",
+                "sequence",
+                "status",
+                "reason"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        }
+      },
+      "notifications": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "minLength": 1
+            },
+            "args": {
+              "type": "array",
+              "items": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "const": "json"
+                      },
+                      "value": {}
+                    },
+                    "required": [
+                      "kind",
+                      "value"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "const": "undefined"
+                      }
+                    },
+                    "required": [
+                      "kind"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "const": "host-ref"
+                      },
+                      "token": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "refKind": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "token",
+                      "refKind"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              }
+            }
+          },
+          "required": [
+            "type",
+            "args"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "diagnostics": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string",
+              "minLength": 1
+            },
+            "message": {
+              "type": "string"
+            },
+            "sequence": {
+              "oneOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "code",
+            "message",
+            "sequence"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "stateUpdate": {
+        "type": "object",
+        "properties": {
+          "consecutiveMk": {
+            "oneOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "consecutiveProcessingCount": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "consecutiveMk",
+          "consecutiveProcessingCount"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "required": [
+      "status",
+      "settlements",
+      "notifications",
+      "diagnostics"
+    ],
+    "additionalProperties": false
+  }
+}

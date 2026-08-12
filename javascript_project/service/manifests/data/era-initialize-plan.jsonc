@@ -1,0 +1,12 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.initialize.plan",
+  "representation": "json",
+  "display_name": "ERA·初始化·计划",
+  "description": "定义“ERA·初始化·计划”的数据结构与校验约束。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": true
+  }
+}

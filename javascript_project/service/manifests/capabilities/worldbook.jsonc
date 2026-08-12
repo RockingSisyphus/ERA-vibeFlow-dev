@@ -1,0 +1,29 @@
+{
+  "kind": "capability",
+  "id": "era.tavern.worldbook",
+  "targets": ["browser"],
+  "display_name": "酒馆世界书",
+  "description": "通过明确的宿主操作读取、创建、绑定和替换 ERA 世界书条目。",
+  "operations": {
+    "read": {
+      "input_type": "era.tavern.worldbook.read.request",
+      "output_type": "era.tavern.worldbook.read.result",
+      "completion": "suspend"
+    },
+    "create": {
+      "input_type": "era.tavern.worldbook.create.request",
+      "output_type": "era.tavern.worldbook.create.result",
+      "completion": "suspend"
+    },
+    "bind": {
+      "input_type": "era.tavern.worldbook.bind.request",
+      "output_type": "era.tavern.worldbook.bind.result",
+      "completion": "suspend"
+    },
+    "replace_entries": {
+      "input_type": "era.tavern.worldbook.replace_entries.request",
+      "output_type": "era.tavern.worldbook.replace_entries.result",
+      "completion": "suspend"
+    }
+  }
+}

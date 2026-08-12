@@ -1,0 +1,58 @@
+{
+  "kind": "node",
+  "type_key": "era.service.build_outbound",
+  "display_name": "构造批次结果帧",
+  "category": "批次发布",
+  "description": "构造确定性幂等 batch-result 帧、致命标记和批次后携带状态。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.batch.finalization",
+        "cardinality": "exactly_one",
+        "display_name": "批次收尾结果"
+      }
+    ],
+    "provides": [
+      {
+        "key": "batch_result_frame",
+        "type": "era.batch.result",
+        "display_name": "批次结果帧"
+      },
+      {
+        "key": "batch_fatal_flag",
+        "type": "era.batch.fatal",
+        "display_name": "批次致命标记"
+      },
+      {
+        "key": "post_batch_state",
+        "type": "era.service.state.post_batch",
+        "display_name": "批次后状态"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {"era.batch.finalization":["输入：批次收尾结果。"]},
+    "output_semantics": {"batch_result_frame":["输出：批次结果帧。"],"batch_fatal_flag":["输出：批次致命标记。"],"post_batch_state":["输出：批次后状态。"]}
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/publish/build_outbound.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.protocol"
+  ],
+  "capabilities": []
+}

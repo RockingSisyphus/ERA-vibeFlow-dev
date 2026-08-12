@@ -1,0 +1,25 @@
+{
+  "kind": "node",
+  "type_key": "era.mk.build_commit",
+  "display_name": "构造消息密钥提交请求",
+  "category": "消息密钥纯计算",
+  "description": "把已路由候选转换为明确的消息文本更新与完整 ERAMetaData 更新请求，不执行宿主操作。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [{"type": "era.mk.candidate.routed", "cardinality": "exactly_one", "display_name": "已路由 MK 候选"}],
+    "provides": [{"key": "mk_commit_request", "type": "era.mk.commit.request", "display_name": "MK 提交请求"}],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {"era.mk.candidate.routed":["输入：已路由 MK 候选。"]},
+    "output_semantics": {"mk_commit_request":["输出：MK 提交请求。"]}
+  },
+  "implementations": [{
+    "language": "typescript",
+    "targets": ["browser", "node"],
+    "completion": "immediate",
+    "source": {"kind": "file", "ref": "nodes/update_mk/build_mk_commit.ts", "export": "run"}
+  }],
+  "base_libs": ["era.service.types"],
+  "capabilities": []
+}

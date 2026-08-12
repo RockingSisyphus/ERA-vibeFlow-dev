@@ -1,0 +1,22 @@
+{
+  "kind": "node",
+  "type_key": "era.tavern.variables_commit",
+  "display_name": "提交同步消息与变量",
+  "category": "同步宿主边界",
+  "description": "严格先确认全部消息文本，再提交并核对聊天 stat/meta；部分或未知提交一律 fatal。",
+  "version": "1.0.0",
+  "flow_kind": "data_store",
+  "contract": {
+    "requires": [{"type": "era.tavern.commit.request", "cardinality": "exactly_one", "display_name": "同步提交请求"}],
+    "provides": [{"key": "sync_commit_result", "type": "era.tavern.commit.result", "display_name": "同步提交结果"}],
+    "params_schema": {}, "params_defaults": {},
+    "input_semantics": {"era.tavern.commit.request":["输入：同步提交请求。"]},
+    "output_semantics": {"sync_commit_result":["输出：同步提交结果。"]}
+  },
+  "implementations": [{"language": "typescript", "targets": ["browser"], "completion": "suspend", "source": {"kind": "file", "ref": "nodes/sync/commit_sync.ts", "export": "run"}}],
+  "base_libs": ["era.service.sync_transaction"],
+  "capabilities": [
+    {"id": "era.tavern.messages", "operations": ["update_content"]},
+    {"id": "era.tavern.variables", "operations": ["commit"]}
+  ]
+}

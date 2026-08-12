@@ -1,0 +1,79 @@
+{
+  "type_key": "era.task.update_mk",
+  "display_name": "ERA 消息密钥任务",
+  "description": "消费统一任务上下文准备已经确认的 MK 与占位符结果，不再重复读取或提交消息，仅构造不推进连续状态的任务结算。",
+  "requires": [
+    {
+      "type": "era.step.request.routed",
+      "cardinality": "exactly_one",
+      "display_name": "已准备路由步骤"
+    }
+  ],
+  "provides": [
+    {
+      "key": "update_mk_task_result",
+      "type": "era.task.result",
+      "display_name": "MK 更新结果"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "routed_step",
+        "type": "era.step.request.routed",
+        "display_name": "已准备路由步骤",
+        "required": true
+      }
+    ],
+    "max_steps": 6,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.service.terminal",
+        "display_name": "MK 结算启动",
+        "description": "启动一次已统一准备的消息密钥任务结算。"
+      },
+      {
+        "id": "consume_prepared_mk_context",
+        "type_used": "era.mk.consume_prepared",
+        "display_name": "确认统一 MK 准备结果",
+        "description": "读取已准备步骤内的 EraDispatchContextV2，确认 processing MK、占位符与 affected 刷新均已完成或明确无操作，不再调用 Tavern Capability。"
+      },
+      {
+        "id": "build_mk_result",
+        "type_used": "era.mk.build_result",
+        "display_name": "构造 MK 任务结果",
+        "description": "对全部 step.sources 恰好结算一次，不发送 writeDone，不推进连续 MK 状态，并保留普通失败或 fatal 身份。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.service.terminal",
+        "display_name": "MK 结算结束",
+        "description": "结束一次消息密钥任务结算。"
+      }
+    ],
+    "edges": [
+      [
+        "start",
+        "consume_prepared_mk_context"
+      ],
+      [
+        "consume_prepared_mk_context",
+        "build_mk_result"
+      ],
+      [
+        "build_mk_result",
+        "end"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.task.result",
+        "cardinality": "exactly_one",
+        "display_name": "MK 更新结果",
+        "as": "updateMkTaskResult"
+      }
+    ]
+  }
+}

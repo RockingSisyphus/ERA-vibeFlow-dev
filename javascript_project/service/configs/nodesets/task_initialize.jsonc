@@ -1,0 +1,172 @@
+{
+  "type_key": "era.task.initialize",
+  "display_name": "ERA 初始化任务",
+  "description": "规划并提交幂等设置、世界书、正则和消息资源；启动操作随后复用共享同步事务。",
+  "requires": [
+    {
+      "type": "era.step.request.routed",
+      "cardinality": "exactly_one",
+      "display_name": "已路由步骤"
+    },
+    {
+      "type": "era.batch.execution.state",
+      "cardinality": "exactly_one",
+      "display_name": "当前批次执行状态"
+    }
+  ],
+  "provides": [
+    {
+      "key": "initialize_task_result",
+      "type": "era.task.result",
+      "display_name": "初始化结果"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "routed_step",
+        "type": "era.step.request.routed",
+        "display_name": "已路由步骤",
+        "required": true
+      },
+      {
+        "key": "execution_state",
+        "type": "era.batch.execution.state",
+        "display_name": "当前批次执行状态",
+        "required": true
+      }
+    ],
+    "max_steps": 20,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.service.terminal",
+        "display_name": "初始化启动",
+        "description": "启动一次初始化任务。"
+      },
+      {
+        "id": "read_host_resources",
+        "type_used": "era.tavern.initialization_read",
+        "display_name": "读取 Tavern 资源",
+        "description": "消费已准备步骤内的严格消息投影，并读取身份、脚本设置、世界书和角色正则快照；不再复制宿主消息对象。"
+      },
+      {
+        "id": "plan_resources",
+        "type_used": "era.initialize.plan",
+        "display_name": "规划资源变更",
+        "description": "以纯计算方式生成设置、世界书和正则动作；MK 与占位符由统一任务上下文准备独占处理。"
+      },
+      {
+        "id": "preserve_resources",
+        "type_used": "era.initialize.no_change",
+        "display_name": "保留现有资源",
+        "description": "无动作或读取失败时保留计划并进入统一提交边界。"
+      },
+      {
+        "id": "compute_resource_changes",
+        "type_used": "era.initialize.compute",
+        "display_name": "确认资源变更",
+        "description": "保留纯规划器生成的声明式设置与资源变更。"
+      },
+      {
+        "id": "build_resource_commit",
+        "type_used": "era.initialize.build_commit",
+        "display_name": "构造资源提交",
+        "description": "形成有序 Capability 动作列表，不执行宿主写入。"
+      },
+      {
+        "id": "commit_host_resources",
+        "type_used": "era.tavern.initialization_commit",
+        "display_name": "提交 Tavern 资源",
+        "description": "顺序应用声明式设置、世界书和正则变更；不再写入消息占位符，部分或未知提交进入 fatal。"
+      },
+      {
+        "id": "route_completion",
+        "type_used": "era.initialize.build_result",
+        "display_name": "选择初始化完成方式",
+        "description": "资源或设置操作直接结算；启动成功后构造共享同步步骤。"
+      },
+      {
+        "id": "startup_sync",
+        "type_used": "era.task.sync",
+        "display_name": "执行启动历史同步",
+        "description": "启动设置确认后，复用共享同步事务提交历史状态。"
+      },
+      {
+        "id": "merge_result",
+        "type_used": "era.initialize.merge_result",
+        "display_name": "合并初始化结果",
+        "description": "合并直接资源结果或启动同步结果。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.service.terminal",
+        "display_name": "初始化结束",
+        "description": "结束一次初始化任务。"
+      }
+    ],
+    "edges": [
+      [
+        "start",
+        "read_host_resources"
+      ],
+      [
+        "read_host_resources",
+        "plan_resources"
+      ],
+      {
+        "from": "plan_resources",
+        "to": "preserve_resources",
+        "when": "initialization_route == 'no-op'"
+      },
+      {
+        "from": "plan_resources",
+        "to": "compute_resource_changes",
+        "when": "initialization_route == 'reconcile'"
+      },
+      [
+        "preserve_resources",
+        "build_resource_commit"
+      ],
+      [
+        "compute_resource_changes",
+        "build_resource_commit"
+      ],
+      [
+        "build_resource_commit",
+        "commit_host_resources"
+      ],
+      [
+        "commit_host_resources",
+        "route_completion"
+      ],
+      {
+        "from": "route_completion",
+        "to": "startup_sync",
+        "when": "initialize_completion_route == 'sync'"
+      },
+      {
+        "from": "route_completion",
+        "to": "merge_result",
+        "when": "initialize_completion_route == 'finish'"
+      },
+      [
+        "startup_sync",
+        "merge_result"
+      ],
+      [
+        "merge_result",
+        "end"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.task.result",
+        "cardinality": "exactly_one",
+        "display_name": "初始化结果",
+        "as": "initializeTaskResult"
+      }
+    ]
+  }
+}

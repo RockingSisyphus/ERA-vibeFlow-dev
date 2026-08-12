@@ -1,0 +1,705 @@
+/**
+ * ERA VariableInsert / VariableEdit / VariableDelete 纯计算引擎。
+ *
+ * 输入必须是 JSON 可移植的消息内容、状态与元数据；模块不读取 Tavern、不写持久化、
+ * 不读取时间或随机数，也不在模块级保存 Converter、RegExp 或可变业务状态。
+ */
+
+import { Converter } from "opencc-js";
+import { cloneEraPortableJsonV1 } from "@era/vibeflow-contracts";
+
+import { findLatestNewValue } from "./snapshot_query";
+
+export type EraCrudCommandType = "insert" | "edit" | "delete";
+
+export interface EraCrudCommand {
+  readonly type: EraCrudCommandType;
+  readonly data: readonly unknown[];
+}
+
+export type EraCrudEditLog =
+  | {
+      readonly op: "insert";
+      readonly path: string;
+      readonly value_new: unknown;
+    }
+  | {
+      readonly op: "update";
+      readonly path: string;
+      readonly value_old: unknown;
+      readonly value_new: unknown;
+    }
+  | {
+      readonly op: "delete";
+      readonly path: string;
+      readonly value_old: unknown;
+    };
+
+export interface EraCrudResult {
+  readonly finalStat: unknown;
+  readonly editLog: readonly EraCrudEditLog[];
+}
+
+export interface EraCommandParseInput {
+  readonly content: string;
+  readonly traditionalToSimplified?: boolean;
+}
+
+export interface EraEditContext {
+  readonly messageId: number;
+  readonly meta: Readonly<Record<string, unknown>>;
+}
+
+export interface EraApplyMessageCommandsInput {
+  readonly content: string;
+  readonly messageId: number;
+  readonly initialStat: unknown;
+  readonly meta: Readonly<Record<string, unknown>>;
+  readonly traditionalToSimplified?: boolean;
+}
+
+export interface EraApplyMessageCommandsResult extends EraCrudResult {
+  readonly commands: readonly EraCrudCommand[];
+}
+
+interface PositionedCommand extends EraCrudCommand {
+  readonly index: number;
+}
+
+interface TemplateContext {
+  readonly inheritedContent: unknown;
+  readonly parentData: unknown;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  if (!isRecord(value)) return false;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+
+function defineOwn(
+  target: Record<string, unknown> | unknown[],
+  key: string,
+  value: unknown,
+): void {
+  Object.defineProperty(target, key, {
+    value,
+    enumerable: true,
+    configurable: true,
+    writable: true,
+  });
+}
+
+/** 深拷贝 JSON 值，同时保留数组中的空洞与 null 位置。 */
+export function cloneCrudValue<T>(value: T): T {
+  return cloneEraPortableJsonV1(value) as T;
+}
+
+function escapeString(value: string): string {
+  return value
+    .replace(/\./g, "__DOT__")
+    .replace(/"/g, "__DQUOTE__")
+    .replace(/'/g, "__SQUOTE__");
+}
+
+/** 递归转义 ERA 内部路径会误解的键和值。 */
+export function escapeEraData<T>(value: T): T {
+  if (Array.isArray(value)) {
+    const result = new Array<unknown>(value.length);
+    for (let index = 0; index < value.length; index += 1) {
+      if (index in value) result[index] = escapeEraData(value[index]);
+    }
+    return result as T;
+  }
+  if (isPlainRecord(value)) {
+    const result: Record<string, unknown> = {};
+    for (const key of Object.keys(value)) {
+      defineOwn(result, escapeString(key), escapeEraData(value[key]));
+    }
+    return result as T;
+  }
+  return (typeof value === "string" ? escapeString(value) : value) as T;
+}
+
+/**
+ * 保持候选实现的数组净化规则：数组中的对象或数组转成 JSON 字符串，null 保留；
+ * 普通对象则继续递归处理其属性。
+ */
+export function sanitizeArrays(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((item) =>
+      Array.isArray(item) || isPlainRecord(item) ? JSON.stringify(item) : item,
+    );
+  }
+  if (isPlainRecord(value)) {
+    const result: Record<string, unknown> = {};
+    for (const key of Object.keys(value)) {
+      defineOwn(result, key, sanitizeArrays(value[key]));
+    }
+    return result;
+  }
+  return value;
+}
+
+function mergeValues(base: unknown, patch: unknown): unknown {
+  if (Array.isArray(base) || Array.isArray(patch)) {
+    return cloneCrudValue(patch);
+  }
+  if (isPlainRecord(base) && isPlainRecord(patch)) {
+    const result = cloneCrudValue(base);
+    for (const key of Object.keys(patch)) {
+      const next = Object.prototype.hasOwnProperty.call(result, key)
+        ? mergeValues(result[key], patch[key])
+        : cloneCrudValue(patch[key]);
+      defineOwn(result, key, next);
+    }
+    return result;
+  }
+  if (isPlainRecord(patch)) return cloneCrudValue(patch);
+  if (typeof patch === "undefined" || patch === null) {
+    return cloneCrudValue(base);
+  }
+  return cloneCrudValue(patch);
+}
+
+/** 深合并对象，并在任一侧为数组时用补丁数组整体覆盖。 */
+export function mergeReplaceArray(base: unknown, patch: unknown): unknown {
+  const initial = isPlainRecord(base) ? cloneCrudValue(base) : {};
+  if (!isPlainRecord(patch)) return initial;
+  return mergeValues(initial, patch);
+}
+
+function stripComments(source: string): string {
+  if (!source) return "";
+  let result = "";
+  let inString = false;
+  for (let index = 0; index < source.length; index += 1) {
+    const character = source[index];
+    if (character === '"' && (index === 0 || source[index - 1] !== "\\")) {
+      inString = !inString;
+    }
+    if (inString) {
+      result += character;
+      continue;
+    }
+    const next = source[index + 1];
+    if (character === "/" && next === "/") {
+      const end = source.indexOf("\n", index + 2);
+      if (end === -1) break;
+      result += "\n";
+      index = end;
+      continue;
+    }
+    if (character === "/" && next === "*") {
+      const end = source.indexOf("*/", index + 2);
+      if (end === -1) break;
+      index = end + 1;
+      continue;
+    }
+    if (character === "<" && source.substring(index, index + 4) === "<!--") {
+      const end = source.indexOf("-->", index + 4);
+      if (end === -1) break;
+      index = end + 2;
+      continue;
+    }
+    result += character;
+  }
+  return result;
+}
+
+/** 解析候选实现接受的串联 JSON 对象，并忽略字符串字面量外的注释。 */
+export function parseJsonl(source: string): unknown[] {
+  const objects: unknown[] = [];
+  if (!source || typeof source !== "string") return objects;
+  const content = stripComments(source).trim();
+  let braceCount = 0;
+  let startIndex = -1;
+  let inString = false;
+  for (let index = 0; index < content.length; index += 1) {
+    const character = content[index];
+    if (character === '"' && (index === 0 || content[index - 1] !== "\\")) {
+      inString = !inString;
+    }
+    if (inString) continue;
+    if (character === "{") {
+      if (braceCount === 0) startIndex = index;
+      braceCount += 1;
+    } else if (character === "}" && braceCount > 0) {
+      braceCount -= 1;
+      if (braceCount === 0 && startIndex !== -1) {
+        try {
+          objects.push(JSON.parse(content.substring(startIndex, index + 1)));
+        } catch {
+          // 候选实现跳过当前损坏片段并继续寻找后续对象。
+        }
+        startIndex = -1;
+      }
+    }
+  }
+  return objects;
+}
+
+function stripCodeFence(source: string): string {
+  if (!source) return source;
+  let result = String(source).trim();
+  result = result.replace(/^\s*(?:```|~~~)[a-zA-Z0-9_-]*\s*\r?\n/, "");
+  result = result.replace(/\r?\n(?:```|~~~)\s*$/, "");
+  return result.trim();
+}
+
+function convertTraditionalToSimplified(source: string): string {
+  const converter = Converter({ from: "tw", to: "cn" });
+  return converter(source);
+}
+
+function parseBlockContent(source: string): unknown[] {
+  let parsed = parseJsonl(source);
+  if (parsed.length > 0) return parsed;
+  try {
+    const single: unknown = JSON.parse(source);
+    parsed = Array.isArray(single) ? single : [single];
+  } catch {
+    return [];
+  }
+  return parsed;
+}
+
+/** 从混合消息中按原始出现位置提取、解析并转义三类 ERA 指令。 */
+export function parseMessageCommands(
+  input: EraCommandParseInput,
+): EraCrudCommand[] {
+  if (!input || typeof input.content !== "string" || !input.content) return [];
+  const commands: PositionedCommand[] = [];
+  const commandPattern =
+    /<(Variable(Insert|Edit|Delete))>\s*(?=[\s\S]*?\S[\s\S]*?<\/\1>)((?:(?!<(?:era_data|Variable(?:Think|Insert|Edit|Delete))>|<\/\1>)[\s\S])*?)\s*<\/\1>/gi;
+  let match: RegExpExecArray | null;
+  while ((match = commandPattern.exec(input.content)) !== null) {
+    const cleaned = stripCodeFence((match[3] ?? "").trim());
+    if (!cleaned) continue;
+    const parseSource = input.traditionalToSimplified
+      ? convertTraditionalToSimplified(cleaned)
+      : cleaned;
+    const parsed = parseBlockContent(parseSource);
+    if (parsed.length === 0) continue;
+    const shortName = (match[2] ?? "").toLowerCase();
+    let type: EraCrudCommandType;
+    if (shortName === "insert") type = "insert";
+    else if (shortName === "edit") type = "edit";
+    else if (shortName === "delete") type = "delete";
+    else continue;
+    commands.push({
+      type,
+      data: escapeEraData(parsed),
+      index: match.index,
+    });
+  }
+  commands.sort((left, right) => left.index - right.index);
+  return commands.map((command) => ({
+    type: command.type,
+    data: cloneCrudValue(command.data),
+  }));
+}
+
+function pathSegments(path: string): string[] {
+  const result: string[] = [];
+  if (path.charCodeAt(0) === 46) result.push("");
+  path.replace(
+    /[^.[\]]+|\[(?:(-?\d+(?:\.\d+)?)|(["'])((?:(?!\2)[^\\]|\\.)*?)\2)\]|(?=(?:\.|\[\])(?:\.|\[\]|$))/g,
+    (match: string, number: string, quote: string, substring: string) => {
+      result.push(
+        quote ? substring.replace(/\\(\\)?/g, "$1") : number || match,
+      );
+      return match;
+    },
+  );
+  return result;
+}
+
+function isArrayIndex(value: string): boolean {
+  if (!/^(?:0|[1-9]\d*)$/.test(value)) return false;
+  const index = Number(value);
+  return Number.isSafeInteger(index) && index >= 0 && index < 4_294_967_295;
+}
+
+function canTraverse(
+  value: unknown,
+): value is Record<string, unknown> | unknown[] {
+  return value !== null && typeof value === "object";
+}
+
+function readOwn(
+  target: Record<string, unknown> | unknown[],
+  key: string,
+): unknown {
+  return Object.prototype.hasOwnProperty.call(target, key)
+    ? (target as Record<string, unknown>)[key]
+    : undefined;
+}
+
+function getAtPath(target: unknown, path: string): unknown {
+  if (!canTraverse(target)) return undefined;
+  let cursor: unknown = target;
+  for (const segment of pathSegments(path)) {
+    if (!canTraverse(cursor)) return undefined;
+    cursor = readOwn(cursor, segment);
+  }
+  return cursor;
+}
+
+function hasAtPath(target: unknown, path: string): boolean {
+  if (!canTraverse(target)) return false;
+  let cursor: unknown = target;
+  for (const segment of pathSegments(path)) {
+    if (!canTraverse(cursor)) return false;
+    if (!Object.prototype.hasOwnProperty.call(cursor, segment)) return false;
+    cursor = (cursor as Record<string, unknown>)[segment];
+  }
+  return true;
+}
+
+function setAtPath(target: unknown, path: string, value: unknown): void {
+  if (!canTraverse(target)) return;
+  const segments = pathSegments(path);
+  if (segments.length === 0) return;
+  let cursor: Record<string, unknown> | unknown[] = target;
+  for (let index = 0; index < segments.length; index += 1) {
+    const key = segments[index];
+    if (index === segments.length - 1) {
+      defineOwn(cursor, key, cloneCrudValue(value));
+      return;
+    }
+    const child = readOwn(cursor, key);
+    if (canTraverse(child)) {
+      cursor = child;
+    } else {
+      const replacement: Record<string, unknown> | unknown[] = isArrayIndex(
+        segments[index + 1],
+      )
+        ? []
+        : {};
+      defineOwn(cursor, key, replacement);
+      cursor = replacement;
+    }
+  }
+}
+
+function unsetAtPath(target: unknown, path: string): void {
+  if (!canTraverse(target)) return;
+  const segments = pathSegments(path);
+  if (segments.length === 0) return;
+  let cursor: Record<string, unknown> | unknown[] = target;
+  for (let index = 0; index < segments.length - 1; index += 1) {
+    const child = readOwn(cursor, segments[index]);
+    if (!canTraverse(child)) return;
+    cursor = child;
+  }
+  delete (cursor as Record<string, unknown>)[segments[segments.length - 1]];
+}
+
+function isEmptyRecord(value: unknown): boolean {
+  return isPlainRecord(value) && Object.keys(value).length === 0;
+}
+
+function metaValue(node: unknown, key: string): unknown {
+  if (!isPlainRecord(node)) return undefined;
+  const meta = node.$meta;
+  return isPlainRecord(meta) ? meta[key] : undefined;
+}
+
+function resolveTemplate(context: TemplateContext): unknown {
+  const variablesContent = isPlainRecord(context.parentData)
+    ? context.parentData.$template
+    : undefined;
+  let merged: unknown = {};
+  merged = mergeReplaceArray(merged, context.inheritedContent);
+  merged = mergeReplaceArray(merged, variablesContent);
+  return isPlainRecord(merged) && Object.keys(merged).length > 0
+    ? merged
+    : null;
+}
+
+function inheritedTemplateContent(
+  parentTemplate: unknown,
+  key: string,
+): unknown {
+  if (!isPlainRecord(parentTemplate)) return undefined;
+  const prototypeContent = parentTemplate.$template;
+  const specificContent = parentTemplate[key];
+  if (isPlainRecord(prototypeContent) && isPlainRecord(specificContent)) {
+    return mergeReplaceArray(prototypeContent, specificContent);
+  }
+  if (isPlainRecord(specificContent)) return specificContent;
+  if (isPlainRecord(prototypeContent)) return prototypeContent;
+  return undefined;
+}
+
+function applyTemplate(template: unknown, patch: unknown): unknown {
+  if (!isPlainRecord(patch)) return patch;
+  if (!template) return patch;
+  if (Object.keys(patch).length === 0) return cloneCrudValue(template);
+  return mergeReplaceArray(template, patch);
+}
+
+function applyInsertAtLevel(
+  stat: unknown,
+  basePath: string,
+  patch: unknown,
+  logs: EraCrudEditLog[],
+  context: TemplateContext,
+): void {
+  const localTemplate = resolveTemplate(context);
+  const current = basePath ? getAtPath(stat, basePath) : stat;
+  const protection = metaValue(current, "unInsertAble");
+
+  if (basePath && typeof current === "undefined") {
+    const finalValue = sanitizeArrays(applyTemplate(localTemplate, patch));
+    setAtPath(stat, basePath, finalValue);
+    logs.push({
+      op: "insert",
+      path: basePath,
+      value_new: cloneCrudValue(finalValue),
+    });
+    return;
+  }
+
+  if (isPlainRecord(current) && isPlainRecord(patch)) {
+    const keys = Object.keys(patch);
+    const metaOnly = keys.every((key) => key === "$meta");
+    if (protection === "all" && keys.length > 0 && !metaOnly) return;
+    for (const key of keys) {
+      if (
+        protection === "self" &&
+        key !== "$meta" &&
+        !Object.prototype.hasOwnProperty.call(current, key)
+      ) {
+        continue;
+      }
+      const subPath = basePath ? `${basePath}.${key}` : key;
+      applyInsertAtLevel(stat, subPath, patch[key], logs, {
+        inheritedContent: inheritedTemplateContent(localTemplate, key),
+        parentData: current,
+      });
+    }
+  }
+}
+
+/** 对有序 VariableInsert 根对象应用非破坏性插入与模板规则。 */
+export function applyInsert(
+  inserts: readonly unknown[],
+  initialStat: unknown,
+): EraCrudResult {
+  const finalStat = cloneCrudValue(initialStat);
+  const editLog: EraCrudEditLog[] = [];
+  for (const root of inserts ?? []) {
+    if (!isPlainRecord(root) || Object.keys(root).length === 0) continue;
+    try {
+      applyInsertAtLevel(finalStat, "", root, editLog, {
+        inheritedContent: null,
+        parentData: null,
+      });
+    } catch {
+      // 与候选实现一致：单个根失败不会阻止后续根继续处理。
+    }
+  }
+  return { finalStat, editLog };
+}
+
+function selectedMks(
+  meta: Readonly<Record<string, unknown>>,
+): (string | null)[] {
+  return Array.isArray(meta.SelectedMks)
+    ? (cloneCrudValue(meta.SelectedMks) as (string | null)[])
+    : [];
+}
+
+function editLogs(
+  meta: Readonly<Record<string, unknown>>,
+): Readonly<Record<string, unknown>> {
+  return isPlainRecord(meta.EditLogs) ? meta.EditLogs : {};
+}
+
+function applyEditAtLevel(
+  stat: unknown,
+  basePath: string,
+  patch: unknown,
+  logs: EraCrudEditLog[],
+  context: EraEditContext,
+  orderedMks: readonly (string | null)[],
+  historicalLogs: Readonly<Record<string, unknown>>,
+): void {
+  const current = basePath ? getAtPath(stat, basePath) : stat;
+  if (typeof current === "undefined") return;
+  const updatable = metaValue(current, "updatable") ?? true;
+  const bypass =
+    updatable === false &&
+    isPlainRecord(patch) &&
+    isPlainRecord(patch.$meta) &&
+    patch.$meta.updatable === true;
+  if (updatable === false && !bypass) return;
+  if (!isPlainRecord(patch)) return;
+
+  for (const key of Object.keys(patch)) {
+    const subPath = basePath ? `${basePath}.${key}` : key;
+    const valueNew = patch[key];
+    if (isPlainRecord(valueNew)) {
+      applyEditAtLevel(
+        stat,
+        subPath,
+        valueNew,
+        logs,
+        context,
+        orderedMks,
+        historicalLogs,
+      );
+      continue;
+    }
+    if (!hasAtPath(stat, subPath)) continue;
+    let valueOld = findLatestNewValue(
+      subPath,
+      context.messageId,
+      orderedMks,
+      historicalLogs,
+    );
+    if (valueOld === null) valueOld = getAtPath(stat, subPath);
+    const cleaned = sanitizeArrays(valueNew);
+    setAtPath(stat, subPath, cleaned);
+    logs.push({
+      op: "update",
+      path: subPath,
+      value_old: cloneCrudValue(valueOld),
+      value_new: cloneCrudValue(cleaned),
+    });
+  }
+}
+
+/** 只更新已存在路径，并生成包含历史旧值的 update 日志。 */
+export function applyEdit(
+  edits: readonly unknown[],
+  initialStat: unknown,
+  context: EraEditContext,
+): EraCrudResult {
+  const finalStat = cloneCrudValue(initialStat);
+  const editLog: EraCrudEditLog[] = [];
+  const orderedMks = selectedMks(context.meta);
+  const historicalLogs = editLogs(context.meta);
+  for (const root of edits ?? []) {
+    if (!isPlainRecord(root) || Object.keys(root).length === 0) continue;
+    try {
+      applyEditAtLevel(
+        finalStat,
+        "",
+        root,
+        editLog,
+        context,
+        orderedMks,
+        historicalLogs,
+      );
+    } catch {
+      // 单根失败保持容错并继续。
+    }
+  }
+  return { finalStat, editLog };
+}
+
+function deleteBypass(patch: unknown): boolean {
+  if (!isPlainRecord(patch)) return false;
+  const metaPatch = patch.$meta;
+  if (isEmptyRecord(metaPatch)) return true;
+  return (
+    isPlainRecord(metaPatch) &&
+    Object.prototype.hasOwnProperty.call(metaPatch, "necessary")
+  );
+}
+
+function applyDeleteAtLevel(
+  stat: unknown,
+  basePath: string,
+  patch: unknown,
+  logs: EraCrudEditLog[],
+): void {
+  const current = basePath ? getAtPath(stat, basePath) : stat;
+  if (typeof current === "undefined") return;
+  const necessary = metaValue(current, "necessary");
+  const bypass = deleteBypass(patch);
+
+  if (isPlainRecord(patch) && Object.keys(patch).length > 0) {
+    if (necessary === "all" && !bypass) return;
+    for (const key of Object.keys(patch)) {
+      const subPatch = patch[key];
+      if (
+        necessary === "children" &&
+        isEmptyRecord(subPatch) &&
+        !(key === "$meta" && bypass)
+      ) {
+        continue;
+      }
+      const path = basePath ? `${basePath}.${key}` : key;
+      applyDeleteAtLevel(stat, path, subPatch, logs);
+    }
+    return;
+  }
+
+  if (necessary === "self" || necessary === "all" || basePath === "") return;
+  const valueOld = cloneCrudValue(current);
+  unsetAtPath(stat, basePath);
+  logs.push({ op: "delete", path: basePath, value_old: valueOld });
+}
+
+/** 按 necessary 保护规则递归删除，并为每个原子删除生成日志。 */
+export function applyDelete(
+  deletes: readonly unknown[],
+  initialStat: unknown,
+): EraCrudResult {
+  const finalStat = cloneCrudValue(initialStat);
+  const editLog: EraCrudEditLog[] = [];
+  for (const root of deletes ?? []) {
+    if (!isPlainRecord(root) || Object.keys(root).length === 0) continue;
+    try {
+      applyDeleteAtLevel(finalStat, "", root, editLog);
+    } catch {
+      // 单根失败保持候选容错语义。
+    }
+  }
+  return { finalStat, editLog };
+}
+
+/** 解析并严格按消息内出现顺序执行 Insert/Edit/Delete。 */
+export function applyMessageCommands(
+  input: EraApplyMessageCommandsInput,
+): EraApplyMessageCommandsResult {
+  const initial = cloneCrudValue(input.initialStat);
+  try {
+    const commands = parseMessageCommands({
+      content: input.content,
+      traditionalToSimplified: input.traditionalToSimplified,
+    });
+    let current = initial;
+    const accumulated: EraCrudEditLog[] = [];
+    for (const command of commands) {
+      let result: EraCrudResult;
+      if (command.type === "insert") {
+        result = applyInsert(command.data, current);
+      } else if (command.type === "edit") {
+        result = applyEdit(command.data, current, {
+          messageId: input.messageId,
+          meta: input.meta,
+        });
+      } else {
+        result = applyDelete(command.data, current);
+      }
+      current = result.finalStat;
+      accumulated.push(...result.editLog);
+    }
+    return {
+      finalStat: current,
+      editLog: accumulated,
+      commands,
+    };
+  } catch {
+    return { finalStat: initial, editLog: [], commands: [] };
+  }
+}

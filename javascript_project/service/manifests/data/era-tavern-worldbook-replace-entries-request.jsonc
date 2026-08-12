@@ -1,0 +1,12 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.tavern.worldbook.replace_entries.request",
+  "representation": "json",
+  "display_name": "ERA·酒馆·世界书·替换·条目·请求",
+  "description": "定义“ERA·酒馆·世界书·替换·条目·请求”的数据结构与校验约束。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": true
+  }
+}

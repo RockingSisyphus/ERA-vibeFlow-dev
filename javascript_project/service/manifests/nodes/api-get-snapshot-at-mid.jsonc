@@ -1,0 +1,18 @@
+{
+  "kind": "node",
+  "type_key": "era.api.get_snapshot_at_mid",
+  "display_name": "选择消息 ID 单点查询",
+  "category": "只读查询",
+  "description": "把规范化请求标记为 getSnapshotAtMId，不访问宿主。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [{"type": "era.api.query.request", "cardinality": "exactly_one", "display_name": "查询请求"}],
+    "provides": [{"key": "snapshot_at_mid_query", "type": "era.api.query.request", "display_name": "消息 ID 单点查询"}],
+    "params_schema": {}, "params_defaults": {},
+    "input_semantics": {"era.api.query.request":["输入：查询请求。"]},
+    "output_semantics": {"snapshot_at_mid_query":["输出：消息 ID 单点查询。"]}
+  },
+  "implementations": [{"language": "typescript", "targets": ["browser", "node"], "completion": "immediate", "source": {"kind": "file", "ref": "nodes/api/select_snapshot_at_mid.ts", "export": "run"}}],
+  "base_libs": [], "capabilities": []
+}

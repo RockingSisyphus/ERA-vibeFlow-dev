@@ -1,0 +1,20 @@
+{
+  "kind": "base_lib",
+  "id": "era.service.protocol",
+  "display_name": "ERA 服务协议纯函数库",
+  "description": "提供传输事件校验、有界事件集窗口归约、绝对截止时间控制、无损严格批次合并、来源覆盖检查、ignore 结算、连续状态合并和出站帧构造；不访问宿主、时间、随机数或持久化状态。",
+  "category": "服务协议",
+  "version": "1.0.0",
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": ["browser", "node"],
+      "source": {
+        "kind": "file",
+        "ref": "base_lib/service_protocol.ts"
+      }
+    }
+  ],
+  "dependencies": ["era.service.types", "era.service.event_planner"],
+  "external_packages": ["@era/vibeflow-contracts"]
+}

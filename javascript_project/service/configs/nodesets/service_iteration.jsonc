@@ -1,0 +1,198 @@
+{
+  "nodeset_imports": [
+    {
+      "path": "batch_execute.jsonc"
+    }
+  ],
+  "type_key": "era.service.iteration",
+  "display_name": "ERA 服务迭代",
+  "description": "接收一个传输事件、更新有界事件集、发送事件集控制，并等待或执行一个批次。",
+  "requires": [
+    {
+      "type": "era.service.state",
+      "cardinality": "exactly_one",
+      "display_name": "服务状态"
+    }
+  ],
+  "provides": [
+    {
+      "key": "service_state_next",
+      "type": "era.service.state.next",
+      "display_name": "下一服务状态"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "service_state",
+        "type": "era.service.state",
+        "display_name": "服务状态",
+        "required": true
+      }
+    ],
+    "max_steps": 32,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.service.terminal",
+        "display_name": "迭代启动",
+        "description": "启动一次异步服务迭代。"
+      },
+      {
+        "id": "state_input",
+        "type_used": "era.service.state_input",
+        "display_name": "读取携带状态",
+        "description": "将外层循环携带状态适配给本次迭代，不更改其内容。"
+      },
+      {
+        "id": "receive_event",
+        "type_used": "vibeflow.io",
+        "display_name": "接收服务事件",
+        "description": "在宿主提供的入站 Port 上挂起，直至收到一个传输事件。",
+        "provides": [
+          {
+            "key": "transport_event_raw",
+            "type": "era.transport.event.raw",
+            "display_name": "原始传输事件"
+          }
+        ],
+        "io": {
+          "operation": "receive",
+          "port": "era.service.in"
+        },
+        "requires": []
+      },
+      {
+        "id": "validate_transport",
+        "type_used": "era.service.validate_transport",
+        "display_name": "校验传输事件",
+        "description": "领域规划前校验 Schema、字节限制、宿主引用数量和无损参数标签。"
+      },
+      {
+        "id": "reduce_collection",
+        "type_used": "era.service.reduce_collection",
+        "display_name": "归约事件集",
+        "description": "应用 FIFO、防抖、生成栅栏、dry-run、独立 swipe、定时器和事件集限制语义。"
+      },
+      {
+        "id": "send_collection_control",
+        "type_used": "vibeflow.io",
+        "display_name": "发送事件集控制",
+        "description": "分支路由前向宿主提交定时器调度或取消命令。",
+        "requires": [
+          {
+            "type": "era.collection.control",
+            "cardinality": "exactly_one",
+            "display_name": "事件集控制"
+          }
+        ],
+        "io": {
+          "operation": "send",
+          "port": "era.service.out"
+        },
+        "provides": []
+      },
+      {
+        "id": "route_iteration",
+        "type_used": "era.service.route_iteration",
+        "display_name": "路由等待或执行",
+        "description": "选择更新后的事件集继续等待输入，或转为可执行批次。"
+      },
+      {
+        "id": "wait_state",
+        "type_used": "era.service.wait_state",
+        "display_name": "携带等待状态",
+        "description": "原样返回有界事件集状态，供下一次接收迭代使用。"
+      },
+      {
+        "id": "execute_batch",
+        "type_used": "era.service.batch_execute",
+        "display_name": "执行已收集批次",
+        "description": "对一个就绪批次依次规划、检查覆盖、执行、收尾、发送并路由致命结果。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.service.terminal",
+        "display_name": "迭代结束",
+        "description": "生成下一有界服务状态后结束本次迭代。"
+      }
+    ],
+    "edges": [
+      [
+        "start",
+        "state_input"
+      ],
+      {
+        "from": "state_input",
+        "to": "receive_event",
+        "transfer": false
+      },
+      {
+        "from": "state_input",
+        "to": "reduce_collection",
+        "schedule": false
+      },
+      [
+        "receive_event",
+        "validate_transport"
+      ],
+      [
+        "validate_transport",
+        "reduce_collection"
+      ],
+      [
+        "reduce_collection",
+        "send_collection_control"
+      ],
+      {
+        "from": "send_collection_control",
+        "to": "route_iteration",
+        "transfer": false
+      },
+      {
+        "from": "reduce_collection",
+        "to": "route_iteration",
+        "schedule": false
+      },
+      {
+        "from": "route_iteration",
+        "to": "wait_state",
+        "when": "iteration_route == 'wait'",
+        "transfer": false
+      },
+      {
+        "from": "reduce_collection",
+        "to": "wait_state",
+        "schedule": false
+      },
+      {
+        "from": "route_iteration",
+        "to": "execute_batch",
+        "when": "iteration_route == 'execute'",
+        "transfer": false
+      },
+      {
+        "from": "reduce_collection",
+        "to": "execute_batch",
+        "schedule": false
+      },
+      [
+        "wait_state",
+        "end"
+      ],
+      [
+        "execute_batch",
+        "end"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.service.state.next",
+        "cardinality": "exactly_one",
+        "display_name": "下一服务状态",
+        "as": "serviceStateNext"
+      }
+    ]
+  }
+}

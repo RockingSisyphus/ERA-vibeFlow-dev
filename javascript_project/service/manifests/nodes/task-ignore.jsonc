@@ -1,0 +1,43 @@
+{
+  "kind": "node",
+  "type_key": "era.task.ignore",
+  "display_name": "结算忽略步骤",
+  "category": "步骤执行",
+  "description": "按规划器保留的原因把 ignore 步骤来源结算为 ignored/no-op，不执行任何领域或宿主副作用。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.step.request.routed",
+        "cardinality": "exactly_one",
+        "display_name": "已路由忽略步骤"
+      }
+    ],
+    "provides": [
+      {
+        "key": "ignore_task_result",
+        "type": "era.task.result",
+        "display_name": "忽略步骤结果"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {"era.step.request.routed":["输入：已路由忽略步骤。"]},
+    "output_semantics": {"ignore_task_result":["输出：忽略步骤结果。"]}
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": ["browser", "node"],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/step/task_ignore.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": ["era.service.protocol"],
+  "capabilities": []
+}

@@ -1,0 +1,21 @@
+{
+  "kind": "node",
+  "type_key": "era.api.route_message_append",
+  "display_name": "判定消息追加结果",
+  "category": "逻辑提交",
+  "description": "将消息提交结果显式路由为继续同步、已确认未写失败或提交状态未知 fatal。",
+  "version": "1.0.0",
+  "flow_kind": "decision",
+  "contract": {
+    "requires": [{"type": "era.api.write.append.result", "cardinality": "exactly_one", "display_name": "消息追加结果"}],
+    "provides": [
+      {"key": "api_message_append_routed", "type": "era.api.write.append.result", "display_name": "已路由追加结果"},
+      {"key": "api_message_append_route", "type": "era.api.write.append.route", "display_name": "追加结果路由"}
+    ],
+    "params_schema": {}, "params_defaults": {},
+    "input_semantics": {"era.api.write.append.result":["输入：消息追加结果。"]},
+    "output_semantics": {"api_message_append_routed":["输出：已路由追加结果。"],"api_message_append_route":["输出：追加结果路由。"]}
+  },
+  "implementations": [{"language": "typescript", "targets": ["browser", "node"], "completion": "immediate", "source": {"kind": "file", "ref": "nodes/api/route_api_message_append.ts", "export": "run"}}],
+  "base_libs": [], "capabilities": []
+}

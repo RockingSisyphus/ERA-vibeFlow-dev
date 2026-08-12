@@ -1,0 +1,24 @@
+{
+  "kind": "base_lib",
+  "id": "era.service.sync_engine",
+  "display_name": "ERA 历史同步与定向回滚纯引擎",
+  "description": "纯函数比较 SelectedMks，规划无害删除快速同步，完成首个分歧、末楼、完全或定向回滚后的顺序重算，并保真更新 EditLogs、动作标记与连续处理计数；不执行宿主 IO。",
+  "category": "历史同步",
+  "version": "1.0.0",
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": ["browser", "node"],
+      "source": {
+        "kind": "file",
+        "ref": "base_lib/domain/sync_engine.ts"
+      }
+    }
+  ],
+  "dependencies": [
+    "era.snapshot.query",
+    "era.crud.engine",
+    "era.service.mk_engine"
+  ],
+  "external_packages": []
+}

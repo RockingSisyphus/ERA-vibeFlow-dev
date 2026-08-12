@@ -1,0 +1,107 @@
+{
+  "type_key": "era.macro.replace_all",
+  "display_name": "替换全部 ERA 宏",
+  "description": "对所有 ERA 宏依次执行纯扫描、快照选择、路径解析、值格式化和文本重建。",
+  "requires": [
+    {
+      "type": "era.macro.substring.for_replace",
+      "cardinality": "exactly_one",
+      "display_name": "待替换文本片段"
+    },
+    {
+      "type": "era.macro.snapshot",
+      "cardinality": "exactly_one",
+      "display_name": "宏快照"
+    }
+  ],
+  "provides": [
+    {
+      "key": "macro.replacement.rendered",
+      "type": "era.macro.replacement.candidate",
+      "display_name": "渲染替换候选"
+    }
+  ],
+  "pipeline": {
+    "inputs": [
+      {
+        "key": "substring",
+        "type": "era.macro.substring.for_replace",
+        "display_name": "待替换文本片段",
+        "required": true
+      },
+      {
+        "key": "snapshot",
+        "type": "era.macro.snapshot",
+        "display_name": "宏快照",
+        "required": true
+      }
+    ],
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.macro.terminal",
+        "display_name": "开始批量替换",
+        "description": "开始以纯函数方式替换全部 ERA 宏。"
+      },
+      {
+        "id": "scan_occurrences",
+        "type_used": "era.macro.scan_occurrences",
+        "display_name": "扫描宏匹配项",
+        "description": "每次创建新的全局正则，保留匹配顺序，并记录各匹配项的路径和元数据视图选择。"
+      },
+      {
+        "id": "resolve_occurrences",
+        "type_used": "era.macro.resolve_occurrences",
+        "display_name": "解析快照路径",
+        "description": "逐项选择含或不含元数据的快照，处理 $ALLDATA；快照缺失时保留原宏，路径缺失时作显式标记。"
+      },
+      {
+        "id": "format_values",
+        "type_used": "era.macro.format_values",
+        "display_name": "格式化宏值",
+        "description": "对象序列化为 JSON，标量转为字符串，缺失路径替换为空串，快照缺失时保留原宏文本。"
+      },
+      {
+        "id": "adapt_output",
+        "type_used": "era.macro.adapt_output",
+        "display_name": "适配替换输出",
+        "description": "将重建文本无损适配为节点集的替换候选契约，不访问宿主。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.macro.terminal",
+        "display_name": "结束批量替换",
+        "description": "生成渲染替换候选后结束流程。"
+      }
+    ],
+    "edges": [
+      [
+        "start",
+        "scan_occurrences"
+      ],
+      [
+        "scan_occurrences",
+        "resolve_occurrences"
+      ],
+      [
+        "resolve_occurrences",
+        "format_values"
+      ],
+      [
+        "format_values",
+        "adapt_output"
+      ],
+      [
+        "adapt_output",
+        "end"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.macro.replacement.candidate",
+        "cardinality": "exactly_one",
+        "display_name": "渲染替换候选"
+      }
+    ]
+  }
+}

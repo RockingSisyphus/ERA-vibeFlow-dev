@@ -1,0 +1,71 @@
+{
+  "kind": "node",
+  "type_key": "era.api.prepare_post_commit_context",
+  "display_name": "校验并准备提交后同步上下文",
+  "category": "外部 API",
+  "description": "验证提交后目标消息唯一且文本一致，并只更新可变消息快照，保留不可变 processing message/MK。",
+  "version": "1.0.0",
+  "flow_kind": "decision",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.api.write.append.result",
+        "cardinality": "exactly_one",
+        "display_name": "已确认消息追加"
+      },
+      {
+        "type": "era.tavern.messages.read_context.outcome",
+        "cardinality": "exactly_one",
+        "display_name": "提交后严格消息读取结果"
+      }
+    ],
+    "provides": [
+      {
+        "key": "post_commit_context_route",
+        "type": "era.api.write.post_commit.context.route",
+        "display_name": "提交后上下文路由"
+      },
+      {
+        "key": "post_commit_sync_context",
+        "type": "era.api.write.post_commit.context",
+        "display_name": "提交后同步上下文"
+      },
+      {
+        "key": "post_commit_context_failure",
+        "type": "era.api.write.post_commit.failure",
+        "display_name": "提交后上下文失败"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.api.write.append.result": ["输入：已确认消息追加。"],
+      "era.tavern.messages.read_context.outcome": [
+        "输入：提交后严格消息读取结果。"
+      ]
+    },
+    "output_semantics": {
+      "post_commit_context_route": ["输出：ready 或 fatal。"],
+      "post_commit_sync_context": [
+        "输出：ready 路由下为通过一致性验证的同步上下文；fatal 路由下为 null。"
+      ],
+      "post_commit_context_failure": [
+        "输出：fatal 路由下为消息已写后的致命一致性失败；ready 路由下为 null。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": ["browser", "node"],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/api/prepare_post_commit_context.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [],
+  "capabilities": []
+}

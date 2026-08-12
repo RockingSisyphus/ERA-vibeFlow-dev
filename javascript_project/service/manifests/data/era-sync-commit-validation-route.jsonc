@@ -1,0 +1,12 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.sync.commit.validation.route",
+  "representation": "json",
+  "display_name": "ERA·同步·提交·校验·路由",
+  "description": "区分同步提交候选合同有效，或必须在任何 Capability 写入前按失败结束。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "string",
+    "enum": ["valid", "failed"]
+  }
+}

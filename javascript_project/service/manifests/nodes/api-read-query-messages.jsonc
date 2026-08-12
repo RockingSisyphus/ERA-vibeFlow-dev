@@ -1,0 +1,19 @@
+{
+  "kind": "node",
+  "type_key": "era.api.read_query_messages",
+  "display_name": "只读获取聊天消息上下文",
+  "category": "宿主只读边界",
+  "description": "仅调用 messages.read_context 获取当前聊天消息；捕获读取错误供兼容结果处理。",
+  "version": "1.0.0",
+  "flow_kind": "data_store",
+  "contract": {
+    "requires": [],
+    "provides": [{"key": "query_messages_raw", "type": "era.tavern.messages.read_context.outcome", "display_name": "原始消息读取结果"}],
+    "params_schema": {}, "params_defaults": {},
+    "input_semantics": {},
+    "output_semantics": {"query_messages_raw":["输出：原始消息读取结果。"]}
+  },
+  "implementations": [{"language": "typescript", "targets": ["browser"], "completion": "suspend", "source": {"kind": "file", "ref": "nodes/api/read_query_messages.ts", "export": "run"}}],
+  "base_libs": [],
+  "capabilities": [{"id": "era.tavern.messages", "operations": ["read_context"]}]
+}

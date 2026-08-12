@@ -1,0 +1,4 @@
+{"kind":"node","type_key":"era.api.adapt_force_sync_result","display_name":"适配强制同步结果","category":"外部 API","description":"把共享同步任务结果适配为 API 分支结果，不改变结算、通知或诊断。","version":"1.0.0","flow_kind":"process","contract":{"requires":[{"type":"era.task.result","cardinality":"exactly_one","display_name":"共享同步结果"}],"provides":[{"key":"force_sync_success_result","type":"era.task.result.merged","display_name":"强制同步成功结果"}],"params_schema":{},"params_defaults":{},
+    "input_semantics": {"era.task.result":["输入：共享同步结果。"]},
+    "output_semantics": {"force_sync_success_result":["输出：强制同步成功结果。"]}
+  },"implementations":[{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/api/adapt_force_sync_result.ts","export":"run"}}],"base_libs":[],"capabilities":[]}

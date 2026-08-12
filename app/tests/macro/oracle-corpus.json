@@ -1,0 +1,182 @@
+{
+  "baselineCommit": "11f9c7d9c7881afa264ed27953a69120c0a7d21e",
+  "cases": [
+    {
+      "name": "无宏文本保持原样",
+      "substring": "没有任何宏",
+      "storedStat": { "kind": "present", "value": { "hp": 7 } },
+      "expected": "没有任何宏"
+    },
+    {
+      "name": "普通宏与 withmeta 宏混合",
+      "substring": "HP={{ERA: character.hp }}，标签={{era:character.label}}，来源={{ERA-withmeta: character.$meta.source}}",
+      "storedStat": {
+        "kind": "present",
+        "value": {
+          "character": {
+            "hp": 7,
+            "label": "纯净状态",
+            "$meta": { "source": "swipe-2" }
+          }
+        }
+      },
+      "expected": "HP=7，标签=纯净状态，来源=swipe-2"
+    },
+    {
+      "name": "普通 ALLDATA 递归移除美元字段",
+      "substring": "{{ERA:$ALLDATA}}",
+      "storedStat": {
+        "kind": "present",
+        "value": {
+          "character": {
+            "hp": 7,
+            "$meta": { "source": "swipe-2" },
+            "items": [{ "name": "剑", "$owner": "system" }]
+          },
+          "$root": "隐藏"
+        }
+      },
+      "expected": "{\"character\":{\"hp\":7,\"items\":[{\"name\":\"剑\"}]}}"
+    },
+    {
+      "name": "withmeta ALLDATA 保留完整视图",
+      "substring": "{{ERA-withmeta:$ALLDATA}}",
+      "storedStat": {
+        "kind": "present",
+        "value": {
+          "character": { "hp": 7, "$meta": { "source": "swipe-2" } },
+          "$root": "保留"
+        }
+      },
+      "expected": "{\"character\":{\"hp\":7,\"$meta\":{\"source\":\"swipe-2\"}},\"$root\":\"保留\"}"
+    },
+    {
+      "name": "quoted bracket 读取反转义后的带点键",
+      "substring": "{{ERA:[\"display.name\"]}}",
+      "storedStat": {
+        "kind": "present",
+        "value": { "display__DOT__name": "带点号的键" }
+      },
+      "expected": "带点号的键"
+    },
+    {
+      "name": "数组下标路径",
+      "substring": "{{ERA:items[1].name}}",
+      "storedStat": {
+        "kind": "present",
+        "value": { "items": [{ "name": "甲" }, { "name": "乙" }] }
+      },
+      "expected": "乙"
+    },
+    {
+      "name": "空路径读取空字符串键",
+      "substring": "{{ERA: }}",
+      "storedStat": { "kind": "present", "value": { "": "空键值" } },
+      "expected": "空键值"
+    },
+    {
+      "name": "null false zero 与空字符串",
+      "substring": "{{ERA:n}}/{{ERA:b}}/{{ERA:z}}/{{ERA:e}}",
+      "storedStat": {
+        "kind": "present",
+        "value": { "n": null, "b": false, "z": 0, "e": "" }
+      },
+      "expected": "null/false/0/"
+    },
+    {
+      "name": "路径缺失替换为空字符串",
+      "substring": "before{{ERA:missing.path}}after",
+      "storedStat": { "kind": "present", "value": {} },
+      "expected": "beforeafter"
+    },
+    {
+      "name": "显式缺失快照保留宏",
+      "substring": "{{ERA:character.hp}}",
+      "storedStat": { "kind": "missing" },
+      "expected": "{{ERA:character.hp}}"
+    },
+    {
+      "name": "存在但为 null 的状态保留宏",
+      "substring": "{{ERA:character.hp}}",
+      "storedStat": { "kind": "present", "value": null },
+      "expected": "{{ERA:character.hp}}"
+    },
+    {
+      "name": "键和值中的三类占位符反转义",
+      "substring": "{{ERA:character.label}}|{{ERA:[\"display.name\"]}}",
+      "storedStat": {
+        "kind": "present",
+        "value": {
+          "character": {
+            "label": "Mr__DOT__ X said __DQUOTE__hello__DQUOTE__ and it__SQUOTE__s fine"
+          },
+          "display__DOT__name": "带点号"
+        }
+      },
+      "expected": "Mr. X said \"hello\" and it's fine|带点号"
+    },
+    {
+      "name": "反转义键冲突沿用后写覆盖顺序",
+      "substring": "{{ERA:[\"a.b\"]}}",
+      "storedStat": {
+        "kind": "present",
+        "value": { "a__DOT__b": "先写", "a.b": "后写" }
+      },
+      "expected": "后写"
+    },
+    {
+      "name": "直接带点键优先于嵌套路径",
+      "substring": "{{ERA:a.b}}",
+      "storedStat": {
+        "kind": "present",
+        "value": { "a.b": "直接键", "a": { "b": "嵌套键" } }
+      },
+      "expected": "直接键"
+    },
+    {
+      "name": "未闭合与路径内右花括号保持原文",
+      "substring": "x={{ERA:missing y={{ERA:[\"a}b\"]}}",
+      "storedStat": { "kind": "present", "value": { "a}b": "不会匹配" } },
+      "expected": "x={{ERA:missing y={{ERA:[\"a}b\"]}}"
+    },
+    {
+      "name": "代理对前后的 UTF-16 位置重建",
+      "substring": "😀{{ERA:value}}🎉",
+      "storedStat": { "kind": "present", "value": { "value": "成功" } },
+      "expected": "😀成功🎉"
+    },
+    {
+      "name": "替换值中的美元和宏文本保持字面",
+      "substring": "值={{ERA:value}}",
+      "storedStat": {
+        "kind": "present",
+        "value": { "value": "$& $$ {{ERA:next}}", "next": "不得二次替换" }
+      },
+      "expected": "值=$& $$ {{ERA:next}}"
+    },
+    {
+      "name": "相邻宏按发现顺序替换",
+      "substring": "{{ERA:a}}{{ERA:b}}{{ERA:c}}",
+      "storedStat": {
+        "kind": "present",
+        "value": { "a": "甲", "b": "乙", "c": "丙" }
+      },
+      "expected": "甲乙丙"
+    },
+    {
+      "name": "大小写与空白变体",
+      "substring": "{{ era-withmeta : data.$meta.value }}",
+      "storedStat": {
+        "kind": "present",
+        "value": { "data": { "$meta": { "value": "命中" } } }
+      },
+      "expected": "命中"
+    },
+    {
+      "name": "单引号 bracket 中的双引号键",
+      "substring": "{{ERA:['a\"b']}}",
+      "storedStat": { "kind": "present", "value": { "a__DQUOTE__b": "引号键" } },
+      "expected": "引号键"
+    }
+  ]
+}

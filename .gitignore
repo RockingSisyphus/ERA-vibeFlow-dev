@@ -1,0 +1,21 @@
+# Python/VibeFlow runtime outputs
+__pycache__/
+*.pyc
+runs/
+
+# Project-local JavaScript toolchains and generated builds
+node_modules/
+project/*/node_modules/
+generated/
+app/dist/
+
+# Local intermediate builds and workspace release mirrors
+reports/archive/
+reports/release/
+reports/kernel-upgrade/**/pre-upgrade/
+reports/kernel-upgrade/**/macro-build-probe*/
+reports/kernel-upgrade/**/migrate-*.mjs
+
+# Local caches and editor noise
+.cache/
+.DS_Store

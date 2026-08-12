@@ -1,0 +1,16 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.sync.route",
+  "representation": "json",
+  "display_name": "ERA·同步·路由",
+  "description": "定义“ERA·同步·路由”的数据结构与校验约束。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "string",
+    "enum": [
+      "no-op",
+      "crud",
+      "reconcile"
+    ]
+  }
+}

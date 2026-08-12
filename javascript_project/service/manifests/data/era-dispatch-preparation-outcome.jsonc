@@ -1,0 +1,1 @@
+{"kind":"data_schema","type_key":"era.dispatch.preparation.outcome","representation":"json","display_name":"ERA 派发准备结果","description":"携带准备状态、严格消息、MK 与宿主写入确认。","schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":true}}

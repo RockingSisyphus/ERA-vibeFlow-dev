@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "captured_at": "2026-07-31T01:52:56+08:00",
+  "scope": [
+    "javascript_project/service/configs/**/*.jsonc",
+    "javascript_project/macro/configs/**/*.jsonc",
+    "javascript_project/service/manifests/**/*.jsonc",
+    "javascript_project/macro/manifests/**/*.jsonc",
+    "packages/era-contracts/contracts.catalog.jsonc"
+  ],
+  "source_readable_fields": {
+    "keys": [
+      "display_name",
+      "description",
+      "title",
+      "purpose"
+    ],
+    "total": 710,
+    "with_cjk": 710,
+    "without_cjk": 0
+  },
+  "generated_architecture_readable_fields": {
+    "total": 870,
+    "configurable_with_cjk": 864,
+    "unconfigurable_kernel_metadata": 6,
+    "kernel_metadata_objects": [
+      "node_types.vibeflow.io.info.display_name",
+      "node_types.vibeflow.io.info.description",
+      "node_types.vibeflow.loop.while.info.display_name",
+      "node_types.vibeflow.loop.while.info.description",
+      "node_types.vibeflow.loop.while.contract.params_schema.fields.body.description",
+      "node_types.vibeflow.loop.while.config.schema.fields.body.description"
+    ]
+  },
+  "semantic_architecture_comparison": {
+    "normalization": "Historical localization-only comparison before planned Host registration: remove display_name and description recursively, sort JSON keys, then hash.",
+    "era_service_before_sha256": "7e8149ebda1b0a29fb60112336d03e5a1de931f7e2f603bd77b70ec9889bc2f0",
+    "era_service_after_sha256": "7e8149ebda1b0a29fb60112336d03e5a1de931f7e2f603bd77b70ec9889bc2f0",
+    "era_macro_before_sha256": "f5af5d15b85f9611a866420492023e5581e88dd0fd14bd02a907abf76c8029a6",
+    "era_macro_after_sha256": "f5af5d15b85f9611a866420492023e5581e88dd0fd14bd02a907abf76c8029a6",
+    "semantic_change_detected": false
+  },
+  "post_kernel_host_refresh": {
+    "intended_semantic_change": "Register era.tavern.service_host as a workflow-level planned Host Extension resource in era-service only.",
+    "era_service_architecture_sha256": "dbbe8374f90dd763907111807514b14d292e28df4646ede8c5f447adf0827a50",
+    "era_service_svg_sha256": "8ce3ba13089f185741a70e5b762d253fcd8755615e3040a25aa32f3d4adb8f96",
+    "era_macro_architecture_sha256": "719fbdb10f3ebcb9bd37d5c9a358d52bcf1114bee1ced86d043dfd7223828b26",
+    "era_macro_svg_sha256": "461214da75143c56a37f892188d519306b80ed5a1ec6685461da9d3240a45d7e",
+    "planned_host_display_name_has_cjk": true,
+    "planned_host_description_has_cjk": true
+  },
+  "latest_review": {
+    "era_service": {
+      "status": "CONCERNS",
+      "errors": 0,
+      "warnings": 111
+    },
+    "era_macro": {
+      "status": "CONCERNS",
+      "errors": 0,
+      "warnings": 13
+    }
+  },
+  "intentionally_untranslated_machine_abi": [
+    "id",
+    "type_key",
+    "type_used",
+    "key",
+    "type",
+    "as",
+    "port",
+    "Capability and operation IDs",
+    "JSON field names and enum literals",
+    "when expressions",
+    "configuration keys",
+    "package names",
+    "source paths"
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "kind": "node",
+  "type_key": "era.macro.terminal",
+  "display_name": "宏流程终端",
+  "category": "宏处理",
+  "description": "以纯函数方式标记 ERA 宏工作流或节点集的开始与结束。",
+  "version": "1.0.0",
+  "flow_kind": "terminal",
+  "contract": {
+    "requires": [],
+    "provides": [],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {},
+    "output_semantics": {}
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": ["browser", "node"],
+      "source": {
+        "kind": "file",
+        "ref": "nodes/terminal.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [],
+  "capabilities": []
+}

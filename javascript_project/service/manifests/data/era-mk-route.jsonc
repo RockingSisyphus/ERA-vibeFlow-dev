@@ -1,0 +1,15 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.mk.route",
+  "representation": "json",
+  "display_name": "ERA 消息密钥提交路由",
+  "description": "选择不触及宿主状态的 no-op 分支或执行逻辑提交的 commit 分支。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "string",
+    "enum": [
+      "no-op",
+      "commit"
+    ]
+  }
+}

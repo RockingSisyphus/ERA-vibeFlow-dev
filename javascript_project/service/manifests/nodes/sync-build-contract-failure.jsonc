@@ -1,0 +1,18 @@
+{
+  "kind": "node",
+  "type_key": "era.sync.build_contract_failure",
+  "display_name": "构造同步提交合同失败",
+  "category": "同步事务",
+  "description": "把预提交合同失败转换为无通知、无状态推进且逐来源结算的普通同步失败。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [{"type": "era.sync.commit.contract.failure", "cardinality": "exactly_one", "display_name": "同步提交合同失败"}],
+    "provides": [{"key": "sync_contract_task_result", "type": "era.task.result", "display_name": "同步合同失败结果"}],
+    "params_schema": {}, "params_defaults": {},
+    "input_semantics": {"era.sync.commit.contract.failure": ["输入：同步提交合同失败证据。"]},
+    "output_semantics": {"sync_contract_task_result": ["输出：任何 Capability 写入前的普通失败结果。"]}
+  },
+  "implementations": [{"language": "typescript", "targets": ["browser", "node"], "completion": "immediate", "source": {"kind": "file", "ref": "nodes/sync/build_contract_failure.ts", "export": "run"}}],
+  "base_libs": ["era.service.sync_transaction"], "capabilities": []
+}

@@ -1,0 +1,11 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.macro.replacement.candidate",
+  "representation": "json",
+  "display_name": "宏替换候选",
+  "description": "由互斥的原样分支或替换分支中唯一激活的一支生成的字符串。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "string"
+  }
+}

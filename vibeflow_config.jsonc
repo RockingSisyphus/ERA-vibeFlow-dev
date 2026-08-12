@@ -1,0 +1,13 @@
+{
+  "policy": {},
+  "roots": [
+    {
+      "id": "era-service",
+      "path": "javascript_project/service"
+    },
+    {
+      "id": "era-macro",
+      "path": "javascript_project/macro"
+    }
+  ]
+}

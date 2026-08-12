@@ -1,0 +1,19 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.api.write.route",
+  "representation": "json",
+  "display_name": "ERA·API·写入·路由",
+  "description": "定义“ERA·API·写入·路由”的数据结构与校验约束。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "string",
+    "enum": [
+      "insert-by-object",
+      "update-by-object",
+      "insert-by-path",
+      "update-by-path",
+      "delete-by-object",
+      "delete-by-path"
+    ]
+  }
+}

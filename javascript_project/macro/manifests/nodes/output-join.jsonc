@@ -1,0 +1,42 @@
+{
+  "kind": "node",
+  "type_key": "era.macro.output_join",
+  "display_name": "选择宏结果",
+  "category": "宏处理",
+  "description": "接收互斥分支中唯一激活的候选并输出公开替换结果。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.macro.replacement.candidate",
+        "cardinality": "exactly_one",
+        "display_name": "已选替换候选"
+      }
+    ],
+    "provides": [
+      {
+        "key": "macro.replacement",
+        "type": "era.macro.replacement",
+        "display_name": "宏替换结果"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {"era.macro.replacement.candidate":["输入：已选替换候选。"]},
+    "output_semantics": {"macro.replacement":["输出：宏替换结果。"]}
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": ["browser", "node"],
+      "source": {
+        "kind": "file",
+        "ref": "nodes/output_join.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [],
+  "capabilities": []
+}

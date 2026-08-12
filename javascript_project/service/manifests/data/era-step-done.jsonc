@@ -1,0 +1,11 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.step.done",
+  "representation": "json",
+  "display_name": "ERA·步骤·完成",
+  "description": "定义“ERA·步骤·完成”的数据结构与校验约束。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "boolean"
+  }
+}

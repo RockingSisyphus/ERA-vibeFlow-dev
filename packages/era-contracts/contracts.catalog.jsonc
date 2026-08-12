@@ -1,0 +1,138 @@
+{
+  "package": "@era/vibeflow-contracts",
+  "status": "implemented",
+  "version": "1.4.0",
+  "schema_version": 1,
+  "contracts": [
+    {
+      "id": "era.json.value",
+      "owners": ["app", "service", "macro"],
+      "purpose": "可移植的 JSON 值。",
+    },
+    {
+      "id": "era.transport.arg.v1",
+      "owners": ["app", "service"],
+      "purpose": "无损区分 JSON、undefined 与受控宿主引用的参数标签。",
+    },
+    {
+      "id": "era.transport.event.v1",
+      "owners": ["app", "service"],
+      "purpose": "携带完整参数的酒馆、UI、API 或内部定时器入站事件。",
+    },
+    {
+      "id": "era.service.config.v1",
+      "owners": ["app", "service"],
+      "purpose": "有界队列、批次、事件、步骤、宿主引用和看门狗配置。",
+    },
+    {
+      "id": "era.service.state.v1",
+      "owners": ["service"],
+      "purpose": "不包含回执 Promise 或长期 trace 的有界循环携带状态。",
+    },
+    {
+      "id": "era.collection.reduction.v1",
+      "owners": ["service"],
+      "purpose": "事件集等待或执行路由、下一状态和批次事件。",
+    },
+    {
+      "id": "era.collection.control.v1",
+      "owners": ["app", "service"],
+      "purpose": "严格的定时器 schedule/cancel 幂等出站帧。",
+    },
+    {
+      "id": "era.batch.plan.v1",
+      "owners": ["service"],
+      "purpose": "覆盖全部来源序号的有界动态步骤计划。",
+    },
+    {
+      "id": "era.planned_step.v1",
+      "owners": ["service"],
+      "purpose": "无损携带 execute 领域任务/来源关系或 ignore 原因的严格动态步骤。",
+    },
+    {
+      "id": "era.domain_task.v1",
+      "owners": ["service"],
+      "purpose": "初始化、同步、API 或 MK 更新任务的完整候选基线语义。",
+    },
+    {
+      "id": "era.tavern.message.v1",
+      "owners": ["app", "service"],
+      "purpose": "只携带 ERA 所需消息编号、角色、当前激活文本和 swipe 索引的严格宿主投影。",
+    },
+    {
+      "id": "era.tavern.message_context.v2",
+      "owners": ["app", "service"],
+      "purpose": "禁止 Date、swipes_info、附件和宿主对象跨入工作流的严格消息上下文。",
+    },
+    {
+      "id": "era.dispatch.context.v2",
+      "owners": ["service"],
+      "purpose": "把可更新的严格消息快照与任务开始时不可变的处理消息、MK 和显式来源分离。",
+    },
+    {
+      "id": "era.planned_source.v1",
+      "owners": ["service"],
+      "purpose": "计划步骤来源事件及 primary、combined、coalesced 关系。",
+    },
+    {
+      "id": "era.task.state_update.v1",
+      "owners": ["service"],
+      "purpose": "任务成功后原子推进易失 Service 连续处理状态，不写入持久数据。",
+    },
+    {
+      "id": "era.batch.execution_state.v1",
+      "owners": ["service"],
+      "purpose": "步骤循环携带的索引、结算、通知、诊断和致命状态。",
+    },
+    {
+      "id": "era.failure.v1",
+      "owners": ["service"],
+      "purpose": "不携带 Error 实例的稳定可恢复错误。",
+    },
+    {
+      "id": "era.settlement.v1",
+      "owners": ["app", "service"],
+      "purpose": "completed、ignored、failed 或 cancelled 的恰好一次事件结算。",
+    },
+    {
+      "id": "era.notification.v1",
+      "owners": ["app", "service"],
+      "purpose": "按声明顺序在锁外启动的事件通知与带标签参数。",
+    },
+    {
+      "id": "era.diagnostic.v1",
+      "owners": ["app", "service"],
+      "purpose": "不改变业务结算的结构化诊断。",
+    },
+    {
+      "id": "era.task.result.v1",
+      "owners": ["service"],
+      "purpose": "committed、no-op、failed 或 fatal 的领域任务结果。",
+    },
+    {
+      "id": "era.batch.finalization.v1",
+      "owners": ["service"],
+      "purpose": "批次结束时的下一状态、完整结算、通知、诊断与致命标记。",
+    },
+    {
+      "id": "era.batch.result.v1",
+      "owners": ["app", "service"],
+      "purpose": "先结算回执、后启动通知的幂等批次结果帧。",
+    },
+    {
+      "id": "era.service.output.v1",
+      "owners": ["app", "service"],
+      "purpose": "事件集控制帧或批次结果帧。",
+    },
+    {
+      "id": "era.macro.inputs.v1",
+      "owners": ["app", "macro"],
+      "purpose": "宏子串与存在或缺失的已存储状态。",
+    },
+    {
+      "id": "era.macro.outputs.v1",
+      "owners": ["app", "macro"],
+      "purpose": "立即返回的替换字符串。",
+    },
+  ],
+}

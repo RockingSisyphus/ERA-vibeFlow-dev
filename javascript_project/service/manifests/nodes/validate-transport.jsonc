@@ -1,0 +1,48 @@
+{
+  "kind": "node",
+  "type_key": "era.service.validate_transport",
+  "display_name": "校验传输事件",
+  "category": "服务迭代",
+  "description": "严格校验事件字段、tagged 参数、序号、来源、字节和宿主引用限制。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.transport.event.raw",
+        "cardinality": "exactly_one",
+        "display_name": "原始传输事件"
+      }
+    ],
+    "provides": [
+      {
+        "key": "transport_event",
+        "type": "era.transport.event",
+        "display_name": "已校验传输事件"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {"era.transport.event.raw":["输入：原始传输事件。"]},
+    "output_semantics": {"transport_event":["输出：已校验传输事件。"]}
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/iteration/validate_transport.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.protocol"
+  ],
+  "capabilities": []
+}

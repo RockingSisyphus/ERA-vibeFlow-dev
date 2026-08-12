@@ -1,0 +1,1 @@
+{"kind":"data_schema","type_key":"era.dispatch.canonical_context","representation":"json","display_name":"ERA 严格派发读取上下文","description":"只携带严格消息投影、元数据与占位符设置。","schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":true}}

@@ -1,0 +1,19 @@
+{
+  "kind": "capability",
+  "id": "era.tavern.variables",
+  "targets": ["browser"],
+  "display_name": "酒馆变量",
+  "description": "读取并按逻辑提交边界写入现有 ERA 状态、元数据、已选 MK 与编辑日志。",
+  "operations": {
+    "read": {
+      "input_type": "era.tavern.variables.read.request",
+      "output_type": "era.tavern.variables.read.result",
+      "completion": "suspend"
+    },
+    "commit": {
+      "input_type": "era.tavern.variables.commit.request",
+      "output_type": "era.tavern.variables.commit.result",
+      "completion": "suspend"
+    }
+  }
+}

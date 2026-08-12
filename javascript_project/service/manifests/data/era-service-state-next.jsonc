@@ -1,0 +1,205 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.service.state.next",
+  "representation": "json",
+  "display_name": "ERA 下一服务状态",
+  "description": "一次等待或批次处理后交还永久循环的有界状态。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "schemaVersion": {
+        "const": 1
+      },
+      "collection": {
+        "type": "array",
+        "maxItems": 128,
+        "items": {
+          "type": "object",
+          "allOf": [
+            {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "source": {
+                      "enum": [
+                        "tavern",
+                        "ui",
+                        "era-api"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "source"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "source": {
+                      "const": "timer"
+                    },
+                    "type": {
+                      "const": "era.service.collection_timer"
+                    }
+                  },
+                  "required": [
+                    "source",
+                    "type"
+                  ]
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "schemaVersion": {
+              "const": 1
+            },
+            "eventId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "sequence": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "type": {
+              "type": "string",
+              "minLength": 1
+            },
+            "occurredAt": {
+              "type": "number"
+            },
+            "source": {
+              "type": "string",
+              "enum": [
+                "tavern",
+                "ui",
+                "era-api",
+                "timer"
+              ]
+            },
+            "args": {
+              "type": "array",
+              "items": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "const": "json"
+                      },
+                      "value": {}
+                    },
+                    "required": [
+                      "kind",
+                      "value"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "const": "undefined"
+                      }
+                    },
+                    "required": [
+                      "kind"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "const": "host-ref"
+                      },
+                      "token": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "refKind": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "token",
+                      "refKind"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              }
+            },
+            "encodedBytes": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 262144
+            }
+          },
+          "required": [
+            "schemaVersion",
+            "eventId",
+            "sequence",
+            "type",
+            "occurredAt",
+            "source",
+            "args",
+            "encodedBytes"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "collectionBytes": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 2097152
+      },
+      "iteration": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "consecutiveProcessingCount": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "consecutiveMk": {
+        "oneOf": [
+          {
+            "type": "string",
+            "minLength": 1
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "timerToken": {
+        "oneOf": [
+          {
+            "type": "string",
+            "minLength": 1
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
+    "required": [
+      "schemaVersion",
+      "collection",
+      "collectionBytes",
+      "iteration",
+      "consecutiveProcessingCount",
+      "consecutiveMk",
+      "timerToken"
+    ],
+    "additionalProperties": false
+  }
+}
+

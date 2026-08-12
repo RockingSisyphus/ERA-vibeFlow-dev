@@ -1,0 +1,18 @@
+{
+  "kind": "node",
+  "type_key": "era.api.merge_query_result",
+  "display_name": "导出查询中间结果",
+  "category": "API 结果",
+  "description": "把唯一快照查询任务结果转换为 task_api 使用的中间结果类型。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [{"type": "era.task.result", "cardinality": "exactly_one", "display_name": "快照查询任务结果"}],
+    "provides": [{"key": "query_api_result", "type": "era.task.result.merged", "display_name": "查询 API 结果"}],
+    "params_schema": {}, "params_defaults": {},
+    "input_semantics": {"era.task.result":["输入：快照查询任务结果。"]},
+    "output_semantics": {"query_api_result":["输出：查询 API 结果。"]}
+  },
+  "implementations": [{"language": "typescript", "targets": ["browser", "node"], "completion": "immediate", "source": {"kind": "file", "ref": "nodes/api/merge_query_result.ts", "export": "run"}}],
+  "base_libs": [], "capabilities": []
+}

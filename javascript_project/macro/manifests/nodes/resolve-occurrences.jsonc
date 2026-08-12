@@ -1,0 +1,42 @@
+{
+  "kind": "node",
+  "type_key": "era.macro.resolve_occurrences",
+  "display_name": "解析快照路径",
+  "category": "宏处理",
+  "description": "按宏类型选择快照并使用 Lodash 路径语义解析每个值。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.macro.occurrence_plan",
+        "cardinality": "exactly_one",
+        "display_name": "宏匹配计划"
+      }
+    ],
+    "provides": [
+      {
+        "key": "macro.resolved_occurrences",
+        "type": "era.macro.resolved_occurrences",
+        "display_name": "已解析宏匹配项"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {"era.macro.occurrence_plan":["输入：宏匹配计划。"]},
+    "output_semantics": {"macro.resolved_occurrences":["输出：已解析宏匹配项。"]}
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": ["browser", "node"],
+      "source": {
+        "kind": "file",
+        "ref": "nodes/resolve_occurrences.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": ["era.macro.runtime"],
+  "capabilities": []
+}

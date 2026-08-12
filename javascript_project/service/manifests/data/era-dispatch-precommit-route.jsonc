@@ -1,0 +1,1 @@
+{"kind":"data_schema","type_key":"era.dispatch.precommit.route","representation":"json","display_name":"ERA 预提交路由","description":"选择提交或保留统一准备结果。","schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","enum":["commit","no-op"]}}

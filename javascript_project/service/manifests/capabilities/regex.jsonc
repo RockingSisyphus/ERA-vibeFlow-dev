@@ -1,0 +1,19 @@
+{
+  "kind": "capability",
+  "id": "era.tavern.regex",
+  "targets": ["browser"],
+  "display_name": "酒馆正则资源",
+  "description": "读取 ERA 正则资源，并以幂等方式创建或更新资源。",
+  "operations": {
+    "read": {
+      "input_type": "era.tavern.regex.read.request",
+      "output_type": "era.tavern.regex.read.result",
+      "completion": "suspend"
+    },
+    "upsert": {
+      "input_type": "era.tavern.regex.upsert.request",
+      "output_type": "era.tavern.regex.upsert.result",
+      "completion": "suspend"
+    }
+  }
+}

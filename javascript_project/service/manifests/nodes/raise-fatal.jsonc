@@ -1,0 +1,48 @@
+{
+  "kind": "node",
+  "type_key": "era.service.raise_fatal",
+  "display_name": "抛出致命服务错误",
+  "category": "批次发布",
+  "description": "仅在 batch-result 已提交后抛出稳定致命错误，阻止服务继续接受事件。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.service.state.post_batch",
+        "cardinality": "exactly_one",
+        "display_name": "批次后状态"
+      }
+    ],
+    "provides": [
+      {
+        "key": "fatal_state_next",
+        "type": "era.service.state.next",
+        "display_name": "致命状态"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {"era.service.state.post_batch":["输入：批次后状态。"]},
+    "output_semantics": {"fatal_state_next":["输出：致命状态。"]}
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/publish/raise_fatal.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.protocol"
+  ],
+  "capabilities": []
+}

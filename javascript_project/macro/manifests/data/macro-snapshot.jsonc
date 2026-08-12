@@ -1,0 +1,34 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.macro.snapshot",
+  "representation": "json",
+  "display_name": "宏快照",
+  "description": "包含已反转义的含元数据与不含元数据视图，或显式缺失标记的带标签不可变快照。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "oneOf": [
+      {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "const": "present"
+          },
+          "statWithMeta": {},
+          "statWithoutMeta": {}
+        },
+        "required": ["kind", "statWithMeta", "statWithoutMeta"],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "const": "missing"
+          }
+        },
+        "required": ["kind"],
+        "additionalProperties": false
+      }
+    ]
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "kind": "node",
+  "type_key": "era.api.merge_result",
+  "display_name": "合并互斥 API 结果",
+  "category": "API 结果",
+  "description": "把四条互斥 API 分支之一的中间结果转换为唯一公共任务结果。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [{"type": "era.task.result.merged", "cardinality": "exactly_one", "display_name": "API 分支结果"}],
+    "provides": [{"key": "api_task_result", "type": "era.task.result", "display_name": "API 任务结果"}],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {"era.task.result.merged":["输入：API 分支结果。"]},
+    "output_semantics": {"api_task_result":["输出：API 任务结果。"]}
+  },
+  "implementations": [{
+    "language": "typescript",
+    "targets": ["browser", "node"],
+    "completion": "immediate",
+    "source": {"kind": "file", "ref": "nodes/api/merge_api_result.ts", "export": "run"}
+  }],
+  "base_libs": [],
+  "capabilities": []
+}

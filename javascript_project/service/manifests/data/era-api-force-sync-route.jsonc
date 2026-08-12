@@ -1,0 +1,1 @@
+{"kind":"data_schema","type_key":"era.api.force_sync.route","representation":"json","display_name":"强制同步路由","description":"选择执行同步或返回输入失败。","schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"string","enum":["sync","failed"]}}

@@ -1,0 +1,19 @@
+{
+  "kind": "node",
+  "type_key": "era.api.commit_message_append",
+  "display_name": "提交 API 消息指令",
+  "category": "宿主写入边界",
+  "description": "通过挂起式消息 Capability 提交一条局部消息更新；只有明确未应用可恢复，未知结果必须进入 fatal。",
+  "version": "1.0.0",
+  "flow_kind": "data_store",
+  "contract": {
+    "requires": [{"type": "era.api.write.append.request", "cardinality": "exactly_one", "display_name": "消息追加请求"}],
+    "provides": [{"key": "api_message_append_result", "type": "era.api.write.append.result", "display_name": "消息追加结果"}],
+    "params_schema": {}, "params_defaults": {},
+    "input_semantics": {"era.api.write.append.request":["输入：消息追加请求。"]},
+    "output_semantics": {"api_message_append_result":["输出：消息追加结果。"]}
+  },
+  "implementations": [{"language": "typescript", "targets": ["browser"], "completion": "suspend", "source": {"kind": "file", "ref": "nodes/api/commit_api_message_append.ts", "export": "run"}}],
+  "base_libs": [],
+  "capabilities": [{"id": "era.tavern.messages", "operations": ["update_content"]}]
+}

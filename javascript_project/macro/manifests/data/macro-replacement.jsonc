@@ -1,0 +1,11 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.macro.replacement",
+  "representation": "json",
+  "display_name": "宏替换结果",
+  "description": "由 runWorkflow() 同步返回的稳定公开替换字符串。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "string"
+  }
+}

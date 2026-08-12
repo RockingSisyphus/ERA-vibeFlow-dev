@@ -1,0 +1,48 @@
+{
+  "kind": "node",
+  "type_key": "era.service.route_iteration",
+  "display_name": "路由等待或执行",
+  "category": "服务迭代",
+  "description": "按事件集归约结果选择继续等待或执行批次。",
+  "version": "1.0.0",
+  "flow_kind": "decision",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.collection.reduction",
+        "cardinality": "exactly_one",
+        "display_name": "事件集归约结果"
+      }
+    ],
+    "provides": [
+      {
+        "key": "iteration_route",
+        "type": "era.iteration.route",
+        "display_name": "迭代路由"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {"era.collection.reduction":["输入：事件集归约结果。"]},
+    "output_semantics": {"iteration_route":["输出：迭代路由。"]}
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/iteration/route_iteration.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.protocol"
+  ],
+  "capabilities": []
+}

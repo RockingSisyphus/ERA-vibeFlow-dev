@@ -1,0 +1,145 @@
+{
+  "type_key": "era.service.batch_publish",
+  "display_name": "ERA 批次发布",
+  "description": "构造并发送一个批次结果帧，然后选择正常继续或致命终止服务。",
+  "requires": [
+    {
+      "type": "era.batch.finalization",
+      "cardinality": "exactly_one",
+      "display_name": "批次收尾结果"
+    }
+  ],
+  "provides": [
+    {
+      "key": "published_state_next",
+      "type": "era.service.state.next",
+      "display_name": "发布后的下一状态"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "batch_finalization",
+        "type": "era.batch.finalization",
+        "display_name": "批次收尾结果",
+        "required": true
+      }
+    ],
+    "max_steps": 16,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.service.terminal",
+        "display_name": "发布启动",
+        "description": "开始发布出站帧。"
+      },
+      {
+        "id": "build_outbound",
+        "type_used": "era.service.build_outbound",
+        "display_name": "构造批次结果帧",
+        "description": "构造幂等帧，确保结算先于通知，并携带致命决策。"
+      },
+      {
+        "id": "send_batch_result",
+        "type_used": "vibeflow.io",
+        "display_name": "发送批次结果",
+        "description": "在抛出任何致命错误前，将最终帧提交到出站 Port。",
+        "requires": [
+          {
+            "type": "era.batch.result",
+            "cardinality": "exactly_one",
+            "display_name": "批次结果帧"
+          }
+        ],
+        "io": {
+          "operation": "send",
+          "port": "era.service.out"
+        },
+        "provides": []
+      },
+      {
+        "id": "route_fatal",
+        "type_used": "era.service.route_fatal",
+        "display_name": "路由致命结果",
+        "description": "可恢复批次结果后继续；提交结果未知或部分提交时抛出错误。"
+      },
+      {
+        "id": "continue_state",
+        "type_used": "era.service.continue_state",
+        "display_name": "继续服务",
+        "description": "导出已提交的批次后状态，供外层循环下一次迭代使用。"
+      },
+      {
+        "id": "raise_fatal",
+        "type_used": "era.service.raise_fatal",
+        "display_name": "抛出致命服务错误",
+        "description": "仅在宿主收到终止批次帧后抛出带类型的致命错误。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.service.terminal",
+        "display_name": "发布结束",
+        "description": "发布路径未被致命异常中断时结束。"
+      }
+    ],
+    "edges": [
+      [
+        "start",
+        "build_outbound"
+      ],
+      [
+        "build_outbound",
+        "send_batch_result"
+      ],
+      {
+        "from": "send_batch_result",
+        "to": "route_fatal",
+        "transfer": false
+      },
+      {
+        "from": "build_outbound",
+        "to": "route_fatal",
+        "schedule": false
+      },
+      {
+        "from": "route_fatal",
+        "to": "continue_state",
+        "when": "fatal_route == 'continue'",
+        "transfer": false
+      },
+      {
+        "from": "build_outbound",
+        "to": "continue_state",
+        "schedule": false
+      },
+      {
+        "from": "route_fatal",
+        "to": "raise_fatal",
+        "when": "fatal_route == 'fatal'",
+        "transfer": false
+      },
+      {
+        "from": "build_outbound",
+        "to": "raise_fatal",
+        "schedule": false
+      },
+      [
+        "continue_state",
+        "end"
+      ],
+      [
+        "raise_fatal",
+        "end"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.service.state.next",
+        "cardinality": "exactly_one",
+        "display_name": "发布后的下一状态",
+        "as": "publishedStateNext"
+      }
+    ]
+  }
+}

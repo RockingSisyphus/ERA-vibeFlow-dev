@@ -1,0 +1,48 @@
+{
+  "kind": "node",
+  "type_key": "era.service.continue_state",
+  "display_name": "继续服务",
+  "category": "批次发布",
+  "description": "无损导出已发布批次的下一服务状态。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.service.state.post_batch",
+        "cardinality": "exactly_one",
+        "display_name": "批次后状态"
+      }
+    ],
+    "provides": [
+      {
+        "key": "continued_state_next",
+        "type": "era.service.state.next",
+        "display_name": "继续服务状态"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {"era.service.state.post_batch":["输入：批次后状态。"]},
+    "output_semantics": {"continued_state_next":["输出：继续服务状态。"]}
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/publish/continue_state.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.protocol"
+  ],
+  "capabilities": []
+}

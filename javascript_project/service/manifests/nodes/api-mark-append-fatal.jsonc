@@ -1,0 +1,25 @@
+{
+  "kind": "node",
+  "type_key": "era.api.mark_append_fatal",
+  "display_name": "标记未知消息提交",
+  "category": "逻辑提交",
+  "description": "显式承接部分写入或结果未知分支，并把原追加结果无损交给统一失败结果构造节点。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [{"type": "era.api.write.append.result", "cardinality": "exactly_one", "display_name": "未知消息追加结果"}],
+    "provides": [{"key": "fatal_append_result", "type": "era.api.write.append.result", "display_name": "已标记未知追加结果"}],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {"era.api.write.append.result":["输入：未知消息追加结果。"]},
+    "output_semantics": {"fatal_append_result":["输出：已标记未知追加结果。"]}
+  },
+  "implementations": [{
+    "language": "typescript",
+    "targets": ["browser", "node"],
+    "completion": "immediate",
+    "source": {"kind": "file", "ref": "nodes/api/mark_append_fatal.ts", "export": "run"}
+  }],
+  "base_libs": [],
+  "capabilities": []
+}

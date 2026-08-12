@@ -1,0 +1,4 @@
+{"kind":"node","type_key":"era.api.prepare_delete_object","display_name":"构造对象删除指令","category":"外部 API","description":"把 era:deleteByObject 请求转换为候选 VariableDelete 对象块。","version":"1.0.0","flow_kind":"process","contract":{"requires":[{"type":"era.api.write.request","cardinality":"exactly_one","display_name":"写入请求"}],"provides":[{"key":"delete_object_directive","type":"era.api.write.directive","display_name":"对象删除指令"}],"params_schema":{},"params_defaults":{},
+    "input_semantics": {"era.api.write.request":["输入：写入请求。"]},
+    "output_semantics": {"delete_object_directive":["输出：对象删除指令。"]}
+  },"implementations":[{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/api/prepare_delete_by_object.ts","export":"run"}}],"base_libs":["era.service.api_write_engine"],"capabilities":[]}

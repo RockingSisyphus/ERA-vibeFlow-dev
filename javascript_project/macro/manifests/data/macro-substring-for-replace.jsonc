@@ -1,0 +1,11 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.macro.substring.for_replace",
+  "representation": "json",
+  "display_name": "待替换文本片段",
+  "description": "与稳定快照一同传入替换节点集的已检查原始文本片段。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "string"
+  }
+}

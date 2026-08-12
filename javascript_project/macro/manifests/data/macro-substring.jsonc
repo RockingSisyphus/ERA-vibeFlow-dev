@@ -1,0 +1,11 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.macro.substring",
+  "representation": "json",
+  "display_name": "宏文本片段",
+  "description": "由 Tavern 同步宏适配器传入的原始文本片段。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "string"
+  }
+}

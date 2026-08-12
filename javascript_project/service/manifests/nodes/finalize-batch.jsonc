@@ -1,0 +1,48 @@
+{
+  "kind": "node",
+  "type_key": "era.service.finalize_batch",
+  "display_name": "完成批次收尾",
+  "category": "批次执行",
+  "description": "按来源序号规范化结算并确保恰好一次覆盖，构造下一状态与致命标记。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.batch.execution.state.after",
+        "cardinality": "exactly_one",
+        "display_name": "最终执行状态"
+      }
+    ],
+    "provides": [
+      {
+        "key": "batch_finalization",
+        "type": "era.batch.finalization",
+        "display_name": "批次收尾结果"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {"era.batch.execution.state.after":["输入：最终执行状态。"]},
+    "output_semantics": {"batch_finalization":["输出：批次收尾结果。"]}
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/batch/finalize_batch.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.protocol"
+  ],
+  "capabilities": []
+}

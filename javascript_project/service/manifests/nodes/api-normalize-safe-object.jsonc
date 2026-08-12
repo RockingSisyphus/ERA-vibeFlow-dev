@@ -1,0 +1,31 @@
+{
+  "kind": "node",
+  "type_key": "era.api.normalize_safe_object",
+  "display_name": "安全规范化兼容对象",
+  "category": "外部 API",
+  "description": "仅在三个公开对象 API 入口应用 legacy-safe-object-v1，安全提升自有 __proto__ 字段并拒绝不可移植值。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      { "type": "era.api.request", "cardinality": "exactly_one", "display_name": "规范化 API 请求" }
+    ],
+    "provides": [
+      { "key": "safe_api_request", "type": "era.api.request", "display_name": "安全 API 请求" }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": { "era.api.request": ["输入：尚未物化兼容保留键的公开 API 请求。"] },
+    "output_semantics": { "safe_api_request": ["输出：无原型、无访问器且无循环引用的安全 API 请求。"] }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": ["browser", "node"],
+      "completion": "immediate",
+      "source": { "kind": "file", "ref": "nodes/api/normalize_safe_object_payload.ts", "export": "run" }
+    }
+  ],
+  "base_libs": [],
+  "capabilities": []
+}

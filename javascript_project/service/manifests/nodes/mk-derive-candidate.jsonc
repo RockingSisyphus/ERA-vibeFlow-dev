@@ -1,0 +1,25 @@
+{
+  "kind": "node",
+  "type_key": "era.mk.derive",
+  "display_name": "推导消息密钥提交候选",
+  "category": "消息密钥纯计算",
+  "description": "仅扫描当前激活文本，使用主事件 occurredAt 与 eventId/sequence 的稳定 base36 token 生成 MK，并保真构造 SelectedMks 更新。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [{"type": "era.mk.context", "cardinality": "exactly_one", "display_name": "MK 上下文"}],
+    "provides": [{"key": "mk_candidate", "type": "era.mk.candidate", "display_name": "MK 候选"}],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {"era.mk.context":["输入：MK 上下文。"]},
+    "output_semantics": {"mk_candidate":["输出：MK 候选。"]}
+  },
+  "implementations": [{
+    "language": "typescript",
+    "targets": ["browser", "node"],
+    "completion": "immediate",
+    "source": {"kind": "file", "ref": "nodes/update_mk/derive_mk_candidate.ts", "export": "run"}
+  }],
+  "base_libs": ["era.service.mk_engine", "era.service.types"],
+  "capabilities": []
+}

@@ -1,0 +1,121 @@
+{
+  "nodeset_imports": [
+    {
+      "path": "nodesets/service_iteration.jsonc"
+    }
+  ],
+  "host_extensions": [
+    {
+      "id": "era.tavern.service_host",
+      "status": "implemented",
+      "enabled": true,
+      "display_name": "ERA 酒馆服务宿主",
+      "description": "连接 SillyTavern 与 Tavern Helper，管理单一先进先出队列、回执、高水位屏障、绝对截止时间定时器、宿主引用和出站帧幂等，并提供服务端口及五类酒馆能力；消息读取按 era-active-message-v1 投影，Host 不承载 CRUD、同步、合并或回滚规则。",
+      "category": "宿主接线",
+      "version": "0.1.0",
+      "targets": [
+        "browser"
+      ],
+      "provides": [
+        "vibeflow.port",
+        "era.tavern.variables",
+        "era.tavern.messages",
+        "era.tavern.worldbook",
+        "era.tavern.regex",
+        "era.tavern.identity"
+      ],
+      "dependencies": [],
+      "config": {
+        "ports": {
+          "inbound": "era.service.in",
+          "outbound": "era.service.out"
+        },
+        "limits": {
+          "max_event_bytes": 262144,
+          "max_fifo_events": 256,
+          "max_fifo_bytes": 8388608,
+          "max_host_refs_per_event": 32
+        },
+        "barrier_watchdog_ms": 5000
+      }
+    }
+  ],
+  "global_config": {
+    "config": {
+      "max_event_bytes": 262144,
+      "max_fifo_events": 256,
+      "max_fifo_bytes": 8388608,
+      "max_collection_events": 128,
+      "max_collection_bytes": 2097152,
+      "max_batch_steps": 128,
+      "barrier_watchdog_ms": 5000,
+      "max_host_refs_per_event": 32
+    },
+    "allow_config_override": false
+  },
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [],
+    "max_steps": 8,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.service.terminal",
+        "display_name": "ERA 服务启动",
+        "description": "启动 ERA 异步服务工作流。"
+      },
+      {
+        "id": "initialize_state",
+        "type_used": "era.service.initialize_state",
+        "display_name": "初始化服务状态",
+        "description": "创建有界服务携带状态，用于事件收集、定时器、迭代跟踪和连续 MK 计数。"
+      },
+      {
+        "id": "service_loop",
+        "type_used": "vibeflow.loop.while",
+        "display_name": "永久服务循环",
+        "description": "持续接收并处理服务迭代，直至宿主取消异步工作流。",
+        "requires": [
+          {
+            "type": "era.service.state",
+            "cardinality": "exactly_one",
+            "display_name": "服务状态"
+          }
+        ],
+        "loop": {
+          "body": "era.service.iteration",
+          "max_iterations": null,
+          "carry": [
+            {
+              "from": "era.service.state",
+              "as": "service_state",
+              "update": "serviceStateNext"
+            }
+          ]
+        },
+        "provides": []
+      },
+      {
+        "id": "end",
+        "type_used": "era.service.terminal",
+        "display_name": "ERA 服务结束",
+        "description": "表示永久循环将来按受控停止策略退出后到达的终点。"
+      }
+    ],
+    "edges": [
+      [
+        "start",
+        "initialize_state"
+      ],
+      [
+        "initialize_state",
+        "service_loop"
+      ],
+      [
+        "service_loop",
+        "end"
+      ]
+    ],
+    "outputs": []
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "kind": "node",
+  "type_key": "era.mk.build_result",
+  "display_name": "构造消息密钥任务结果",
+  "category": "消息密钥结果",
+  "description": "对 step.sources 逐一且仅一次结算，隔离普通失败与 fatal，不发布 writeDone，并保持连续 MK 状态不变。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [{"type": "era.mk.commit.result", "cardinality": "exactly_one", "display_name": "MK 结果"}],
+    "provides": [{"key": "update_mk_task_result", "type": "era.task.result", "display_name": "MK 更新结果"}],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {"era.mk.commit.result":["输入：MK 结果。"]},
+    "output_semantics": {"update_mk_task_result":["输出：MK 更新结果。"]}
+  },
+  "implementations": [{
+    "language": "typescript",
+    "targets": ["browser", "node"],
+    "completion": "immediate",
+    "source": {"kind": "file", "ref": "nodes/update_mk/build_mk_result.ts", "export": "run"}
+  }],
+  "base_libs": ["era.service.types"],
+  "capabilities": []
+}

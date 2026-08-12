@@ -1,0 +1,28 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.tavern.messages.read_context.request",
+  "representation": "json",
+  "display_name": "ERA·酒馆·消息·读取·上下文·请求",
+  "description": "定义“ERA·酒馆·消息·读取·上下文·请求”的数据结构与校验约束。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["projection", "range"],
+    "properties": {
+      "projection": {
+        "const": "era-active-message-v1"
+      },
+      "range": {
+        "oneOf": [
+          { "type": "string", "minLength": 1 },
+          { "type": "integer" }
+        ]
+      },
+      "purpose": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  }
+}

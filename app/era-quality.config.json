@@ -1,0 +1,153 @@
+{
+  "schemaVersion": 1,
+  "include": ["src/ERA变量框架/**/*.ts", "src/ERA变量框架/**/*.vue"],
+  "thresholds": {
+    "warnFileLines": 450,
+    "maxFileLines": 500,
+    "maxFileBytes": 120000,
+    "maxFunctionsPerFile": 40,
+    "maxClassesPerFile": 20,
+    "maxExportsPerFile": 30,
+    "maxFileBranches": 150,
+    "maxDirectoryFanout": 25,
+    "maxDirectoryFanin": 25,
+    "maxFunctionLines": 80,
+    "maxFunctionBranches": 12,
+    "maxFunctionNesting": 4,
+    "maxFunctionParams": 6,
+    "warnDependencyChain": 6,
+    "maxDependencyChain": 10,
+    "minDuplicateFunctionLines": 10
+  },
+  "comments": {
+    "minimumHanForUseful": 4,
+    "largeFileCodeLines": 100,
+    "minimumUsefulRatio": 0.05,
+    "highUsefulRatio": 0.4,
+    "moduleDocCodeLines": 150,
+    "moduleDocExports": 10,
+    "minimumModuleDocHan": 12,
+    "minimumCriticalDocHan": 12,
+    "minimumTypeDocHan": 8,
+    "exportedFunctionLines": 10,
+    "exportedFunctionBranches": 3,
+    "criticalFunctionLines": 50,
+    "criticalFunctionBranches": 12,
+    "criticalFunctionNesting": 4,
+    "criticalFunctionParams": 6,
+    "disabledBlockLines": 5,
+    "disabledBlockCodeRatio": 0.6,
+    "duplicateProseHan": 20,
+    "rationaleWords": [
+      "因为",
+      "由于",
+      "为了",
+      "否则",
+      "避免",
+      "防止",
+      "确保",
+      "必须",
+      "不能",
+      "不得",
+      "兼容",
+      "回滚",
+      "重入",
+      "竞态",
+      "死锁",
+      "时序",
+      "不变量",
+      "副作用",
+      "失败",
+      "异常",
+      "刻意",
+      "前提"
+    ],
+    "historyWords": ["新增", "改为", "关键修复", "修复结束", "备份", "采纳建议", "原样保留", "尝试改为"]
+  },
+  "architecture": {
+    "forbiddenImports": [
+      {
+        "from": "src/ERA变量框架/core/**",
+        "to": [
+          "src/ERA变量框架/ui/**",
+          "src/ERA变量框架/events/**",
+          "src/ERA变量框架/macro/**",
+          "src/ERA变量框架/initer/**"
+        ]
+      },
+      {
+        "from": "src/ERA变量框架/events/{catalog,merger,types,scheduler}.ts",
+        "to": [
+          "src/ERA变量框架/events/handlers/**",
+          "src/ERA变量框架/events/dispatcher.ts",
+          "src/ERA变量框架/events/queue.ts",
+          "src/ERA变量框架/ui/**",
+          "src/ERA变量框架/macro/**",
+          "src/ERA变量框架/initer/**"
+        ]
+      }
+    ],
+    "purePaths": [
+      "src/ERA变量框架/events/catalog.ts",
+      "src/ERA变量框架/events/merger.ts",
+      "src/ERA变量框架/events/types.ts",
+      "src/ERA变量框架/macro/syntax.ts",
+      "src/ERA变量框架/core/timetravel.ts",
+      "src/ERA变量框架/core/crud/delete.ts",
+      "src/ERA变量框架/core/crud/update.ts",
+      "src/ERA变量框架/core/crud/insert/**"
+    ],
+    "schedulerPath": "src/ERA变量框架/events/scheduler.ts",
+    "schedulerClockObject": "SYSTEM_CLOCK"
+  },
+  "capabilities": {
+    "domUi": ["$", "jQuery", "window", "document", "toastr", "getDisplayedMessage", "formatAsDisplayedMessage"],
+    "storage": [
+      "localStorage",
+      "sessionStorage",
+      "getVariables",
+      "replaceVariables",
+      "insertOrAssignVariables",
+      "deleteVariable",
+      "getChatMessages",
+      "setChatMessages",
+      "createChatMessages",
+      "deleteChatMessages",
+      "getWorldbook",
+      "replaceWorldbook"
+    ],
+    "network": [
+      "fetch",
+      "axios",
+      "generate",
+      "generateRaw",
+      "socket",
+      "WebSocket",
+      "XMLHttpRequest",
+      "EventSource",
+      "navigator.sendBeacon"
+    ],
+    "clockRandom": [
+      "setTimeout",
+      "clearTimeout",
+      "setInterval",
+      "clearInterval",
+      "setImmediate",
+      "clearImmediate",
+      "queueMicrotask",
+      "requestAnimationFrame",
+      "cancelAnimationFrame",
+      "FinalizationRegistry",
+      "WeakRef",
+      "Date",
+      "Date.now",
+      "performance.now",
+      "performance.timeOrigin",
+      "Math.random",
+      "crypto.randomUUID",
+      "crypto.getRandomValues"
+    ],
+    "allowedGlobals": ["console"]
+  },
+  "waivers": []
+}

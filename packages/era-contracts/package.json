@@ -1,0 +1,27 @@
+{
+  "name": "@era/vibeflow-contracts",
+  "version": "1.4.0",
+  "description": "ERA 与 VibeFlow 之间的可移植 DTO、JSON Schema 和纯 codec。",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "contracts.catalog.jsonc",
+    "index.js",
+    "index.d.ts",
+    "schemas"
+  ],
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.js"
+    },
+    "./schemas/*": "./schemas/*"
+  },
+  "scripts": {
+    "check": "node --check index.js",
+    "check:schema-sync": "node scripts/check-schema-sync.mjs"
+  },
+  "engines": {
+    "node": ">=24.18.0"
+  }
+}

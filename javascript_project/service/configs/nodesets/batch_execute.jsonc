@@ -1,0 +1,168 @@
+{
+  "nodeset_imports": [
+    {
+      "path": "service_step.jsonc"
+    },
+    {
+      "path": "batch_publish.jsonc"
+    }
+  ],
+  "type_key": "era.service.batch_execute",
+  "display_name": "ERA 批次执行",
+  "description": "规划就绪事件集、验证来源覆盖、运行有界动态步骤循环，并完成批次收尾与结果发布。",
+  "requires": [
+    {
+      "type": "era.collection.reduction",
+      "cardinality": "exactly_one",
+      "display_name": "事件集归约结果"
+    }
+  ],
+  "provides": [
+    {
+      "key": "executed_state_next",
+      "type": "era.service.state.next",
+      "display_name": "执行后状态"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "collection_reduction",
+        "type": "era.collection.reduction",
+        "display_name": "事件集归约结果",
+        "required": true
+      }
+    ],
+    "max_steps": 24,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.service.terminal",
+        "display_name": "批次启动",
+        "description": "开始执行一个就绪事件集。"
+      },
+      {
+        "id": "plan_batch",
+        "type_used": "era.service.plan_batch",
+        "display_name": "规划动态批次",
+        "description": "将事件集转换为有序 PlannedStep 数组，不执行领域任务。"
+      },
+      {
+        "id": "validate_coverage",
+        "type_used": "era.service.validate_coverage",
+        "display_name": "验证来源覆盖",
+        "description": "要求每个来源序号恰好出现一次，并拒绝重复、缺失或批次外引用。"
+      },
+      {
+        "id": "coverage_failure",
+        "type_used": "era.service.coverage_failure",
+        "display_name": "构造覆盖失败结果",
+        "description": "将无效计划中的所有来源标记为失败，同时保持服务继续运行。"
+      },
+      {
+        "id": "step_loop",
+        "type_used": "vibeflow.loop.while",
+        "display_name": "执行规划步骤",
+        "description": "最多执行 128 个动态步骤，并在可恢复任务失败后继续。",
+        "requires": [
+          {
+            "type": "era.batch.execution.state",
+            "cardinality": "exactly_one",
+            "display_name": "初始执行状态"
+          }
+        ],
+        "provides": [
+          {
+            "key": "step_loop_state_after",
+            "type": "era.batch.execution.state.after",
+            "display_name": "步骤执行后状态"
+          }
+        ],
+        "loop": {
+          "body": "era.service.step",
+          "max_iterations": 128,
+          "stop_when": {
+            "from": "stepDone",
+            "equals": true
+          },
+          "carry": [
+            {
+              "from": "era.batch.execution.state",
+              "as": "execution_state",
+              "update": "executionStateNext"
+            }
+          ],
+          "outputs": [
+            {
+              "from": "executionStateNext",
+              "as": "step_loop_state_after"
+            }
+          ]
+        }
+      },
+      {
+        "id": "finalize_batch",
+        "type_used": "era.service.finalize_batch",
+        "display_name": "完成批次收尾",
+        "description": "全部规划步骤结束后，构造有序结算、通知、诊断、下一携带状态和致命标记。"
+      },
+      {
+        "id": "publish_batch",
+        "type_used": "era.service.batch_publish",
+        "display_name": "发布批次结果",
+        "description": "发送最终帧，然后路由到继续服务或致命终止。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.service.terminal",
+        "display_name": "批次结束",
+        "description": "非致命批次提交出站帧后结束。"
+      }
+    ],
+    "edges": [
+      [
+        "start",
+        "plan_batch"
+      ],
+      [
+        "plan_batch",
+        "validate_coverage"
+      ],
+      {
+        "from": "validate_coverage",
+        "to": "coverage_failure",
+        "when": "coverage_route == 'invalid'"
+      },
+      {
+        "from": "validate_coverage",
+        "to": "step_loop",
+        "when": "coverage_route == 'execute'"
+      },
+      [
+        "coverage_failure",
+        "finalize_batch"
+      ],
+      [
+        "step_loop",
+        "finalize_batch"
+      ],
+      [
+        "finalize_batch",
+        "publish_batch"
+      ],
+      [
+        "publish_batch",
+        "end"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.service.state.next",
+        "cardinality": "exactly_one",
+        "display_name": "执行后状态",
+        "as": "executedStateNext"
+      }
+    ]
+  }
+}

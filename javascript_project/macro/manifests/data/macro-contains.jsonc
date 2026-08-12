@@ -1,0 +1,11 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.macro.contains",
+  "representation": "json",
+  "display_name": "是否包含 ERA 宏",
+  "description": "传入片段包含 ERA 或 ERA-withmeta 宏候选时为 true。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "boolean"
+  }
+}

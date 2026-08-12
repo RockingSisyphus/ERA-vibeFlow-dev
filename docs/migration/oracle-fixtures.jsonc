@@ -1,0 +1,36 @@
+{
+  // Inline expectations in the frozen tests are executable golden fixtures.
+  "schema_version": 1,
+  "baseline_tag": "era-vibeflow-baseline-v1",
+  "tests_tree_sha256": "5923cbdfbd55f60f627fd523d9e62c9df6ad1265c72293ab63999782acee87db",
+  "oracles": {
+    "normalized_trace": [
+      "tests/events/catalog.test.ts",
+      "tests/events/merger.test.ts",
+      "tests/events/scheduler.test.ts"
+    ],
+    "final_persistent_state": [
+      "tests/events/api-dispatcher.test.ts",
+      "tests/events/scheduler.test.ts"
+    ],
+    "notification_sequence": [
+      "tests/events/api-dispatcher.test.ts",
+      "tests/events/scheduler.test.ts"
+    ],
+    "macro_output": [
+      "tests/macro/syntax.test.ts"
+    ]
+  },
+  "required_future_exports": [
+    "machine-readable normalized trace fixtures",
+    "final stat/meta/editLogs/selectedMks snapshots",
+    "ordered notification command snapshots",
+    "macro input/output corpus"
+  ],
+  "policy": {
+    "authoritative_behavior": "frozen candidate code and inline expectations",
+    "missing_case": "add characterization to the frozen oracle corpus before implementing the corresponding migrated branch",
+    "intentional_change": "requires an approved deviation record and a separate golden expectation"
+  }
+}
+

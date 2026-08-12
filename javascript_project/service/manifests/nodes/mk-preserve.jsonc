@@ -1,0 +1,25 @@
+{
+  "kind": "node",
+  "type_key": "era.mk.no_change",
+  "display_name": "保留消息密钥状态",
+  "category": "消息密钥结果",
+  "description": "不调用任何宿主写入；把已一致候选转换为 no-op，或保留读取与推导阶段的普通失败。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [{"type": "era.mk.candidate.routed", "cardinality": "exactly_one", "display_name": "已路由 MK 候选"}],
+    "provides": [{"key": "mk_noop_outcome", "type": "era.mk.commit.result", "display_name": "MK 无操作结果"}],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {"era.mk.candidate.routed":["输入：已路由 MK 候选。"]},
+    "output_semantics": {"mk_noop_outcome":["输出：MK 无操作结果。"]}
+  },
+  "implementations": [{
+    "language": "typescript",
+    "targets": ["browser", "node"],
+    "completion": "immediate",
+    "source": {"kind": "file", "ref": "nodes/update_mk/preserve_mk.ts", "export": "run"}
+  }],
+  "base_libs": ["era.service.types"],
+  "capabilities": []
+}

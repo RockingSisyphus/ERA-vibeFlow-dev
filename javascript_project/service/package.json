@@ -1,0 +1,17 @@
+{
+  "name": "era-vibeflow-service",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.18.0"
+  },
+  "dependencies": {
+    "@era/vibeflow-contracts": "file:../../packages/era-contracts/era-vibeflow-contracts-1.4.0.tgz",
+    "opencc-js": "1.4.1"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.1",
+    "typescript": "7.0.2"
+  }
+}

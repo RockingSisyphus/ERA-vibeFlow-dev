@@ -1,0 +1,7 @@
+{
+  "id": "d40fa76e-65fd-49e3-a675-4d6c9e66265e",
+  "name": "SwipeAwaitDemo-本地导入",
+  "content": "import 'http://127.0.0.1:5500/dist/SwipeAwaitDemo/index.js'",
+  "info": "验证 Tavern Helper 的异步 MESSAGE_SWIPED 监听器是否会让 SillyTavern 等待 Promise 完成。",
+  "buttons": []
+}

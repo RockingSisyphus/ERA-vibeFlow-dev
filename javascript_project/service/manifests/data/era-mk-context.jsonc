@@ -1,0 +1,47 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.mk.context",
+  "representation": "json",
+  "display_name": "ERA 消息密钥读取上下文",
+  "description": "包含完整 update-mk 步骤、当前激活消息文本、ERAMetaData、状态占位符设置或读取失败；不携带身份或其他宿主状态。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": ["schemaVersion", "step", "status", "message", "meta", "placeholderSettings", "failure"],
+    "properties": {
+      "schemaVersion": {"const": 1},
+      "step": {"type": "object"},
+      "status": {"type": "string", "enum": ["ready", "failed"]},
+      "message": {
+        "type": ["object", "null"],
+        "properties": {
+          "messageId": {"type": "integer", "minimum": 0},
+          "role": {"type": "string", "minLength": 1},
+          "activeText": {"type": "string"}
+        },
+        "required": ["messageId", "role", "activeText"]
+      },
+      "meta": {"type": ["object", "null"]},
+      "placeholderSettings": {
+        "type": ["object", "null"],
+        "properties": {
+          "enabled": {"type": "boolean"},
+          "value": {"type": "string"}
+        },
+        "required": ["enabled", "value"],
+        "additionalProperties": false
+      },
+      "failure": {
+        "type": ["object", "null"],
+        "properties": {
+          "code": {"type": "string", "minLength": 1},
+          "message": {"type": "string", "minLength": 1},
+          "category": {"type": "string", "enum": ["input", "domain", "tavern", "cancelled"]},
+          "retryable": {"const": false}
+        },
+        "required": ["code", "message", "category", "retryable"]
+      }
+    },
+    "additionalProperties": false
+  }
+}

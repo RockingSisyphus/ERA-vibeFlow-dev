@@ -1,0 +1,11 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.macro.substring.checked",
+  "representation": "json",
+  "display_name": "已检查的宏文本片段",
+  "description": "经过快速检测边界后保持原样的宏文本片段。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "string"
+  }
+}

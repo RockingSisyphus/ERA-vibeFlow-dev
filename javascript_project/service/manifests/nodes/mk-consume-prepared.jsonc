@@ -1,0 +1,5 @@
+{
+  "kind":"node","type_key":"era.mk.consume_prepared","display_name":"确认统一 MK 准备结果","category":"消息密钥","description":"消费已准备步骤中的 EraDispatchContextV2，不再读取或写入 Tavern。","version":"1.0.0","flow_kind":"process",
+  "contract":{"requires":[{"type":"era.step.request.routed","cardinality":"exactly_one","display_name":"已准备路由步骤"}],"provides":[{"key":"prepared_mk_outcome","type":"era.mk.commit.result","display_name":"统一 MK 准备结果"}],"params_schema":{},"params_defaults":{},"input_semantics":{"era.step.request.routed":["输入：已经完成统一 MK 与占位符准备的步骤。"]},"output_semantics":{"prepared_mk_outcome":["输出：保持提交、无操作或失败身份的 MK 结果。"]}},
+  "implementations":[{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/update_mk/consume_prepared_context.ts","export":"run"}}],"base_libs":["era.service.types"],"capabilities":[]
+}

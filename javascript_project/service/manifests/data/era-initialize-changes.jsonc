@@ -1,0 +1,12 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.initialize.changes",
+  "representation": "json",
+  "display_name": "ERA·初始化·变更",
+  "description": "定义“ERA·初始化·变更”的数据结构与校验约束。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": true
+  }
+}

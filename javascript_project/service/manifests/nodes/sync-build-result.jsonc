@@ -1,0 +1,18 @@
+{
+  "kind": "node",
+  "type_key": "era.sync.build_notification",
+  "display_name": "构造同步结算与通知",
+  "category": "同步事务",
+  "description": "按提交状态形成每个来源的唯一结算、状态更新、诊断和锁外 writeDone 通知。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [{"type": "era.tavern.commit.result", "cardinality": "exactly_one", "display_name": "同步提交结果"}],
+    "provides": [{"key": "sync_task_result", "type": "era.task.result", "display_name": "同步结果"}],
+    "params_schema": {}, "params_defaults": {},
+    "input_semantics": {"era.tavern.commit.result":["输入：同步提交结果。"]},
+    "output_semantics": {"sync_task_result":["输出：同步结果。"]}
+  },
+  "implementations": [{"language": "typescript", "targets": ["browser", "node"], "completion": "immediate", "source": {"kind": "file", "ref": "nodes/sync/build_sync_result.ts", "export": "run"}}],
+  "base_libs": ["era.service.sync_transaction"], "capabilities": []
+}

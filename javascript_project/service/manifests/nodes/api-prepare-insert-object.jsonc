@@ -1,0 +1,4 @@
+{"kind":"node","type_key":"era.api.prepare_insert_object","display_name":"构造对象插入指令","category":"外部 API","description":"把 era:insertByObject 请求转换为候选 VariableInsert 对象块。","version":"1.0.0","flow_kind":"process","contract":{"requires":[{"type":"era.api.write.request","cardinality":"exactly_one","display_name":"写入请求"}],"provides":[{"key":"insert_object_directive","type":"era.api.write.directive","display_name":"对象插入指令"}],"params_schema":{},"params_defaults":{},
+    "input_semantics": {"era.api.write.request":["输入：写入请求。"]},
+    "output_semantics": {"insert_object_directive":["输出：对象插入指令。"]}
+  },"implementations":[{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/api/prepare_insert_by_object.ts","export":"run"}}],"base_libs":["era.service.api_write_engine"],"capabilities":[]}

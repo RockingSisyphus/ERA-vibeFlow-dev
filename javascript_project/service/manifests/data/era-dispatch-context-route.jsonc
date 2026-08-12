@@ -1,0 +1,1 @@
+{"kind":"data_schema","type_key":"era.dispatch.context.route","representation":"json","display_name":"ERA 上下文准备路由","description":"选择不读宿主或读取严格消息上下文。","schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","enum":["none","read"]}}

@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "frameId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "kind": {
+      "const": "collection-control"
+    },
+    "commands": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "schedule"
+              },
+              "token": {
+                "type": "string",
+                "minLength": 1
+              },
+              "dueAt": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "kind",
+              "token",
+              "dueAt"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "cancel"
+              },
+              "token": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "kind",
+              "token"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      }
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "frameId",
+    "kind",
+    "commands"
+  ],
+  "additionalProperties": false
+}
+

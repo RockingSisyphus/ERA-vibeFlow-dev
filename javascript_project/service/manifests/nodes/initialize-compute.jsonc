@@ -1,0 +1,4 @@
+{"kind":"node","type_key":"era.initialize.compute","display_name":"确认初始化变更","category":"初始化规划","description":"保留纯规划器生成的声明式资源变更。","version":"1.0.0","flow_kind":"process","contract":{"requires":[{"type":"era.initialize.plan","cardinality":"exactly_one","display_name":"初始化计划"}],"provides":[{"key":"computed_resource_changes","type":"era.initialize.changes","display_name":"已计算资源变更"}],"params_schema":{},"params_defaults":{},
+    "input_semantics": {"era.initialize.plan":["输入：初始化计划。"]},
+    "output_semantics": {"computed_resource_changes":["输出：已计算资源变更。"]}
+  },"implementations":[{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/initialize/compute_initialization.ts","export":"run"}}],"base_libs":[],"capabilities":[]}

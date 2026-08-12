@@ -1,0 +1,57 @@
+{
+  "kind": "node",
+  "type_key": "era.macro.quick_check",
+  "display_name": "检测 ERA 宏",
+  "category": "宏处理",
+  "description": "检测输入是否包含 ERA 宏并无损转发公开输入。",
+  "version": "1.0.0",
+  "flow_kind": "decision",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.macro.substring",
+        "cardinality": "exactly_one",
+        "display_name": "宏文本片段"
+      },
+      {
+        "type": "era.macro.stored_stat",
+        "cardinality": "exactly_one",
+        "display_name": "已存 ERA 状态"
+      }
+    ],
+    "provides": [
+      {
+        "key": "macro.checked_substring",
+        "type": "era.macro.substring.checked",
+        "display_name": "已检查的宏文本片段"
+      },
+      {
+        "key": "macro.checked_stored_stat",
+        "type": "era.macro.stored_stat.checked",
+        "display_name": "已检查的 ERA 状态"
+      },
+      {
+        "key": "macro.contains",
+        "type": "era.macro.contains",
+        "display_name": "是否包含 ERA 宏"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {"era.macro.substring":["输入：宏文本片段。"],"era.macro.stored_stat":["输入：已存 ERA 状态。"]},
+    "output_semantics": {"macro.checked_substring":["输出：已检查的宏文本片段。"],"macro.checked_stored_stat":["输出：已检查的 ERA 状态。"],"macro.contains":["输出：是否包含 ERA 宏。"]}
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": ["browser", "node"],
+      "source": {
+        "kind": "file",
+        "ref": "nodes/quick_check.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": ["era.macro.runtime"],
+  "capabilities": []
+}
