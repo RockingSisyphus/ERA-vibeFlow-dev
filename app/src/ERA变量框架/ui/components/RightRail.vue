@@ -34,4 +34,11 @@ import EraSettingsPanel from './RightRailContent/EraSettingsPanel.vue';
   overflow-y: auto;
   flex-grow: 1;
 }
+
+@media (max-width: 992px) {
+  .right-rail {
+    min-width: 0;
+    width: 100%;
+  }
+}
 </style>
