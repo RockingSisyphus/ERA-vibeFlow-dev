@@ -16,3 +16,21 @@
 # Collaborative profile
 
 遵循[`人机协同开发协议`](kernel/docs/user/profiles/collaborative.md)：维护四类变更清单，以 planned 内容生成正式审核图，等待人类明确批准后实施获批变化。机器检查与人工批准分别报告。
+
+# 酒馆运行时与 ERA 宿主路由
+
+本文件保留全仓 VibeFlow 规则；不要把 Tavern Helper 的长篇接口说明复制到这里。涉及
+SillyTavern、Tavern Helper、浏览器事件、ERA 宏、UI 或真实酒馆联调时，还必须按目标目录
+读取更具体的 `AGENTS.md`：
+
+- `app/**`：读取 `app/AGENTS.md`，其 `@types/**` 是本仓 Tavern Helper/SillyTavern 接口
+  的唯一类型参考；实际可用性仍由已连接酒馆页面验证。
+- `app/src/ERA变量框架/**`：额外读取该目录及 `service`、`macro` 或 `ui` 下的局部规则；
+  ERA 业务状态不得绕过 Service Host 直接修改。
+- `javascript_project/service/**` 或 `javascript_project/macro/**`：读取对应 root 的局部规则；
+  先遵循本文件的 VibeFlow review/validate/build 流程，再处理 Tavern 宿主边界。
+
+跨越上述目录的修改（例如生成事件、回滚与宏）必须同时阅读
+`app/开发文档/ERA事件调度与生成栅栏设计.md` 和
+`docs/development/era-host-contract.md`。接口入口、文档索引与联调步骤见
+`docs/development/README.md`。

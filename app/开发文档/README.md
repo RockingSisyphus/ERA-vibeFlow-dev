@@ -7,8 +7,10 @@
 - [`../README.md`](../README.md)：角色卡作者使用说明、公开事件和宏。
 - 根项目 `docs/migration/最终报告.md`：当前实现和验证状态。
 - `javascript_project/service/ARCHITECTURE.jsonc`：Service 真实登记架构。
+- [`../../docs/development/README.md`](../../docs/development/README.md)：Tavern
+  Helper/SillyTavern 接口定位、ERA 宿主边界与上游兼容性治理；它不替代本目录的当前设计说明。
 
 ## 历史说明
 
-`历史/` 保存迁移前调度器设计、长期服务能力 RFC 和 2026-07-26 兼容性审计。它们用于
-追溯设计来源，不描述当前生产代码。新增维护说明不得以历史文件作为当前入口。
+`历史/`
+保存迁移前调度器设计、长期服务能力 RFC 和 2026-07-26 兼容性审计。它们用于追溯设计来源，不描述当前生产代码。新增维护说明不得以历史文件作为当前入口。

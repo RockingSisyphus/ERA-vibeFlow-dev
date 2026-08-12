@@ -11,6 +11,8 @@
   UI 操作路径、预期结果、自动化缺口和专项验收条件。
 - `javascript_project/service/ARCHITECTURE.jsonc` 与
   `javascript_project/macro/ARCHITECTURE.jsonc`：由 VibeFlow `review` 生成的登记架构。
+- [`development/README.md`](development/README.md)：酒馆运行时接口、ERA 宿主边界、上游兼容性
+  与 Codex 分层开发入口。
 
 ## 审核与迁移证据
 
