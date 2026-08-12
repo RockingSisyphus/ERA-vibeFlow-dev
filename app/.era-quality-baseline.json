@@ -1849,7 +1849,7 @@
       "severity": "warning"
     },
     {
-      "debt": 4,
+      "debt": 3,
       "fingerprint": "b009a1fa120c7a7429377ac4456164c10c20154cfc7d35c98ff43821f4f20b0f",
       "objectId": "src/ERA变量框架/events/merger",
       "ruleId": "COMMENT_USEFUL_RATIO_LOW",

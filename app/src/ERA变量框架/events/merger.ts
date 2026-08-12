@@ -55,6 +55,18 @@ function isDryRunGeneration(event: TimedEvent): boolean {
   return event.type === INPUT_EVENT.GENERATION_STARTED && event.args?.[2] === true;
 }
 
+/** 酒馆明确请求重新生成当前回复；普通生成、续写和静默生成不得触发回退。 */
+function isRegenerateGeneration(event: TimedEvent): boolean {
+  return (
+    event.type === INPUT_EVENT.GENERATION_STARTED && event.args?.[0] === 'regenerate' && !isDryRunGeneration(event)
+  );
+}
+
+/** swipe 组合与酒馆显式 regenerate 都要求在放行生成前恢复上一楼状态。 */
+function needsPreviousMessageRollback(unit: WorkUnit): boolean {
+  return unit.combo === 'swipe-and-regenerate' || isRegenerateGeneration(unit.primaryEvent);
+}
+
 function canCompleteCombo(event: TimedEvent): boolean {
   return !isDryRunGeneration(event);
 }
@@ -91,7 +103,7 @@ function syncTask(
  * 无须再次猜测 `combo_*` 这样的技术性事件名称。
  */
 function createDomainTask(unit: WorkUnit): DomainTask | null {
-  if (unit.combo === 'swipe-and-regenerate') {
+  if (needsPreviousMessageRollback(unit)) {
     return syncTask(unit, {
       reason: 'swipe-regeneration',
       target: { kind: 'previous-of-latest', stopAfterTarget: true },

@@ -16,6 +16,49 @@ function rawEvent(sequence: number, type: string, occurredAt: number, args: read
 }
 
 describe('事件批次规划器', () => {
+  it('把明确的单人 regenerate 生成为生成前定向回退任务', () => {
+    const regenerate = rawEvent(1, INPUT_EVENT.GENERATION_STARTED, 1_000, [
+      'regenerate',
+      { automatic_trigger: false },
+      false,
+    ]);
+
+    expect(planEventBatch([regenerate])).toMatchObject([
+      {
+        kind: 'execute',
+        task: {
+          kind: 'sync',
+          reason: 'swipe-regeneration',
+          target: { kind: 'previous-of-latest', stopAfterTarget: true },
+          context: 'latest-message',
+        },
+        sources: [{ event: regenerate, relation: 'primary' }],
+      },
+    ]);
+  });
+
+  it.each(['normal', 'continue', 'quiet', 'impersonate'])('不会把 %s 生成误判为回退', generationType => {
+    const generation = rawEvent(1, INPUT_EVENT.GENERATION_STARTED, 1_000, [generationType, {}, false]);
+
+    expect(planEventBatch([generation])).toMatchObject([
+      {
+        kind: 'ignore',
+        events: [generation],
+      },
+    ]);
+  });
+
+  it('不会把 regenerate dry-run 预演误判为回退', () => {
+    const dryRun = rawEvent(1, INPUT_EVENT.GENERATION_STARTED, 1_000, ['regenerate', {}, true]);
+
+    expect(planEventBatch([dryRun])).toMatchObject([
+      {
+        kind: 'ignore',
+        events: [dryRun],
+      },
+    ]);
+  });
+
   it('在 600ms 边界内识别 swipe + generation，并生成定向回退任务', () => {
     const swipe = rawEvent(1, INPUT_EVENT.MESSAGE_SWIPED, 1_000, [12]);
     const generation = rawEvent(2, INPUT_EVENT.GENERATION_STARTED, 1_600, ['swipe', { automatic: true }, false]);

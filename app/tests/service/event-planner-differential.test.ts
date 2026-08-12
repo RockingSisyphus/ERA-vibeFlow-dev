@@ -326,6 +326,50 @@ describe('VibeFlow Service 事件规划器差分', () => {
     expectDifferential([swipe, outside]);
   });
 
+  it('只把明确的 regenerate 规划为生成前回退，其他生成类型保持 ignored', () => {
+    const regenerate = rawEvent(1, CANDIDATE_INPUT_EVENT.GENERATION_STARTED, 1_000, [
+      'regenerate',
+      { automatic_trigger: false },
+      false,
+    ]);
+    const [regenerateStep] = expectDifferential([regenerate]);
+    expect(regenerateStep).toMatchObject({
+      kind: 'execute',
+      taskRoute: 'sync',
+      task: {
+        kind: 'sync',
+        reason: 'swipe-regeneration',
+        target: { kind: 'previous-of-latest', stopAfterTarget: true },
+        context: 'latest-message',
+      },
+    });
+
+    for (const [index, generationType] of ['normal', 'continue', 'quiet', 'impersonate'].entries()) {
+      const generation = rawEvent(index + 2, CANDIDATE_INPUT_EVENT.GENERATION_STARTED, 2_000 + index, [
+        generationType,
+        {},
+        false,
+      ]);
+      expect(expectDifferential([generation])[0]).toMatchObject({ kind: 'ignore' });
+    }
+
+    const dryRun = rawEvent(10, CANDIDATE_INPUT_EVENT.GENERATION_STARTED, 3_000, ['regenerate', {}, true]);
+    expect(expectDifferential([dryRun])[0]).toMatchObject({ kind: 'ignore' });
+  });
+
+  it('群聊式 message_deleted 后 normal 只执行历史同步，不产生第二次回退', () => {
+    const deleted = rawEvent(1, CANDIDATE_INPUT_EVENT.MESSAGE_DELETED, 1_000, [3]);
+    const normal = rawEvent(2, CANDIDATE_INPUT_EVENT.GENERATION_STARTED, 1_020, ['normal', {}, false]);
+    const steps = expectDifferential([deleted, normal]);
+
+    expect(steps).toHaveLength(2);
+    expect(steps[0]).toMatchObject({
+      kind: 'execute',
+      task: { kind: 'sync', reason: 'history-changed' },
+    });
+    expect(steps[1]).toMatchObject({ kind: 'ignore' });
+  });
+
   it('在 updated 1500ms 边界保持 edit-and-continue 组合', () => {
     const updated = rawEvent(1, CANDIDATE_INPUT_EVENT.MESSAGE_UPDATED, 10_000, [8]);
     const atBoundary = rawEvent(2, CANDIDATE_INPUT_EVENT.GENERATION_STARTED, 11_500, ['normal', {}, false]);
