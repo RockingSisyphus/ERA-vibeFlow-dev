@@ -62,6 +62,7 @@ onMounted(() => {
 
 <style scoped>
 .tabs {
+  min-width: 0;
   border: 1px solid var(--border-soft);
   border-radius: 12px;
   overflow: hidden;
@@ -81,6 +82,8 @@ onMounted(() => {
     border-color 0.3s ease;
 }
 .tab-btn {
+  flex: 1 1 0;
+  min-width: 0;
   padding: 8px 12px;
   font-weight: 800;
   font-size: 13px;
@@ -89,6 +92,7 @@ onMounted(() => {
   border: 1px solid var(--settings-border-input);
   border-radius: 10px;
   cursor: pointer;
+  white-space: normal;
   transition:
     background 0.3s ease,
     border-color 0.3s ease,

@@ -270,6 +270,7 @@ async function saveEdits() {
 .settings-card {
   /* 玻璃卡容器 */
   width: 100%; /* 占满侧栏宽度 */
+  min-width: 0;
   padding: 12px; /* 内边距 */
   background: var(--settings-bg-glass);
   border: 1px solid var(--border-strong);
@@ -319,6 +320,7 @@ async function saveEdits() {
 
 /* 内容体 */
 .content {
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -328,6 +330,7 @@ async function saveEdits() {
 .toolbar {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
 } /* 工具条布局 */
 .spacer {
@@ -344,6 +347,7 @@ async function saveEdits() {
   cursor: pointer; /* 可点击 */
   font-size: 12px; /* 字号 */
   font-weight: 700; /* 加粗 */
+  white-space: normal;
   box-shadow: var(--settings-shadow-inset), var(--settings-shadow-minibtn);
   transition:
     background 0.3s ease,
@@ -368,6 +372,7 @@ async function saveEdits() {
 
 /* 变量列表 */
 .vars {
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -376,7 +381,8 @@ async function saveEdits() {
 .var-row {
   /* 一行变量 */
   display: grid; /* 网格布局 */
-  grid-template-columns: 1fr minmax(120px, 1.2fr) auto; /* 三列：键 / 编辑器 / 类型 */
+  grid-template-columns: minmax(0, 1fr) minmax(120px, 1.2fr) auto; /* 三列：键 / 编辑器 / 类型 */
+  min-width: 0;
   align-items: center; /* 垂直居中 */
   gap: 10px; /* 列间距 */
   padding: 8px 10px; /* 内边距 */
@@ -400,6 +406,7 @@ async function saveEdits() {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
 } /* 编辑器容器 */
 
 .ipt {
@@ -502,4 +509,28 @@ async function saveEdits() {
     border-color 0.3s ease,
     color 0.3s ease;
 } /* 空状态 */
+
+@media (max-width: 480px) {
+  .var-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .var-editor {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .type-chip {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .toolbar .spacer {
+    display: none;
+  }
+
+  .mini-btn {
+    flex: 1 1 calc(50% - 4px);
+  }
+}
 </style>

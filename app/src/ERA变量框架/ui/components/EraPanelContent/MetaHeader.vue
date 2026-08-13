@@ -60,7 +60,7 @@ watch(
 
 .kv {
   display: grid;
-  grid-template-columns: 120px 1fr;
+  grid-template-columns: minmax(88px, 120px) minmax(0, 1fr);
   gap: 8px 12px;
 }
 .item {
@@ -82,6 +82,7 @@ watch(
     color 0.3s ease;
 }
 .v {
+  min-width: 0;
   align-self: center;
   font-family: ui-monospace, Menlo, Consolas, monospace;
   font-size: 12px;

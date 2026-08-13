@@ -37,6 +37,7 @@
 <style scoped>
 .about-era-card {
   width: 100%;
+  min-width: 0;
   padding: 12px;
   background: var(--actions-bg-glass);
   border: 1px solid var(--border-strong);
@@ -77,9 +78,14 @@
 .info-list li {
   display: flex;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  min-width: 0;
 }
 
 .info-list a {
+  max-width: 100%;
+  overflow-wrap: anywhere;
   color: var(--text-subtitle);
   text-decoration: none;
   font-weight: 600;
@@ -89,5 +95,10 @@
 .info-list a:hover {
   color: var(--text-title);
   text-decoration: underline;
+}
+
+.info-list strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 </style>

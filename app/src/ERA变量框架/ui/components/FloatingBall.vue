@@ -1,5 +1,5 @@
 <template>
-  <div class="floating-ball" @click="$emit('click')">
+  <div id="era-floating-ball" class="floating-ball" @click="$emit('click')">
     <span class="era-logo" aria-hidden="true">ERA</span>
     <!-- 仅显示用；不拦截事件 -->
   </div>

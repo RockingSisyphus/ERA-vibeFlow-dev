@@ -33,6 +33,7 @@ const open = ref<boolean>(props.defaultOpen);
 
 <style scoped>
 .acc {
+  min-width: 0;
   border: 1px solid var(--border-soft);
   border-radius: 12px;
   background: var(--accordion-bg);
@@ -47,6 +48,7 @@ const open = ref<boolean>(props.defaultOpen);
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
   background: var(--mk-pill-null-bg);
   border-bottom: 1px solid var(--border-soft);
   padding: 10px 12px;
@@ -66,6 +68,8 @@ const open = ref<boolean>(props.defaultOpen);
 }
 .title {
   font-size: 13px;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .spacer {
   flex: 1;
@@ -89,5 +93,6 @@ const open = ref<boolean>(props.defaultOpen);
 
 .inner {
   padding: 10px 12px;
+  min-width: 0;
 }
 </style>

@@ -17,10 +17,9 @@ import EraSettingsPanel from './RightRailContent/EraSettingsPanel.vue';
 <style scoped>
 .right-rail {
   flex: 1 1 420px;
-  min-width: 400px;
-  height: min(680px, 86vh);
-  position: sticky;
-  top: 10px;
+  min-width: 0;
+  max-width: 100%;
+  height: var(--era-region-height);
   align-self: flex-start;
   z-index: 1;
   display: flex;
@@ -28,17 +27,14 @@ import EraSettingsPanel from './RightRailContent/EraSettingsPanel.vue';
 }
 
 .right-rail-content-wrapper {
+  min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 12px;
   overflow-y: auto;
+  overflow-x: clip;
+  overscroll-behavior: contain;
   flex-grow: 1;
-}
-
-@media (max-width: 992px) {
-  .right-rail {
-    min-width: 0;
-    width: 100%;
-  }
 }
 </style>

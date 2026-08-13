@@ -173,7 +173,7 @@ Pack 写错脚本变量作用域造成，不属于 ERA 产品缺陷；ERA 源码
 
 ### ERA-PROD-004：320px 宽手机上完整面板横向溢出
 
-- 状态：`confirmed`
+- 状态：`fixed`
 - 优先级：P1
 - 对应测试：
   - `ERA-UI-LAYOUT-009`（亮色）
@@ -191,7 +191,7 @@ Pack 写错脚本变量作用域造成，不属于 ERA 产品缺陷；ERA 源码
 - 内容可以纵向滚动；
 - 不应出现横向溢出或左右裁切。
 
-实际行为：
+修复前行为：
 
 - 展开层左边界约为 `x=-9`；
 - `clipped=true`；
@@ -206,6 +206,30 @@ Pack 写错脚本变量作用域造成，不属于 ERA 产品缺陷；ERA 源码
 - 两条 320px 亮暗主题路径均通过；
 - `375×812`、`812×375` 触屏及桌面 viewport 不回退；
 - 200% zoom 下仍能访问全部功能。
+
+修复记录（2026-08-14）：
+
+- 根因：旧 mount point、`.era-app-container` 和子级 fixed 定位重复争夺 viewport；同时
+  `92vw`、面板/右栏 `min-width` 与窄屏高度规则互相冲突。SillyTavern 移动端的 body
+  fixed 包含块还会让嵌套 fixed 悬浮球随页面滚动产生负坐标。
+- 产品修复：mount point 成为唯一 fixed viewport 根，App 在其内铺满；桌面左右并排，
+  992px 以下上下堆叠；左面板、右栏和 accordion 分别独立滚动；极窄屏内部控件允许
+  收缩、换行或两行布局；删除未引用的旧 `ExpandedView.vue`。
+- ERA 门禁：`pnpm verify` 通过，31 个测试文件、267/267 单测通过，质量基线 0 新增、
+  0 恶化；production build 通过。
+- ERA-Test-Pack：升级至 0.3.1，增加严格布局 subject、组件几何、命中和四级滚动终态
+  证据；55/55 合同测试通过。
+- 定点 run：`st-run-20260813T18531350-06afebbe9a06`，`ERA-UI-LAYOUT-009`
+  recording/evaluation 均通过，Artifact `consistent/complete`。
+- visual run：`st-run-20260813T18191762-a3b36d61f8a1`，18/18 recording 完成；12 条
+  LAYOUT 与两条 ABOUT 全部 passed，4 条 ADAPT 仅因透明/渐变背景对比度无法自动证明
+  而 inconclusive，0 failed。
+- 最终 UI 全量 run：`st-run-20260813T18553243-3946bf8fb2f5`，101/101 recording
+  completed、582 个 action 完整记录；evaluation 为 97 passed、4 inconclusive、0 failed。
+  4 条 inconclusive 仍仅为 `ERA-UI-ADAPT-001`～`004` 的透明/渐变背景对比度不可证明；
+  12 条 LAYOUT、`ABOUT-002` 及其余功能路径全部 passed。101 个 required evaluation
+  均有终态，Artifact audit 为 `consistent/complete`、issues=[]。
+- 最终 bundle SHA-256：`7b4fda393b816dd5d3c81372b7021719fb03231b8a62d84ce4ef1cc537dd72d4`。
 
 ## 4. 待独立复测的产品候选
 
@@ -312,8 +336,7 @@ Artifact audit 为 `consistent/complete`。该候选不属于产品缺陷。
 
 ## 6. 建议处理顺序
 
-1. `ERA-PROD-004`：修复 320px 完整面板响应式布局；
-2. `ERA-CAND-001`：核对公开 API 合同后决定修产品或修文档。
+1. `ERA-CAND-001`：核对公开 API 合同后决定修产品或修文档。
 
 ## 7. 修复记录要求
 

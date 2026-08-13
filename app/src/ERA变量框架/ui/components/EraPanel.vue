@@ -52,8 +52,9 @@ const requestSwitchView = (viewName: 'FloatingBall' | 'ExpandedView') => {
 <style scoped>
 .era-panel {
   flex: 2 1 600px;
-  min-width: 320px;
-  height: min(680px, 86vh);
+  min-width: 0;
+  max-width: 100%;
+  height: var(--era-region-height);
   display: flex;
   flex-direction: column;
   background: var(--bg-blur-heavy);
@@ -111,6 +112,8 @@ const requestSwitchView = (viewName: 'FloatingBall' | 'ExpandedView') => {
 }
 
 .panel-body {
+  min-width: 0;
+  min-height: 0;
   padding: 0;
   overflow: hidden;
   flex-grow: 1;
@@ -119,8 +122,12 @@ const requestSwitchView = (viewName: 'FloatingBall' | 'ExpandedView') => {
 }
 
 .panel-content-wrapper {
+  min-width: 0;
+  min-height: 0;
   padding: 14px 14px 16px;
-  overflow-y: auto; /* 内部滚动 */
+  overflow-x: clip;
+  overflow-y: auto; /* 左侧数据面板独立滚动 */
+  overscroll-behavior: contain;
   flex-grow: 1;
 }
 

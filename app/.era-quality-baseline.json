@@ -814,13 +814,6 @@
     },
     {
       "debt": 1,
-      "fingerprint": "cbc4b46fdce8854897d69eb7a09caafa6d4f82be929a8873c6692ebdef0f3f6b",
-      "objectId": "comment:style: -> .era-shell {",
-      "ruleId": "COMMENT_DEVELOPMENT_HISTORY",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
       "fingerprint": "d7e7887edf12bccb5d8b38241ab8a6bda5b10f38a3e0d90fd6051ee73faaeba2",
       "objectId": "comment:style: -> .input-btn-combo {",
       "ruleId": "COMMENT_DEVELOPMENT_HISTORY",
@@ -828,22 +821,8 @@
     },
     {
       "debt": 1,
-      "fingerprint": "1f0bfe7aa1610ab62059dde8946b0909ab414b0d5184d2670497a407d1fe0f08",
-      "objectId": "comment:style:.era-expanded-layer { -> position: fixed;",
-      "ruleId": "COMMENT_DEVELOPMENT_HISTORY",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
       "fingerprint": "239fafd14ceaf5a8437ea72cd9c51860370943c622afda96db372bfa5e238788",
       "objectId": "comment:style:} -> :deep(.floating-ball) {",
-      "ruleId": "COMMENT_DEVELOPMENT_HISTORY",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "af5347ba9d1b9ee29be645d8476cda2bd4541d79b7dd0802fb59e8998375fbcf",
-      "objectId": "comment:style:} -> .era-expanded-layer {",
       "ruleId": "COMMENT_DEVELOPMENT_HISTORY",
       "severity": "warning"
     },
@@ -863,29 +842,8 @@
     },
     {
       "debt": 1,
-      "fingerprint": "cffef8107bb605c1a0ed9eb2dedc9c010c13fa3d6e052f59241fa663d8143212",
-      "objectId": "comment:style:} -> @media (max-width: 640px) {",
-      "ruleId": "COMMENT_DEVELOPMENT_HISTORY",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "2269b5c234e1f41f4f951dbb4891e71498d789a8b559eaeb8577998cccf9e23c",
-      "objectId": "comment:style:} -> @media (max-width: 992px) {",
-      "ruleId": "COMMENT_DEVELOPMENT_HISTORY",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
       "fingerprint": "61e69ef590ce9684382ff63568e94c3d13edce51f7039825d6670737993ee1b0",
       "objectId": "comment:style:#era-snapshot-ui .error-message { -> color: var(--snapshot-danger);",
-      "ruleId": "COMMENT_DEVELOPMENT_HISTORY",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "99d62ca1f05c4ac59b7ad788bc5d9064266976836554ab904fac88e9a7c99578",
-      "objectId": "comment:style:background: transparent; -> overflow: auto;",
       "ruleId": "COMMENT_DEVELOPMENT_HISTORY",
       "severity": "warning"
     },
@@ -1297,20 +1255,6 @@
     },
     {
       "debt": 1,
-      "fingerprint": "347994c0ccfb9e945850dd30b260d6a7acef5fef7648aabcfb3c502541ca8c80",
-      "objectId": "comment:style:.action-buttons-card { -> width: 100%;",
-      "ruleId": "COMMENT_META_WORDING",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "e370df388b5e61132158f0aa31615993733760501e4ebf3c2af395da14ce179d",
-      "objectId": "comment:style:.btn { -> display: grid;",
-      "ruleId": "COMMENT_META_WORDING",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
       "fingerprint": "fda4967b9a9dcde8b7bfa84474f683fe1b77acbc1ccdf6558bb48d52be62c8e2",
       "objectId": "comment:style:.btn:active { -> transform: translateY(0);",
       "ruleId": "COMMENT_META_WORDING",
@@ -1360,13 +1304,6 @@
     },
     {
       "debt": 1,
-      "fingerprint": "03e16005f270729ff12a737d863468c0bbf181847de25568c363b25a79114bb6",
-      "objectId": "comment:style:.era-shell { -> display: flex;",
-      "ruleId": "COMMENT_META_WORDING",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
       "fingerprint": "39f88905711562ffa2b8ab687ac57e574136cb7ae675712131bf1308e3e04fd2",
       "objectId": "comment:style:.ico { -> display: inline-grid;",
       "ruleId": "COMMENT_META_WORDING",
@@ -1374,22 +1311,8 @@
     },
     {
       "debt": 1,
-      "fingerprint": "7e7893f19f66f41e6ee12433b2edc244ec8711c71d421f8c799c14e9c4735db6",
-      "objectId": "comment:style:.label { -> white-space: nowrap;",
-      "ruleId": "COMMENT_META_WORDING",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
       "fingerprint": "27b37b791e7d244ba7da99873768adf014f1f526f548f0b64fd5c9ae38dc6f3b",
       "objectId": "comment:style:align-items: center; -> column-gap: 8px;",
-      "ruleId": "COMMENT_META_WORDING",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "dee0e21a02bd41c928b261a69ed697f52ddbab2b10368b3d66b2383b14a37630",
-      "objectId": "comment:style:align-items: flex-start; -> gap: 12px;",
       "ruleId": "COMMENT_META_WORDING",
       "severity": "warning"
     },
@@ -1430,13 +1353,6 @@
     },
     {
       "debt": 1,
-      "fingerprint": "24afca0caff3a1495a0d9551267347a62672d97f0e0d8e43888b98e4cd2a9162",
-      "objectId": "comment:style:display: flex; -> align-items: flex-start;",
-      "ruleId": "COMMENT_META_WORDING",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
       "fingerprint": "1a7e90e71d5bf9f61a84137f335c43efc418f379f3d58a7232256b5cabdc1fa5",
       "objectId": "comment:style:display: flex; -> flex-direction: column;",
       "ruleId": "COMMENT_META_WORDING",
@@ -1446,13 +1362,6 @@
       "debt": 1,
       "fingerprint": "9f3f4bdcfedeade47ddba284482c8cd1932ac0f4be74250ba5f4160f2cec4143",
       "objectId": "comment:style:display: flex; -> flex-direction: column;",
-      "ruleId": "COMMENT_META_WORDING",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "e363e5657a8b8238264712449cb5366f1d2256f4e0251732455686ea3a70e80e",
-      "objectId": "comment:style:display: grid; -> grid-template-columns: 22px 1fr;",
       "ruleId": "COMMENT_META_WORDING",
       "severity": "warning"
     },
@@ -1481,13 +1390,6 @@
       "debt": 1,
       "fingerprint": "c2af2ab3050e326fb0a6fdb4bac095e014b57ad5bfab2be5abb10ab8c0c4ab73",
       "objectId": "comment:style:flex-direction: column; -> gap: 16px;",
-      "ruleId": "COMMENT_META_WORDING",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "e607f501b2a38f7983505602435dd47334d0b26130db1dc866ecc4cf37f6ba24",
-      "objectId": "comment:style:flex-wrap: nowrap; -> }",
       "ruleId": "COMMENT_META_WORDING",
       "severity": "warning"
     },
@@ -1528,22 +1430,8 @@
     },
     {
       "debt": 1,
-      "fingerprint": "5c8149a240955129346ef9264c665759c381e10a8eeb3744171dec625fa6c188",
-      "objectId": "comment:style:gap: 12px; -> flex-wrap: nowrap;",
-      "ruleId": "COMMENT_META_WORDING",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
       "fingerprint": "1f54e52425e1c480e50654b046ab124eab92b93424cf3220b0268b3b3c0941b1",
       "objectId": "comment:style:gap: 16px; -> }",
-      "ruleId": "COMMENT_META_WORDING",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "bec9c5cd198410c2d8fc829407be8b63eaa82835e321dca0c099e98828f53030",
-      "objectId": "comment:style:grid-template-columns: 22px 1fr; -> align-items: center;",
       "ruleId": "COMMENT_META_WORDING",
       "severity": "warning"
     },
@@ -1577,13 +1465,6 @@
     },
     {
       "debt": 1,
-      "fingerprint": "e04b24890960a4d35c7b7d3526631790ba5fa5e14317f70e863c9bc952ab7700",
-      "objectId": "comment:style:overflow: hidden; -> text-overflow: ellipsis;",
-      "ruleId": "COMMENT_META_WORDING",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
       "fingerprint": "dc8a2abfeec4eaa99844611e5693e51cb86f96a6707b9d16670c27b40dc62cef",
       "objectId": "comment:style:padding: 10px 12px; -> border-radius: 12px;",
       "ruleId": "COMMENT_META_WORDING",
@@ -1612,13 +1493,6 @@
     },
     {
       "debt": 1,
-      "fingerprint": "bdafe689bd83523cb749e358f8b8f597dd85b002e4f60df04cbf592e6da3ea97",
-      "objectId": "comment:style:text-overflow: ellipsis; -> }",
-      "ruleId": "COMMENT_META_WORDING",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
       "fingerprint": "29c5582b4b6d6deed59258c9528604ee1b1562484d92f2c052289dfbe6f2b06f",
       "objectId": "comment:style:transform: translateY(-1px); -> box-shadow: var(--settings-shadow-inset), var(--shadow-button-hover);",
       "ruleId": "COMMENT_META_WORDING",
@@ -1628,20 +1502,6 @@
       "debt": 1,
       "fingerprint": "afe544b163b6f962b3c88e2379a81076212f57cb6a25a79d9d6b0959678acd09",
       "objectId": "comment:style:transform: translateY(0); -> box-shadow: var(--settings-shadow-inset), var(--actions-shadow-btn-active);",
-      "ruleId": "COMMENT_META_WORDING",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "156bb2af133dfb09732d8d9e4da97f8abf4320363be84f0a74a559438fd7824e",
-      "objectId": "comment:style:white-space: nowrap; -> overflow: hidden;",
-      "ruleId": "COMMENT_META_WORDING",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "719caefd2965451c09a69191e5377cb08f344e4a8f52d962617ea5fc41ce1ba3",
-      "objectId": "comment:style:width: 100%; -> padding: 12px;",
       "ruleId": "COMMENT_META_WORDING",
       "severity": "warning"
     },
@@ -1838,13 +1698,6 @@
       "debt": 1,
       "fingerprint": "e823121c2b11e72336a039aa6f08bf67f1a81e464781c19a7630a6133aa55c02",
       "objectId": "comment:script:export const ERA_DATA_TAG = 'era_data'; -> export const ERA_DATA_REGEX = new RegExp(`<${ERA_DATA_TAG}>({.*?})<\\\\/${ERA_D",
-      "ruleId": "COMMENT_STALE_FILE_REFERENCE",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "33934e88fb84212d27078ec9f4662b5acc92d06cb02f7d1d258f48fc89d7d8de",
-      "objectId": "comment:style: -> .era-shell {",
       "ruleId": "COMMENT_STALE_FILE_REFERENCE",
       "severity": "warning"
     },

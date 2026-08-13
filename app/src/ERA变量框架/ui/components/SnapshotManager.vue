@@ -285,6 +285,7 @@ onUnmounted(() => {
   display: flex; /* 弹性布局：竖向栈 */
   flex-direction: column; /* 纵向排列 */
   gap: 16px; /* 行距 */
+  min-width: 0;
 }
 
 /* ---- 选择器区域：标签与下拉并排 ---- */
@@ -292,11 +293,13 @@ onUnmounted(() => {
   /* 选择器外层容器 */
   display: block; /* 纵向堆叠，标题在上，下拉在下 */
   margin-bottom: 4px; /* 底部留一点呼吸 */
+  min-width: 0;
 }
 #era-snapshot-ui .select-field {
   /* 字段容器 */
   position: relative; /* 作为浮动标题的定位上下文 */
   display: block; /* 独占一行，便于对齐其他控件 */
+  min-width: 0;
 }
 
 /* ---- 左侧标签：略提权重与对比度 ---- */
@@ -315,6 +318,7 @@ onUnmounted(() => {
   position: relative; /* 用于放置内置箭头 */
   flex-grow: 1; /* 占满剩余宽度 */
   isolation: isolate; /* 防止子层混合到外部 */
+  min-width: 0;
 }
 
 /* ---- 自定义下拉箭头：跟随焦点旋转 ---- */
@@ -475,6 +479,7 @@ onUnmounted(() => {
 /* 容器：实现无缝拼接和整体焦点效果 */
 #era-snapshot-ui .id-query-container {
   display: flex;
+  min-width: 0;
   border-radius: 10px;
   transition: box-shadow 0.18s ease;
 }
@@ -485,6 +490,7 @@ onUnmounted(() => {
 /* 输入框：继承 .mk-selector 样式，并调整拼接侧的圆角和边框 */
 #era-snapshot-ui .id-input {
   flex-grow: 1;
+  min-width: 0;
   border-top-right-radius: 0;
   border-bottom-right-radius: 0;
   border-right-width: 0;
@@ -514,6 +520,12 @@ onUnmounted(() => {
     background-color 0.2s ease,
     border-color 0.2s ease,
     transform 0.1s ease;
+}
+
+@media (max-width: 360px) {
+  #era-snapshot-ui .query-button {
+    padding-inline: 12px;
+  }
 }
 #era-snapshot-ui .query-button:hover {
   background-color: var(--snapshot-btn-hover-bg);

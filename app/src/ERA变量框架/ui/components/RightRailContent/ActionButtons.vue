@@ -149,6 +149,7 @@ async function onRollbackTo() {
 .input-btn-combo {
   display: flex;
   gap: 8px;
+  min-width: 0;
 }
 
 .input-field {
@@ -194,8 +195,8 @@ async function onRollbackTo() {
 
 /* === 外层卡片：与左侧 ERA 面板同风格（玻璃卡 + 轻浮雕） === */
 .action-buttons-card {
-  /* 中文注释：卡片容器 */
-  width: 100%; /* 占满侧栏 */ /* 中文注释：自适应宽度 */
+  width: 100%;
+  min-width: 0;
   padding: 12px; /* 内边距 */ /* 中文注释：留白 */
   background: var(--actions-bg-glass);
   border: 1px solid var(--border-strong);
@@ -246,9 +247,8 @@ async function onRollbackTo() {
 
 /* 通用按钮造型：大号、易点、可聚焦 */
 .btn {
-  /* 中文注释：通用按钮 */
-  display: grid; /* 中文注释：网格方便对齐图标与文字 */
-  grid-template-columns: 22px 1fr; /* 中文注释：左 22px 图标 + 右侧文字 */
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
   align-items: center; /* 中文注释：垂直居中 */
   column-gap: 8px; /* 中文注释：图标与文字间距 */
   padding: 10px 12px; /* 中文注释：触控友好尺寸 */
@@ -320,9 +320,7 @@ async function onRollbackTo() {
   filter: saturate(0.95); /* 中文注释：轻饱和 */
 }
 .label {
-  /* 中文注释：文字 */
-  white-space: nowrap; /* 中文注释：不换行（文字短） */
-  overflow: hidden; /* 中文注释：溢出裁剪 */
-  text-overflow: ellipsis; /* 中文注释：省略号 */
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 </style>

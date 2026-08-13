@@ -1,9 +1,11 @@
 export function createMountPoint(): JQuery<HTMLDivElement> {
   return $('<div>').attr('id', `era-ui-mount-point-${getScriptId()}`).css({
     position: 'fixed',
-    bottom: '20px',
-    left: '20px',
-    'z-index': 10000,
+    inset: 0,
+    width: '100svw',
+    height: '100svh',
+    'z-index': 2147483647,
+    'pointer-events': 'none',
   }) as JQuery<HTMLDivElement>;
 }
 
