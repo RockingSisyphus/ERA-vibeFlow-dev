@@ -3120,7 +3120,7 @@
         "path": "configs/nodesets/dispatch_prepare_context.jsonc"
       },
       "display_name": "ERA 统一任务上下文准备",
-      "description": "在领域任务路由前统一分类任务上下文，读取严格酒馆消息投影，规划并提交 MK 与状态占位符，最后把 EraDispatchContextV2 和显式任务来源封装进已准备步骤。",
+      "description": "在领域任务路由前统一分类任务上下文，读取严格酒馆消息投影，规划并提交消息文本中的 MK 与状态占位符；仅 update-mk 任务在此提交 SelectedMks，状态任务保留旧链供同步事务识别分歧，最后把 EraDispatchContextV2 和显式任务来源封装进已准备步骤。",
       "status": "implemented",
       "flow_kind": "predefined",
       "effect_scope": "none",
@@ -3406,7 +3406,7 @@
             },
             "role": {
               "display_name": "规划 MK 与占位符",
-              "description": "按上下文模式确保当前消息 MK，为启用设置的非用户文本幂等追加占位符，并生成携带 affected 刷新的统一预提交计划。"
+              "description": "按上下文模式确保当前消息 MK，为启用设置的非用户文本幂等追加占位符；状态任务只准备消息文本并保留旧 SelectedMks，update-mk 任务同时规划主链提交。"
             },
             "contract_source": "node_type",
             "flow_kind": "decision",
@@ -3501,7 +3501,7 @@
             },
             "role": {
               "display_name": "提交 MK 与占位符准备",
-              "description": "先以 affected 刷新确认当前文本写入，再提交并回读完整 ERAMetaData；部分写入或结果未知立即标为 fatal。"
+              "description": "先以 affected 刷新确认当前文本写入；仅 update-mk 任务在此提交完整 ERAMetaData，状态任务的 SelectedMks 由后续同步事务随变量结果一次性提交；部分写入或结果未知立即标为 fatal。"
             },
             "contract_source": "node_type",
             "flow_kind": "data_store",
@@ -10596,7 +10596,7 @@
     },
     "era.dispatch.commit_preparation": {
       "display_name": "提交 MK 与占位符准备",
-      "description": "以 affected 刷新提交当前激活文本，再提交完整 ERAMetaData；部分或未知提交立即致命失败。",
+      "description": "以 affected 刷新提交当前激活文本；仅 update-mk 任务提交完整 ERAMetaData，状态任务把 SelectedMks 留给同步事务提交；部分或未知提交立即致命失败。",
       "category": "任务派发",
       "version": "1.0.0",
       "flow_kind": "data_store",
@@ -10617,12 +10617,12 @@
         ],
         "input_semantics": {
           "era.dispatch.preparation.plan": [
-            "输入：含明确消息或变量写入的准备计划。"
+            "输入：含明确消息写入，或 update-mk 元数据写入的准备计划。"
           ]
         },
         "output_semantics": {
           "committed_preparation_outcome": [
-            "输出：全部必需写入确认后的准备结果。"
+            "输出：当前任务拥有的全部预提交写入确认后的准备结果。"
           ]
         },
         "params_schema": {},
@@ -10713,7 +10713,7 @@
     },
     "era.dispatch.plan_message_preparation": {
       "display_name": "规划 MK 与占位符",
-      "description": "幂等确保最新消息 MK、SelectedMks 和启用的非用户消息占位符，并选择预提交路由。",
+      "description": "幂等确保最新消息 MK 和启用的非用户消息占位符；仅 update-mk 任务同时规划 SelectedMks，状态任务保留旧链供同步事务识别分歧。",
       "category": "任务派发",
       "version": "1.0.0",
       "flow_kind": "decision",
@@ -10744,7 +10744,7 @@
         },
         "output_semantics": {
           "dispatch_preparation_plan": [
-            "输出：消息文本与元数据的唯一逻辑准备计划。"
+            "输出：消息文本准备，以及仅属于 update-mk 的元数据准备计划。"
           ],
           "precommit_route": [
             "输出：commit 或 no-op 的互斥路由。"
@@ -38489,7 +38489,7 @@
         "kind": "base_lib",
         "id": "era.service.dispatch_preparation",
         "display_name": "ERA 统一任务上下文准备纯逻辑",
-        "description": "分类显式任务来源，校验严格消息投影，幂等规划 MK、占位符与 SelectedMks，并形成统一派发上下文。",
+        "description": "分类显式任务来源，校验严格消息投影，幂等规划 MK 与占位符；仅 update-mk 任务规划 SelectedMks，状态任务保留旧链供同步事务识别分歧，并形成统一派发上下文。",
         "category": "任务派发",
         "version": "1.0.0",
         "implementations": [

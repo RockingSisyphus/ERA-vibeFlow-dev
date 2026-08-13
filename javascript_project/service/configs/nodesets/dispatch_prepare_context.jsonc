@@ -1,7 +1,7 @@
 {
   "type_key": "era.dispatch.prepare_context",
   "display_name": "ERA 统一任务上下文准备",
-  "description": "在领域任务路由前统一分类任务上下文，读取严格酒馆消息投影，规划并提交 MK 与状态占位符，最后把 EraDispatchContextV2 和显式任务来源封装进已准备步骤。",
+  "description": "在领域任务路由前统一分类任务上下文，读取严格酒馆消息投影，规划并提交消息文本中的 MK 与状态占位符；仅 update-mk 任务在此提交 SelectedMks，状态任务保留旧链供同步事务识别分歧，最后把 EraDispatchContextV2 和显式任务来源封装进已准备步骤。",
   "requires": [
     {
       "type": "era.step.request",
@@ -77,7 +77,7 @@
         "id": "plan_message_preparation",
         "type_used": "era.dispatch.plan_message_preparation",
         "display_name": "规划 MK 与占位符",
-        "description": "按上下文模式确保当前消息 MK，为启用设置的非用户文本幂等追加占位符，并生成携带 affected 刷新的统一预提交计划。"
+        "description": "按上下文模式确保当前消息 MK，为启用设置的非用户文本幂等追加占位符；状态任务只准备消息文本并保留旧 SelectedMks，update-mk 任务同时规划主链提交。"
       },
       {
         "id": "preserve_prepared_context",
@@ -89,7 +89,7 @@
         "id": "commit_preparation",
         "type_used": "era.dispatch.commit_preparation",
         "display_name": "提交 MK 与占位符准备",
-        "description": "先以 affected 刷新确认当前文本写入，再提交并回读完整 ERAMetaData；部分写入或结果未知立即标为 fatal。"
+        "description": "先以 affected 刷新确认当前文本写入；仅 update-mk 任务在此提交完整 ERAMetaData，状态任务的 SelectedMks 由后续同步事务随变量结果一次性提交；部分写入或结果未知立即标为 fatal。"
       },
       {
         "id": "finalize_dispatch_context",

@@ -71,6 +71,29 @@ function syncStep(
   };
 }
 
+function updateMkStep() {
+  const sourceEvent = {
+    ...event(),
+    type: 'message_sent',
+  };
+  return {
+    kind: 'execute',
+    stepId: 'step:update-mk:1',
+    index: 0,
+    taskRoute: 'update-mk',
+    sourceSequences: [1],
+    events: [sourceEvent],
+    task: {
+      id: 'task:update-mk:1',
+      sourceEvents: [sourceEvent],
+      primaryEvent: sourceEvent,
+      context: 'latest-message-with-mk',
+      kind: 'update-mk',
+    },
+    sources: [{ event: sourceEvent, relation: 'primary' }],
+  };
+}
+
 function state(step: JsonRecord) {
   return {
     schemaVersion: 1,
@@ -139,7 +162,7 @@ describe('统一执行前上下文', () => {
     expect(plan).toMatchObject({ processingMk: null, messageUpdate: null, variableWriteRequired: false });
   });
 
-  it('with-mk 一次性确保 MK、保留 null 位置并幂等追加自定义占位符', () => {
+  it('状态任务确保 MK 和占位符，但保留旧 SelectedMks 供同步事务识别 swipe 分歧', () => {
     const step = syncStep();
     const seed = preparation.classifyDispatch(step, state(step)).seed;
     const canonical = preparation.canonicalDispatchContext(
@@ -153,8 +176,9 @@ describe('统一执行前上下文', () => {
     expect(plan.processingMk).toMatch(/^era_mk_1001_/);
     expect(plan.messageUpdate?.content).toContain('<自定义状态栏/>');
     expect(plan.messageUpdate?.content.match(/<自定义状态栏\/>/g)).toHaveLength(1);
-    expect(plan.metaUpdate.SelectedMks).toEqual(['mk-0', null, plan.processingMk]);
+    expect(plan.metaUpdate.SelectedMks).toEqual(['mk-0', null]);
     expect(plan.metaUpdate.unknown).toEqual({ keep: true });
+    expect(plan.variableWriteRequired).toBe(false);
 
     const repeated = preparation.planDispatchPreparation(
       preparation.canonicalDispatchContext(
@@ -166,6 +190,24 @@ describe('统一执行前上下文', () => {
     );
     expect(repeated.messageWriteRequired).toBe(false);
     expect(repeated.variableWriteRequired).toBe(false);
+  });
+
+  it('仅 update-mk 任务在准备阶段拥有 SelectedMks 提交权', () => {
+    const step = updateMkStep();
+    const seed = preparation.classifyDispatch(step, state(step)).seed;
+    const plan = preparation.planDispatchPreparation(
+      preparation.canonicalDispatchContext(
+        seed,
+        strictMessages('用户正文', 'user'),
+        { variables: { ERAMetaData: { SelectedMks: ['mk-0', null], unknown: { keep: true } } } },
+        { variables: {} },
+      ),
+    );
+    expect(plan.status).toBe('ready');
+    expect(plan.processingMk).toMatch(/^era_mk_1001_/);
+    expect(plan.variableWriteRequired).toBe(true);
+    expect(plan.metaUpdate.SelectedMks).toEqual(['mk-0', null, plan.processingMk]);
+    expect(plan.metaUpdate.unknown).toEqual({ keep: true });
   });
 
   it('占位符关闭时不新增也不删除历史值，用户消息从不追加占位符', () => {
@@ -194,11 +236,11 @@ describe('统一执行前上下文', () => {
   });
 
   it('预提交部分写入与未知确认均升级为 fatal', async () => {
-    const step = syncStep();
-    const seed = preparation.classifyDispatch(step, state(step)).seed;
-    const plan = preparation.planDispatchPreparation(
+    const updateStep = updateMkStep();
+    const updateSeed = preparation.classifyDispatch(updateStep, state(updateStep)).seed;
+    const updatePlan = preparation.planDispatchPreparation(
       preparation.canonicalDispatchContext(
-        seed,
+        updateSeed,
         strictMessages(),
         { variables: { ERAMetaData: {} } },
         { variables: {} },
@@ -206,7 +248,7 @@ describe('统一执行前上下文', () => {
     );
     await expect(
       commitNode.run(
-        { 'era.dispatch.preparation.plan': { value: plan } },
+        { 'era.dispatch.preparation.plan': { value: updatePlan } },
         {},
         {
           capabilities: {
@@ -217,9 +259,20 @@ describe('统一执行前上下文', () => {
       ),
     ).rejects.toThrow('ERA_DISPATCH_PARTIAL_COMMIT');
 
+    const syncStepValue = syncStep();
+    const syncSeed = preparation.classifyDispatch(syncStepValue, state(syncStepValue)).seed;
+    const syncPlan = preparation.planDispatchPreparation(
+      preparation.canonicalDispatchContext(
+        syncSeed,
+        strictMessages(),
+        { variables: { ERAMetaData: {} } },
+        { variables: {} },
+      ),
+    );
+
     await expect(
       commitNode.run(
-        { 'era.dispatch.preparation.plan': { value: plan } },
+        { 'era.dispatch.preparation.plan': { value: syncPlan } },
         {},
         {
           capabilities: {
@@ -316,5 +369,84 @@ describe('严格 DTO、安全对象与 API 状态策略', () => {
     });
     expect(normalWork.payload?.consecutiveProcessingCount).toBe(5);
     expect(normalWork.plan?.nextConsecutiveState).toEqual({ mk: 'mk-existing', count: 5 });
+  });
+
+  it('swipe 新 MK 只预提交消息文本，再由同步事务原子撤销 A 并应用 B', async () => {
+    const keyBlock = (mk: string) => `<era_data>{"era-message-key"="${mk}","era-message-type"="assistant"}</era_data>`;
+    const rawMessages = [
+      {
+        schemaVersion: 1,
+        messageId: 0,
+        role: 'assistant',
+        activeText: `起始消息\n${keyBlock('mk-0')}`,
+        swipeIndex: null,
+      },
+      {
+        schemaVersion: 1,
+        messageId: 1,
+        role: 'assistant',
+        activeText: '<VariableInsert>{"ui_swipe":{"branch":"B"}}</VariableInsert>',
+        swipeIndex: 1,
+      },
+    ];
+    const variables = {
+      stat_data: { ui_swipe: { branch: 'A' } },
+      ERAMetaData: {
+        SelectedMks: ['mk-0', 'mk-a'],
+        EditLogs: {
+          'mk-0': [],
+          'mk-a': [{ op: 'insert', path: 'ui_swipe', value_new: { branch: 'A' } }],
+        },
+      },
+    };
+    const step = syncStep();
+    const seed = preparation.classifyDispatch(step, state(step)).seed;
+    const plan = preparation.planDispatchPreparation(
+      preparation.canonicalDispatchContext(
+        seed,
+        { schemaVersion: 2, messages: rawMessages },
+        { variables },
+        { variables: {} },
+      ),
+    );
+    expect(plan.processingMk).toMatch(/^era_mk_1001_/);
+    expect(plan.metaUpdate.SelectedMks).toEqual(['mk-0', 'mk-a']);
+    expect(plan.variableWriteRequired).toBe(false);
+    const updateContent = vi.fn(async () => ({ status: 'committed' }));
+    const commitVariables = vi.fn(async () => ({ status: 'committed' }));
+    const committed = await commitNode.run(
+      { 'era.dispatch.preparation.plan': { value: plan } },
+      {},
+      {
+        capabilities: {
+          'era.tavern.messages': { update_content: updateContent },
+          'era.tavern.variables': { commit: commitVariables },
+        },
+      },
+    );
+    expect(updateContent).toHaveBeenCalledOnce();
+    expect(commitVariables).not.toHaveBeenCalled();
+    const dispatchContext = preparation.dispatchContextOf(committed.committed_preparation_outcome);
+    const routedStep = { ...step, dispatchContext };
+    const work = transaction.planSyncWork({
+      schemaVersion: 1,
+      step: routedStep,
+      state: state(routedStep),
+      status: 'ready',
+      messagesRaw: { schemaVersion: 2, messages: dispatchContext.messages },
+      variablesRaw: variables,
+      failure: null,
+    });
+    expect(work.disposition).toBe('commit');
+    expect(work.plan).toMatchObject({
+      status: 'recalculated',
+      divergence: { type: 'FULL_RECALC', recalcId: 1, cause: 'divergence' },
+      stat: { ui_swipe: { branch: 'B' } },
+      rollback: { applied: true, fromMk: 'mk-a', toMk: 'mk-0' },
+    });
+    expect(work.plan?.meta.SelectedMks).toEqual(['mk-0', plan.processingMk]);
+    expect((work.plan?.meta.EditLogs as JsonRecord)[String(plan.processingMk)]).toEqual([
+      { op: 'insert', path: 'ui_swipe', value_new: { branch: 'B' } },
+    ]);
   });
 });

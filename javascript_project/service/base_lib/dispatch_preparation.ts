@@ -308,17 +308,21 @@ export function planDispatchPreparation(
   const messages = context.messages.map((item) =>
     item.messageId === latest.messageId ? preparedLatest : item,
   );
-  const chain = selectedMks(context.meta);
-  while (chain.length <= latest.messageId) chain.push(null);
-  const variableWriteRequired = chain[latest.messageId] !== ensured.mk;
-  chain[latest.messageId] = ensured.mk;
   const metaUpdate = cloneMkValue(context.meta) as Record<string, unknown>;
-  Object.defineProperty(metaUpdate, "SelectedMks", {
-    value: chain,
-    enumerable: true,
-    configurable: true,
-    writable: true,
-  });
+  const ownsSelectedMkCommit = context.seed.dispatchClass === "update-mk";
+  let variableWriteRequired = false;
+  if (ownsSelectedMkCommit) {
+    const chain = selectedMks(context.meta);
+    while (chain.length <= latest.messageId) chain.push(null);
+    variableWriteRequired = chain[latest.messageId] !== ensured.mk;
+    chain[latest.messageId] = ensured.mk;
+    Object.defineProperty(metaUpdate, "SelectedMks", {
+      value: chain,
+      enumerable: true,
+      configurable: true,
+      writable: true,
+    });
+  }
   return {
     schemaVersion: 1,
     seed: context.seed,
