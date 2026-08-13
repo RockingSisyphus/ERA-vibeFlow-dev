@@ -77,7 +77,7 @@
 
 ### ERA-PROD-002：非法消息 ID 和回滚 ID 未在 UI 本地拦截
 
-- 状态：`confirmed`
+- 状态：`fixed`
 - 优先级：P1
 - 对应测试：
   - `ERA-UI-SNAPSHOT-MID-004`
@@ -101,18 +101,33 @@
 - UI 仍发送了 `era:getSnapshotAtMId` 或 `era:forceSync`；
 - 非法请求进入 Service 后才产生诊断。
 
-初步判断：消息 ID 与回滚 ID 的 UI 校验没有要求“非负安全整数”。三条失败应作为
-同一个根因修复，而不是三个独立 bug。
+根因：消息 ID 与回滚 ID 的 UI 校验只判断 `null` 和负数，而 Vue 的 `v-model.number`
+只负责尽量把文本转换为数字，不能保证结果是整数或处于 JavaScript 安全整数范围内。
+因此小数和超安全整数会被直接放入 Service payload。
 
-完成条件：
+修复：新增共享的 UI 消息 ID 守卫，只有运行时值满足 `typeof value === 'number'`、
+`Number.isSafeInteger(value)` 且 `value >= 0` 时才允许构造查询或回滚请求；两个数字输入框
+同时增加 `min=0` 和 `step=1` 改善浏览器交互，但不依赖 HTML 属性作为业务安全边界。
 
-- 小数、负数、空值、非数字和超过 `Number.MAX_SAFE_INTEGER` 的值均在 UI 本地拒绝；
-- 上述输入产生 0 次 Service 调用；
-- `0` 和有效安全整数仍能正常查询或回滚。
+2026-08-14 使用修复后生产 bundle（SHA-256：
+`4c8205e3f26aa2739c169831331fea73a363ecbd326cc8ced3da734df0ae99f7`）独立真实重测：
 
-### ERA-PROD-003：关闭悬浮球后仍挂载 UI 和监听器
+- `ERA-UI-SNAPSHOT-MID-004`：run `st-run-20260813T16585521-3ea42b8ff485`，passed，
+  小数 `1.5` 产生 0 次 Service 调用；
+- `ERA-UI-SNAPSHOT-MID-006`：run `st-run-20260813T16594905-b8d50a46d169`，passed，
+  超安全整数产生 0 次 Service 调用；
+- `ERA-UI-ACTION-ROLLBACK-004`：run `st-run-20260813T17004089-e2bfd5212559`，passed，
+  小数 `1.5` 产生 0 次 Service 调用；
+- 合法边界 `ERA-UI-SNAPSHOT-MID-001` 与 `ERA-UI-ACTION-ROLLBACK-001` 均 passed，
+  ID `0` 各自精确提交 1 次正确 Service 调用；
+- 五个 run 均为 recording completed、evaluation passed、Artifact audit consistent/complete。
 
-- 状态：`confirmed`
+产品门禁：app `pnpm verify` 全部通过，31 个测试文件、267/267 测试通过；production build
+成功。最终结论：本问题已修复。
+
+### ERA-PROD-003：关闭悬浮球后仍挂载 UI 和监听器（已排除）
+
+- 状态：`excluded`
 - 优先级：P0
 - 对应测试：`ERA-UI-LIFE-002`
 
@@ -127,16 +142,34 @@
 - 禁用时不挂载悬浮球；
 - 不遗留 ERA UI 的 DOM、样式容器或监听器。
 
-实际行为：
+旧测试观察：
 
 - 悬浮球仍然可见；
 - 观察到 1 个挂载实例和 15 个活动监听器。
 
-完成条件：
+2026-08-14 根因复核：ERA-Test-Pack 的 Browser Pack 在顶层页面执行，却使用该上下文的
+`getScriptId()` 写入 `boot.settings`；ERA bundle 则运行在角色卡 loader 脚本上下文，读取
+loader 自己的 script ID。两者并非同一个脚本变量槽。因此旧测试显示的
+`开启悬浮球=false` 只是 Driver 内部目标配置，ERA 实际读到空设置并采用默认值 `true`。
 
-- 禁用启动时悬浮球不可见且 UI 资源归零；
-- 再次启用并完整启动后只挂载一个实例；
-- stop、pagehide 和热重载生命周期测试不回退。
+ERA 产品启动链本身已经在启动 UI 前刷新脚本设置，并在值严格等于 `false` 时直接返回
+`mounted=false`。Pack 随后改为使用 loader controller 暴露的精确 `scriptId` 写入设置，立即
+从同一变量槽回读并严格比对；任何作用域、写入或回读异常均以
+`ERA_UI_DRIVER_PROTOCOL` 终止，不能再伪装为产品 failed。
+
+2026-08-14 使用同一生产 bundle 独立真实重测：
+
+- run：`st-run-20260813T16461099-9ded142a5daf`；
+- recording：1/1 completed；evaluation：1/1 passed；
+- `settingsTarget.verified=true`、`bootSettingsVerified=true`；
+- 悬浮球计数 0、`mountCount=0`、`styleContainerCount=0`；
+- `eraStorePresent=false`、`switchViewPresent=false`；
+- 14 个活动 listener 均为 Service/macro 的公共 `era:*` 接口，旧样本多出的 UI
+  `era:writeDone` listener 已消失，`staleListenerCount=0`；
+- Artifact audit 为 `consistent/complete`，issues=[]。
+
+最终结论：关闭悬浮球时 ERA 没有挂载 UI 自有 DOM、样式或 listener。旧 failed 完全由
+Pack 写错脚本变量作用域造成，不属于 ERA 产品缺陷；ERA 源码和生产 bundle 无需修改。
 
 ### ERA-PROD-004：320px 宽手机上完整面板横向溢出
 
@@ -242,7 +275,7 @@ ERA 实现。
 
 ### ERA-CAND-003：切换已有 Swipe 后 regenerate 最终变量为空
 
-- 状态：`candidate`
+- 状态：`excluded`
 - 优先级：P0
 - 对应测试：`UI-SWIPE-010`
 
@@ -254,30 +287,33 @@ regenerate；Response Lab 返回包含 `VariableEdit` 的完整非流式回复�
 实际行为：`generation_started → message_received → generation_ended` 均已出现，provider
 请求也正常完成，但最终 `stat_data={}`。
 
-为何暂列候选：需独立复测，区分 ERA regenerate 同步/解析缺陷、消息来源规则与测试
-fixture 语义；不得仅凭聚合 run 的单个样本直接修改核心逻辑。
+最终结论：测试回复错误使用了“只改不增”的 `VariableEdit`，而 regenerate 栅栏已正确
+回退旧回复状态，新回复上的 `ui_swipe.branch` 当时并不存在，因此 ERA 按合同跳过写入。
+ERA-Test-Pack 已将回复改为 `VariableInsert` 并增加防回归合同。使用同一生产 bundle 的
+独立真实 run `st-run-20260813T16243535-0bde25b9f463` 已 1/1 passed、14 个 action 完整，
+Artifact audit 为 `consistent/complete`。该候选不属于产品缺陷。
 
 ## 5. 已解决或已排除项目
 
-| 项目                              | 状态       | 结论                                                           |
-| --------------------------------- | ---------- | -------------------------------------------------------------- |
-| 重新生成请求在 ERA 回退变量前开始 | `fixed`    | 已在提交 `ad6a7c7` 中增加 regenerate barrier 并完成相关验证    |
-| `ABOUT-002` 极窄触屏外链命中问题  | `fixed`    | 已修复右栏适配并单独重测通过                                   |
-| 点号键显示为 `__DOT__`            | `excluded` | 这是内部持久化编码；公开事件和查询结果会还原正常键名           |
-| 空字符串路径                      | `excluded` | 按当前 ERA 合同表示根对象，不是非法路径                        |
-| 数组嵌套更新                      | `excluded` | ERA 明确不支持数组操作，不纳入产品缺陷                         |
-| 第二开场白切换                    | `excluded` | `UI-NAV-004` 独立真实重测 passed                               |
-| PNG 图片附件生成                  | `excluded` | `UI-GEN-013` 修正 Pack 证据路径后独立真实重测 passed           |
-| WAV 音频附件生成                  | `excluded` | `UI-GEN-014` 修正 Pack 证据路径后独立真实重测 passed           |
-| 旧回归中的其余 Pack failed        | `excluded` | 已确认属于 oracle、fixture、编码层级或证据路径问题，不修改 ERA |
+| 项目                              | 状态       | 结论                                                             |
+| --------------------------------- | ---------- | ---------------------------------------------------------------- |
+| 重新生成请求在 ERA 回退变量前开始 | `fixed`    | 已在提交 `ad6a7c7` 中增加 regenerate barrier 并完成相关验证      |
+| 非法消息 ID 和回滚 ID 穿透 UI     | `fixed`    | 共享安全整数守卫；三条非法与两条 ID 0 路径真实重测 passed        |
+| `ABOUT-002` 极窄触屏外链命中问题  | `fixed`    | 已修复右栏适配并单独重测通过                                     |
+| 点号键显示为 `__DOT__`            | `excluded` | 这是内部持久化编码；公开事件和查询结果会还原正常键名             |
+| 空字符串路径                      | `excluded` | 按当前 ERA 合同表示根对象，不是非法路径                          |
+| 数组嵌套更新                      | `excluded` | ERA 明确不支持数组操作，不纳入产品缺陷                           |
+| 第二开场白切换                    | `excluded` | `UI-NAV-004` 独立真实重测 passed                                 |
+| PNG 图片附件生成                  | `excluded` | `UI-GEN-013` 修正 Pack 证据路径后独立真实重测 passed             |
+| WAV 音频附件生成                  | `excluded` | `UI-GEN-014` 修正 Pack 证据路径后独立真实重测 passed             |
+| 已有 Swipe 后 regenerate 变量为空 | `excluded` | 场景误用 `VariableEdit`；改为 `VariableInsert` 后真实重测 passed |
+| 关闭悬浮球后仍挂载 UI             | `excluded` | Pack 修正脚本变量作用域并加强判定后独立真实重测 passed           |
+| 旧回归中的其余 Pack failed        | `excluded` | 已确认属于 oracle、fixture、编码层级或证据路径问题，不修改 ERA   |
 
 ## 6. 建议处理顺序
 
-1. `ERA-CAND-003`：独立复测已有 Swipe 后 regenerate 的变量结算；
-2. `ERA-PROD-003`：修复禁用状态和生命周期所有权；
-3. `ERA-PROD-002`：统一消息 ID/回滚 ID 输入校验；
-4. `ERA-PROD-004`：修复 320px 完整面板响应式布局；
-5. `ERA-CAND-001`：核对公开 API 合同后决定修产品或修文档。
+1. `ERA-PROD-004`：修复 320px 完整面板响应式布局；
+2. `ERA-CAND-001`：核对公开 API 合同后决定修产品或修文档。
 
 ## 7. 修复记录要求
 

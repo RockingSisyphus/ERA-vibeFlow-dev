@@ -28,6 +28,8 @@
             id="mid-input"
             v-model.number="messageIdInput"
             type="number"
+            min="0"
+            step="1"
             class="mk-selector id-input"
             placeholder="输入消息 ID..."
             @keyup.enter="queryByMId"
@@ -64,6 +66,7 @@ import { ERA_API_EVENTS } from '../../utils/constants';
 import type { QueryResultItem, QueryResultPayload, WriteDonePayload } from '../../utils/constants';
 import { Logger } from '../../utils/log';
 import { isUserMessage } from '../../utils/message';
+import { isNonNegativeSafeMessageId } from '../utils/message-id';
 import EraAccordion from '../template/EraAccordion.vue';
 import PrettyJsonViewer from '../template/PrettyJsonViewer.vue';
 import TabSwitch from '../template/TabSwitch.vue';
@@ -80,7 +83,7 @@ const logger = new Logger();
 
 const latestMkFromProps = computed(() => props.latestData?.mk ?? null);
 const selectedMk = ref<string | null>(latestMkFromProps.value);
-const messageIdInput = ref<number | null>(null);
+const messageIdInput = ref<number | string | null>(null);
 const historicalSnapshot = ref<QueryResultItem | null>(null);
 const loading = ref(false);
 const error = ref<string | null>(null);
@@ -169,8 +172,9 @@ const handleSelectionChange = () => {
 };
 
 const queryByMId = () => {
-  if (messageIdInput.value === null || messageIdInput.value < 0) {
-    error.value = '请输入一个有效的、非负的消息 ID。';
+  const messageId = messageIdInput.value;
+  if (!isNonNegativeSafeMessageId(messageId)) {
+    error.value = '请输入有效的非负安全整数消息 ID。';
     return;
   }
   // 清理其他查询方式的状态
@@ -179,8 +183,8 @@ const queryByMId = () => {
   error.value = null;
   loading.value = true;
 
-  logger.debug('SnapshotManager', `(ID Query) 请求快照, message_id: ${messageIdInput.value}`);
-  submitQuery(ERA_API_EVENTS.GET_SNAPSHOT_AT_MID, { message_id: messageIdInput.value });
+  logger.debug('SnapshotManager', `(ID Query) 请求快照, message_id: ${messageId}`);
+  submitQuery(ERA_API_EVENTS.GET_SNAPSHOT_AT_MID, { message_id: messageId });
 };
 
 const handleQueryResult = (detail: QueryResultPayload) => {

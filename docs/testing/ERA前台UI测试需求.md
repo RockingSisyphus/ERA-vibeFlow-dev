@@ -298,7 +298,8 @@ UI 操作：
 - 不存在时清除旧结果并显示含目标 ID 的未找到提示；
 - 点击“查找”后才发起查询；输入本身不得意外发起查询。
 
-已知缺口：当前只检查 null 和 `<0`，小数、NaN 或非安全整数可能穿透。
+实现状态：UI 已统一通过共享守卫校验非负安全整数；小数、NaN、空值和非安全整数不会
+构造 Service 请求。
 
 ### 4.9 快照并发、迟到和无关响应
 
@@ -380,7 +381,8 @@ UI 操作：
 - 不存在、已删除或 Service 失败不改变已提交状态、不显示成功；
 - pending 时同一按钮不重复提交。
 
-已知缺口：当前本地校验只覆盖 null 与负数，也没有 pending 防重入。
+实现状态：本地 ID 校验已覆盖非负安全整数；pending 期间的按钮防重入仍需按 4.10 的
+统一 busy 规则验收。
 
 ### 4.12 ERA 快速初始化
 
@@ -615,14 +617,14 @@ UI 操作：
 `inspect-era-snapshot-detail` 可以保留。新增能力应归 `era` pack 所有，使用语义定位和
 严格输入 schema，不把 selector 暴露给 catalog。至少需要：
 
-| 能力组       | 需要表达的动作/观察                                                                   |
-| ------------ | ------------------------------------------------------------------------------------- |
-| 生命周期     | 读取 ERA mount/style/listener 数，触发 UI stop/热重载，检查迟到事件                   |
-| 数据面板     | 读取空态、元数据、SelectedMks、EditLogs、当前页签和可见 JSON 摘要                     |
-| 快照         | 选择指定 MK、按消息 ID 查询、切页签、控制 queryResult 顺序、读取 loading/error        |
-| 快捷操作     | 点击 full/latest/rollback/init，输入 rollback ID，关联唯一 receipt/settlement/toast   |
-| 设置         | 展开、重新读取、编辑各类型、丢弃、保存，读取 busy、toast、主题和持久化值              |
-| 视觉与适配   | 设置 viewport/pointer/reduced-motion/zoom，读取裁切、命中、overflow 与 computed style |
+| 能力组     | 需要表达的动作/观察                                                                   |
+| ---------- | ------------------------------------------------------------------------------------- |
+| 生命周期   | 读取 ERA mount/style/listener 数，触发 UI stop/热重载，检查迟到事件                   |
+| 数据面板   | 读取空态、元数据、SelectedMks、EditLogs、当前页签和可见 JSON 摘要                     |
+| 快照       | 选择指定 MK、按消息 ID 查询、切页签、控制 queryResult 顺序、读取 loading/error        |
+| 快捷操作   | 点击 full/latest/rollback/init，输入 rollback ID，关联唯一 receipt/settlement/toast   |
+| 设置       | 展开、重新读取、编辑各类型、丢弃、保存，读取 busy、toast、主题和持久化值              |
+| 视觉与适配 | 设置 viewport/pointer/reduced-motion/zoom，读取裁切、命中、overflow 与 computed style |
 
 每个 completed action 必须有专属 completion evidence；“点击成功”不能替代以下证据：
 
@@ -633,12 +635,12 @@ UI 操作：
 
 ## 6. 建议套件
 
-| Suite               | 内容                                                                             |                                并发建议 |
-| ------------------- | -------------------------------------------------------------------------------- | --------------------------------------: |
-| `era-ui-smoke`      | 启动、悬浮球开关、首屏数据、主面板、一个快照查询、四个快捷操作成功路径、设置保存 |                                       4 |
-| `era-ui-functional` | 本文全部 P0/P1 功能、输入边界、Service 失败和并发/迟到响应                       |                                       4 |
+| Suite               | 内容                                                                                    |                                并发建议 |
+| ------------------- | --------------------------------------------------------------------------------------- | --------------------------------------: |
+| `era-ui-smoke`      | 启动、悬浮球开关、首屏数据、主面板、一个快照查询、四个快捷操作成功路径、设置保存        |                                       4 |
+| `era-ui-functional` | 本文全部 P0/P1 功能、输入边界、Service 失败和并发/迟到响应                              |                                       4 |
 | `era-ui-visual`     | 五档 viewport、亮/暗主题、长内容、鼠标/触屏、reduced-motion、200% 缩放、截图与 overflow | 4；point target 时按 Harness 规则降为 1 |
-| `era-ui-lifecycle`  | 热重载、pagehide、stop、样式/监听器/DOM 所有权                                   |                                       1 |
+| `era-ui-lifecycle`  | 热重载、pagehide、stop、样式/监听器/DOM 所有权                                          |                                       1 |
 
 普通 path 失败后仍继续执行其他 path；所有已选择路径都必须产生终态。最终 summary 将
 recording 与 evaluation 分开，并列出每个失败功能、稳定错误码和 evidence refs。

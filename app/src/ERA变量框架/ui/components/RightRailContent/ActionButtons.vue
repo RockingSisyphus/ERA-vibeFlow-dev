@@ -38,6 +38,8 @@
           <input
             v-model.number="rollbackId"
             type="number"
+            min="0"
+            step="1"
             class="input-field"
             placeholder="消息 ID"
             aria-label="要回滚到的消息 ID"
@@ -78,9 +80,10 @@ import { requestEraService } from '../../../service/client';
 import { ERA_UI_EVENT } from '../../../service/types';
 import { ERA_API_EVENTS } from '../../../utils/constants';
 import { Logger } from '../../../utils/log';
+import { isNonNegativeSafeMessageId } from '../../utils/message-id';
 
 const logger = new Logger();
-const rollbackId = ref<number | null>(null);
+const rollbackId = ref<number | string | null>(null);
 
 async function submitUiCommand(type: string, args: readonly unknown[], label: string): Promise<void> {
   const admission = requestEraService(type, args, 'ui');
@@ -125,18 +128,15 @@ async function onLastSync() {
 }
 
 async function onRollbackTo() {
-  if (rollbackId.value === null || rollbackId.value < 0) {
-    toastr.warning('请输入一个有效的、非负的消息 ID。', '输入无效');
+  const messageId = rollbackId.value;
+  if (!isNonNegativeSafeMessageId(messageId)) {
+    toastr.warning('请输入有效的非负安全整数消息 ID。', '输入无效');
     return;
   }
-  logger.log('onRollbackTo', `点击“回滚到”，直达 ERA Service (message_id: ${rollbackId.value})。`);
+  logger.log('onRollbackTo', `点击“回滚到”，直达 ERA Service (message_id: ${messageId})。`);
   try {
-    await submitUiCommand(
-      ERA_API_EVENTS.FORCE_SYNC,
-      [{ mode: 'rollbackTo', message_id: rollbackId.value }],
-      '定向回滚',
-    );
-    toastr.success(`已回滚到消息 #${rollbackId.value}。`, '操作成功');
+    await submitUiCommand(ERA_API_EVENTS.FORCE_SYNC, [{ mode: 'rollbackTo', message_id: messageId }], '定向回滚');
+    toastr.success(`已回滚到消息 #${messageId}。`, '操作成功');
   } catch (error) {
     logger.error('onRollbackTo', '定向回滚失败。', error);
     toastr.error('定向回滚未完成，请检查控制台。', '操作失败');
