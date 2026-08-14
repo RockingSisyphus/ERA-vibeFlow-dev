@@ -24,6 +24,25 @@ Evaluator 修正和多开场白 fixture 已分别验证，但尚未合并到同�
 - `app`：Vue/Pinia、webpack、Tavern adapter、唯一生产入口和差分测试 oracle。
 - `generated`：VibeFlow AOT 构建输出，禁止手工修改。
 
+## JSON 相对数值更新
+
+`<VariableEdit>`、`era:updateByObject` 和 `era:updateByPath` 共用同一套有限数值运算：
+
+```json
+{
+  "player": {
+    "hp": { "$inc": -10 },
+    "damageMultiplier": { "$mul": 1.2 },
+    "cooldown": { "$div": 2 }
+  }
+}
+```
+
+运算对象必须恰好只有一个键，操作数、目标和结果必须是有限数字，`$div` 不能除以
+0。无效字段会被跳过并产生诊断，同一指令的其他合法字段继续执行。不存在或受保护的
+路径仍不会被修改。`"+=2"`、`"-=2"`、`"*=2"`、`"/=2"` 不属于运算语法，只是普通
+字符串；ERA 不支持 `$sub`、`$set`、任意表达式、变量引用或数组运算。
+
 ## 常用检查
 
 ```bash

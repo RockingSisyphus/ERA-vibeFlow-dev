@@ -40,6 +40,18 @@ export interface EraCrudResult {
   readonly editLog: readonly EraCrudEditLog[];
 }
 
+export type EraCrudDiagnosticCode =
+  | "ERA_EDIT_OPERATOR_INVALID"
+  | "ERA_EDIT_TARGET_NOT_NUMERIC"
+  | "ERA_EDIT_DIVIDE_BY_ZERO"
+  | "ERA_EDIT_RESULT_NON_FINITE";
+
+export interface EraCrudDiagnostic {
+  readonly code: EraCrudDiagnosticCode;
+  readonly message: string;
+  readonly path: string;
+}
+
 export interface EraCommandParseInput {
   readonly content: string;
   readonly traditionalToSimplified?: boolean;
@@ -60,6 +72,7 @@ export interface EraApplyMessageCommandsInput {
 
 export interface EraApplyMessageCommandsResult extends EraCrudResult {
   readonly commands: readonly EraCrudCommand[];
+  readonly diagnostics: readonly EraCrudDiagnostic[];
 }
 
 interface PositionedCommand extends EraCrudCommand {
@@ -522,6 +535,116 @@ function editLogs(
   return isPlainRecord(meta.EditLogs) ? meta.EditLogs : {};
 }
 
+type RelativeEditResolution =
+  | { readonly kind: "not-operator" }
+  | { readonly kind: "resolved"; readonly value: number }
+  | { readonly kind: "invalid"; readonly diagnostic: EraCrudDiagnostic };
+
+function publicEditPath(path: string): string {
+  return path
+    .replace(/__DOT__/g, ".")
+    .replace(/__DQUOTE__/g, '"')
+    .replace(/__SQUOTE__/g, "'");
+}
+
+function editDiagnostic(
+  code: EraCrudDiagnosticCode,
+  path: string,
+  message: string,
+): EraCrudDiagnostic {
+  const publicPath = publicEditPath(path);
+  return {
+    code,
+    path: publicPath,
+    message: `${message}（路径 ${publicPath || "(root)"}）`,
+  };
+}
+
+/**
+ * 识别 VariableEdit 叶子上的有限 JSON 数值运算。
+ *
+ * 任何非 `$meta` 的 `$` 控制键都会被视为操作意图并 fail-closed，避免未知控制对象
+ * 被当作普通数据继续递归。普通对象和普通 JSON 值仍返回 not-operator。
+ */
+export function resolveRelativeEdit(
+  patch: unknown,
+  current: unknown,
+  path: string,
+): RelativeEditResolution {
+  if (!isPlainRecord(patch)) return { kind: "not-operator" };
+  const keys = Object.keys(patch);
+  const controlKeys = keys.filter(
+    (key) => key.startsWith("$") && key !== "$meta",
+  );
+  if (controlKeys.length === 0) return { kind: "not-operator" };
+
+  const operator = controlKeys[0];
+  if (
+    keys.length !== 1 ||
+    controlKeys.length !== 1 ||
+    (operator !== "$inc" && operator !== "$mul" && operator !== "$div")
+  ) {
+    return {
+      kind: "invalid",
+      diagnostic: editDiagnostic(
+        "ERA_EDIT_OPERATOR_INVALID",
+        path,
+        "相对数值更新必须是只含 $inc、$mul 或 $div 之一的单键对象。",
+      ),
+    };
+  }
+
+  const operand = patch[operator];
+  if (typeof operand !== "number" || !Number.isFinite(operand)) {
+    return {
+      kind: "invalid",
+      diagnostic: editDiagnostic(
+        "ERA_EDIT_OPERATOR_INVALID",
+        path,
+        "相对数值更新的操作数必须是有限数字。",
+      ),
+    };
+  }
+  if (typeof current !== "number" || !Number.isFinite(current)) {
+    return {
+      kind: "invalid",
+      diagnostic: editDiagnostic(
+        "ERA_EDIT_TARGET_NOT_NUMERIC",
+        path,
+        "相对数值更新的目标当前值必须是有限数字。",
+      ),
+    };
+  }
+  if (operator === "$div" && operand === 0) {
+    return {
+      kind: "invalid",
+      diagnostic: editDiagnostic(
+        "ERA_EDIT_DIVIDE_BY_ZERO",
+        path,
+        "相对数值更新不能除以 0。",
+      ),
+    };
+  }
+
+  const result =
+    operator === "$inc"
+      ? current + operand
+      : operator === "$mul"
+        ? current * operand
+        : current / operand;
+  if (!Number.isFinite(result)) {
+    return {
+      kind: "invalid",
+      diagnostic: editDiagnostic(
+        "ERA_EDIT_RESULT_NON_FINITE",
+        path,
+        "相对数值更新结果不是有限数字。",
+      ),
+    };
+  }
+  return { kind: "resolved", value: Object.is(result, -0) ? 0 : result };
+}
+
 function applyEditAtLevel(
   stat: unknown,
   basePath: string,
@@ -530,6 +653,7 @@ function applyEditAtLevel(
   context: EraEditContext,
   orderedMks: readonly (string | null)[],
   historicalLogs: Readonly<Record<string, unknown>>,
+  diagnostics: EraCrudDiagnostic[],
 ): void {
   const current = basePath ? getAtPath(stat, basePath) : stat;
   if (typeof current === "undefined") return;
@@ -540,6 +664,23 @@ function applyEditAtLevel(
     isPlainRecord(patch.$meta) &&
     patch.$meta.updatable === true;
   if (updatable === false && !bypass) return;
+
+  const relative = resolveRelativeEdit(patch, current, basePath);
+  if (relative.kind === "invalid") {
+    diagnostics.push(relative.diagnostic);
+    return;
+  }
+  if (relative.kind === "resolved") {
+    if (!basePath || !hasAtPath(stat, basePath)) return;
+    setAtPath(stat, basePath, relative.value);
+    logs.push({
+      op: "update",
+      path: basePath,
+      value_old: cloneCrudValue(current),
+      value_new: relative.value,
+    });
+    return;
+  }
   if (!isPlainRecord(patch)) return;
 
   for (const key of Object.keys(patch)) {
@@ -554,6 +695,7 @@ function applyEditAtLevel(
         context,
         orderedMks,
         historicalLogs,
+        diagnostics,
       );
       continue;
     }
@@ -582,8 +724,18 @@ export function applyEdit(
   initialStat: unknown,
   context: EraEditContext,
 ): EraCrudResult {
+  const result = applyEditWithDiagnostics(edits, initialStat, context);
+  return { finalStat: result.finalStat, editLog: result.editLog };
+}
+
+function applyEditWithDiagnostics(
+  edits: readonly unknown[],
+  initialStat: unknown,
+  context: EraEditContext,
+): EraCrudResult & { readonly diagnostics: readonly EraCrudDiagnostic[] } {
   const finalStat = cloneCrudValue(initialStat);
   const editLog: EraCrudEditLog[] = [];
+  const diagnostics: EraCrudDiagnostic[] = [];
   const orderedMks = selectedMks(context.meta);
   const historicalLogs = editLogs(context.meta);
   for (const root of edits ?? []) {
@@ -597,12 +749,13 @@ export function applyEdit(
         context,
         orderedMks,
         historicalLogs,
+        diagnostics,
       );
     } catch {
       // 单根失败保持容错并继续。
     }
   }
-  return { finalStat, editLog };
+  return { finalStat, editLog, diagnostics };
 }
 
 function deleteBypass(patch: unknown): boolean {
@@ -679,15 +832,18 @@ export function applyMessageCommands(
     });
     let current = initial;
     const accumulated: EraCrudEditLog[] = [];
+    const diagnostics: EraCrudDiagnostic[] = [];
     for (const command of commands) {
       let result: EraCrudResult;
       if (command.type === "insert") {
         result = applyInsert(command.data, current);
       } else if (command.type === "edit") {
-        result = applyEdit(command.data, current, {
+        const editResult = applyEditWithDiagnostics(command.data, current, {
           messageId: input.messageId,
           meta: input.meta,
         });
+        diagnostics.push(...editResult.diagnostics);
+        result = editResult;
       } else {
         result = applyDelete(command.data, current);
       }
@@ -698,8 +854,9 @@ export function applyMessageCommands(
       finalStat: current,
       editLog: accumulated,
       commands,
+      diagnostics,
     };
   } catch {
-    return { finalStat: initial, editLog: [], commands: [] };
+    return { finalStat: initial, editLog: [], commands: [], diagnostics: [] };
   }
 }

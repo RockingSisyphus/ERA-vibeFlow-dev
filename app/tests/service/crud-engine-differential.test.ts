@@ -446,6 +446,7 @@ describe('ERA 纯 CRUD 引擎冻结基线差分', () => {
       finalStat: stat,
       editLog: [],
       commands: [],
+      diagnostics: [],
     });
   });
 

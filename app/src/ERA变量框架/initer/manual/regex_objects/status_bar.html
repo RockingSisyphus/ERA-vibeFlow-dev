@@ -278,12 +278,13 @@
     
     - **`era:insertByObject`**: 非破坏性地插入一个或多个变量。
       `eventEmit('era:insertByObject', { player: { score: 0 } });`
-    - **`era:updateByObject`**: 修改一个或多个已存在的变量。
-      `eventEmit('era:updateByObject', { player: { level: 2 } });`
+    - **`era:updateByObject`**: 修改一个或多个已存在的变量；数值可用单键 `$inc/$mul/$div` 对象做相对更新。
+      `eventEmit('era:updateByObject', { player: { level: 2, hp: { $inc: -10 } } });`
     - **`era:insertByPath`**: 在指定路径插入一个新变量。
       `eventEmit('era:insertByPath', { path: 'inventory.item_002', value: { name: '新物品' } });`
-    - **`era:updateByPath`**: 修改指定路径的变量，支持数学运算。
-      `eventEmit('era:updateByPath', { path: 'player.hp', value: '-=10' });`
+    - **`era:updateByPath`**: 修改指定路径的变量；相对数值更新使用严格 JSON 运算对象。
+      `eventEmit('era:updateByPath', { path: 'player.hp', value: { $inc: -10 } });`
+      不支持 `"+=2"`、`"-=2"`、`"*=2"`、`"/=2"` 字符串表达式；它们会作为普通字符串保存。
     - **`era:deleteByPath`**: 删除指定路径的变量。
       `eventEmit('era:deleteByPath', { path: 'inventory.item_001' });`
     ================================================================

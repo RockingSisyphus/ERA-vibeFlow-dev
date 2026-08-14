@@ -233,27 +233,42 @@ Pack 写错脚本变量作用域造成，不属于 ERA 产品缺陷；ERA 源码
 
 ## 4. 待独立复测的产品候选
 
-### ERA-CAND-001：`updateByPath` 运算表达式被保存为普通字符串
+### ERA-CAND-001：JSON 相对数值更新
 
-- 状态：`candidate`
+- 状态：`fixed`
 - 优先级：P1
-- 对应测试：`API-BOUND-007`
+- 对应测试：`era-relative-update` 16 条专项路径
 
-调用过程：
+确认后的功能合同：
 
-1. 通过公开 API 将目标值替换为数字 `7`；
-2. 再对同一路径提交文档化运算表达式 `+=2`。
+1. `VariableEdit` 、`updateByObject` 和 `updateByPath` 共享 `$inc/$mul/$div`
+   JSON 终端运算对象；
+2. `$inc` 的负数表示减法，`$div` 的除数不得为零；
+3. 运算数、当前值和结果必须是有限数字，无效字段跳过但不影响合法兄弟字段；
+4. `"+=2"`、`"-=2"`、`"*=2"`、`"/=2"` 明确保持普通字符串赋值，不建立兼容解析。
 
-预期行为：最终值为数字 `9`。
+实现结果：运算只在共享 CRUD 引擎中解析；EditLog 保存具体旧值/新值；
+full sync 和 Swipe 重算保留消息中的原始运算意图；无效运算通过四个
+`ERA_EDIT_*` 诊断码进入既有任务结果。
 
-实际行为：最终值为字符串 `"+=2"`。
+修复验证（2026-08-14）：
 
-待确认事项：需要先核对当前公开 API 合同是否仍承诺解释 `+=2` 一类表达式。若承诺，
-这是产品解析问题；若现行设计只支持普通替换，则应同步修改文档和测试合同，而不是修改
-ERA 实现。
+- ERA 的 VibeFlow architecture/check、validate、quality、review、browser build，及 app
+  `pnpm verify`（276/276 单测）和 `test:integration` 均通过；
+- Pack 0.4.0 `pnpm verify` 通过（58/58 合同测试）；
+- 专项 `era-relative-update` run `st-run-20260814T04494864-02b2e33179cb`：16/16
+  recording completed、16/16 evaluation passed，Artifact `consistent/complete`；
+- AI、API、无效诊断、full replay、Swipe 重算五条独立重测均 passed；
+- 聚合 run `st-run-20260814T05033257-2aca0d402bd4`：379/379 recording completed、
+  379 个 required evaluation 终态、Artifact `consistent/complete`。新增 16 条 REL 全部
+  passed；初次运行的 `API-BOUND-007` 和 `SEM-SRC-003` 是旧字符串/用户消息的 Pack oracle
+  遗留假设，已修正后分别以 `st-run-20260814T06434633-6a8b8f83c036` 和
+  `st-run-20260814T06442328-a3b44b1be6b2` 独立通过，不属于产品问题；
+- 最终 production bundle SHA-256：
+  `a15c154a3e7c84d532f03fb2996f11b05084b4be549aed28c741cee6da4fc983`。
 
-确认条件：使用当前 Pack 和当前生产 bundle 独立重跑 `API-BOUND-007`，同时核对公开
-接口文档与 action 的 `era:writeDone`、最终变量快照。
+最终结论：JSON `$inc/$mul/$div` 相对更新及其无效输入、历史重算、API 和旧字符串边界
+均已真实验证；该功能扩展不再是开放候选。
 
 ### ERA-CAND-002：Swipe 切换或删除后变量可能未完成同步
 
@@ -336,7 +351,7 @@ Artifact audit 为 `consistent/complete`。该候选不属于产品缺陷。
 
 ## 6. 建议处理顺序
 
-1. `ERA-CAND-001`：核对公开 API 合同后决定修产品或修文档。
+1. `ERA-CAND-001`：完成 16 条相对更新专项真实验收与统一完整回归。
 
 ## 7. 修复记录要求
 

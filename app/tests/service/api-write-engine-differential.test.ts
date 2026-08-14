@@ -22,13 +22,19 @@ describe('VibeFlow 六个 ERA 写入 API 纯适配差分', () => {
     expect(detail).toEqual(before);
   });
 
-  it('路径写入支持点、数组和引号下标，并按删除语义写入空对象', () => {
+  it('路径写入支持点、数组和引号下标，旧字符串保持字面值，并按删除语义写入空对象', () => {
     expect(
       engine.prepareApiWriteDirective('era:insertByPath', { path: 'player.inventory[0]', value: 3 }).blockContent,
     ).toEqual({ player: { inventory: [3] } });
     expect(
       engine.prepareApiWriteDirective('era:updateByPath', { path: 'player["a.b"].hp', value: '+=10' }).blockContent,
     ).toEqual({ player: { 'a.b': { hp: '+=10' } } });
+    expect(
+      engine.prepareApiWriteDirective('era:updateByPath', {
+        path: 'player["a.b"].hp',
+        value: { $inc: 10 },
+      }).blockContent,
+    ).toEqual({ player: { 'a.b': { hp: { $inc: 10 } } } });
     const deleted = engine.prepareApiWriteDirective('era:deleteByPath', { path: 'player.inventory[1]' });
     const inventory = (deleted.blockContent.player as { inventory: unknown[] }).inventory;
     expect(inventory).toHaveLength(2);

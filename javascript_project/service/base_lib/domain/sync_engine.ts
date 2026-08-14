@@ -76,6 +76,7 @@ export interface EraSyncDiagnosticV1 {
   readonly code: string;
   readonly message: string;
   readonly messageIndex: number | null;
+  readonly path?: string;
 }
 
 export type EraSyncPlanV1 =
@@ -448,7 +449,7 @@ export function planEraSync(input: EraSyncInputV1): EraSyncPlanV1 {
       messages[index],
       input.mkSeedsByIndex?.[index] ?? undefined,
     );
-    if (ensured.status === "invalid" || ensured.status === "seed-required") {
+    if ("reason" in ensured) {
       newSelectedMks[index] = null;
       diagnostics.push({
         code:
@@ -482,6 +483,14 @@ export function planEraSync(input: EraSyncInputV1): EraSyncPlanV1 {
       traditionalToSimplified: input.traditionalToSimplified,
     });
     statForRecalc = applied.finalStat;
+    diagnostics.push(
+      ...applied.diagnostics.map((diagnostic) => ({
+        code: diagnostic.code,
+        message: diagnostic.message,
+        messageIndex: index,
+        path: diagnostic.path,
+      })),
+    );
     defineOwn(editLogs, ensured.mk, cloneSnapshotValue(applied.editLog));
     newSelectedMks[index] = ensured.mk;
     recalculatedMessageIndexes.push(index);

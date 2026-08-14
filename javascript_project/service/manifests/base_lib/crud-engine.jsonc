@@ -2,9 +2,9 @@
   "kind": "base_lib",
   "id": "era.crud.engine",
   "display_name": "ERA 变量增删改纯计算引擎",
-  "description": "纯函数按消息内原始顺序解析并执行 VariableInsert、VariableEdit 与 VariableDelete，保持 JSONL、注释、代码围栏、繁转简、键值转义、模板与数组覆盖、保护字段、历史旧值和编辑日志语义；不访问或写入宿主。",
+  "description": "纯函数按消息内原始顺序解析并执行 VariableInsert、VariableEdit 与 VariableDelete；VariableEdit 在唯一领域入口支持严格单键 $inc/$mul/$div 数值运算和逐字段诊断，并保持 JSONL、繁转简、保护、历史重算与具体编辑日志语义；不访问或写入宿主。",
   "category": "变量增删改",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "implementations": [
     {
       "language": "typescript",

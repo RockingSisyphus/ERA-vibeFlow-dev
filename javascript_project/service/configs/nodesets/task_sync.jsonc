@@ -54,8 +54,8 @@
       {
         "id": "plan_sync",
         "type_used": "era.sync.plan",
-        "display_name": "规划共享同步",
-        "description": "以 EraDispatchContextV2 的不可变 processing message/MK 作为当前任务唯一身份，使用当前严格消息快照规划无操作、统一安全 CRUD 或协调；API 固定公开计数为 1 且不改变 carry。"
+        "display_name": "规划共享同步与相对数值更新",
+        "description": "以 EraDispatchContextV2 的不可变 processing message/MK 作为当前任务唯一身份，在统一 CRUD 领域入口规划无操作、绝对更新、$inc/$mul/$div 相对数值更新或历史协调；无效运算逐字段跳过并形成可结算诊断。"
       },
       {
         "id": "no_sync_change",

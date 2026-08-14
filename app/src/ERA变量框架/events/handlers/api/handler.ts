@@ -50,11 +50,11 @@ interface ApiWriteJob {
 
 /**
  * @section API Event: 'era:updateByObject'
- * @description 通过一个对象，修改已存在的变量。如果路径不存在，则忽略。
+ * @description 通过一个对象修改已存在变量；数值字段可使用单键 $inc/$mul/$div 对象。如果路径不存在，则忽略。
  * @param {object} detail - 要更新的变量对象。
  * @example
  * eventEmit('era:updateByObject', {
- *   player: { hp: 120, status: 'blessed' }
+ *   player: { hp: { $inc: -10 }, status: 'blessed' }
  * });
  */
 
@@ -76,11 +76,11 @@ interface ApiWriteJob {
  * @description 通过指定路径和值，修改一个已存在的变量。
  * @param {object} detail - 包含路径和值的对象。
  * @param {string} detail.path - 变量的路径。
- * @param {*} detail.value - 要设置的新值。可以是直接的值，也可以是运算表达式。
+ * @param {*} detail.value - 要设置的新值，或恰好只含 $inc/$mul/$div 之一的数值运算对象。
  * @example
  * eventEmit('era:updateByPath', {
  *   path: 'player.hp',
- *   value: '+=10'
+ *   value: { $inc: 10 }
  * });
  */
 
