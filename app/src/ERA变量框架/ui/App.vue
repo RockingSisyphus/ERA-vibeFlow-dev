@@ -44,15 +44,26 @@ const isDarkMode = ref(false);
 const expandedLayer = ref<HTMLElement | null>(null);
 let floatingBallFocusTimer: number | null = null;
 
+// Tavern Helper 会在脚本 iframe 内执行模块，但 UI DOM 由其 jQuery 宿主挂到顶层酒馆页面。
+// 键盘事件和焦点必须绑定到同一份宿主 window/document；跨域宿主时安全退回当前 iframe。
+const uiHostWindow = (() => {
+  try {
+    return window.top ?? window;
+  } catch {
+    return window;
+  }
+})();
+const uiHostDocument = uiHostWindow.document;
+
 const restoreFloatingBallFocus = () => {
   if (floatingBallFocusTimer !== null) {
-    window.clearTimeout(floatingBallFocusTimer);
+    uiHostWindow.clearTimeout(floatingBallFocusTimer);
   }
   // 先让浏览器完成对已隐藏 dialog 的焦点清理，再恢复到重新显示的按钮。
   // 若在同一渲染轮直接 focus，浏览器可能随后把焦点退回 body。
-  floatingBallFocusTimer = window.setTimeout(() => {
+  floatingBallFocusTimer = uiHostWindow.setTimeout(() => {
     floatingBallFocusTimer = null;
-    document.getElementById('era-floating-ball')?.focus();
+    uiHostDocument.getElementById('era-floating-ball')?.focus();
   }, 0);
 };
 
@@ -73,16 +84,16 @@ const loadThemeSetting = () => {
 onMounted(() => {
   loadThemeSetting();
   window.addEventListener('era-settings-updated', loadThemeSetting);
-  window.addEventListener('keydown', handleWindowKeydown, true);
-  window.addEventListener('keyup', handleWindowKeydown, true);
+  uiHostWindow.addEventListener('keydown', handleWindowKeydown, true);
+  uiHostWindow.addEventListener('keyup', handleWindowKeydown, true);
 });
 
 onBeforeUnmount(() => {
   window.removeEventListener('era-settings-updated', loadThemeSetting);
-  window.removeEventListener('keydown', handleWindowKeydown, true);
-  window.removeEventListener('keyup', handleWindowKeydown, true);
+  uiHostWindow.removeEventListener('keydown', handleWindowKeydown, true);
+  uiHostWindow.removeEventListener('keyup', handleWindowKeydown, true);
   if (floatingBallFocusTimer !== null) {
-    window.clearTimeout(floatingBallFocusTimer);
+    uiHostWindow.clearTimeout(floatingBallFocusTimer);
   }
 });
 
