@@ -1,5 +1,12 @@
 <template>
-  <button id="era-floating-ball" class="floating-ball" type="button" tabindex="0" aria-label="打开 ERA 面板" @click="$emit('click')">
+  <button
+    id="era-floating-ball"
+    class="floating-ball"
+    type="button"
+    tabindex="0"
+    aria-label="打开 ERA 面板"
+    @click="$emit('click')"
+  >
     <span class="era-logo" aria-hidden="true">ERA</span>
     <!-- 仅显示用；不拦截事件 -->
   </button>
