@@ -10,7 +10,6 @@
       aria-modal="true"
       aria-label="ERA 面板"
       tabindex="-1"
-      @keydown.esc.stop.prevent="closeExpandedView"
     >
       <!-- 视口级展开层：悬浮模态容器 -->
       <div class="era-shell">
@@ -74,10 +73,12 @@ const loadThemeSetting = () => {
 onMounted(() => {
   loadThemeSetting();
   window.addEventListener('era-settings-updated', loadThemeSetting);
+  window.addEventListener('keydown', handleWindowKeydown, true);
 });
 
 onBeforeUnmount(() => {
   window.removeEventListener('era-settings-updated', loadThemeSetting);
+  window.removeEventListener('keydown', handleWindowKeydown, true);
   if (floatingBallFocusTimer !== null) {
     window.clearTimeout(floatingBallFocusTimer);
   }
@@ -96,6 +97,16 @@ const closeExpandedView = async () => {
   uiStore.switchView('FloatingBall');
   await nextTick();
   restoreFloatingBallFocus();
+};
+
+const handleWindowKeydown = (event: KeyboardEvent) => {
+  if (event.key !== 'Escape' || currentComponent.value !== 'ExpandedView') {
+    return;
+  }
+  // 在捕获阶段截获 Escape，避免依赖 dialog 初始聚焦时序，也不让宿主接管本次关闭。
+  event.preventDefault();
+  event.stopPropagation();
+  void closeExpandedView();
 };
 
 watch(currentComponent, async viewName => {
