@@ -16,7 +16,7 @@ Artifact，并将 recording 与业务 evaluation 分开报告。
 
 - `ERA-Test-Pack` 负责被测 bundle 接入、ERA 专项 fixture、语义化 UI action、领域采集、
   专项 Test File / suite 与 Evaluator；
-- `ST-Test-Harness` 负责浏览器 context profile（viewport、媒体偏好与输入设备）的公开
+- `ST-Test-Harness` 负责浏览器 context profile（viewport 与触屏输入设备）的公开
   配置和 Artifact 记录；
 - 不修改 ERA 产品业务逻辑；如需使用现有运行时 adapter 进行故障注入，只能在每条独立
   sandbox 内临时安装，并必须在 teardown 中恢复。
@@ -30,9 +30,9 @@ Artifact，并将 recording 与业务 evaluation 分开报告。
 | --- | --- | --- | --- |
 | B1 | `era-test` 仅接受 Git 工作树的 `dist/ERA变量框架/index.js`，或由该 Git 工作树生成的 package。`ERA-vibeFlow` 当前不是 Git 工作树。 | 当前生产 bundle 不能成为受测输入。 | ERA-Test-Pack |
 | B2 | ERA loader 仅接受旧 bundle 的固定 `OpenCC → Pinia` 静态 import 顺序；当前 bundle 为 `Pinia → OpenCC`。 | loader 会拒绝当前 bundle，无法执行 UI。 | ERA-Test-Pack |
-| B3 | 现有 Pack 仅有面板开关与快照基础 action；快照、快捷操作、设置、生命周期、无障碍、样式隔离均无专项语义 action 与 collector。 | 无法编写需求文档中的专项路径，也无法形成可审计证据。 | ERA-Test-Pack |
+| B3 | 现有 Pack 仅有面板开关与快照基础 action；快照、快捷操作、设置、生命周期、手机触屏适配、样式隔离均无专项语义 action 与 collector。 | 无法编写需求文档中的专项路径，也无法形成可审计证据。 | ERA-Test-Pack |
 | B4 | canonical catalog 被锁定为 235 paths / 2,241 actions，且 suite 顺序与 hash 必须稳定。 | 不能把新专项路径直接加入既有 canonical catalog。 | ERA-Test-Pack |
-| B5 | Harness 在 runtime 中固定使用 `1440×960`，Pack API 没有设置 viewport、`prefers-reduced-motion`、颜色方案、touch/pointer 的接口。 | 无法真实覆盖需求规定的五档尺寸与可访问性环境矩阵。 | ST-Test-Harness |
+| B5 | Harness 在 runtime 中固定使用 `1440×960`，Pack API 没有设置手机触屏 viewport、颜色方案、touch/pointer 的接口。 | 无法真实覆盖桌面基准与手机触屏竖横屏矩阵。 | ST-Test-Harness |
 
 ## 3. ERA-Test-Pack 改造需求
 
@@ -72,7 +72,7 @@ Artifact，并将 recording 与业务 evaluation 分开报告。
 | 快照 | 选择 MK、输入并查询 message ID、切换纯净/完整页签、读取 loading/error；控制并验证乱序、重复、无关及超时结果。 |
 | 快捷操作 | 点击 full/latest/rollback/init，输入 rollback ID；记录唯一 admission、receipt、settlement、toast 和变量/资源后果。 |
 | 设置和主题 | 展开、读取、编辑、丢弃、保存；读取 busy、toast、持久化值、`era-settings-updated` 与 ERA 根内外 computed style。 |
-| 无障碍与隔离 | 键盘激活、焦点、ARIA、overflow、命中测试、样式和 DOM 所有权。 |
+| 触屏适配与隔离 | 手机触屏的 overflow、命中测试、样式和 DOM 所有权。 |
 
 每个 action 的 completed evidence 至少包含目标最终可见状态；涉及 Service 的 action 还必须
 包含唯一 admission/receipt、最终 settlement，以及相关公共事件或宿主后果。点击本身不能
@@ -92,7 +92,7 @@ Artifact，并将 recording 与业务 evaluation 分开报告。
 ### 3.5 suite、catalog 与 Evaluator
 
 1. 新增独立的专项 Test File V2 和以下 suite：
-   `era-ui-smoke`、`era-ui-functional`、`era-ui-visual`、`era-ui-a11y`、
+   `era-ui-smoke`、`era-ui-functional`、`era-ui-visual`、
    `era-ui-lifecycle`。
 2. `era-test` 应能够安全 staging 这些 Pack 随附的 Test File；既有 canonical catalog 的
    235 paths、2,241 actions、suite ID、顺序和 hash 必须完全保持不变。
@@ -111,7 +111,6 @@ Harness 必须将 browser context profile 作为显式、受 schema 校验且可
 
 - `viewport`: `{ width, height }`；
 - `colorScheme`: `light | dark`；
-- `reducedMotion`: `reduce | no-preference`；
 - `hasTouch` / pointer profile。
 
 要求：
@@ -120,8 +119,8 @@ Harness 必须将 browser context profile 作为显式、受 schema 校验且可
 2. profile 写入 normalized project、Scenario 和 path Artifact；
 3. point target 时保持“精确 viewport、DPR、scroll、`elementFromPoint()`”复核与单 worker
    限制；
-4. 支持以下专项矩阵：`1440×900`、`1024×768`、`768×1024`、`375×812`、`320×568`，每档
-   至少有亮/暗代表路径；
+4. 支持桌面基准 `1440×900`，以及手机触屏 `375×812`、`320×568` 与对应横屏；每类至少有
+   亮/暗代表路径；
 5. 不改变默认路径当前的 `1440×960` 行为，除非 path 显式声明 profile。
 
 ## 5. 验收标准
@@ -135,8 +134,7 @@ Harness 必须将 browser context profile 作为显式、受 schema 校验且可
 3. P0/P1 的每个功能均有明确专项 path；每条已选择路径都有完整终态 Artifact。
 4. Service 相关路径能区分 admission rejected、各 settlement、Promise reject 与 timeout；
    每个用户动作至多对应一个 receipt。
-5. 视觉/无障碍路径在五档 viewport、亮/暗和 reduced-motion 环境中运行，Artifact 记录实际
-   profile 与截图。
+5. 视觉路径在桌面基准与手机触屏竖横屏、亮/暗环境中运行，Artifact 记录实际 profile 与截图。
 6. stop/热重载后，ERA 自有 DOM、监听器、样式和全局句柄归零；宿主范围外的 computed style
    不变。
 7. Pack 离线门禁通过：`format:check`、`typecheck`、`build`、`catalog:check`、
@@ -151,3 +149,4 @@ Harness 必须将 browser context profile 作为显式、受 schema 校验且可
 - 不读取旧 Artifact 进行新旧比较；正确性仅来自本专项需求的显式 expected 和冻结 Evaluator。
 - 不执行两小时长稳；除非后续单独、明确授权。
 - 不用 toast、点击成功或 Harness action completed 代替业务成功证据。
+- 不实现或验收键盘、焦点、ARIA、读屏、浏览器缩放、reduced-motion 或 WCAG 对比度兼容。
