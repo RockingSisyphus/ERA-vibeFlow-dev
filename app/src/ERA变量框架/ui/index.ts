@@ -1,6 +1,8 @@
 import { createPinia } from 'pinia';
 import { createApp, type App as VueApp } from 'vue';
 import { ERA_EVENT_EMITTER, type WriteDonePayload } from '../utils/constants';
+import { ERA_API_EVENTS } from '../utils/constants';
+import { requestEraService } from '../service/client';
 import { settings } from '../utils/era_data';
 import { Logger } from '../utils/log';
 import App from './App.vue';
@@ -50,6 +52,21 @@ export function startEraUi(): EraUiHandle {
   eraWindow.eraUiSwitchView = switchView;
   teleportStyle();
   eventOn(ERA_EVENT_EMITTER.WRITE_DONE, writeDoneHandler);
+
+  // UI 可能在最后一次 writeDone 之后才启动。通过现有 Service 回放入口
+  // 取得缓存的最新状态，而不是直接读取或写入聊天变量。
+  const replay = requestEraService(ERA_API_EVENTS.REQUEST_WRITE_DONE, [], 'ui');
+  if (!replay.accepted) {
+    logger.warn('startEraUi', `请求最新 writeDone 被拒绝：${replay.code}`);
+  } else {
+    void replay.done
+      .then(settlement => {
+        if (settlement.status !== 'completed' && settlement.status !== 'ignored') {
+          logger.warn('startEraUi', `请求最新 writeDone 未完成：${settlement.status}`);
+        }
+      })
+      .catch(error => logger.warn('startEraUi', '请求最新 writeDone 失败。', error));
+  }
 
   let stopped = false;
   return Object.freeze({

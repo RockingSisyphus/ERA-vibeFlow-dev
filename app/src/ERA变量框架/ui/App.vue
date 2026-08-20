@@ -2,7 +2,16 @@
   <div class="era-app-container" :class="{ 'dark-theme': isDarkMode }">
     <ThemeManager ref="themeManager" />
     <FloatingBall v-show="currentComponent === 'FloatingBall'" @click="requestSwitchView('ExpandedView')" />
-    <div v-show="currentComponent === 'ExpandedView'" class="era-expanded-layer">
+    <div
+      v-show="currentComponent === 'ExpandedView'"
+      ref="expandedLayer"
+      class="era-expanded-layer"
+      role="dialog"
+      aria-modal="true"
+      aria-label="ERA 面板"
+      tabindex="-1"
+      @keydown.esc="requestSwitchView('FloatingBall')"
+    >
       <!-- 视口级展开层：悬浮模态容器 -->
       <div class="era-shell">
         <!-- 新增横向壳容器：左面板 + 右侧栏 -->
@@ -15,7 +24,7 @@
 
 <script setup lang="ts">
 import { storeToRefs } from 'pinia';
-import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { settings } from '../utils/era_data';
 import { Logger } from '../utils/log';
 import EraPanel from './components/EraPanel.vue';
@@ -33,6 +42,7 @@ const { currentView: currentComponent, eventData: dataRef } = storeToRefs(uiStor
 // 主题状态管理
 const themeManager = ref<InstanceType<typeof ThemeManager> | null>(null);
 const isDarkMode = ref(false);
+const expandedLayer = ref<HTMLElement | null>(null);
 
 const loadThemeSetting = () => {
   try {
@@ -61,6 +71,15 @@ const requestSwitchView = (viewName: 'FloatingBall' | 'ExpandedView') => {
   logger.debug('requestSwitchView', `请求切换视图到: ${viewName}`);
   uiStore.switchView(viewName);
 };
+
+watch(currentComponent, async viewName => {
+  await nextTick();
+  if (viewName === 'ExpandedView') {
+    expandedLayer.value?.focus();
+    return;
+  }
+  document.getElementById('era-floating-ball')?.focus();
+});
 </script>
 
 <style>

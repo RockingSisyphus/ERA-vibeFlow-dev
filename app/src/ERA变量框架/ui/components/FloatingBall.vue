@@ -1,20 +1,12 @@
 <template>
-  <div id="era-floating-ball" class="floating-ball" @click="$emit('click')">
+  <button id="era-floating-ball" class="floating-ball" type="button" aria-label="打开 ERA 面板" @click="$emit('click')">
     <span class="era-logo" aria-hidden="true">ERA</span>
     <!-- 仅显示用；不拦截事件 -->
-  </div>
+  </button>
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue';
-import { Logger } from '../../utils/log';
-
-const logger = new Logger();
-defineEmits(['click']);
-
-onMounted(() => {
-  //logger.debug('onMounted', 'FloatingBall.vue 组件已挂载');
-});
+defineEmits<{ click: [] }>();
 </script>
 
 <style scoped>
@@ -36,6 +28,8 @@ onMounted(() => {
   --glass: var(--ball-glass-color, rgba(255, 255, 255, 0.18)); /* 玻璃质感覆盖层 */
   width: var(--size); /* 宽度设为可变量 */
   height: var(--size); /* 高度设为可变量 */
+  padding: 0;
+  border: 0;
   border-radius: 50%; /* 圆形 */
   position: relative; /* 作为伪元素定位参照 */
   display: grid; /* 用 grid 实现精确居中 */

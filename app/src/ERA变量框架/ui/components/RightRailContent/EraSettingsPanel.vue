@@ -17,13 +17,23 @@
       <!-- 顶部操作区：刷新/保存/重置编辑 -->
       <div class="toolbar">
         <!-- 工具条 -->
-        <button class="mini-btn" title="重新读取脚本变量" @click.stop="loadVars">🔄 重新读取</button>
+        <button class="mini-btn" title="重新读取脚本变量" :disabled="busy" @click.stop="loadVars()">🔄 重新读取</button>
         <!-- 读取按钮 -->
         <div class="spacer"></div>
         <!-- 占位撑开 -->
-        <button class="mini-btn subtle" title="丢弃未保存的修改" @click.stop="discardEdits">↩︎ 丢弃修改</button>
+        <button class="mini-btn subtle" title="丢弃未保存的修改" :disabled="busy" @click.stop="discardEdits">
+          ↩︎ 丢弃修改
+        </button>
         <!-- 丢弃编辑 -->
-        <button class="mini-btn primary" title="保存修改到脚本变量" @click.stop="saveEdits">💾 保存修改</button>
+        <button
+          class="mini-btn primary"
+          title="保存修改到脚本变量"
+          :disabled="busy"
+          :aria-busy="busy"
+          @click.stop="saveEdits"
+        >
+          💾 保存修改
+        </button>
         <!-- 保存修改 -->
       </div>
 
@@ -118,6 +128,7 @@ const isOpen = ref(false); // 中文注释：是否展开
 // === 原始数据与编辑缓存 ===
 type Row = { key: string; value: any; type: 'boolean' | 'number' | 'string' | 'json' }; // 中文注释：一行变量的结构
 const rows = ref<Row[]>([]); // 中文注释：可渲染的变量行
+const busy = ref(false); // 中文注释：读取、丢弃和保存期间禁止重复提交
 const edits = reactive<Record<string, any>>({}); // 中文注释：针对简单类型的编辑缓存（布尔/数字/字符串）
 const jsonBuffers = reactive<Record<string, string>>({}); // 中文注释：针对 JSON 类型的文本缓存
 const jsonState = reactive<Record<string, { ok?: boolean; bad?: boolean; msg?: string }>>({}); // 中文注释：JSON 校验状态
@@ -144,7 +155,18 @@ function safeStringify(v: any): string {
 }
 
 // === 加载变量列表 ===
-function loadVars() {
+function resetEditorState(nextRows: readonly Row[]): void {
+  for (const k of Object.keys(edits)) delete edits[k];
+  for (const k of Object.keys(jsonBuffers)) delete jsonBuffers[k];
+  for (const k of Object.keys(jsonState)) delete jsonState[k];
+  rows.value = nextRows.map(row => ({ ...row }));
+  rows.value.forEach(row => {
+    if (row.type === 'json') jsonBuffers[row.key] = safeStringify(row.value);
+    else edits[row.key] = row.value;
+  });
+}
+
+function loadVars(showSuccess = true) {
   try {
     logger.debug('loadVars', '尝试读取脚本设置...');
     const obj = settings.value;
@@ -152,30 +174,22 @@ function loadVars() {
 
     if (!obj || Object.keys(obj).length === 0) {
       logger.warn('loadVars', '设置对象为空，UI 将不会被填充。');
-      rows.value = [];
+      resetEditorState([]);
       toastr.info('未找到任何脚本变量。');
       return;
     }
 
     // 清空旧缓存
-    rows.value = [];
-    for (const k of Object.keys(edits)) delete edits[k];
-    for (const k of Object.keys(jsonBuffers)) delete jsonBuffers[k];
-    for (const k of Object.keys(jsonState)) delete jsonState[k];
-
+    const nextRows: Row[] = [];
     // 构建可编辑行
     Object.entries(obj)
       .filter(([key]) => key !== '开启悬浮球')
       .forEach(([key, value]) => {
         const t = detectType(value);
-        rows.value.push({ key, value, type: t });
-        if (t === 'json') {
-          jsonBuffers[key] = safeStringify(value);
-        } else {
-          edits[key] = value;
-        }
+        nextRows.push({ key, value, type: t });
       });
-    toastr.success('已从脚本变量中加载最新设置。', '读取成功');
+    resetEditorState(nextRows);
+    if (showSuccess) toastr.success('已从脚本变量中加载最新设置。', '读取成功');
   } catch (e) {
     logger.error('loadVars', '读取脚本变量失败:', e);
     toastr.error('读取 ERA 设置失败，请检查浏览器控制台。', '读取失败');
@@ -210,7 +224,7 @@ function markJsonTouched(key: string) {
 // === 丢弃未保存的编辑 ===
 function discardEdits() {
   logger.log('discardEdits', '点击“丢弃修改”');
-  loadVars(); // 重新读取宿主快照，确保丢弃全部未提交的本地改动。
+  loadVars(false); // 重新读取宿主快照，确保丢弃全部未提交的本地改动。
   toastr.info('所有未保存的修改已被丢弃。', '操作完成');
 }
 
@@ -219,6 +233,8 @@ async function saveEdits() {
   // 保存请求只能经过 ERA Service 的逻辑提交边界，避免 UI 直接写入脚本变量。
   const originalRows = JSON.parse(JSON.stringify(rows.value)); // 深拷贝原始数据用于回滚
 
+  if (busy.value) return;
+  busy.value = true;
   try {
     // 1. 先构造并校验完整设置，不提前修改响应式快照。
     const updatedSettings: Record<string, any> = {};
@@ -252,15 +268,9 @@ async function saveEdits() {
     logger.error('saveEdits', '保存失败：', e);
     toastr.error(`保存失败：${(e as any)?.message ?? e}。正在回滚界面。`, '保存失败');
     // 2. 错误处理：回滚 UI
-    rows.value = originalRows;
-    // 重新填充 edits 和 jsonBuffers 以匹配回滚后的 UI
-    originalRows.forEach((row: Row) => {
-      if (row.type === 'json') {
-        jsonBuffers[row.key] = safeStringify(row.value);
-      } else {
-        edits[row.key] = row.value;
-      }
-    });
+    resetEditorState(originalRows);
+  } finally {
+    busy.value = false;
   }
 }
 </script>

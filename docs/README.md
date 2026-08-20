@@ -9,6 +9,8 @@
   只以最后一节作为当前状态。
 - [`testing/ERA前台UI测试需求.md`](testing/ERA前台UI测试需求.md)：当前前台组件的功能意图、
   UI 操作路径、预期结果、自动化缺口和专项验收条件。
+- [`testing/前台测试实施变更清单.md`](testing/前台测试实施变更清单.md)：本轮专项测试、
+  Harness 合并与 UI 收口的复用、修改、删除、新增清单。
 - `javascript_project/service/ARCHITECTURE.jsonc` 与
   `javascript_project/macro/ARCHITECTURE.jsonc`：由 VibeFlow `review` 生成的登记架构。
 - [`development/README.md`](development/README.md)：酒馆运行时接口、ERA 宿主边界、上游兼容性

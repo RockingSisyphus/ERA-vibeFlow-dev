@@ -7,7 +7,13 @@
     <div class="btns">
       <!-- 中文注释：按钮垂直栈 -->
       <div class="btn-group">
-        <button class="btn primary" title="重新计算所有变量" @click.stop="onFullSync">
+        <button
+          class="btn primary"
+          title="重新计算所有变量"
+          :disabled="pendingAction !== null"
+          :aria-busy="pendingAction === 'full'"
+          @click.stop="onFullSync"
+        >
           <!-- 中文注释：主按钮 -->
           <span class="ico" aria-hidden="true">🔄</span>
           <!-- 中文注释：图标 -->
@@ -20,7 +26,13 @@
       </div>
 
       <div class="btn-group">
-        <button class="btn subtle" title="只重算最新一楼的变量" @click.stop="onLastSync">
+        <button
+          class="btn subtle"
+          title="只重算最新一楼的变量"
+          :disabled="pendingAction !== null"
+          :aria-busy="pendingAction === 'latest'"
+          @click.stop="onLastSync"
+        >
           <!-- 中文注释：次按钮 -->
           <span class="ico" aria-hidden="true">♻️</span>
           <!-- 中文注释：图标 -->
@@ -44,7 +56,13 @@
             placeholder="消息 ID"
             aria-label="要回滚到的消息 ID"
           />
-          <button class="btn subtle combo-btn" title="将变量状态回滚到指定消息" @click.stop="onRollbackTo">
+          <button
+            class="btn subtle combo-btn"
+            title="将变量状态回滚到指定消息"
+            :disabled="pendingAction !== null"
+            :aria-busy="pendingAction === 'rollback'"
+            @click.stop="onRollbackTo"
+          >
             <span class="ico" aria-hidden="true">⏳</span>
             <span class="label">回滚到</span>
           </button>
@@ -53,7 +71,13 @@
       </div>
 
       <div class="btn-group">
-        <button class="btn danger" title="为角色卡注入 ERA 规则" @click.stop="onInjectRegex">
+        <button
+          class="btn danger"
+          title="为角色卡注入 ERA 规则"
+          :disabled="pendingAction !== null"
+          :aria-busy="pendingAction === 'initialize'"
+          @click.stop="onInjectRegex"
+        >
           <span class="ico" aria-hidden="true">🥽</span>
           <span class="label">ERA 快速初始化</span>
         </button>
@@ -84,6 +108,7 @@ import { isNonNegativeSafeMessageId } from '../../utils/message-id';
 
 const logger = new Logger();
 const rollbackId = ref<number | string | null>(null);
+const pendingAction = ref<'full' | 'latest' | 'rollback' | 'initialize' | null>(null);
 
 async function submitUiCommand(type: string, args: readonly unknown[], label: string): Promise<void> {
   const admission = requestEraService(type, args, 'ui');
@@ -94,10 +119,25 @@ async function submitUiCommand(type: string, args: readonly unknown[], label: st
   }
 }
 
+async function runUiCommand(
+  action: Exclude<typeof pendingAction.value, null>,
+  type: string,
+  args: readonly unknown[],
+  label: string,
+): Promise<void> {
+  if (pendingAction.value !== null) return;
+  pendingAction.value = action;
+  try {
+    await submitUiCommand(type, args, label);
+  } finally {
+    pendingAction.value = null;
+  }
+}
+
 async function onInjectRegex() {
   logger.log('onInjectRegex', '点击“ERA 快速初始化”，提交资源初始化工作流。');
   try {
-    await submitUiCommand(ERA_UI_EVENT.INITIALIZE_RESOURCES, [], '资源初始化');
+    await runUiCommand('initialize', ERA_UI_EVENT.INITIALIZE_RESOURCES, [], '资源初始化');
     toastr.success('世界书与正则资源已由 ERA Service 完成校验与写入。', '初始化完成');
   } catch (error) {
     logger.error('onInjectRegex', '资源初始化失败。', error);
@@ -108,7 +148,7 @@ async function onInjectRegex() {
 async function onFullSync() {
   logger.log('onFullSync', '点击“完全重算变量”，直达 ERA Service。');
   try {
-    await submitUiCommand(ERA_API_EVENTS.FORCE_SYNC, [{ mode: 'full' }], '完全重算');
+    await runUiCommand('full', ERA_API_EVENTS.FORCE_SYNC, [{ mode: 'full' }], '完全重算');
     toastr.success('“完全重算变量”已完成。', '操作成功');
   } catch (error) {
     logger.error('onFullSync', '完全重算失败。', error);
@@ -119,7 +159,7 @@ async function onFullSync() {
 async function onLastSync() {
   logger.log('onLastSync', '点击“重算最后一楼变量”，直达 ERA Service。');
   try {
-    await submitUiCommand(ERA_API_EVENTS.FORCE_SYNC, [{ mode: 'latest' }], '最后一楼重算');
+    await runUiCommand('latest', ERA_API_EVENTS.FORCE_SYNC, [{ mode: 'latest' }], '最后一楼重算');
     toastr.success('“重算最后一楼变量”已完成。', '操作成功');
   } catch (error) {
     logger.error('onLastSync', '最后一楼重算失败。', error);
@@ -135,7 +175,12 @@ async function onRollbackTo() {
   }
   logger.log('onRollbackTo', `点击“回滚到”，直达 ERA Service (message_id: ${messageId})。`);
   try {
-    await submitUiCommand(ERA_API_EVENTS.FORCE_SYNC, [{ mode: 'rollbackTo', message_id: messageId }], '定向回滚');
+    await runUiCommand(
+      'rollback',
+      ERA_API_EVENTS.FORCE_SYNC,
+      [{ mode: 'rollbackTo', message_id: messageId }],
+      '定向回滚',
+    );
     toastr.success(`已回滚到消息 #${messageId}。`, '操作成功');
   } catch (error) {
     logger.error('onRollbackTo', '定向回滚失败。', error);
@@ -301,6 +346,11 @@ async function onRollbackTo() {
   /* 中文注释：按下态 */
   transform: translateY(0); /* 中文注释：回落 */
   box-shadow: var(--settings-shadow-inset), var(--actions-shadow-btn-active);
+}
+.btn:disabled {
+  cursor: wait;
+  opacity: 0.62;
+  transform: none;
 }
 
 /* 焦点可见性（无障碍） */
