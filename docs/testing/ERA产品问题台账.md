@@ -17,6 +17,16 @@
 历史 suite 的 `failed` 数量不能直接当成产品 bug 数量。ERA-Test-Pack 已确认并修复
 多项 oracle、fixture 和证据路径问题；只有本台账列出的开放项进入后续产品修复范围。
 
+## 当前 bundle 完整回归（2026-08-20）
+
+- Bundle SHA-256：`6c8fe7b370bee747ae76babb9ff17679041a4e5e4b21637973a873543e952e71`。
+- 独立 run：`st-run-20260820T09422060-7133ecc3d902`，`era-regression-all` 372/372
+  recording completed、372 个 required evaluation 均终态；370 passed、2 inconclusive、0 failed/error。
+- Artifact audit：`consistent/complete`，issues=[]；Pack `pnpm verify` 也在 run 后通过。
+- 当前未检出新的 ERA 产品断言失败。两个 Swipe→regenerate 路径因实际 event interval
+  为 658.6ms/659.7ms、未满足 `<600ms` 覆盖前置条件而 inconclusive；两条 provider prompt
+  均仍使用正确的 `previous_floor`，不升级为产品问题。
+
 ## 2. 状态定义
 
 | 状态        | 含义                                     | 后续动作                     |
