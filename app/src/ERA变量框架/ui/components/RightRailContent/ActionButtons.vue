@@ -14,7 +14,7 @@
           :aria-busy="pendingAction === 'full'"
           @click.stop="onFullSync"
         >
-          <!-- 中文注释：主按钮 -->
+          <!-- 发起全量变量重算。 -->
           <span class="ico" aria-hidden="true">🔄</span>
           <!-- 中文注释：图标 -->
           <span class="label">完全重算变量</span>
@@ -33,7 +33,7 @@
           :aria-busy="pendingAction === 'latest'"
           @click.stop="onLastSync"
         >
-          <!-- 中文注释：次按钮 -->
+          <!-- 发起最近一楼的变量重算。 -->
           <span class="ico" aria-hidden="true">♻️</span>
           <!-- 中文注释：图标 -->
           <span class="label">重算最后一楼变量</span>

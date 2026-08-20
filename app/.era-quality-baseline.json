@@ -205,20 +205,6 @@
     },
     {
       "debt": 1,
-      "fingerprint": "ef9ea6f86b7381a21bca104bc3931ea63bc2fdfdcd36b772b4de523c9adaf663",
-      "objectId": "comment:style::root { -> --bg-blur-heavy: linear-gradient(180deg, rgba(255, 255, 255, 0.75), rgba(255, 25",
-      "ruleId": "COMMENT_CHINESE_PRIMARY",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "603a1392d4faf74981da30578b009f2c9ef0ac6a6f1d7066a5a393d0c49de7ec",
-      "objectId": "comment:style:.dark-theme { -> --bg-blur-heavy: linear-gradient(180deg, rgba(35, 37, 43, 0.8), rgba(28, 29, 33,",
-      "ruleId": "COMMENT_CHINESE_PRIMARY",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
       "fingerprint": "492d68337f10fcc7d82cb410c03328040aee4cc8c0ea2c6eef7fafe27fd91c4f",
       "objectId": "comment:style:position: relative; -> border: 1px solid var(--border-soft);",
       "ruleId": "COMMENT_CHINESE_PRIMARY",
@@ -911,13 +897,6 @@
       "severity": "warning"
     },
     {
-      "debt": 1,
-      "fingerprint": "c8ded7a5668c9634815fc2fd3405d4f6a942f0c40f8f475cefcfd73a3525b0fc",
-      "objectId": "comment:script:onMounted(() => { -> });",
-      "ruleId": "COMMENT_DISABLED_CODE",
-      "severity": "warning"
-    },
-    {
       "debt": 17,
       "fingerprint": "749ac650c9d9cd12aa953891c7d534dda29e65d181c31054cb70580b262cefc5",
       "objectId": "comment:script:return mk; -> }",
@@ -1110,13 +1089,6 @@
       "debt": 1,
       "fingerprint": "d451990483194d0d200b17a59f3d8bdbaee85556a8a1e4c5b4edbce8b1a29b5b",
       "objectId": "comment:script:const logger = new Logger(); -> const isOpen = ref(false);",
-      "ruleId": "COMMENT_META_WORDING",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "6c7abe5d791a2aa922b7523b70a9256a7751bb41451070d1d72910803e3a98f9",
-      "objectId": "comment:script:const rows = ref<Row[]>([]); -> const edits = reactive<Record<string, any>>({});",
       "ruleId": "COMMENT_META_WORDING",
       "severity": "warning"
     },
@@ -1509,20 +1481,6 @@
       "debt": 1,
       "fingerprint": "0a129e970b91db5708e939edae0d6e5aa6eddd0f56c01c16fdca86e573c68190",
       "objectId": "comment:style:width: 22px; -> height: 22px;",
-      "ruleId": "COMMENT_META_WORDING",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "44316b933c0c7ca6b59daacaacbcc31d7aace20a4d0db34ede90e59050b7fc74",
-      "objectId": "comment:template:<button class=\"btn primary\" title=\"重新计算所有变量\" @click.stop=\"onFullSync\"> -> <span class=\"ico\" aria-hidden=\"true\">🔄</span>",
-      "ruleId": "COMMENT_META_WORDING",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "c3bccf49d168657cea07ccf9ed722e2949f55b2eca9d4152efaded234479da0a",
-      "objectId": "comment:template:<button class=\"btn subtle\" title=\"只重算最新一楼的变量\" @click.stop=\"onLastSync\"> -> <span class=\"ico\" aria-hidden=\"true\">♻️</span",
       "ruleId": "COMMENT_META_WORDING",
       "severity": "warning"
     },

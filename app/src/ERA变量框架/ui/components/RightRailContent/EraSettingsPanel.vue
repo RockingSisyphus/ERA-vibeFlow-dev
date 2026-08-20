@@ -127,8 +127,8 @@ const isOpen = ref(false); // 中文注释：是否展开
 
 // === 原始数据与编辑缓存 ===
 type Row = { key: string; value: any; type: 'boolean' | 'number' | 'string' | 'json' }; // 中文注释：一行变量的结构
-const rows = ref<Row[]>([]); // 中文注释：可渲染的变量行
-const busy = ref(false); // 中文注释：读取、丢弃和保存期间禁止重复提交
+const rows = ref<Row[]>([]); // 当前可渲染的设置行。
+const busy = ref(false); // 读取、丢弃或保存期间禁止重复提交。
 const edits = reactive<Record<string, any>>({}); // 中文注释：针对简单类型的编辑缓存（布尔/数字/字符串）
 const jsonBuffers = reactive<Record<string, string>>({}); // 中文注释：针对 JSON 类型的文本缓存
 const jsonState = reactive<Record<string, { ok?: boolean; bad?: boolean; msg?: string }>>({}); // 中文注释：JSON 校验状态

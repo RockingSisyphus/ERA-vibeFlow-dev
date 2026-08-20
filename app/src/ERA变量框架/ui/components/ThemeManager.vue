@@ -18,7 +18,7 @@ defineExpose({
 
 /* 亮色主题（默认） */
 .era-app-container {
-  /* === App.vue & General Styles === */
+  /* App.vue 与通用组件共用的颜色变量。 */
   --bg-blur-heavy: linear-gradient(180deg, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0.65));
   --bg-blur-light: linear-gradient(90deg, rgba(255, 255, 255, 0.65), rgba(255, 255, 255, 0.45));
   --bg-solid: #fff;
@@ -152,7 +152,7 @@ defineExpose({
 
 /* 暗色主题 */
 .era-app-container.dark-theme {
-  /* === App.vue & General Styles === */
+  /* App.vue 与通用组件共用的颜色变量。 */
   --bg-blur-heavy: linear-gradient(180deg, rgba(35, 37, 43, 0.8), rgba(28, 29, 33, 0.75));
   --bg-blur-light: linear-gradient(90deg, rgba(50, 52, 59, 0.7), rgba(42, 43, 48, 0.6));
   --bg-solid: #2d2f37;
