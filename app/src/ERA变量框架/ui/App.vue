@@ -43,6 +43,19 @@ const { currentView: currentComponent, eventData: dataRef } = storeToRefs(uiStor
 const themeManager = ref<InstanceType<typeof ThemeManager> | null>(null);
 const isDarkMode = ref(false);
 const expandedLayer = ref<HTMLElement | null>(null);
+let floatingBallFocusFrame: number | null = null;
+
+const restoreFloatingBallFocus = () => {
+  if (floatingBallFocusFrame !== null) {
+    window.cancelAnimationFrame(floatingBallFocusFrame);
+  }
+  // v-show 的可见性更新由 Vue 在本轮渲染中完成；等待下一帧，确保焦点不会
+  // 落在刚刚隐藏的展开层上，并且键盘用户可以继续操作悬浮球。
+  floatingBallFocusFrame = window.requestAnimationFrame(() => {
+    floatingBallFocusFrame = null;
+    document.getElementById('era-floating-ball')?.focus({ preventScroll: true });
+  });
+};
 
 const loadThemeSetting = () => {
   try {
@@ -65,6 +78,9 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('era-settings-updated', loadThemeSetting);
+  if (floatingBallFocusFrame !== null) {
+    window.cancelAnimationFrame(floatingBallFocusFrame);
+  }
 });
 
 const requestSwitchView = (viewName: 'FloatingBall' | 'ExpandedView') => {
@@ -78,7 +94,7 @@ watch(currentComponent, async viewName => {
     expandedLayer.value?.focus();
     return;
   }
-  document.getElementById('era-floating-ball')?.focus();
+  restoreFloatingBallFocus();
 });
 </script>
 
