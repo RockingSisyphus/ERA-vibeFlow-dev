@@ -74,11 +74,13 @@ onMounted(() => {
   loadThemeSetting();
   window.addEventListener('era-settings-updated', loadThemeSetting);
   window.addEventListener('keydown', handleWindowKeydown, true);
+  window.addEventListener('keyup', handleWindowKeydown, true);
 });
 
 onBeforeUnmount(() => {
   window.removeEventListener('era-settings-updated', loadThemeSetting);
   window.removeEventListener('keydown', handleWindowKeydown, true);
+  window.removeEventListener('keyup', handleWindowKeydown, true);
   if (floatingBallFocusTimer !== null) {
     window.clearTimeout(floatingBallFocusTimer);
   }
@@ -103,7 +105,8 @@ const handleWindowKeydown = (event: KeyboardEvent) => {
   if (event.key !== 'Escape' || currentComponent.value !== 'ExpandedView') {
     return;
   }
-  // 在捕获阶段截获 Escape，避免依赖 dialog 初始聚焦时序，也不让宿主接管本次关闭。
+  // 优先在捕获阶段处理 keydown；若宿主抢先消费 keydown，keyup 是同一语义的兜底。
+  // 切换后 currentComponent 已不是 ExpandedView，因此一次按键不会重复关闭。
   event.preventDefault();
   event.stopPropagation();
   void closeExpandedView();
