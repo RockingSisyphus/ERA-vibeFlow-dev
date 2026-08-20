@@ -1,0 +1,8 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.tavern.sidecar_test.clear_report.request",
+  "representation": "json",
+  "display_name": "ERA Sidecar 测试报告清理请求",
+  "description": "stop 时清理受控测试报告。",
+  "schema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "additionalProperties": true }
+}

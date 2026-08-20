@@ -59,6 +59,7 @@ class FakeAdapter implements EraTavernHostAdapter {
   }> = [];
   readonly notifications: EraPreparedNotification[] = [];
   readonly lifecycleOrder: string[] = [];
+  sidecarReportClearCount = 0;
 
   private listener: ((event: EraInboundEvent) => EraAdmissionResult) | null = null;
   notificationImplementation: (notification: EraPreparedNotification, signal: AbortSignal) => void | Promise<void> =
@@ -89,6 +90,15 @@ class FakeAdapter implements EraTavernHostAdapter {
 
   readonly identity = {
     read: (input: Readonly<Record<string, unknown>>) => ({ ...input }),
+  };
+
+  readonly sidecar_test = {
+    read_context: async (input: Readonly<Record<string, unknown>>) => ({ ...input }),
+    publish_report: (input: Readonly<Record<string, unknown>>) => ({ ...input }),
+    clear_report: (input: Readonly<Record<string, unknown>>) => {
+      this.sidecarReportClearCount += 1;
+      return { ...input };
+    },
   };
 
   subscribe(listener: (event: EraInboundEvent) => EraAdmissionResult): () => void {
@@ -217,6 +227,7 @@ describe('ERA 服务 Host Extension 核心', () => {
     await host.stop();
     expect(adapter.listenerCount).toBe(0);
     expect(adapter.lifecycleOrder).toEqual(['start', 'stop']);
+    expect(adapter.sidecarReportClearCount).toBe(1);
   });
 
   it('无损编码 tagged args，并严格保持结算先于通知启动', async () => {

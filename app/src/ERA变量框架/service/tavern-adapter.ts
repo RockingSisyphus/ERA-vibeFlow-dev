@@ -6,6 +6,7 @@
 
 import { INPUT_EVENT, LISTENED_EVENT_TYPES, getEventDefinition, shouldCloseCollectionWindow } from '../events/catalog';
 import { Logger } from '../utils/log';
+import { createSidecarTestAdapter } from './sidecar-test-adapter';
 import type {
   EraAdmissionResult,
   EraCapabilityContext,
@@ -446,7 +447,9 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
       throwIfAborted(context.signal);
       return clonePortable({
         characterName: getCurrentCharacterName(),
-        characterId: SillyTavern.characterId || null,
+        // characterId 必须使用 Tavern Helper 的稳定角色卡头像 ID；SillyTavern
+        // 导出的当前索引会随切卡/聊天切换变化，不能作为 Sidecar 绑定主键。
+        characterId: getCurrentCharacterId(),
         groupId: SillyTavern.groupId || null,
         isGroup: Boolean(SillyTavern.groupId),
         chatId: SillyTavern.getCurrentChatId(),
@@ -454,4 +457,9 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
       });
     },
   };
+
+  /** 测试 probe 复用既有 identity 能力；其分类仍由 workflow 的纯节点完成。 */
+  readonly sidecar_test = createSidecarTestAdapter({
+    readCurrentIdentity: context => this.identity.read({}, context),
+  });
 }

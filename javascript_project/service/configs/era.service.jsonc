@@ -10,7 +10,7 @@
       "status": "implemented",
       "enabled": true,
       "display_name": "ERA 酒馆服务宿主",
-      "description": "连接 SillyTavern 与 Tavern Helper，管理单一先进先出队列、回执、高水位屏障、绝对截止时间定时器、宿主引用和出站帧幂等，并提供服务端口及五类酒馆能力；消息读取按 era-active-message-v1 投影，Host 不承载 CRUD、同步、合并或回滚规则。",
+      "description": "连接 SillyTavern 与 Tavern Helper，管理单一先进先出队列、回执、高水位屏障、绝对截止时间定时器、宿主引用和出站帧幂等，并提供服务端口、五类酒馆能力与受控 Sidecar 测试接线；消息读取按 era-active-message-v1 投影，Host 不承载 CRUD、同步、合并、回滚或身份判定规则。",
       "category": "宿主接线",
       "version": "0.1.0",
       "targets": [
@@ -22,7 +22,8 @@
         "era.tavern.messages",
         "era.tavern.worldbook",
         "era.tavern.regex",
-        "era.tavern.identity"
+        "era.tavern.identity",
+        "era.tavern.sidecar_test"
       ],
       "dependencies": [],
       "config": {

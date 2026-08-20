@@ -9,6 +9,7 @@ Architecture。接口事实以 `app/@types/**` 为准，运行时可用性以已
 | Service、回滚、事件组合、生成 barrier       | [era-host-contract.md](era-host-contract.md)                                                           | `javascript_project/service/ARCHITECTURE.jsonc` 与 source                       |
 | `{{ERA:...}}` 宏                            | [era-host-contract.md](era-host-contract.md)                                                           | `javascript_project/macro/ARCHITECTURE.jsonc` 与 `app/src/ERA变量框架/macro/**` |
 | ERA UI、设置、快照和视觉验收                | [era-host-contract.md](era-host-contract.md)                                                           | `app/src/ERA变量框架/ui/**`、`docs/testing/ERA前台UI测试需求.md`                |
+| Sidecar 身份识别与安全重绑测试               | [era-sidecar-identity-test.md](era-sidecar-identity-test.md)                                          | Service workflow、technical adapter 与 `era-sidecar-identity` suite             |
 | 真实酒馆联调                                | [../../app/开发文档/Codex开发与酒馆实时联调指南.md](../../app/开发文档/Codex开发与酒馆实时联调指南.md) | 浏览器页面、Console、8000/5500/6621                                             |
 | 更新上游类型/兼容性判断                     | [upstream-compatibility.md](upstream-compatibility.md)                                                 | 上游发布说明、类型 diff、合同与真实联调                                         |
 

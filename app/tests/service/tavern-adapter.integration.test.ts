@@ -164,6 +164,7 @@ describe('ERA Tavern 生产接线', () => {
     vi.stubGlobal('getTavernRegexes', () => [{ script_name: 'regex', futureRegexField: { keep: true } }]);
     vi.stubGlobal('updateTavernRegexesWith', updateRegexes);
     vi.stubGlobal('getCurrentCharacterName', () => '角色');
+    vi.stubGlobal('getCurrentCharacterId', () => 'stable-character-avatar.png');
     vi.stubGlobal('getScriptId', () => 'script-id');
     vi.stubGlobal('eventEmit', emitted);
     vi.stubGlobal('SillyTavern', {
@@ -179,6 +180,12 @@ describe('ERA Tavern 生产接线', () => {
     const readVariables = await adapter.variables.read({ scope: { type: 'chat' } }, context);
     expect(readVariables).toMatchObject({
       variables: { frameworkUnknown: { nested: [1, null, { future: true }] } },
+    });
+    expect(adapter.identity.read({}, context)).toMatchObject({
+      characterName: '角色',
+      characterId: 'stable-character-avatar.png',
+      chatId: 'chat-id',
+      scriptId: 'script-id',
     });
 
     const messages = await adapter.messages.read_context(

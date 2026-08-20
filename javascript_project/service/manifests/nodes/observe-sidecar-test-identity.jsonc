@@ -1,0 +1,33 @@
+{
+  "kind": "node",
+  "type_key": "era.service.observe_sidecar_test_identity",
+  "display_name": "识别 Sidecar 测试身份",
+  "category": "服务迭代",
+  "description": "仅在受控测试 fixture 有效时读取宿主身份和聊天 marker，生成只读身份结论；始终原样透传已校验传输事件。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      { "type": "era.transport.event", "cardinality": "exactly_one", "display_name": "已校验传输事件" }
+    ],
+    "provides": [
+      { "key": "sidecar_transport_event", "type": "era.transport.event", "display_name": "透传的已校验传输事件" }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": { "era.transport.event": ["输入：已校验传输事件。"] },
+    "output_semantics": { "sidecar_transport_event": ["输出：原样透传的已校验传输事件。"] }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": ["browser"],
+      "completion": "suspend",
+      "source": { "kind": "file", "ref": "nodes/iteration/observe_sidecar_test_identity.ts", "export": "run" }
+    }
+  ],
+  "base_libs": ["era.service.sidecar_identity"],
+  "capabilities": [
+    { "id": "era.tavern.sidecar_test", "operations": ["read_context", "publish_report"] }
+  ]
+}

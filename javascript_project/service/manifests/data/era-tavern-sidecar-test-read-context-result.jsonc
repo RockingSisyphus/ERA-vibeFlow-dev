@@ -1,0 +1,8 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.tavern.sidecar_test.read_context.result",
+  "representation": "json",
+  "display_name": "ERA Sidecar 测试上下文读取结果",
+  "description": "当前 Tavern 身份、当前聊天保留 marker 与 session fixture 的只读快照。",
+  "schema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "additionalProperties": true }
+}

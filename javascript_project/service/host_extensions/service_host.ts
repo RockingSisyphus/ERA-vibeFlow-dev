@@ -120,6 +120,15 @@ export interface EraTavernCapabilityAdapter {
   readonly identity: {
     readonly read: EraHostOperation;
   };
+  /**
+   * 仅供受控 Pack 身份识别测试使用的技术接线。它不判断绑定结果，也不读取
+   * ERA 业务状态；判定规则必须留在 service workflow 的纯节点中。
+   */
+  readonly sidecar_test: {
+    readonly read_context: EraAsyncHostOperation;
+    readonly publish_report: EraHostOperation;
+    readonly clear_report: EraHostOperation;
+  };
 }
 
 export interface EraTavernClock {
@@ -634,6 +643,20 @@ class ServiceHostRuntime {
         options: PortCallOptions = {},
       ) => this.invokeImmediate("identity", "read", input, options),
     },
+    "era.tavern.sidecar_test": {
+      read_context: (
+        input: Readonly<Record<string, unknown>>,
+        options: PortCallOptions = {},
+      ) => this.invokeSuspend("sidecar_test", "read_context", input, options),
+      publish_report: (
+        input: Readonly<Record<string, unknown>>,
+        options: PortCallOptions = {},
+      ) => this.invokeImmediate("sidecar_test", "publish_report", input, options),
+      clear_report: (
+        input: Readonly<Record<string, unknown>>,
+        options: PortCallOptions = {},
+      ) => this.invokeImmediate("sidecar_test", "clear_report", input, options),
+    },
   } as const;
 
   start(): void {
@@ -736,6 +759,9 @@ class ServiceHostRuntime {
       [adapter.regex?.read, "regex.read"],
       [adapter.regex?.upsert, "regex.upsert"],
       [adapter.identity?.read, "identity.read"],
+      [adapter.sidecar_test?.read_context, "sidecar_test.read_context"],
+      [adapter.sidecar_test?.publish_report, "sidecar_test.publish_report"],
+      [adapter.sidecar_test?.clear_report, "sidecar_test.clear_report"],
     ];
     for (const [value, name] of required) {
       if (typeof value !== "function") {
@@ -1567,6 +1593,20 @@ class ServiceHostRuntime {
     this.cachedWriteDoneArgs = null;
     this.fatalTransitioning = false;
     this.fatalLatched = false;
+
+    // 测试报告是 adapter 所属浏览器侧资源；停止时只请求清理，不在 Host 内
+    // 解释 marker 或决定身份结果。
+    if (this.adapter) {
+      try {
+        // lifecycle 已在上方中止；清理是 adapter 自己的资源释放，使用新的
+        // 已激活 signal，避免把正常 teardown 误当成被取消的 capability 调用。
+        this.adapter.sidecar_test.clear_report({}, { signal: new AbortController().signal });
+      } catch (error) {
+        this.warn("清理 ERA Sidecar 测试报告时发生异常。", {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
 
     while (this.activeNotifications.size > 0) {
       await Promise.allSettled([...this.activeNotifications]);

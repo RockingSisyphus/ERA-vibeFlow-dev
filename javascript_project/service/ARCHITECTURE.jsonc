@@ -4779,11 +4779,11 @@
         "execution_lock": null,
         "contains_global_state": false,
         "summary": {
-          "nodes": 10,
+          "nodes": 11,
           "nodesets": 12,
-          "explicit_edges": 14,
+          "explicit_edges": 15,
           "data_edges": 4,
-          "reported_edges": 14,
+          "reported_edges": 15,
           "contains_global_state": false
         },
         "entry_nodes": [
@@ -4951,6 +4951,51 @@
                 "key": "transport_event",
                 "type": "era.transport.event",
                 "display_name": "已校验传输事件"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "observe_sidecar_test_identity",
+            "type_used": "era.service.observe_sidecar_test_identity",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/service_iteration.jsonc"
+            },
+            "role": {
+              "display_name": "识别 Sidecar 测试身份",
+              "description": "仅在受控测试期开启：由 workflow 计算 matched、rebind-approved、conflict、unbound、invalid 或 not-applicable 报告；不改变传输事件、FIFO、同步或变量状态。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "process",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.transport.event",
+                "cardinality": "exactly_one",
+                "display_name": "已校验传输事件"
+              }
+            ],
+            "provides": [
+              {
+                "key": "sidecar_transport_event",
+                "type": "era.transport.event",
+                "display_name": "透传的已校验传输事件"
               }
             ],
             "join_policy": "safe_any",
@@ -5275,6 +5320,16 @@
           },
           {
             "from": "validate_transport",
+            "to": "observe_sidecar_test_identity",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "observe_sidecar_test_identity",
             "to": "reduce_collection",
             "when": "",
             "roles": [
@@ -11840,6 +11895,56 @@
             "export": "run"
           },
           "completion": "immediate"
+        }
+      ]
+    },
+    "era.service.observe_sidecar_test_identity": {
+      "display_name": "识别 Sidecar 测试身份",
+      "description": "仅在受控测试 fixture 有效时读取宿主身份和聊天 marker，生成只读身份结论；始终原样透传已校验传输事件。",
+      "category": "服务迭代",
+      "version": "1.0.0",
+      "flow_kind": "process",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.transport.event",
+            "cardinality": "exactly_one",
+            "display_name": "已校验传输事件"
+          }
+        ],
+        "provides": [
+          {
+            "key": "sidecar_transport_event",
+            "type": "era.transport.event",
+            "display_name": "透传的已校验传输事件"
+          }
+        ],
+        "input_semantics": {
+          "era.transport.event": [
+            "输入：已校验传输事件。"
+          ]
+        },
+        "output_semantics": {
+          "sidecar_transport_event": [
+            "输出：原样透传的已校验传输事件。"
+          ]
+        },
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/iteration/observe_sidecar_test_identity.ts",
+            "export": "run"
+          },
+          "completion": "suspend"
         }
       ]
     },
@@ -37991,6 +38096,78 @@
           "additionalProperties": true
         }
       },
+      "era.tavern.sidecar_test.clear_report.request": {
+        "kind": "data_schema",
+        "type_key": "era.tavern.sidecar_test.clear_report.request",
+        "representation": "json",
+        "display_name": "ERA Sidecar 测试报告清理请求",
+        "description": "stop 时清理受控测试报告。",
+        "schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "era.tavern.sidecar_test.clear_report.result": {
+        "kind": "data_schema",
+        "type_key": "era.tavern.sidecar_test.clear_report.result",
+        "representation": "json",
+        "display_name": "ERA Sidecar 测试报告清理结果",
+        "description": "受控测试报告已清理。",
+        "schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "era.tavern.sidecar_test.publish_report.request": {
+        "kind": "data_schema",
+        "type_key": "era.tavern.sidecar_test.publish_report.request",
+        "representation": "json",
+        "display_name": "ERA Sidecar 测试报告发布请求",
+        "description": "由 workflow 计算后交给受控测试槽的只读报告。",
+        "schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "era.tavern.sidecar_test.publish_report.result": {
+        "kind": "data_schema",
+        "type_key": "era.tavern.sidecar_test.publish_report.result",
+        "representation": "json",
+        "display_name": "ERA Sidecar 测试报告发布结果",
+        "description": "受控测试报告写入结果。",
+        "schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "era.tavern.sidecar_test.read_context.request": {
+        "kind": "data_schema",
+        "type_key": "era.tavern.sidecar_test.read_context.request",
+        "representation": "json",
+        "display_name": "ERA Sidecar 测试上下文读取请求",
+        "description": "仅允许受控测试身份观察请求。",
+        "schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "era.tavern.sidecar_test.read_context.result": {
+        "kind": "data_schema",
+        "type_key": "era.tavern.sidecar_test.read_context.result",
+        "representation": "json",
+        "display_name": "ERA Sidecar 测试上下文读取结果",
+        "description": "当前 Tavern 身份、当前聊天保留 marker 与 session fixture 的只读快照。",
+        "schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
       "era.tavern.variables.commit.request": {
         "kind": "data_schema",
         "type_key": "era.tavern.variables.commit.request",
@@ -38644,6 +38821,32 @@
         "dependencies": [],
         "external_packages": []
       },
+      "era.service.sidecar_identity": {
+        "kind": "base_lib",
+        "id": "era.service.sidecar_identity",
+        "display_name": "ERA Sidecar 测试身份纯规则",
+        "description": "在受控测试期根据宿主身份、聊天 marker 与退役拥有者 fixture 生成只读匹配、冲突或重绑建议；不访问宿主、不写状态也不迁移数据。",
+        "category": "测试身份识别",
+        "version": "1.0.0",
+        "implementations": [
+          {
+            "language": "typescript",
+            "targets": [
+              "browser",
+              "node"
+            ],
+            "source": {
+              "kind": "file",
+              "ref": "base_lib/sidecar_identity.ts"
+            },
+            "completion": "immediate"
+          }
+        ],
+        "dependencies": [
+          "era.service.types"
+        ],
+        "external_packages": []
+      },
       "era.service.sync_engine": {
         "kind": "base_lib",
         "id": "era.service.sync_engine",
@@ -38815,6 +39018,32 @@
           }
         }
       },
+      "era.tavern.sidecar_test": {
+        "kind": "capability",
+        "id": "era.tavern.sidecar_test",
+        "targets": [
+          "browser"
+        ],
+        "display_name": "ERA Sidecar 测试接线",
+        "description": "仅在 Pack 受控 fixture 下搬运当前身份、聊天测试 marker 与只读测试报告；不包含匹配、重绑、同步或持久化规则。",
+        "operations": {
+          "read_context": {
+            "input_type": "era.tavern.sidecar_test.read_context.request",
+            "output_type": "era.tavern.sidecar_test.read_context.result",
+            "completion": "suspend"
+          },
+          "publish_report": {
+            "input_type": "era.tavern.sidecar_test.publish_report.request",
+            "output_type": "era.tavern.sidecar_test.publish_report.result",
+            "completion": "immediate"
+          },
+          "clear_report": {
+            "input_type": "era.tavern.sidecar_test.clear_report.request",
+            "output_type": "era.tavern.sidecar_test.clear_report.result",
+            "completion": "immediate"
+          }
+        }
+      },
       "era.tavern.variables": {
         "kind": "capability",
         "id": "era.tavern.variables",
@@ -38874,7 +39103,7 @@
         "status": "implemented",
         "display_name": "ERA 酒馆服务宿主",
         "category": "宿主接线",
-        "description": "连接 SillyTavern 与 Tavern Helper，管理单一先进先出队列、回执、高水位屏障、绝对截止时间定时器、宿主引用和出站帧幂等，并提供服务端口及五类酒馆能力；消息读取按 era-active-message-v1 投影，Host 不承载 CRUD、同步、合并或回滚规则。",
+        "description": "连接 SillyTavern 与 Tavern Helper，管理单一先进先出队列、回执、高水位屏障、绝对截止时间定时器、宿主引用和出站帧幂等，并提供服务端口、五类酒馆能力与受控 Sidecar 测试接线；消息读取按 era-active-message-v1 投影，Host 不承载 CRUD、同步、合并、回滚或身份判定规则。",
         "version": "0.1.0",
         "targets": [
           "browser"
@@ -38885,7 +39114,8 @@
           "era.tavern.messages",
           "era.tavern.worldbook",
           "era.tavern.regex",
-          "era.tavern.identity"
+          "era.tavern.identity",
+          "era.tavern.sidecar_test"
         ],
         "dependencies": [],
         "config_keys": [

@@ -95,6 +95,12 @@ export interface EraTavernAdapter {
   readonly identity: {
     read(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
   };
+  /** 受控 Pack 测试接线；业务判定位于 VibeFlow service workflow。 */
+  readonly sidecar_test: {
+    read_context(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
+    publish_report(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
+    clear_report(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
+  };
 }
 
 /** 应用启动器和 UI client 共用的最小入站接口。 */
