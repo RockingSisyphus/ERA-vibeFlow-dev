@@ -10,7 +10,7 @@
       aria-modal="true"
       aria-label="ERA 面板"
       tabindex="-1"
-      @keydown.esc.prevent="closeExpandedView"
+      @keydown.esc.stop.prevent="closeExpandedView"
     >
       <!-- 视口级展开层：悬浮模态容器 -->
       <div class="era-shell">
