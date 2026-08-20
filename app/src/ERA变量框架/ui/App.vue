@@ -10,7 +10,7 @@
       aria-modal="true"
       aria-label="ERA 面板"
       tabindex="-1"
-      @keydown.esc="requestSwitchView('FloatingBall')"
+      @keydown.esc.prevent="closeExpandedView"
     >
       <!-- 视口级展开层：悬浮模态容器 -->
       <div class="era-shell">
@@ -43,18 +43,18 @@ const { currentView: currentComponent, eventData: dataRef } = storeToRefs(uiStor
 const themeManager = ref<InstanceType<typeof ThemeManager> | null>(null);
 const isDarkMode = ref(false);
 const expandedLayer = ref<HTMLElement | null>(null);
-let floatingBallFocusFrame: number | null = null;
+let floatingBallFocusTimer: number | null = null;
 
 const restoreFloatingBallFocus = () => {
-  if (floatingBallFocusFrame !== null) {
-    window.cancelAnimationFrame(floatingBallFocusFrame);
+  if (floatingBallFocusTimer !== null) {
+    window.clearTimeout(floatingBallFocusTimer);
   }
-  // v-show 的可见性更新由 Vue 在本轮渲染中完成；等待下一帧，确保焦点不会
-  // 落在刚刚隐藏的展开层上，并且键盘用户可以继续操作悬浮球。
-  floatingBallFocusFrame = window.requestAnimationFrame(() => {
-    floatingBallFocusFrame = null;
-    document.getElementById('era-floating-ball')?.focus({ preventScroll: true });
-  });
+  // 先让浏览器完成对已隐藏 dialog 的焦点清理，再恢复到重新显示的按钮。
+  // 若在同一渲染轮直接 focus，浏览器可能随后把焦点退回 body。
+  floatingBallFocusTimer = window.setTimeout(() => {
+    floatingBallFocusTimer = null;
+    document.getElementById('era-floating-ball')?.focus();
+  }, 0);
 };
 
 const loadThemeSetting = () => {
@@ -78,14 +78,24 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('era-settings-updated', loadThemeSetting);
-  if (floatingBallFocusFrame !== null) {
-    window.cancelAnimationFrame(floatingBallFocusFrame);
+  if (floatingBallFocusTimer !== null) {
+    window.clearTimeout(floatingBallFocusTimer);
   }
 });
 
 const requestSwitchView = (viewName: 'FloatingBall' | 'ExpandedView') => {
   logger.debug('requestSwitchView', `请求切换视图到: ${viewName}`);
   uiStore.switchView(viewName);
+  if (viewName === 'FloatingBall') {
+    void nextTick().then(restoreFloatingBallFocus);
+  }
+};
+
+const closeExpandedView = async () => {
+  logger.debug('closeExpandedView', '收到 Escape，关闭面板并恢复悬浮球焦点。');
+  uiStore.switchView('FloatingBall');
+  await nextTick();
+  restoreFloatingBallFocus();
 };
 
 watch(currentComponent, async viewName => {
