@@ -105,18 +105,14 @@ import { ERA_UI_EVENT } from '../../../service/types';
 import { ERA_API_EVENTS } from '../../../utils/constants';
 import { Logger } from '../../../utils/log';
 import { isNonNegativeSafeMessageId } from '../../utils/message-id';
+import { awaitUiSettlement } from '../../utils/service-settlement';
 
 const logger = new Logger();
 const rollbackId = ref<number | string | null>(null);
 const pendingAction = ref<'full' | 'latest' | 'rollback' | 'initialize' | null>(null);
 
 async function submitUiCommand(type: string, args: readonly unknown[], label: string): Promise<void> {
-  const admission = requestEraService(type, args, 'ui');
-  if (!admission.accepted) throw new Error(`${admission.code}: ${admission.message}`);
-  const settlement = await admission.done;
-  if (settlement.status !== 'completed') {
-    throw new Error(`${label}未完成：${settlement.status}`);
-  }
+  await awaitUiSettlement(requestEraService(type, args, 'ui'), label);
 }
 
 async function runUiCommand(

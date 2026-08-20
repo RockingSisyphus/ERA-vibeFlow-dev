@@ -1,13 +1,13 @@
 # ERA → VibeFlow 当前 TODO
 
-Updated: 2026-08-09 CST
+Updated: 2026-08-20 CST
 
 状态标记：`[ ]` 未完成，`[~]` 进行中，`[x]` 完成，`[-]` 仅在明确请求时执行。
 
 ## 当前结论
 
-- [~] 发布状态：`BLOCKED_VALIDATION`。当前没有剩余已知 ERA 功能回退；尚需把两项
-  Harness 修正合并到同一执行树，并重跑、审计完整 P2。
+- [~] 发布状态：`P2_VALIDATED_PENDING_RELEASE_GATES`。当前没有剩余已知 ERA 功能回退；
+  统一 P2 已通过，尚未按本轮范围执行或重新授权最终发布门禁。
 - [x] VibeFlow 0.13.2、Service/Macro 两个 AOT root、contracts 1.4.0 已实现。
 - [x] 两个 workflow 的 `status: planned` 数量为 0。
 - [x] 当前机器审计的业务 JSONC 可读字段为 1083/1083 含中文。
@@ -27,13 +27,12 @@ Updated: 2026-08-09 CST
 
 ## 尚需完成
 
-- [ ] 将修正后的 `era-contract-v1` Evaluator 与 `alternateGreetings` fixture 能力同步到
-  同一个 Harness 工作树。
-- [ ] 在该统一工作树中运行 Harness 合同门禁。
-- [ ] 使用 `workers=4` 重新执行 P2 234 路径；普通 path 失败继续执行。
-- [ ] 审计新 Artifact：234 条均有终态，summary 与 path manifests 一致，所有 required
-  evaluation passed。
-- [ ] 仅在上述结果通过后更新 v1.1.0 release manifest 为 `READY`。
+- [x] 将修正后的 `era-contract-v1` Evaluator 与 `alternateGreetings` fixture 能力同步到
+  同一个 Harness 工作树，并完成 Harness 合同门禁。
+- [x] 使用 4 workers 重新执行 P2 234 路径。
+- [x] 审计新 Artifact `st-run-20260820T06341931-9eb114de60a0`：234 条均有终态、全部
+  `completed/passed`、结构 `consistent/complete`。
+- [ ] 仅在用户后续明确要求执行最终发布门禁并全部通过后，才更新 v1.1.0 release manifest 为 `READY`。
 
 ## 历史证据说明
 

@@ -1178,13 +1178,6 @@
     },
     {
       "debt": 1,
-      "fingerprint": "2560c1fc917d0a012ae769b08a21d2e2d236f9e207cd14d843907d94ec6ef7da",
-      "objectId": "comment:script:import { Logger } from '../../../utils/log'; -> const logger = new Logger();",
-      "ruleId": "COMMENT_META_WORDING",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
       "fingerprint": "c39de5b697371fa7f46d5286aa7d5787cd106903b26c35f90a2d0554af3dc4cf",
       "objectId": "comment:script:import { reactive, ref } from 'vue'; -> import toastr from 'toastr';",
       "ruleId": "COMMENT_META_WORDING",

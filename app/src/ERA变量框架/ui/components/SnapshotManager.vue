@@ -1,3 +1,7 @@
+<!--
+  快照查询面板：只经 ERA Service 请求历史状态并消费 queryResult；不直接读取 Tavern
+  消息或变量。查询世代隔离迟到响应，避免旧请求覆盖用户最后一次选择。
+-->
 <template>
   <!-- ★ 新增唯一 id：不改变任何逻辑，仅用于限制样式作用域 -->
   <div id="era-snapshot-ui" class="snapshot-manager">
@@ -11,7 +15,12 @@
           <!-- 下拉容器：保留右侧箭头与阴影效果 -->
           <select id="mk-selector" v-model="selectedMk" class="mk-selector" @change="handleSelectionChange">
             <option :value="null" disabled>-- 从列表中选择 --</option>
-            <option v-for="(mk, index) in reversedSelectedMks" :key="mk || `null-${index}`" :value="mk">
+            <option
+              v-for="(mk, index) in reversedSelectedMks"
+              :key="mk || `null-${index}`"
+              :value="mk"
+              :disabled="mk === null"
+            >
               {{ formatMkForDisplay(mk, index) }}
               <!-- 选项显示文本 -->
             </option>
@@ -60,12 +69,16 @@
 </template>
 
 <script setup lang="ts">
+/*
+ * 快照查询面板负责把用户的 MK/消息 ID 意图交给 ERA Service，并消费公开
+ * queryResult 展示结果；边界是不直接读取 Tavern 消息或变量。查询世代必须隔离
+ * 迟到响应，否则旧请求会覆盖最后一次选择。
+ */
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { requestEraService } from '../../service/client';
 import { ERA_API_EVENTS } from '../../utils/constants';
 import type { QueryResultItem, QueryResultPayload, WriteDonePayload } from '../../utils/constants';
 import { Logger } from '../../utils/log';
-import { isUserMessage } from '../../utils/message';
 import { isNonNegativeSafeMessageId } from '../utils/message-id';
 import EraAccordion from '../template/EraAccordion.vue';
 import PrettyJsonViewer from '../template/PrettyJsonViewer.vue';
@@ -87,6 +100,8 @@ const messageIdInput = ref<number | string | null>(null);
 const historicalSnapshot = ref<QueryResultItem | null>(null);
 const loading = ref(false);
 const error = ref<string | null>(null);
+let nextQueryGeneration = 0;
+let activeQuery: { generation: number; type: string; request: Readonly<Record<string, unknown>> } | null = null;
 
 const tabs: TabItem[] = [
   { key: 'pure', label: '纯净状态数据' },
@@ -98,22 +113,39 @@ const reversedSelectedMks = computed(() => {
   return props.latestData?.selectedMks?.slice().reverse() ?? [];
 });
 
+function sameQueryRequest(left: Readonly<Record<string, unknown>>, right: Readonly<Record<string, unknown>>): boolean {
+  const leftKeys = Object.keys(left);
+  const rightKeys = Object.keys(right);
+  return leftKeys.length === rightKeys.length && leftKeys.every(key => left[key] === right[key]);
+}
+
 function submitQuery(type: string, request: Readonly<Record<string, unknown>>): void {
+  // queryResult ABI 没有单独 request ID；相同键的并发请求无法由公开事件可靠地区分，
+  // 因此当前查询尚未终态时不重复入队，避免旧响应被错误归给后一次点击。
+  if (activeQuery && activeQuery.type === type && sameQueryRequest(activeQuery.request, request)) return;
+  const generation = ++nextQueryGeneration;
+  activeQuery = { generation, type, request };
   const admission = requestEraService(type, [request], 'ui');
   if (!admission.accepted) {
-    loading.value = false;
-    error.value = `${admission.code}: ${admission.message}`;
+    if (activeQuery?.generation === generation) {
+      loading.value = false;
+      error.value = `${admission.code}: ${admission.message}`;
+      activeQuery = null;
+    }
     return;
   }
   void admission.done
     .then(settlement => {
-      if (settlement.status === 'completed') return;
+      if (activeQuery?.generation !== generation || settlement.status === 'completed') return;
       loading.value = false;
       error.value = `ERA 查询未完成：${settlement.status}`;
+      activeQuery = null;
     })
     .catch(reason => {
+      if (activeQuery?.generation !== generation) return;
       loading.value = false;
       error.value = reason instanceof Error ? reason.message : String(reason);
+      activeQuery = null;
     });
 }
 
@@ -136,16 +168,16 @@ const isUserMessageComputed = computed(() => {
   if ('is_user' in displayData.value) {
     return (displayData.value as QueryResultItem).is_user;
   }
-  // 否则，这是最新数据(WriteDonePayload)，我们需要从消息中获取它
-  const message = getChatMessages(displayData.value.message_id, { include_swipes: false })[0];
-  return message ? isUserMessage(message) : false;
+  return props.latestData?.is_user ?? false;
 });
 
 watch(
-  () => latestMkFromProps.value,
-  newLatestMk => {
+  () => props.latestData,
+  latestData => {
     // 当外部数据更新时，重置UI到最新状态
-    selectedMk.value = newLatestMk;
+    nextQueryGeneration += 1;
+    activeQuery = null;
+    selectedMk.value = latestData?.mk ?? null;
     historicalSnapshot.value = null;
     messageIdInput.value = null;
     error.value = null;
@@ -188,6 +220,8 @@ const queryByMId = () => {
 };
 
 const handleQueryResult = (detail: QueryResultPayload) => {
+  const query = activeQuery;
+  if (!query || detail.queryType !== query.type || !sameQueryRequest(detail.request, query.request)) return;
   loading.value = false;
 
   const handleResult = (result: QueryResultItem | null, errorMsg: string) => {
@@ -207,6 +241,7 @@ const handleQueryResult = (detail: QueryResultPayload) => {
   } else if (detail.queryType === 'getSnapshotAtMId' && detail.request.message_id === messageIdInput.value) {
     handleResult(detail.result as QueryResultItem | null, `未找到与消息 ID "${messageIdInput.value}" 相关的快照。`);
   }
+  activeQuery = null;
 };
 
 const formatMkForDisplay = (mk: string | null, index: number): string => {

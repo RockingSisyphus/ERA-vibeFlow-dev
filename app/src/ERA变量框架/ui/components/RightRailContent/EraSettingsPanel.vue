@@ -118,7 +118,8 @@ import { requestEraService } from '../../../service/client';
 import { ERA_UI_EVENT } from '../../../service/types';
 import { SettingsSchema } from '../../../utils/constants';
 import { settings } from '../../../utils/era_data';
-import { Logger } from '../../../utils/log'; // 中文注释：项目内日志工具
+import { Logger } from '../../../utils/log'; // 记录设置读取、提交与回滚的可诊断结果。
+import { awaitUiSettlement } from '../../utils/service-settlement';
 
 const logger = new Logger(); // 中文注释：实例化日志
 
@@ -252,10 +253,10 @@ async function saveEdits() {
       }
     });
     const nextSettings = SettingsSchema.parse({ ...settings.value, ...updatedSettings });
-    const admission = requestEraService(ERA_UI_EVENT.UPDATE_SETTINGS, [{ settings: nextSettings }], 'ui');
-    if (!admission.accepted) throw new Error(`${admission.code}: ${admission.message}`);
-    const settlement = await admission.done;
-    if (settlement.status !== 'completed') throw new Error(`设置提交未完成：${settlement.status}`);
+    await awaitUiSettlement(
+      requestEraService(ERA_UI_EVENT.UPDATE_SETTINGS, [{ settings: nextSettings }], 'ui'),
+      '设置提交',
+    );
 
     rows.value.forEach(row => {
       if (Object.prototype.hasOwnProperty.call(nextSettings, row.key)) {

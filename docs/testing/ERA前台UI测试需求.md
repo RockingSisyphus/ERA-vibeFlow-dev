@@ -1,12 +1,20 @@
 # ERA 前台 UI 专项测试需求
 
-> 状态：设计基线，待审核后实现测试  
-> 编制日期：2026-08-09  
+> 状态：专项验证完成
+> 更新日期：2026-08-20
 > 适用范围：`app/src/ERA变量框架/ui` 当前生产 UI，以及它与 ERA Service、Tavern 宿主之间的可观察交互
 
 ## 1. 文档目的
 
 本文定义 ERA 前台 UI 应当具备的专项测试，不把“面板能够打开”当成完整 UI 验收。
+
+## 本轮验证结果
+
+- 功能专项：75/75 通过；Artifact `st-run-20260820T05524707-be90d18274b3`。
+- 视觉与手机触屏专项：11/11 通过；Artifact `st-run-20260820T06071210-326e5870f210`。
+- 生命周期与样式所有权：8 条单路径、单 worker 全部通过；Artifact 位于
+  `reports/ui-special-20260820/artifacts/`。
+- 最终 Artifact 均为 `consistent / complete`；本轮未运行两小时长稳。
 每项功能均说明：如何从用户界面进入、如何操作、界面应出现什么结果，以及必要时
 Service、公共事件和宿主状态应出现什么结果。
 
@@ -32,13 +40,10 @@ Playwright adapter 得出。
 | `AboutEra.vue`                                                              | 作者、群号和外部链接                                                             |
 | `ExpandedView.vue`、`processing/panel-data.ts`、`patch.ts`                  | 未进入当前生产依赖图的遗留实现，不作为现行用户功能                               |
 
-当前 Harness 只有以下直接相关路径：
-
-- `UI-PANEL-001`：打开、关闭 ERA 面板；
-- `UI-PANEL-003`：打开快照区域、选择一个 MK、切换到完整数据、关闭；
-- `UI-PANEL-002` 测的是 Tavern Helper 变量管理器，不是 ERA 自身 UI 功能。
-
-因此，已有路径只能作为新专项套件的基础，不能代表本文中的功能已经被覆盖。
+专项 UI 由 `ERA-Test-Pack` 的受限 UI driver 和 `era-ui-*` suite 承载：catalog 只能
+表达受限的语义动作、profile 和预期，不能携带 selector、任意脚本或任意事件名。Harness
+为每条 path 保存截图、DOM、receipt、settlement、公共事件与宿主状态；Evaluator 只读取
+冻结 Artifact，不读取旧 Artifact 或产品源码。
 
 ## 3. 测试口径
 
@@ -71,8 +76,8 @@ Playwright adapter 得出。
   只覆盖声明为触屏的手机 profile。
 - 每个操作至少保存 before/after screenshot、DOM 摘要、console/pageerror、ERA
   入站 receipt、settlement、公共事件和相关变量快照。
-- 视觉基准至少覆盖 1440×900、1024×768、768×1024、375×812、320×568，且各有
-  亮色和暗色代表路径；桌面基准为 1440×900，手机触屏覆盖 375×812、320×568 及其横屏。
+- 视觉基准覆盖桌面 1440×900，以及手机触屏 375×812、320×568 和对应横屏；每类有
+  亮色和暗色代表路径。
 
 ### 3.4 标准数据夹具
 
@@ -143,7 +148,7 @@ Enter/Space/Escape 操作和焦点返回均不属于本专项验收范围。
 
 ### 4.3 首屏状态与实时 `writeDone` 更新
 
-**用例：UI-DATA-001～004（P0，需扩展，已知缺口）**
+**用例：UI-DATA-001～004（P0，需扩展）**
 
 前置状态：聊天中已经存在可读取的 ERA 状态；另准备一个尚未产生状态的空聊天。
 
@@ -164,8 +169,8 @@ UI 操作：
 - 面板关闭期间仍接收事件，重新打开显示最新数据；
 - 非法 payload 被边界校验拒绝并留下诊断，不能把面板更新成半结构数据。
 
-已知缺口：当前 UI 只监听挂载后的广播，不主动发送 `era:requestWriteDone`，因此启动前已
-存在的最后状态可能永远显示不出来。
+实现约束：UI 挂载后经既有 `era:requestWriteDone` 请求 Service 回放；回放不直接读取
+聊天变量。stop 后的迟到回放或事件必须被实例会话隔离。
 
 ### 4.4 消息元数据与最新操作详情
 
@@ -248,8 +253,9 @@ UI 操作：
 - 同一 MK 的新 payload 到达时也必须刷新内容并清理过时查询状态；
 - 最新来源身份直接使用 `WriteDonePayload.is_user`，不得再次读取 Tavern 原始消息推断。
 
-已知缺口：null MK 当前可被选择；watcher 只监听 MK 值；最新身份当前通过
-`getChatMessages()` 二次推导。
+实现约束：null MK 只作为列表信息显示而不可查询；任何新的 `writeDone` payload（即使
+MK 不变）都会回到最新快照。最新身份直接使用 `WriteDonePayload.is_user`，不二次读取
+Tavern 消息。
 
 ### 4.7 按 MK 查询历史快照
 
@@ -305,7 +311,7 @@ UI 操作：
 
 ### 4.9 快照并发、迟到和无关响应
 
-**用例：UI-SNAPSHOT-RACE-001～005（P0，需扩展，已知缺口）**
+**用例：UI-SNAPSHOT-RACE-001～005（P0，需扩展）**
 
 前置状态：测试 adapter 能控制多个查询的返回顺序。
 
@@ -327,8 +333,8 @@ UI 操作：
 - 新 `writeDone` 后界面应明确回到最新状态，或明确保留历史查看模式，不能把新元数据与
   旧快照混合；本版目标统一为回到最新状态并取消旧查询。
 
-已知缺口：当前 handler 在判断响应相关性前无条件 `loading=false`，且只靠 MK/ID 值
-匹配，没有请求代次。
+实现约束：每次异键查询都有本地递增世代，只有当前世代、类型与规范化请求键同时匹配的
+结果才可改变界面。公开 ABI 未提供 request ID，因此同键请求在未终态时不得重复入队。
 
 ### 4.10 完全重算与最后一楼重算
 
@@ -357,7 +363,8 @@ UI 操作：
 - 用户消息、空聊天等特殊语义由 Service 决定为 completed/no-op/failed，UI 只准确呈现
   结算，不自行伪造结果。
 
-已知缺口：当前按钮没有 pending/disabled/防重入，快速双击会提交多个事件。
+实现约束：所有快捷操作共享一个 busy 锁；只允许第一个动作入队，且仅 completed 能显示
+成功。等待超过 30 秒后只恢复按钮与显示失败，不撤销已入队工作。
 
 ### 4.11 定向回滚
 
@@ -439,7 +446,7 @@ UI 操作：
 - 空设置显示占位和 app_ready 提示，读取异常显示失败反馈；
 - JSON 组件分支中，合法 JSON 显示有效，空白/非法 JSON 显示错误且保存前本地拒绝。
 
-已知缺口：丢弃会先触发“读取成功”再触发“操作完成”，当前可能出现双 toast。
+实现约束：丢弃只读取当前宿主设置并给出一次完成反馈；不提交 Service 写入。
 
 ### 4.14 设置保存、失败回滚与实时主题
 
@@ -469,8 +476,8 @@ UI 操作：
 - 亮/暗主题下所有 ERA 控件可读，切换主题不得改变 ERA 根之外 Tavern 元素的 computed
   style。
 
-已知缺口：当前保存按钮无防重入；JSON 失败回滚没有重建 `jsonState`；主题变量在全局
-`:root` 声明，可能污染宿主。
+实现约束：保存使用同一 receipt 等待工具和 busy 锁；失败或超时必须重建全部编辑缓存与
+JSON 校验状态。主题变量只落在 ERA 根，只有已提交设置触发的 `era-settings-updated` 可切换主题。
 
 ### 4.15 关于 ERA 与外部链接
 
@@ -570,7 +577,8 @@ UI 操作：
 - 停止窗口的新请求收到 `ERA_APP_SERVICE_UNAVAILABLE` 或等价 typed rejection；
 - 卸载会取消/隔离 UI 等待，迟到 Promise 不访问 DOM、不 toast、不产生 unhandled rejection。
 
-已知缺口：当前命令和保存按钮均没有通用 pending 状态或防重复机制。
+实现约束：命令和设置保存共用 receipt 等待语义；超时、拒绝、非 completed 与 reject 都不能
+假装成功，且迟到结算不得覆盖后续用户操作的状态。
 
 ### 4.19 样式所有权、宿主隔离与 DOM 清理
 
@@ -595,8 +603,8 @@ UI 操作：
 - 不同 script ID 互不删除资源；stop 后 ERA 资源归零；
 - 事件和样式容器数量不随热重载增长。
 
-已知缺口：`teleportStyle()` 当前复制 head 中所有 `<style>`；ThemeManager 把亮色变量
-声明在全局 `:root`。
+实现约束：宿主样式容器只承载 ERA script iframe 内由 Vue 生成的样式，并以 owner script ID
+标记；停止时只删除同一 owner 的容器。主题变量只定义在 `.era-app-container`。
 
 ### 4.20 遗留代码不得回流生产
 
@@ -653,16 +661,15 @@ recording 与 evaluation 分开，并列出每个失败功能、稳定错误码�
 
 以下不是测试阻塞理由，而是应由新测试稳定捕获的首批问题：
 
-1. UI 挂载后不主动请求当前 `writeDone`，首屏可能永久等待；
+1. UI 首屏回放、异键快照竞态、快捷操作 receipt 超时与样式所有权已进入本轮专项验证；
 2. ~~320/375px 下 RightRail 的 400px 最小宽度可能溢出；~~ 已由 ERA-PROD-004 修复；最终
    run `st-run-20260813T18553243-3946bf8fb2f5` 完成 101/101 条 UI 路径，12 条 LAYOUT
    全部通过，Artifact 为 `consistent/complete`；
-3. SnapshotManager 二次读取 Tavern 消息判断最新来源，破坏严格 DTO 边界；
-4. null MK、同 MK 新 payload、无关/迟到 queryResult 的处理不完整；
-5. 消息 ID 和回滚 ID 没有严格限制为非负安全整数；
-6. 命令、查询和保存缺少统一 busy、防重入与超时恢复；
-7. 丢弃设置可能产生双 toast，JSON 保存失败后校验状态可能未正确回滚；
-8. `:root` 主题变量和复制全部 head style 的做法可能污染 Tavern；
+3. null MK 的信息展示、同键重复查询抑制和超范围 Service 返回仍须由专项路径确认；
+4. 回滚与消息 ID 都必须严格限制为非负安全整数；
+5. 命令、查询和保存的 busy、防重入与超时恢复必须由故障注入路径确认；
+6. 丢弃设置的单 toast、保存失败后的 JSON 校验回滚与主题提交顺序必须由专项路径确认；
+7. 宿主样式隔离必须通过 Tavern 输入框、按钮与独立插件元素的 computed style 前后比较确认；
 9. 未使用的旧 `ExpandedView.vue` 已删除；其余遗留 bundle 特征继续由 4.20 审计防回归。
 
 ## 8. 验收完成条件

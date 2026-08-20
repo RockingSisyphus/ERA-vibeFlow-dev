@@ -10,6 +10,7 @@ import { useUiStore } from './store';
 import { createMountPoint, destroyMountPoint, deteleportStyle, teleportStyle } from './utils/dom';
 
 const logger = new Logger();
+let activeUiStop: (() => void) | null = null;
 
 export interface EraUiHandle {
   readonly mounted: boolean;
@@ -21,6 +22,9 @@ export interface EraUiHandle {
  * 页面生命周期由生产入口统一管理，本模块只保存自己创建的资源。
  */
 export function startEraUi(): EraUiHandle {
+  // 同一 script ID 的新实例必须先完整释放旧实例，避免热重载遗留 Vue、监听器、
+  // 宿主样式或全局调试入口。
+  activeUiStop?.();
   if (settings.value['开启悬浮球'] === false) {
     logger.log('startEraUi', '悬浮球设置为关闭，本次不挂载 UI。');
     return Object.freeze({ mounted: false, stop: () => undefined });
@@ -38,8 +42,10 @@ export function startEraUi(): EraUiHandle {
   vueApp.mount(mountPoint[0]);
 
   const uiStore = useUiStore(pinia);
+  let active = true;
   const switchView = (viewName: 'FloatingBall' | 'ExpandedView') => uiStore.switchView(viewName);
   const writeDoneHandler = (data: WriteDonePayload) => {
+    if (!active) return;
     logger.log(ERA_EVENT_EMITTER.WRITE_DONE, '接收到 writeDone，更新 UI store。', data);
     uiStore.setEventData(data);
   };
@@ -61,26 +67,38 @@ export function startEraUi(): EraUiHandle {
   } else {
     void replay.done
       .then(settlement => {
+        if (!active) return;
         if (settlement.status !== 'completed' && settlement.status !== 'ignored') {
           logger.warn('startEraUi', `请求最新 writeDone 未完成：${settlement.status}`);
         }
       })
-      .catch(error => logger.warn('startEraUi', '请求最新 writeDone 失败。', error));
+      .catch(error => {
+        if (active) logger.warn('startEraUi', '请求最新 writeDone 失败。', error);
+      });
   }
 
   let stopped = false;
-  return Object.freeze({
-    mounted: true,
-    stop(): void {
-      if (stopped) return;
-      stopped = true;
-      eventRemoveListener(ERA_EVENT_EMITTER.WRITE_DONE, writeDoneHandler);
-      vueApp.unmount();
+  const stop = (): void => {
+    if (stopped) return;
+    stopped = true;
+    active = false;
+    eventRemoveListener(ERA_EVENT_EMITTER.WRITE_DONE, writeDoneHandler);
+    vueApp.unmount();
+
+    // 旧 handle 在新实例已接管后只能清理它自己的 Vue/监听器，不能误删新实例的
+    // mount/style/global 资源。
+    if (activeUiStop === stop) {
+      activeUiStop = null;
       deteleportStyle();
       destroyMountPoint();
-      delete eraWindow.eraUiStore;
-      delete eraWindow.eraUiSwitchView;
-      logger.log('stopEraUi', 'ERA UI 已完整卸载。');
-    },
+      if (eraWindow.eraUiStore === uiStore) delete eraWindow.eraUiStore;
+      if (eraWindow.eraUiSwitchView === switchView) delete eraWindow.eraUiSwitchView;
+    }
+    logger.log('stopEraUi', 'ERA UI 已完整卸载。');
+  };
+  activeUiStop = stop;
+  return Object.freeze({
+    mounted: true,
+    stop,
   });
 }
