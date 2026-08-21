@@ -15,7 +15,7 @@
     "contains_global_state": false,
     "summary": {
       "nodes": 4,
-      "nodesets": 12,
+      "nodesets": 13,
       "explicit_edges": 3,
       "data_edges": 0,
       "reported_edges": 3,
@@ -287,7 +287,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 8,
-          "nodesets": 12,
+          "nodesets": 13,
           "explicit_edges": 10,
           "data_edges": 2,
           "reported_edges": 10,
@@ -837,7 +837,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 12,
-          "nodesets": 12,
+          "nodesets": 13,
           "explicit_edges": 21,
           "data_edges": 6,
           "reported_edges": 21,
@@ -1662,7 +1662,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 23,
-          "nodesets": 12,
+          "nodesets": 13,
           "explicit_edges": 38,
           "data_edges": 8,
           "reported_edges": 38,
@@ -3200,7 +3200,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 9,
-          "nodesets": 12,
+          "nodesets": 13,
           "explicit_edges": 10,
           "data_edges": 0,
           "reported_edges": 10,
@@ -3784,7 +3784,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 8,
-          "nodesets": 12,
+          "nodesets": 13,
           "explicit_edges": 8,
           "data_edges": 0,
           "reported_edges": 8,
@@ -4306,7 +4306,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 7,
-          "nodesets": 12,
+          "nodesets": 13,
           "explicit_edges": 10,
           "data_edges": 3,
           "reported_edges": 10,
@@ -4779,11 +4779,11 @@
         "execution_lock": null,
         "contains_global_state": false,
         "summary": {
-          "nodes": 11,
-          "nodesets": 12,
-          "explicit_edges": 15,
+          "nodes": 10,
+          "nodesets": 13,
+          "explicit_edges": 14,
           "data_edges": 4,
-          "reported_edges": 15,
+          "reported_edges": 14,
           "contains_global_state": false
         },
         "entry_nodes": [
@@ -4951,51 +4951,6 @@
                 "key": "transport_event",
                 "type": "era.transport.event",
                 "display_name": "已校验传输事件"
-              }
-            ],
-            "join_policy": "safe_any",
-            "async": null,
-            "loop": null,
-            "io": null,
-            "invokes": null,
-            "config": {
-              "call": {},
-              "node_configs": {},
-              "allow_config_override": false
-            }
-          },
-          {
-            "id": "observe_sidecar_test_identity",
-            "type_used": "era.service.observe_sidecar_test_identity",
-            "source": {
-              "root_id": "era-service",
-              "path": "configs/nodesets/service_iteration.jsonc"
-            },
-            "role": {
-              "display_name": "识别 Sidecar 测试身份",
-              "description": "仅在受控测试期开启：由 workflow 计算 matched、rebind-approved、conflict、unbound、invalid 或 not-applicable 报告；不改变传输事件、FIFO、同步或变量状态。"
-            },
-            "contract_source": "node_type",
-            "flow_kind": "process",
-            "effect_scope": "none",
-            "runtime_dispatch": "unknown",
-            "execution_lock": null,
-            "effective_execution_lock": null,
-            "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
-            "requires": [
-              {
-                "type": "era.transport.event",
-                "cardinality": "exactly_one",
-                "display_name": "已校验传输事件"
-              }
-            ],
-            "provides": [
-              {
-                "key": "sidecar_transport_event",
-                "type": "era.transport.event",
-                "display_name": "透传的已校验传输事件"
               }
             ],
             "join_policy": "safe_any",
@@ -5320,16 +5275,6 @@
           },
           {
             "from": "validate_transport",
-            "to": "observe_sidecar_test_identity",
-            "when": "",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "observe_sidecar_test_identity",
             "to": "reduce_collection",
             "when": "",
             "roles": [
@@ -5490,7 +5435,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 10,
-          "nodesets": 12,
+          "nodesets": 13,
           "explicit_edges": 14,
           "data_edges": 1,
           "reported_edges": 14,
@@ -6148,6 +6093,423 @@
         ]
       }
     },
+    "era.sidecar.binding": {
+      "type_key": "era.sidecar.binding",
+      "source": {
+        "root_id": "era-service",
+        "path": "configs/nodesets/sidecar_binding.jsonc"
+      },
+      "display_name": "ERA Sidecar 绑定事务",
+      "description": "集中承载 Sidecar 身份检查、冲突选择、迁移/独立/复制事务和受控弹窗请求。Host 只提供身份、files 和 UI 机械能力；归属、冲突与恢复规则均在本 Nodeset。成功提交后的镜像由同域 Sidecar 节点在 task_sync 的提交后边界调用。",
+      "status": "implemented",
+      "flow_kind": "process",
+      "effect_scope": "none",
+      "reachable_from_workflow": true,
+      "requires": [
+        {
+          "type": "era.sync.context",
+          "cardinality": "exactly_one",
+          "display_name": "同步上下文"
+        }
+      ],
+      "provides": [
+        {
+          "key": "sidecar_binding_context",
+          "type": "era.sync.context",
+          "display_name": "已解析的同步上下文"
+        },
+        {
+          "key": "sidecar_binding_route",
+          "type": "era.sidecar.binding.route",
+          "display_name": "Sidecar 绑定路由"
+        }
+      ],
+      "global_config": {},
+      "body": {
+        "source": {
+          "root_id": "era-service",
+          "path": "configs/nodesets/sidecar_binding.jsonc"
+        },
+        "inputs": [
+          {
+            "key": "sync_context",
+            "type": "era.sync.context",
+            "display_name": "同步上下文",
+            "required": true
+          }
+        ],
+        "outputs": [
+          {
+            "type": "era.sync.context",
+            "cardinality": "exactly_one",
+            "display_name": "已解析的同步上下文",
+            "as": "sidecarBindingContext"
+          },
+          {
+            "type": "era.sidecar.binding.route",
+            "cardinality": "exactly_one",
+            "display_name": "Sidecar 绑定路由",
+            "as": "sidecarBindingRoute"
+          }
+        ],
+        "max_steps": 10,
+        "entry_mode": "async",
+        "execution_lock": null,
+        "contains_global_state": false,
+        "summary": {
+          "nodes": 6,
+          "nodesets": 13,
+          "explicit_edges": 7,
+          "data_edges": 2,
+          "reported_edges": 7,
+          "contains_global_state": false
+        },
+        "entry_nodes": [
+          "start"
+        ],
+        "terminal_nodes": [
+          "end"
+        ],
+        "god_nodes": [
+          {
+            "node": "apply_resolution",
+            "degree": 4
+          }
+        ],
+        "nodes": [
+          {
+            "id": "start",
+            "type_used": "era.service.terminal",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/sidecar_binding.jsonc"
+            },
+            "role": {
+              "display_name": "Sidecar 事务启动",
+              "description": "开始一次受控的 Sidecar 绑定前置事务。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "terminal",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [],
+            "provides": [],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "inspect_current",
+            "type_used": "era.sidecar_binding.inspect_current",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/sidecar_binding.jsonc"
+            },
+            "role": {
+              "display_name": "检查当前 Sidecar 绑定",
+              "description": "读取当前角色/群组、聊天 ID、聊天变量 ERAMetaData.SidecarId 与当前用户 files 记录，形成 matched、缺失、损坏或归属冲突事实；不写变量、不写文件。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "process",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.sync.context",
+                "cardinality": "exactly_one",
+                "display_name": "同步上下文"
+              }
+            ],
+            "provides": [
+              {
+                "key": "sidecar_binding_input",
+                "type": "era.sidecar.binding.input",
+                "display_name": "Sidecar 绑定输入"
+              },
+              {
+                "key": "sidecar_binding_facts",
+                "type": "era.sidecar.binding.facts",
+                "display_name": "当前 Sidecar 事实"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "resolve_choice",
+            "type_used": "era.sidecar_binding.resolve_choice",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/sidecar_binding.jsonc"
+            },
+            "role": {
+              "display_name": "规划 Sidecar 绑定选择",
+              "description": "以检查事实、当前身份、文件 revision 和用户选择纯规则决定继续、阻塞、迁移、创建独立变量或复制变量；Host 不承载归属判断。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "process",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.sidecar.binding.input",
+                "cardinality": "exactly_one",
+                "display_name": "Sidecar 绑定输入"
+              },
+              {
+                "type": "era.sidecar.binding.facts",
+                "cardinality": "exactly_one",
+                "display_name": "当前 Sidecar 事实"
+              }
+            ],
+            "provides": [
+              {
+                "key": "sidecar_binding_resolution",
+                "type": "era.sidecar.binding.resolution",
+                "display_name": "Sidecar 绑定决议"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "publish_choice_prompt",
+            "type_used": "era.sidecar_binding.publish_choice_prompt",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/sidecar_binding.jsonc"
+            },
+            "role": {
+              "display_name": "发布不可关闭的 Sidecar 选择弹窗",
+              "description": "把 workflow 的阻塞冲突结论交给宿主 UI 能力展示迁移、创建独立变量或复制变量；无取消、关闭、背景点击或 Escape 路径。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "process",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.sidecar.binding.resolution",
+                "cardinality": "exactly_one",
+                "display_name": "Sidecar 绑定决议"
+              }
+            ],
+            "provides": [],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "apply_resolution",
+            "type_used": "era.sidecar_binding.apply_resolution",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/sidecar_binding.jsonc"
+            },
+            "role": {
+              "display_name": "执行 Sidecar 绑定事务",
+              "description": "提交前重新读取当前身份、聊天 ID、SidecarId 与 record revision；受控执行迁移、独立或复制。迁移和复制只追加标准 ERA 恢复指令并完整同步；不能安全恢复时 fail-closed。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "process",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.sidecar.binding.input",
+                "cardinality": "exactly_one",
+                "display_name": "Sidecar 绑定输入"
+              },
+              {
+                "type": "era.sidecar.binding.resolution",
+                "cardinality": "exactly_one",
+                "display_name": "Sidecar 绑定决议"
+              }
+            ],
+            "provides": [
+              {
+                "key": "sidecar_applied_context",
+                "type": "era.sync.context",
+                "display_name": "事务后的同步上下文"
+              },
+              {
+                "key": "sidecar_binding_route",
+                "type": "era.sidecar.binding.route",
+                "display_name": "外部 Sidecar 绑定路由"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "end",
+            "type_used": "era.service.terminal",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/sidecar_binding.jsonc"
+            },
+            "role": {
+              "display_name": "Sidecar 事务结束",
+              "description": "输出已解析的同步上下文和绑定路由。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "terminal",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [],
+            "provides": [],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": "start",
+            "to": "inspect_current",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "inspect_current",
+            "to": "resolve_choice",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "inspect_current",
+            "to": "apply_resolution",
+            "when": "",
+            "roles": [
+              "data_bypass",
+              "transfer"
+            ]
+          },
+          {
+            "from": "resolve_choice",
+            "to": "apply_resolution",
+            "when": "",
+            "roles": [
+              "data_bypass",
+              "transfer"
+            ]
+          },
+          {
+            "from": "resolve_choice",
+            "to": "publish_choice_prompt",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "publish_choice_prompt",
+            "to": "apply_resolution",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "apply_resolution",
+            "to": "end",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          }
+        ]
+      }
+    },
     "era.task.api": {
       "type_key": "era.task.api",
       "source": {
@@ -6213,7 +6575,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 9,
-          "nodesets": 12,
+          "nodesets": 13,
           "explicit_edges": 11,
           "data_edges": 0,
           "reported_edges": 11,
@@ -6828,7 +7190,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 11,
-          "nodesets": 12,
+          "nodesets": 13,
           "explicit_edges": 12,
           "data_edges": 0,
           "reported_edges": 12,
@@ -7526,11 +7888,11 @@
         "execution_lock": null,
         "contains_global_state": false,
         "summary": {
-          "nodes": 12,
-          "nodesets": 12,
-          "explicit_edges": 14,
-          "data_edges": 0,
-          "reported_edges": 14,
+          "nodes": 16,
+          "nodesets": 13,
+          "explicit_edges": 21,
+          "data_edges": 1,
+          "reported_edges": 21,
           "contains_global_state": false
         },
         "entry_nodes": [
@@ -7618,6 +7980,60 @@
             "loop": null,
             "io": null,
             "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "sidecar_binding_prepare",
+            "type_used": "era.sidecar.binding",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/task_sync.jsonc"
+            },
+            "role": {
+              "display_name": "运行 Sidecar 绑定前置检查",
+              "description": "调用专用 Sidecar Nodeset，集中检查当前身份、聊天 SidecarId 与本地记录，并决定继续、显示阻塞选择或执行用户已提交的绑定事务。"
+            },
+            "contract_source": "nodeset",
+            "flow_kind": "predefined",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.sync.context",
+                "cardinality": "exactly_one",
+                "display_name": "同步上下文"
+              }
+            ],
+            "provides": [
+              {
+                "key": "sidecar_binding_context",
+                "type": "era.sync.context",
+                "display_name": "已解析的同步上下文"
+              },
+              {
+                "key": "sidecar_binding_route",
+                "type": "era.sidecar.binding.route",
+                "display_name": "Sidecar 绑定路由"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": {
+              "kind": "nodeset",
+              "target": "era.sidecar.binding",
+              "target_status": "implemented"
+            },
             "config": {
               "call": {},
               "node_configs": {},
@@ -8000,6 +8416,45 @@
             }
           },
           {
+            "id": "sidecar_binding_persist",
+            "type_used": "era.sidecar_binding.persist_snapshot",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/task_sync.jsonc"
+            },
+            "role": {
+              "display_name": "运行 Sidecar 提交后镜像",
+              "description": "仅在 Tavern 变量提交成功后调用 Sidecar 域的镜像节点，重新核验绑定并镜像当前 stat_data；失败保持可重试状态，不伪装成功。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "process",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.tavern.commit.result",
+                "cardinality": "exactly_one",
+                "display_name": "变量提交结果"
+              }
+            ],
+            "provides": [],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
             "id": "build_sync_notification",
             "type_used": "era.sync.build_notification",
             "source": {
@@ -8031,6 +8486,96 @@
                 "key": "sync_task_result",
                 "type": "era.task.result",
                 "display_name": "同步结果"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "sidecar_binding_blocked_result",
+            "type_used": "era.sidecar_binding.build_blocked_result",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/task_sync.jsonc"
+            },
+            "role": {
+              "display_name": "构造 Sidecar 选择等待结果",
+              "description": "仅在专用 Sidecar Nodeset 已确认冲突且等待用户选择时，构造无写入的正常结算结果。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "process",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.sync.context",
+                "cardinality": "exactly_one",
+                "display_name": "同步上下文"
+              }
+            ],
+            "provides": [
+              {
+                "key": "sidecar_binding_blocked_result",
+                "type": "era.task.result",
+                "display_name": "Sidecar 选择等待结果"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "sidecar_binding_applied_result",
+            "type_used": "era.sidecar_binding.build_applied_result",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/task_sync.jsonc"
+            },
+            "role": {
+              "display_name": "构造已完成 Sidecar 修复结果",
+              "description": "仅在 Sidecar repair 已重建本地镜像时结算该 UI 选择；不得再进入普通变量重算或覆盖当前聊天状态。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "process",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.sync.context",
+                "cardinality": "exactly_one",
+                "display_name": "同步上下文"
+              }
+            ],
+            "provides": [
+              {
+                "key": "sidecar_binding_applied_result",
+                "type": "era.task.result",
+                "display_name": "已完成 Sidecar 修复结果"
               }
             ],
             "join_policy": "safe_any",
@@ -8091,8 +8636,38 @@
           },
           {
             "from": "read_sync_context",
-            "to": "plan_sync",
+            "to": "sidecar_binding_prepare",
             "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "sidecar_binding_prepare",
+            "to": "plan_sync",
+            "when": "sidecar_binding_route == 'continue'",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "sidecar_binding_prepare",
+            "to": "sidecar_binding_blocked_result",
+            "when": "sidecar_binding_route == 'blocked'",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "sidecar_binding_prepare",
+            "to": "sidecar_binding_applied_result",
+            "when": "sidecar_binding_route == 'applied'",
             "roles": [
               "mainline",
               "schedule",
@@ -8191,12 +8766,30 @@
           },
           {
             "from": "commit_variables",
-            "to": "build_sync_notification",
+            "to": "sidecar_binding_persist",
             "when": "",
             "roles": [
               "mainline",
               "schedule",
               "transfer"
+            ]
+          },
+          {
+            "from": "commit_variables",
+            "to": "build_sync_notification",
+            "when": "",
+            "roles": [
+              "data_bypass",
+              "transfer"
+            ]
+          },
+          {
+            "from": "sidecar_binding_persist",
+            "to": "build_sync_notification",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule"
             ]
           },
           {
@@ -8211,6 +8804,26 @@
           },
           {
             "from": "build_sync_contract_failure",
+            "to": "end",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "sidecar_binding_blocked_result",
+            "to": "end",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "sidecar_binding_applied_result",
             "to": "end",
             "when": "",
             "roles": [
@@ -8276,7 +8889,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 4,
-          "nodesets": 12,
+          "nodesets": 13,
           "explicit_edges": 3,
           "data_edges": 0,
           "reported_edges": 3,
@@ -11898,56 +12511,6 @@
         }
       ]
     },
-    "era.service.observe_sidecar_test_identity": {
-      "display_name": "识别 Sidecar 测试身份",
-      "description": "仅在受控测试 fixture 有效时读取宿主身份和聊天 marker，生成只读身份结论；始终原样透传已校验传输事件。",
-      "category": "服务迭代",
-      "version": "1.0.0",
-      "flow_kind": "process",
-      "contract": {
-        "requires": [
-          {
-            "type": "era.transport.event",
-            "cardinality": "exactly_one",
-            "display_name": "已校验传输事件"
-          }
-        ],
-        "provides": [
-          {
-            "key": "sidecar_transport_event",
-            "type": "era.transport.event",
-            "display_name": "透传的已校验传输事件"
-          }
-        ],
-        "input_semantics": {
-          "era.transport.event": [
-            "输入：已校验传输事件。"
-          ]
-        },
-        "output_semantics": {
-          "sidecar_transport_event": [
-            "输出：原样透传的已校验传输事件。"
-          ]
-        },
-        "params_schema": {},
-        "params_defaults": {},
-        "examples": []
-      },
-      "implementations": [
-        {
-          "language": "typescript",
-          "targets": [
-            "browser"
-          ],
-          "source": {
-            "kind": "file",
-            "ref": "nodes/iteration/observe_sidecar_test_identity.ts",
-            "export": "run"
-          },
-          "completion": "suspend"
-        }
-      ]
-    },
     "era.service.plan_batch": {
       "display_name": "规划领域事件批次",
       "description": "使用 ERA 纯事件规划器直接生成严格有界 execute/ignore PlannedStep，完整保留 task、sources、reason 与全部来源事件。",
@@ -12515,6 +13078,370 @@
           "source": {
             "kind": "file",
             "ref": "nodes/iteration/wait_state.ts",
+            "export": "run"
+          },
+          "completion": "immediate"
+        }
+      ]
+    },
+    "era.sidecar_binding.apply_resolution": {
+      "display_name": "执行 Sidecar 绑定事务",
+      "description": "执行 workflow 决定的迁移、独立或复制事务。",
+      "category": "Sidecar 绑定",
+      "version": "1.0.0",
+      "flow_kind": "process",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.sidecar.binding.input",
+            "cardinality": "exactly_one",
+            "display_name": "Sidecar 绑定输入"
+          },
+          {
+            "type": "era.sidecar.binding.resolution",
+            "cardinality": "exactly_one",
+            "display_name": "Sidecar 绑定决议"
+          }
+        ],
+        "provides": [
+          {
+            "key": "sidecar_applied_context",
+            "type": "era.sync.context",
+            "display_name": "事务后的同步上下文"
+          },
+          {
+            "key": "sidecar_binding_route",
+            "type": "era.sidecar.binding.route",
+            "display_name": "外部 Sidecar 绑定路由"
+          }
+        ],
+        "input_semantics": {
+          "era.sidecar.binding.input": [
+            "输入：同步上下文封装。"
+          ],
+          "era.sidecar.binding.resolution": [
+            "输入：确认可执行的 Sidecar 绑定决议。"
+          ]
+        },
+        "output_semantics": {
+          "sidecar_applied_context": [
+            "输出：完成事务的同步上下文。"
+          ],
+          "sidecar_binding_route": [
+            "输出：apply 完成后继续原同步的外部路由。"
+          ]
+        },
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/sidecar/apply_resolution.ts",
+            "export": "run"
+          },
+          "completion": "suspend"
+        }
+      ]
+    },
+    "era.sidecar_binding.build_applied_result": {
+      "display_name": "构造已完成 Sidecar 修复结果",
+      "description": "将已完成的本地镜像修复结算为无变量重算的正常结果。",
+      "category": "Sidecar 绑定",
+      "version": "1.0.0",
+      "flow_kind": "process",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.sync.context",
+            "cardinality": "exactly_one",
+            "display_name": "同步上下文"
+          }
+        ],
+        "provides": [
+          {
+            "key": "sidecar_binding_applied_result",
+            "type": "era.task.result",
+            "display_name": "已完成 Sidecar 修复结果"
+          }
+        ],
+        "input_semantics": {
+          "era.sync.context": [
+            "输入：已经完成 Sidecar repair 的同步上下文。"
+          ]
+        },
+        "output_semantics": {
+          "sidecar_binding_applied_result": [
+            "输出：正常 no-op 结算；不再次执行变量重算。"
+          ]
+        },
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser",
+            "node"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/sidecar/build_applied_result.ts",
+            "export": "run"
+          },
+          "completion": "immediate"
+        }
+      ]
+    },
+    "era.sidecar_binding.build_blocked_result": {
+      "display_name": "构造 Sidecar 选择等待结果",
+      "description": "将未决 Sidecar 冲突结算为无写入同步失败，避免普通任务无结果终止。",
+      "category": "Sidecar 绑定",
+      "version": "1.0.0",
+      "flow_kind": "process",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.sync.context",
+            "cardinality": "exactly_one",
+            "display_name": "同步上下文"
+          }
+        ],
+        "provides": [
+          {
+            "key": "sidecar_binding_blocked_result",
+            "type": "era.task.result",
+            "display_name": "Sidecar 选择等待结果"
+          }
+        ],
+        "input_semantics": {
+          "era.sync.context": [
+            "输入：专用 Sidecar Nodeset 已标记为阻塞的同步上下文。"
+          ]
+        },
+        "output_semantics": {
+          "sidecar_binding_blocked_result": [
+            "输出：无变量写入、可定位的等待选择结果。"
+          ]
+        },
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser",
+            "node"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/sidecar/build_blocked_result.ts",
+            "export": "run"
+          },
+          "completion": "immediate"
+        }
+      ]
+    },
+    "era.sidecar_binding.inspect_current": {
+      "display_name": "检查当前 Sidecar 绑定",
+      "description": "读取事实与 files，不做事务决策。",
+      "category": "Sidecar 绑定",
+      "version": "1.0.0",
+      "flow_kind": "process",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.sync.context",
+            "cardinality": "exactly_one",
+            "display_name": "同步上下文"
+          }
+        ],
+        "provides": [
+          {
+            "key": "sidecar_binding_input",
+            "type": "era.sidecar.binding.input",
+            "display_name": "Sidecar 绑定输入"
+          },
+          {
+            "key": "sidecar_binding_facts",
+            "type": "era.sidecar.binding.facts",
+            "display_name": "当前 Sidecar 事实"
+          }
+        ],
+        "input_semantics": {
+          "era.sync.context": [
+            "输入：同步上下文。"
+          ]
+        },
+        "output_semantics": {
+          "sidecar_binding_input": [
+            "输出：转交给 Sidecar 分支的同步上下文封装。"
+          ],
+          "sidecar_binding_facts": [
+            "输出：当前身份、聊天变量和本地记录的只读检查事实。"
+          ]
+        },
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/sidecar/inspect_current.ts",
+            "export": "run"
+          },
+          "completion": "suspend"
+        }
+      ]
+    },
+    "era.sidecar_binding.persist_snapshot": {
+      "display_name": "镜像 Sidecar 变量快照",
+      "description": "仅在变量提交成功后镜像当前变量；文件写入失败时发布显式修复入口，不把聊天提交伪装为镜像成功。",
+      "category": "Sidecar 绑定",
+      "version": "1.0.0",
+      "flow_kind": "process",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.tavern.commit.result",
+            "cardinality": "exactly_one",
+            "display_name": "变量提交结果"
+          }
+        ],
+        "provides": [],
+        "input_semantics": {
+          "era.tavern.commit.result": [
+            "输入：变量提交结果。"
+          ]
+        },
+        "output_semantics": {},
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/sidecar/persist_snapshot.ts",
+            "export": "run"
+          },
+          "completion": "suspend"
+        }
+      ]
+    },
+    "era.sidecar_binding.publish_choice_prompt": {
+      "display_name": "发布 Sidecar 选择弹窗",
+      "description": "只显示 workflow 已作出的阻塞结论。",
+      "category": "Sidecar 绑定",
+      "version": "1.0.0",
+      "flow_kind": "process",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.sidecar.binding.resolution",
+            "cardinality": "exactly_one",
+            "display_name": "Sidecar 绑定决议"
+          }
+        ],
+        "provides": [],
+        "input_semantics": {
+          "era.sidecar.binding.resolution": [
+            "输入：确认需要用户选择的 Sidecar 决议。"
+          ]
+        },
+        "output_semantics": {},
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/sidecar/publish_choice_prompt.ts",
+            "export": "run"
+          },
+          "completion": "immediate"
+        }
+      ]
+    },
+    "era.sidecar_binding.resolve_choice": {
+      "display_name": "规划 Sidecar 绑定选择",
+      "description": "纯规则规划继续、阻塞或事务。",
+      "category": "Sidecar 绑定",
+      "version": "1.0.0",
+      "flow_kind": "process",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.sidecar.binding.input",
+            "cardinality": "exactly_one",
+            "display_name": "Sidecar 绑定输入"
+          },
+          {
+            "type": "era.sidecar.binding.facts",
+            "cardinality": "exactly_one",
+            "display_name": "当前 Sidecar 事实"
+          }
+        ],
+        "provides": [
+          {
+            "key": "sidecar_binding_resolution",
+            "type": "era.sidecar.binding.resolution",
+            "display_name": "Sidecar 绑定决议"
+          }
+        ],
+        "input_semantics": {
+          "era.sidecar.binding.input": [
+            "输入：转交的同步上下文。"
+          ],
+          "era.sidecar.binding.facts": [
+            "输入：当前 Sidecar 检查事实。"
+          ]
+        },
+        "output_semantics": {
+          "sidecar_binding_resolution": [
+            "输出：包含事实、用户选择和内部动作的纯决议。"
+          ]
+        },
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/sidecar/resolve_choice.ts",
             "export": "run"
           },
           "completion": "immediate"
@@ -30248,6 +31175,138 @@
           "additionalProperties": false
         }
       },
+      "era.sidecar.binding.facts": {
+        "kind": "data_schema",
+        "type_key": "era.sidecar.binding.facts",
+        "representation": "json",
+        "display_name": "Sidecar 绑定事实",
+        "description": "当前身份、聊天 SidecarId 与本地记录的只读检查事实。",
+        "schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "required": [
+            "status",
+            "reason",
+            "current",
+            "sidecarId",
+            "record"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "not-applicable",
+                "create",
+                "matched",
+                "conflict",
+                "invalid",
+                "blocked"
+              ]
+            },
+            "reason": {
+              "type": "string"
+            },
+            "current": {
+              "type": [
+                "object",
+                "null"
+              ]
+            },
+            "sidecarId": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "record": {
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          }
+        }
+      },
+      "era.sidecar.binding.input": {
+        "kind": "data_schema",
+        "type_key": "era.sidecar.binding.input",
+        "representation": "json",
+        "display_name": "Sidecar 绑定输入",
+        "description": "仅在 Sidecar Nodeset 内部传递的同步上下文封装。",
+        "schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "required": [
+            "sync"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "sync": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "era.sidecar.binding.resolution": {
+        "kind": "data_schema",
+        "type_key": "era.sidecar.binding.resolution",
+        "representation": "json",
+        "display_name": "Sidecar 绑定决议",
+        "description": "纯规则解析出的事实、路由与可选用户选择。",
+        "schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "required": [
+            "facts",
+            "route",
+            "choice"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "facts": {
+              "type": "object"
+            },
+            "route": {
+              "type": "string",
+              "enum": [
+                "continue",
+                "blocked",
+                "apply"
+              ]
+            },
+            "choice": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "enum": [
+                "migrate",
+                "independent",
+                "copy",
+                "repair",
+                null
+              ]
+            }
+          }
+        }
+      },
+      "era.sidecar.binding.route": {
+        "kind": "data_schema",
+        "type_key": "era.sidecar.binding.route",
+        "representation": "json",
+        "display_name": "Sidecar 绑定路由",
+        "description": "Sidecar 绑定事务的正式条件路由。",
+        "schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "string",
+          "enum": [
+            "continue",
+            "blocked",
+            "applied"
+          ]
+        }
+      },
       "era.step.done": {
         "kind": "data_schema",
         "type_key": "era.step.done",
@@ -38096,72 +39155,212 @@
           "additionalProperties": true
         }
       },
-      "era.tavern.sidecar_test.clear_report.request": {
+      "era.tavern.sidecar.clear_prompt.request": {
         "kind": "data_schema",
-        "type_key": "era.tavern.sidecar_test.clear_report.request",
+        "type_key": "era.tavern.sidecar.clear_prompt.request",
         "representation": "json",
-        "display_name": "ERA Sidecar 测试报告清理请求",
-        "description": "stop 时清理受控测试报告。",
+        "display_name": "Sidecar 弹窗清理请求",
+        "description": "清理当前 Sidecar 弹窗。",
+        "schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "era.tavern.sidecar.clear_prompt.result": {
+        "kind": "data_schema",
+        "type_key": "era.tavern.sidecar.clear_prompt.result",
+        "representation": "json",
+        "display_name": "Sidecar 弹窗清理结果",
+        "description": "弹窗清理结论。",
         "schema": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
           "type": "object",
           "additionalProperties": true
         }
       },
-      "era.tavern.sidecar_test.clear_report.result": {
+      "era.tavern.sidecar.commit_metadata.request": {
         "kind": "data_schema",
-        "type_key": "era.tavern.sidecar_test.clear_report.result",
+        "type_key": "era.tavern.sidecar.commit_metadata.request",
         "representation": "json",
-        "display_name": "ERA Sidecar 测试报告清理结果",
-        "description": "受控测试报告已清理。",
+        "display_name": "Sidecar 元数据提交请求",
+        "description": "仅提交 ERAMetaData.SidecarId。",
+        "schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "required": [
+            "sidecarId"
+          ],
+          "properties": {
+            "sidecarId": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "era.tavern.sidecar.commit_metadata.result": {
+        "kind": "data_schema",
+        "type_key": "era.tavern.sidecar.commit_metadata.result",
+        "representation": "json",
+        "display_name": "Sidecar 元数据提交结果",
+        "description": "聊天元数据提交后的回读。",
         "schema": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
           "type": "object",
           "additionalProperties": true
         }
       },
-      "era.tavern.sidecar_test.publish_report.request": {
+      "era.tavern.sidecar.create_id.request": {
         "kind": "data_schema",
-        "type_key": "era.tavern.sidecar_test.publish_report.request",
+        "type_key": "era.tavern.sidecar.create_id.request",
         "representation": "json",
-        "display_name": "ERA Sidecar 测试报告发布请求",
-        "description": "由 workflow 计算后交给受控测试槽的只读报告。",
+        "display_name": "Sidecar ID 创建请求",
+        "description": "创建稳定随机 SidecarId。",
+        "schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "era.tavern.sidecar.create_id.result": {
+        "kind": "data_schema",
+        "type_key": "era.tavern.sidecar.create_id.result",
+        "representation": "json",
+        "display_name": "Sidecar ID 创建结果",
+        "description": "新建的稳定 SidecarId。",
+        "schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "required": [
+            "sidecarId"
+          ],
+          "properties": {
+            "sidecarId": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "era.tavern.sidecar.present_prompt.request": {
+        "kind": "data_schema",
+        "type_key": "era.tavern.sidecar.present_prompt.request",
+        "representation": "json",
+        "display_name": "Sidecar 弹窗请求",
+        "description": "显示 workflow 已确定的不可关闭选择弹窗。",
+        "schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "required": [
+            "prompt"
+          ],
+          "properties": {
+            "prompt": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "era.tavern.sidecar.present_prompt.result": {
+        "kind": "data_schema",
+        "type_key": "era.tavern.sidecar.present_prompt.result",
+        "representation": "json",
+        "display_name": "Sidecar 弹窗结果",
+        "description": "弹窗发布结论。",
         "schema": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
           "type": "object",
           "additionalProperties": true
         }
       },
-      "era.tavern.sidecar_test.publish_report.result": {
+      "era.tavern.sidecar.read_current.request": {
         "kind": "data_schema",
-        "type_key": "era.tavern.sidecar_test.publish_report.result",
+        "type_key": "era.tavern.sidecar.read_current.request",
         "representation": "json",
-        "display_name": "ERA Sidecar 测试报告发布结果",
-        "description": "受控测试报告写入结果。",
+        "display_name": "Sidecar 当前上下文读取请求",
+        "description": "读取当前角色、聊天和变量。",
+        "schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "era.tavern.sidecar.read_current.result": {
+        "kind": "data_schema",
+        "type_key": "era.tavern.sidecar.read_current.result",
+        "representation": "json",
+        "display_name": "Sidecar 当前上下文读取结果",
+        "description": "当前身份、元数据和变量快照。",
         "schema": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
           "type": "object",
           "additionalProperties": true
         }
       },
-      "era.tavern.sidecar_test.read_context.request": {
+      "era.tavern.sidecar.read_record.request": {
         "kind": "data_schema",
-        "type_key": "era.tavern.sidecar_test.read_context.request",
+        "type_key": "era.tavern.sidecar.read_record.request",
         "representation": "json",
-        "display_name": "ERA Sidecar 测试上下文读取请求",
-        "description": "仅允许受控测试身份观察请求。",
+        "display_name": "Sidecar 记录读取请求",
+        "description": "按稳定 SidecarId 读取当前用户 files 记录。",
+        "schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "required": [
+            "sidecarId"
+          ],
+          "properties": {
+            "sidecarId": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "era.tavern.sidecar.read_record.result": {
+        "kind": "data_schema",
+        "type_key": "era.tavern.sidecar.read_record.result",
+        "representation": "json",
+        "display_name": "Sidecar 记录读取结果",
+        "description": "当前用户 files 中的受控记录。",
         "schema": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
           "type": "object",
           "additionalProperties": true
         }
       },
-      "era.tavern.sidecar_test.read_context.result": {
+      "era.tavern.sidecar.write_record.request": {
         "kind": "data_schema",
-        "type_key": "era.tavern.sidecar_test.read_context.result",
+        "type_key": "era.tavern.sidecar.write_record.request",
         "representation": "json",
-        "display_name": "ERA Sidecar 测试上下文读取结果",
-        "description": "当前 Tavern 身份、当前聊天保留 marker 与 session fixture 的只读快照。",
+        "display_name": "Sidecar 记录写入请求",
+        "description": "写入版本化当前用户 files 记录。",
+        "schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "required": [
+            "sidecarId",
+            "record"
+          ],
+          "properties": {
+            "sidecarId": {
+              "type": "string"
+            },
+            "record": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "era.tavern.sidecar.write_record.result": {
+        "kind": "data_schema",
+        "type_key": "era.tavern.sidecar.write_record.result",
+        "representation": "json",
+        "display_name": "Sidecar 记录写入结果",
+        "description": "受控文件写入结论。",
         "schema": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
           "type": "object",
@@ -38821,29 +40020,28 @@
         "dependencies": [],
         "external_packages": []
       },
-      "era.service.sidecar_identity": {
+      "era.service.sidecar_binding": {
         "kind": "base_lib",
-        "id": "era.service.sidecar_identity",
-        "display_name": "ERA Sidecar 测试身份纯规则",
-        "description": "在受控测试期根据宿主身份、聊天 marker 与退役拥有者 fixture 生成只读匹配、冲突或重绑建议；不访问宿主、不写状态也不迁移数据。",
-        "category": "测试身份识别",
+        "id": "era.service.sidecar_binding",
+        "display_name": "ERA Sidecar 绑定规则",
+        "description": "Sidecar 身份、记录校验、冲突选择和快照记录的纯规则；不访问 Tavern 或 files。",
+        "category": "",
         "version": "1.0.0",
         "implementations": [
           {
             "language": "typescript",
             "targets": [
-              "browser",
-              "node"
+              "browser"
             ],
             "source": {
               "kind": "file",
-              "ref": "base_lib/sidecar_identity.ts"
+              "ref": "base_lib/sidecar_binding.ts"
             },
             "completion": "immediate"
           }
         ],
         "dependencies": [
-          "era.service.types"
+          "era.service.sync_transaction"
         ],
         "external_packages": []
       },
@@ -39018,28 +40216,48 @@
           }
         }
       },
-      "era.tavern.sidecar_test": {
+      "era.tavern.sidecar": {
         "kind": "capability",
-        "id": "era.tavern.sidecar_test",
+        "id": "era.tavern.sidecar",
         "targets": [
           "browser"
         ],
-        "display_name": "ERA Sidecar 测试接线",
-        "description": "仅在 Pack 受控 fixture 下搬运当前身份、聊天测试 marker 与只读测试报告；不包含匹配、重绑、同步或持久化规则。",
+        "display_name": "ERA Sidecar 宿主接线",
+        "description": "仅搬运当前身份、聊天变量、当前用户 files 和 UI 弹窗；不包含绑定、迁移或复制决策。",
         "operations": {
-          "read_context": {
-            "input_type": "era.tavern.sidecar_test.read_context.request",
-            "output_type": "era.tavern.sidecar_test.read_context.result",
+          "read_current": {
+            "input_type": "era.tavern.sidecar.read_current.request",
+            "output_type": "era.tavern.sidecar.read_current.result",
             "completion": "suspend"
           },
-          "publish_report": {
-            "input_type": "era.tavern.sidecar_test.publish_report.request",
-            "output_type": "era.tavern.sidecar_test.publish_report.result",
+          "read_record": {
+            "input_type": "era.tavern.sidecar.read_record.request",
+            "output_type": "era.tavern.sidecar.read_record.result",
+            "completion": "suspend"
+          },
+          "write_record": {
+            "input_type": "era.tavern.sidecar.write_record.request",
+            "output_type": "era.tavern.sidecar.write_record.result",
+            "completion": "suspend"
+          },
+          "commit_metadata": {
+            "input_type": "era.tavern.sidecar.commit_metadata.request",
+            "output_type": "era.tavern.sidecar.commit_metadata.result",
+            "completion": "suspend"
+          },
+          "create_id": {
+            "input_type": "era.tavern.sidecar.create_id.request",
+            "output_type": "era.tavern.sidecar.create_id.result",
             "completion": "immediate"
           },
-          "clear_report": {
-            "input_type": "era.tavern.sidecar_test.clear_report.request",
-            "output_type": "era.tavern.sidecar_test.clear_report.result",
+          "present_prompt": {
+            "input_type": "era.tavern.sidecar.present_prompt.request",
+            "output_type": "era.tavern.sidecar.present_prompt.result",
+            "completion": "immediate"
+          },
+          "clear_prompt": {
+            "input_type": "era.tavern.sidecar.clear_prompt.request",
+            "output_type": "era.tavern.sidecar.clear_prompt.result",
             "completion": "immediate"
           }
         }
@@ -39103,7 +40321,7 @@
         "status": "implemented",
         "display_name": "ERA 酒馆服务宿主",
         "category": "宿主接线",
-        "description": "连接 SillyTavern 与 Tavern Helper，管理单一先进先出队列、回执、高水位屏障、绝对截止时间定时器、宿主引用和出站帧幂等，并提供服务端口、五类酒馆能力与受控 Sidecar 测试接线；消息读取按 era-active-message-v1 投影，Host 不承载 CRUD、同步、合并、回滚或身份判定规则。",
+        "description": "连接 SillyTavern 与 Tavern Helper，管理单一先进先出队列、回执、高水位屏障、绝对截止时间定时器、宿主引用和出站帧幂等，并提供服务端口、五类酒馆能力与 Sidecar 身份/files/UI 机械接线；消息读取按 era-active-message-v1 投影，Host 不承载 CRUD、同步、合并、回滚或身份判定规则。",
         "version": "0.1.0",
         "targets": [
           "browser"
@@ -39115,7 +40333,7 @@
           "era.tavern.worldbook",
           "era.tavern.regex",
           "era.tavern.identity",
-          "era.tavern.sidecar_test"
+          "era.tavern.sidecar"
         ],
         "dependencies": [],
         "config_keys": [

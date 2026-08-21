@@ -1,0 +1,1 @@
+{"kind":"data_schema","type_key":"era.sidecar.binding.route","representation":"json","display_name":"Sidecar 绑定路由","description":"Sidecar 绑定事务的正式条件路由。","schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"string","enum":["continue","blocked","applied"]}}

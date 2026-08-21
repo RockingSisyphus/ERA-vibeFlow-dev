@@ -6,7 +6,7 @@
 
 import { INPUT_EVENT, LISTENED_EVENT_TYPES, getEventDefinition, shouldCloseCollectionWindow } from '../events/catalog';
 import { Logger } from '../utils/log';
-import { createSidecarTestAdapter } from './sidecar-test-adapter';
+import { createSidecarAdapter } from './sidecar-adapter';
 import type {
   EraAdmissionResult,
   EraCapabilityContext,
@@ -458,8 +458,6 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
     },
   };
 
-  /** 测试 probe 复用既有 identity 能力；其分类仍由 workflow 的纯节点完成。 */
-  readonly sidecar_test = createSidecarTestAdapter({
-    readCurrentIdentity: context => this.identity.read({}, context),
-  });
+  /** Sidecar 的文件/身份/UI 机械接线；所有绑定决策由 workflow 完成。 */
+  readonly sidecar = createSidecarAdapter();
 }

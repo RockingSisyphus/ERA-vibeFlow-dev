@@ -1,0 +1,1 @@
+{"kind":"data_schema","type_key":"era.tavern.sidecar.clear_prompt.result","representation":"json","display_name":"Sidecar 弹窗清理结果","description":"弹窗清理结论。","schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":true}}

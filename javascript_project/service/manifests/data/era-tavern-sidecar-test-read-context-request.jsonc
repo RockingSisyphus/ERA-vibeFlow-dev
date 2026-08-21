@@ -1,8 +1,0 @@
-{
-  "kind": "data_schema",
-  "type_key": "era.tavern.sidecar_test.read_context.request",
-  "representation": "json",
-  "display_name": "ERA Sidecar 测试上下文读取请求",
-  "description": "仅允许受控测试身份观察请求。",
-  "schema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "additionalProperties": true }
-}

@@ -70,12 +70,6 @@
         "description": "领域规划前校验 Schema、字节限制、宿主引用数量和无损参数标签。"
       },
       {
-        "id": "observe_sidecar_test_identity",
-        "type_used": "era.service.observe_sidecar_test_identity",
-        "display_name": "识别 Sidecar 测试身份",
-        "description": "仅在受控测试期开启：由 workflow 计算 matched、rebind-approved、conflict、unbound、invalid 或 not-applicable 报告；不改变传输事件、FIFO、同步或变量状态。"
-      },
-      {
         "id": "reduce_collection",
         "type_used": "era.service.reduce_collection",
         "display_name": "归约事件集",
@@ -145,10 +139,6 @@
       ],
       [
         "validate_transport",
-        "observe_sidecar_test_identity"
-      ],
-      [
-        "observe_sidecar_test_identity",
         "reduce_collection"
       ],
       [

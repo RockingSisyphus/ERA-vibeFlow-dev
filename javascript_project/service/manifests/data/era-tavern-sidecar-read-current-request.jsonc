@@ -1,0 +1,1 @@
+{"kind":"data_schema","type_key":"era.tavern.sidecar.read_current.request","representation":"json","display_name":"Sidecar 当前上下文读取请求","description":"读取当前角色、聊天和变量。","schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false}}

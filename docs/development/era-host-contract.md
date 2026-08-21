@@ -18,6 +18,10 @@ Tavern Helper / SillyTavern / ERA UI
 | VibeFlow Macro        | 基于已提交快照同步计算替换文本                   | Promise、写入、Service 调用、状态同步    |
 | UI                    | 展示、收集用户意图、显示结算后的状态             | 直接重建/写入 ERA 业务状态、复制同步逻辑 |
 
+Sidecar 的身份检查、冲突决策和迁移/独立/复制事务属于 Service 的
+`era.sidecar.binding` Nodeset。Tavern adapter/Host 只提供当前身份、聊天变量、原生 files 与 UI
+通知这几项技术能力；它不能自行决定 owner、迁移或变量恢复。
+
 ## 生成 barrier
 
 生成开始前，Host 必须等待对应 high-water sequence 之前全部被接受事件的 receipt 进入终态；随后宏

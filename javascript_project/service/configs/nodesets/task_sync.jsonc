@@ -1,4 +1,9 @@
 {
+  "nodeset_imports": [
+    {
+      "path": "sidecar_binding.jsonc"
+    }
+  ],
   "type_key": "era.task.sync",
   "display_name": "ERA 同步任务",
   "description": "运行共享同步路径，处理普通协调、full/latest/auto 修复、rollbackTo 定向同步和 CRUD 写入。",
@@ -52,6 +57,12 @@
         "description": "消费已准备步骤内的 EraDispatchContextV2，并仅补读变量和编辑日志；消息快照与不可变 processing message/MK 必须来自严格派发上下文。"
       },
       {
+        "id": "sidecar_binding_prepare",
+        "type_used": "era.sidecar.binding",
+        "display_name": "运行 Sidecar 绑定前置检查",
+        "description": "调用专用 Sidecar Nodeset，集中检查当前身份、聊天 SidecarId 与本地记录，并决定继续、显示阻塞选择或执行用户已提交的绑定事务。"
+      },
+      {
         "id": "plan_sync",
         "type_used": "era.sync.plan",
         "display_name": "规划共享同步与相对数值更新",
@@ -100,10 +111,28 @@
         "description": "通过挂起式变量 Capability 执行有序逻辑提交，并将部分写入或未知写入报告为致命错误。"
       },
       {
+        "id": "sidecar_binding_persist",
+        "type_used": "era.sidecar_binding.persist_snapshot",
+        "display_name": "运行 Sidecar 提交后镜像",
+        "description": "仅在 Tavern 变量提交成功后调用 Sidecar 域的镜像节点，重新核验绑定并镜像当前 stat_data；失败保持可重试状态，不伪装成功。"
+      },
+      {
         "id": "build_sync_notification",
         "type_used": "era.sync.build_notification",
         "display_name": "构造同步结果",
         "description": "仅在提交确认后按候选顺序构造结算及锁外 writeDone/apiWrite 通知，并保持 API 前后的连续状态 carry 完全相同。"
+      },
+      {
+        "id": "sidecar_binding_blocked_result",
+        "type_used": "era.sidecar_binding.build_blocked_result",
+        "display_name": "构造 Sidecar 选择等待结果",
+        "description": "仅在专用 Sidecar Nodeset 已确认冲突且等待用户选择时，构造无写入的正常结算结果。"
+      },
+      {
+        "id": "sidecar_binding_applied_result",
+        "type_used": "era.sidecar_binding.build_applied_result",
+        "display_name": "构造已完成 Sidecar 修复结果",
+        "description": "仅在 Sidecar repair 已重建本地镜像时结算该 UI 选择；不得再进入普通变量重算或覆盖当前聊天状态。"
       },
       {
         "id": "end",
@@ -112,9 +141,24 @@
         "description": "结束一次共享同步任务。"
       }
     ],
-    "edges": [
+      "edges": [
       ["start", "read_sync_context"],
-      ["read_sync_context", "plan_sync"],
+      ["read_sync_context", "sidecar_binding_prepare"],
+      {
+        "from": "sidecar_binding_prepare",
+        "to": "plan_sync",
+        "when": "sidecar_binding_route == 'continue'"
+      },
+      {
+        "from": "sidecar_binding_prepare",
+        "to": "sidecar_binding_blocked_result",
+        "when": "sidecar_binding_route == 'blocked'"
+      },
+      {
+        "from": "sidecar_binding_prepare",
+        "to": "sidecar_binding_applied_result",
+        "when": "sidecar_binding_route == 'applied'"
+      },
       {
         "from": "plan_sync",
         "to": "no_sync_change",
@@ -144,9 +188,25 @@
         "to": "build_sync_contract_failure",
         "when": "commit_validation_route == 'failed'"
       },
-      ["commit_variables", "build_sync_notification"],
+      {
+        "from": "commit_variables",
+        "to": "sidecar_binding_persist",
+        "transfer": true
+      },
+      {
+        "from": "commit_variables",
+        "to": "build_sync_notification",
+        "schedule": false
+      },
+      {
+        "from": "sidecar_binding_persist",
+        "to": "build_sync_notification",
+        "transfer": false
+      },
       ["build_sync_notification", "end"],
-      ["build_sync_contract_failure", "end"]
+      ["build_sync_contract_failure", "end"],
+      ["sidecar_binding_blocked_result", "end"],
+      ["sidecar_binding_applied_result", "end"]
     ],
     "outputs": [
       {

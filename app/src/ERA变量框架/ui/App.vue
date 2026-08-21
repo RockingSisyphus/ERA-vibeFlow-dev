@@ -1,6 +1,7 @@
 <template>
   <div class="era-app-container" :class="{ 'dark-theme': isDarkMode }">
     <ThemeManager ref="themeManager" />
+    <SidecarBindingDialog />
     <FloatingBall v-show="currentComponent === 'FloatingBall'" @click="requestSwitchView('ExpandedView')" />
     <div
       v-show="currentComponent === 'ExpandedView'"
@@ -29,14 +30,16 @@ import { Logger } from '../utils/log';
 import EraPanel from './components/EraPanel.vue';
 import FloatingBall from './components/FloatingBall.vue';
 import RightRail from './components/RightRail.vue';
+import SidecarBindingDialog from './components/SidecarBindingDialog.vue';
 import ThemeManager from './components/ThemeManager.vue';
-import { useUiStore } from './store';
+import { useUiStore, type SidecarBindingPrompt } from './store';
+import { SIDECAR_PROMPT_EVENT } from '../service/sidecar-adapter';
 
 const logger = new Logger();
 
 // 从 Pinia store 获取状态和 action
 const uiStore = useUiStore();
-const { currentView: currentComponent, eventData: dataRef } = storeToRefs(uiStore);
+const { currentView: currentComponent, eventData: dataRef, sidecarBindingPrompt } = storeToRefs(uiStore);
 
 // 主题状态管理
 const themeManager = ref<InstanceType<typeof ThemeManager> | null>(null);
@@ -86,12 +89,14 @@ onMounted(() => {
   window.addEventListener('era-settings-updated', loadThemeSetting);
   uiHostWindow.addEventListener('keydown', handleWindowKeydown, true);
   uiHostWindow.addEventListener('keyup', handleWindowKeydown, true);
+  uiHostWindow.addEventListener(SIDECAR_PROMPT_EVENT, handleSidecarPrompt as EventListener);
 });
 
 onBeforeUnmount(() => {
   window.removeEventListener('era-settings-updated', loadThemeSetting);
   uiHostWindow.removeEventListener('keydown', handleWindowKeydown, true);
   uiHostWindow.removeEventListener('keyup', handleWindowKeydown, true);
+  uiHostWindow.removeEventListener(SIDECAR_PROMPT_EVENT, handleSidecarPrompt as EventListener);
   if (floatingBallFocusTimer !== null) {
     uiHostWindow.clearTimeout(floatingBallFocusTimer);
   }
@@ -113,7 +118,7 @@ const closeExpandedView = async () => {
 };
 
 const handleWindowKeydown = (event: KeyboardEvent) => {
-  if (event.key !== 'Escape' || currentComponent.value !== 'ExpandedView') {
+  if (event.key !== 'Escape' || currentComponent.value !== 'ExpandedView' || sidecarBindingPrompt.value !== null) {
     return;
   }
   // 优先在捕获阶段处理 keydown；若宿主抢先消费 keydown，keyup 是同一语义的兜底。
@@ -121,6 +126,13 @@ const handleWindowKeydown = (event: KeyboardEvent) => {
   event.preventDefault();
   event.stopPropagation();
   void closeExpandedView();
+};
+
+const handleSidecarPrompt = (event: Event) => {
+  const detail = (event as CustomEvent<unknown>).detail;
+  uiStore.setSidecarBindingPrompt(
+    detail !== null && typeof detail === 'object' ? (detail as SidecarBindingPrompt) : null,
+  );
 };
 
 watch(currentComponent, async viewName => {

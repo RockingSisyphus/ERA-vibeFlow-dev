@@ -2,7 +2,7 @@
   "kind": "host_extension",
   "id": "era.tavern.service_host",
   "display_name": "ERA 酒馆服务宿主",
-  "description": "连接 SillyTavern 与 Tavern Helper，管理单一先进先出队列、回执、高水位屏障、绝对截止时间定时器、宿主引用、出站帧幂等、致命态锁存与写入完成通知重播，并提供服务端口、五类酒馆能力和受控 Sidecar 测试接线；不承载 CRUD、同步、合并、回滚或身份判定规则。",
+  "description": "连接 SillyTavern 与 Tavern Helper，管理单一先进先出队列、回执、高水位屏障、绝对截止时间定时器、宿主引用、出站帧幂等、致命态锁存与写入完成通知重播，并提供服务端口、五类酒馆能力和 Sidecar 身份/files/UI 机械接线；不承载 CRUD、同步、合并、回滚或身份判定规则。",
   "version": "0.1.0",
   "targets": ["browser"],
   "implementations": [
@@ -24,7 +24,7 @@
     "era.tavern.worldbook",
     "era.tavern.regex",
     "era.tavern.identity",
-    "era.tavern.sidecar_test"
+    "era.tavern.sidecar"
   ],
   "dependencies": [],
   "external_packages": ["@era/vibeflow-contracts"]

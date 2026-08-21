@@ -120,14 +120,15 @@ export interface EraTavernCapabilityAdapter {
   readonly identity: {
     readonly read: EraHostOperation;
   };
-  /**
-   * 仅供受控 Pack 身份识别测试使用的技术接线。它不判断绑定结果，也不读取
-   * ERA 业务状态；判定规则必须留在 service workflow 的纯节点中。
-   */
-  readonly sidecar_test: {
-    readonly read_context: EraAsyncHostOperation;
-    readonly publish_report: EraHostOperation;
-    readonly clear_report: EraHostOperation;
+  /** Sidecar 的身份/files/UI 机械能力；绑定与迁移规则必须留在 workflow。 */
+  readonly sidecar: {
+    readonly read_current: EraAsyncHostOperation;
+    readonly read_record: EraAsyncHostOperation;
+    readonly write_record: EraAsyncHostOperation;
+    readonly commit_metadata: EraAsyncHostOperation;
+    readonly create_id: EraHostOperation;
+    readonly present_prompt: EraHostOperation;
+    readonly clear_prompt: EraHostOperation;
   };
 }
 
@@ -643,19 +644,29 @@ class ServiceHostRuntime {
         options: PortCallOptions = {},
       ) => this.invokeImmediate("identity", "read", input, options),
     },
-    "era.tavern.sidecar_test": {
-      read_context: (
+    "era.tavern.sidecar": {
+      read_current: (
         input: Readonly<Record<string, unknown>>,
         options: PortCallOptions = {},
-      ) => this.invokeSuspend("sidecar_test", "read_context", input, options),
-      publish_report: (
+      ) => this.invokeSuspend("sidecar", "read_current", input, options),
+      read_record: (
         input: Readonly<Record<string, unknown>>,
         options: PortCallOptions = {},
-      ) => this.invokeImmediate("sidecar_test", "publish_report", input, options),
-      clear_report: (
+      ) => this.invokeSuspend("sidecar", "read_record", input, options),
+      write_record: (
         input: Readonly<Record<string, unknown>>,
         options: PortCallOptions = {},
-      ) => this.invokeImmediate("sidecar_test", "clear_report", input, options),
+      ) => this.invokeSuspend("sidecar", "write_record", input, options),
+      commit_metadata: (
+        input: Readonly<Record<string, unknown>>,
+        options: PortCallOptions = {},
+      ) => this.invokeSuspend("sidecar", "commit_metadata", input, options),
+      create_id: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
+        this.invokeImmediate("sidecar", "create_id", input, options),
+      present_prompt: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
+        this.invokeImmediate("sidecar", "present_prompt", input, options),
+      clear_prompt: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
+        this.invokeImmediate("sidecar", "clear_prompt", input, options),
     },
   } as const;
 
@@ -759,9 +770,13 @@ class ServiceHostRuntime {
       [adapter.regex?.read, "regex.read"],
       [adapter.regex?.upsert, "regex.upsert"],
       [adapter.identity?.read, "identity.read"],
-      [adapter.sidecar_test?.read_context, "sidecar_test.read_context"],
-      [adapter.sidecar_test?.publish_report, "sidecar_test.publish_report"],
-      [adapter.sidecar_test?.clear_report, "sidecar_test.clear_report"],
+      [adapter.sidecar?.read_current, "sidecar.read_current"],
+      [adapter.sidecar?.read_record, "sidecar.read_record"],
+      [adapter.sidecar?.write_record, "sidecar.write_record"],
+      [adapter.sidecar?.commit_metadata, "sidecar.commit_metadata"],
+      [adapter.sidecar?.create_id, "sidecar.create_id"],
+      [adapter.sidecar?.present_prompt, "sidecar.present_prompt"],
+      [adapter.sidecar?.clear_prompt, "sidecar.clear_prompt"],
     ];
     for (const [value, name] of required) {
       if (typeof value !== "function") {
@@ -1600,9 +1615,9 @@ class ServiceHostRuntime {
       try {
         // lifecycle 已在上方中止；清理是 adapter 自己的资源释放，使用新的
         // 已激活 signal，避免把正常 teardown 误当成被取消的 capability 调用。
-        this.adapter.sidecar_test.clear_report({}, { signal: new AbortController().signal });
+        this.adapter.sidecar.clear_prompt({}, { signal: new AbortController().signal });
       } catch (error) {
-        this.warn("清理 ERA Sidecar 测试报告时发生异常。", {
+        this.warn("清理 ERA Sidecar 绑定弹窗时发生异常。", {
           error: error instanceof Error ? error.message : String(error),
         });
       }

@@ -43,6 +43,17 @@ Evaluator 修正和多开场白 fixture 已分别验证，但尚未合并到同�
 路径仍不会被修改。`"+=2"`、`"-=2"`、`"*=2"`、`"/=2"` 不属于运算语法，只是普通
 字符串；ERA 不支持 `$sub`、`$set`、任意表达式、变量引用或数组运算。
 
+## Sidecar 绑定镜像
+
+ERA 聊天会在 `ERAMetaData.SidecarId` 保存稳定的 `era_chat_<uuid>`，并将该 ID 的 owner 和
+`stat_data` 镜像写入当前 SillyTavern 用户 files 目录。聊天记录仍是变量重算的事实来源；Sidecar
+只是可恢复镜像，不会在本版本删减聊天变量或 Variable 指令。
+
+当导入聊天或切换角色卡使同一个 ID 指向另一 owner 时，ERA 会显示不可关闭的三选项：迁移原变量、
+创建独立变量、或复制原变量。迁移/复制以标准可重放的 ERA 指令写回当前聊天；返回旧卡会再次要求
+选择，支持在多个角色卡版本间往返。详细合同见
+[`docs/development/era-sidecar-identity-test.md`](docs/development/era-sidecar-identity-test.md)。
+
 ## 常用检查
 
 ```bash

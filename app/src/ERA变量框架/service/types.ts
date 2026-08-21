@@ -10,6 +10,7 @@ export type EraEventSource = 'tavern' | 'ui' | 'era-api' | 'timer';
 export const ERA_UI_EVENT = {
   INITIALIZE_RESOURCES: 'era.ui.initialize_resources',
   UPDATE_SETTINGS: 'era.ui.update_settings',
+  SIDECAR_BINDING_CHOICE: 'era.ui.sidecar_binding_choice',
 } as const;
 
 /** 单个入站事件在 Host receipt 上可观察到的最终结算。 */
@@ -95,11 +96,15 @@ export interface EraTavernAdapter {
   readonly identity: {
     read(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
   };
-  /** 受控 Pack 测试接线；业务判定位于 VibeFlow service workflow。 */
-  readonly sidecar_test: {
-    read_context(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
-    publish_report(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
-    clear_report(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
+  /** Sidecar 宿主机械能力；绑定规则与迁移决策位于 VibeFlow service workflow。 */
+  readonly sidecar: {
+    read_current(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
+    read_record(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
+    write_record(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
+    commit_metadata(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
+    create_id(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
+    present_prompt(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
+    clear_prompt(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
   };
 }
 

@@ -1,0 +1,1 @@
+{"kind":"data_schema","type_key":"era.tavern.sidecar.create_id.result","representation":"json","display_name":"Sidecar ID 创建结果","description":"新建的稳定 SidecarId。","schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","required":["sidecarId"],"properties":{"sidecarId":{"type":"string"}},"additionalProperties":false}}

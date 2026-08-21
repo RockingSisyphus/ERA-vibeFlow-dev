@@ -1,0 +1,1 @@
+{"kind":"data_schema","type_key":"era.tavern.sidecar.commit_metadata.request","representation":"json","display_name":"Sidecar 元数据提交请求","description":"仅提交 ERAMetaData.SidecarId。","schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","required":["sidecarId"],"properties":{"sidecarId":{"type":"string"}},"additionalProperties":false}}
