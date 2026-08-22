@@ -1,0 +1,45 @@
+{
+  "kind": "node",
+  "type_key": "era.expression.initialize_ast_frames",
+  "display_name": "初始化 AST 调用帧栈",
+  "category": "表达式循环",
+  "description": "为一条操作建立显式后序求值栈。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.expression.operation.current",
+        "cardinality": "exactly_one",
+        "display_name": "当前表达式操作"
+      }
+    ],
+    "provides": [
+      {
+        "key": "ast_frame_state",
+        "type": "era.expression.ast_frame.state",
+        "display_name": "AST 调用帧状态"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.expression.operation.current": ["输入：当前表达式操作。"]
+    },
+    "output_semantics": { "ast_frame_state": ["输出：调用帧栈。"] }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": ["browser", "node"],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/initialize_ast_frames.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": ["era.expression.engine"],
+  "capabilities": []
+}

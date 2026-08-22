@@ -1,0 +1,1 @@
+{"kind":"data_schema","type_key":"era.expression.ast_frame.route","representation":"json","display_name":"AST 调用帧路由","description":"决定将栈顶帧交给值、运算符、内建函数、自定义函数或返回处理。","schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"string","enum":["value","operator","builtin","custom","return"]}}

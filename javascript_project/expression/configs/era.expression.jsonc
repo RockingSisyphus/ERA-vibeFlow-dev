@@ -1,0 +1,47 @@
+{
+  "nodeset_imports": [{ "path": "nodesets/execute_layer.jsonc" }],
+  "pipeline": {
+    "entry_mode": "sync",
+    "inputs": [
+      {
+        "key": "expression_request",
+        "type": "era.expression.request",
+        "display_name": "函数表达式请求",
+        "required": true
+      }
+    ],
+    "max_steps": 3,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.expression.terminal",
+        "display_name": "表达式计算启动",
+        "description": "启动独立、无宿主副作用的函数表达式层计算。"
+      },
+      {
+        "id": "execute_layer",
+        "type_used": "era.expression.execute_layer",
+        "display_name": "执行表达式层",
+        "description": "调用 planned 节点集，验证函数库和操作，按顺序求值并生成可重放的压缩候选。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.expression.terminal",
+        "display_name": "表达式计算结束",
+        "description": "输出最终数值状态、诊断和规范化压缩表达式。"
+      }
+    ],
+    "edges": [
+      ["start", "execute_layer"],
+      ["execute_layer", "end"]
+    ],
+    "outputs": [
+      {
+        "type": "era.expression.response",
+        "cardinality": "exactly_one",
+        "display_name": "函数表达式结果",
+        "as": "expressionResponse"
+      }
+    ]
+  }
+}

@@ -1,0 +1,1 @@
+{"kind":"data_schema","type_key":"era.expression.sequence.done","representation":"json","display_name":"顺序操作结束标记","description":"表示操作游标已到达有序操作列表末尾。","schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"boolean"}}

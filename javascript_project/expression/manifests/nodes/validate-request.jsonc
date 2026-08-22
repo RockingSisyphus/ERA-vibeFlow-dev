@@ -1,0 +1,47 @@
+{
+  "kind": "node",
+  "type_key": "era.expression.validate_request",
+  "display_name": "验证表达式请求",
+  "category": "表达式工作流",
+  "description": "规范化初始状态、函数库与有序操作。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.expression.request",
+        "cardinality": "exactly_one",
+        "display_name": "函数表达式请求"
+      }
+    ],
+    "provides": [
+      {
+        "key": "normalized_expression_request",
+        "type": "era.expression.request.normalized",
+        "display_name": "规范表达式请求"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.expression.request": ["输入：表达式请求 JSON。"]
+    },
+    "output_semantics": {
+      "normalized_expression_request": ["输出：已验证请求。"]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": ["browser", "node"],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/validate_request.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": ["era.expression.engine"],
+  "capabilities": []
+}

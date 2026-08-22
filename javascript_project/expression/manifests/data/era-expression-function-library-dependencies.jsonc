@@ -1,0 +1,1 @@
+{"kind":"data_schema","type_key":"era.expression.function_library.dependencies","representation":"json","display_name":"函数调用依赖","description":"从函数体 AST 提取的自定义函数和内建函数调用边。","schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":true}}

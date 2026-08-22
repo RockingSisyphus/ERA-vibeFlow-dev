@@ -1,0 +1,51 @@
+{
+  "kind": "node",
+  "type_key": "era.expression.derive_symbolic_layer",
+  "display_name": "推导消息层符号变化",
+  "category": "表达式压缩",
+  "description": "用层起始 @path 和顺序操作推导每条变化路径的最终 AST。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.expression.sequence.state",
+        "cardinality": "exactly_one",
+        "display_name": "表达式顺序执行状态"
+      },
+      {
+        "type": "era.expression.execution.result",
+        "cardinality": "exactly_one",
+        "display_name": "顺序数值结果"
+      }
+    ],
+    "provides": [
+      {
+        "key": "symbolic_layer",
+        "type": "era.expression.symbolic.layer",
+        "display_name": "符号层变化"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.expression.sequence.state": ["输入：层起始状态。"],
+      "era.expression.execution.result": ["输入：数值执行结果。"]
+    },
+    "output_semantics": { "symbolic_layer": ["输出：每路径符号 AST。"] }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": ["browser", "node"],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/derive_symbolic_layer.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": ["era.expression.engine"],
+  "capabilities": []
+}

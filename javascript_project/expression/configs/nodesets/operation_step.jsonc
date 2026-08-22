@@ -1,0 +1,142 @@
+{
+  "nodeset_imports": [{ "path": "ast_frame_step.jsonc" }],
+  "type_key": "era.expression.operation_step",
+  "flow_kind": "process",
+  "display_name": "执行一条表达式操作",
+  "description": "从顺序状态取出一条操作，以显式 AST 调用帧栈求值其表达式，再将结果写入当前状态并推进游标。",
+  "requires": [
+    {
+      "type": "era.expression.sequence.state",
+      "cardinality": "exactly_one",
+      "display_name": "表达式顺序执行状态"
+    }
+  ],
+  "provides": [
+    {
+      "key": "sequence_state_next",
+      "type": "era.expression.sequence.state",
+      "display_name": "下一顺序执行状态"
+    },
+    {
+      "key": "sequence_done",
+      "type": "era.expression.sequence.done",
+      "display_name": "顺序操作结束标记"
+    },
+    {
+      "key": "operation_execution_result",
+      "type": "era.expression.execution.result",
+      "display_name": "当前累计数值结果"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "sync",
+    "inputs": [
+      {
+        "key": "sequence_state",
+        "type": "era.expression.sequence.state",
+        "display_name": "表达式顺序执行状态",
+        "required": true
+      }
+    ],
+    "max_steps": 8,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.expression.terminal",
+        "display_name": "操作步骤启动",
+        "description": "开始当前游标的一条表达式操作。"
+      },
+      {
+        "id": "select_next_operation",
+        "type_used": "era.expression.select_next_operation",
+        "display_name": "选择下一操作",
+        "description": "读取游标并保留目标路径、原始 AST 和当时的当前变量状态。"
+      },
+      {
+        "id": "initialize_ast_frames",
+        "type_used": "era.expression.initialize_ast_frames",
+        "display_name": "初始化 AST 调用帧栈",
+        "description": "为当前表达式建立显式后序求值栈；不使用 JavaScript 递归，因此函数体可嵌套调用其他函数。"
+      },
+      {
+        "id": "ast_frame_loop",
+        "type_used": "vibeflow.loop.while",
+        "display_name": "求值 AST 调用帧",
+        "description": "重复执行栈顶帧；自定义函数调用会绑定实参、压入函数体，返回值完成后回传父表达式。",
+        "requires": [
+          {
+            "type": "era.expression.ast_frame.state",
+            "cardinality": "exactly_one",
+            "display_name": "AST 调用帧状态"
+          }
+        ],
+        "provides": [
+          {
+            "key": "evaluated_expression",
+            "type": "era.expression.value",
+            "display_name": "已求值表达式"
+          }
+        ],
+        "loop": {
+          "body": "era.expression.ast_frame_step",
+          "max_iterations": null,
+          "stop_when": { "from": "astFrameDone", "equals": true },
+          "carry": [
+            {
+              "from": "era.expression.ast_frame.state",
+              "as": "ast_frame_state",
+              "update": "astFrameStateNext"
+            }
+          ],
+          "outputs": [
+            { "from": "evaluatedExpression", "as": "evaluated_expression" }
+          ]
+        }
+      },
+      {
+        "id": "commit_operation_result",
+        "type_used": "era.expression.commit_operation_result",
+        "display_name": "提交当前操作结果",
+        "description": "仅在有限数值结果成功时写入目标路径、推进游标并生成累计结果；失败操作保留前状态及定位诊断。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.expression.terminal",
+        "display_name": "操作步骤结束",
+        "description": "输出更新后的顺序状态、结束标记和累计结果。"
+      }
+    ],
+    "edges": [
+      ["start", "select_next_operation"],
+      ["select_next_operation", "initialize_ast_frames"],
+      ["initialize_ast_frames", "ast_frame_loop"],
+      {
+        "from": "select_next_operation",
+        "to": "commit_operation_result",
+        "schedule": false
+      },
+      ["ast_frame_loop", "commit_operation_result"],
+      ["commit_operation_result", "end"]
+    ],
+    "outputs": [
+      {
+        "type": "era.expression.sequence.state",
+        "cardinality": "exactly_one",
+        "display_name": "下一顺序执行状态",
+        "as": "sequenceStateNext"
+      },
+      {
+        "type": "era.expression.sequence.done",
+        "cardinality": "exactly_one",
+        "display_name": "顺序操作结束标记",
+        "as": "sequenceDone"
+      },
+      {
+        "type": "era.expression.execution.result",
+        "cardinality": "exactly_one",
+        "display_name": "当前累计数值结果",
+        "as": "operationExecutionResult"
+      }
+    ]
+  }
+}

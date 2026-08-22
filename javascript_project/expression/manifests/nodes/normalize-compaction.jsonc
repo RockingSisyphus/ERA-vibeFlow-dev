@@ -1,0 +1,59 @@
+{
+  "kind": "node",
+  "type_key": "era.expression.normalize_compaction",
+  "display_name": "规范化压缩表达式",
+  "category": "表达式压缩",
+  "description": "局部常数折叠并打印每路径至多一个可重放 $expr。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.expression.sequence.state",
+        "cardinality": "exactly_one",
+        "display_name": "表达式顺序执行状态"
+      },
+      {
+        "type": "era.expression.execution.result",
+        "cardinality": "exactly_one",
+        "display_name": "顺序数值结果"
+      },
+      {
+        "type": "era.expression.symbolic.layer",
+        "cardinality": "exactly_one",
+        "display_name": "符号层变化"
+      }
+    ],
+    "provides": [
+      {
+        "key": "expression_response",
+        "type": "era.expression.response",
+        "display_name": "函数表达式结果"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.expression.sequence.state": ["输入：层起始状态。"],
+      "era.expression.execution.result": ["输入：数值执行结果。"],
+      "era.expression.symbolic.layer": ["输入：符号层变化。"]
+    },
+    "output_semantics": {
+      "expression_response": ["输出：最终状态与压缩候选。"]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": ["browser", "node"],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/normalize_compaction.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": ["era.expression.engine"],
+  "capabilities": []
+}

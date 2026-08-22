@@ -1,0 +1,59 @@
+{
+  "kind": "node",
+  "type_key": "era.expression.publish_frame_transition",
+  "display_name": "发布调用帧迁移",
+  "category": "表达式调用帧",
+  "description": "输出下一栈、完成标记和根表达式值。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.expression.ast_frame.transition",
+        "cardinality": "exactly_one",
+        "display_name": "调用帧迁移"
+      }
+    ],
+    "provides": [
+      {
+        "key": "ast_frame_state_next",
+        "type": "era.expression.ast_frame.state",
+        "display_name": "下一 AST 调用帧状态"
+      },
+      {
+        "key": "ast_frame_done",
+        "type": "era.expression.ast_frame.done",
+        "display_name": "AST 调用帧结束标记"
+      },
+      {
+        "key": "evaluated_expression",
+        "type": "era.expression.value",
+        "display_name": "已求值表达式"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.expression.ast_frame.transition": ["输入：调用帧迁移。"]
+    },
+    "output_semantics": {
+      "ast_frame_state_next": ["输出：下一栈。"],
+      "ast_frame_done": ["输出：帧完成标记。"],
+      "evaluated_expression": ["输出：根表达式值。"]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": ["browser", "node"],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/publish_frame_transition.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": ["era.expression.engine"],
+  "capabilities": []
+}

@@ -1,0 +1,45 @@
+{
+  "kind": "node",
+  "type_key": "era.expression.evaluate_builtin_frame",
+  "display_name": "计算内建函数帧",
+  "category": "表达式调用帧",
+  "description": "调用原生 Math、Gamma、受控导数或自适应 Simpson 积分。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.expression.ast_frame.current",
+        "cardinality": "exactly_one",
+        "display_name": "当前 AST 调用帧"
+      }
+    ],
+    "provides": [
+      {
+        "key": "frame_transition_builtin",
+        "type": "era.expression.ast_frame.transition",
+        "display_name": "调用帧迁移"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.expression.ast_frame.current": ["输入：栈顶内建函数帧。"]
+    },
+    "output_semantics": { "frame_transition_builtin": ["输出：下一帧栈迁移。"] }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": ["browser", "node"],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/evaluate_builtin_frame.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": ["era.expression.engine"],
+  "capabilities": []
+}

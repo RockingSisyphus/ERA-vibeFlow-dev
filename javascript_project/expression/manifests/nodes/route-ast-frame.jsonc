@@ -1,0 +1,53 @@
+{
+  "kind": "node",
+  "type_key": "era.expression.route_ast_frame",
+  "display_name": "路由 AST 调用帧",
+  "category": "表达式调用帧",
+  "description": "区分值、运算符、内建、自定义调用和返回帧。",
+  "version": "1.0.0",
+  "flow_kind": "decision",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.expression.ast_frame.current",
+        "cardinality": "exactly_one",
+        "display_name": "当前 AST 调用帧"
+      }
+    ],
+    "provides": [
+      {
+        "key": "routed_ast_frame_current",
+        "type": "era.expression.ast_frame.current",
+        "display_name": "已路由的当前调用帧"
+      },
+      {
+        "key": "ast_frame_route",
+        "type": "era.expression.ast_frame.route",
+        "display_name": "AST 调用帧路由"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.expression.ast_frame.current": ["输入：栈顶帧。"]
+    },
+    "output_semantics": {
+      "routed_ast_frame_current": ["输出：将当前帧随路由结果传递给对应处理分支。"],
+      "ast_frame_route": ["输出：帧类型路由。"]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": ["browser", "node"],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/route_ast_frame.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": ["era.expression.engine"],
+  "capabilities": []
+}

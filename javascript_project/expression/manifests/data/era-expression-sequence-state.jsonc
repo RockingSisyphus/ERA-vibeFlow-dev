@@ -1,0 +1,1 @@
+{"kind":"data_schema","type_key":"era.expression.sequence.state","representation":"json","display_name":"表达式顺序执行状态","description":"包含层起始状态、当前状态、操作游标、函数库和累计诊断的显式 carry 状态。","schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":true}}

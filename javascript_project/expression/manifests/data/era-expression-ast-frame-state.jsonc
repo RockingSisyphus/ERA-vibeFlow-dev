@@ -1,0 +1,1 @@
+{"kind":"data_schema","type_key":"era.expression.ast_frame.state","representation":"json","display_name":"AST 调用帧状态","description":"显式后序求值帧栈、当前函数局部环境、父帧接收位置和累积诊断。","schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":true}}

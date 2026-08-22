@@ -1,0 +1,1 @@
+{"kind":"data_schema","type_key":"era.expression.symbolic.layer","representation":"json","display_name":"符号层变化","description":"以 @path 表示层开始状态的顺序替换结果。","schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":true}}

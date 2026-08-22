@@ -1,0 +1,1 @@
+{"kind":"data_schema","type_key":"era.expression.request.normalized","representation":"json","display_name":"规范表达式请求","description":"经过输入形状与有限数值验证的函数表达式请求。","schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":true}}

@@ -1,0 +1,1 @@
+{"kind":"data_schema","type_key":"era.expression.function_library.call_graph","representation":"json","display_name":"函数调用图","description":"支持前向定义和嵌套调用的有向自定义函数调用图。","schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":true}}

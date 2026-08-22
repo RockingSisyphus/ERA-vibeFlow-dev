@@ -1,0 +1,45 @@
+{
+  "kind": "node",
+  "type_key": "era.expression.parse_operations",
+  "display_name": "解析顺序操作",
+  "category": "表达式工作流",
+  "description": "解析路径和用户表达式并拒绝原始 @path。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.expression.request.normalized",
+        "cardinality": "exactly_one",
+        "display_name": "规范表达式请求"
+      }
+    ],
+    "provides": [
+      {
+        "key": "parsed_operations",
+        "type": "era.expression.operations.parsed",
+        "display_name": "已解析顺序操作"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.expression.request.normalized": ["输入：已验证请求。"]
+    },
+    "output_semantics": { "parsed_operations": ["输出：按顺序的操作 AST。"] }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": ["browser", "node"],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/parse_operations.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": ["era.expression.engine"],
+  "capabilities": []
+}

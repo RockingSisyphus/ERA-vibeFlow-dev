@@ -1,0 +1,51 @@
+{
+  "kind": "node",
+  "type_key": "era.expression.build_function_call_graph",
+  "display_name": "建立函数调用图",
+  "category": "表达式工作流",
+  "description": "建立支持前向声明和嵌套调用的有向图。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.expression.function_library.dependencies",
+        "cardinality": "exactly_one",
+        "display_name": "函数调用依赖"
+      },
+      {
+        "type": "era.expression.function_library.purity",
+        "cardinality": "exactly_one",
+        "display_name": "函数纯度报告"
+      }
+    ],
+    "provides": [
+      {
+        "key": "function_call_graph",
+        "type": "era.expression.function_library.call_graph",
+        "display_name": "函数调用图"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.expression.function_library.dependencies": ["输入：调用依赖。"],
+      "era.expression.function_library.purity": ["输入：纯度报告。"]
+    },
+    "output_semantics": { "function_call_graph": ["输出：调用图。"] }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": ["browser", "node"],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/build_function_call_graph.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": ["era.expression.engine"],
+  "capabilities": []
+}

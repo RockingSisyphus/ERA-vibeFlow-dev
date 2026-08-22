@@ -1,0 +1,1 @@
+{"kind":"data_schema","type_key":"era.expression.ast_frame.current","representation":"json","display_name":"当前 AST 调用帧","description":"栈顶 AST 节点、已完成子值、当前函数局部环境及其父帧位置。","schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":true}}

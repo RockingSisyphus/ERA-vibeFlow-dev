@@ -1,0 +1,47 @@
+{
+  "kind": "node",
+  "type_key": "era.expression.evaluate_operator_frame",
+  "display_name": "计算运算符帧",
+  "category": "表达式调用帧",
+  "description": "推进一元或二元 AST 帧。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.expression.ast_frame.current",
+        "cardinality": "exactly_one",
+        "display_name": "当前 AST 调用帧"
+      }
+    ],
+    "provides": [
+      {
+        "key": "frame_transition_operator",
+        "type": "era.expression.ast_frame.transition",
+        "display_name": "调用帧迁移"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.expression.ast_frame.current": ["输入：栈顶运算符帧。"]
+    },
+    "output_semantics": {
+      "frame_transition_operator": ["输出：下一帧栈迁移。"]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": ["browser", "node"],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/evaluate_operator_frame.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": ["era.expression.engine"],
+  "capabilities": []
+}

@@ -1,0 +1,47 @@
+{
+  "kind": "node",
+  "type_key": "era.expression.reject_recursive_functions",
+  "display_name": "拒绝递归函数环",
+  "category": "表达式工作流",
+  "description": "以 DFS 检测直接与间接函数递归。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.expression.function_library.call_graph",
+        "cardinality": "exactly_one",
+        "display_name": "函数调用图"
+      }
+    ],
+    "provides": [
+      {
+        "key": "acyclic_function_graph",
+        "type": "era.expression.function_library.acyclic_graph",
+        "display_name": "无环函数调用图"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.expression.function_library.call_graph": ["输入：函数调用图。"]
+    },
+    "output_semantics": {
+      "acyclic_function_graph": ["输出：附环诊断的调用图。"]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": ["browser", "node"],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/reject_recursive_functions.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": ["era.expression.engine"],
+  "capabilities": []
+}

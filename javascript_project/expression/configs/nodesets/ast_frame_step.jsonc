@@ -1,0 +1,159 @@
+{
+  "type_key": "era.expression.ast_frame_step",
+  "flow_kind": "process",
+  "display_name": "执行一个 AST 调用帧",
+  "description": "显式处理字面量、路径、运算符、内建函数和自定义函数帧；自定义函数绑定实参后压入函数体，任意嵌套返回后回传父帧。",
+  "requires": [
+    {
+      "type": "era.expression.ast_frame.state",
+      "cardinality": "exactly_one",
+      "display_name": "AST 调用帧状态"
+    }
+  ],
+  "provides": [
+    {
+      "key": "ast_frame_state_next",
+      "type": "era.expression.ast_frame.state",
+      "display_name": "下一 AST 调用帧状态"
+    },
+    {
+      "key": "ast_frame_done",
+      "type": "era.expression.ast_frame.done",
+      "display_name": "AST 调用帧结束标记"
+    },
+    {
+      "key": "evaluated_expression",
+      "type": "era.expression.value",
+      "display_name": "已求值表达式"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "sync",
+    "inputs": [
+      {
+        "key": "ast_frame_state",
+        "type": "era.expression.ast_frame.state",
+        "display_name": "AST 调用帧状态",
+        "required": true
+      }
+    ],
+    "max_steps": 10,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.expression.terminal",
+        "display_name": "调用帧启动",
+        "description": "开始处理栈顶 AST 帧。"
+      },
+      {
+        "id": "inspect_frame",
+        "type_used": "era.expression.inspect_ast_frame",
+        "display_name": "读取栈顶 AST 帧",
+        "description": "读取节点种类、已完成子值、当前变量环境和父调用接收位置。"
+      },
+      {
+        "id": "route_frame",
+        "type_used": "era.expression.route_ast_frame",
+        "display_name": "路由 AST 帧种类",
+        "description": "区分字面量、变量路径、运算符、内建函数、自定义函数调用和子调用返回。"
+      },
+      {
+        "id": "resolve_value_frame",
+        "type_used": "era.expression.resolve_value_frame",
+        "display_name": "解析字面量与状态路径",
+        "description": "读取当前顺序变量状态；函数体不允许通过此路径读取外部状态。"
+      },
+      {
+        "id": "evaluate_operator_frame",
+        "type_used": "era.expression.evaluate_operator_frame",
+        "display_name": "计算运算符帧",
+        "description": "对子帧完成的有限数值应用受限四则、幂和一元运算，或压入尚未完成的子 AST 帧。"
+      },
+      {
+        "id": "evaluate_builtin_frame",
+        "type_used": "era.expression.evaluate_builtin_frame",
+        "display_name": "计算内建函数帧",
+        "description": "普通函数调用 Math/@stdlib；导数将已验证的一元纯函数 AST 交给受控 Math.js；积分以同一纯 AST 回调 Simpson。"
+      },
+      {
+        "id": "bind_custom_function_frame",
+        "type_used": "era.expression.bind_custom_function_frame",
+        "display_name": "绑定自定义函数调用",
+        "description": "验证实参数目，将已完成实参绑定到形参环境，压入被调函数体 AST；这支持 f(g(x), h(y)) 和函数体内多层调用。"
+      },
+      {
+        "id": "return_child_value",
+        "type_used": "era.expression.return_child_value",
+        "display_name": "回传子调用结果",
+        "description": "将子表达式或子函数返回的有限数值回填父帧，继续其未完成的运算或函数调用。"
+      },
+      {
+        "id": "publish_frame_transition",
+        "type_used": "era.expression.publish_frame_transition",
+        "display_name": "发布下一调用帧状态",
+        "description": "应用选定迁移，输出下一帧栈、完成标记及根表达式最终值。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.expression.terminal",
+        "display_name": "调用帧结束",
+        "description": "输出帧机下一状态和根表达式值。"
+      }
+    ],
+    "edges": [
+      ["start", "inspect_frame"],
+      ["inspect_frame", "route_frame"],
+      {
+        "from": "route_frame",
+        "to": "resolve_value_frame",
+        "when": "ast_frame_route == 'value'"
+      },
+      {
+        "from": "route_frame",
+        "to": "evaluate_operator_frame",
+        "when": "ast_frame_route == 'operator'"
+      },
+      {
+        "from": "route_frame",
+        "to": "evaluate_builtin_frame",
+        "when": "ast_frame_route == 'builtin'"
+      },
+      {
+        "from": "route_frame",
+        "to": "bind_custom_function_frame",
+        "when": "ast_frame_route == 'custom'"
+      },
+      {
+        "from": "route_frame",
+        "to": "return_child_value",
+        "when": "ast_frame_route == 'return'"
+      },
+      ["resolve_value_frame", "publish_frame_transition"],
+      ["evaluate_operator_frame", "publish_frame_transition"],
+      ["evaluate_builtin_frame", "publish_frame_transition"],
+      ["bind_custom_function_frame", "publish_frame_transition"],
+      ["return_child_value", "publish_frame_transition"],
+      ["publish_frame_transition", "end"]
+    ],
+    "outputs": [
+      {
+        "type": "era.expression.ast_frame.state",
+        "cardinality": "exactly_one",
+        "display_name": "下一 AST 调用帧状态",
+        "as": "astFrameStateNext"
+      },
+      {
+        "type": "era.expression.ast_frame.done",
+        "cardinality": "exactly_one",
+        "display_name": "AST 调用帧结束标记",
+        "as": "astFrameDone"
+      },
+      {
+        "type": "era.expression.value",
+        "cardinality": "exactly_one",
+        "display_name": "已求值表达式",
+        "as": "evaluatedExpression"
+      }
+    ]
+  }
+}

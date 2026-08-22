@@ -1,0 +1,45 @@
+{
+  "kind": "node",
+  "type_key": "era.expression.select_next_operation",
+  "display_name": "选择下一操作",
+  "category": "表达式循环",
+  "description": "从显式游标提取当前操作及其顺序状态。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.expression.sequence.state",
+        "cardinality": "exactly_one",
+        "display_name": "表达式顺序执行状态"
+      }
+    ],
+    "provides": [
+      {
+        "key": "current_operation",
+        "type": "era.expression.operation.current",
+        "display_name": "当前表达式操作"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.expression.sequence.state": ["输入：顺序 carry 状态。"]
+    },
+    "output_semantics": { "current_operation": ["输出：当前操作和其状态。"] }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": ["browser", "node"],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/select_next_operation.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": ["era.expression.engine"],
+  "capabilities": []
+}

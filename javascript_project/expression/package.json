@@ -1,0 +1,22 @@
+{
+  "name": "@era/vibeflow-expression",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.18.0"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "esbuild base_lib/expression_engine.ts --bundle --platform=node --format=esm --outfile=generated/test/expression_engine.mjs && node --test tests/expression_engine.test.mjs",
+    "test:workflow": "node scripts/workflow_execution_probe.mjs"
+  },
+  "dependencies": {
+    "@stdlib/math-base-special-gamma": "^0.3.1",
+    "mathjs": "^15.2.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.1",
+    "typescript": "^7.0.2"
+  }
+}

@@ -1,0 +1,1 @@
+{"kind":"data_schema","type_key":"era.expression.execution.result","representation":"json","display_name":"顺序数值结果","description":"逐条执行后的最终有限数值状态、逐操作结果和诊断。","schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":true}}

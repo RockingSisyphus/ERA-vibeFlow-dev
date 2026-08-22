@@ -1,0 +1,1 @@
+{"kind":"data_schema","type_key":"era.expression.ast_frame.transition","representation":"json","display_name":"AST 调用帧迁移","description":"单步帧执行后要压入、弹出或回填的显式栈迁移。","schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":true}}

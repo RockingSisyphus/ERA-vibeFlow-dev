@@ -1,0 +1,1 @@
+{"kind":"data_schema","type_key":"era.expression.function_library.compiled","representation":"json","display_name":"已编译函数库","description":"已通过调用图、纯度、参数与递归验证的函数库。","schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":true}}

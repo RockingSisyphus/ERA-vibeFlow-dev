@@ -1,0 +1,65 @@
+{
+  "kind": "node",
+  "type_key": "era.expression.commit_operation_result",
+  "display_name": "提交表达式操作结果",
+  "category": "表达式循环",
+  "description": "在当前帧成功后更新当前状态、游标和累计结果。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.expression.operation.current",
+        "cardinality": "exactly_one",
+        "display_name": "当前表达式操作"
+      },
+      {
+        "type": "era.expression.value",
+        "cardinality": "exactly_one",
+        "display_name": "已求值表达式"
+      }
+    ],
+    "provides": [
+      {
+        "key": "sequence_state_next",
+        "type": "era.expression.sequence.state",
+        "display_name": "下一顺序执行状态"
+      },
+      {
+        "key": "sequence_done",
+        "type": "era.expression.sequence.done",
+        "display_name": "顺序操作结束标记"
+      },
+      {
+        "key": "operation_execution_result",
+        "type": "era.expression.execution.result",
+        "display_name": "当前累计数值结果"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.expression.operation.current": ["输入：当前操作。"],
+      "era.expression.value": ["输入：帧求值结果。"]
+    },
+    "output_semantics": {
+      "sequence_state_next": ["输出：推进后的顺序状态。"],
+      "sequence_done": ["输出：操作结束标记。"],
+      "operation_execution_result": ["输出：累计结果。"]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": ["browser", "node"],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/commit_operation_result.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": ["era.expression.engine"],
+  "capabilities": []
+}

@@ -1,0 +1,1 @@
+{"kind":"data_schema","type_key":"era.expression.function_library.purity","representation":"json","display_name":"函数纯度报告","description":"函数体形参、自由变量、调用名称和参数数验证的结果。","schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":true}}

@@ -1,0 +1,57 @@
+{
+  "kind": "node",
+  "type_key": "era.expression.initialize_sequence_state",
+  "display_name": "初始化顺序状态",
+  "category": "表达式工作流",
+  "description": "创建层起始快照、当前状态、函数库和操作游标。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.expression.request.normalized",
+        "cardinality": "exactly_one",
+        "display_name": "规范表达式请求"
+      },
+      {
+        "type": "era.expression.function_library.compiled",
+        "cardinality": "exactly_one",
+        "display_name": "已编译函数库"
+      },
+      {
+        "type": "era.expression.operations.parsed",
+        "cardinality": "exactly_one",
+        "display_name": "已解析顺序操作"
+      }
+    ],
+    "provides": [
+      {
+        "key": "sequence_state",
+        "type": "era.expression.sequence.state",
+        "display_name": "表达式顺序执行状态"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.expression.request.normalized": ["输入：已验证请求。"],
+      "era.expression.function_library.compiled": ["输入：可调用函数库。"],
+      "era.expression.operations.parsed": ["输入：操作 AST。"]
+    },
+    "output_semantics": { "sequence_state": ["输出：顺序 carry 状态。"] }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": ["browser", "node"],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/initialize_sequence_state.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": ["era.expression.engine"],
+  "capabilities": []
+}

@@ -1,0 +1,1 @@
+{"kind":"data_schema","type_key":"era.expression.ast_frame.done","representation":"json","display_name":"AST 调用帧结束标记","description":"表示当前根表达式的显式调用帧栈是否已完成。","schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"boolean"}}

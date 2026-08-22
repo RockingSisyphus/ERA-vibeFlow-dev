@@ -1,0 +1,1 @@
+{"kind":"data_schema","type_key":"era.expression.function_library.acyclic_graph","representation":"json","display_name":"无环函数调用图","description":"经 DFS/SCC 验证不存在直接或间接递归的函数调用图。","schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":true}}
