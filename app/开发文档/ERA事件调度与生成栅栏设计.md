@@ -52,7 +52,8 @@ Service Host 只负责宿主投影、队列、资源生命周期和 Capability �
 - 统一任务上下文可以先为当前激活文本补齐 MK 和状态占位符，但同步、初始化和 API
   状态任务不得在领域同步前预先改写 `ERAMetaData.SelectedMks`。
 - `SelectedMks` 是同步器识别旧消息链与当前消息链首个分歧的基线。状态任务必须保留旧链，
-  由同步事务完成回滚、命令重放后随 `stat_data`、`EditLogs` 和新链一次性提交。
+  由同步事务完成回滚、命令重放后随 `stat_data`、`EditLogs` 和新链一次性提交到 Sidecar V2
+  状态；聊天变量仅保留 Sidecar 指针。
 - `message_sent` 对应的独立 `update-mk` 任务不执行历史同步，因此仍由统一准备阶段提交其
   `SelectedMks` 校准。提交所有权按任务类型确定，不根据事件时序或生成停止状态猜测。
 

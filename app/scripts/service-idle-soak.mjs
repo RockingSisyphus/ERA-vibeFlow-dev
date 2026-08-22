@@ -3,7 +3,7 @@
 import { appendFile, mkdir, writeFile } from 'node:fs/promises';
 import { performance } from 'node:perf_hooks';
 
-const generatedModuleUrl = new URL('../../generated/era-service/era-service.js', import.meta.url);
+const generatedModuleUrl = new URL('../../generated/era-service/workflow.js', import.meta.url);
 const progressUrl = new URL('../../reports/service-idle-soak.progress.jsonl', import.meta.url);
 const reportUrl = new URL('../../reports/service-idle-soak.json', import.meta.url);
 const durationMs = Number(process.env.ERA_SOAK_MS ?? 2 * 60 * 60 * 1_000);
@@ -51,6 +51,19 @@ function createAdapter(counters) {
         count('identityReads');
         return { characterName: '长稳探针角色', isGroup: false };
       },
+    },
+    installation_scope: { read: () => ({ scriptId: 'era-idle-soak', scopes: ['character'], readStatus: 'complete' }) },
+    sidecar: {
+      read_current: async () => {
+        count('sidecarReads');
+        return { identity: null, meta: null, stat: null };
+      },
+      read_record: operation('sidecarRecordReads'),
+      write_record: operation('sidecarRecordWrites'),
+      commit_metadata: operation('sidecarMetadataCommits'),
+      create_id: () => ({ sidecarId: 'era_chat_idle-soak-12345678' }),
+      present_prompt: operation('sidecarPrompts'),
+      clear_prompt: operation('sidecarPromptClears'),
     },
     warn() {
       count('warnings');

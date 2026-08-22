@@ -3,7 +3,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { performance } from 'node:perf_hooks';
 
-const generatedModuleUrl = new URL('../../generated/era-service/era-service.js', import.meta.url);
+const generatedModuleUrl = new URL('../../generated/era-service/workflow.js', import.meta.url);
 const reportUrl = new URL('../../reports/service-performance.json', import.meta.url);
 const warmupEvents = Number(process.env.ERA_PERF_WARMUP_EVENTS ?? 10_000);
 const measuredEvents = Number(process.env.ERA_PERF_MEASURED_EVENTS ?? 50_000);
@@ -63,6 +63,16 @@ function createAdapter() {
       upsert: async () => ({ status: 'committed' }),
     },
     identity: { read: () => ({ characterName: '性能探针角色', isGroup: false }) },
+    installation_scope: { read: () => ({ scriptId: 'era-performance', scopes: ['character'], readStatus: 'complete' }) },
+    sidecar: {
+      read_current: async () => ({ identity: null, meta: null, stat: null }),
+      read_record: async () => ({ status: 'missing' }),
+      write_record: async () => ({ status: 'committed' }),
+      commit_metadata: async () => ({ status: 'committed' }),
+      create_id: () => ({ sidecarId: 'era_chat_performance-12345678' }),
+      present_prompt: () => ({ status: 'presented' }),
+      clear_prompt: () => ({ status: 'cleared' }),
+    },
     warn() {},
   };
 }
@@ -85,7 +95,10 @@ async function runEvents(adapter, count, collectDurations, heapCheckpoints) {
       receipts.push(admission.done);
     }
     const outcomes = await Promise.all(receipts);
-    assert(outcomes.every(outcome => outcome.status === 'completed'), '性能事件存在非 completed 结算。');
+    assert(
+      outcomes.every(outcome => outcome.status === 'completed'),
+      '性能事件存在非 completed 结算。',
+    );
     if (collectDurations) batchDurations.push((performance.now() - startedAt) / currentBatch);
 
     const completed = offset + currentBatch;

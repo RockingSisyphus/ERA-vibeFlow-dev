@@ -1,0 +1,10 @@
+{
+  "kind": "capability",
+  "id": "era.tavern.installation_scope",
+  "targets": ["browser"],
+  "display_name": "ERA 安装作用域读取",
+  "description": "只读当前脚本 ID 及三类 Tavern Helper 脚本树中的启用归属；不作业务分类。",
+  "operations": {
+    "read": {"input_type": "era.tavern.installation_scope.read.request", "output_type": "era.installation.scope.facts", "completion": "immediate"}
+  }
+}

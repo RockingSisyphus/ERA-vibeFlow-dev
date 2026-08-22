@@ -1,0 +1,18 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.installation.scope.decision",
+  "representation": "json",
+  "display_name": "ERA 安装作用域启动决议",
+  "description": "启动前 workflow 返回给组合层的允许或休眠决议及提示要求。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": ["classification", "route", "warn"],
+    "additionalProperties": false,
+    "properties": {
+      "classification": {"enum": ["character", "global", "preset", "ambiguous", "unknown"]},
+      "route": {"enum": ["allow", "dormant"]},
+      "warn": {"type": "boolean"}
+    }
+  }
+}

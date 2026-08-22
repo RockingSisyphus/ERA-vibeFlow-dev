@@ -39,6 +39,7 @@ const EVENT_MANUAL_SYNC = "manual_sync";
 const EVENT_MANUAL_FULL_SYNC = "manual_full_sync";
 const EVENT_UI_INITIALIZE_RESOURCES = "era.ui.initialize_resources";
 const EVENT_UI_UPDATE_SETTINGS = "era.ui.update_settings";
+const EVENT_UI_SIDECAR_BINDING_CHOICE = "era.ui.sidecar_binding_choice";
 
 export type EventGroup =
   | "INIT"
@@ -164,6 +165,7 @@ export function getInputEvents() {
     MANUAL_FULL_SYNC: EVENT_MANUAL_FULL_SYNC,
     UI_INITIALIZE_RESOURCES: EVENT_UI_INITIALIZE_RESOURCES,
     UI_UPDATE_SETTINGS: EVENT_UI_UPDATE_SETTINGS,
+    UI_SIDECAR_BINDING_CHOICE: EVENT_UI_SIDECAR_BINDING_CHOICE,
   } as const;
 }
 
@@ -183,6 +185,7 @@ export function getEventGroups() {
       EVENT_CHAT_CHANGED,
       EVENT_MANUAL_SYNC,
       EVENT_MANUAL_FULL_SYNC,
+      EVENT_UI_SIDECAR_BINDING_CHOICE,
     ],
     API: getApiEventTypes(),
     UPDATE_MK_ONLY: [EVENT_MESSAGE_SENT],
@@ -198,6 +201,7 @@ export function getListenedEventTypes(): readonly string[] {
     EVENT_APP_READY,
     EVENT_UI_INITIALIZE_RESOURCES,
     EVENT_UI_UPDATE_SETTINGS,
+    EVENT_UI_SIDECAR_BINDING_CHOICE,
     EVENT_MANUAL_WRITE,
     EVENT_MESSAGE_RECEIVED,
     EVENT_MESSAGE_DELETED,
@@ -248,6 +252,9 @@ export function getEventDefinition(
       awaitMode: "detached",
       collectionWindowMs: 0,
     };
+  }
+  if (eventType === EVENT_UI_SIDECAR_BINDING_CHOICE) {
+    return { type: eventType, group: "SYNC", listenerOrder: "normal", awaitMode: "detached", collectionWindowMs: 0 };
   }
   if (isApiEventType(eventType)) {
     return {
@@ -423,6 +430,10 @@ function isManualSyncEvent(eventType: string): boolean {
   );
 }
 
+/**
+ * 修复本地镜像只重试 Sidecar 文件提交，绝不能把 API/当前状态回退到聊天文本
+ * 的全量重算结果。迁移、独立和复制则需要完整重放，才能把其受控恢复指令固化。
+ */
 function isApiMessageWriteEvent(eventType: string): boolean {
   return (
     eventType === API_INSERT_BY_OBJECT ||
@@ -508,7 +519,8 @@ function createDomainTask(unit: WorkUnitV1): DomainTaskV1 | null {
         : "history-changed",
       target: { kind: "auto" },
       context: "latest-message-with-mk",
-      fullRebuild: unit.effectiveType === EVENT_MANUAL_FULL_SYNC,
+      fullRebuild: unit.effectiveType === EVENT_MANUAL_FULL_SYNC ||
+        unit.effectiveType === EVENT_UI_SIDECAR_BINDING_CHOICE,
     });
   }
 

@@ -63,6 +63,13 @@ export interface EraPreparedNotification {
   readonly args: readonly unknown[];
 }
 
+/** 主 workflow 的安装作用域结论；应用组合层据此决定是否挂载 client/宏/UI。 */
+export interface EraStartupGateDecision {
+  readonly classification: 'character' | 'global' | 'preset' | 'ambiguous' | 'unknown' | 'legacy';
+  readonly route: 'allow' | 'dormant';
+  readonly warn?: boolean;
+}
+
 export interface EraCapabilityContext {
   readonly signal: AbortSignal;
 }
@@ -96,6 +103,10 @@ export interface EraTavernAdapter {
   readonly identity: {
     read(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
   };
+  /** 只读当前脚本在三类 Tavern Helper 脚本树中的启用归属。 */
+  readonly installation_scope: {
+    read(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
+  };
   /** Sidecar 宿主机械能力；绑定规则与迁移决策位于 VibeFlow service workflow。 */
   readonly sidecar: {
     read_current(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
@@ -115,6 +126,12 @@ export interface EraServiceIngress {
 }
 
 export type EraRuntimeAdapter = EraTavernAdapter & EraServiceIngress;
+
+/** 真实 Tavern adapter 由 workflow Host 结算一次启动闸门。 */
+export interface EraStartupGateAdapter {
+  waitForStartupGate(): Promise<EraStartupGateDecision>;
+  settleStartupGate(decision: EraStartupGateDecision): void;
+}
 
 /** 应用层只依赖 AOT Host 的公开生命周期 ABI。 */
 export interface EraWorkflowHost {

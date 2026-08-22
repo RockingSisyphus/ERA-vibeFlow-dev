@@ -1,8 +1,13 @@
 import {
   durableRestoreInstruction,
   enrich,
+  factsWithRecord,
   inspectSidecar,
   recordFor,
+  stateFromRecord,
+  type SidecarFactsV1,
+  type SidecarRecordV1,
+  type SidecarStateV2,
   type SidecarResolutionV1,
   type SyncContextV1,
 } from "../../base_lib/sidecar_binding.ts";
@@ -34,9 +39,21 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  */
 function variablesFromSync(sync: SyncContextV1): Record<string, unknown> {
   if (!isRecord(sync.variablesRaw)) throw new TypeError("当前同步上下文缺少聊天变量。");
-  return isRecord(sync.variablesRaw.variables)
-    ? sync.variablesRaw.variables
-    : sync.variablesRaw;
+  if (isRecord(sync.variablesRaw.variables)) return sync.variablesRaw.variables;
+  // Sidecar store 的入口故意只读宿主的 `{ identity, meta, stat }` 事实，
+  // 而不是直接把整份 chat variables 交给同步路径。事务内部仍需要构造一次
+  // 临时变量投影，以便给既有纯同步/恢复逻辑传递 SidecarId；这个投影不写回
+  // Tavern，也不构成状态回退来源。
+  if (Object.prototype.hasOwnProperty.call(sync.variablesRaw, "identity") &&
+    (sync.variablesRaw.meta === null || isRecord(sync.variablesRaw.meta))) {
+    const variables: Record<string, unknown> = {};
+    if (isRecord(sync.variablesRaw.meta)) variables.ERAMetaData = sync.variablesRaw.meta;
+    if (sync.variablesRaw.stat !== null && Object.prototype.hasOwnProperty.call(sync.variablesRaw, "stat")) {
+      variables.stat_data = sync.variablesRaw.stat;
+    }
+    return variables;
+  }
+  return sync.variablesRaw;
 }
 
 function withVariables(sync: SyncContextV1, variables: Record<string, unknown>): SyncContextV1 {
@@ -84,6 +101,44 @@ function withSidecarId(sync: SyncContextV1, sidecarId: string): SyncContextV1 {
   return withVariables(sync, { ...variables, ERAMetaData: { ...meta, SidecarId: sidecarId } });
 }
 
+function stateFromSync(sync: SyncContextV1, facts: SidecarFactsV1): SidecarStateV2 {
+  if (facts.legacyState !== null) return facts.legacyState;
+  // V1 用户文件没有聊天内 legacy stat_data 时，文件本身就是升级的唯一旧
+  // 状态来源。不得把它误降级为空对象，否则一次格式升级会丢失变量。
+  if (facts.legacyRecord !== null) {
+    return { statData: facts.legacyRecord.statData, eraMeta: {} };
+  }
+  const value = variablesFromSync(sync);
+  const eraMeta = isRecord(value.ERAMetaData) ? { ...value.ERAMetaData } : {};
+  delete eraMeta.SidecarId;
+  return { statData: value.stat_data ?? {}, eraMeta };
+}
+
+async function publish(context: Ctx, record: SidecarRecordV1): Promise<void> {
+  // Host 只在文件已确认后，以同一机械 pointer 提交顺序发布易失快照；不在此处
+  // 决定 owner、冲突或状态内容。
+  const committed = await context.capabilities["era.tavern.sidecar"].commit_metadata({ sidecarId: record.sidecarId, snapshot: record });
+  if (!isRecord(committed) || committed.status !== "committed") {
+    throw new TypeError("ERA Sidecar 聊天指针提交失败。");
+  }
+}
+
+async function commitV2(context: Ctx, record: SidecarRecordV1): Promise<void> {
+  await context.capabilities["era.tavern.sidecar"].write_record({ sidecarId: record.sidecarId, record });
+  // 指针绝不能先于文件公开。回读同时让上传成功但落盘内容异常的情况
+  // 停在旧聊天状态，避免产生“指针已切换、唯一状态却不可读取”的半事务。
+  const reread = await context.capabilities["era.tavern.sidecar"].read_record({ sidecarId: record.sidecarId });
+  const verified = inspectSidecar(
+    { identity: record.owner, meta: { SidecarId: record.sidecarId }, stat: null },
+    reread,
+  );
+  if (verified.record === null || verified.record.revision !== record.revision ||
+    verified.record.sidecarId !== record.sidecarId) {
+    throw new TypeError("ERA Sidecar 文件提交后验证失败。");
+  }
+  await publish(context, record);
+}
+
 export async function run(inputs: Readonly<{
   "era.sidecar.binding.input": { readonly value: unknown };
   "era.sidecar.binding.resolution": { readonly value: unknown };
@@ -91,7 +146,23 @@ export async function run(inputs: Readonly<{
   const sync = (inputs["era.sidecar.binding.input"].value as { readonly sync: SyncContextV1 }).sync;
   const resolution = inputs["era.sidecar.binding.resolution"].value as SidecarResolutionV1;
   const { facts, choice } = resolution;
+  // 派发上下文若已在 Sidecar 之前失败，就没有安全的消息/变量快照可迁移。
+  // 此时保持原失败上下文由后续同步结果结算，绝不为了“修复绑定”去读取或清空
+  // 聊天状态；否则一个无关的 Tavern 事件错误会制造 Sidecar 半事务。
+  const syncStatus = (sync as { readonly status?: unknown }).status;
+  if (syncStatus !== undefined && syncStatus !== "ready") {
+    return {
+      sidecar_applied_context: {
+        ...sync,
+        sidecarBinding: facts,
+        sidecarBindingRoute: "continue",
+        sidecarBindingChoice: null,
+      },
+      sidecar_binding_route: "continue",
+    };
+  }
   if (resolution.route === "continue") {
+    if (facts.record !== null) await publish(context, facts.record);
     return { sidecar_applied_context: enrich(sync, facts, "continue", choice), sidecar_binding_route: "continue" };
   }
   if (resolution.route === "blocked") {
@@ -100,16 +171,19 @@ export async function run(inputs: Readonly<{
   if (facts.status === "create" && facts.current !== null) {
     const targetId = context.capabilities["era.tavern.sidecar"].create_id({}).sidecarId;
     const resolved = withSidecarId(sync, targetId);
-    await context.capabilities["era.tavern.sidecar"].commit_metadata({ sidecarId: targetId });
-    const stat = variablesFromSync(resolved).stat_data ?? {};
-    await context.capabilities["era.tavern.sidecar"].write_record({
-      sidecarId: targetId,
-      record: recordFor(targetId, facts.current, stat, null),
-    });
+    const record = recordFor(targetId, facts.current, stateFromSync(resolved, facts), null);
+    await commitV2(context, record);
     // `apply` 只属于本 Nodeset 内部的决议阶段；事务已经完成后，输出给
     // task_sync 的同步上下文必须是可继续的正式路由。把它泄露为 `apply`
     // 会在工作流数据合同校验处被拒绝，导致已经完成的宿主写入无法结算。
-    return { sidecar_applied_context: enrich(resolved, facts, "continue", choice), sidecar_binding_route: "continue" };
+    return { sidecar_applied_context: enrich(resolved, factsWithRecord(facts, record), "continue", choice), sidecar_binding_route: "continue" };
+  }
+  if (facts.status === "migrate-legacy" && facts.current !== null) {
+    const targetId = facts.sidecarId ?? context.capabilities["era.tavern.sidecar"].create_id({}).sidecarId;
+    const resolved = withSidecarId(sync, targetId);
+    const record = recordFor(targetId, facts.current, stateFromSync(resolved, facts), facts.record ?? facts.legacyRecord);
+    await commitV2(context, record);
+    return { sidecar_applied_context: enrich(resolved, factsWithRecord(facts, record), "continue", choice), sidecar_binding_route: "continue" };
   }
   if ((facts.status === "invalid" || facts.status === "matched") && facts.current !== null && choice === "repair") {
     // 修复不是静默降级：只有用户点击明确的修复动作后，才会保留可用 ID 或分配新 ID，
@@ -126,19 +200,15 @@ export async function run(inputs: Readonly<{
     }
     const targetId = rereadFacts.sidecarId ?? context.capabilities["era.tavern.sidecar"].create_id({}).sidecarId;
     const resolved = withSidecarId(sync, targetId);
-    await context.capabilities["era.tavern.sidecar"].commit_metadata({ sidecarId: targetId });
     // repair 处理的是“文件镜像落后于已提交聊天变量”的情形。同步上下文可能
     // 来自该次 UI 选择之前的规划快照，不能拿它覆盖刚刚由 API 写入的当前状态。
-    const stat = (rereadCurrent as Record<string, unknown>).stat;
-    if (stat === undefined) throw new TypeError("当前聊天缺少可镜像的 stat_data；请修复当前聊天。");
-    await context.capabilities["era.tavern.sidecar"].write_record({
-      sidecarId: targetId,
-      record: recordFor(targetId, rereadFacts.current, stat, rereadFacts.record),
-    });
+    const record = recordFor(targetId, rereadFacts.current, rereadFacts.record === null ? stateFromSync(resolved, rereadFacts) : stateFromRecord(rereadFacts.record), rereadFacts.record);
+    await commitV2(context, record);
     context.capabilities["era.tavern.sidecar"].clear_prompt({});
-    // repair 已经只通过当前聊天的已提交 stat_data 重建了本地镜像。继续进入
-    // 普通同步会把 API 写入误当成聊天文本可重放状态，反而覆盖当前变量。
-    return { sidecar_applied_context: enrich(resolved, rereadFacts, "applied", choice), sidecar_binding_route: "applied" };
+    // 文件失败前已经确认写入的 Variable 指令是唯一可重放事实。repair 先恢复
+    // 一个经过回读验证的 V2 基线，再强制完整同步，使该指令重新得出状态；绝不
+    // 读取聊天变量作为后备状态，也不把旧 Sidecar 快照当作最终恢复结果。
+    return { sidecar_applied_context: enrich(resolved, factsWithRecord(rereadFacts, record), "continue", choice), sidecar_binding_route: "continue" };
   }
   if (facts.status !== "conflict" || facts.current === null || facts.record === null || choice === null) {
     throw new TypeError("Sidecar 绑定决议无效；请重新检查当前聊天。");
@@ -161,7 +231,7 @@ export async function run(inputs: Readonly<{
     const messages = (sync.messagesRaw as { readonly messages?: readonly { readonly messageId: number; readonly role: string; readonly content: string }[] })?.messages ?? [];
     const lastAi = [...messages].reverse().find((item) => item.role === "assistant");
     if (lastAi === undefined) throw new TypeError("当前聊天没有可追加恢复指令的 AI 消息。");
-    const restore = durableRestoreInstruction(variablesFromSync(sync).stat_data, facts.record.statData);
+    const restore = durableRestoreInstruction(stateFromSync(sync, facts).statData, facts.record.state.statData);
     if (restore === null) throw new TypeError("当前聊天含有无法安全替换的受保护变量；请先修复当前聊天。");
     await context.capabilities["era.tavern.messages"].update_content({
       messageId: lastAi.messageId,
@@ -172,15 +242,10 @@ export async function run(inputs: Readonly<{
   }
 
   resolved = withSidecarId(resolved, targetId);
-  await context.capabilities["era.tavern.sidecar"].commit_metadata({ sidecarId: targetId });
-  const stat = choice === "independent"
-    ? (variablesFromSync(resolved).stat_data ?? {})
-    : facts.record.statData;
-  await context.capabilities["era.tavern.sidecar"].write_record({
-    sidecarId: targetId,
-    record: recordFor(targetId, facts.current, stat, choice === "migrate" ? facts.record : null),
-  });
+  const state = choice === "independent" ? stateFromSync(resolved, facts) : stateFromRecord(facts.record);
+  const record = recordFor(targetId, facts.current, state, choice === "migrate" ? facts.record : null);
+  await commitV2(context, record);
   context.capabilities["era.tavern.sidecar"].clear_prompt({});
   // 同上：选择已经被事务消费，后续完整同步只接收规范的 continue 路由。
-  return { sidecar_applied_context: enrich(resolved, facts, "continue", choice), sidecar_binding_route: "continue" };
+  return { sidecar_applied_context: enrich(resolved, factsWithRecord(facts, record), "continue", choice), sidecar_binding_route: "continue" };
 }

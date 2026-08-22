@@ -1759,13 +1759,6 @@
     },
     {
       "debt": 1,
-      "fingerprint": "6e401c630fffe64c327059086a8981ce5b1b523ed76830d20f6cfbf1fd7a9e76",
-      "objectId": "src/ERA变量框架/core/crud/delete.ts#STORAGE#src/ERA变量框架/utils/era_data.ts#src/ERA变量框架/utils/era_data#function:getEraData",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
       "fingerprint": "a16b61cf35b2b9adb2eac4575120199e1035c1edbcb0d8bf77d80ff964ae512a",
       "objectId": "src/ERA变量框架/core/crud/delete.ts#STORAGE#src/ERA变量框架/utils/era_data.ts#src/ERA变量框架/utils/era_data#function:initEraSettings",
       "ruleId": "PURE_MODULE_SIDE_EFFECT",
@@ -1808,20 +1801,6 @@
     },
     {
       "debt": 1,
-      "fingerprint": "291ebad0b9a6f9e291afb0ba97d5c5c8b5c7ef5072b3facb0a4e4d09851c5a01",
-      "objectId": "src/ERA变量框架/core/crud/delete.ts#TAVERN_HELPER#src/ERA变量框架/utils/era_data.ts#src/ERA变量框架/utils/era_data#function:updateEraMetaData",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "3ae0cdafbd45795d423392da384be4100bd05eb5f3c7502ca92d8ddd784d6255",
-      "objectId": "src/ERA变量框架/core/crud/delete.ts#TAVERN_HELPER#src/ERA变量框架/utils/era_data.ts#src/ERA变量框架/utils/era_data#function:updateEraStatData",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
       "fingerprint": "a9da7917e43fa4af1b9ba7d8d89e9d6bfb3c41473268da5a3d4f1f47acd150c7",
       "objectId": "src/ERA变量框架/core/crud/delete.ts#TAVERN_HELPER#src/ERA变量框架/utils/era_data.ts#src/ERA变量框架/utils/era_data#function:updateScriptSettings",
       "ruleId": "PURE_MODULE_SIDE_EFFECT",
@@ -1838,13 +1817,6 @@
       "debt": 1,
       "fingerprint": "7f297722c1bb10de6f50c6ca1f0867b67daa0bd2247d839fbcf41f56c7f0df73",
       "objectId": "src/ERA变量框架/core/crud/insert/insert.ts#DOM_UI#src/ERA变量框架/utils/log.ts#src/ERA变量框架/utils/log#function:Logger.warn",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "85b938d874fd5ee812b9e5284199724568c82b40e07ae8e75bb743201cd0606a",
-      "objectId": "src/ERA变量框架/core/crud/insert/insert.ts#STORAGE#src/ERA变量框架/utils/era_data.ts#src/ERA变量框架/utils/era_data#function:getEraData",
       "ruleId": "PURE_MODULE_SIDE_EFFECT",
       "severity": "error"
     },
@@ -1892,20 +1864,6 @@
     },
     {
       "debt": 1,
-      "fingerprint": "75d68689e0e013b62c3dd69cd609876add6cccb1648ad6d2cb99c3304e2d0fd0",
-      "objectId": "src/ERA变量框架/core/crud/insert/insert.ts#TAVERN_HELPER#src/ERA变量框架/utils/era_data.ts#src/ERA变量框架/utils/era_data#function:updateEraMetaData",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "1065ab20a0530d5036303605f045b8e30be990eec110bcead07c63910750557a",
-      "objectId": "src/ERA变量框架/core/crud/insert/insert.ts#TAVERN_HELPER#src/ERA变量框架/utils/era_data.ts#src/ERA变量框架/utils/era_data#function:updateEraStatData",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
       "fingerprint": "cf459e1ca39b3abcda8c923abe08be7edbc5d945892024fd236cdf0ce36b815f",
       "objectId": "src/ERA变量框架/core/crud/insert/insert.ts#TAVERN_HELPER#src/ERA变量框架/utils/era_data.ts#src/ERA变量框架/utils/era_data#function:updateScriptSettings",
       "ruleId": "PURE_MODULE_SIDE_EFFECT",
@@ -1922,13 +1880,6 @@
       "debt": 1,
       "fingerprint": "dfee3f1e7f28928ca35689280a237cfbf137396f02e7db02a6c10de36c49ce3e",
       "objectId": "src/ERA变量框架/core/crud/insert/template.ts#DOM_UI#src/ERA变量框架/utils/log.ts#src/ERA变量框架/utils/log#function:Logger.warn",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "32b6f95c27057b5315da3aa932a1b88bc58f48402b12915ee59fedb266a7b90a",
-      "objectId": "src/ERA变量框架/core/crud/insert/template.ts#STORAGE#src/ERA变量框架/utils/era_data.ts#src/ERA变量框架/utils/era_data#function:getEraData",
       "ruleId": "PURE_MODULE_SIDE_EFFECT",
       "severity": "error"
     },
@@ -1976,20 +1927,6 @@
     },
     {
       "debt": 1,
-      "fingerprint": "c853e5ab341f665bf5b893251caa922495280b77e757b5c22b0345946e4f3dac",
-      "objectId": "src/ERA变量框架/core/crud/insert/template.ts#TAVERN_HELPER#src/ERA变量框架/utils/era_data.ts#src/ERA变量框架/utils/era_data#function:updateEraMetaData",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "fdfe3314263dfb12f245a30602e8d62fe8fa494c0596e4a0e369d237636d7945",
-      "objectId": "src/ERA变量框架/core/crud/insert/template.ts#TAVERN_HELPER#src/ERA变量框架/utils/era_data.ts#src/ERA变量框架/utils/era_data#function:updateEraStatData",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
       "fingerprint": "bf3998dd9696c6f0bb33676e893160966bd68415766370b87b20a7c8c1f2f697",
       "objectId": "src/ERA变量框架/core/crud/insert/template.ts#TAVERN_HELPER#src/ERA变量框架/utils/era_data.ts#src/ERA变量框架/utils/era_data#function:updateScriptSettings",
       "ruleId": "PURE_MODULE_SIDE_EFFECT",
@@ -2006,13 +1943,6 @@
       "debt": 1,
       "fingerprint": "cde2ff9415d3a52e66cfd04a3226a9d429850b7468cf1f1a4c22751d0262e45a",
       "objectId": "src/ERA变量框架/core/crud/update.ts#DOM_UI#src/ERA变量框架/utils/log.ts#src/ERA变量框架/utils/log#function:Logger.warn",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "99ea271a8540174c34825332fa20776b189424fece845c4ea5f71f85d36d878a",
-      "objectId": "src/ERA变量框架/core/crud/update.ts#STORAGE#src/ERA变量框架/utils/era_data.ts#src/ERA变量框架/utils/era_data#function:getEraData",
       "ruleId": "PURE_MODULE_SIDE_EFFECT",
       "severity": "error"
     },
@@ -2060,20 +1990,6 @@
     },
     {
       "debt": 1,
-      "fingerprint": "e28fe4c9d828468ba4521963c2fe508a2f220bbdb9e236f4a37e4a0668cb328f",
-      "objectId": "src/ERA变量框架/core/crud/update.ts#TAVERN_HELPER#src/ERA变量框架/utils/era_data.ts#src/ERA变量框架/utils/era_data#function:updateEraMetaData",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "f59ef945a7e557e44d56074451cf04a28c83cf42f9bf20e891a1422824d4cdcf",
-      "objectId": "src/ERA变量框架/core/crud/update.ts#TAVERN_HELPER#src/ERA变量框架/utils/era_data.ts#src/ERA变量框架/utils/era_data#function:updateEraStatData",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
       "fingerprint": "b8988cdaa2410c18fe387653de18ffe52f947ff877d54daabd664aafa2e20a69",
       "objectId": "src/ERA变量框架/core/crud/update.ts#TAVERN_HELPER#src/ERA变量框架/utils/era_data.ts#src/ERA变量框架/utils/era_data#function:updateScriptSettings",
       "ruleId": "PURE_MODULE_SIDE_EFFECT",
@@ -2090,13 +2006,6 @@
       "debt": 1,
       "fingerprint": "e134fc535afb478eac8c482c7cda08183ee0d05698199fe28b43c59b4cc80113",
       "objectId": "src/ERA变量框架/core/timetravel.ts#DOM_UI#src/ERA变量框架/utils/log.ts#src/ERA变量框架/utils/log#function:Logger.warn",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "3eb5d39f3e8b6f08a3892b1b3f702cfcc944d35f6a45a196efbeaa6547818950",
-      "objectId": "src/ERA变量框架/core/timetravel.ts#STORAGE#src/ERA变量框架/utils/era_data.ts#src/ERA变量框架/utils/era_data#function:getEraData",
       "ruleId": "PURE_MODULE_SIDE_EFFECT",
       "severity": "error"
     },
@@ -2139,20 +2048,6 @@
       "debt": 1,
       "fingerprint": "70c3624d87fe0eb123f4a2e2244e12f4019f6fe558225fcfabf2d5c11cdc4ead",
       "objectId": "src/ERA变量框架/core/timetravel.ts#STORAGE#src/ERA变量框架/utils/log.ts#src/ERA变量框架/utils/log#function:updateConfig",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "92f91db0ad0d7f225c9993d82553f19f2e5a7273f7645f8fe43fa20637f91a5a",
-      "objectId": "src/ERA变量框架/core/timetravel.ts#TAVERN_HELPER#src/ERA变量框架/utils/era_data.ts#src/ERA变量框架/utils/era_data#function:updateEraMetaData",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "a0944d26c9c2c7235f55211f3cf8aa956973b89305d50b32d51629f4744a2e00",
-      "objectId": "src/ERA变量框架/core/timetravel.ts#TAVERN_HELPER#src/ERA变量框架/utils/era_data.ts#src/ERA变量框架/utils/era_data#function:updateEraStatData",
       "ruleId": "PURE_MODULE_SIDE_EFFECT",
       "severity": "error"
     },

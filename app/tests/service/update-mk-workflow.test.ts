@@ -72,9 +72,17 @@ interface FakeOptions {
 }
 
 function fakeTavern(message: JsonRecord, initialMeta: JsonRecord, options: FakeOptions = {}) {
+  const sidecarId = 'era_chat_update-mk-12345678';
   const state = {
     message: structuredClone(message),
     meta: structuredClone(initialMeta),
+    sidecar: {
+      schemaVersion: 2,
+      sidecarId,
+      owner: { characterId: 'card-update-mk', groupId: null, chatId: 'chat-update-mk' },
+      revision: 1,
+      state: { statData: {}, eraMeta: structuredClone(initialMeta) },
+    },
     scriptVariables: structuredClone(options.scriptVariables ?? {}),
   };
   const counters = {
@@ -147,6 +155,32 @@ function fakeTavern(message: JsonRecord, initialMeta: JsonRecord, options: FakeO
         };
       },
     },
+    'era.tavern.sidecar': {
+      read_current: async () => {
+        counters.variableReads += 1;
+        order.push('sidecar.read_current');
+        return { identity: structuredClone(state.sidecar.owner), meta: { SidecarId: sidecarId }, stat: null };
+      },
+      read_record: async () => {
+        counters.variableReads += 1;
+        order.push('sidecar.read_record');
+        return { status: 'found', sidecarId, record: structuredClone(state.sidecar) };
+      },
+      write_record: async (input: JsonRecord) => {
+        counters.variableCommits += 1;
+        order.push('sidecar.write_record');
+        if (options.variableFailure === 'throw') throw new Error('变量写入故障');
+        if (options.variableFailure === 'cancel') {
+          const error = new Error('变量写入已取消');
+          error.name = 'AbortError';
+          throw error;
+        }
+        state.sidecar = structuredClone(input.record);
+        state.meta = structuredClone(state.sidecar.state.eraMeta);
+        return { status: 'committed' };
+      },
+      commit_metadata: async () => ({ status: 'committed' }),
+    },
   };
   return { state, counters, order, capabilities };
 }
@@ -209,7 +243,7 @@ describe('VibeFlow update-mk 工作流切片', () => {
     expect(result.taskResult.diagnostics[0].code).toBe('ERA_UPDATE_MK_CONSECUTIVE_STATE_UNCHANGED');
     expect(fake.counters).toEqual({
       messageReads: 1,
-      variableReads: 2,
+      variableReads: 3,
       messageUpdates: 0,
       variableCommits: 0,
       lateResults: 0,
@@ -233,11 +267,15 @@ describe('VibeFlow update-mk 工作流切片', () => {
     expect(fake.state.meta.unknown).toEqual(initialMeta.unknown);
     expect(fake.order).toEqual([
       'messages.read_context',
-      'variables.read',
+      'sidecar.read_current',
+      'sidecar.read_record',
       'variables.read',
       'messages.update_content',
-      'variables.commit',
-      'variables.read',
+      'sidecar.read_current',
+      'sidecar.read_record',
+      'sidecar.write_record',
+      'sidecar.read_record',
+      'sidecar.read_current',
     ]);
     expect(result.taskResult.status).toBe('committed');
     expect(result.taskResult.settlements).toHaveLength(2);
@@ -319,7 +357,7 @@ describe('VibeFlow update-mk 工作流切片', () => {
       error: { code: 'ERA_UPDATE_MK_MESSAGE_COMMIT_FAILED' },
     });
     expect(fake.counters.variableCommits).toBe(0);
-    expect(fake.counters.variableReads).toBe(2);
+    expect(fake.counters.variableReads).toBe(3);
   });
 
   it('消息已确认后变量失败进入 fatal，不伪报部分成功', async () => {
@@ -356,6 +394,6 @@ describe('VibeFlow update-mk 工作流切片', () => {
     expect(result.taskResult.settlements[0]).toMatchObject({ status: 'cancelled', sequence: 61 });
     expect(fake.counters.lateResults).toBe(1);
     expect(fake.counters.variableCommits).toBe(0);
-    expect(fake.counters.variableReads).toBe(2);
+    expect(fake.counters.variableReads).toBe(3);
   });
 });

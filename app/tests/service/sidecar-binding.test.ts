@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { updateEraMetaData, updateEraStatData } from '../../src/ERA变量框架/utils/era_data';
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- 验证同一 VibeFlow 纯规则。
 // @ts-ignore app test root 直接复用 service 纯规则。
@@ -11,7 +12,6 @@ import {
 } from '../../../javascript_project/service/base_lib/sidecar_binding';
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- 验证提交后镜像失败的 workflow 行为。
 // @ts-ignore app test root 直接复用 Service Sidecar 节点。
-import { run as persistSnapshot } from '../../../javascript_project/service/nodes/sidecar/persist_snapshot';
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- 验证修复事务使用重新读取的当前聊天状态。
 // @ts-ignore app test root 直接复用 Service Sidecar 节点。
 import { run as applyResolution } from '../../../javascript_project/service/nodes/sidecar/apply_resolution';
@@ -22,8 +22,8 @@ import { planEventBatch } from '../../../javascript_project/service/base_lib/dom
 const current = { characterId: 'card-a', groupId: null, chatId: 'chat-a' };
 const sidecarId = 'era_chat_12345678-1234-4234-8234-123456789abc';
 
-function currentContext(id = sidecarId) {
-  return { identity: current, meta: { SidecarId: id }, stat: { player: { hp: 10 } } };
+function currentContext(id = sidecarId, legacy = false) {
+  return { identity: current, meta: { SidecarId: id }, stat: legacy ? { player: { hp: 10 } } : null };
 }
 
 function sidecarChoiceStep(choice: 'migrate' | 'independent' | 'copy' | 'repair') {
@@ -40,6 +40,15 @@ function sidecarChoiceStep(choice: 'migrate' | 'independent' | 'copy' | 'repair'
 }
 
 describe('ERA Sidecar 绑定纯规则', () => {
+  it('冻结旧写入 helper，避免任何生产路径回退把状态写入聊天变量', async () => {
+    await expect(updateEraStatData(() => ({ player: { hp: 99 } }))).rejects.toThrow(
+      'ERA_LEGACY_CHAT_STATE_WRITE_FORBIDDEN',
+    );
+    await expect(updateEraMetaData(() => ({ SelectedMks: [] }))).rejects.toThrow(
+      'ERA_LEGACY_CHAT_STATE_WRITE_FORBIDDEN',
+    );
+  });
+
   it('同一角色卡与聊天的记录精确匹配', () => {
     const record = recordFor(sidecarId, current, { player: { hp: 10 } }, null);
     expect(inspectSidecar(currentContext(), { status: 'found', record })).toMatchObject({
@@ -57,10 +66,10 @@ describe('ERA Sidecar 绑定纯规则', () => {
     });
   });
 
-  it('无 ERA 元数据的聊天没有任何 Sidecar 副作用', () => {
+  it('已获角色卡脚本许可的新聊天无指针时进入创建，而不再以元数据猜测是否运行 ERA', () => {
     expect(inspectSidecar({ identity: current, meta: null }, null)).toMatchObject({
-      status: 'not-applicable',
-      reason: 'not-era-chat',
+      status: 'create',
+      reason: 'sidecar-id-absent',
     });
   });
 
@@ -124,38 +133,6 @@ describe('ERA Sidecar 绑定纯规则', () => {
     ).toMatchObject({ route: 'apply', choice: 'repair' });
   });
 
-  it('提交后本地镜像写失败时发布显式 repair，而不伪装聊天提交失败', async () => {
-    const record = recordFor(sidecarId, current, { player: { hp: 10 } }, null);
-    const prompts: unknown[] = [];
-    await expect(
-      persistSnapshot(
-        { 'era.tavern.commit.result': { value: { status: 'committed', variablesCommitted: true } } },
-        {},
-        {
-          capabilities: {
-            'era.tavern.sidecar': {
-              read_current: async () => currentContext(),
-              read_record: async () => ({ status: 'found', record }),
-              write_record: async () => {
-                throw new Error('native-file-unavailable');
-              },
-              present_prompt: (input: unknown) => prompts.push(input),
-            },
-          },
-        },
-      ),
-    ).resolves.toEqual({});
-    expect(prompts).toEqual([
-      {
-        prompt: expect.objectContaining({
-          kind: 'repair',
-          sidecarId,
-          reason: 'sidecar-record-write-failed',
-        }),
-      },
-    ]);
-  });
-
   it('只接受 Sidecar UI 事件的 ABI JSON 参数，普通同步不得伪造选择', () => {
     const record = recordFor(sidecarId, current, { player: { hp: 10 } }, null);
     const facts = inspectSidecar(currentContext(), { status: 'found', record });
@@ -184,7 +161,7 @@ describe('ERA Sidecar 绑定纯规则', () => {
     ).toMatchObject({ route: 'continue', choice: null });
   });
 
-  it('repair 只重试本地镜像，迁移、独立和复制才请求完整重放', () => {
+  it('所有 Sidecar 选择都请求完整重放，repair 也必须重放已确认的文件失败前指令', () => {
     const plan = (choice: 'repair' | 'migrate' | 'independent' | 'copy') =>
       planEventBatch([
         {
@@ -198,8 +175,7 @@ describe('ERA Sidecar 绑定纯规则', () => {
           encodedBytes: 1,
         },
       ])[0];
-    expect(plan('repair')).toMatchObject({ kind: 'execute', task: { kind: 'sync', fullRebuild: false } });
-    for (const choice of ['migrate', 'independent', 'copy'] as const) {
+    for (const choice of ['repair', 'migrate', 'independent', 'copy'] as const) {
       expect(plan(choice)).toMatchObject({ kind: 'execute', task: { kind: 'sync', fullRebuild: true } });
     }
   });
@@ -208,6 +184,7 @@ describe('ERA Sidecar 绑定纯规则', () => {
     const record = recordFor(sidecarId, current, { player: { hp: 10 } }, null);
     const writes: unknown[] = [];
     const clears: unknown[] = [];
+    let persisted = record;
     await applyResolution(
       {
         'era.sidecar.binding.input': {
@@ -232,9 +209,13 @@ describe('ERA Sidecar 绑定纯规则', () => {
         capabilities: {
           'era.tavern.sidecar': {
             read_current: async () => currentContext(),
-            read_record: async () => ({ status: 'found', record }),
-            write_record: async (input: unknown) => writes.push(input),
-            commit_metadata: async () => ({}),
+            read_record: async () => ({ status: 'found', record: persisted }),
+            write_record: async (input: unknown) => {
+              writes.push(input);
+              persisted = (input as { readonly record: typeof record }).record;
+              return { status: 'committed' };
+            },
+            commit_metadata: async () => ({ status: 'committed' }),
             create_id: () => ({ sidecarId: 'era_chat_unused' }),
             clear_prompt: (input: unknown) => clears.push(input),
           },
@@ -245,7 +226,7 @@ describe('ERA Sidecar 绑定纯规则', () => {
     expect(writes).toEqual([
       expect.objectContaining({
         sidecarId,
-        record: expect.objectContaining({ statData: { player: { hp: 10 } } }),
+        record: expect.objectContaining({ state: expect.objectContaining({ statData: { player: { hp: 10 } } }) }),
       }),
     ]);
     expect(clears).toEqual([{}]);
@@ -255,6 +236,7 @@ describe('ERA Sidecar 绑定纯规则', () => {
     const record = recordFor(sidecarId, { ...current, chatId: 'chat-old' }, { player: { hp: 10 } }, null);
     const conflictCurrent = currentContext();
     const writes: unknown[] = [];
+    let persisted = record;
     const result = await applyResolution(
       {
         'era.sidecar.binding.input': {
@@ -282,9 +264,13 @@ describe('ERA Sidecar 绑定纯规则', () => {
         capabilities: {
           'era.tavern.sidecar': {
             read_current: async () => conflictCurrent,
-            read_record: async () => ({ status: 'found', record }),
-            write_record: async (input: unknown) => writes.push(input),
-            commit_metadata: async () => ({}),
+            read_record: async () => ({ status: 'found', record: persisted }),
+            write_record: async (input: unknown) => {
+              writes.push(input);
+              persisted = (input as { readonly record: typeof record }).record;
+              return { status: 'committed' };
+            },
+            commit_metadata: async () => ({ status: 'committed' }),
             create_id: () => ({ sidecarId: 'era_chat_unused' }),
             clear_prompt: () => ({}),
           },
@@ -296,12 +282,16 @@ describe('ERA Sidecar 绑定纯规则', () => {
     expect(result.sidecar_applied_context).toMatchObject({
       sidecarBindingRoute: 'continue',
       sidecarBindingChoice: 'migrate',
-      variablesRaw: { variables: { ERAMetaData: { SidecarId: sidecarId } } },
+      variablesRaw: { stat_data: { player: { hp: 10 } }, ERAMetaData: { SidecarId: sidecarId } },
     });
     expect(writes).toEqual([
       expect.objectContaining({
         sidecarId,
-        record: expect.objectContaining({ owner: current, revision: 2, statData: { player: { hp: 10 } } }),
+        record: expect.objectContaining({
+          owner: current,
+          revision: 2,
+          state: expect.objectContaining({ statData: { player: { hp: 10 } } }),
+        }),
       }),
     ]);
   });

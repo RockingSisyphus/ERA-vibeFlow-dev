@@ -1,7 +1,7 @@
 {
   "nodeset_imports": [
     {
-      "path": "sidecar_binding.jsonc"
+      "path": "sidecar_store.jsonc"
     }
   ],
   "type_key": "era.task.sync",
@@ -57,10 +57,10 @@
         "description": "消费已准备步骤内的 EraDispatchContextV2，并仅补读变量和编辑日志；消息快照与不可变 processing message/MK 必须来自严格派发上下文。"
       },
       {
-        "id": "sidecar_binding_prepare",
-        "type_used": "era.sidecar.binding",
-        "display_name": "运行 Sidecar 绑定前置检查",
-        "description": "调用专用 Sidecar Nodeset，集中检查当前身份、聊天 SidecarId 与本地记录，并决定继续、显示阻塞选择或执行用户已提交的绑定事务。"
+        "id": "sidecar_store_prepare",
+        "type_used": "era.sidecar.store",
+        "display_name": "运行 Sidecar 状态存储前置事务",
+        "description": "调用专用 Sidecar 状态节点集：检查身份与唯一聊天指针，读取或迁移 V2 用户文件状态，并规划冲突选择或继续同步。"
       },
       {
         "id": "plan_sync",
@@ -107,14 +107,8 @@
       {
         "id": "commit_variables",
         "type_used": "era.tavern.variables_commit",
-        "display_name": "提交 Tavern 变量",
-        "description": "通过挂起式变量 Capability 执行有序逻辑提交，并将部分写入或未知写入报告为致命错误。"
-      },
-      {
-        "id": "sidecar_binding_persist",
-        "type_used": "era.sidecar_binding.persist_snapshot",
-        "display_name": "运行 Sidecar 提交后镜像",
-        "description": "仅在 Tavern 变量提交成功后调用 Sidecar 域的镜像节点，重新核验绑定并镜像当前 stat_data；失败保持可重试状态，不伪装成功。"
+        "display_name": "提交 Sidecar 状态",
+        "description": "先确认消息写入，再提交 V2 Sidecar 状态文件并发布当前身份的易失宏快照；聊天变量不再保存 ERA 状态。"
       },
       {
         "id": "build_sync_notification",
@@ -132,7 +126,7 @@
         "id": "sidecar_binding_applied_result",
         "type_used": "era.sidecar_binding.build_applied_result",
         "display_name": "构造已完成 Sidecar 修复结果",
-        "description": "仅在 Sidecar repair 已重建本地镜像时结算该 UI 选择；不得再进入普通变量重算或覆盖当前聊天状态。"
+        "description": "保留给未来纯绑定 no-op 修复；当前 Sidecar repair 会进入完整重放，确保已确认的聊天指令重新生成文件状态。"
       },
       {
         "id": "end",
@@ -143,19 +137,19 @@
     ],
       "edges": [
       ["start", "read_sync_context"],
-      ["read_sync_context", "sidecar_binding_prepare"],
+      ["read_sync_context", "sidecar_store_prepare"],
       {
-        "from": "sidecar_binding_prepare",
+        "from": "sidecar_store_prepare",
         "to": "plan_sync",
         "when": "sidecar_binding_route == 'continue'"
       },
       {
-        "from": "sidecar_binding_prepare",
+        "from": "sidecar_store_prepare",
         "to": "sidecar_binding_blocked_result",
         "when": "sidecar_binding_route == 'blocked'"
       },
       {
-        "from": "sidecar_binding_prepare",
+        "from": "sidecar_store_prepare",
         "to": "sidecar_binding_applied_result",
         "when": "sidecar_binding_route == 'applied'"
       },
@@ -188,21 +182,7 @@
         "to": "build_sync_contract_failure",
         "when": "commit_validation_route == 'failed'"
       },
-      {
-        "from": "commit_variables",
-        "to": "sidecar_binding_persist",
-        "transfer": true
-      },
-      {
-        "from": "commit_variables",
-        "to": "build_sync_notification",
-        "schedule": false
-      },
-      {
-        "from": "sidecar_binding_persist",
-        "to": "build_sync_notification",
-        "transfer": false
-      },
+      ["commit_variables", "build_sync_notification"],
       ["build_sync_notification", "end"],
       ["build_sync_contract_failure", "end"],
       ["sidecar_binding_blocked_result", "end"],

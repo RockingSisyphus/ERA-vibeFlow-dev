@@ -181,6 +181,8 @@ function createFixture(): Fixture {
     },
     refreshSettings: () => order.push('settings.refresh'),
     dispatchSettingsUpdated: () => order.push('settings.dispatch'),
+    awaitStartupGate: async () => ({ classification: 'legacy', route: 'allow', warn: false }),
+    warnInstallationScope: decision => warnings.push({ installationScope: decision }),
     warnAdmission: (result: EraAdmissionResult, label: string) => {
       if (!result.accepted) warnings.push({ label, result });
     },

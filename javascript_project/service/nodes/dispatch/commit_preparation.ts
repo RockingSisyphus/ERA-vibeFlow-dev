@@ -2,14 +2,10 @@ import {
   type DispatchPreparationOutcomeV1,
   type DispatchPreparationPlanV1,
 } from "../../base_lib/dispatch_preparation.ts";
+import { inspectSidecar, recordFor, stateFromRecord } from "../../base_lib/sidecar_binding.ts";
 
 interface Envelope<T> { readonly value: T; }
-interface Context {
-  readonly capabilities: {
-    readonly "era.tavern.messages": { readonly update_content: (input: Readonly<Record<string, unknown>>) => Promise<unknown> };
-    readonly "era.tavern.variables": { readonly commit: (input: Readonly<Record<string, unknown>>) => Promise<unknown> };
-  };
-}
+type Context = any;
 function isRecord(value: unknown): value is Record<string, unknown> { return value !== null && typeof value === "object" && !Array.isArray(value); }
 function errorMessage(error: unknown): string { return error instanceof Error ? error.message : String(error); }
 function confirmed(value: unknown): boolean {
@@ -59,11 +55,18 @@ export async function run(
   }
   let response: unknown;
   try {
-    response = await context.capabilities["era.tavern.variables"].commit({
-      scope: { type: "chat" },
-      meta: plan.metaUpdate,
-      purpose: "era-dispatch-prepare",
-    });
+    const current = await context.capabilities["era.tavern.sidecar"].read_current({});
+    const meta = current !== null && typeof current === "object" ? (current as Record<string, unknown>).meta : null;
+    const id = meta !== null && typeof meta === "object" ? (meta as Record<string, unknown>).SidecarId : null;
+    if (typeof id !== "string") throw new TypeError("ERA Sidecar 指针不可用。");
+    const stored = await context.capabilities["era.tavern.sidecar"].read_record({ sidecarId: id });
+    const facts = inspectSidecar(current, stored);
+    if (facts.current === null || facts.record === null || facts.status !== "matched") throw new TypeError("ERA Sidecar 状态不可用。");
+    const nextMeta = { ...plan.metaUpdate } as Record<string, unknown>;
+    delete nextMeta.SidecarId;
+    const record = recordFor(id, facts.current, { ...stateFromRecord(facts.record), eraMeta: nextMeta }, facts.record);
+    response = await context.capabilities["era.tavern.sidecar"].write_record({ sidecarId: id, record });
+    if (confirmed(response)) await context.capabilities["era.tavern.sidecar"].commit_metadata({ sidecarId: id, snapshot: record });
   } catch (error) {
     if (messageChanged) throw new Error(`ERA_DISPATCH_PARTIAL_COMMIT：${errorMessage(error)}`);
     return { committed_preparation_outcome: failed(plan, error) };

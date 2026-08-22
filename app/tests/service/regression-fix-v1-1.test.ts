@@ -241,6 +241,31 @@ describe('提交后消息上下文', () => {
     expect(final.api_write_success_result.settlements).toHaveLength(1);
     expect(final.api_write_success_result.notifications).toEqual([]);
   });
+
+  it('已确认消息后的 Sidecar 文件失败保持可修复 failed，不停服', () => {
+    const recoverable = {
+      status: 'failed',
+      settlements: [
+        {
+          status: 'failed',
+          eventId: 'api-sidecar-fault',
+          sequence: 7,
+          taskId: 'task-sidecar-fault',
+          relation: 'primary',
+        },
+      ],
+      notifications: [],
+      diagnostics: [{ code: 'ERA_SYNC_SIDECAR_COMMIT_FAILED', message: 'Sidecar 文件写入失败。', sequence: 7 }],
+    };
+    const final = finalizeApiWrite.run({
+      'era.task.result': envelope(recoverable),
+    });
+    expect(final.api_write_success_result).toEqual(recoverable);
+    expect(final.api_write_success_result.status).toBe('failed');
+    expect(final.api_write_success_result.diagnostics).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: 'ERA_API_PARTIAL_COMMIT' })]),
+    );
+  });
 });
 
 describe('MK 唯一权威与保留键状态语义', () => {

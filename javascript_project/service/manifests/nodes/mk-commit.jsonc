@@ -20,9 +20,9 @@
     "completion": "suspend",
     "source": {"kind": "file", "ref": "nodes/update_mk/commit_mk.ts", "export": "run"}
   }],
-  "base_libs": ["era.service.types"],
+  "base_libs": ["era.service.types", "era.service.sidecar_binding"],
   "capabilities": [
     {"id": "era.tavern.messages", "operations": ["update_content"]},
-    {"id": "era.tavern.variables", "operations": ["commit", "read"]}
+    {"id": "era.tavern.sidecar", "operations": ["read_current", "read_record", "write_record", "commit_metadata"]}
   ]
 }

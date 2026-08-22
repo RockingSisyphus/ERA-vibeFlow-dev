@@ -20,9 +20,10 @@
     "completion": "suspend",
     "source": {"kind": "file", "ref": "nodes/update_mk/read_message_metadata.ts", "export": "run"}
   }],
-  "base_libs": ["era.service.types"],
+  "base_libs": ["era.service.types", "era.service.sidecar_binding"],
   "capabilities": [
     {"id": "era.tavern.messages", "operations": ["read_context"]},
-    {"id": "era.tavern.variables", "operations": ["read"]}
+    {"id": "era.tavern.variables", "operations": ["read"]},
+    {"id": "era.tavern.sidecar", "operations": ["read_current", "read_record"]}
   ]
 }

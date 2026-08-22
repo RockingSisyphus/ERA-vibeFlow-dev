@@ -42,6 +42,7 @@ describe('重新生成的宏与生成栅栏', () => {
   let chatVariables: Record<string, unknown>;
   let replaceMacro: MacroReplace | null = null;
   let unregisterMacro = (): void => undefined;
+  let sidecarFiles: Map<string, unknown>;
 
   beforeEach(async () => {
     chatVariables = {
@@ -61,12 +62,33 @@ describe('重新生成的宏与生成栅栏', () => {
         },
       },
     };
+    sidecarFiles = new Map();
 
     vi.stubGlobal('eventOn', (type: string, handler: EventHandler) => events.register(type, handler));
     vi.stubGlobal('eventMakeFirst', (type: string, handler: EventHandler) => events.register(type, handler));
     vi.stubGlobal('eventMakeLast', (type: string, handler: EventHandler) => events.register(type, handler));
     vi.stubGlobal('eventRemoveListener', (type: string, handler: EventHandler) => events.remove(type, handler));
     vi.stubGlobal('getButtonEvent', (name: string) => `era-button:${name}`);
+    vi.stubGlobal('getCurrentCharacterId', () => 'barrier-card');
+    vi.stubGlobal('SillyTavern', {
+      groupId: null,
+      getCurrentChatId: () => 'barrier-chat',
+      getRequestHeaders: () => ({ 'Content-Type': 'application/json' }),
+    });
+    vi.stubGlobal('fetch', async (input: string | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith('/api/files/upload')) {
+        const body = JSON.parse(String(init?.body)) as { name: string; data: string };
+        const json = decodeURIComponent(escape(atob(body.data)));
+        sidecarFiles.set(body.name, JSON.parse(json));
+        return new Response('{}', { status: 200 });
+      }
+      const name = decodeURIComponent(url.split('/').at(-1) ?? '');
+      const record = sidecarFiles.get(name);
+      return record === undefined
+        ? new Response('', { status: 404 })
+        : new Response(JSON.stringify(record), { status: 200 });
+    });
     vi.stubGlobal('_', _);
     vi.stubGlobal('eventEmit', async () => undefined);
     vi.stubGlobal('registerMacroLike', (_regex: RegExp, replace: MacroReplace) => {
@@ -132,6 +154,6 @@ describe('重新生成的宏与生成栅栏', () => {
 
     expect(replaceMacro).not.toBeNull();
     expect(replaceMacro?.({}, '{{ERA:generation_value}}')).toBe('上一楼的变量');
-    expect((chatVariables.stat_data as Record<string, unknown>).generation_value).toBe('上一楼的变量');
+    expect(chatVariables.stat_data).toBeUndefined();
   });
 });

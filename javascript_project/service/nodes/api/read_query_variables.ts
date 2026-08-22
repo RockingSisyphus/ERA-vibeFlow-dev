@@ -1,16 +1,10 @@
+import { inspectSidecar, variablesForState } from "../../base_lib/sidecar_binding.ts";
+
 interface Envelope<T> {
   readonly value: T;
 }
 
-interface Context {
-  readonly capabilities: {
-    readonly "era.tavern.variables": {
-      readonly read: (
-        input: Readonly<Record<string, unknown>>,
-      ) => Promise<unknown>;
-    };
-  };
-}
+type Context = any;
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -33,11 +27,14 @@ export async function run(
   context: Context,
 ): Promise<any> {
   try {
-    const value = await context.capabilities["era.tavern.variables"].read({
-      scope: { type: "chat" },
-      fields: ["stat_data", "ERAMetaData"],
-      purpose: "era-snapshot-query",
-    });
+    const current = await context.capabilities["era.tavern.sidecar"].read_current({});
+    const meta = current !== null && typeof current === "object" ? (current as Record<string, unknown>).meta : null;
+    const sidecarId = meta !== null && typeof meta === "object" ? (meta as Record<string, unknown>).SidecarId : null;
+    if (typeof sidecarId !== "string") throw new TypeError("ERA 当前聊天没有已加载的 SidecarId。");
+    const stored = await context.capabilities["era.tavern.sidecar"].read_record({ sidecarId });
+    const facts = inspectSidecar(current, stored);
+    if (facts.record === null || facts.status !== "matched") throw new TypeError("ERA Sidecar 状态不可用。");
+    const value = { variables: variablesForState(facts.record.state, facts.record.sidecarId) };
     return { query_variables_raw: { ok: true, value } };
   } catch (error) {
     return {

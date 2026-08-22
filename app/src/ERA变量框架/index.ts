@@ -17,7 +17,13 @@ import {
   type EraPageLifecycleTarget,
 } from './service/lifecycle';
 import { TavernEraServiceAdapter } from './service/tavern-adapter';
-import type { EraAdmissionResult, EraWorkflowHost } from './service/types';
+import type {
+  EraAdmissionResult,
+  EraRuntimeAdapter,
+  EraStartupGateAdapter,
+  EraStartupGateDecision,
+  EraWorkflowHost,
+} from './service/types';
 import { startEraUi } from './ui';
 import { initEraSettings } from './utils/era_data';
 import { Logger } from './utils/log';
@@ -37,6 +43,15 @@ function dispatchSettingsUpdated(): void {
   window.dispatchEvent(new CustomEvent('era-settings-updated'));
 }
 
+function warnInstallationScope(decision: EraStartupGateDecision): void {
+  if (!decision.warn) return;
+  if (decision.route === 'dormant') {
+    toastr.warning('ERA 必须作为角色卡脚本安装。请移除全局脚本或预设脚本中的 ERA 副本。', 'ERA 未启动');
+    return;
+  }
+  toastr.warning('ERA 无法确认当前脚本安装位置，已按兼容模式启动；请检查 Tavern Helper 脚本树。', 'ERA 安装位置');
+}
+
 function productionDependencies(): EraApplicationDependencies {
   return {
     globals: globalThis as unknown as Record<string, unknown>,
@@ -48,6 +63,8 @@ function productionDependencies(): EraApplicationDependencies {
     startUi: startEraUi,
     refreshSettings: initEraSettings,
     dispatchSettingsUpdated,
+    awaitStartupGate: adapter => (adapter as EraRuntimeAdapter & EraStartupGateAdapter).waitForStartupGate(),
+    warnInstallationScope,
     warnAdmission,
     warnStop: error => logger.warn('stopRuntime', 'ERA 服务停止期间收到非预期异常。', error),
     reportFatal: error => {

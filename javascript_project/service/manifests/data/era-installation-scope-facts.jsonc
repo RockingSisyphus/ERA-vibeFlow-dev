@@ -1,0 +1,18 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.installation.scope.facts",
+  "representation": "json",
+  "display_name": "ERA 安装作用域事实",
+  "description": "启动期 Host 对当前脚本 ID 与各作用域启用归属的只读采样。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": ["scriptId", "scopes", "readStatus"],
+    "additionalProperties": false,
+    "properties": {
+      "scriptId": {"type": ["string", "null"]},
+      "scopes": {"type": "array", "items": {"enum": ["character", "global", "preset"]}},
+      "readStatus": {"enum": ["complete", "unavailable", "failed"]}
+    }
+  }
+}

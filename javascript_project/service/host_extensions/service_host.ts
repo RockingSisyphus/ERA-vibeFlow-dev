@@ -120,6 +120,10 @@ export interface EraTavernCapabilityAdapter {
   readonly identity: {
     readonly read: EraHostOperation;
   };
+  /** 启动期脚本树的原始只读事实；分类规则保留在 workflow。 */
+  readonly installation_scope: {
+    readonly read: EraHostOperation;
+  };
   /** Sidecar 的身份/files/UI 机械能力；绑定与迁移规则必须留在 workflow。 */
   readonly sidecar: {
     readonly read_current: EraAsyncHostOperation;
@@ -157,6 +161,8 @@ export interface EraTavernHostAdapter extends EraTavernCapabilityAdapter {
   ): void | Promise<void>;
   readonly clock?: EraTavernClock;
   warn?(message: string, details?: Readonly<Record<string, unknown>>): void;
+  /** 应用接线层拥有的启动闸门；Host 只转交 workflow 已作出的结果。 */
+  settleStartupGate?(decision: Readonly<Record<string, unknown>>): void;
 }
 
 export interface EraHostDiagnosticsSnapshot {
@@ -190,6 +196,8 @@ export interface EraHostExtensionConfig {
   };
   readonly barrier_watchdog_ms?: number;
   readonly adapter_global_key?: string;
+  /** true 时先启动 Host capability，等 workflow 明确 allow 后才订阅 Tavern 事件。 */
+  readonly staged_startup?: boolean;
 }
 
 export interface EraHostExtensionContext {
@@ -524,6 +532,7 @@ class ServiceHostRuntime {
   private readonly maxHostRefsPerEvent: number;
   private readonly watchdogMs: number;
   private readonly adapterGlobalKey: string;
+  private readonly stagedStartup: boolean;
   private readonly queue: BoundedEventQueue;
   private readonly references = new HostReferenceRegistry();
   private readonly receipts = new Map<number, ReceiptRecord>();
@@ -567,6 +576,7 @@ class ServiceHostRuntime {
     );
     this.adapterGlobalKey =
       config.adapter_global_key?.trim() || DEFAULT_ADAPTER_GLOBAL_KEY;
+    this.stagedStartup = config.staged_startup === true;
     this.queue = new BoundedEventQueue(
       configuredPositiveInteger(
         config.limits?.max_fifo_events,
@@ -644,6 +654,18 @@ class ServiceHostRuntime {
         options: PortCallOptions = {},
       ) => this.invokeImmediate("identity", "read", input, options),
     },
+    "era.tavern.installation_scope": {
+      read: (
+        input: Readonly<Record<string, unknown>>,
+        options: PortCallOptions = {},
+      ) => this.invokeImmediate("installation_scope", "read", input, options),
+    },
+    "era.tavern.startup_gate": {
+      activate: (input: Readonly<Record<string, unknown>>) =>
+        this.activateIngress(input),
+      dormant: (input: Readonly<Record<string, unknown>>) =>
+        this.settleDormantStartup(input),
+    },
     "era.tavern.sidecar": {
       read_current: (
         input: Readonly<Record<string, unknown>>,
@@ -696,22 +718,63 @@ class ServiceHostRuntime {
     this.contextAbortListener = onContextAbort;
 
     try {
-      const unsubscribe = adapter.subscribe((event) => this.admit(event));
-      if (typeof unsubscribe !== "function") {
-        throw new EraServiceHostError(
-          "ERA_HOST_ADAPTER_SHAPE",
-          "酒馆适配器 subscribe 必须返回注销函数。",
-        );
-      }
       this.adapter = adapter;
-      this.unsubscribe = unsubscribe;
       this.started = true;
+      // 旧 Host 使用者保持 start 即订阅；ERA 主服务选择 staged_startup，
+      // 将唯一 subscribe 推迟到 workflow 的 allow 分支。
+      if (!this.stagedStartup) {
+        this.activateIngress({ route: "allow", classification: "legacy" });
+      }
     } catch (error) {
       this.context.signal.removeEventListener("abort", onContextAbort);
       this.contextAbortListener = null;
       this.adapter = null;
       throw error;
     }
+  }
+
+  /** 唯一的 Tavern listener 登记点，且对 allow 分支幂等。 */
+  private activateIngress(
+    decision: Readonly<Record<string, unknown>>,
+  ): Readonly<Record<string, unknown>> {
+    if (!this.started || this.adapter === null) {
+      throw new EraServiceHostError(
+        "ERA_HOST_NOT_STARTED",
+        "ERA 服务宿主尚未完成无监听器启动。",
+      );
+    }
+    if (this.stopping) {
+      throw new EraServiceHostError(
+        "ERA_HOST_STOPPING",
+        "ERA 服务宿主正在停止，不能登记事件入口。",
+      );
+    }
+    if (this.unsubscribe === null) {
+      const unsubscribe = this.adapter.subscribe((event) => this.admit(event));
+      if (typeof unsubscribe !== "function") {
+        throw new EraServiceHostError(
+          "ERA_HOST_ADAPTER_SHAPE",
+          "酒馆适配器 subscribe 必须返回注销函数。",
+        );
+      }
+      this.unsubscribe = unsubscribe;
+    }
+    this.adapter.settleStartupGate?.(decision);
+    return Object.freeze({ activated: true });
+  }
+
+  /** dormant 分支只结算启动闸门，绝不调用 subscribe。 */
+  private settleDormantStartup(
+    decision: Readonly<Record<string, unknown>>,
+  ): Readonly<Record<string, unknown>> {
+    if (!this.started || this.adapter === null) {
+      throw new EraServiceHostError(
+        "ERA_HOST_NOT_STARTED",
+        "ERA 服务宿主尚未完成无监听器启动。",
+      );
+    }
+    this.adapter.settleStartupGate?.(decision);
+    return Object.freeze({ activated: false });
   }
 
   stop(reason: unknown = "ERA 服务宿主已停止"): Promise<void> {
@@ -770,6 +833,7 @@ class ServiceHostRuntime {
       [adapter.regex?.read, "regex.read"],
       [adapter.regex?.upsert, "regex.upsert"],
       [adapter.identity?.read, "identity.read"],
+      [adapter.installation_scope?.read, "installation_scope.read"],
       [adapter.sidecar?.read_current, "sidecar.read_current"],
       [adapter.sidecar?.read_record, "sidecar.read_record"],
       [adapter.sidecar?.write_record, "sidecar.write_record"],
@@ -982,6 +1046,14 @@ class ServiceHostRuntime {
     options: PortCallOptions,
   ): Promise<{ readonly value: EraTransportEventV1 }> {
     this.assertOperational();
+    if (this.unsubscribe === null) {
+      return Promise.reject(
+        new EraServiceHostError(
+          "ERA_HOST_INGRESS_INACTIVE",
+          "ERA 服务入口尚未由启动工作流激活。",
+        ),
+      );
+    }
     if (!request || request.port !== this.inboundPort) {
       return Promise.reject(
         new EraServiceHostError(

@@ -3,6 +3,7 @@ import {
   type DispatchCanonicalContextV1,
   type DispatchSeedV1,
 } from "../../base_lib/dispatch_preparation.ts";
+import { inspectSidecar, variablesForState } from "../../base_lib/sidecar_binding.ts";
 
 interface Envelope<T> { readonly value: T; }
 interface MessageReadRequest {
@@ -10,12 +11,7 @@ interface MessageReadRequest {
   readonly range: string | number;
   readonly purpose?: string;
 }
-interface Context {
-  readonly capabilities: {
-    readonly "era.tavern.messages": { readonly read_context: (input: MessageReadRequest) => Promise<unknown> };
-    readonly "era.tavern.variables": { readonly read: (input: Readonly<Record<string, unknown>>) => Promise<unknown> };
-  };
-}
+type Context = any;
 function errorMessage(error: unknown): string { return error instanceof Error ? error.message : String(error); }
 function failed(seed: DispatchSeedV1, error: unknown): DispatchCanonicalContextV1 {
   return {
@@ -57,11 +53,18 @@ export async function run(
         ),
       };
     }
-    const [messages, chatVariables, scriptVariables] = await Promise.all([
+    const [messages, current, scriptVariables] = await Promise.all([
       messagesPromise,
-      context.capabilities["era.tavern.variables"].read({ scope: { type: "chat" }, purpose: "era-dispatch-prepare" }),
+      context.capabilities["era.tavern.sidecar"].read_current({}),
       context.capabilities["era.tavern.variables"].read({ scope: { type: "script" }, purpose: "era-dispatch-placeholder" }),
     ]);
+    const meta = current !== null && typeof current === "object" ? (current as Record<string, unknown>).meta : null;
+    const id = meta !== null && typeof meta === "object" ? (meta as Record<string, unknown>).SidecarId : null;
+    const stored = typeof id === "string" ? await context.capabilities["era.tavern.sidecar"].read_record({ sidecarId: id }) : null;
+    const facts = inspectSidecar(current, stored);
+    const chatVariables = facts.record === null
+      ? { variables: {} }
+      : { variables: variablesForState(facts.record.state, facts.record.sidecarId) };
     return { canonical_dispatch_context: canonicalDispatchContext(seed, messages, chatVariables, scriptVariables) };
   } catch (error) {
     return { canonical_dispatch_context: failed(seed, error) };

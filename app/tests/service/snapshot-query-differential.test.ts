@@ -69,6 +69,17 @@ interface LegacyModules {
 
 let activeFixture: Fixture;
 let legacy: LegacyModules;
+let publishSidecarRuntimeSnapshot: typeof import('../../src/ERA变量框架/service/sidecar-runtime-snapshot').publishSidecarRuntimeSnapshot;
+
+function publishFixtureForLegacy(fixture: Fixture): void {
+  publishSidecarRuntimeSnapshot({
+    sidecarId: 'era_chat_snapshot-query-12345678',
+    identity: { characterId: 'card-snapshot-query', groupId: null, chatId: 'chat-snapshot-query' },
+    revision: 1,
+    statData: fixture.variables.stat,
+    eraMeta: fixture.variables.meta,
+  });
+}
 
 function makeFixture(): Fixture {
   const selectedMks: (string | null)[] = [null, 'mk-array', 'mk-object', null, 'mk-fenced', 'mk-ignored'];
@@ -239,6 +250,7 @@ function legacyResult(queryType: EraSnapshotQueryType, request: unknown, fixture
 
 function legacyPayload(queryType: EraSnapshotQueryType, request: unknown, fixture: Fixture): EraQueryResultPayload {
   activeFixture = fixture;
+  publishFixtureForLegacy(fixture);
   return {
     queryType,
     request,
@@ -262,12 +274,18 @@ beforeAll(async () => {
   const globals = globalThis as unknown as {
     _: typeof lodash;
     getVariables: () => unknown;
+    getCurrentCharacterId: () => string;
+    SillyTavern: { groupId: null; getCurrentChatId: () => string };
   };
   globals._ = lodash;
   globals.getVariables = () => ({
     ERAMetaData: activeFixture.variables.meta,
     stat_data: activeFixture.variables.stat,
   });
+  globals.getCurrentCharacterId = () => 'card-snapshot-query';
+  globals.SillyTavern = { groupId: null, getCurrentChatId: () => 'chat-snapshot-query' };
+
+  ({ publishSidecarRuntimeSnapshot } = await import('../../src/ERA变量框架/service/sidecar-runtime-snapshot'));
 
   const [snapshot, timetravel, data, eraData, message] = await Promise.all([
     import('../../src/ERA变量框架/core/snapshot'),

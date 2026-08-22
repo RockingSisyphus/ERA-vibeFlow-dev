@@ -7,7 +7,7 @@ import { pathToFileURL } from 'node:url';
 
 const projectRoot = resolve(import.meta.dirname, '../..');
 const buildRoot = process.env.ERA_SERVICE_BUILD_DIR ?? resolve(projectRoot, 'generated/era-service');
-const generatedModuleUrl = pathToFileURL(resolve(buildRoot, 'era-service.js'));
+const generatedModuleUrl = pathToFileURL(resolve(buildRoot, 'workflow.js'));
 const manifestPath = resolve(buildRoot, 'vibeflow-build.json');
 const reportPath = resolve(projectRoot, 'reports/service-g4-collection-runtime.json');
 
@@ -78,6 +78,31 @@ function createTavernCapabilities() {
       upsert: async () => ({ status: 'committed' }),
     },
     'era.tavern.identity': { read: () => ({ characterName: 'G4 窗口探针角色', isGroup: false }) },
+    'era.tavern.installation_scope': { read: () => ({ scriptId: 'era-g4', scopes: ['character'], readStatus: 'complete' }) },
+    'era.tavern.startup_gate': { activate: () => ({ activated: true }), dormant: () => ({ activated: false }) },
+    'era.tavern.sidecar': (() => {
+      const records = new Map();
+      const current = { identity: { characterId: 'g4-card', groupId: null, chatId: 'g4-chat' }, meta: {}, stat: {} };
+      return {
+      read_current: async () => structuredClone(current),
+      read_record: async input => {
+        const record = records.get(input.sidecarId);
+        return record === undefined ? { status: 'missing' } : { status: 'found', record };
+      },
+      write_record: async input => {
+        records.set(input.sidecarId, structuredClone(input.record));
+        return { status: 'committed' };
+      },
+      commit_metadata: async input => {
+        current.meta = { SidecarId: input.sidecarId };
+        current.stat = null;
+        return { status: 'committed' };
+      },
+      create_id: () => ({ sidecarId: 'era_chat_g4-probe-12345678' }),
+      present_prompt: () => ({ status: 'presented' }),
+      clear_prompt: () => ({ status: 'cleared' }),
+      };
+    })(),
   };
 }
 

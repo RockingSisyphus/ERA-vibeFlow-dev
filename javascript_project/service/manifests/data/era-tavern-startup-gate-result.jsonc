@@ -1,0 +1,1 @@
+{"kind":"data_schema","type_key":"era.tavern.startup_gate.result","representation":"json","display_name":"启动闸门结果","description":"Host 对 workflow 启动决议的机械执行结果。","schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","required":["activated"],"properties":{"activated":{"type":"boolean"}},"additionalProperties":false}}

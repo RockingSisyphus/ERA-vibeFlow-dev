@@ -2,17 +2,27 @@ import _ from 'lodash';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 let registerEraMacro: typeof import('../../src/ERA变量框架/macro/registration').registerEraMacro;
+let publishSidecarRuntimeSnapshot: typeof import('../../src/ERA变量框架/service/sidecar-runtime-snapshot').publishSidecarRuntimeSnapshot;
+let clearSidecarRuntimeSnapshot: typeof import('../../src/ERA变量框架/service/sidecar-runtime-snapshot').clearSidecarRuntimeSnapshot;
 
 beforeAll(async () => {
   vi.stubGlobal('_', _);
   ({ registerEraMacro } = await import('../../src/ERA变量框架/macro/registration'));
+  ({ publishSidecarRuntimeSnapshot, clearSidecarRuntimeSnapshot } =
+    await import('../../src/ERA变量框架/service/sidecar-runtime-snapshot'));
 });
 
 beforeEach(() => {
-  vi.stubGlobal(
-    'getVariables',
-    vi.fn(() => ({ stat_data: { character: { hp: 7 } } })),
-  );
+  clearSidecarRuntimeSnapshot();
+  vi.stubGlobal('getCurrentCharacterId', () => 'card-a');
+  vi.stubGlobal('SillyTavern', { groupId: null, getCurrentChatId: () => 'chat-a' });
+  publishSidecarRuntimeSnapshot({
+    sidecarId: 'era_chat_test-1234',
+    identity: { characterId: 'card-a', groupId: null, chatId: 'chat-a' },
+    revision: 1,
+    statData: { character: { hp: 7 } },
+    eraMeta: {},
+  });
 });
 
 describe('Macro AOT Tavern 同步适配器', () => {
@@ -30,7 +40,6 @@ describe('Macro AOT Tavern 同步适配器', () => {
 
     expect(result).toBe('7');
     expect(result).not.toBeInstanceOf(Promise);
-    expect(getVariables).toHaveBeenCalledTimes(1);
     stop();
     stop();
     expect(unregister).toHaveBeenCalledTimes(1);

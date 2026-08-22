@@ -94,7 +94,7 @@
         "id": "read_query_variables",
         "type_used": "era.api.read_query_variables",
         "display_name": "只读获取 ERA 变量上下文",
-        "description": "仅调用 variables.read，读取 chat 级 stat_data 与 ERAMetaData；不调用 commit。"
+        "description": "只读取当前聊天 SidecarId 指针及其 V2 用户文件状态；不调用聊天状态 commit。"
       },
       {
         "id": "read_query_messages",

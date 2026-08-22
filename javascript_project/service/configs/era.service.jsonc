@@ -10,7 +10,7 @@
       "status": "implemented",
       "enabled": true,
       "display_name": "ERA 酒馆服务宿主",
-      "description": "连接 SillyTavern 与 Tavern Helper，管理单一先进先出队列、回执、高水位屏障、绝对截止时间定时器、宿主引用和出站帧幂等，并提供服务端口、五类酒馆能力与 Sidecar 身份/files/UI 机械接线；消息读取按 era-active-message-v1 投影，Host 不承载 CRUD、同步、合并、回滚或身份判定规则。",
+      "description": "连接 SillyTavern 与 Tavern Helper，管理单一先进先出队列、回执、高水位屏障、绝对截止时间定时器、宿主引用和出站帧幂等，并提供服务端口、酒馆能力、Sidecar 机械接线与分阶段启动闸门；消息读取按 era-active-message-v1 投影，Host 不承载 CRUD、同步、合并、回滚或身份判定规则。",
       "category": "宿主接线",
       "version": "0.1.0",
       "targets": [
@@ -23,7 +23,9 @@
         "era.tavern.worldbook",
         "era.tavern.regex",
         "era.tavern.identity",
-        "era.tavern.sidecar"
+        "era.tavern.sidecar",
+        "era.tavern.installation_scope",
+        "era.tavern.startup_gate"
       ],
       "dependencies": [],
       "config": {
@@ -37,7 +39,8 @@
           "max_fifo_bytes": 8388608,
           "max_host_refs_per_event": 32
         },
-        "barrier_watchdog_ms": 5000
+        "barrier_watchdog_ms": 5000,
+        "staged_startup": true
       }
     }
   ],
@@ -57,13 +60,43 @@
   "pipeline": {
     "entry_mode": "async",
     "inputs": [],
-    "max_steps": 8,
+    "max_steps": 12,
     "nodes": [
       {
         "id": "start",
         "type_used": "era.service.terminal",
         "display_name": "ERA 服务启动",
         "description": "启动 ERA 异步服务工作流。"
+      },
+      {
+        "id": "inspect_current_script_scope",
+        "type_used": "era.installation.scope.inspect",
+        "display_name": "读取当前脚本与脚本树",
+        "description": "经既有 service_host.ts 的无监听器启动期能力读取 getScriptId 与 global、preset、character 三类脚本树；只采集启用层级和脚本 ID。"
+      },
+      {
+        "id": "classify_installation_scope",
+        "type_used": "era.installation.scope.classify",
+        "display_name": "分类安装作用域",
+        "description": "纯 workflow 规则根据启用祖先文件夹和当前脚本 ID 分类 character、global、preset、ambiguous 或 unknown。"
+      },
+      {
+        "id": "decide_startup_policy",
+        "type_used": "era.installation.scope.decide",
+        "display_name": "决定启动策略",
+        "description": "character 允许完整启动；global、preset 与 ambiguous 要求 dormant；unknown 允许启动并要求一次兼容警告。"
+      },
+      {
+        "id": "activate_tavern_ingress",
+        "type_used": "era.installation.scope.activate_ingress",
+        "display_name": "登记 Tavern 事件入口",
+        "description": "仅 allow 时调用启动期 Host 的机械 activate 操作，登记既有 TavernEraServiceAdapter ingress；随后复用原有初始化与永久循环。"
+      },
+      {
+        "id": "publish_dormant_startup",
+        "type_used": "era.installation.scope.publish_dormant",
+        "display_name": "发布休眠安装提示",
+        "description": "仅 dormant 时调用启动期 Host 的机械提示操作，随后结束；不登记事件、不运行 Sidecar、宏或 UI。"
       },
       {
         "id": "initialize_state",
@@ -106,6 +139,28 @@
     "edges": [
       [
         "start",
+        "inspect_current_script_scope"
+      ],
+      [
+        "inspect_current_script_scope",
+        "classify_installation_scope"
+      ],
+      [
+        "classify_installation_scope",
+        "decide_startup_policy"
+      ],
+      {
+        "from": "decide_startup_policy",
+        "to": "activate_tavern_ingress",
+        "when": "installation_scope_route == 'allow'"
+      },
+      {
+        "from": "decide_startup_policy",
+        "to": "publish_dormant_startup",
+        "when": "installation_scope_route == 'dormant'"
+      },
+      [
+        "activate_tavern_ingress",
         "initialize_state"
       ],
       [
@@ -114,6 +169,10 @@
       ],
       [
         "service_loop",
+        "end"
+      ],
+      [
+        "publish_dormant_startup",
         "end"
       ]
     ],

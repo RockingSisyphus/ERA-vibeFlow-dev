@@ -5,8 +5,9 @@
 'use strict';
 
 import _ from 'lodash';
-import { CHAT_SCOPE, META_DATA_PATH, STAT_DATA_PATH, SettingsSchema, EraConfig } from './constants';
+import { SettingsSchema, EraConfig } from './constants';
 import { ref, readonly, DeepReadonly, Ref } from 'vue';
+import { readSidecarRuntimeSnapshot } from '../service/sidecar-runtime-snapshot';
 
 declare function getScriptId(): string;
 
@@ -77,36 +78,40 @@ export function removeMetaFields(obj: any): any {
  * @returns {{meta: object, stat: object}} 包含元数据和状态数据的对象。
  */
 export function getEraData(): { meta: any; stat: any } {
-  const chatVars = getVariables(CHAT_SCOPE) || {};
-  const meta = _.get(chatVars, META_DATA_PATH, {});
-  const stat = _.get(chatVars, STAT_DATA_PATH, {});
-  return { meta, stat };
+  const helper = globalThis as typeof globalThis & {
+    getCurrentCharacterId?: () => string | null;
+    SillyTavern?: { groupId?: string | null; getCurrentChatId?: () => string };
+  };
+  if (
+    typeof helper.getCurrentCharacterId !== 'function' ||
+    typeof helper.SillyTavern?.getCurrentChatId !== 'function'
+  ) {
+    return { meta: {}, stat: {} };
+  }
+  const snapshot = readSidecarRuntimeSnapshot({
+    characterId: helper.getCurrentCharacterId(),
+    groupId: helper.SillyTavern.groupId || null,
+    chatId: helper.SillyTavern.getCurrentChatId(),
+  });
+  // 宏与旧兼容读取必须同步且不可回退到聊天变量；缺快照时使用空对象。
+  return snapshot === null
+    ? { meta: {}, stat: {} }
+    : { meta: structuredClone(snapshot.eraMeta), stat: structuredClone(snapshot.statData) };
 }
 
 /**
- * 原子性地更新 ERA 的状态数据 (stat_data)。
- * @param {(currentStatData: any) => (any | Promise<any>)} updater - 一个接收当前 stat_data 并返回修改后 stat_data 的函数 (可以是 async)。
+ * 冻结的旧差分 oracle 不得再绕过 Service 把 ERA 状态写入聊天变量。
+ *
+ * 保留导出只是为了让旧测试得到明确、可定位的失败；生产状态写入必须经过
+ * `era.sidecar.store`，由该 Nodeset 事务性提交 Sidecar V2 文件。
  */
-export async function updateEraStatData(updater: (currentStatData: any) => any | Promise<any>) {
-  await updateVariablesWith(async v => {
-    const currentStat = _.get(v, STAT_DATA_PATH, {});
-    const newStat = await updater(currentStat);
-    _.set(v, STAT_DATA_PATH, newStat);
-    return v;
-  }, CHAT_SCOPE);
+export async function updateEraStatData(_updater: (currentStatData: any) => any | Promise<any>) {
+  throw new Error('ERA_LEGACY_CHAT_STATE_WRITE_FORBIDDEN: 请通过 Service Sidecar 状态事务提交变量。');
 }
 
-/**
- * 原子性地更新 ERA 的元数据 (ERAMetaData)。
- * @param {(currentMetaData: any) => (any | Promise<any>)} updater - 一个接收当前 ERAMetaData 并返回修改后 ERAMetaData 的函数 (可以是 async)。
- */
-export async function updateEraMetaData(updater: (currentMetaData: any) => any | Promise<any>) {
-  await updateVariablesWith(async v => {
-    const currentMeta = _.get(v, META_DATA_PATH, {});
-    const newMeta = await updater(currentMeta);
-    _.set(v, META_DATA_PATH, newMeta);
-    return v;
-  }, CHAT_SCOPE);
+/** 与 `updateEraStatData` 相同，禁止旧路径直接写入聊天 `ERAMetaData`。 */
+export async function updateEraMetaData(_updater: (currentMetaData: any) => any | Promise<any>) {
+  throw new Error('ERA_LEGACY_CHAT_STATE_WRITE_FORBIDDEN: 请通过 Service Sidecar 状态事务提交元数据。');
 }
 
 /**

@@ -3,7 +3,7 @@
   "type_key": "era.api.read_query_variables",
   "display_name": "只读获取 ERA 变量上下文",
   "category": "宿主只读边界",
-  "description": "仅调用 variables.read 读取 chat 级 stat_data 与 ERAMetaData；捕获读取错误供兼容结果处理。",
+  "description": "只从当前聊天指针定位并读取 V2 Sidecar 状态；捕获读取错误供兼容结果处理。",
   "version": "1.0.0",
   "flow_kind": "data_store",
   "contract": {
@@ -14,6 +14,6 @@
     "output_semantics": {"query_variables_raw":["输出：原始变量读取结果。"]}
   },
   "implementations": [{"language": "typescript", "targets": ["browser"], "completion": "suspend", "source": {"kind": "file", "ref": "nodes/api/read_query_variables.ts", "export": "run"}}],
-  "base_libs": [],
-  "capabilities": [{"id": "era.tavern.variables", "operations": ["read"]}]
+  "base_libs": ["era.service.sidecar_binding"],
+  "capabilities": [{"id": "era.tavern.sidecar", "operations": ["read_current", "read_record"]}]
 }

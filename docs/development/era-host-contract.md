@@ -18,9 +18,11 @@ Tavern Helper / SillyTavern / ERA UI
 | VibeFlow Macro        | 基于已提交快照同步计算替换文本                   | Promise、写入、Service 调用、状态同步    |
 | UI                    | 展示、收集用户意图、显示结算后的状态             | 直接重建/写入 ERA 业务状态、复制同步逻辑 |
 
-Sidecar 的身份检查、冲突决策和迁移/独立/复制事务属于 Service 的
-`era.sidecar.binding` Nodeset。Tavern adapter/Host 只提供当前身份、聊天变量、原生 files 与 UI
-通知这几项技术能力；它不能自行决定 owner、迁移或变量恢复。
+Sidecar 的身份检查、旧聊天迁移、冲突决策和迁移/独立/复制事务属于 Service 的
+`era.sidecar.store` Nodeset。聊天变量只保存 `ERAMetaData.SidecarId`；ERA 状态只保存在
+Sidecar V2 用户文件中。Tavern adapter/Host 只提供当前身份、聊天指针、原生 files、受限内存
+快照与 UI 通知这几项技术能力；它不能自行决定 owner、迁移或变量恢复。宏只能读取身份匹配的
+内存快照，快照缺失时必须为空，不能回退读取聊天变量。
 
 ## 生成 barrier
 

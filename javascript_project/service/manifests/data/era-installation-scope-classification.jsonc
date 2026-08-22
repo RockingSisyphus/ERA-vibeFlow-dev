@@ -1,0 +1,17 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.installation.scope.classification",
+  "representation": "json",
+  "display_name": "ERA 安装作用域分类",
+  "description": "纯规则对启动期脚本归属的分类结果。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": ["status", "reason"],
+    "additionalProperties": false,
+    "properties": {
+      "status": {"enum": ["character", "global", "preset", "ambiguous", "unknown"]},
+      "reason": {"type": "string", "minLength": 1}
+    }
+  }
+}

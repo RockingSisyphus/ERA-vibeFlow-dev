@@ -3,7 +3,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { performance } from 'node:perf_hooks';
 
-const generatedModuleUrl = new URL('../../generated/era-service/era-service.js', import.meta.url);
+const generatedModuleUrl = new URL('../../generated/era-service/workflow.js', import.meta.url);
 const reportUrl = new URL('../../reports/service-g3-runtime.json', import.meta.url);
 
 function assert(condition, message) {
@@ -18,6 +18,8 @@ function createAdapter() {
   const warnings = [];
   let chatVariables = { stat_data: {}, ERAMetaData: { SelectedMks: [], EditLogs: {} } };
   let scriptVariables = {};
+  const sidecarRecords = new Map();
+  const sidecarCurrent = { identity: { characterId: 'probe-card', groupId: null, chatId: 'probe-chat' }, meta: {}, stat: {} };
   const messages = [{ message_id: 0, role: 'assistant', is_user: false, message: '运行时探针消息' }];
   return {
     adapter: {
@@ -87,6 +89,28 @@ function createAdapter() {
         upsert: async () => ({ status: 'committed' }),
       },
       identity: { read: () => ({ characterName: '运行时探针角色', isGroup: false }) },
+      installation_scope: {
+        read: () => ({ scriptId: 'era-probe', scopes: ['character'], readStatus: 'complete' }),
+      },
+      sidecar: {
+        read_current: async () => structuredClone(sidecarCurrent),
+        read_record: async input => {
+          const record = sidecarRecords.get(input.sidecarId);
+          return record === undefined ? { status: 'missing' } : { status: 'found', record };
+        },
+        write_record: async input => {
+          sidecarRecords.set(input.sidecarId, structuredClone(input.record));
+          return { status: 'committed' };
+        },
+        commit_metadata: async input => {
+          sidecarCurrent.meta = { SidecarId: input.sidecarId };
+          sidecarCurrent.stat = null;
+          return { status: 'committed' };
+        },
+        create_id: () => ({ sidecarId: 'era_chat_probe-12345678' }),
+        present_prompt: () => ({ status: 'presented' }),
+        clear_prompt: () => ({ status: 'cleared' }),
+      },
       warn(message, details) {
         warnings.push({ message, details });
       },
@@ -110,14 +134,23 @@ async function probeGeneratedHost(workflow) {
   await host.start();
   const afterStart = fake.snapshot();
   const traceEvents = [];
-  const execution = host.runWorkflowAsync(
-    {},
-    { trace: 'full', onTrace: event => traceEvents.push(event) },
-  );
+  const execution = host.runWorkflowAsync({}, { trace: 'full', onTrace: event => traceEvents.push(event) });
   const workflowStopped = execution.then(
     () => ({ kind: 'stopped', error: null }),
     error => ({ kind: 'stopped', error }),
   );
+  // staged_startup 的唯一订阅由 workflow allow 分支完成，而不是 host.start。
+  for (let index = 0; index < 20 && fake.snapshot().registrations === 0; index += 1) {
+    await new Promise(resolve => setTimeout(resolve, 0));
+  }
+  const afterActivation = fake.snapshot();
+  if (afterActivation.registrations === 0) {
+    const stopped = await Promise.race([
+      workflowStopped,
+      new Promise(resolve => setTimeout(() => resolve({ kind: 'pending' }), 10)),
+    ]);
+    throw new Error(`workflow allow 未登记 Tavern 监听器：${JSON.stringify(stopped)}，trace=${JSON.stringify(traceEvents.slice(-30))}`);
+  }
 
   const outcomes = [];
   for (let sequence = 1; sequence <= 4; sequence += 1) {
@@ -167,14 +200,18 @@ async function probeGeneratedHost(workflow) {
 
   assert(beforeCreate.registrations === 0, '导入前不应注册监听器。');
   assert(afterCreate.registrations === 0, 'createWorkflowHost() 不应注册监听器。');
-  assert(afterStart.registrations === 1, 'host.start() 必须只注册一套监听器。');
+  assert(afterStart.registrations === 0, 'staged host.start() 不得提前注册 Tavern 监听器。');
+  assert(afterActivation.registrations === 1, 'workflow allow 分支必须只注册一套监听器。');
   assert(afterStop.removals === 1, 'host.stop() 必须只注销一次监听器。');
-  assert(outcomes.every(outcome => outcome.status === 'completed'), '真实同步与查询事件必须完整结算。');
+  assert(
+    outcomes.every(outcome => outcome.status === 'completed'),
+    '真实同步与查询事件必须完整结算。',
+  );
   assert(afterStop.notifications >= 5, '写入 API 和 forceSync 必须在真实 Host 路径中发出兼容通知。');
   assert(executionCode === 'VF_ABORTED', `永久 workflow 停止码异常：${String(executionCode)}`);
   assert(stopMs <= 1_000, `Host 停止耗时 ${stopMs}ms，超过 1 秒。`);
 
-  return { beforeCreate, afterCreate, afterStart, afterStop, outcomes, executionCode, stopMs };
+  return { beforeCreate, afterCreate, afterStart, afterActivation, afterStop, outcomes, executionCode, stopMs };
 }
 
 async function probeWorkflowFrames(workflow) {
@@ -238,6 +275,9 @@ async function probeWorkflowFrames(workflow) {
           'era.tavern.worldbook': directAdapter.worldbook,
           'era.tavern.regex': directAdapter.regex,
           'era.tavern.identity': directAdapter.identity,
+          'era.tavern.installation_scope': directAdapter.installation_scope,
+          'era.tavern.startup_gate': { activate: () => ({ activated: true }), dormant: () => ({ activated: false }) },
+          'era.tavern.sidecar': directAdapter.sidecar,
         },
       },
     );

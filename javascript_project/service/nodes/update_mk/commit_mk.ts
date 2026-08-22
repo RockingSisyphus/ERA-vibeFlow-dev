@@ -1,26 +1,11 @@
 import type { PlannedStepV1 } from "../../base_lib/service_types.ts";
+import { inspectSidecar, recordFor, stateFromRecord } from "../../base_lib/sidecar_binding.ts";
 
 interface Envelope<T> {
   readonly value: T;
 }
 
-interface Context {
-  readonly capabilities: {
-    readonly "era.tavern.messages": {
-      readonly update_content: (
-        input: Readonly<Record<string, unknown>>,
-      ) => Promise<unknown>;
-    };
-    readonly "era.tavern.variables": {
-      readonly commit: (
-        input: Readonly<Record<string, unknown>>,
-      ) => Promise<unknown>;
-      readonly read: (
-        input: Readonly<Record<string, unknown>>,
-      ) => Promise<unknown>;
-    };
-  };
-}
+type Context = any;
 
 interface CommitRequest {
   readonly schemaVersion: 1;
@@ -236,14 +221,20 @@ export async function run(
   }
 
   let variableCommit: unknown;
+  let nextRecord: unknown = null;
   try {
-    variableCommit = await context.capabilities[
-      "era.tavern.variables"
-    ].commit({
-      scope: { type: "chat" },
-      meta: request.metaUpdate,
-      purpose: "era-update-mk",
-    });
+    const current = await context.capabilities["era.tavern.sidecar"].read_current({});
+    const pointer = current !== null && typeof current === "object" ? (current as Record<string, unknown>).meta : null;
+    const id = pointer !== null && typeof pointer === "object" ? (pointer as Record<string, unknown>).SidecarId : null;
+    if (typeof id !== "string") throw new TypeError("ERA Sidecar 指针不可用。");
+    const stored = await context.capabilities["era.tavern.sidecar"].read_record({ sidecarId: id });
+    const facts = inspectSidecar(current, stored);
+    if (facts.current === null || facts.record === null || facts.status !== "matched") throw new TypeError("ERA Sidecar 状态不可用。");
+    const eraMeta = { ...request.metaUpdate } as Record<string, unknown>;
+    delete eraMeta.SidecarId;
+    nextRecord = recordFor(id, facts.current, { ...stateFromRecord(facts.record), eraMeta }, facts.record);
+    variableCommit = await context.capabilities["era.tavern.sidecar"].write_record({ sidecarId: id, record: nextRecord });
+    if (isConfirmed(variableCommit)) await context.capabilities["era.tavern.sidecar"].commit_metadata({ sidecarId: id, snapshot: nextRecord as Record<string, unknown> });
   } catch (error) {
     const cancelled = isCancellation(error);
     return outcome(
@@ -290,11 +281,8 @@ export async function run(
 
   let observed: unknown;
   try {
-    observed = await context.capabilities["era.tavern.variables"].read({
-      scope: { type: "chat" },
-      fields: ["ERAMetaData"],
-      purpose: "era-update-mk-confirm",
-    });
+    const record = nextRecord as { readonly sidecarId: string };
+    observed = await context.capabilities["era.tavern.sidecar"].read_record({ sidecarId: record.sidecarId });
   } catch (error) {
     const cancelled = isCancellation(error);
     return outcome(
@@ -312,7 +300,9 @@ export async function run(
     );
   }
   try {
-    if (!deepEqual(observedMeta(observed), request.metaUpdate)) {
+    const current = await context.capabilities["era.tavern.sidecar"].read_current({});
+    const facts = inspectSidecar(current, observed);
+    if (facts.record === null || !deepEqual({ ...facts.record.state.eraMeta, SidecarId: facts.record.sidecarId }, request.metaUpdate)) {
       return outcome(
         request,
         "fatal",

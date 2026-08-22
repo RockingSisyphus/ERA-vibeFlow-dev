@@ -117,6 +117,23 @@ function route(eventType: string, detail?: unknown, sequence = 1): JsonRecord {
 }
 
 function fakeCapabilities(counters: JsonRecord, failVariables = false) {
+  const sidecarId = 'era_chat_query-12345678';
+  const record = {
+    schemaVersion: 2,
+    sidecarId,
+    owner: { characterId: 'card-query', groupId: null, chatId: 'chat-query' },
+    revision: 1,
+    state: {
+      statData: { player: { hp: 100 } },
+      eraMeta: {
+        SelectedMks: ['mk0', 'mk1'],
+        EditLogs: {
+          mk0: [{ op: 'insert', path: 'player', value_new: { hp: 50 } }],
+          mk1: [{ op: 'update', path: 'player.hp', value_old: 50, value_new: 100 }],
+        },
+      },
+    },
+  };
   return {
     'era.tavern.variables': {
       read: async () => {
@@ -136,6 +153,18 @@ function fakeCapabilities(counters: JsonRecord, failVariables = false) {
       commit: async () => {
         counters.commits += 1;
         throw new Error('只读测试禁止 variables.commit');
+      },
+    },
+    'era.tavern.sidecar': {
+      read_current: async () => {
+        counters.variableReads += 1;
+        if (failVariables) throw new Error('变量读取故障');
+        return { identity: structuredClone(record.owner), meta: { SidecarId: sidecarId }, stat: null };
+      },
+      read_record: async () => {
+        counters.variableReads += 1;
+        if (failVariables) throw new Error('变量读取故障');
+        return { status: 'found', sidecarId, record: structuredClone(record) };
       },
     },
     'era.tavern.messages': {
@@ -244,7 +273,7 @@ describe('VibeFlow Service API 二级路由与只读查询', () => {
       expect(notification.args[0].value.queryType).toBe(queryType);
       expect(notification.args[0].value.result).toBeDefined();
     }
-    expect(counters).toEqual({ variableReads: 5, messageReads: 5, commits: 0, messageUpdates: 0, refreshes: 0 });
+    expect(counters).toEqual({ variableReads: 10, messageReads: 5, commits: 0, messageUpdates: 0, refreshes: 0 });
   });
 
   it('候选参数错误和 Capability 读取错误仍以 queryResult payload 返回，不写入', async () => {

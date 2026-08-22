@@ -5,7 +5,8 @@
  */
 
 import { installEraServiceClient } from './client';
-import type { EraAdmissionResult, EraRuntimeAdapter, EraWorkflowHost } from './types';
+import { clearSidecarRuntimeSnapshot } from './sidecar-runtime-snapshot';
+import type { EraAdmissionResult, EraRuntimeAdapter, EraStartupGateDecision, EraWorkflowHost } from './types';
 
 export const ERA_ADAPTER_GLOBAL_KEY = '__ERA_VIBEFLOW_SERVICE_ADAPTER__';
 export const ERA_RUNTIME_GLOBAL_KEY = '__ERA_VIBEFLOW_APP_RUNTIME__';
@@ -35,6 +36,9 @@ export interface EraApplicationDependencies {
   startUi(): EraUiLifecycle;
   refreshSettings(): void;
   dispatchSettingsUpdated(): void;
+  /** 等待主 workflow 的安装作用域决议；测试可注入稳定的兼容决议。 */
+  awaitStartupGate(adapter: EraRuntimeAdapter): Promise<EraStartupGateDecision>;
+  warnInstallationScope(decision: EraStartupGateDecision): void;
   warnAdmission(result: EraAdmissionResult, label: string): void;
   warnStop(error: unknown): void;
   reportFatal(error: unknown): void;
@@ -165,6 +169,7 @@ class EraRuntimeController implements EraAppRuntime {
     runCleanup(this.detachPagehide, this.dependencies);
     runCleanup(() => this.adapter.stopAccepting(), this.dependencies);
     runCleanup(this.stopMacro, this.dependencies);
+    clearSidecarRuntimeSnapshot();
     runCleanup(() => this.currentUi.stop(), this.dependencies);
     runCleanup(this.disconnectClient, this.dependencies);
     this.stopPromise = (async () => {
@@ -186,8 +191,8 @@ class EraRuntimeController implements EraAppRuntime {
 /**
  * 启动唯一 ERA 生产运行时。
  *
- * 为了避免新旧监听器重叠，顺序固定为 Host 创建/启动 → 永久 workflow →
- * client → 启动初始化回执 → 同步宏 → UI；旧实例必须先完整停止。
+ * 为了避免误装的全局/预设脚本先监听 Tavern，顺序固定为无监听器 Host 启动 →
+ * 主 workflow 作用域决议 → allow 后才安装 client/APP_READY/宏/UI。
  */
 export async function startEraApplication(dependencies: EraApplicationDependencies): Promise<EraAppRuntime> {
   const previous = dependencies.globals[ERA_RUNTIME_GLOBAL_KEY] as EraAppRuntime | undefined;
@@ -206,6 +211,12 @@ export async function startEraApplication(dependencies: EraApplicationDependenci
   try {
     await host.start();
     runtime.bindService(host.runWorkflowAsync({}));
+    const startup = await dependencies.awaitStartupGate(adapter);
+    if (startup.warn) dependencies.warnInstallationScope(startup);
+    if (startup.route === 'dormant') {
+      await runtime.stop();
+      return runtime;
+    }
     runtime.bindClient(installEraServiceClient(adapter));
     dependencies.globals[ERA_RUNTIME_GLOBAL_KEY] = runtime;
     await awaitStartupAdmission(adapter, dependencies);

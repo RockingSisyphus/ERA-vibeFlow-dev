@@ -1,23 +1,11 @@
 import type { PlannedStepV1 } from "../../base_lib/service_types.ts";
+import { inspectSidecar, variablesForState } from "../../base_lib/sidecar_binding.ts";
 
 interface Envelope<T> {
   readonly value: T;
 }
 
-interface Context {
-  readonly capabilities: {
-    readonly "era.tavern.messages": {
-      readonly read_context: (
-        input: Readonly<Record<string, unknown>>,
-      ) => Promise<unknown>;
-    };
-    readonly "era.tavern.variables": {
-      readonly read: (
-        input: Readonly<Record<string, unknown>>,
-      ) => Promise<unknown>;
-    };
-  };
-}
+type Context = any;
 
 type FailureCategory = "input" | "tavern" | "cancelled";
 
@@ -278,11 +266,14 @@ export async function run(
   }
 
   try {
-    const raw = await context.capabilities["era.tavern.variables"].read({
-      scope: { type: "chat" },
-      fields: ["ERAMetaData"],
-      purpose: "era-update-mk",
-    });
+    const current = await context.capabilities["era.tavern.sidecar"].read_current({});
+    const pointer = current !== null && typeof current === "object" ? (current as Record<string, unknown>).meta : null;
+    const id = pointer !== null && typeof pointer === "object" ? (pointer as Record<string, unknown>).SidecarId : null;
+    if (typeof id !== "string") throw new TypeError("ERA Sidecar 指针不可用。");
+    const stored = await context.capabilities["era.tavern.sidecar"].read_record({ sidecarId: id });
+    const facts = inspectSidecar(current, stored);
+    if (facts.record === null || facts.status !== "matched") throw new TypeError("ERA Sidecar 状态不可用。");
+    const raw = { variables: variablesForState(facts.record.state, facts.record.sidecarId) };
     const scriptRaw = await context.capabilities["era.tavern.variables"].read({
       scope: { type: "script" },
       fields: ["在ai消息尾部生成特殊符号", "特殊符号值"],

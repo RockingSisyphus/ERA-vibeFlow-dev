@@ -11,13 +11,7 @@ interface Envelope<T> {
   readonly value: T;
 }
 
-interface Context {
-  readonly capabilities: {
-    readonly "era.tavern.variables": {
-      readonly read: (input: Readonly<Record<string, unknown>>) => Promise<unknown>;
-    };
-  };
-}
+type Context = any;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -42,10 +36,9 @@ export async function run(
     if (dispatchContext?.status !== "ready") {
       throw new TypeError(String(isRecord(dispatchContext?.failure) ? dispatchContext.failure.message : "统一派发上下文不可用。"));
     }
-    variablesRaw = await context.capabilities["era.tavern.variables"].read({
-      scope: { type: "chat" },
-      purpose: "era-sync-read",
-    });
+    // 此处只读取聊天中的 Sidecar 指针和旧状态迁移来源。后续 Nodeset 负责
+    // 读取 V2 文件并以其状态替换 variablesRaw，生产同步不再直接读取 chat state。
+    variablesRaw = await context.capabilities["era.tavern.sidecar"].read_current({});
     const result: SyncContextV1 = {
       schemaVersion: 1,
       step,

@@ -2,23 +2,19 @@
  * @file ERA 变量框架 - 核心常量模块
  * @description
  * 该文件集中定义了整个 ERA 框架所使用的关键常量。
- * 这些常量主要用作在酒馆 `chat` 变量中存储和检索 ERA 核心数据的路径（键名）。
+ * 这些常量主要描述 ERA 历史格式以及 Sidecar V2 `state` 中沿用的键名。
  *
  * **核心数据结构**:
- * ERA 的数据被分为两部分，存储在 `chat` 变量下：
+ * ERA 的数据被分为两部分，存储在 Sidecar V2 文件的 `state` 下：
  * 1. **元数据 (ERAMetaData)**: 包含框架自身运行所需的核心数据，如 `EditLogs` 和 `SelectedMks`。
  * 2. **状态数据 (stat_data)**: 包含所有由用户和 AI 管理的游戏/故事变量，如 `player`、`world_state` 等。
  *
  * 其结构大致如下：
  * ```json
  * {
- *   "ERAMetaData": {
- *     "EditLogs": { ... },
- *     "SelectedMks": [ ... ]
- *   },
- *   "stat_data": {
- *     "player": { "hp": 100, "gold": 50 },
- *     "world_state": { ... }
+ *   "state": {
+ *     "eraMeta": { "EditLogs": { ... }, "SelectedMks": [ ... ] },
+ *     "statData": { "player": { "hp": 100, "gold": 50 }, "world_state": { ... } }
  *   }
  * }
  * ```
@@ -57,21 +53,20 @@ export type EraConfig = z.infer<typeof SettingsSchema>;
 /**
  * @constant {object} CHAT_SCOPE
  * @description
- * 用于酒馆助手 `getVariables` 和 `replaceVariables` 系列函数的 `scope` 参数。
- * 它指定了操作的目标是当前**聊天（Chat）**级别的变量。
- * ERA 框架的所有核心数据和用户变量都存储在此作用域下。
+ * 冻结旧差分 oracle 所使用的聊天 scope。生产 ERA 不得通过它读写状态；
+ * 当前聊天变量只保留 `ERAMetaData.SidecarId` 指针。
  */
 export const CHAT_SCOPE = { type: 'chat' as const };
 
 /**
  * @constant {string} META_DATA_PATH
- * @description 在 `chat` 变量中，存储 ERA 框架**元数据**的根对象的键名。
+ * @description 历史聊天变量和 Sidecar state 投影中 ERA 元数据的根键名。
  */
 export const META_DATA_PATH = 'ERAMetaData';
 
 /**
  * @constant {string} STAT_DATA_PATH
- * @description 在 `chat` 变量中，存储用户**状态数据**的根对象的键名。
+ * @description 历史聊天变量和 Sidecar state 投影中用户状态数据的根键名。
  */
 export const STAT_DATA_PATH = 'stat_data';
 

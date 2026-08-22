@@ -9,16 +9,16 @@
     },
     "inputs": [],
     "outputs": [],
-    "max_steps": 8,
+    "max_steps": 12,
     "entry_mode": "async",
     "execution_lock": null,
     "contains_global_state": false,
     "summary": {
-      "nodes": 4,
+      "nodes": 9,
       "nodesets": 13,
-      "explicit_edges": 3,
+      "explicit_edges": 9,
       "data_edges": 0,
-      "reported_edges": 3,
+      "reported_edges": 9,
       "contains_global_state": false
     },
     "entry_nodes": [
@@ -50,6 +50,218 @@
         "status": "implemented",
         "planned_behavior": null,
         "requires": [],
+        "provides": [],
+        "join_policy": "safe_any",
+        "async": null,
+        "loop": null,
+        "io": null,
+        "invokes": null,
+        "config": {
+          "call": {},
+          "node_configs": {},
+          "allow_config_override": false
+        }
+      },
+      {
+        "id": "inspect_current_script_scope",
+        "type_used": "era.installation.scope.inspect",
+        "source": {
+          "root_id": "era-service",
+          "path": "configs/era.service.jsonc"
+        },
+        "role": {
+          "display_name": "读取当前脚本与脚本树",
+          "description": "经既有 service_host.ts 的无监听器启动期能力读取 getScriptId 与 global、preset、character 三类脚本树；只采集启用层级和脚本 ID。"
+        },
+        "contract_source": "node_type",
+        "flow_kind": "process",
+        "effect_scope": "none",
+        "runtime_dispatch": "unknown",
+        "execution_lock": null,
+        "effective_execution_lock": null,
+        "contains_global_state": false,
+        "status": "implemented",
+        "planned_behavior": null,
+        "requires": [],
+        "provides": [
+          {
+            "key": "installation_scope_facts",
+            "type": "era.installation.scope.facts",
+            "display_name": "安装作用域事实"
+          }
+        ],
+        "join_policy": "safe_any",
+        "async": null,
+        "loop": null,
+        "io": null,
+        "invokes": null,
+        "config": {
+          "call": {},
+          "node_configs": {},
+          "allow_config_override": false
+        }
+      },
+      {
+        "id": "classify_installation_scope",
+        "type_used": "era.installation.scope.classify",
+        "source": {
+          "root_id": "era-service",
+          "path": "configs/era.service.jsonc"
+        },
+        "role": {
+          "display_name": "分类安装作用域",
+          "description": "纯 workflow 规则根据启用祖先文件夹和当前脚本 ID 分类 character、global、preset、ambiguous 或 unknown。"
+        },
+        "contract_source": "node_type",
+        "flow_kind": "process",
+        "effect_scope": "none",
+        "runtime_dispatch": "unknown",
+        "execution_lock": null,
+        "effective_execution_lock": null,
+        "contains_global_state": false,
+        "status": "implemented",
+        "planned_behavior": null,
+        "requires": [
+          {
+            "type": "era.installation.scope.facts",
+            "cardinality": "exactly_one",
+            "display_name": "安装作用域事实"
+          }
+        ],
+        "provides": [
+          {
+            "key": "installation_scope_classification",
+            "type": "era.installation.scope.classification",
+            "display_name": "安装作用域分类"
+          }
+        ],
+        "join_policy": "safe_any",
+        "async": null,
+        "loop": null,
+        "io": null,
+        "invokes": null,
+        "config": {
+          "call": {},
+          "node_configs": {},
+          "allow_config_override": false
+        }
+      },
+      {
+        "id": "decide_startup_policy",
+        "type_used": "era.installation.scope.decide",
+        "source": {
+          "root_id": "era-service",
+          "path": "configs/era.service.jsonc"
+        },
+        "role": {
+          "display_name": "决定启动策略",
+          "description": "character 允许完整启动；global、preset 与 ambiguous 要求 dormant；unknown 允许启动并要求一次兼容警告。"
+        },
+        "contract_source": "node_type",
+        "flow_kind": "process",
+        "effect_scope": "none",
+        "runtime_dispatch": "unknown",
+        "execution_lock": null,
+        "effective_execution_lock": null,
+        "contains_global_state": false,
+        "status": "implemented",
+        "planned_behavior": null,
+        "requires": [
+          {
+            "type": "era.installation.scope.classification",
+            "cardinality": "exactly_one",
+            "display_name": "安装作用域分类"
+          }
+        ],
+        "provides": [
+          {
+            "key": "installation_scope_decision",
+            "type": "era.installation.scope.decision",
+            "display_name": "启动决议"
+          },
+          {
+            "key": "installation_scope_route",
+            "type": "era.installation.scope.route",
+            "display_name": "启动分支"
+          }
+        ],
+        "join_policy": "safe_any",
+        "async": null,
+        "loop": null,
+        "io": null,
+        "invokes": null,
+        "config": {
+          "call": {},
+          "node_configs": {},
+          "allow_config_override": false
+        }
+      },
+      {
+        "id": "activate_tavern_ingress",
+        "type_used": "era.installation.scope.activate_ingress",
+        "source": {
+          "root_id": "era-service",
+          "path": "configs/era.service.jsonc"
+        },
+        "role": {
+          "display_name": "登记 Tavern 事件入口",
+          "description": "仅 allow 时调用启动期 Host 的机械 activate 操作，登记既有 TavernEraServiceAdapter ingress；随后复用原有初始化与永久循环。"
+        },
+        "contract_source": "node_type",
+        "flow_kind": "process",
+        "effect_scope": "none",
+        "runtime_dispatch": "unknown",
+        "execution_lock": null,
+        "effective_execution_lock": null,
+        "contains_global_state": false,
+        "status": "implemented",
+        "planned_behavior": null,
+        "requires": [
+          {
+            "type": "era.installation.scope.decision",
+            "cardinality": "exactly_one",
+            "display_name": "启动决议"
+          }
+        ],
+        "provides": [],
+        "join_policy": "safe_any",
+        "async": null,
+        "loop": null,
+        "io": null,
+        "invokes": null,
+        "config": {
+          "call": {},
+          "node_configs": {},
+          "allow_config_override": false
+        }
+      },
+      {
+        "id": "publish_dormant_startup",
+        "type_used": "era.installation.scope.publish_dormant",
+        "source": {
+          "root_id": "era-service",
+          "path": "configs/era.service.jsonc"
+        },
+        "role": {
+          "display_name": "发布休眠安装提示",
+          "description": "仅 dormant 时调用启动期 Host 的机械提示操作，随后结束；不登记事件、不运行 Sidecar、宏或 UI。"
+        },
+        "contract_source": "node_type",
+        "flow_kind": "process",
+        "effect_scope": "none",
+        "runtime_dispatch": "unknown",
+        "execution_lock": null,
+        "effective_execution_lock": null,
+        "contains_global_state": false,
+        "status": "implemented",
+        "planned_behavior": null,
+        "requires": [
+          {
+            "type": "era.installation.scope.decision",
+            "cardinality": "exactly_one",
+            "display_name": "启动决议"
+          }
+        ],
         "provides": [],
         "join_policy": "safe_any",
         "async": null,
@@ -191,6 +403,56 @@
     "edges": [
       {
         "from": "start",
+        "to": "inspect_current_script_scope",
+        "when": "",
+        "roles": [
+          "mainline",
+          "schedule",
+          "transfer"
+        ]
+      },
+      {
+        "from": "inspect_current_script_scope",
+        "to": "classify_installation_scope",
+        "when": "",
+        "roles": [
+          "mainline",
+          "schedule",
+          "transfer"
+        ]
+      },
+      {
+        "from": "classify_installation_scope",
+        "to": "decide_startup_policy",
+        "when": "",
+        "roles": [
+          "mainline",
+          "schedule",
+          "transfer"
+        ]
+      },
+      {
+        "from": "decide_startup_policy",
+        "to": "activate_tavern_ingress",
+        "when": "installation_scope_route == 'allow'",
+        "roles": [
+          "mainline",
+          "schedule",
+          "transfer"
+        ]
+      },
+      {
+        "from": "decide_startup_policy",
+        "to": "publish_dormant_startup",
+        "when": "installation_scope_route == 'dormant'",
+        "roles": [
+          "mainline",
+          "schedule",
+          "transfer"
+        ]
+      },
+      {
+        "from": "activate_tavern_ingress",
         "to": "initialize_state",
         "when": "",
         "roles": [
@@ -211,6 +473,16 @@
       },
       {
         "from": "service_loop",
+        "to": "end",
+        "when": "",
+        "roles": [
+          "mainline",
+          "schedule",
+          "transfer"
+        ]
+      },
+      {
+        "from": "publish_dormant_startup",
         "to": "end",
         "when": "",
         "roles": [
@@ -1181,7 +1453,7 @@
             },
             "role": {
               "display_name": "只读获取 ERA 变量上下文",
-              "description": "仅调用 variables.read，读取 chat 级 stat_data 与 ERAMetaData；不调用 commit。"
+              "description": "只读取当前聊天 SidecarId 指针及其 V2 用户文件状态；不调用聊天状态 commit。"
             },
             "contract_source": "node_type",
             "flow_kind": "data_store",
@@ -2667,7 +2939,7 @@
             },
             "role": {
               "display_name": "完成 API 写入事务",
-              "description": "成功时声明 apiWrite 后 writeDone；状态同步失败时因消息已写而升级 fatal。"
+              "description": "成功时声明 apiWrite 后 writeDone；只有消息提交未知时升级 fatal，已确认消息后的 Sidecar 文件失败返回可修复 failed。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -6093,14 +6365,14 @@
         ]
       }
     },
-    "era.sidecar.binding": {
-      "type_key": "era.sidecar.binding",
+    "era.sidecar.store": {
+      "type_key": "era.sidecar.store",
       "source": {
         "root_id": "era-service",
-        "path": "configs/nodesets/sidecar_binding.jsonc"
+        "path": "configs/nodesets/sidecar_store.jsonc"
       },
-      "display_name": "ERA Sidecar 绑定事务",
-      "description": "集中承载 Sidecar 身份检查、冲突选择、迁移/独立/复制事务和受控弹窗请求。Host 只提供身份、files 和 UI 机械能力；归属、冲突与恢复规则均在本 Nodeset。成功提交后的镜像由同域 Sidecar 节点在 task_sync 的提交后边界调用。",
+      "display_name": "ERA Sidecar 状态存储",
+      "description": "ERA 聊天状态的唯一领域存储节点集。它检查聊天 SidecarId 指针与身份，读取或迁移 V2 用户文件状态，处理冲突选择，并在成功读取或写入后发布易失宏快照。聊天变量仅保留 ERAMetaData.SidecarId；stat_data、SelectedMks、EditLogs 和其余 ERA 元数据只在 Sidecar 文件中读写。",
       "status": "implemented",
       "flow_kind": "process",
       "effect_scope": "none",
@@ -6116,19 +6388,19 @@
         {
           "key": "sidecar_binding_context",
           "type": "era.sync.context",
-          "display_name": "已解析的同步上下文"
+          "display_name": "已加载 Sidecar 状态的同步上下文"
         },
         {
           "key": "sidecar_binding_route",
           "type": "era.sidecar.binding.route",
-          "display_name": "Sidecar 绑定路由"
+          "display_name": "Sidecar 状态路由"
         }
       ],
       "global_config": {},
       "body": {
         "source": {
           "root_id": "era-service",
-          "path": "configs/nodesets/sidecar_binding.jsonc"
+          "path": "configs/nodesets/sidecar_store.jsonc"
         },
         "inputs": [
           {
@@ -6142,13 +6414,13 @@
           {
             "type": "era.sync.context",
             "cardinality": "exactly_one",
-            "display_name": "已解析的同步上下文",
+            "display_name": "已加载 Sidecar 状态的同步上下文",
             "as": "sidecarBindingContext"
           },
           {
             "type": "era.sidecar.binding.route",
             "cardinality": "exactly_one",
-            "display_name": "Sidecar 绑定路由",
+            "display_name": "Sidecar 状态路由",
             "as": "sidecarBindingRoute"
           }
         ],
@@ -6182,11 +6454,11 @@
             "type_used": "era.service.terminal",
             "source": {
               "root_id": "era-service",
-              "path": "configs/nodesets/sidecar_binding.jsonc"
+              "path": "configs/nodesets/sidecar_store.jsonc"
             },
             "role": {
-              "display_name": "Sidecar 事务启动",
-              "description": "开始一次受控的 Sidecar 绑定前置事务。"
+              "display_name": "Sidecar 状态存储启动",
+              "description": "开始一次当前聊天状态加载或绑定事务。"
             },
             "contract_source": "node_type",
             "flow_kind": "terminal",
@@ -6215,11 +6487,11 @@
             "type_used": "era.sidecar_binding.inspect_current",
             "source": {
               "root_id": "era-service",
-              "path": "configs/nodesets/sidecar_binding.jsonc"
+              "path": "configs/nodesets/sidecar_store.jsonc"
             },
             "role": {
-              "display_name": "检查当前 Sidecar 绑定",
-              "description": "读取当前角色/群组、聊天 ID、聊天变量 ERAMetaData.SidecarId 与当前用户 files 记录，形成 matched、缺失、损坏或归属冲突事实；不写变量、不写文件。"
+              "display_name": "检查聊天指针与身份",
+              "description": "读取当前身份、聊天 SidecarId 指针和 V2 文件；旧聊天状态只在迁移时读取。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -6265,11 +6537,11 @@
             "type_used": "era.sidecar_binding.resolve_choice",
             "source": {
               "root_id": "era-service",
-              "path": "configs/nodesets/sidecar_binding.jsonc"
+              "path": "configs/nodesets/sidecar_store.jsonc"
             },
             "role": {
-              "display_name": "规划 Sidecar 绑定选择",
-              "description": "以检查事实、当前身份、文件 revision 和用户选择纯规则决定继续、阻塞、迁移、创建独立变量或复制变量；Host 不承载归属判断。"
+              "display_name": "解析绑定选择",
+              "description": "纯规则决定继续、阻塞或迁移/独立/复制事务。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -6315,11 +6587,11 @@
             "type_used": "era.sidecar_binding.publish_choice_prompt",
             "source": {
               "root_id": "era-service",
-              "path": "configs/nodesets/sidecar_binding.jsonc"
+              "path": "configs/nodesets/sidecar_store.jsonc"
             },
             "role": {
-              "display_name": "发布不可关闭的 Sidecar 选择弹窗",
-              "description": "把 workflow 的阻塞冲突结论交给宿主 UI 能力展示迁移、创建独立变量或复制变量；无取消、关闭、背景点击或 Escape 路径。"
+              "display_name": "发布 Sidecar 冲突选择",
+              "description": "显示 workflow 已决定的不可关闭选择提示。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -6354,11 +6626,11 @@
             "type_used": "era.sidecar_binding.apply_resolution",
             "source": {
               "root_id": "era-service",
-              "path": "configs/nodesets/sidecar_binding.jsonc"
+              "path": "configs/nodesets/sidecar_store.jsonc"
             },
             "role": {
-              "display_name": "执行 Sidecar 绑定事务",
-              "description": "提交前重新读取当前身份、聊天 ID、SidecarId 与 record revision；受控执行迁移、独立或复制。迁移和复制只追加标准 ERA 恢复指令并完整同步；不能安全恢复时 fail-closed。"
+              "display_name": "应用绑定与状态决议",
+              "description": "执行 V2 文件、聊天指针与运行时快照的受控事务。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -6409,11 +6681,11 @@
             "type_used": "era.service.terminal",
             "source": {
               "root_id": "era-service",
-              "path": "configs/nodesets/sidecar_binding.jsonc"
+              "path": "configs/nodesets/sidecar_store.jsonc"
             },
             "role": {
-              "display_name": "Sidecar 事务结束",
-              "description": "输出已解析的同步上下文和绑定路由。"
+              "display_name": "Sidecar 状态存储结束",
+              "description": "输出已加载的同步上下文及路由。"
             },
             "contract_source": "node_type",
             "flow_kind": "terminal",
@@ -7888,11 +8160,11 @@
         "execution_lock": null,
         "contains_global_state": false,
         "summary": {
-          "nodes": 16,
+          "nodes": 15,
           "nodesets": 13,
-          "explicit_edges": 21,
-          "data_edges": 1,
-          "reported_edges": 21,
+          "explicit_edges": 19,
+          "data_edges": 0,
+          "reported_edges": 19,
           "contains_global_state": false
         },
         "entry_nodes": [
@@ -7987,15 +8259,15 @@
             }
           },
           {
-            "id": "sidecar_binding_prepare",
-            "type_used": "era.sidecar.binding",
+            "id": "sidecar_store_prepare",
+            "type_used": "era.sidecar.store",
             "source": {
               "root_id": "era-service",
               "path": "configs/nodesets/task_sync.jsonc"
             },
             "role": {
-              "display_name": "运行 Sidecar 绑定前置检查",
-              "description": "调用专用 Sidecar Nodeset，集中检查当前身份、聊天 SidecarId 与本地记录，并决定继续、显示阻塞选择或执行用户已提交的绑定事务。"
+              "display_name": "运行 Sidecar 状态存储前置事务",
+              "description": "调用专用 Sidecar 状态节点集：检查身份与唯一聊天指针，读取或迁移 V2 用户文件状态，并规划冲突选择或继续同步。"
             },
             "contract_source": "nodeset",
             "flow_kind": "predefined",
@@ -8017,12 +8289,12 @@
               {
                 "key": "sidecar_binding_context",
                 "type": "era.sync.context",
-                "display_name": "已解析的同步上下文"
+                "display_name": "已加载 Sidecar 状态的同步上下文"
               },
               {
                 "key": "sidecar_binding_route",
                 "type": "era.sidecar.binding.route",
-                "display_name": "Sidecar 绑定路由"
+                "display_name": "Sidecar 状态路由"
               }
             ],
             "join_policy": "safe_any",
@@ -8031,7 +8303,7 @@
             "io": null,
             "invokes": {
               "kind": "nodeset",
-              "target": "era.sidecar.binding",
+              "target": "era.sidecar.store",
               "target_status": "implemented"
             },
             "config": {
@@ -8378,8 +8650,8 @@
               "path": "configs/nodesets/task_sync.jsonc"
             },
             "role": {
-              "display_name": "提交 Tavern 变量",
-              "description": "通过挂起式变量 Capability 执行有序逻辑提交，并将部分写入或未知写入报告为致命错误。"
+              "display_name": "提交 Sidecar 状态",
+              "description": "先确认消息写入，再提交 V2 Sidecar 状态文件并发布当前身份的易失宏快照；聊天变量不再保存 ERA 状态。"
             },
             "contract_source": "node_type",
             "flow_kind": "data_store",
@@ -8404,45 +8676,6 @@
                 "display_name": "同步提交结果"
               }
             ],
-            "join_policy": "safe_any",
-            "async": null,
-            "loop": null,
-            "io": null,
-            "invokes": null,
-            "config": {
-              "call": {},
-              "node_configs": {},
-              "allow_config_override": false
-            }
-          },
-          {
-            "id": "sidecar_binding_persist",
-            "type_used": "era.sidecar_binding.persist_snapshot",
-            "source": {
-              "root_id": "era-service",
-              "path": "configs/nodesets/task_sync.jsonc"
-            },
-            "role": {
-              "display_name": "运行 Sidecar 提交后镜像",
-              "description": "仅在 Tavern 变量提交成功后调用 Sidecar 域的镜像节点，重新核验绑定并镜像当前 stat_data；失败保持可重试状态，不伪装成功。"
-            },
-            "contract_source": "node_type",
-            "flow_kind": "process",
-            "effect_scope": "none",
-            "runtime_dispatch": "unknown",
-            "execution_lock": null,
-            "effective_execution_lock": null,
-            "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
-            "requires": [
-              {
-                "type": "era.tavern.commit.result",
-                "cardinality": "exactly_one",
-                "display_name": "变量提交结果"
-              }
-            ],
-            "provides": [],
             "join_policy": "safe_any",
             "async": null,
             "loop": null,
@@ -8553,7 +8786,7 @@
             },
             "role": {
               "display_name": "构造已完成 Sidecar 修复结果",
-              "description": "仅在 Sidecar repair 已重建本地镜像时结算该 UI 选择；不得再进入普通变量重算或覆盖当前聊天状态。"
+              "description": "保留给未来纯绑定 no-op 修复；当前 Sidecar repair 会进入完整重放，确保已确认的聊天指令重新生成文件状态。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -8636,7 +8869,7 @@
           },
           {
             "from": "read_sync_context",
-            "to": "sidecar_binding_prepare",
+            "to": "sidecar_store_prepare",
             "when": "",
             "roles": [
               "mainline",
@@ -8645,7 +8878,7 @@
             ]
           },
           {
-            "from": "sidecar_binding_prepare",
+            "from": "sidecar_store_prepare",
             "to": "plan_sync",
             "when": "sidecar_binding_route == 'continue'",
             "roles": [
@@ -8655,7 +8888,7 @@
             ]
           },
           {
-            "from": "sidecar_binding_prepare",
+            "from": "sidecar_store_prepare",
             "to": "sidecar_binding_blocked_result",
             "when": "sidecar_binding_route == 'blocked'",
             "roles": [
@@ -8665,7 +8898,7 @@
             ]
           },
           {
-            "from": "sidecar_binding_prepare",
+            "from": "sidecar_store_prepare",
             "to": "sidecar_binding_applied_result",
             "when": "sidecar_binding_route == 'applied'",
             "roles": [
@@ -8766,30 +8999,12 @@
           },
           {
             "from": "commit_variables",
-            "to": "sidecar_binding_persist",
+            "to": "build_sync_notification",
             "when": "",
             "roles": [
               "mainline",
               "schedule",
               "transfer"
-            ]
-          },
-          {
-            "from": "commit_variables",
-            "to": "build_sync_notification",
-            "when": "",
-            "roles": [
-              "data_bypass",
-              "transfer"
-            ]
-          },
-          {
-            "from": "sidecar_binding_persist",
-            "to": "build_sync_notification",
-            "when": "",
-            "roles": [
-              "mainline",
-              "schedule"
             ]
           },
           {
@@ -10743,7 +10958,7 @@
     },
     "era.api.read_query_variables": {
       "display_name": "只读获取 ERA 变量上下文",
-      "description": "仅调用 variables.read 读取 chat 级 stat_data 与 ERAMetaData；捕获读取错误供兼容结果处理。",
+      "description": "只从当前聊天指针定位并读取 V2 Sidecar 状态；捕获读取错误供兼容结果处理。",
       "category": "宿主只读边界",
       "version": "1.0.0",
       "flow_kind": "data_store",
@@ -11863,6 +12078,236 @@
           "source": {
             "kind": "file",
             "ref": "nodes/initialize/plan_initialization.ts",
+            "export": "run"
+          },
+          "completion": "immediate"
+        }
+      ]
+    },
+    "era.installation.scope.activate_ingress": {
+      "display_name": "登记 Tavern 事件入口",
+      "description": "仅 allow 分支让 Host 机械登记既有 Tavern ingress。",
+      "category": "服务生命周期",
+      "version": "1.0.0",
+      "flow_kind": "process",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.installation.scope.decision",
+            "cardinality": "exactly_one",
+            "display_name": "启动决议"
+          }
+        ],
+        "provides": [],
+        "input_semantics": {
+          "era.installation.scope.decision": [
+            "输入：allow 启动决议。"
+          ]
+        },
+        "output_semantics": {},
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/lifecycle/activate_tavern_ingress.ts",
+            "export": "run"
+          },
+          "completion": "immediate"
+        }
+      ]
+    },
+    "era.installation.scope.classify": {
+      "display_name": "分类安装作用域",
+      "description": "纯规则根据唯一的启用脚本归属分类安装位置。",
+      "category": "服务生命周期",
+      "version": "1.0.0",
+      "flow_kind": "process",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.installation.scope.facts",
+            "cardinality": "exactly_one",
+            "display_name": "安装作用域事实"
+          }
+        ],
+        "provides": [
+          {
+            "key": "installation_scope_classification",
+            "type": "era.installation.scope.classification",
+            "display_name": "安装作用域分类"
+          }
+        ],
+        "input_semantics": {
+          "era.installation.scope.facts": [
+            "输入：Host 采集的启用脚本树事实。"
+          ]
+        },
+        "output_semantics": {
+          "installation_scope_classification": [
+            "输出：纯安装位置分类。"
+          ]
+        },
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser",
+            "node"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/lifecycle/classify_installation_scope.ts",
+            "export": "run"
+          },
+          "completion": "immediate"
+        }
+      ]
+    },
+    "era.installation.scope.decide": {
+      "display_name": "决定启动策略",
+      "description": "角色卡脚本允许；全局、预设和重复安装休眠；未知兼容启动并警告。",
+      "category": "服务生命周期",
+      "version": "1.0.0",
+      "flow_kind": "process",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.installation.scope.classification",
+            "cardinality": "exactly_one",
+            "display_name": "安装作用域分类"
+          }
+        ],
+        "provides": [
+          {
+            "key": "installation_scope_decision",
+            "type": "era.installation.scope.decision",
+            "display_name": "启动决议"
+          },
+          {
+            "key": "installation_scope_route",
+            "type": "era.installation.scope.route",
+            "display_name": "启动分支"
+          }
+        ],
+        "input_semantics": {
+          "era.installation.scope.classification": [
+            "输入：纯安装位置分类。"
+          ]
+        },
+        "output_semantics": {
+          "installation_scope_decision": [
+            "输出：workflow 启动策略。"
+          ],
+          "installation_scope_route": [
+            "输出：供显式边使用的 allow 或 dormant 路由。"
+          ]
+        },
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser",
+            "node"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/lifecycle/decide_startup_policy.ts",
+            "export": "run"
+          },
+          "completion": "immediate"
+        }
+      ]
+    },
+    "era.installation.scope.inspect": {
+      "display_name": "读取当前脚本与脚本树",
+      "description": "通过已登记 Host 读取当前脚本 ID 与启用脚本树原始事实。",
+      "category": "服务生命周期",
+      "version": "1.0.0",
+      "flow_kind": "process",
+      "contract": {
+        "requires": [],
+        "provides": [
+          {
+            "key": "installation_scope_facts",
+            "type": "era.installation.scope.facts",
+            "display_name": "安装作用域事实"
+          }
+        ],
+        "input_semantics": {},
+        "output_semantics": {
+          "installation_scope_facts": [
+            "输出：Host 原始作用域事实。"
+          ]
+        },
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/lifecycle/inspect_installation_scope.ts",
+            "export": "run"
+          },
+          "completion": "immediate"
+        }
+      ]
+    },
+    "era.installation.scope.publish_dormant": {
+      "display_name": "发布休眠安装提示",
+      "description": "仅 dormant 分支结算无监听器启动结果。",
+      "category": "服务生命周期",
+      "version": "1.0.0",
+      "flow_kind": "process",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.installation.scope.decision",
+            "cardinality": "exactly_one",
+            "display_name": "启动决议"
+          }
+        ],
+        "provides": [],
+        "input_semantics": {
+          "era.installation.scope.decision": [
+            "输入：dormant 启动决议。"
+          ]
+        },
+        "output_semantics": {},
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/lifecycle/publish_dormant_startup.ts",
             "export": "run"
           },
           "completion": "immediate"
@@ -13310,46 +13755,6 @@
         }
       ]
     },
-    "era.sidecar_binding.persist_snapshot": {
-      "display_name": "镜像 Sidecar 变量快照",
-      "description": "仅在变量提交成功后镜像当前变量；文件写入失败时发布显式修复入口，不把聊天提交伪装为镜像成功。",
-      "category": "Sidecar 绑定",
-      "version": "1.0.0",
-      "flow_kind": "process",
-      "contract": {
-        "requires": [
-          {
-            "type": "era.tavern.commit.result",
-            "cardinality": "exactly_one",
-            "display_name": "变量提交结果"
-          }
-        ],
-        "provides": [],
-        "input_semantics": {
-          "era.tavern.commit.result": [
-            "输入：变量提交结果。"
-          ]
-        },
-        "output_semantics": {},
-        "params_schema": {},
-        "params_defaults": {},
-        "examples": []
-      },
-      "implementations": [
-        {
-          "language": "typescript",
-          "targets": [
-            "browser"
-          ],
-          "source": {
-            "kind": "file",
-            "ref": "nodes/sidecar/persist_snapshot.ts",
-            "export": "run"
-          },
-          "completion": "suspend"
-        }
-      ]
-    },
     "era.sidecar_binding.publish_choice_prompt": {
       "display_name": "发布 Sidecar 选择弹窗",
       "description": "只显示 workflow 已作出的阻塞结论。",
@@ -14192,7 +14597,7 @@
     },
     "era.tavern.sync_read": {
       "display_name": "读取 Tavern 同步上下文",
-      "description": "消费统一派发上下文中的严格消息投影，仅补读聊天变量，并把读取失败收敛为带类型同步上下文。",
+      "description": "消费统一派发上下文中的严格消息投影，仅读取聊天 Sidecar 指针与旧状态迁移来源，并把读取失败收敛为带类型同步上下文。",
       "category": "同步宿主边界",
       "version": "1.0.0",
       "flow_kind": "data_store",
@@ -14249,8 +14654,8 @@
       ]
     },
     "era.tavern.variables_commit": {
-      "display_name": "提交同步消息与变量",
-      "description": "严格先确认全部消息文本，再提交并核对聊天 stat/meta；部分或未知提交一律 fatal。",
+      "display_name": "提交同步消息与 Sidecar 状态",
+      "description": "严格先确认全部消息文本，再提交并回读 V2 Sidecar 状态，随后发布当前身份的易失宏快照；仅消息提交未知才 fatal，文件提交失败发布显式修复入口。",
       "category": "同步宿主边界",
       "version": "1.0.0",
       "flow_kind": "data_store",
@@ -29914,6 +30319,131 @@
           ]
         }
       },
+      "era.installation.scope.classification": {
+        "kind": "data_schema",
+        "type_key": "era.installation.scope.classification",
+        "representation": "json",
+        "display_name": "ERA 安装作用域分类",
+        "description": "纯规则对启动期脚本归属的分类结果。",
+        "schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "required": [
+            "status",
+            "reason"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "status": {
+              "enum": [
+                "character",
+                "global",
+                "preset",
+                "ambiguous",
+                "unknown"
+              ]
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      },
+      "era.installation.scope.decision": {
+        "kind": "data_schema",
+        "type_key": "era.installation.scope.decision",
+        "representation": "json",
+        "display_name": "ERA 安装作用域启动决议",
+        "description": "启动前 workflow 返回给组合层的允许或休眠决议及提示要求。",
+        "schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "required": [
+            "classification",
+            "route",
+            "warn"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "classification": {
+              "enum": [
+                "character",
+                "global",
+                "preset",
+                "ambiguous",
+                "unknown"
+              ]
+            },
+            "route": {
+              "enum": [
+                "allow",
+                "dormant"
+              ]
+            },
+            "warn": {
+              "type": "boolean"
+            }
+          }
+        }
+      },
+      "era.installation.scope.facts": {
+        "kind": "data_schema",
+        "type_key": "era.installation.scope.facts",
+        "representation": "json",
+        "display_name": "ERA 安装作用域事实",
+        "description": "启动期 Host 对当前脚本 ID 与各作用域启用归属的只读采样。",
+        "schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "required": [
+            "scriptId",
+            "scopes",
+            "readStatus"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "scriptId": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "scopes": {
+              "type": "array",
+              "items": {
+                "enum": [
+                  "character",
+                  "global",
+                  "preset"
+                ]
+              }
+            },
+            "readStatus": {
+              "enum": [
+                "complete",
+                "unavailable",
+                "failed"
+              ]
+            }
+          }
+        }
+      },
+      "era.installation.scope.route": {
+        "kind": "data_schema",
+        "type_key": "era.installation.scope.route",
+        "representation": "json",
+        "display_name": "ERA 安装作用域路由",
+        "description": "主 workflow 的启动分支路由。",
+        "schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "string",
+          "enum": [
+            "allow",
+            "dormant"
+          ]
+        }
+      },
       "era.iteration.route": {
         "kind": "data_schema",
         "type_key": "era.iteration.route",
@@ -31180,7 +31710,7 @@
         "type_key": "era.sidecar.binding.facts",
         "representation": "json",
         "display_name": "Sidecar 绑定事实",
-        "description": "当前身份、聊天 SidecarId 与本地记录的只读检查事实。",
+        "description": "当前身份、聊天 SidecarId、V2 文件记录与仅用于一次迁移的旧状态事实。运行资格由安装作用域 workflow 决定，缺失指针为 create 或 migrate-legacy。",
         "schema": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
           "type": "object",
@@ -31189,15 +31719,17 @@
             "reason",
             "current",
             "sidecarId",
-            "record"
+            "record",
+            "legacyRecord",
+            "legacyState"
           ],
           "additionalProperties": false,
           "properties": {
             "status": {
               "type": "string",
               "enum": [
-                "not-applicable",
                 "create",
+                "migrate-legacy",
                 "matched",
                 "conflict",
                 "invalid",
@@ -31220,6 +31752,18 @@
               ]
             },
             "record": {
+              "type": [
+                "object",
+                "null"
+              ]
+            },
+            "legacyRecord": {
+              "type": [
+                "object",
+                "null"
+              ]
+            },
+            "legacyState": {
               "type": [
                 "object",
                 "null"
@@ -38890,6 +39434,18 @@
           "additionalProperties": true
         }
       },
+      "era.tavern.installation_scope.read.request": {
+        "kind": "data_schema",
+        "type_key": "era.tavern.installation_scope.read.request",
+        "representation": "json",
+        "display_name": "安装作用域读取请求",
+        "description": "无输入的启动期脚本树读取请求。",
+        "schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
       "era.tavern.messages.read_context.outcome": {
         "kind": "data_schema",
         "type_key": "era.tavern.messages.read_context.outcome",
@@ -39183,8 +39739,8 @@
         "kind": "data_schema",
         "type_key": "era.tavern.sidecar.commit_metadata.request",
         "representation": "json",
-        "display_name": "Sidecar 元数据提交请求",
-        "description": "仅提交 ERAMetaData.SidecarId。",
+        "display_name": "Sidecar 指针提交请求",
+        "description": "只提交 ERAMetaData.SidecarId；可在已确认文件提交后携带易失快照。",
         "schema": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
           "type": "object",
@@ -39194,6 +39750,9 @@
           "properties": {
             "sidecarId": {
               "type": "string"
+            },
+            "snapshot": {
+              "type": "object"
             }
           },
           "additionalProperties": false
@@ -39365,6 +39924,26 @@
           "$schema": "https://json-schema.org/draft/2020-12/schema",
           "type": "object",
           "additionalProperties": true
+        }
+      },
+      "era.tavern.startup_gate.result": {
+        "kind": "data_schema",
+        "type_key": "era.tavern.startup_gate.result",
+        "representation": "json",
+        "display_name": "启动闸门结果",
+        "description": "Host 对 workflow 启动决议的机械执行结果。",
+        "schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "required": [
+            "activated"
+          ],
+          "properties": {
+            "activated": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
         }
       },
       "era.tavern.variables.commit.request": {
@@ -40169,6 +40748,22 @@
           }
         }
       },
+      "era.tavern.installation_scope": {
+        "kind": "capability",
+        "id": "era.tavern.installation_scope",
+        "targets": [
+          "browser"
+        ],
+        "display_name": "ERA 安装作用域读取",
+        "description": "只读当前脚本 ID 及三类 Tavern Helper 脚本树中的启用归属；不作业务分类。",
+        "operations": {
+          "read": {
+            "input_type": "era.tavern.installation_scope.read.request",
+            "output_type": "era.installation.scope.facts",
+            "completion": "immediate"
+          }
+        }
+      },
       "era.tavern.messages": {
         "kind": "capability",
         "id": "era.tavern.messages",
@@ -40262,6 +40857,27 @@
           }
         }
       },
+      "era.tavern.startup_gate": {
+        "kind": "capability",
+        "id": "era.tavern.startup_gate",
+        "targets": [
+          "browser"
+        ],
+        "display_name": "ERA 启动闸门",
+        "description": "机械地结算 workflow 的启动决定；allow 才登记 Tavern ingress，dormant 不登记。",
+        "operations": {
+          "activate": {
+            "input_type": "era.installation.scope.decision",
+            "output_type": "era.tavern.startup_gate.result",
+            "completion": "immediate"
+          },
+          "dormant": {
+            "input_type": "era.installation.scope.decision",
+            "output_type": "era.tavern.startup_gate.result",
+            "completion": "immediate"
+          }
+        }
+      },
       "era.tavern.variables": {
         "kind": "capability",
         "id": "era.tavern.variables",
@@ -40321,7 +40937,7 @@
         "status": "implemented",
         "display_name": "ERA 酒馆服务宿主",
         "category": "宿主接线",
-        "description": "连接 SillyTavern 与 Tavern Helper，管理单一先进先出队列、回执、高水位屏障、绝对截止时间定时器、宿主引用和出站帧幂等，并提供服务端口、五类酒馆能力与 Sidecar 身份/files/UI 机械接线；消息读取按 era-active-message-v1 投影，Host 不承载 CRUD、同步、合并、回滚或身份判定规则。",
+        "description": "连接 SillyTavern 与 Tavern Helper，管理单一先进先出队列、回执、高水位屏障、绝对截止时间定时器、宿主引用和出站帧幂等，并提供服务端口、酒馆能力、Sidecar 机械接线与分阶段启动闸门；消息读取按 era-active-message-v1 投影，Host 不承载 CRUD、同步、合并、回滚或身份判定规则。",
         "version": "0.1.0",
         "targets": [
           "browser"
@@ -40333,13 +40949,16 @@
           "era.tavern.worldbook",
           "era.tavern.regex",
           "era.tavern.identity",
-          "era.tavern.sidecar"
+          "era.tavern.sidecar",
+          "era.tavern.installation_scope",
+          "era.tavern.startup_gate"
         ],
         "dependencies": [],
         "config_keys": [
           "barrier_watchdog_ms",
           "limits",
-          "ports"
+          "ports",
+          "staged_startup"
         ],
         "effect_scope": "trusted"
       }

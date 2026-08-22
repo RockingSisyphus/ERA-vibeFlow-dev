@@ -13,9 +13,12 @@ import type {
   EraEventSource,
   EraInboundEvent,
   EraPreparedNotification,
+  EraStartupGateDecision,
   EraTavernAdapter,
   EraWaitThroughResult,
 } from './types';
+import { readInstallationScopeFacts } from './installation-scope';
+import { projectMessage } from './message-projection';
 
 const logger = new Logger();
 
@@ -105,66 +108,6 @@ function messageId(input: Readonly<Record<string, unknown>>): number {
   return value;
 }
 
-type EraProjectedMessage = {
-  readonly schemaVersion: 1;
-  readonly messageId: number;
-  readonly role: string;
-  readonly activeText: string;
-  readonly swipeIndex: number | null;
-};
-
-function projectedMessageId(value: Readonly<Record<string, unknown>>, index: number): number {
-  const rawId = value.message_id ?? value.messageId;
-  if (!Number.isSafeInteger(rawId) || Number(rawId) < 0) {
-    throw new TypeError(`ERA 消息投影失败：消息 #${index} 缺少非负整数 ID。`);
-  }
-  return Number(rawId);
-}
-
-function projectedMessageRole(value: Readonly<Record<string, unknown>>, id: number): string {
-  if (typeof value.role === 'string' && value.role.length > 0) return value.role;
-  if (value.is_user === true) return 'user';
-  if (value.is_user === false) return 'assistant';
-  throw new TypeError(`ERA 消息投影失败：消息 #${id} 缺少角色。`);
-}
-
-function projectedSwipeIndex(value: Readonly<Record<string, unknown>>, id: number): number | null {
-  const raw = value.swipe_id ?? value.swipeIndex;
-  if (raw === undefined || raw === null) return null;
-  if (Number.isSafeInteger(raw) && Number(raw) >= 0) return Number(raw);
-  throw new TypeError(`ERA 消息投影失败：消息 #${id} 的 swipe 索引无效。`);
-}
-
-function projectedActiveText(value: Readonly<Record<string, unknown>>, id: number, swipeIndex: number | null): string {
-  if (Array.isArray(value.swipes) && swipeIndex !== null && typeof value.swipes[swipeIndex] === 'string') {
-    return value.swipes[swipeIndex];
-  }
-  if (typeof value.mes === 'string') return value.mes;
-  if (typeof value.message === 'string') return value.message;
-  if (typeof value.activeText === 'string') return value.activeText;
-  throw new TypeError(`ERA 消息投影失败：消息 #${id} 没有当前激活文本。`);
-}
-
-/**
- * 把单条 Tavern 消息压缩为 ERA 严格投影；只读取可验证的 ID、角色、当前文本
- * 与 swipe 索引，任何缺失或歧义都在 Host 边界立即失败。
- */
-function projectMessage(value: unknown, index: number): EraProjectedMessage {
-  if (!isRecord(value)) throw new TypeError(`ERA 消息投影失败：消息 #${index} 不是对象。`);
-  const messageId = projectedMessageId(value, index);
-  const role = projectedMessageRole(value, messageId);
-  const swipeIndex = projectedSwipeIndex(value, messageId);
-  const activeText = projectedActiveText(value, messageId, swipeIndex);
-
-  return {
-    schemaVersion: 1,
-    messageId,
-    role,
-    activeText,
-    swipeIndex,
-  };
-}
-
 /** 按钮由独立 Tavern button 事件接入，目录监听不得重复登记。 */
 function isNonButtonInputEvent(value: string): boolean {
   return !BUTTON_INPUT_EVENTS.has(value);
@@ -177,8 +120,25 @@ function isNonButtonInputEvent(value: string): boolean {
 export class TavernEraServiceAdapter implements EraTavernAdapter {
   private listener: ((event: EraInboundEvent) => EraAdmissionResult) | null = null;
   private accepting = true;
+  private startupGate: Promise<EraStartupGateDecision>;
+  private resolveStartupGate: ((decision: EraStartupGateDecision) => void) | null = null;
 
-  constructor(private readonly options: EraTavernAdapterOptions = {}) {}
+  constructor(private readonly options: EraTavernAdapterOptions = {}) {
+    this.startupGate = new Promise<EraStartupGateDecision>(resolve => {
+      this.resolveStartupGate = resolve;
+    });
+  }
+
+  waitForStartupGate(): Promise<EraStartupGateDecision> {
+    return this.startupGate;
+  }
+
+  settleStartupGate(decision: EraStartupGateDecision): void {
+    const resolve = this.resolveStartupGate;
+    if (!resolve) return;
+    this.resolveStartupGate = null;
+    resolve(Object.freeze({ ...decision }));
+  }
 
   /**
    * 一次性登记 25 个生产监听器。重复订阅必须失败，否则同一 Tavern 事件
@@ -455,6 +415,14 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
         chatId: SillyTavern.getCurrentChatId(),
         scriptId: getScriptId(),
       });
+    },
+  };
+
+  /** 启动期 raw DTO：脚本树读取只在 workflow 审核的 capability 内发生。 */
+  readonly installation_scope = {
+    read: (_input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown => {
+      throwIfAborted(context.signal);
+      return readInstallationScopeFacts();
     },
   };
 

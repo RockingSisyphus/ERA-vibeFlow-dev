@@ -92,6 +92,15 @@ class FakeAdapter implements EraTavernHostAdapter {
     read: (input: Readonly<Record<string, unknown>>) => ({ ...input }),
   };
 
+  readonly installation_scope = {
+    read: (input: Readonly<Record<string, unknown>>) => ({
+      ...input,
+      scriptId: 'era',
+      scopes: ['character'],
+      readStatus: 'complete',
+    }),
+  };
+
   readonly sidecar = {
     read_current: async (input: Readonly<Record<string, unknown>>) => ({ ...input }),
     read_record: async (input: Readonly<Record<string, unknown>>) => ({ ...input }),
@@ -232,6 +241,38 @@ describe('ERA 服务 Host Extension 核心', () => {
     expect(adapter.listenerCount).toBe(0);
     expect(adapter.lifecycleOrder).toEqual(['start', 'stop']);
     expect(adapter.sidecarPromptClearCount).toBe(1);
+  });
+
+  it('staged startup 在 workflow allow 前绝不订阅 Tavern，dormant 也不订阅', async () => {
+    const adapter = new FakeAdapter();
+    const controller = new AbortController();
+    const host = createHostExtension({
+      extensionId: 'era.tavern.service_host',
+      config: { staged_startup: true },
+      signal: controller.signal,
+      adapter,
+    });
+    host.start();
+    expect(adapter.listenerCount).toBe(0);
+    expect(
+      host.capabilities['era.tavern.startup_gate'].dormant({ route: 'dormant', classification: 'global' }),
+    ).toEqual({ activated: false });
+    expect(adapter.listenerCount).toBe(0);
+    await host.stop();
+
+    const allowedAdapter = new FakeAdapter();
+    const allowedHost = createHostExtension({
+      extensionId: 'era.tavern.service_host',
+      config: { staged_startup: true },
+      signal: new AbortController().signal,
+      adapter: allowedAdapter,
+    });
+    allowedHost.start();
+    expect(
+      allowedHost.capabilities['era.tavern.startup_gate'].activate({ route: 'allow', classification: 'character' }),
+    ).toEqual({ activated: true });
+    expect(allowedAdapter.listenerCount).toBe(1);
+    await allowedHost.stop();
   });
 
   it('无损编码 tagged args，并严格保持结算先于通知启动', async () => {

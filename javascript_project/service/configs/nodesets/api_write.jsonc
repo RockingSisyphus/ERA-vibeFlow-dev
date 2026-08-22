@@ -169,7 +169,7 @@
         "id": "finalize_api_write",
         "type_used": "era.api.finalize_write",
         "display_name": "完成 API 写入事务",
-        "description": "成功时声明 apiWrite 后 writeDone；状态同步失败时因消息已写而升级 fatal。"
+        "description": "成功时声明 apiWrite 后 writeDone；只有消息提交未知时升级 fatal，已确认消息后的 Sidecar 文件失败返回可修复 failed。"
       },
       {
         "id": "end",
