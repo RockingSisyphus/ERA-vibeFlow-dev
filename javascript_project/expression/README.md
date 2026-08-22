@@ -34,7 +34,7 @@
 
 ## 语法与数学后端
 
-- 语法：有限数值、路径、括号、一元 `+/-`、`+ - * / % ^`、内建函数与自定义函数调用。
+- 语法：有限数值、路径、括号、一元 `+/-`、`+ - * / % ^`、内建函数与自定义函数调用。指数按标准数学优先级处理：`-2^2` 为 `-4`，`(-2)^2` 为 `4`，`^` 保持右结合。
 - 原生 `Math`：三角/反三角/双曲、指数、对数、开方、绝对值与取整等普通标量函数。
 - 自有实现：非负整数阶乘、有限数检查和确定性的迭代自适应 Simpson 定积分。
 - `@stdlib/math-base-special-gamma`：Gamma 数值。
@@ -55,6 +55,7 @@
 ```bash
 npm run typecheck
 npm test
+npm run test:sandbox
 python ../../run.py architecture --config configs/era.expression.jsonc --output ARCHITECTURE.jsonc
 python ../../run.py architecture --config configs/era.expression.jsonc --output ARCHITECTURE.jsonc --check
 python ../../run.py validate --config configs/era.expression.jsonc

@@ -1,0 +1,122 @@
+[
+  {
+    "id": "raw-snapshot-is-forbidden",
+    "request": { "functionLibrary": {}, "initialState": { "a": 1 }, "operations": [{ "path": "a", "expr": "@a+1" }] },
+    "expect": { "status": "partial", "finalState": { "a": 1 }, "diagnostics": ["ERA_EXPR_SNAPSHOT_FORBIDDEN"], "compressed": {} }
+  },
+  {
+    "id": "invalid-character",
+    "request": { "functionLibrary": {}, "initialState": { "a": 1 }, "operations": [{ "path": "a", "expr": "a$1" }] },
+    "expect": { "status": "partial", "finalState": { "a": 1 }, "diagnostics": ["ERA_EXPR_LEX_INVALID_CHARACTER"], "compressed": {} }
+  },
+  {
+    "id": "missing-parenthesis",
+    "request": { "functionLibrary": {}, "initialState": { "a": 1 }, "operations": [{ "path": "a", "expr": "(a+1" }] },
+    "expect": { "status": "partial", "finalState": { "a": 1 }, "diagnostics": ["ERA_EXPR_PARSE_EXPECTED"], "compressed": {} }
+  },
+  {
+    "id": "trailing-expression",
+    "request": { "functionLibrary": {}, "initialState": { "a": 1 }, "operations": [{ "path": "a", "expr": "a 1" }] },
+    "expect": { "status": "partial", "finalState": { "a": 1 }, "diagnostics": ["ERA_EXPR_PARSE_TRAILING"], "compressed": {} }
+  },
+  {
+    "id": "invalid-target-path",
+    "request": { "functionLibrary": {}, "initialState": { "a": 1 }, "operations": [{ "path": "a..b", "expr": "1" }] },
+    "expect": { "status": "partial", "finalState": { "a": 1 }, "diagnostics": ["ERA_EXPR_PATH_INVALID"], "compressed": {} }
+  },
+  {
+    "id": "unknown-custom-function",
+    "request": { "functionLibrary": {}, "initialState": { "a": 1 }, "operations": [{ "path": "a", "expr": "missing(a)" }] },
+    "expect": { "status": "partial", "finalState": { "a": 1 }, "diagnostics": ["ERA_EXPR_FUNCTION_UNKNOWN_CALL"], "compressed": {} }
+  },
+  {
+    "id": "custom-function-arity",
+    "request": { "functionLibrary": { "f": { "params": ["x"], "expr": "x+1" } }, "initialState": { "a": 1 }, "operations": [{ "path": "a", "expr": "f(1,2)" }] },
+    "expect": { "status": "partial", "finalState": { "a": 1 }, "diagnostics": ["ERA_EXPR_FUNCTION_ARITY"], "compressed": {} }
+  },
+  {
+    "id": "impure-function-body",
+    "request": { "functionLibrary": { "f": { "params": ["x"], "expr": "x+outside" } }, "initialState": { "a": 1, "outside": 4 }, "operations": [{ "path": "a", "expr": "f(a)" }] },
+    "expect": { "status": "partial", "finalState": { "a": 1, "outside": 4 }, "diagnostics": ["ERA_EXPR_FUNCTION_IMPURE"], "compressed": {} }
+  },
+  {
+    "id": "direct-recursion",
+    "request": { "functionLibrary": { "f": { "params": ["x"], "expr": "f(x)" } }, "initialState": { "a": 1 }, "operations": [{ "path": "a", "expr": "f(a)" }] },
+    "expect": { "status": "partial", "finalState": { "a": 1 }, "diagnostics": ["ERA_EXPR_FUNCTION_RECURSION"], "compressed": {} }
+  },
+  {
+    "id": "indirect-recursion",
+    "request": { "functionLibrary": { "f": { "params": ["x"], "expr": "g(x)" }, "g": { "params": ["x"], "expr": "f(x)" } }, "initialState": { "a": 1 }, "operations": [{ "path": "a", "expr": "f(a)" }] },
+    "expect": { "status": "partial", "finalState": { "a": 1 }, "diagnostics": ["ERA_EXPR_FUNCTION_RECURSION"], "compressed": {} }
+  },
+  {
+    "id": "builtin-name-conflict",
+    "request": { "functionLibrary": { "sin": { "params": ["x"], "expr": "x" } }, "initialState": { "a": 1 }, "operations": [{ "path": "a", "expr": "sin(a)" }] },
+    "expect": { "status": "partial", "finalState": { "a": 1 }, "diagnostics": ["ERA_EXPR_FUNCTION_NAME_CONFLICT"], "compressed": {} }
+  },
+  {
+    "id": "duplicate-function-parameters",
+    "request": { "functionLibrary": { "f": { "params": ["x", "x"], "expr": "x" } }, "initialState": { "a": 1 }, "operations": [{ "path": "a", "expr": "f(a,a)" }] },
+    "expect": { "status": "partial", "finalState": { "a": 1 }, "diagnostics": ["ERA_EXPR_FUNCTION_PARAMS"], "compressed": {} }
+  },
+  {
+    "id": "bad-function-shape",
+    "request": { "functionLibrary": { "f": { "params": "x", "expr": 1 } }, "initialState": { "a": 1 }, "operations": [{ "path": "a", "expr": "a+1" }] },
+    "expect": { "status": "partial", "finalState": { "a": 1 }, "diagnostics": ["ERA_EXPR_FUNCTION_SHAPE"], "compressed": {} }
+  },
+  {
+    "id": "builtin-arity",
+    "request": { "functionLibrary": {}, "initialState": { "a": 1 }, "operations": [{ "path": "a", "expr": "sqrt(1,2)" }] },
+    "expect": { "status": "partial", "finalState": { "a": 1 }, "diagnostics": ["ERA_EXPR_BUILTIN_ARITY"], "compressed": {} }
+  },
+  {
+    "id": "non-finite-builtin-result",
+    "request": { "functionLibrary": {}, "initialState": { "a": 1 }, "operations": [{ "path": "a", "expr": "sqrt(-1)" }] },
+    "expect": { "status": "partial", "finalState": { "a": 1 }, "diagnostics": ["ERA_EXPR_BUILTIN_NON_FINITE"], "compressed": {} }
+  },
+  {
+    "id": "factorial-domain",
+    "request": { "functionLibrary": {}, "initialState": { "a": 1 }, "operations": [{ "path": "a", "expr": "factorial(-1)" }] },
+    "expect": { "status": "partial", "finalState": { "a": 1 }, "diagnostics": ["ERA_EXPR_FACTORIAL_DOMAIN"], "compressed": {} }
+  },
+  {
+    "id": "non-finite-operator-result",
+    "request": { "functionLibrary": {}, "initialState": { "a": 1 }, "operations": [{ "path": "a", "expr": "1/0" }] },
+    "expect": { "status": "partial", "finalState": { "a": 1 }, "diagnostics": ["ERA_EXPR_RESULT_NON_FINITE"], "compressed": {} }
+  },
+  {
+    "id": "non-numeric-reference",
+    "request": { "functionLibrary": {}, "initialState": { "a": "text" }, "operations": [{ "path": "a", "expr": "a+1" }] },
+    "expect": { "status": "partial", "finalState": { "a": "text" }, "diagnostics": ["ERA_EXPR_REFERENCE_NON_NUMERIC"], "compressed": {} }
+  },
+  {
+    "id": "derivative-order",
+    "request": { "functionLibrary": { "f": { "params": ["x"], "expr": "x^2" } }, "initialState": { "a": 1 }, "operations": [{ "path": "a", "expr": "derivative(f,2,0)" }] },
+    "expect": { "status": "partial", "finalState": { "a": 1 }, "diagnostics": ["ERA_EXPR_DERIVATIVE_ORDER"], "compressed": {} }
+  },
+  {
+    "id": "calculus-target",
+    "request": { "functionLibrary": {}, "initialState": { "a": 1 }, "operations": [{ "path": "a", "expr": "integral(missing,0,1)" }] },
+    "expect": { "status": "partial", "finalState": { "a": 1 }, "diagnostics": ["ERA_EXPR_CALCULUS_TARGET"], "compressed": {} }
+  },
+  {
+    "id": "invalid-initial-state",
+    "request": { "functionLibrary": {}, "initialState": [], "operations": [] },
+    "expect": { "status": "invalid", "finalState": {}, "diagnostics": ["ERA_EXPR_INITIAL_STATE_INVALID"], "compressed": {}, "workflowError": "VF_INPUT_SCHEMA" }
+  },
+  {
+    "id": "invalid-function-library",
+    "request": { "functionLibrary": [], "initialState": { "a": 1 }, "operations": [] },
+    "expect": { "status": "invalid", "finalState": { "a": 1 }, "diagnostics": ["ERA_EXPR_LIBRARY_INVALID"], "compressed": {}, "workflowError": "VF_INPUT_SCHEMA" }
+  },
+  {
+    "id": "invalid-operations-array",
+    "request": { "functionLibrary": {}, "initialState": { "a": 1 }, "operations": {} },
+    "expect": { "status": "invalid", "finalState": { "a": 1 }, "diagnostics": ["ERA_EXPR_OPERATIONS_INVALID"], "compressed": {}, "workflowError": "VF_INPUT_SCHEMA" }
+  },
+  {
+    "id": "invalid-operation-shape",
+    "request": { "functionLibrary": {}, "initialState": { "a": 1 }, "operations": [{ "path": "a", "expr": 2 }] },
+    "expect": { "status": "invalid", "finalState": { "a": 1 }, "diagnostics": ["ERA_EXPR_OPERATION_SHAPE"], "compressed": {} }
+  }
+]

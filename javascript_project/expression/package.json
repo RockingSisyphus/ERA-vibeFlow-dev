@@ -9,6 +9,7 @@
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
     "test": "esbuild base_lib/expression_engine.ts --bundle --platform=node --format=esm --outfile=generated/test/expression_engine.mjs && node --test tests/expression_engine.test.mjs",
+    "test:sandbox": "node ../../examples/era_expression_sandbox/run.mjs",
     "test:workflow": "node scripts/workflow_execution_probe.mjs"
   },
   "dependencies": {

@@ -1,0 +1,73 @@
+[
+  {
+    "id": "ordered-cross-path-compression",
+    "request": {
+      "functionLibrary": {},
+      "initialState": { "a": 10, "b": 0 },
+      "operations": [
+        { "path": "a", "expr": "a+1" },
+        { "path": "b", "expr": "a*2" },
+        { "path": "a", "expr": "a+1" }
+      ]
+    },
+    "expect": {
+      "status": "ok",
+      "finalState": { "a": 12, "b": 22 },
+      "diagnostics": [],
+      "compressed": { "a": { "$expr": "@a + 2" }, "b": { "$expr": "(@a + 1) * 2" } },
+      "replayCompression": true
+    }
+  },
+  {
+    "id": "nested-path-compression",
+    "request": {
+      "functionLibrary": {},
+      "initialState": { "stats": { "hp": 10 }, "damage": 0 },
+      "operations": [
+        { "path": "stats.hp", "expr": "stats.hp+5" },
+        { "path": "damage", "expr": "stats.hp*3" }
+      ]
+    },
+    "expect": {
+      "status": "ok",
+      "finalState": { "stats": { "hp": 15 }, "damage": 45 },
+      "diagnostics": [],
+      "compressed": { "stats.hp": { "$expr": "@stats.hp + 5" }, "damage": { "$expr": "(@stats.hp + 5) * 3" } },
+      "replayCompression": true
+    }
+  },
+  {
+    "id": "constant-folding-compression",
+    "request": {
+      "functionLibrary": {},
+      "initialState": { "a": 7 },
+      "operations": [{ "path": "a", "expr": "a+1+2-3+4" }]
+    },
+    "expect": {
+      "status": "ok",
+      "finalState": { "a": 11 },
+      "diagnostics": [],
+      "compressed": { "a": { "$expr": "@a + 4" } },
+      "replayCompression": true
+    }
+  },
+  {
+    "id": "custom-function-compression",
+    "request": {
+      "functionLibrary": { "increment": { "params": ["x"], "expr": "x+1" }, "twice": { "params": ["x"], "expr": "increment(x)*2" } },
+      "initialState": { "a": 4, "answer": 0 },
+      "operations": [
+        { "path": "a", "expr": "a+1" },
+        { "path": "answer", "expr": "twice(a)" },
+        { "path": "a", "expr": "a+1" }
+      ]
+    },
+    "expect": {
+      "status": "ok",
+      "finalState": { "a": 6, "answer": 12 },
+      "diagnostics": [],
+      "compressed": { "a": { "$expr": "@a + 2" }, "answer": { "$expr": "twice(@a + 1)" } },
+      "replayCompression": true
+    }
+  }
+]

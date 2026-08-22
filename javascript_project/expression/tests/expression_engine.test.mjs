@@ -37,6 +37,35 @@ test("按出现顺序读取已经更新的变量状态，并压缩为起始快�
   });
 });
 
+test("指数遵循标准数学优先级，并保持右结合与负指数", () => {
+  const result = run({
+    initialState: { unaryPower: 0, grouped: 0, negativeExponent: 0, chain: 0 },
+    operations: [
+      { path: "unaryPower", expr: "-2^2" },
+      { path: "grouped", expr: "(-2)^2" },
+      { path: "negativeExponent", expr: "2^-2" },
+      { path: "chain", expr: "2^3^2" }
+    ]
+  });
+  assert.equal(result.status, "ok");
+  assert.deepEqual(result.finalState, {
+    unaryPower: -4,
+    grouped: 4,
+    negativeExponent: 0.25,
+    chain: 512
+  });
+});
+
+test("压缩合并同一路径连续加减的常数", () => {
+  const result = run({
+    initialState: { a: 7 },
+    operations: [{ path: "a", expr: "a+1+2-3+4" }]
+  });
+  assert.equal(result.status, "ok");
+  assert.deepEqual(result.finalState, { a: 11 });
+  assert.deepEqual(result.compressed, { a: { $expr: "@a + 4" } });
+});
+
 test("支持前向声明、函数体嵌套调用和调用实参嵌套", () => {
   const result = run({
     functionLibrary: {
@@ -84,6 +113,15 @@ test("函数体只能读取形参，未知外部状态不会被捕获", () => {
   assert.equal(result.finalState.value, 1);
 });
 
+test("函数定义诊断只记录一次", () => {
+  const result = run({
+    functionLibrary: { sin: { params: ["x"], expr: "x" } },
+    initialState: { value: 1 },
+    operations: [{ path: "value", expr: "sin(value)" }]
+  });
+  assert.deepEqual(codes(result), ["ERA_EXPR_FUNCTION_NAME_CONFLICT"]);
+});
+
 test("支持原生数学、Gamma、阶乘、任意正阶导数和确定性积分", () => {
   const result = run({
     functionLibrary: {
@@ -123,7 +161,7 @@ test("原始用户表达式禁止 @ 快照，但无效操作不会影响合法�
   });
   assert.equal(result.finalState.a, 1);
   assert.equal(result.finalState.b, 5);
-  assert.ok(codes(result).includes("ERA_EXPR_SNAPSHOT_FORBIDDEN"));
+  assert.deepEqual(codes(result), ["ERA_EXPR_SNAPSHOT_FORBIDDEN"]);
 });
 
 test("函数参数错误、非有限数和不存在变量均保持操作前状态", () => {

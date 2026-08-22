@@ -232,7 +232,7 @@ class Parser {
     return this.take();
   }
   parse(): Ast {
-    const ast = this.binary(0);
+    const ast = this.additive();
     if (this.current().kind !== "eof")
       throw new ExpressionFailure(
         diagnostic("ERA_EXPR_PARSE_TRAILING", "表达式末尾存在未解析内容。", {
@@ -241,28 +241,19 @@ class Parser {
       );
     return ast;
   }
-  private binary(minPrecedence: number): Ast {
+  private additive(): Ast {
+    let left = this.multiplicative();
+    while (this.matches("+") || this.matches("-")) {
+      const op = this.take().text as "+" | "-";
+      left = { kind: "binary", op, left, right: this.multiplicative() };
+    }
+    return left;
+  }
+  private multiplicative(): Ast {
     let left = this.unary();
-    const precedence: Readonly<Record<string, number>> = {
-      "+": 1,
-      "-": 1,
-      "*": 2,
-      "/": 2,
-      "%": 2,
-      "^": 3
-    };
-    while (true) {
-      const op = this.current();
-      const value = precedence[op.text];
-      if (value === undefined || value < minPrecedence) break;
-      this.take();
-      const right = this.binary(value + (op.text === "^" ? 0 : 1));
-      left = {
-        kind: "binary",
-        op: op.text as "+" | "-" | "*" | "/" | "%" | "^",
-        left,
-        right
-      };
+    while (this.matches("*") || this.matches("/") || this.matches("%")) {
+      const op = this.take().text as "*" | "/" | "%";
+      left = { kind: "binary", op, left, right: this.unary() };
     }
     return left;
   }
@@ -271,12 +262,20 @@ class Parser {
       const op = this.take().text as "+" | "-";
       return { kind: "unary", op, value: this.unary() };
     }
-    return this.primary();
+    return this.power();
+  }
+  private power(): Ast {
+    const left = this.primary();
+    if (this.matches("^")) {
+      this.take();
+      return { kind: "binary", op: "^", left, right: this.unary() };
+    }
+    return left;
   }
   private primary(): Ast {
     if (this.matches("(")) {
       this.take();
-      const ast = this.binary(0);
+      const ast = this.additive();
       this.expect(")");
       return ast;
     }
@@ -316,7 +315,7 @@ class Parser {
       const args: Ast[] = [];
       if (!this.matches(")")) {
         do {
-          args.push(this.binary(0));
+          args.push(this.additive());
           if (!this.matches(",")) break;
           this.take();
         } while (true);
@@ -634,7 +633,7 @@ export function compileCallableFunctions(
   parsed: readonly ParsedFunction[],
   diagnostics: readonly Diagnostic[]
 ): CompiledLibrary {
-  const all = [...diagnostics, ...parsed.flatMap((item) => item.diagnostics)];
+  const all = [...diagnostics];
   return {
     functions: Object.fromEntries(
       parsed
@@ -686,11 +685,7 @@ export function initializeSequenceState(
     compiled,
     operations,
     cursor: 0,
-    diagnostics: [
-      ...request.diagnostics,
-      ...compiled.diagnostics,
-      ...operations.flatMap((item) => item.diagnostics)
-    ]
+    diagnostics: [...request.diagnostics, ...compiled.diagnostics]
   };
 }
 
@@ -1364,7 +1359,11 @@ export function runOperationStep(state: SequenceState): {
       }
     };
   if (!state.compiled.valid) {
-    const next: SequenceState = { ...state, cursor: state.cursor + 1 };
+    const next: SequenceState = {
+      ...state,
+      cursor: state.cursor + 1,
+      diagnostics: [...state.diagnostics, ...operation.diagnostics]
+    };
     return {
       sequenceStateNext: next,
       sequenceDone: next.cursor >= next.operations.length,
@@ -1550,6 +1549,22 @@ export function simplify(ast: Ast): Ast {
         left: left.left,
         right: literal(nested + rightNumber)
       });
+    const subtraction =
+      left.kind === "binary" && left.op === "-"
+        ? literalNumber(left.right)
+        : undefined;
+    if (
+      left.kind === "binary" &&
+      left.op === "-" &&
+      subtraction !== undefined &&
+      rightNumber !== undefined
+    )
+      return simplify({
+        kind: "binary",
+        op: "-",
+        left: left.left,
+        right: literal(subtraction - rightNumber)
+      });
   }
   if (ast.op === "-") {
     if (rightNumber === 0) return left;
@@ -1568,6 +1583,22 @@ export function simplify(ast: Ast): Ast {
         op: "-",
         left: left.left,
         right: literal(nested + rightNumber)
+      });
+    const addition =
+      left.kind === "binary" && left.op === "+"
+        ? literalNumber(left.right)
+        : undefined;
+    if (
+      left.kind === "binary" &&
+      left.op === "+" &&
+      addition !== undefined &&
+      rightNumber !== undefined
+    )
+      return simplify({
+        kind: "binary",
+        op: "+",
+        left: left.left,
+        right: literal(addition - rightNumber)
       });
   }
   if (ast.op === "*") {
