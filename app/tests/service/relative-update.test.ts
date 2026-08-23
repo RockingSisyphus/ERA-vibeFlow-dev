@@ -155,6 +155,120 @@ describe('ERA $expr 与函数指令', () => {
     ]);
   });
 
+  it('函数 $meta.updatable 与变量一致：锁住编辑，但同次显式解锁可以更新定义', () => {
+    const initial = {
+      f: {
+        params: ['x'],
+        expr: 'x + 1',
+        $meta: { updatable: false, note: 'locked' },
+      },
+    };
+    const result = apply(
+      [
+        tag('FunctionEdit', { f: { params: ['x'], expr: 'x + 2' } }),
+        tag('FunctionEdit', {
+          f: {
+            params: ['x'],
+            expr: 'x * 3',
+            $meta: { updatable: true },
+          },
+        }),
+      ].join('\n'),
+      {},
+      initial,
+    );
+
+    expect(result.finalStatFunc).toEqual({
+      f: {
+        params: ['x'],
+        expr: 'x * 3',
+        $meta: { updatable: true, note: 'locked' },
+      },
+    });
+    expect(result.functionEditLog).toEqual([
+      {
+        op: 'update',
+        name: 'f',
+        value_old: initial.f,
+        value_new: {
+          params: ['x'],
+          expr: 'x * 3',
+          $meta: { updatable: true, note: 'locked' },
+        },
+      },
+    ]);
+  });
+
+  it('函数 $meta.necessary 可维护后删除，且元数据编辑不会改写函数数学定义', () => {
+    const initial = {
+      f: {
+        params: ['x'],
+        expr: 'x + 1',
+        $meta: { necessary: 'all', note: 'keep until unlocked' },
+      },
+    };
+    const result = apply(
+      [
+        tag('FunctionEdit', { f: { $meta: { note: 'still protected' } } }),
+        tag('FunctionDelete', { f: {} }),
+        tag('FunctionDelete', { f: { $meta: { necessary: {} } } }),
+        tag('FunctionDelete', { f: {} }),
+      ].join('\n'),
+      {},
+      initial,
+    );
+
+    expect(result.finalStatFunc).toEqual({});
+    expect(result.functionEditLog).toEqual([
+      {
+        op: 'update',
+        name: 'f',
+        value_old: initial.f,
+        value_new: {
+          params: ['x'],
+          expr: 'x + 1',
+          $meta: { necessary: 'all', note: 'still protected' },
+        },
+      },
+      {
+        op: 'update',
+        name: 'f',
+        value_old: {
+          params: ['x'],
+          expr: 'x + 1',
+          $meta: { necessary: 'all', note: 'still protected' },
+        },
+        value_new: {
+          params: ['x'],
+          expr: 'x + 1',
+          $meta: { note: 'still protected' },
+        },
+      },
+      {
+        op: 'delete',
+        name: 'f',
+        value_old: {
+          params: ['x'],
+          expr: 'x + 1',
+          $meta: { note: 'still protected' },
+        },
+      },
+    ]);
+  });
+
+  it('函数不支持变量树专属元数据，并对整个标签 fail-closed', () => {
+    const result = apply(
+      tag('FunctionInsert', {
+        valid: { params: ['x'], expr: 'x + 1' },
+        invalid: { params: ['x'], expr: 'x', $meta: { unInsertAble: 'all' } },
+      }),
+      {},
+    );
+    expect(result.finalStatFunc).toEqual({});
+    expect(result.functionEditLog).toEqual([]);
+    expect(result.diagnostics).toMatchObject([{ code: 'ERA_FUNCTION_META_UNSUPPORTED', path: 'invalid' }]);
+  });
+
   it('同一 FunctionInsert 支持前向声明与嵌套调用，并拒绝整体递归库', () => {
     const accepted = apply(
       `${tag('FunctionInsert', {

@@ -122,6 +122,23 @@ test("函数定义诊断只记录一次", () => {
   assert.deepEqual(codes(result), ["ERA_EXPR_FUNCTION_NAME_CONFLICT"]);
 });
 
+test("函数元数据不进入表达式编译或计算", () => {
+  const result = run({
+    functionLibrary: {
+      f: {
+        params: ["x"],
+        expr: "x*2",
+        $meta: { updatable: false, necessary: "all", note: "service-owned" }
+      }
+    },
+    initialState: { value: 3, result: 0 },
+    operations: [{ path: "result", expr: "f(value)" }]
+  });
+  assert.equal(result.status, "ok");
+  assert.equal(result.finalState.result, 6);
+  assert.deepEqual(result.diagnostics, []);
+});
+
 test("支持原生数学、Gamma、阶乘、任意正阶导数和确定性积分", () => {
   const result = run({
     functionLibrary: {

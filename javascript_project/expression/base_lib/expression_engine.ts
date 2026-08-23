@@ -509,6 +509,12 @@ export function parseFunctionDefinitions(
 ): readonly ParsedFunction[] {
   const parsed: ParsedFunction[] = [];
   for (const [name, raw] of Object.entries(request.functionLibrary)) {
+    // Service-owned function metadata (for example `$meta.updatable`) travels with a
+    // definition in Sidecar, but it must never become expression grammar or evaluation
+    // input.  Project only the mathematical definition at this cross-root boundary.
+    const definition = isRecord(raw)
+      ? { params: raw.params, expr: raw.expr }
+      : raw;
     const diagnostics: Diagnostic[] = [];
     if (!/^[A-Za-z_][A-Za-z0-9_]*$/u.test(name))
       diagnostics.push(
@@ -527,9 +533,9 @@ export function parseFunctionDefinitions(
         )
       );
     if (
-      !isRecord(raw) ||
-      !Array.isArray(raw.params) ||
-      typeof raw.expr !== "string"
+      !isRecord(definition) ||
+      !Array.isArray(definition.params) ||
+      typeof definition.expr !== "string"
     )
       diagnostics.push(
         diagnostic(
@@ -539,8 +545,8 @@ export function parseFunctionDefinitions(
         )
       );
     const params =
-      isRecord(raw) && Array.isArray(raw.params)
-        ? raw.params.filter((item): item is string => typeof item === "string")
+      isRecord(definition) && Array.isArray(definition.params)
+        ? definition.params.filter((item): item is string => typeof item === "string")
         : [];
     if (
       params.length !== new Set(params).size ||
@@ -553,7 +559,9 @@ export function parseFunctionDefinitions(
           { path: name }
         )
       );
-    const expr = isRecord(raw) && typeof raw.expr === "string" ? raw.expr : "";
+    const expr = isRecord(definition) && typeof definition.expr === "string"
+      ? definition.expr
+      : "";
     const result =
       diagnostics.length === 0
         ? parseExpression(expr, false)

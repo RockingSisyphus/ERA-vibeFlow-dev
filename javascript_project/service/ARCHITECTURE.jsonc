@@ -8792,7 +8792,7 @@
             },
             "role": {
               "display_name": "调用函数表达式 Nodeset",
-              "description": "调用独立 expression root 的已实现 Nodeset 执行变量与函数命令。数学语义、函数嵌套、递归拒绝与 @path/@function 快照由该 root 提供；Service 只保留顺序同步、Sidecar 状态和封存楼层压缩编排。"
+              "description": "调用独立 expression root 的已实现 Nodeset 执行变量与函数命令，并在既有按消息顺序的函数 CRUD 事务内实施可解锁 $meta 保护。数学语义、函数嵌套、递归拒绝与 @path/@function 快照由该 root 提供；Service 只保留顺序同步、Sidecar 状态和封存楼层压缩编排。"
             },
             "contract_source": "nodeset",
             "flow_kind": "predefined",
