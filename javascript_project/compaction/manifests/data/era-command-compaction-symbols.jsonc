@@ -1,0 +1,1 @@
+{"kind":"data_schema","type_key":"era.command_compaction.symbols","representation":"json","display_name":"符号依赖","description":"变量、函数及快照闭包的规范表达式和依赖信息。","schema":{"type":"object","additionalProperties":true}}

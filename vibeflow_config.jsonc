@@ -12,6 +12,10 @@
     {
       "id": "era-expression",
       "path": "javascript_project/expression"
+    },
+    {
+      "id": "era-command-compaction",
+      "path": "javascript_project/compaction"
     }
   ]
 }

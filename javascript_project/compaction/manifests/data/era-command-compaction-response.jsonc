@@ -1,0 +1,1 @@
+{"kind":"data_schema","type_key":"era.command_compaction.response","representation":"json","display_name":"ERA 命令层压缩结果","description":"规范消息、压缩状态、未压缩原因、最终状态、函数库和诊断。","schema":{"type":"object","additionalProperties":true}}

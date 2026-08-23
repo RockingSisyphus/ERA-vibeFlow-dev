@@ -1,0 +1,1 @@
+{"kind":"data_schema","type_key":"era.command_compaction.candidate","representation":"json","display_name":"压缩候选","description":"保留原命令残余与局部规范标签组成的候选消息。","schema":{"type":"object","additionalProperties":true}}

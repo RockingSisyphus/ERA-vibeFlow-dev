@@ -1,0 +1,150 @@
+[
+  {
+    "id": "cross-variable-snapshot-is-not-constant",
+    "request": {
+      "content": "叙述。<VariableEdit>{\"a\":{\"$expr\":\"a+1\"}}</VariableEdit><VariableEdit>{\"b\":{\"$expr\":\"a*2\"}}</VariableEdit><VariableEdit>{\"a\":{\"$expr\":\"a+1\"}}</VariableEdit>尾注。",
+      "initialStatData": {"a":10,"b":0}
+    },
+    "expect": {"status":"compacted","stat":{"a":12,"b":22},"includes":["@a + 2","(@a + 1) * 2"],"excludes":["@b + 22"]},
+    "variants":[{"a":3,"b":100},{"a":0,"b":-1}]
+  },
+  {
+    "id": "strict-insert-safe-disjoint-merge",
+    "request": {"content":"<VariableInsert>{\"a\":1}</VariableInsert><VariableInsert>{\"b\":2}</VariableInsert>","initialStatData":{"a":10}},
+    "expect":{"status":"compacted","stat":{"a":10,"b":2},"includes":["\"a\":1","\"b\":2"]},
+    "variants":[{}, {"a":{}}, {"a":1,"b":9}]
+  },
+  {
+    "id": "strict-insert-shape-conflict-is-barrier",
+    "request": {"content":"<VariableInsert>{\"a\":1}</VariableInsert><VariableInsert>{\"a\":{\"x\":2}}</VariableInsert>","initialStatData":{"a":{}}},
+    "expect":{"status":"unchanged","stat":{"a":{"x":2}}},
+    "variants":[{}, {"a":1}, {"a":{"x":0}}]
+  },
+  {
+    "id": "insert-template-and-protection-use-real-strict-semantics",
+    "request": {
+      "content":"<VariableInsert>{\"a\":{\"slot\":{}},\"guarded\":{\"blocked\":2}}</VariableInsert>",
+      "initialStatData":{"a":{"$template":{"coins":0}},"guarded":{"$meta":{"unInsertAble":"self"},"existing":1}}
+    },
+    "expect":{"status":"compacted","stat":{"a":{"$template":{"coins":0},"slot":{"coins":0}},"guarded":{"$meta":{"unInsertAble":"self"},"existing":1}},"includes":["VariableInsert"]},
+    "variants":[{"a":{"$template":{"coins":5}},"guarded":{"$meta":{"unInsertAble":"all"},"existing":1}},{"a":{"$template":{"coins":2},"slot":{"coins":9}},"guarded":{"$meta":{"unInsertAble":"self"},"existing":2}}]
+  },
+  {
+    "id": "direct-edits-collapse",
+    "request": {"content":"<VariableEdit>{\"a\":10}</VariableEdit><VariableEdit>{\"a\":11}</VariableEdit><VariableEdit>{\"a\":12}</VariableEdit>","initialStatData":{"a":1}},
+    "expect":{"status":"compacted","stat":{"a":12},"includes":["\"a\":12"],"excludes":["\"$expr\":\"12\""]},
+    "variants":[{}, {"a":3}, {"a":false}]
+  },
+  {
+    "id": "meta-lock-remains-observable-barrier",
+    "request": {"content":"<VariableEdit>{\"a\":{\"$meta\":{\"updatable\":true},\"$expr\":\"a+1\"}}</VariableEdit>","initialStatData":{"a":{"$meta":{"updatable":false}}}},
+    "expect":{"status":"unchanged","stat":{"a":{"$meta":{"updatable":true}}}},
+    "variants":[{"a":{"$meta":{"updatable":true}}}]
+  },
+  {
+    "id": "functions-execute-and-stay-as-a-transaction-barrier",
+    "request": {"content":"<FunctionInsert>{\"f\":{\"params\":[\"x\"],\"expr\":\"x*2\"}}</FunctionInsert><VariableEdit>{\"answer\":{\"$expr\":\"f(a)\"}}</VariableEdit>","initialStatData":{"a":4,"answer":0}},
+    "expect":{"status":"unchanged","stat":{"a":4,"answer":8},"functions":{"f":{"params":["x"],"expr":"x*2"}}},
+    "variants":[{"a":2,"answer":0}, {"a":10,"answer":1}]
+  },
+  {
+    "id": "function-snapshot-keeps-the-layer-start-closure",
+    "request": {
+      "content":"<FunctionEdit>{\"f\":{\"params\":[\"x\"],\"expr\":\"x*2\"}}</FunctionEdit><VariableEdit>{\"fromSnapshot\":{\"$expr\":\"@f(x)\"},\"fromCurrent\":{\"$expr\":\"f(x)\"}}</VariableEdit>",
+      "initialStatData":{"x":3,"fromSnapshot":0,"fromCurrent":0},
+      "initialStatFunc":{"f":{"params":["x"],"expr":"x+1"}}
+    },
+    "expect":{"status":"unchanged","stat":{"x":3,"fromSnapshot":4,"fromCurrent":6},"functions":{"f":{"params":["x"],"expr":"x*2"}}},
+    "variants":[{"x":0,"fromSnapshot":99,"fromCurrent":99},{"x":-2,"fromSnapshot":0,"fromCurrent":0}]
+  },
+  {
+    "id": "function-snapshot-freezes-nested-call-closure",
+    "request": {
+      "content":"<FunctionEdit>{\"h\":{\"params\":[\"x\"],\"expr\":\"x*3\"}}</FunctionEdit><VariableEdit>{\"fromSnapshot\":{\"$expr\":\"@f(x)\"},\"fromCurrent\":{\"$expr\":\"f(x)\"}}</VariableEdit>",
+      "initialStatData":{"x":3,"fromSnapshot":0,"fromCurrent":0},
+      "initialStatFunc":{"h":{"params":["x"],"expr":"x+1"},"f":{"params":["x"],"expr":"h(x)*2"}}
+    },
+    "expect":{"status":"unchanged","stat":{"x":3,"fromSnapshot":8,"fromCurrent":18},"functions":{"h":{"params":["x"],"expr":"x*3"},"f":{"params":["x"],"expr":"h(x)*2"}}},
+    "variants":[{"x":1,"fromSnapshot":0,"fromCurrent":0},{"x":-2,"fromSnapshot":0,"fromCurrent":0}]
+  },
+  {
+    "id": "forward-and-nested-functions-are-validated-as-one-library-transaction",
+    "request": {
+      "content":"<FunctionInsert>{\"g\":{\"params\":[\"x\"],\"expr\":\"f(x)+1\"},\"f\":{\"params\":[\"x\"],\"expr\":\"x*3\"}}</FunctionInsert><VariableEdit>{\"answer\":{\"$expr\":\"g(seed)\"}}</VariableEdit>",
+      "initialStatData":{"seed":4,"answer":0}
+    },
+    "expect":{"status":"unchanged","stat":{"seed":4,"answer":13},"functions":{"g":{"params":["x"],"expr":"f(x)+1"},"f":{"params":["x"],"expr":"x*3"}}},
+    "variants":[{"seed":0,"answer":9},{"seed":-2,"answer":0}]
+  },
+  {
+    "id": "function-tag-is-atomic-on-library-validation-error",
+    "request": {
+      "content":"<FunctionInsert>{\"good\":{\"params\":[\"x\"],\"expr\":\"x+1\"},\"bad\":{\"params\":[\"x\"],\"expr\":\"bad(x)\"}}</FunctionInsert>",
+      "initialStatData":{}
+    },
+    "expect":{"status":"unchanged","stat":{},"functions":{},"diagnostics":["ERA_EXPR_FUNCTION_RECURSION"]},
+    "variants":[{}]
+  },
+  {
+    "id": "function-meta-unlock-and-delete-remains-ordered",
+    "request": {
+      "content":"<FunctionEdit>{\"f\":{\"params\":[\"x\"],\"expr\":\"x*2\",\"$meta\":{\"updatable\":true}}}</FunctionEdit><FunctionDelete>{\"f\":{}}</FunctionDelete><FunctionDelete>{\"f\":{\"$meta\":{\"necessary\":{}}}}</FunctionDelete><FunctionDelete>{\"f\":{}}</FunctionDelete>",
+      "initialStatData":{},
+      "initialStatFunc":{"f":{"params":["x"],"expr":"x+1","$meta":{"updatable":false,"necessary":"self"}}}
+    },
+    "expect":{"status":"unchanged","stat":{},"functions":{}},
+    "variants":[{}]
+  },
+  {
+    "id": "invalid-function-delete-is-atomic-and-does-not-pollute-library",
+    "request": {
+      "content":"<FunctionDelete>{\"f\":{\"unexpected\":true}}</FunctionDelete>",
+      "initialStatData":{},
+      "initialStatFunc":{"f":{"params":["x"],"expr":"x+1"}}
+    },
+    "expect":{"status":"unchanged","stat":{},"functions":{"f":{"params":["x"],"expr":"x+1"}},"diagnostics":["ERA_FUNCTION_DELETE_INVALID"]},
+    "variants":[{}]
+  },
+  {
+    "id": "variable-meta-unlock-and-delete-remains-ordered",
+    "request": {
+      "content":"<VariableEdit>{\"a\":{\"$meta\":{\"updatable\":true},\"count\":2}}</VariableEdit><VariableDelete>{\"a\":{}}</VariableDelete><VariableDelete>{\"a\":{\"$meta\":{\"necessary\":{}}}}</VariableDelete><VariableDelete>{\"a\":{}}</VariableDelete>",
+      "initialStatData":{"a":{"count":1,"$meta":{"updatable":false,"necessary":"self"}}}
+    },
+    "expect":{"status":"unchanged","stat":{}},
+    "variants":[{"a":{"count":99,"$meta":{"updatable":false,"necessary":"self"}}}]
+  },
+  {
+    "id": "insert-edit-delete-chain-is-a-semantic-barrier",
+    "request": {
+      "content":"<VariableInsert>{\"a\":1,\"b\":10}</VariableInsert><VariableEdit>{\"a\":20}</VariableEdit><VariableDelete>{\"a\":{}}</VariableDelete>",
+      "initialStatData":{}
+    },
+    "expect":{"status":"partial","stat":{"b":10},"includes":["\"a\":1","\"b\":10","VariableEdit","VariableDelete"]},
+    "variants":[{"a":10},{"a":{"locked":true}}]
+  },
+  {
+    "id": "mixed-literal-and-expression-edits-remain-uncompressed",
+    "request": {
+      "content":"<VariableEdit>{\"a\":10}</VariableEdit><VariableEdit>{\"a\":{\"$expr\":\"a+1\"}}</VariableEdit>",
+      "initialStatData":{"a":1}
+    },
+    "expect":{"status":"unchanged","stat":{"a":11}},
+    "variants":[{"a":4},{"a":false}]
+  },
+  {
+    "id": "invalid-expression-does-not-pollute-state",
+    "request": {
+      "content":"<VariableEdit>{\"a\":{\"$expr\":\"unknown+1\"}}</VariableEdit><VariableEdit>{\"b\":5}</VariableEdit>",
+      "initialStatData":{"a":1,"b":0}
+    },
+    "expect":{"status":"unchanged","stat":{"a":1,"b":5},"diagnostics":["ERA_EXPR_REFERENCE_NON_NUMERIC"]},
+    "variants":[{"a":3,"b":2}]
+  },
+  {
+    "id": "invalid-json-fails-closed",
+    "request": {"content":"<VariableEdit>{not-json}</VariableEdit>","initialStatData":{"a":1}},
+    "expect":{"status":"invalid","stat":{"a":1},"diagnostics":["ERA_COMPACT_COMMAND_JSON_INVALID"]},
+    "variants":[{"a":2}]
+  }
+]

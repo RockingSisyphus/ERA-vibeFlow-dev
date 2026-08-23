@@ -1,0 +1,1 @@
+{"kind":"data_schema","type_key":"era.command_compaction.invariants","representation":"json","display_name":"重放不变量","description":"用于判断任意可达历史起点下安全重写的保守条件。","schema":{"type":"object","additionalProperties":true}}

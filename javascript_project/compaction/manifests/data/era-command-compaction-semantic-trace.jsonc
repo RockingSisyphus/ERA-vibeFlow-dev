@@ -1,0 +1,1 @@
+{"kind":"data_schema","type_key":"era.command_compaction.semantic_trace","representation":"json","display_name":"原始语义轨迹","description":"原命令逐步重放后的变量、函数、日志和诊断轨迹。","schema":{"type":"object","additionalProperties":true}}

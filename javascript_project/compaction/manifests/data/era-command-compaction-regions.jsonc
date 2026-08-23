@@ -1,0 +1,1 @@
+{"kind":"data_schema","type_key":"era.command_compaction.regions","representation":"json","display_name":"安全压缩区间","description":"可改写区间与不可跨越的语义屏障。","schema":{"type":"object","additionalProperties":true}}

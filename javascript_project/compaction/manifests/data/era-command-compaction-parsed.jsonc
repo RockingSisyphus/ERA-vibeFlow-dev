@@ -1,0 +1,1 @@
+{"kind":"data_schema","type_key":"era.command_compaction.parsed","representation":"json","display_name":"已解析命令层","description":"按原文位置排序的六类 ERA 指令和保留文本区间。","schema":{"type":"object","additionalProperties":true}}

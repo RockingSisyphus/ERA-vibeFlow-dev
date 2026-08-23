@@ -1,0 +1,1 @@
+{"kind":"data_schema","type_key":"era.command_compaction.request","representation":"json","display_name":"ERA 命令层压缩请求","description":"一条消息文本及该层起始变量、函数、元数据和模板上下文。","schema":{"type":"object","additionalProperties":true}}

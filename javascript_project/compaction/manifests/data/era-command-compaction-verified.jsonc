@@ -1,0 +1,1 @@
+{"kind":"data_schema","type_key":"era.command_compaction.verified","representation":"json","display_name":"已验证候选","description":"通过重放与保守等价证明的候选，或退回原命令。","schema":{"type":"object","additionalProperties":true}}
