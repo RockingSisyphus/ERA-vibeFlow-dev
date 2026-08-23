@@ -164,6 +164,38 @@ test("原始用户表达式禁止 @ 快照，但无效操作不会影响合法�
   assert.deepEqual(codes(result), ["ERA_EXPR_SNAPSHOT_FORBIDDEN"]);
 });
 
+test("@f 调用层起始函数库，且其嵌套闭包不受当前函数编辑影响", () => {
+  const result = run({
+    allowSnapshots: true,
+    functionLibrary: {
+      f: { params: ["x"], expr: "g(x)+10" },
+      g: { params: ["x"], expr: "x*3" }
+    },
+    snapshotFunctionLibrary: {
+      f: { params: ["x"], expr: "g(x)+1" },
+      g: { params: ["x"], expr: "x*2" }
+    },
+    initialState: { a: 3, snapshotValue: 0, currentValue: 0 },
+    operations: [
+      { path: "snapshotValue", expr: "@f(a)" },
+      { path: "currentValue", expr: "f(a)" }
+    ]
+  });
+  assert.equal(result.status, "ok");
+  assert.equal(result.finalState.snapshotValue, 7);
+  assert.equal(result.finalState.currentValue, 19);
+});
+
+test("@ 只能用于调用自定义函数，不能调用内建函数", () => {
+  const result = run({
+    allowSnapshots: true,
+    initialState: { value: 1 },
+    operations: [{ path: "value", expr: "@sin(0)" }]
+  });
+  assert.equal(result.finalState.value, 1);
+  assert.ok(codes(result).includes("ERA_EXPR_SNAPSHOT_FUNCTION_REQUIRED"));
+});
+
 test("函数参数错误、非有限数和不存在变量均保持操作前状态", () => {
   const result = run({
     functionLibrary: { f: { params: ["x"], expr: "x+1" } },

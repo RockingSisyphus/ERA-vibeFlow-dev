@@ -1,5 +1,7 @@
 import gamma from "@stdlib/math-base-special-gamma";
-import { derivative, evaluate as mathEvaluate } from "mathjs";
+// ERA 仅接受有限 JavaScript 数值；number-only entry 保留符号导数与
+// 安全求值，同时不把矩阵、复数或任意精度数学体系带入浏览器 bundle。
+import { derivative, evaluate as mathEvaluate } from "mathjs/number";
 
 export type JsonValue =
   null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
@@ -29,6 +31,8 @@ export type Ast =
       readonly kind: "call";
       readonly name: string;
       readonly args: readonly Ast[];
+      /** `@f(...)` binds this whole custom-call closure to the layer snapshot. */
+      readonly snapshot?: boolean;
     };
 
 export interface ParsedFunction {
@@ -55,7 +59,10 @@ export interface ParsedOperation {
 
 export interface NormalizedRequest {
   readonly initialState: JsonValue;
+  readonly snapshotState: JsonValue | null;
   readonly functionLibrary: Readonly<Record<string, unknown>>;
+  readonly snapshotFunctionLibrary: Readonly<Record<string, unknown>> | null;
+  readonly allowSnapshots: boolean;
   readonly operations: readonly {
     readonly path: string;
     readonly expr: string;
@@ -68,6 +75,7 @@ export interface SequenceState {
   readonly startState: JsonValue;
   readonly currentState: JsonValue;
   readonly compiled: CompiledLibrary;
+  readonly snapshotCompiled: CompiledLibrary;
   readonly operations: readonly ParsedOperation[];
   readonly cursor: number;
   readonly diagnostics: readonly Diagnostic[];
@@ -310,7 +318,7 @@ class Parser {
         })
       );
     const first = this.take();
-    if (!snapshot && this.matches("(")) {
+    if (this.matches("(")) {
       this.take();
       const args: Ast[] = [];
       if (!this.matches(")")) {
@@ -321,7 +329,7 @@ class Parser {
         } while (true);
       }
       this.expect(")");
-      return { kind: "call", name: first.text, args };
+      return { kind: "call", name: first.text, args, snapshot };
     }
     const path = [first.text];
     while (this.matches(".")) {
@@ -419,6 +427,19 @@ export function normaliseRequest(input: unknown): NormalizedRequest {
         "initialState 必须是 JSON 对象。"
       )
     );
+  const snapshotState =
+    request.snapshotState === undefined
+      ? null
+      : isRecord(request.snapshotState)
+        ? clone(request.snapshotState as JsonValue)
+        : null;
+  if (request.snapshotState !== undefined && !isRecord(request.snapshotState))
+    diagnostics.push(
+      diagnostic(
+        "ERA_EXPR_SNAPSHOT_STATE_INVALID",
+        "snapshotState 必须是 JSON 对象。"
+      )
+    );
   const functionLibrary = isRecord(request.functionLibrary)
     ? request.functionLibrary
     : {};
@@ -428,6 +449,22 @@ export function normaliseRequest(input: unknown): NormalizedRequest {
   )
     diagnostics.push(
       diagnostic("ERA_EXPR_LIBRARY_INVALID", "functionLibrary 必须是对象。")
+    );
+  const snapshotFunctionLibrary =
+    request.snapshotFunctionLibrary === undefined
+      ? null
+      : isRecord(request.snapshotFunctionLibrary)
+        ? request.snapshotFunctionLibrary
+        : null;
+  if (
+    request.snapshotFunctionLibrary !== undefined &&
+    !isRecord(request.snapshotFunctionLibrary)
+  )
+    diagnostics.push(
+      diagnostic(
+        "ERA_EXPR_SNAPSHOT_LIBRARY_INVALID",
+        "snapshotFunctionLibrary 必须是对象。"
+      )
     );
   const rawOperations = Array.isArray(request.operations)
     ? request.operations
@@ -457,7 +494,10 @@ export function normaliseRequest(input: unknown): NormalizedRequest {
     initialState: isRecord(initialState)
       ? clone(initialState as JsonValue)
       : {},
+    snapshotState,
     functionLibrary,
+    snapshotFunctionLibrary,
+    allowSnapshots: request.allowSnapshots === true,
     operations,
     diagnostics,
     valid: diagnostics.length === 0
@@ -645,6 +685,28 @@ export function compileCallableFunctions(
   };
 }
 
+/** Compile one immutable function-library version for current or snapshot calls. */
+export function compileFunctionLibrary(
+  functionLibrary: Readonly<Record<string, unknown>>
+): CompiledLibrary {
+  const request: NormalizedRequest = {
+    initialState: {},
+    snapshotState: null,
+    functionLibrary,
+    snapshotFunctionLibrary: null,
+    allowSnapshots: false,
+    operations: [],
+    diagnostics: [],
+    valid: true
+  };
+  const parsed = parseFunctionDefinitions(request);
+  const dependencies = extractFunctionDependencies(parsed);
+  return compileCallableFunctions(parsed, [
+    ...validateFunctionPurity(parsed),
+    ...rejectRecursiveFunctions(dependencies)
+  ]);
+}
+
 export function parseOperations(
   request: NormalizedRequest
 ): readonly ParsedOperation[] {
@@ -662,7 +724,7 @@ export function parseOperations(
     }
     const parsed =
       diagnostics.length === 0
-        ? parseExpression(operation.expr, false)
+        ? parseExpression(operation.expr, request.allowSnapshots)
         : { ast: null, diagnostics: [] as readonly Diagnostic[] };
     return {
       index,
@@ -677,12 +739,14 @@ export function parseOperations(
 export function initializeSequenceState(
   request: NormalizedRequest,
   compiled: CompiledLibrary,
-  operations: readonly ParsedOperation[]
+  operations: readonly ParsedOperation[],
+  snapshotCompiled: CompiledLibrary = compiled
 ): SequenceState {
   return {
-    startState: clone(request.initialState),
+    startState: clone(request.snapshotState ?? request.initialState),
     currentState: clone(request.initialState),
     compiled,
+    snapshotCompiled,
     operations,
     cursor: 0,
     diagnostics: [...request.diagnostics, ...compiled.diagnostics]
@@ -694,6 +758,7 @@ interface EvalFrame {
   readonly ast: Ast;
   readonly env: Readonly<Record<string, number>>;
   readonly allowState: boolean;
+  readonly library: CompiledLibrary;
 }
 interface UnaryFrame {
   readonly kind: "unary";
@@ -712,12 +777,14 @@ interface CustomFrame {
   readonly kind: "custom";
   readonly name: string;
   readonly count: number;
+  readonly library: CompiledLibrary;
 }
 interface CalculusFrame {
   readonly kind: "calculus";
   readonly name: "derivative" | "integral";
   readonly target: string;
   readonly count: number;
+  readonly library: CompiledLibrary;
 }
 type EvalFrameEntry =
   | EvalFrame
@@ -873,7 +940,8 @@ function inlineCustomAst(
     };
   const target = library.functions[ast.name];
   const args = ast.args.map((arg) => inlineCustomAst(arg, bindings, library));
-  if (!target || !target.ast) return { kind: "call", name: ast.name, args };
+  if (!target || !target.ast)
+    return { kind: "call", name: ast.name, args, snapshot: ast.snapshot };
   const childBindings = Object.fromEntries(
     target.params.map((param, index) => [param, args[index]!])
   ) as Record<string, Ast>;
@@ -913,6 +981,7 @@ function evaluateFunctionAt(
     startState: {},
     currentState: {},
     compiled: library,
+    snapshotCompiled: library,
     operations: [],
     cursor: 0,
     diagnostics: []
@@ -1096,11 +1165,12 @@ export function createAstFrameState(
   sequence: SequenceState,
   ast: Ast,
   env: Readonly<Record<string, number>> = {},
-  allowState = true
+  allowState = true,
+  library: CompiledLibrary = sequence.compiled
 ): AstFrameState {
   return {
     sequence,
-    stack: [{ kind: "eval", ast, env, allowState }],
+    stack: [{ kind: "eval", ast, env, allowState, library }],
     values: [],
     done: false,
     result: null,
@@ -1163,7 +1233,8 @@ export function advanceAstFrame(
             kind: "eval",
             ast: top.ast.value,
             env: top.env,
-            allowState: top.allowState
+            allowState: top.allowState,
+            library: top.library
           }
         );
       } else if (top.ast.kind === "binary") {
@@ -1173,17 +1244,26 @@ export function advanceAstFrame(
             kind: "eval",
             ast: top.ast.right,
             env: top.env,
-            allowState: top.allowState
+            allowState: top.allowState,
+            library: top.library
           },
           {
             kind: "eval",
             ast: top.ast.left,
             env: top.env,
-            allowState: top.allowState
+            allowState: top.allowState,
+            library: top.library
           }
         );
       } else if (top.ast.kind === "call") {
         if (top.ast.name === "derivative" || top.ast.name === "integral") {
+          if (top.ast.snapshot)
+            throw new ExpressionFailure(
+              diagnostic(
+                "ERA_EXPR_SNAPSHOT_FUNCTION_REQUIRED",
+                "@ 仅可用于自定义函数调用。"
+              )
+            );
           const targetAst = top.ast.args[0];
           if (
             !targetAst ||
@@ -1201,16 +1281,25 @@ export function advanceAstFrame(
             kind: "calculus",
             name: top.ast.name,
             target: targetAst.path[0]!,
-            count: top.ast.args.length - 1
+            count: top.ast.args.length - 1,
+            library: top.library
           });
           for (const arg of [...top.ast.args.slice(1)].reverse())
             stack.push({
               kind: "eval",
               ast: arg,
               env: top.env,
-              allowState: top.allowState
+              allowState: top.allowState,
+              library: top.library
             });
         } else if (isBuiltin(top.ast.name)) {
+          if (top.ast.snapshot)
+            throw new ExpressionFailure(
+              diagnostic(
+                "ERA_EXPR_SNAPSHOT_FUNCTION_REQUIRED",
+                "@ 仅可用于自定义函数调用。"
+              )
+            );
           stack.push({
             kind: "builtin",
             name: top.ast.name,
@@ -1221,20 +1310,25 @@ export function advanceAstFrame(
               kind: "eval",
               ast: arg,
               env: top.env,
-              allowState: top.allowState
+              allowState: top.allowState,
+              library: top.library
             });
         } else {
           stack.push({
             kind: "custom",
             name: top.ast.name,
-            count: top.ast.args.length
+            count: top.ast.args.length,
+            library: top.ast.snapshot
+              ? state.sequence.snapshotCompiled
+              : top.library
           });
           for (const arg of [...top.ast.args].reverse())
             stack.push({
               kind: "eval",
               ast: arg,
               env: top.env,
-              allowState: top.allowState
+              allowState: top.allowState,
+              library: top.library
             });
         }
       }
@@ -1293,12 +1387,12 @@ export function advanceAstFrame(
           top.name,
           top.target,
           popped.args,
-          state.sequence.compiled
+          top.library
         )
       );
     } else {
       const popped = popValues(values, top.count);
-      const target = state.sequence.compiled.functions[top.name];
+      const target = top.library.functions[top.name];
       if (!target || !target.ast)
         throw new ExpressionFailure(
           diagnostic(
@@ -1319,7 +1413,13 @@ export function advanceAstFrame(
         target.params.map((param, index) => [param, popped.args[index]!])
       ) as Record<string, number>;
       values.splice(0, values.length, ...popped.values);
-      stack.push({ kind: "eval", ast: target.ast, env, allowState: false });
+      stack.push({
+        kind: "eval",
+        ast: target.ast,
+        env,
+        allowState: false,
+        library: top.library
+      });
     }
     return complete({ ...state, stack, values });
   } catch (error) {
@@ -1490,7 +1590,8 @@ function substituteSymbolic(
   return {
     kind: "call",
     name: ast.name,
-    args: ast.args.map((arg) => substituteSymbolic(arg, state))
+    args: ast.args.map((arg) => substituteSymbolic(arg, state)),
+    snapshot: ast.snapshot
   };
 }
 
@@ -1624,7 +1725,7 @@ export function printAst(ast: Ast, parent = 0): string {
   if (ast.kind === "ref")
     return `${ast.snapshot ? "@" : ""}${ast.path.join(".")}`;
   if (ast.kind === "call")
-    return `${ast.name}(${ast.args.map((arg) => printAst(arg)).join(", ")})`;
+    return `${ast.snapshot ? "@" : ""}${ast.name}(${ast.args.map((arg) => printAst(arg)).join(", ")})`;
   if (ast.kind === "unary") {
     const own = 4;
     const text = `${ast.op}${printAst(ast.value, own)}`;
@@ -1678,15 +1779,17 @@ export function normaliseCompaction(
 
 export function executeExpressionLayer(input: unknown): ExpressionResponse {
   const normalized = normaliseRequest(input);
-  const parsed = parseFunctionDefinitions(normalized);
-  const dependencies = extractFunctionDependencies(parsed);
-  const diagnostics = [
-    ...validateFunctionPurity(parsed),
-    ...rejectRecursiveFunctions(dependencies)
-  ];
-  const compiled = compileCallableFunctions(parsed, diagnostics);
+  const compiled = compileFunctionLibrary(normalized.functionLibrary);
+  const snapshotCompiled = normalized.snapshotFunctionLibrary
+    ? compileFunctionLibrary(normalized.snapshotFunctionLibrary)
+    : compiled;
   const operations = parseOperations(normalized);
-  let state = initializeSequenceState(normalized, compiled, operations);
+  let state = initializeSequenceState(
+    normalized,
+    compiled,
+    operations,
+    snapshotCompiled
+  );
   while (state.cursor < state.operations.length)
     state = runOperationStep(state).sequenceStateNext;
   return normaliseCompaction(state, deriveSymbolicLayer(state));

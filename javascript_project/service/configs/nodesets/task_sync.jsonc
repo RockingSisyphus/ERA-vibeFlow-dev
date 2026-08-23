@@ -2,6 +2,9 @@
   "nodeset_imports": [
     {
       "path": "sidecar_store.jsonc"
+    },
+    {
+      "path": "expression_engine_bridge.jsonc"
     }
   ],
   "type_key": "era.task.sync",
@@ -42,7 +45,7 @@
         "required": true
       }
     ],
-    "max_steps": 24,
+    "max_steps": 26,
     "nodes": [
       {
         "id": "start",
@@ -63,10 +66,22 @@
         "description": "调用专用 Sidecar 状态节点集：检查身份与唯一聊天指针，读取或迁移 V2 用户文件状态，并规划冲突选择或继续同步。"
       },
       {
-        "id": "plan_sync",
-        "type_used": "era.sync.plan",
-        "display_name": "规划共享同步与相对数值更新",
-        "description": "以 EraDispatchContextV2 的不可变 processing message/MK 作为当前任务唯一身份，在统一 CRUD 领域入口规划无操作、绝对更新、$inc/$mul/$div 相对数值更新或历史协调；无效运算逐字段跳过并形成可结算诊断。"
+        "id": "prepare_expression_command_request",
+        "type_used": "era.sync.prepare_expression_command_request",
+        "display_name": "整理表达式命令与双快照",
+        "description": "在既有 Sidecar V3 上下文中整理同步 DTO，并保留 full/latest/rollback/Swipe 的既有同步范围；它不重新实现解析、函数调用图或数学求值。"
+      },
+      {
+        "id": "execute_expression_commands",
+        "type_used": "era.expression.execute_era_commands",
+        "display_name": "调用函数表达式 Nodeset",
+        "description": "调用独立 expression root 的已实现 Nodeset 执行变量与函数命令。数学语义、函数嵌套、递归拒绝与 @path/@function 快照由该 root 提供；Service 只保留顺序同步、Sidecar 状态和封存楼层压缩编排。"
+      },
+      {
+        "id": "assemble_expression_sync_plan",
+        "type_used": "era.sync.assemble_expression_plan",
+        "display_name": "组装表达式同步计划",
+        "description": "把 expression root 的纯结果映射回既有 no-op、CRUD 或历史协调工作项，携带 statFunc 和函数编辑日志；外层原有路由、事务和通知边界保持不变。"
       },
       {
         "id": "no_sync_change",
@@ -89,8 +104,8 @@
       {
         "id": "build_commit_request",
         "type_used": "era.sync.build_commit",
-        "display_name": "构造逻辑提交",
-        "description": "依据显式 dispatch class 构造有序的状态、元数据和编辑日志提交请求，不再从 reason 推断连续计数，并区分无操作与必需写入。"
+        "display_name": "构造 Sidecar V3 逻辑提交",
+        "description": "构造既有消息先行、状态后置的提交请求，纳入 statData、eraMeta、statFunc、变量/函数编辑日志；无操作与既有连续状态语义保持不变。"
       },
       {
         "id": "validate_commit_candidate",
@@ -107,8 +122,8 @@
       {
         "id": "commit_variables",
         "type_used": "era.tavern.variables_commit",
-        "display_name": "提交 Sidecar 状态",
-        "description": "先确认消息写入，再提交 V2 Sidecar 状态文件并发布当前身份的易失宏快照；聊天变量不再保存 ERA 状态。"
+        "display_name": "提交 Sidecar V3 状态",
+        "description": "沿用消息先确认、文件后提交与回读的事务顺序，提交 V3 用户文件并在成功后发布当前身份的易失宏快照；聊天变量仍只保留 ERAMetaData.SidecarId，文件失败不回退为聊天状态。"
       },
       {
         "id": "build_sync_notification",
@@ -140,7 +155,7 @@
       ["read_sync_context", "sidecar_store_prepare"],
       {
         "from": "sidecar_store_prepare",
-        "to": "plan_sync",
+        "to": "prepare_expression_command_request",
         "when": "sidecar_binding_route == 'continue'"
       },
       {
@@ -154,20 +169,22 @@
         "when": "sidecar_binding_route == 'applied'"
       },
       {
-        "from": "plan_sync",
+        "from": "assemble_expression_sync_plan",
         "to": "no_sync_change",
         "when": "sync_route == 'no-op'"
       },
       {
-        "from": "plan_sync",
+        "from": "assemble_expression_sync_plan",
         "to": "crud_write",
         "when": "sync_route == 'crud'"
       },
       {
-        "from": "plan_sync",
+        "from": "assemble_expression_sync_plan",
         "to": "compute_reconciliation",
         "when": "sync_route == 'reconcile'"
       },
+      ["prepare_expression_command_request", "execute_expression_commands"],
+      ["execute_expression_commands", "assemble_expression_sync_plan"],
       ["no_sync_change", "build_commit_request"],
       ["crud_write", "build_commit_request"],
       ["compute_reconciliation", "build_commit_request"],

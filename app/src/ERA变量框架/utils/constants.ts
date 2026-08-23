@@ -129,6 +129,12 @@ export const ERA_API_EVENTS = {
   UPDATE_BY_PATH: 'era:updateByPath',
   DELETE_BY_OBJECT: 'era:deleteByObject',
   DELETE_BY_PATH: 'era:deleteByPath',
+  /** 函数定义必须以完整 params + expr 原子提交，避免半定义进入历史。 */
+  FUNCTION_INSERT_BY_OBJECT: 'era:functionInsertByObject',
+  /** 替换已存在纯函数的完整定义。 */
+  FUNCTION_EDIT_BY_OBJECT: 'era:functionEditByObject',
+  /** 删除一个或多个函数名；每个值必须是空对象。 */
+  FUNCTION_DELETE_BY_OBJECT: 'era:functionDeleteByObject',
   /** 获取当前最新的变量状态 */
   GET_CURRENT_VARS: 'era:getCurrentVars',
   /** 获取指定 MK 的历史变量快照 */

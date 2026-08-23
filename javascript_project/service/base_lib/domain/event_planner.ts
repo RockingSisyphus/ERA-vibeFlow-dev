@@ -17,6 +17,9 @@ const API_INSERT_BY_PATH = "era:insertByPath";
 const API_UPDATE_BY_PATH = "era:updateByPath";
 const API_DELETE_BY_OBJECT = "era:deleteByObject";
 const API_DELETE_BY_PATH = "era:deleteByPath";
+const API_FUNCTION_INSERT_BY_OBJECT = "era:functionInsertByObject";
+const API_FUNCTION_EDIT_BY_OBJECT = "era:functionEditByObject";
+const API_FUNCTION_DELETE_BY_OBJECT = "era:functionDeleteByObject";
 const API_GET_CURRENT_VARS = "era:getCurrentVars";
 const API_GET_SNAPSHOT_AT_MK = "era:getSnapshotAtMk";
 const API_GET_SNAPSHOTS_BETWEEN_MKS = "era:getSnapshotsBetweenMks";
@@ -129,7 +132,7 @@ export interface EventPlanCoverageV1 {
   readonly mismatchedEventIds: readonly number[];
 }
 
-/** 返回 ERA 的 13 个公开输入 API；每次调用产生独立只读值。 */
+/** 返回 ERA 的 16 个公开输入 API；每次调用产生独立只读值。 */
 export function getApiEventTypes(): readonly string[] {
   return [
     API_INSERT_BY_OBJECT,
@@ -138,6 +141,9 @@ export function getApiEventTypes(): readonly string[] {
     API_UPDATE_BY_PATH,
     API_DELETE_BY_OBJECT,
     API_DELETE_BY_PATH,
+    API_FUNCTION_INSERT_BY_OBJECT,
+    API_FUNCTION_EDIT_BY_OBJECT,
+    API_FUNCTION_DELETE_BY_OBJECT,
     API_GET_CURRENT_VARS,
     API_GET_SNAPSHOT_AT_MK,
     API_GET_SNAPSHOTS_BETWEEN_MKS,
@@ -225,6 +231,9 @@ function isApiEventType(eventType: string): boolean {
     case API_UPDATE_BY_PATH:
     case API_DELETE_BY_OBJECT:
     case API_DELETE_BY_PATH:
+    case API_FUNCTION_INSERT_BY_OBJECT:
+    case API_FUNCTION_EDIT_BY_OBJECT:
+    case API_FUNCTION_DELETE_BY_OBJECT:
     case API_GET_CURRENT_VARS:
     case API_GET_SNAPSHOT_AT_MK:
     case API_GET_SNAPSHOTS_BETWEEN_MKS:
@@ -441,7 +450,10 @@ function isApiMessageWriteEvent(eventType: string): boolean {
     eventType === API_INSERT_BY_PATH ||
     eventType === API_UPDATE_BY_PATH ||
     eventType === API_DELETE_BY_OBJECT ||
-    eventType === API_DELETE_BY_PATH
+    eventType === API_DELETE_BY_PATH ||
+    eventType === API_FUNCTION_INSERT_BY_OBJECT ||
+    eventType === API_FUNCTION_EDIT_BY_OBJECT ||
+    eventType === API_FUNCTION_DELETE_BY_OBJECT
   );
 }
 

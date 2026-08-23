@@ -1,7 +1,7 @@
 {
   "type_key": "era.api.write",
   "display_name": "ERA 写入 API 事务",
-  "description": "显式路由六个公开写入 API，先确认消息指令追加，再复用同一同步任务提交状态；部分或未知提交必须 fatal。",
+  "description": "显式路由变量与函数公开写入 API，先确认消息指令追加，再复用同一同步任务提交 Sidecar 状态；部分或未知提交必须 fatal。",
   "requires": [
     {
       "type": "era.api.request",
@@ -37,7 +37,7 @@
         "required": true
       }
     ],
-    "max_steps": 24,
+    "max_steps": 27,
     "nodes": [
       {
         "id": "start",
@@ -54,8 +54,8 @@
       {
         "id": "route_write",
         "type_used": "era.api.route_write",
-        "display_name": "选择六个写入操作",
-        "description": "按公开事件名选择对象插入、对象更新、路径插入、路径更新、对象删除或路径删除。"
+        "display_name": "选择变量与函数写入操作",
+        "description": "保留六个变量写入事件，新增 era:functionInsertByObject、era:functionEditByObject、era:functionDeleteByObject 三个平面函数 API；仅路由，不执行函数定义校验或消息写入。"
       },
       {
         "id": "normalize_safe_object_payload",
@@ -98,6 +98,24 @@
         "type_used": "era.api.prepare_delete_path",
         "display_name": "按路径删除（era:deleteByPath）",
         "description": "按 lodash 兼容路径构造空对象删除结构，不执行宿主写入。"
+      },
+      {
+        "id": "function_insert_by_object",
+        "type_used": "era.api.prepare_function_insert_object",
+        "display_name": "构造函数插入（era:functionInsertByObject）",
+        "description": "将平面函数定义对象编码为标准 FunctionInsert 标签，不求值、不写宿主；函数名、参数与函数体的完整校验留给表达式 Nodeset。"
+      },
+      {
+        "id": "function_edit_by_object",
+        "type_used": "era.api.prepare_function_edit_object",
+        "display_name": "构造函数更新（era:functionEditByObject）",
+        "description": "将完整的平面函数替换定义编码为标准 FunctionEdit 标签，不求值、不写宿主；不存在函数与调用图错误由表达式 Nodeset给出诊断。"
+      },
+      {
+        "id": "function_delete_by_object",
+        "type_used": "era.api.prepare_function_delete_object",
+        "display_name": "构造函数删除（era:functionDeleteByObject）",
+        "description": "将平面函数名对象编码为标准 FunctionDelete 空对象标签，不求值、不写宿主；删除后的后续调用仍由表达式 Nodeset按消息顺序诊断。"
       },
       {
         "id": "read_target_messages",
@@ -217,12 +235,30 @@
         "to": "delete_by_path",
         "when": "write_route == 'delete-by-path'"
       },
+      {
+        "from": "route_write",
+        "to": "function_insert_by_object",
+        "when": "write_route == 'function-insert-by-object'"
+      },
+      {
+        "from": "route_write",
+        "to": "function_edit_by_object",
+        "when": "write_route == 'function-edit-by-object'"
+      },
+      {
+        "from": "route_write",
+        "to": "function_delete_by_object",
+        "when": "write_route == 'function-delete-by-object'"
+      },
       ["insert_by_object", "read_target_messages"],
       ["update_by_object", "read_target_messages"],
       ["insert_by_path", "read_target_messages"],
       ["update_by_path", "read_target_messages"],
       ["delete_by_object", "read_target_messages"],
       ["delete_by_path", "read_target_messages"],
+      ["function_insert_by_object", "read_target_messages"],
+      ["function_edit_by_object", "read_target_messages"],
+      ["function_delete_by_object", "read_target_messages"],
       {
         "from": "insert_by_object",
         "to": "build_message_append",
@@ -250,6 +286,21 @@
       },
       {
         "from": "delete_by_path",
+        "to": "build_message_append",
+        "schedule": false
+      },
+      {
+        "from": "function_insert_by_object",
+        "to": "build_message_append",
+        "schedule": false
+      },
+      {
+        "from": "function_edit_by_object",
+        "to": "build_message_append",
+        "schedule": false
+      },
+      {
+        "from": "function_delete_by_object",
         "to": "build_message_append",
         "schedule": false
       },

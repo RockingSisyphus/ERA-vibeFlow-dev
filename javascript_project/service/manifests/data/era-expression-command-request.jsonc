@@ -1,0 +1,12 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.expression.command.request",
+  "representation": "json",
+  "display_name": "ERA·表达式·命令·请求",
+  "description": "Service 交给独立表达式 root 的纯命令 DTO：逐消息层起始 statData/statFunc 快照、原文位置有序的六类 ERA 标签、当前同步范围与既有重放身份。它不包含 Tavern 对象、Capability 或文件句柄。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": true
+  }
+}

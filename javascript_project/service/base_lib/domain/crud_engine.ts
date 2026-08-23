@@ -7,10 +7,17 @@
 
 import { Converter } from "opencc-js";
 import { cloneEraPortableJsonV1 } from "@era/vibeflow-contracts";
+import { executeExpressionLayer } from "@era/vibeflow-expression/engine";
 
 import { findLatestNewValue } from "./snapshot_query";
 
-export type EraCrudCommandType = "insert" | "edit" | "delete";
+export type EraCrudCommandType =
+  | "insert"
+  | "edit"
+  | "delete"
+  | "function-insert"
+  | "function-edit"
+  | "function-delete";
 
 export interface EraCrudCommand {
   readonly type: EraCrudCommandType;
@@ -35,16 +42,32 @@ export type EraCrudEditLog =
       readonly value_old: unknown;
     };
 
+export type EraFunctionEditLog =
+  | {
+      readonly op: "insert";
+      readonly name: string;
+      readonly value_new: unknown;
+    }
+  | {
+      readonly op: "update";
+      readonly name: string;
+      readonly value_old: unknown;
+      readonly value_new: unknown;
+    }
+  | {
+      readonly op: "delete";
+      readonly name: string;
+      readonly value_old: unknown;
+    };
+
 export interface EraCrudResult {
   readonly finalStat: unknown;
   readonly editLog: readonly EraCrudEditLog[];
+  readonly finalStatFunc?: Readonly<Record<string, unknown>>;
+  readonly functionEditLog?: readonly EraFunctionEditLog[];
 }
 
-export type EraCrudDiagnosticCode =
-  | "ERA_EDIT_OPERATOR_INVALID"
-  | "ERA_EDIT_TARGET_NOT_NUMERIC"
-  | "ERA_EDIT_DIVIDE_BY_ZERO"
-  | "ERA_EDIT_RESULT_NON_FINITE";
+export type EraCrudDiagnosticCode = string;
 
 export interface EraCrudDiagnostic {
   readonly code: EraCrudDiagnosticCode;
@@ -60,6 +83,11 @@ export interface EraCommandParseInput {
 export interface EraEditContext {
   readonly messageId: number;
   readonly meta: Readonly<Record<string, unknown>>;
+  /** Immutable message-layer baseline used by @path expressions. */
+  readonly layerStartStat?: unknown;
+  /** Current and message-start function libraries supplied by Sidecar replay. */
+  readonly statFunc?: Readonly<Record<string, unknown>>;
+  readonly layerStartStatFunc?: Readonly<Record<string, unknown>>;
 }
 
 export interface EraApplyMessageCommandsInput {
@@ -67,6 +95,8 @@ export interface EraApplyMessageCommandsInput {
   readonly messageId: number;
   readonly initialStat: unknown;
   readonly meta: Readonly<Record<string, unknown>>;
+  /** Current Sidecar function library. It is never read from chat variables. */
+  readonly initialStatFunc?: Readonly<Record<string, unknown>>;
   readonly traditionalToSimplified?: boolean;
 }
 
@@ -132,6 +162,36 @@ export function escapeEraData<T>(value: T): T {
     const result: Record<string, unknown> = {};
     for (const key of Object.keys(value)) {
       defineOwn(result, escapeString(key), escapeEraData(value[key]));
+    }
+    return result as T;
+  }
+  return (typeof value === "string" ? escapeString(value) : value) as T;
+}
+
+/**
+ * `$expr` is source text consumed by the expression root, rather than a Tavern path or a
+ * user value.  Preserve it byte-for-byte while applying the established escape policy to
+ * all ordinary Variable payload fields.
+ */
+function escapeVariableCommandData<T>(value: T): T {
+  if (Array.isArray(value)) {
+    const result = new Array<unknown>(value.length);
+    for (let index = 0; index < value.length; index += 1) {
+      if (index in value) result[index] = escapeVariableCommandData(value[index]);
+    }
+    return result as T;
+  }
+  if (isPlainRecord(value)) {
+    const result: Record<string, unknown> = {};
+    for (const key of Object.keys(value)) {
+      const item = value[key];
+      defineOwn(
+        result,
+        escapeString(key),
+        key === "$expr" && typeof item === "string"
+          ? item
+          : escapeVariableCommandData(item),
+      );
     }
     return result as T;
   }
@@ -281,32 +341,41 @@ function parseBlockContent(source: string): unknown[] {
   return parsed;
 }
 
-/** 从混合消息中按原始出现位置提取、解析并转义三类 ERA 指令。 */
+/** 从混合消息中按原始出现位置提取六类 ERA 指令。
+ *
+ * 变量 payload 沿用既有路径转义；函数定义是表达式 root 的输入，不能经过路径
+ * 转义，否则函数名、参数或表达式中的 `.` 会被改写。
+ */
 export function parseMessageCommands(
   input: EraCommandParseInput,
 ): EraCrudCommand[] {
   if (!input || typeof input.content !== "string" || !input.content) return [];
   const commands: PositionedCommand[] = [];
   const commandPattern =
-    /<(Variable(Insert|Edit|Delete))>\s*(?=[\s\S]*?\S[\s\S]*?<\/\1>)((?:(?!<(?:era_data|Variable(?:Think|Insert|Edit|Delete))>|<\/\1>)[\s\S])*?)\s*<\/\1>/gi;
+    /<((?:Variable|Function)(?:Insert|Edit|Delete))>\s*(?=[\s\S]*?\S[\s\S]*?<\/\1>)((?:(?!<(?:era_data|Variable(?:Think|Insert|Edit|Delete)|Function(?:Insert|Edit|Delete))>|<\/\1>)[\s\S])*?)\s*<\/\1>/gi;
   let match: RegExpExecArray | null;
   while ((match = commandPattern.exec(input.content)) !== null) {
-    const cleaned = stripCodeFence((match[3] ?? "").trim());
+    const cleaned = stripCodeFence((match[2] ?? "").trim());
     if (!cleaned) continue;
     const parseSource = input.traditionalToSimplified
       ? convertTraditionalToSimplified(cleaned)
       : cleaned;
     const parsed = parseBlockContent(parseSource);
     if (parsed.length === 0) continue;
-    const shortName = (match[2] ?? "").toLowerCase();
+    const tagName = (match[1] ?? "").toLowerCase();
     let type: EraCrudCommandType;
-    if (shortName === "insert") type = "insert";
-    else if (shortName === "edit") type = "edit";
-    else if (shortName === "delete") type = "delete";
+    if (tagName === "variableinsert") type = "insert";
+    else if (tagName === "variableedit") type = "edit";
+    else if (tagName === "variabledelete") type = "delete";
+    else if (tagName === "functioninsert") type = "function-insert";
+    else if (tagName === "functionedit") type = "function-edit";
+    else if (tagName === "functiondelete") type = "function-delete";
     else continue;
     commands.push({
       type,
-      data: escapeEraData(parsed),
+      data: type.startsWith("function-")
+        ? cloneCrudValue(parsed)
+        : escapeVariableCommandData(parsed),
       index: match.index,
     });
   }
@@ -561,15 +630,17 @@ function editDiagnostic(
 }
 
 /**
- * 识别 VariableEdit 叶子上的有限 JSON 数值运算。
+ * 识别 VariableEdit 叶子上的唯一 `$expr` 数值表达式。
  *
- * 任何非 `$meta` 的 `$` 控制键都会被视为操作意图并 fail-closed，避免未知控制对象
- * 被当作普通数据继续递归。普通对象和普通 JSON 值仍返回 not-operator。
+ * 旧 `$inc/$mul/$div` 及任何未知 `$` 控制键一律 fail-closed；普通对象和普通 JSON
+ * 直接赋值仍返回 not-operator。表达式的解析、函数图和数值计算委托给独立 root。
  */
 export function resolveRelativeEdit(
   patch: unknown,
   current: unknown,
   path: string,
+  stat: unknown = {},
+  context: EraEditContext = { messageId: 0, meta: {} },
 ): RelativeEditResolution {
   if (!isPlainRecord(patch)) return { kind: "not-operator" };
   const keys = Object.keys(patch);
@@ -582,26 +653,26 @@ export function resolveRelativeEdit(
   if (
     keys.length !== 1 ||
     controlKeys.length !== 1 ||
-    (operator !== "$inc" && operator !== "$mul" && operator !== "$div")
+    operator !== "$expr"
   ) {
     return {
       kind: "invalid",
       diagnostic: editDiagnostic(
         "ERA_EDIT_OPERATOR_INVALID",
         path,
-        "相对数值更新必须是只含 $inc、$mul 或 $div 之一的单键对象。",
+        "数值表达式必须是只含 $expr 的单键对象；$inc、$mul、$div、$sub 和 $set 已不支持。",
       ),
     };
   }
 
   const operand = patch[operator];
-  if (typeof operand !== "number" || !Number.isFinite(operand)) {
+  if (typeof operand !== "string" || operand.trim().length === 0) {
     return {
       kind: "invalid",
       diagnostic: editDiagnostic(
         "ERA_EDIT_OPERATOR_INVALID",
         path,
-        "相对数值更新的操作数必须是有限数字。",
+        "$expr 的值必须是非空表达式字符串。",
       ),
     };
   }
@@ -615,30 +686,33 @@ export function resolveRelativeEdit(
       ),
     };
   }
-  if (operator === "$div" && operand === 0) {
+  if (!isPlainRecord(stat)) {
     return {
       kind: "invalid",
       diagnostic: editDiagnostic(
-        "ERA_EDIT_DIVIDE_BY_ZERO",
+        "ERA_EDIT_OPERATOR_INVALID",
         path,
-        "相对数值更新不能除以 0。",
+        "$expr 只能在对象变量状态上求值。",
       ),
     };
   }
-
-  const result =
-    operator === "$inc"
-      ? current + operand
-      : operator === "$mul"
-        ? current * operand
-        : current / operand;
-  if (!Number.isFinite(result)) {
+  const response = executeExpressionLayer({
+    initialState: cloneCrudValue(stat),
+    snapshotState: cloneCrudValue(context.layerStartStat ?? stat),
+    functionLibrary: context.statFunc ?? {},
+    snapshotFunctionLibrary: context.layerStartStatFunc ?? context.statFunc ?? {},
+    allowSnapshots: true,
+    operations: [{ path: publicEditPath(path), expr: operand }],
+  });
+  const result = getAtPath(response.finalState, publicEditPath(path));
+  if (response.diagnostics.length > 0 || typeof result !== "number" || !Number.isFinite(result)) {
+    const detail = response.diagnostics[0];
     return {
       kind: "invalid",
       diagnostic: editDiagnostic(
-        "ERA_EDIT_RESULT_NON_FINITE",
+        detail?.code ?? "ERA_EDIT_RESULT_NON_FINITE",
         path,
-        "相对数值更新结果不是有限数字。",
+        detail?.message ?? "$expr 未得到有限数值结果。",
       ),
     };
   }
@@ -665,7 +739,7 @@ function applyEditAtLevel(
     patch.$meta.updatable === true;
   if (updatable === false && !bypass) return;
 
-  const relative = resolveRelativeEdit(patch, current, basePath);
+  const relative = resolveRelativeEdit(patch, current, basePath, stat, context);
   if (relative.kind === "invalid") {
     diagnostics.push(relative.diagnostic);
     return;
@@ -820,18 +894,133 @@ export function applyDelete(
   return { finalStat, editLog };
 }
 
-/** 解析并严格按消息内出现顺序执行 Insert/Edit/Delete。 */
+type FunctionMutationKind = "function-insert" | "function-edit" | "function-delete";
+
+function functionDiagnostic(
+  code: string,
+  name: string,
+  message: string,
+): EraCrudDiagnostic {
+  return { code, path: name, message: `${message}（函数 ${name || "(empty)"}）` };
+}
+
+/**
+ * Expression root owns grammar, purity and the complete function call graph.  The Service
+ * only asks it whether a candidate immutable library is admissible before committing it.
+ */
+function validateFunctionLibrary(
+  candidate: Readonly<Record<string, unknown>>,
+): EraCrudDiagnostic | null {
+  const checked = executeExpressionLayer({
+    initialState: {},
+    functionLibrary: candidate,
+    operations: [],
+  });
+  const first = checked.diagnostics[0];
+  return first
+    ? functionDiagnostic(first.code, "<library>", first.message)
+    : null;
+}
+
+function isEmptyFunctionDelete(value: unknown): boolean {
+  return isPlainRecord(value) && Object.keys(value).length === 0;
+}
+
+function applyFunctionCommands(
+  data: readonly unknown[],
+  initialLibrary: Readonly<Record<string, unknown>>,
+  type: FunctionMutationKind,
+): {
+  readonly library: Readonly<Record<string, unknown>>;
+  readonly log: readonly EraFunctionEditLog[];
+  readonly diagnostics: readonly EraCrudDiagnostic[];
+} {
+  const library = cloneCrudValue(initialLibrary) as Record<string, unknown>;
+  const log: EraFunctionEditLog[] = [];
+  const diagnostics: EraCrudDiagnostic[] = [];
+  for (const root of data) {
+    if (!isPlainRecord(root) || Object.keys(root).length === 0) {
+      diagnostics.push(
+        functionDiagnostic("ERA_FUNCTION_COMMAND_INVALID", "", "函数指令必须是非空对象。"),
+      );
+      continue;
+    }
+    const names = Object.keys(root);
+    const invalidName = names.find((name) => {
+      const exists = Object.prototype.hasOwnProperty.call(library, name);
+      return (type === "function-insert" && exists) ||
+        (type === "function-edit" && !exists) ||
+        (type === "function-delete" && !isEmptyFunctionDelete(root[name]));
+    });
+    if (invalidName !== undefined) {
+      const exists = Object.prototype.hasOwnProperty.call(library, invalidName);
+      const code = type === "function-delete"
+        ? "ERA_FUNCTION_DELETE_INVALID"
+        : type === "function-insert" && exists
+          ? "ERA_FUNCTION_ALREADY_EXISTS"
+          : "ERA_FUNCTION_NOT_FOUND";
+      const message = code === "ERA_FUNCTION_DELETE_INVALID"
+        ? "FunctionDelete 的函数值必须是空对象。"
+        : code === "ERA_FUNCTION_ALREADY_EXISTS"
+          ? "FunctionInsert 只能新增不存在的函数。"
+          : "FunctionEdit 只能修改既有函数。";
+      diagnostics.push(functionDiagnostic(code, invalidName, message));
+      continue;
+    }
+
+    // A tag is one transaction: compile the complete candidate at once, so forward
+    // declarations and mutually non-recursive nested definitions are valid.
+    const candidate = cloneCrudValue(library) as Record<string, unknown>;
+    if (type === "function-delete") {
+      for (const name of names) delete candidate[name];
+    } else {
+      for (const name of names) defineOwn(candidate, name, cloneCrudValue(root[name]));
+    }
+    const invalid = validateFunctionLibrary(candidate);
+    if (invalid !== null) {
+      diagnostics.push(invalid);
+      continue;
+    }
+    for (const name of names) {
+      if (type === "function-delete") {
+        // Deleting a missing name is a normal idempotent restore no-op.  This lets
+        // Sidecar recovery emit one deterministic delete+insert pair without
+        // manufacturing a diagnostic on a newly reconstructed branch.
+        if (!Object.prototype.hasOwnProperty.call(library, name)) continue;
+        const valueOld = cloneCrudValue(library[name]);
+        delete library[name];
+        log.push({ op: "delete", name, value_old: valueOld });
+      } else if (type === "function-insert") {
+        defineOwn(library, name, cloneCrudValue(root[name]));
+        log.push({ op: "insert", name, value_new: cloneCrudValue(root[name]) });
+      } else {
+        const valueOld = cloneCrudValue(library[name]);
+        defineOwn(library, name, cloneCrudValue(root[name]));
+        log.push({ op: "update", name, value_old: valueOld, value_new: cloneCrudValue(root[name]) });
+      }
+    }
+  }
+  return { library, log, diagnostics };
+}
+
+/** 解析并严格按消息内出现顺序执行 Variable 和 Function 六类指令。 */
 export function applyMessageCommands(
   input: EraApplyMessageCommandsInput,
 ): EraApplyMessageCommandsResult {
   const initial = cloneCrudValue(input.initialStat);
+  const layerStartStatFunc = cloneCrudValue(input.initialStatFunc ?? {}) as Record<
+    string,
+    unknown
+  >;
   try {
     const commands = parseMessageCommands({
       content: input.content,
       traditionalToSimplified: input.traditionalToSimplified,
     });
     let current = initial;
+    let currentStatFunc = cloneCrudValue(layerStartStatFunc) as Record<string, unknown>;
     const accumulated: EraCrudEditLog[] = [];
+    const functionEditLog: EraFunctionEditLog[] = [];
     const diagnostics: EraCrudDiagnostic[] = [];
     for (const command of commands) {
       let result: EraCrudResult;
@@ -841,22 +1030,49 @@ export function applyMessageCommands(
         const editResult = applyEditWithDiagnostics(command.data, current, {
           messageId: input.messageId,
           meta: input.meta,
+          layerStartStat: initial,
+          statFunc: currentStatFunc,
+          layerStartStatFunc,
         });
         diagnostics.push(...editResult.diagnostics);
         result = editResult;
-      } else {
+      } else if (command.type === "delete") {
         result = applyDelete(command.data, current);
+      } else {
+        const functionResult = applyFunctionCommands(
+          command.data,
+          currentStatFunc,
+          command.type,
+        );
+        currentStatFunc = cloneCrudValue(functionResult.library) as Record<string, unknown>;
+        functionEditLog.push(...functionResult.log);
+        diagnostics.push(...functionResult.diagnostics);
+        result = { finalStat: current, editLog: [] };
       }
       current = result.finalStat;
       accumulated.push(...result.editLog);
     }
+    const exposesFunctionState = Object.keys(layerStartStatFunc).length > 0 ||
+      commands.some((command) => command.type.startsWith("function-"));
     return {
       finalStat: current,
       editLog: accumulated,
+      ...(exposesFunctionState
+        ? { finalStatFunc: currentStatFunc, functionEditLog }
+        : {}),
       commands,
       diagnostics,
     };
   } catch {
-    return { finalStat: initial, editLog: [], commands: [], diagnostics: [] };
+    const exposesFunctionState = Object.keys(layerStartStatFunc).length > 0;
+    return {
+      finalStat: initial,
+      editLog: [],
+      ...(exposesFunctionState
+        ? { finalStatFunc: layerStartStatFunc, functionEditLog: [] }
+        : {}),
+      commands: [],
+      diagnostics: [],
+    };
   }
 }

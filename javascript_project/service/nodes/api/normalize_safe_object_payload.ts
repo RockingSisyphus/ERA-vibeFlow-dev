@@ -7,7 +7,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function isObjectEvent(value: string): boolean {
-  return value === "era:insertByObject" || value === "era:updateByObject" || value === "era:deleteByObject";
+  return value === "era:insertByObject" || value === "era:updateByObject" || value === "era:deleteByObject" ||
+    value === "era:functionInsertByObject" || value === "era:functionEditByObject" || value === "era:functionDeleteByObject";
 }
 
 export function run(inputs: Readonly<{ "era.api.request": Envelope<unknown> }>): any {

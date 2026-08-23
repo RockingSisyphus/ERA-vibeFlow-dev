@@ -1,5 +1,5 @@
 /**
- * ERA 六个公开写入 API 的纯适配引擎。
+ * ERA 九个公开写入 API 的纯适配引擎。
  *
  * 本模块只把公开 detail 转换为候选格式的 Variable 指令块，并在只读消息快照中
  * 选择最后一条 AI 消息、构造单次消息更新请求。它不访问 Tavern、时间、随机数或
@@ -17,12 +17,18 @@ export type EraApiWriteEventV1 =
   | "era:insertByPath"
   | "era:updateByPath"
   | "era:deleteByObject"
-  | "era:deleteByPath";
+  | "era:deleteByPath"
+  | "era:functionInsertByObject"
+  | "era:functionEditByObject"
+  | "era:functionDeleteByObject";
 
 export type EraApiWriteBlockTagV1 =
   | "VariableInsert"
   | "VariableEdit"
-  | "VariableDelete";
+  | "VariableDelete"
+  | "FunctionInsert"
+  | "FunctionEdit"
+  | "FunctionDelete";
 
 export interface EraApiWriteDirectiveV1 {
   readonly eventType: EraApiWriteEventV1;
@@ -111,6 +117,9 @@ function setPath(path: unknown, value: unknown): Record<string, unknown> {
 }
 
 function blockTag(eventType: EraApiWriteEventV1): EraApiWriteBlockTagV1 {
+  if (eventType === "era:functionInsertByObject") return "FunctionInsert";
+  if (eventType === "era:functionEditByObject") return "FunctionEdit";
+  if (eventType === "era:functionDeleteByObject") return "FunctionDelete";
   if (eventType === "era:insertByObject" || eventType === "era:insertByPath")
     return "VariableInsert";
   if (eventType === "era:updateByObject" || eventType === "era:updateByPath")
@@ -133,7 +142,10 @@ export function isEraApiWriteEvent(value: string): value is EraApiWriteEventV1 {
     value === "era:insertByPath" ||
     value === "era:updateByPath" ||
     value === "era:deleteByObject" ||
-    value === "era:deleteByPath"
+    value === "era:deleteByPath" ||
+    value === "era:functionInsertByObject" ||
+    value === "era:functionEditByObject" ||
+    value === "era:functionDeleteByObject"
   );
 }
 
@@ -167,7 +179,7 @@ export function prepareApiWriteDirective(
   };
 }
 
-/** 为六个显式图分支构造拥有唯一 provider key 的节点输出。 */
+/** 为九个显式图分支构造拥有唯一 provider key 的节点输出。 */
 export function prepareApiWriteNodeResult(
   request: unknown,
   expectedEvent: EraApiWriteEventV1,

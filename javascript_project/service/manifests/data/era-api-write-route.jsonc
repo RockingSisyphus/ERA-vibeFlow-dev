@@ -13,7 +13,10 @@
       "insert-by-path",
       "update-by-path",
       "delete-by-object",
-      "delete-by-path"
+      "delete-by-path",
+      "function-insert-by-object",
+      "function-edit-by-object",
+      "function-delete-by-object"
     ]
   }
 }

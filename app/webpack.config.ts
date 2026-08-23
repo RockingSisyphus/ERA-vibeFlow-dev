@@ -517,6 +517,11 @@ function parse_configuration(entry: Entry, is_release = false): (_env: any, argv
     },
     resolve: {
       extensions: ['.ts', '.js', '.tsx', '.jsx', '.css'],
+      // Generated Service AOT lives above `app/`, but its browser-only runtime
+      // dependencies are owned by this application package. Resolve those
+      // dependencies from here so the explicitly bundled expression backends
+      // do not fall back to a network ESM import.
+      modules: [path.resolve(import.meta.dirname, 'node_modules'), 'node_modules'],
       plugins: [
         new TsconfigPathsPlugin({
           extensions: ['.ts', '.js', '.tsx', '.jsx'],
@@ -664,6 +669,26 @@ function parse_configuration(entry: Entry, is_release = false): (_env: any, argv
       ) {
         return callback();
       }
+      // ERA 表达式引擎必须在离线酒馆与隔离 Harness 中可启动。数学后端及
+      // 其传递依赖若被外置为 CDN ESM，会在模块执行入口前失败，因此作为
+      // 一个完整的本地运行时链随生产 bundle 发布，而不是依赖浏览器网络。
+      const expressionRuntimeContext = [
+        '/node_modules/mathjs/',
+        '/node_modules/@stdlib/',
+        '/node_modules/typed-function/',
+        '/node_modules/complex.js/',
+        '/node_modules/decimal.js/',
+        '/node_modules/fraction.js/',
+        '/node_modules/seedrandom/',
+      ];
+      if (
+        request === 'mathjs' ||
+        request.startsWith('mathjs/') ||
+        request === '@stdlib/math-base-special-gamma' ||
+        expressionRuntimeContext.some(segment => context.includes(segment))
+      ) {
+        return callback();
+      }
       const global = {
         jquery: '$',
         lodash: '_',
@@ -673,6 +698,9 @@ function parse_configuration(entry: Entry, is_release = false): (_env: any, argv
         'vue-router': 'VueRouter',
         yaml: 'YAML',
         zod: 'z',
+        // Math.js 的随机数兼容分支会可选引用 Node `crypto`。浏览器只需
+        // 原生 Web Crypto 全局，不应留下会被隔离酒馆 loader 拒绝的 CDN import。
+        crypto: 'crypto',
       };
       if (request in global) {
         return callback(null, 'var ' + global[request as keyof typeof global]);

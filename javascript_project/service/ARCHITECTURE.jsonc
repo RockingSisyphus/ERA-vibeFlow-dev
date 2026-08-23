@@ -15,7 +15,7 @@
     "contains_global_state": false,
     "summary": {
       "nodes": 9,
-      "nodesets": 13,
+      "nodesets": 14,
       "explicit_edges": 9,
       "data_edges": 0,
       "reported_edges": 9,
@@ -559,7 +559,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 8,
-          "nodesets": 13,
+          "nodesets": 14,
           "explicit_edges": 10,
           "data_edges": 2,
           "reported_edges": 10,
@@ -1109,7 +1109,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 12,
-          "nodesets": 13,
+          "nodesets": 14,
           "explicit_edges": 21,
           "data_edges": 6,
           "reported_edges": 21,
@@ -1876,7 +1876,7 @@
         "path": "configs/nodesets/api_write.jsonc"
       },
       "display_name": "ERA 写入 API 事务",
-      "description": "显式路由六个公开写入 API，先确认消息指令追加，再复用同一同步任务提交状态；部分或未知提交必须 fatal。",
+      "description": "显式路由变量与函数公开写入 API，先确认消息指令追加，再复用同一同步任务提交 Sidecar 状态；部分或未知提交必须 fatal。",
       "status": "implemented",
       "flow_kind": "predefined",
       "effect_scope": "none",
@@ -1928,16 +1928,16 @@
             "as": "writeApiResult"
           }
         ],
-        "max_steps": 24,
+        "max_steps": 27,
         "entry_mode": "async",
         "execution_lock": null,
         "contains_global_state": false,
         "summary": {
-          "nodes": 23,
-          "nodesets": 13,
-          "explicit_edges": 38,
-          "data_edges": 8,
-          "reported_edges": 38,
+          "nodes": 26,
+          "nodesets": 14,
+          "explicit_edges": 47,
+          "data_edges": 11,
+          "reported_edges": 47,
           "contains_global_state": false
         },
         "entry_nodes": [
@@ -2044,8 +2044,8 @@
               "path": "configs/nodesets/api_write.jsonc"
             },
             "role": {
-              "display_name": "选择六个写入操作",
-              "description": "按公开事件名选择对象插入、对象更新、路径插入、路径更新、对象删除或路径删除。"
+              "display_name": "选择变量与函数写入操作",
+              "description": "保留六个变量写入事件，新增 era:functionInsertByObject、era:functionEditByObject、era:functionDeleteByObject 三个平面函数 API；仅路由，不执行函数定义校验或消息写入。"
             },
             "contract_source": "node_type",
             "flow_kind": "decision",
@@ -2388,6 +2388,141 @@
                 "key": "delete_path_directive",
                 "type": "era.api.write.directive",
                 "display_name": "路径删除指令"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "function_insert_by_object",
+            "type_used": "era.api.prepare_function_insert_object",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/api_write.jsonc"
+            },
+            "role": {
+              "display_name": "构造函数插入（era:functionInsertByObject）",
+              "description": "将平面函数定义对象编码为标准 FunctionInsert 标签，不求值、不写宿主；函数名、参数与函数体的完整校验留给表达式 Nodeset。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "process",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.api.write.request",
+                "cardinality": "exactly_one",
+                "display_name": "写入请求"
+              }
+            ],
+            "provides": [
+              {
+                "key": "function_insert_directive",
+                "type": "era.api.write.directive",
+                "display_name": "函数插入指令"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "function_edit_by_object",
+            "type_used": "era.api.prepare_function_edit_object",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/api_write.jsonc"
+            },
+            "role": {
+              "display_name": "构造函数更新（era:functionEditByObject）",
+              "description": "将完整的平面函数替换定义编码为标准 FunctionEdit 标签，不求值、不写宿主；不存在函数与调用图错误由表达式 Nodeset给出诊断。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "process",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.api.write.request",
+                "cardinality": "exactly_one",
+                "display_name": "写入请求"
+              }
+            ],
+            "provides": [
+              {
+                "key": "function_edit_directive",
+                "type": "era.api.write.directive",
+                "display_name": "函数更新指令"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "function_delete_by_object",
+            "type_used": "era.api.prepare_function_delete_object",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/api_write.jsonc"
+            },
+            "role": {
+              "display_name": "构造函数删除（era:functionDeleteByObject）",
+              "description": "将平面函数名对象编码为标准 FunctionDelete 空对象标签，不求值、不写宿主；删除后的后续调用仍由表达式 Nodeset按消息顺序诊断。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "process",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.api.write.request",
+                "cardinality": "exactly_one",
+                "display_name": "写入请求"
+              }
+            ],
+            "provides": [
+              {
+                "key": "function_delete_directive",
+                "type": "era.api.write.directive",
+                "display_name": "函数删除指令"
               }
             ],
             "join_policy": "safe_any",
@@ -3110,6 +3245,36 @@
             ]
           },
           {
+            "from": "route_write",
+            "to": "function_insert_by_object",
+            "when": "write_route == 'function-insert-by-object'",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "route_write",
+            "to": "function_edit_by_object",
+            "when": "write_route == 'function-edit-by-object'",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "route_write",
+            "to": "function_delete_by_object",
+            "when": "write_route == 'function-delete-by-object'",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
             "from": "insert_by_object",
             "to": "read_target_messages",
             "when": "",
@@ -3170,6 +3335,36 @@
             ]
           },
           {
+            "from": "function_insert_by_object",
+            "to": "read_target_messages",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "function_edit_by_object",
+            "to": "read_target_messages",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "function_delete_by_object",
+            "to": "read_target_messages",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
             "from": "insert_by_object",
             "to": "build_message_append",
             "when": "",
@@ -3216,6 +3411,33 @@
           },
           {
             "from": "delete_by_path",
+            "to": "build_message_append",
+            "when": "",
+            "roles": [
+              "data_bypass",
+              "transfer"
+            ]
+          },
+          {
+            "from": "function_insert_by_object",
+            "to": "build_message_append",
+            "when": "",
+            "roles": [
+              "data_bypass",
+              "transfer"
+            ]
+          },
+          {
+            "from": "function_edit_by_object",
+            "to": "build_message_append",
+            "when": "",
+            "roles": [
+              "data_bypass",
+              "transfer"
+            ]
+          },
+          {
+            "from": "function_delete_by_object",
             "to": "build_message_append",
             "when": "",
             "roles": [
@@ -3472,7 +3694,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 9,
-          "nodesets": 13,
+          "nodesets": 14,
           "explicit_edges": 10,
           "data_edges": 0,
           "reported_edges": 10,
@@ -4002,6 +4224,210 @@
         ]
       }
     },
+    "era.expression.execute_era_commands": {
+      "type_key": "era.expression.execute_era_commands",
+      "source": {
+        "root_id": "era-service",
+        "path": "configs/nodesets/expression_engine_bridge.jsonc"
+      },
+      "display_name": "执行 ERA 表达式命令",
+      "description": "跨 root 的实际表达式 Nodeset 边界：Service 传入 Sidecar 同步 DTO，桥接节点调用本地版本化 @era/vibeflow-expression 包。表达式语法、嵌套函数、递归拒绝、双快照和数学后端均在 expression root；本 Nodeset 不做 Tavern I/O。",
+      "status": "implemented",
+      "flow_kind": "predefined",
+      "effect_scope": "none",
+      "reachable_from_workflow": true,
+      "requires": [
+        {
+          "type": "era.expression.command.request",
+          "cardinality": "exactly_one",
+          "display_name": "表达式命令请求"
+        }
+      ],
+      "provides": [
+        {
+          "key": "expression_command_result",
+          "type": "era.expression.command.result",
+          "display_name": "表达式命令结果"
+        }
+      ],
+      "global_config": {},
+      "body": {
+        "source": {
+          "root_id": "era-service",
+          "path": "configs/nodesets/expression_engine_bridge.jsonc"
+        },
+        "inputs": [
+          {
+            "key": "expression_command_request",
+            "type": "era.expression.command.request",
+            "display_name": "表达式命令请求",
+            "required": true
+          }
+        ],
+        "outputs": [
+          {
+            "type": "era.expression.command.result",
+            "cardinality": "exactly_one",
+            "display_name": "表达式命令结果",
+            "as": "expressionCommandResult"
+          }
+        ],
+        "max_steps": 3,
+        "entry_mode": "async",
+        "execution_lock": null,
+        "contains_global_state": false,
+        "summary": {
+          "nodes": 3,
+          "nodesets": 14,
+          "explicit_edges": 2,
+          "data_edges": 0,
+          "reported_edges": 2,
+          "contains_global_state": false
+        },
+        "entry_nodes": [
+          "start"
+        ],
+        "terminal_nodes": [
+          "end"
+        ],
+        "god_nodes": [],
+        "nodes": [
+          {
+            "id": "start",
+            "type_used": "era.service.terminal",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/expression_engine_bridge.jsonc"
+            },
+            "role": {
+              "display_name": "表达式命令开始",
+              "description": "进入不含宿主 I/O 的跨 root 计算边界。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "terminal",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [],
+            "provides": [],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "execute",
+            "type_used": "era.expression.execute_era_commands.bridge",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/expression_engine_bridge.jsonc"
+            },
+            "role": {
+              "display_name": "调用 expression root",
+              "description": "以受限 DTO 调用已验证的表达式引擎；不复制 lexer、AST 或数学实现。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "process",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.expression.command.request",
+                "cardinality": "exactly_one",
+                "display_name": "表达式命令请求"
+              }
+            ],
+            "provides": [
+              {
+                "key": "expression_command_result",
+                "type": "era.expression.command.result",
+                "display_name": "表达式命令结果"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "end",
+            "type_used": "era.service.terminal",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/expression_engine_bridge.jsonc"
+            },
+            "role": {
+              "display_name": "表达式命令结束",
+              "description": "返回纯同步工作项。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "terminal",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [],
+            "provides": [],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": "start",
+            "to": "execute",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "execute",
+            "to": "end",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          }
+        ]
+      }
+    },
     "era.service.batch_execute": {
       "type_key": "era.service.batch_execute",
       "source": {
@@ -4056,7 +4482,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 8,
-          "nodesets": 13,
+          "nodesets": 14,
           "explicit_edges": 8,
           "data_edges": 0,
           "reported_edges": 8,
@@ -4578,7 +5004,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 7,
-          "nodesets": 13,
+          "nodesets": 14,
           "explicit_edges": 10,
           "data_edges": 3,
           "reported_edges": 10,
@@ -5052,7 +5478,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 10,
-          "nodesets": 13,
+          "nodesets": 14,
           "explicit_edges": 14,
           "data_edges": 4,
           "reported_edges": 14,
@@ -5707,7 +6133,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 10,
-          "nodesets": 13,
+          "nodesets": 14,
           "explicit_edges": 14,
           "data_edges": 1,
           "reported_edges": 14,
@@ -6372,7 +6798,7 @@
         "path": "configs/nodesets/sidecar_store.jsonc"
       },
       "display_name": "ERA Sidecar 状态存储",
-      "description": "ERA 聊天状态的唯一领域存储节点集。它检查聊天 SidecarId 指针与身份，读取或迁移 V2 用户文件状态，处理冲突选择，并在成功读取或写入后发布易失宏快照。聊天变量仅保留 ERAMetaData.SidecarId；stat_data、SelectedMks、EditLogs 和其余 ERA 元数据只在 Sidecar 文件中读写。",
+      "description": "ERA 聊天状态的唯一领域存储节点集。它检查聊天 SidecarId 指针与身份，读取或迁移用户文件状态，处理冲突选择，并在成功读取或写入后发布易失宏快照。聊天变量仅保留 ERAMetaData.SidecarId；stat_data、SelectedMks、EditLogs、函数日志及 statFunc 只在 Sidecar 文件中读写。",
       "status": "implemented",
       "flow_kind": "process",
       "effect_scope": "none",
@@ -6430,7 +6856,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 6,
-          "nodesets": 13,
+          "nodesets": 14,
           "explicit_edges": 7,
           "data_edges": 2,
           "reported_edges": 7,
@@ -6490,8 +6916,8 @@
               "path": "configs/nodesets/sidecar_store.jsonc"
             },
             "role": {
-              "display_name": "检查聊天指针与身份",
-              "description": "读取当前身份、聊天 SidecarId 指针和 V2 文件；旧聊天状态只在迁移时读取。"
+              "display_name": "检查 Sidecar V3 指针、身份与状态",
+              "description": "读取当前身份、聊天 SidecarId 和本地 V1/V2/V3 文件事实。无指针新聊天进入 create；旧聊天仅在一次迁移事务读取聊天旧状态；V3 只读 statData、eraMeta 与 statFunc。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -6629,8 +7055,8 @@
               "path": "configs/nodesets/sidecar_store.jsonc"
             },
             "role": {
-              "display_name": "应用绑定与状态决议",
-              "description": "执行 V2 文件、聊天指针与运行时快照的受控事务。"
+              "display_name": "应用 Sidecar V3 绑定决议",
+              "description": "以 revision 复核执行迁移、独立或复制。迁移/复制同时恢复 statData、eraMeta 与 statFunc；复制深拷贝变量和函数定义，不复制 SelectedMks 或任何编辑日志。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -6847,7 +7273,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 9,
-          "nodesets": 13,
+          "nodesets": 14,
           "explicit_edges": 11,
           "data_edges": 0,
           "reported_edges": 11,
@@ -7462,7 +7888,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 11,
-          "nodesets": 13,
+          "nodesets": 14,
           "explicit_edges": 12,
           "data_edges": 0,
           "reported_edges": 12,
@@ -7563,7 +7989,7 @@
             },
             "role": {
               "display_name": "规划资源与相对更新规则",
-              "description": "以纯计算方式生成设置、世界书和正则动作，并把 $inc/$mul/$div 的严格 JSON 格式及旧字符串表达式禁用规则写入 ERA 变量操作世界书；MK 与占位符仍由统一任务上下文准备独占处理。"
+              "description": "以纯计算方式生成设置、世界书和正则动作，并把 $expr、Function 标签与双快照格式及旧运算符禁用规则写入 ERA 变量操作世界书；MK 与占位符仍由统一任务上下文准备独占处理。"
             },
             "contract_source": "node_type",
             "flow_kind": "decision",
@@ -8155,16 +8581,16 @@
             "as": "syncTaskResult"
           }
         ],
-        "max_steps": 24,
+        "max_steps": 26,
         "entry_mode": "async",
         "execution_lock": null,
         "contains_global_state": false,
         "summary": {
-          "nodes": 15,
-          "nodesets": 13,
-          "explicit_edges": 19,
+          "nodes": 17,
+          "nodesets": 14,
+          "explicit_edges": 21,
           "data_edges": 0,
-          "reported_edges": 19,
+          "reported_edges": 21,
           "contains_global_state": false
         },
         "entry_nodes": [
@@ -8313,18 +8739,18 @@
             }
           },
           {
-            "id": "plan_sync",
-            "type_used": "era.sync.plan",
+            "id": "prepare_expression_command_request",
+            "type_used": "era.sync.prepare_expression_command_request",
             "source": {
               "root_id": "era-service",
               "path": "configs/nodesets/task_sync.jsonc"
             },
             "role": {
-              "display_name": "规划共享同步与相对数值更新",
-              "description": "以 EraDispatchContextV2 的不可变 processing message/MK 作为当前任务唯一身份，在统一 CRUD 领域入口规划无操作、绝对更新、$inc/$mul/$div 相对数值更新或历史协调；无效运算逐字段跳过并形成可结算诊断。"
+              "display_name": "整理表达式命令与双快照",
+              "description": "在既有 Sidecar V3 上下文中整理同步 DTO，并保留 full/latest/rollback/Swipe 的既有同步范围；它不重新实现解析、函数调用图或数学求值。"
             },
             "contract_source": "node_type",
-            "flow_kind": "decision",
+            "flow_kind": "process",
             "effect_scope": "none",
             "runtime_dispatch": "unknown",
             "execution_lock": null,
@@ -8337,6 +8763,100 @@
                 "type": "era.sync.context",
                 "cardinality": "exactly_one",
                 "display_name": "同步上下文"
+              }
+            ],
+            "provides": [
+              {
+                "key": "expression_command_request",
+                "type": "era.expression.command.request",
+                "display_name": "表达式命令请求"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "execute_expression_commands",
+            "type_used": "era.expression.execute_era_commands",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/task_sync.jsonc"
+            },
+            "role": {
+              "display_name": "调用函数表达式 Nodeset",
+              "description": "调用独立 expression root 的已实现 Nodeset 执行变量与函数命令。数学语义、函数嵌套、递归拒绝与 @path/@function 快照由该 root 提供；Service 只保留顺序同步、Sidecar 状态和封存楼层压缩编排。"
+            },
+            "contract_source": "nodeset",
+            "flow_kind": "predefined",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.expression.command.request",
+                "cardinality": "exactly_one",
+                "display_name": "表达式命令请求"
+              }
+            ],
+            "provides": [
+              {
+                "key": "expression_command_result",
+                "type": "era.expression.command.result",
+                "display_name": "表达式命令结果"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": {
+              "kind": "nodeset",
+              "target": "era.expression.execute_era_commands",
+              "target_status": "implemented"
+            },
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "assemble_expression_sync_plan",
+            "type_used": "era.sync.assemble_expression_plan",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/task_sync.jsonc"
+            },
+            "role": {
+              "display_name": "组装表达式同步计划",
+              "description": "把 expression root 的纯结果映射回既有 no-op、CRUD 或历史协调工作项，携带 statFunc 和函数编辑日志；外层原有路由、事务和通知边界保持不变。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "decision",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.expression.command.result",
+                "cardinality": "exactly_one",
+                "display_name": "表达式命令结果"
               }
             ],
             "provides": [
@@ -8505,8 +9025,8 @@
               "path": "configs/nodesets/task_sync.jsonc"
             },
             "role": {
-              "display_name": "构造逻辑提交",
-              "description": "依据显式 dispatch class 构造有序的状态、元数据和编辑日志提交请求，不再从 reason 推断连续计数，并区分无操作与必需写入。"
+              "display_name": "构造 Sidecar V3 逻辑提交",
+              "description": "构造既有消息先行、状态后置的提交请求，纳入 statData、eraMeta、statFunc、变量/函数编辑日志；无操作与既有连续状态语义保持不变。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -8650,8 +9170,8 @@
               "path": "configs/nodesets/task_sync.jsonc"
             },
             "role": {
-              "display_name": "提交 Sidecar 状态",
-              "description": "先确认消息写入，再提交 V2 Sidecar 状态文件并发布当前身份的易失宏快照；聊天变量不再保存 ERA 状态。"
+              "display_name": "提交 Sidecar V3 状态",
+              "description": "沿用消息先确认、文件后提交与回读的事务顺序，提交 V3 用户文件并在成功后发布当前身份的易失宏快照；聊天变量仍只保留 ERAMetaData.SidecarId，文件失败不回退为聊天状态。"
             },
             "contract_source": "node_type",
             "flow_kind": "data_store",
@@ -8879,7 +9399,7 @@
           },
           {
             "from": "sidecar_store_prepare",
-            "to": "plan_sync",
+            "to": "prepare_expression_command_request",
             "when": "sidecar_binding_route == 'continue'",
             "roles": [
               "mainline",
@@ -8908,7 +9428,7 @@
             ]
           },
           {
-            "from": "plan_sync",
+            "from": "assemble_expression_sync_plan",
             "to": "no_sync_change",
             "when": "sync_route == 'no-op'",
             "roles": [
@@ -8918,7 +9438,7 @@
             ]
           },
           {
-            "from": "plan_sync",
+            "from": "assemble_expression_sync_plan",
             "to": "crud_write",
             "when": "sync_route == 'crud'",
             "roles": [
@@ -8928,9 +9448,29 @@
             ]
           },
           {
-            "from": "plan_sync",
+            "from": "assemble_expression_sync_plan",
             "to": "compute_reconciliation",
             "when": "sync_route == 'reconcile'",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "prepare_expression_command_request",
+            "to": "execute_expression_commands",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "execute_expression_commands",
+            "to": "assemble_expression_sync_plan",
+            "when": "",
             "roles": [
               "mainline",
               "schedule",
@@ -9104,7 +9644,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 4,
-          "nodesets": 13,
+          "nodesets": 14,
           "explicit_edges": 3,
           "data_edges": 0,
           "reported_edges": 3,
@@ -10537,6 +11077,159 @@
         }
       ]
     },
+    "era.api.prepare_function_delete_object": {
+      "display_name": "构造函数对象删除指令",
+      "description": "把 era:functionDeleteByObject 请求转换为标准 FunctionDelete 对象块。",
+      "category": "外部 API",
+      "version": "1.0.0",
+      "flow_kind": "process",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.api.write.request",
+            "cardinality": "exactly_one",
+            "display_name": "写入请求"
+          }
+        ],
+        "provides": [
+          {
+            "key": "function_delete_directive",
+            "type": "era.api.write.directive",
+            "display_name": "函数删除指令"
+          }
+        ],
+        "input_semantics": {
+          "era.api.write.request": [
+            "输入：函数写入请求。"
+          ]
+        },
+        "output_semantics": {
+          "function_delete_directive": [
+            "输出：函数删除指令。"
+          ]
+        },
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser",
+            "node"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/api/prepare_function_delete_by_object.ts",
+            "export": "run"
+          },
+          "completion": "immediate"
+        }
+      ]
+    },
+    "era.api.prepare_function_edit_object": {
+      "display_name": "构造函数对象更新指令",
+      "description": "把 era:functionEditByObject 请求转换为标准 FunctionEdit 对象块。",
+      "category": "外部 API",
+      "version": "1.0.0",
+      "flow_kind": "process",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.api.write.request",
+            "cardinality": "exactly_one",
+            "display_name": "写入请求"
+          }
+        ],
+        "provides": [
+          {
+            "key": "function_edit_directive",
+            "type": "era.api.write.directive",
+            "display_name": "函数更新指令"
+          }
+        ],
+        "input_semantics": {
+          "era.api.write.request": [
+            "输入：函数写入请求。"
+          ]
+        },
+        "output_semantics": {
+          "function_edit_directive": [
+            "输出：函数更新指令。"
+          ]
+        },
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser",
+            "node"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/api/prepare_function_edit_by_object.ts",
+            "export": "run"
+          },
+          "completion": "immediate"
+        }
+      ]
+    },
+    "era.api.prepare_function_insert_object": {
+      "display_name": "构造函数对象插入指令",
+      "description": "把 era:functionInsertByObject 请求转换为标准 FunctionInsert 对象块。",
+      "category": "外部 API",
+      "version": "1.0.0",
+      "flow_kind": "process",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.api.write.request",
+            "cardinality": "exactly_one",
+            "display_name": "写入请求"
+          }
+        ],
+        "provides": [
+          {
+            "key": "function_insert_directive",
+            "type": "era.api.write.directive",
+            "display_name": "函数插入指令"
+          }
+        ],
+        "input_semantics": {
+          "era.api.write.request": [
+            "输入：函数写入请求。"
+          ]
+        },
+        "output_semantics": {
+          "function_insert_directive": [
+            "输出：函数插入指令。"
+          ]
+        },
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser",
+            "node"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/api/prepare_function_insert_by_object.ts",
+            "export": "run"
+          },
+          "completion": "immediate"
+        }
+      ]
+    },
     "era.api.prepare_insert_object": {
       "display_name": "构造对象插入指令",
       "description": "把 era:insertByObject 请求转换为候选 VariableInsert 对象块。",
@@ -11751,6 +12444,57 @@
             "export": "run"
           },
           "completion": "suspend"
+        }
+      ]
+    },
+    "era.expression.execute_era_commands.bridge": {
+      "display_name": "执行表达式命令桥接",
+      "description": "调用同步适配器；其 VariableEdit 求值和函数库校验委托 @era/vibeflow-expression，不复制其语法或数学实现。",
+      "category": "表达式集成",
+      "version": "1.0.0",
+      "flow_kind": "process",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.expression.command.request",
+            "cardinality": "exactly_one",
+            "display_name": "表达式命令请求"
+          }
+        ],
+        "provides": [
+          {
+            "key": "expression_command_result",
+            "type": "era.expression.command.result",
+            "display_name": "表达式命令结果"
+          }
+        ],
+        "input_semantics": {
+          "era.expression.command.request": [
+            "输入：Sidecar 状态与同步范围 DTO。"
+          ]
+        },
+        "output_semantics": {
+          "expression_command_result": [
+            "输出：变量、statFunc、日志和诊断的纯同步工作项。"
+          ]
+        },
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser",
+            "node"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/sync/execute_expression_commands.ts",
+            "export": "run"
+          },
+          "completion": "immediate"
         }
       ]
     },
@@ -13853,6 +14597,65 @@
         }
       ]
     },
+    "era.sync.assemble_expression_plan": {
+      "display_name": "组装表达式同步计划",
+      "description": "把表达式 root 的纯结果映射为现有 no-op、CRUD 或历史协调分支；不重新计算表达式。",
+      "category": "同步规划",
+      "version": "1.0.0",
+      "flow_kind": "decision",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.expression.command.result",
+            "cardinality": "exactly_one",
+            "display_name": "表达式命令结果"
+          }
+        ],
+        "provides": [
+          {
+            "key": "sync_route",
+            "type": "era.sync.route",
+            "display_name": "同步路由"
+          },
+          {
+            "key": "sync_work",
+            "type": "era.sync.work",
+            "display_name": "同步工作项"
+          }
+        ],
+        "input_semantics": {
+          "era.expression.command.result": [
+            "输入：已完成表达式求值的同步工作项。"
+          ]
+        },
+        "output_semantics": {
+          "sync_route": [
+            "输出：既有同步分支。"
+          ],
+          "sync_work": [
+            "输出：既有提交工作项。"
+          ]
+        },
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser",
+            "node"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/sync/assemble_expression_sync_plan.ts",
+            "export": "run"
+          },
+          "completion": "immediate"
+        }
+      ]
+    },
     "era.sync.build_commit": {
       "display_name": "构造同步逻辑提交",
       "description": "把提交工作项转换为消息先行、变量后置的有序请求；无提交工作项原样穿过。",
@@ -14161,6 +14964,57 @@
           "source": {
             "kind": "file",
             "ref": "nodes/sync/plan_sync.ts",
+            "export": "run"
+          },
+          "completion": "immediate"
+        }
+      ]
+    },
+    "era.sync.prepare_expression_command_request": {
+      "display_name": "整理表达式命令请求",
+      "description": "将已加载 Sidecar 的同步上下文作为纯表达式命令 DTO 传给跨 root Nodeset；不解析表达式。",
+      "category": "同步规划",
+      "version": "1.0.0",
+      "flow_kind": "process",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.sync.context",
+            "cardinality": "exactly_one",
+            "display_name": "同步上下文"
+          }
+        ],
+        "provides": [
+          {
+            "key": "expression_command_request",
+            "type": "era.expression.command.request",
+            "display_name": "表达式命令请求"
+          }
+        ],
+        "input_semantics": {
+          "era.sync.context": [
+            "输入：已加载 Sidecar 状态的同步上下文。"
+          ]
+        },
+        "output_semantics": {
+          "expression_command_request": [
+            "输出：不含 Tavern 引用的命令请求。"
+          ]
+        },
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser",
+            "node"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/sync/prepare_expression_command_request.ts",
             "export": "run"
           },
           "completion": "immediate"
@@ -18780,7 +19634,10 @@
             "insert-by-path",
             "update-by-path",
             "delete-by-object",
-            "delete-by-path"
+            "delete-by-path",
+            "function-insert-by-object",
+            "function-edit-by-object",
+            "function-delete-by-object"
           ]
         }
       },
@@ -30214,6 +31071,30 @@
           "additionalProperties": true
         }
       },
+      "era.expression.command.request": {
+        "kind": "data_schema",
+        "type_key": "era.expression.command.request",
+        "representation": "json",
+        "display_name": "ERA·表达式·命令·请求",
+        "description": "Service 交给独立表达式 root 的纯命令 DTO：逐消息层起始 statData/statFunc 快照、原文位置有序的六类 ERA 标签、当前同步范围与既有重放身份。它不包含 Tavern 对象、Capability 或文件句柄。",
+        "schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "era.expression.command.result": {
+        "kind": "data_schema",
+        "type_key": "era.expression.command.result",
+        "representation": "json",
+        "display_name": "ERA·表达式·命令·结果",
+        "description": "独立表达式 root 返回的纯结果：顺序执行后的 statData/statFunc、变量与函数编辑日志、定位诊断，以及经同起始双快照重放验证的已封存楼层压缩候选。它尚未形成 Tavern 提交请求。",
+        "schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
       "era.fatal.route": {
         "kind": "data_schema",
         "type_key": "era.fatal.route",
@@ -40390,7 +41271,7 @@
         "kind": "base_lib",
         "id": "era.crud.engine",
         "display_name": "ERA 变量增删改纯计算引擎",
-        "description": "纯函数按消息内原始顺序解析并执行 VariableInsert、VariableEdit 与 VariableDelete；VariableEdit 在唯一领域入口支持严格单键 $inc/$mul/$div 数值运算和逐字段诊断，并保持 JSONL、繁转简、保护、历史重算与具体编辑日志语义；不访问或写入宿主。",
+        "description": "纯函数按消息内原始顺序解析并执行 VariableInsert/Edit/Delete 与 FunctionInsert/Edit/Delete；VariableEdit 在唯一领域入口支持严格单键 $expr、变量/函数双快照、函数调用图和逐字段诊断，并保持 JSONL、繁转简、保护、历史重算与具体编辑日志语义；不访问或写入宿主。",
         "category": "变量增删改",
         "version": "1.1.0",
         "implementations": [
@@ -40411,7 +41292,8 @@
           "era.snapshot.query"
         ],
         "external_packages": [
-          "opencc-js"
+          "opencc-js",
+          "@era/vibeflow-expression"
         ]
       },
       "era.service.api_write_engine": {
@@ -40579,7 +41461,7 @@
         "kind": "base_lib",
         "id": "era.service.resource_planner",
         "display_name": "ERA 宿主资源纯规划器",
-        "description": "纯函数规划八项设置默认值、世界书条目、角色局部正则和 AI 消息占位符规则，并向 AI 发布严格的 $inc/$mul/$div JSON 相对数值更新格式；只把 JSON 宿主快照转换为声明式资源操作计划，不读取或写入宿主。",
+        "description": "纯函数规划八项设置默认值、世界书条目、角色局部正则和 AI 消息占位符规则，并向 AI 发布严格 $expr、函数标签与双快照格式；只把 JSON 宿主快照转换为声明式资源操作计划，不读取或写入宿主。",
         "category": "宿主资源规划",
         "version": "1.1.0",
         "implementations": [

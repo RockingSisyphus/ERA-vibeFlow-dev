@@ -119,7 +119,7 @@ function route(eventType: string, detail?: unknown, sequence = 1): JsonRecord {
 function fakeCapabilities(counters: JsonRecord, failVariables = false) {
   const sidecarId = 'era_chat_query-12345678';
   const record = {
-    schemaVersion: 2,
+    schemaVersion: 3,
     sidecarId,
     owner: { characterId: 'card-query', groupId: null, chatId: 'chat-query' },
     revision: 1,
@@ -132,6 +132,7 @@ function fakeCapabilities(counters: JsonRecord, failVariables = false) {
           mk1: [{ op: 'update', path: 'player.hp', value_old: 50, value_new: 100 }],
         },
       },
+      statFunc: {},
     },
   };
   return {

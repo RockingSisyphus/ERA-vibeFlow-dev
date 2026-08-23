@@ -146,7 +146,11 @@ export async function run(
     if (facts.current === null || facts.record === null || facts.status !== "matched") throw new TypeError("ERA Sidecar 状态在提交前已变化。");
     const eraMeta = cloneSyncJson(request.meta) as Record<string, unknown>;
     delete eraMeta.SidecarId;
-    const state: SidecarStateV2 = { statData: cloneSyncJson(request.stat), eraMeta };
+    const state: SidecarStateV2 = {
+      statData: cloneSyncJson(request.stat),
+      eraMeta,
+      statFunc: cloneSyncJson(request.statFunc) as Record<string, unknown>,
+    };
     const record = recordFor(id, facts.current, state, facts.record);
     stateResponse = await context.capabilities["era.tavern.sidecar"].write_record({ sidecarId: id, record });
     const observation = observeWrite(stateResponse);

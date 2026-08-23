@@ -1,0 +1,12 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.expression.command.result",
+  "representation": "json",
+  "display_name": "ERA·表达式·命令·结果",
+  "description": "独立表达式 root 返回的纯结果：顺序执行后的 statData/statFunc、变量与函数编辑日志、定位诊断，以及经同起始双快照重放验证的已封存楼层压缩候选。它尚未形成 Tavern 提交请求。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": true
+  }
+}

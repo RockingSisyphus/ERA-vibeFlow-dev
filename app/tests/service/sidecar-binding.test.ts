@@ -4,11 +4,13 @@ import { updateEraMetaData, updateEraStatData } from '../../src/ERA变量框架/
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- 验证同一 VibeFlow 纯规则。
 // @ts-ignore app test root 直接复用 service 纯规则。
 import {
+  durableFunctionRestoreInstruction,
   durableRestoreInstruction,
   inspectSidecar,
   parseRecord,
   recordFor,
   resolveSidecar,
+  stateForIndependentCopy,
 } from '../../../javascript_project/service/base_lib/sidecar_binding';
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- 验证提交后镜像失败的 workflow 行为。
 // @ts-ignore app test root 直接复用 Service Sidecar 节点。
@@ -56,6 +58,58 @@ describe('ERA Sidecar 绑定纯规则', () => {
       sidecarId,
       reason: 'owner-matched',
     });
+  });
+
+  it('所有新提交均为 V3，并把函数库与变量状态一同放入 Sidecar', () => {
+    const record = recordFor(
+      sidecarId,
+      current,
+      {
+        statData: { player: { hp: 10 } },
+        eraMeta: { SelectedMks: ['mk-1'], EditLogs: {} },
+        statFunc: { scale: { params: ['x'], expr: 'x * 2' } },
+      },
+      null,
+    );
+    expect(record).toMatchObject({
+      schemaVersion: 3,
+      state: {
+        statData: { player: { hp: 10 } },
+        statFunc: { scale: { params: ['x'], expr: 'x * 2' } },
+      },
+    });
+    expect(parseRecord(record, sidecarId)).toEqual(record);
+  });
+
+  it('复制变量深拷贝状态和函数，却不带入旧聊天的回放索引', () => {
+    const record = recordFor(
+      sidecarId,
+      current,
+      {
+        statData: { player: { hp: 10 } },
+        statFunc: { scale: { params: ['x'], expr: 'x * 2' } },
+        eraMeta: {
+          SelectedMks: ['old-mk'],
+          EditLogs: { 'old-mk': [{ path: 'player.hp' }] },
+          FunctionEditLogs: { 'old-mk': [{ name: 'scale' }] },
+          CompressedEraCommands: { 'old-mk': { version: 1 } },
+          userSetting: 'preserved',
+        },
+      },
+      null,
+    );
+    const copied = stateForIndependentCopy(record);
+    expect(copied).toMatchObject({
+      statData: { player: { hp: 10 } },
+      statFunc: { scale: { params: ['x'], expr: 'x * 2' } },
+      eraMeta: { userSetting: 'preserved' },
+    });
+    expect(copied.eraMeta).not.toHaveProperty('SelectedMks');
+    expect(copied.eraMeta).not.toHaveProperty('EditLogs');
+    expect(copied.eraMeta).not.toHaveProperty('FunctionEditLogs');
+    expect(copied.eraMeta).not.toHaveProperty('CompressedEraCommands');
+    (copied.statData as { player: { hp: number } }).player.hp = 99;
+    expect((record.state.statData as { player: { hp: number } }).player.hp).toBe(10);
   });
 
   it('同一 ID 被另一聊天占用时明确形成冲突', () => {
@@ -302,5 +356,17 @@ describe('ERA Sidecar 绑定纯规则', () => {
     expect(instruction).toContain('{"stale":null,"nested":null}');
     expect(instruction).toContain('<VariableInsert>');
     expect(durableRestoreInstruction({ protected: { $meta: { necessary: 'self' } } }, { player: {} })).toBeNull();
+  });
+
+  it('函数恢复指令通过幂等删除和完整插入保留可重放函数库', () => {
+    const instruction = durableFunctionRestoreInstruction(
+      { stale: { params: ['x'], expr: 'x' }, shared: { params: ['x'], expr: 'x + 1' } },
+      { shared: { params: ['x'], expr: 'x * 2' }, scale: { params: ['x'], expr: 'x + 3' } },
+    );
+    expect(instruction).toContain('<FunctionDelete>');
+    expect(instruction).toContain('"stale":{}');
+    expect(instruction).toContain('<FunctionInsert>');
+    expect(instruction).toContain('"scale"');
+    expect(durableFunctionRestoreInstruction(null, {})).toBeNull();
   });
 });

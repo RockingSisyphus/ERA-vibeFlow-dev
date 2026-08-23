@@ -2,11 +2,13 @@ import { describe, expect, it } from 'vitest';
 
 import {
   applyMessageCommands,
+  parseMessageCommands,
   resolveRelativeEdit,
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- 产品测试直接验证 VibeFlow 纯领域源码。
   // @ts-ignore TypeScript 会对 app rootDir 外的 VibeFlow 源码报告 TS6059。
 } from '../../../javascript_project/service/base_lib/domain/crud_engine';
 import {
+  findSyncDivergence,
   planEraSync,
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- 产品测试直接验证 VibeFlow 纯领域源码。
   // @ts-ignore TypeScript 会对 app rootDir 外的 VibeFlow 源码报告 TS6059。
@@ -16,26 +18,22 @@ import {
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- 产品测试直接验证 VibeFlow 纯领域源码。
   // @ts-ignore TypeScript 会对 app rootDir 外的 VibeFlow 源码报告 TS6059。
 } from '../../../javascript_project/service/base_lib/domain/api_write_engine';
-import {
-  getEraWorldbookEntries,
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- 产品测试直接验证 VibeFlow 纯领域源码。
-  // @ts-ignore TypeScript 会对 app rootDir 外的 VibeFlow 源码报告 TS6059。
-} from '../../../javascript_project/service/base_lib/domain/resource_planner';
+
+function tag(name: string, value: unknown): string {
+  return `<${name}>${JSON.stringify(value)}</${name}>`;
+}
 
 function edit(value: unknown): string {
-  return `<VariableEdit>${JSON.stringify(value)}</VariableEdit>`;
+  return tag('VariableEdit', value);
 }
 
-function insert(value: unknown): string {
-  return `<VariableInsert>${JSON.stringify(value)}</VariableInsert>`;
-}
-
-function apply(content: string, initialStat: unknown) {
+function apply(content: string, initialStat: unknown, initialStatFunc: Record<string, unknown> = {}) {
   return applyMessageCommands({
     content,
     messageId: 1,
     initialStat,
-    meta: { SelectedMks: [], EditLogs: {} },
+    initialStatFunc,
+    meta: { SelectedMks: [], EditLogs: {}, FunctionEditLogs: {} },
   });
 }
 
@@ -51,242 +49,263 @@ function message(messageId: number, mk: string, body: string) {
   };
 }
 
-describe('ERA JSON 相对数值更新', () => {
-  it('按消息顺序执行 $inc 正负零和小数，并记录每步具体 old/new', () => {
+describe('ERA $expr 与函数指令', () => {
+  it('按原文顺序执行 $expr，并记录具体 old/new', () => {
     const result = apply(
       [
-        edit({ player: { hp: { $inc: 2 } } }),
-        edit({ player: { hp: { $inc: -1.5 } } }),
-        edit({ player: { hp: { $inc: 0 } } }),
+        edit({ player: { hp: { $expr: 'player.hp + 2' } } }),
+        edit({ player: { hp: { $expr: 'player.hp * 1.25 - 1.5' } } }),
       ].join('\n'),
       { player: { hp: 10 } },
     );
 
-    expect(result.finalStat).toEqual({ player: { hp: 10.5 } });
+    expect(result.finalStat).toEqual({ player: { hp: 13.5 } });
     expect(result.editLog).toEqual([
       { op: 'update', path: 'player.hp', value_old: 10, value_new: 12 },
-      { op: 'update', path: 'player.hp', value_old: 12, value_new: 10.5 },
-      { op: 'update', path: 'player.hp', value_old: 10.5, value_new: 10.5 },
+      { op: 'update', path: 'player.hp', value_old: 12, value_new: 13.5 },
     ]);
     expect(result.diagnostics).toEqual([]);
   });
 
-  it('支持 $mul/$div 的正负零和小数，并把 -0 规范化为 0', () => {
+  it('动态变量与 @变量快照遵循同一消息层的开始状态', () => {
     const result = apply(
-      edit({
-        positive: { $mul: 1.25 },
-        negative: { $mul: -2 },
-        zero: { $mul: 0 },
-        quotient: { $div: 2.5 },
-        negativeQuotient: { $div: -2 },
-        normalizedZero: { $mul: -1 },
-      }),
-      { positive: 8, negative: 3, zero: 7, quotient: 10, negativeQuotient: 8, normalizedZero: 0 },
+      [edit({ a: { $expr: '@a + 1' } }), edit({ b: { $expr: 'a * 2' } }), edit({ a: { $expr: 'a + 1' } })].join('\n'),
+      { a: 1, b: 0 },
     );
-
-    expect(result.finalStat).toEqual({
-      positive: 10,
-      negative: -6,
-      zero: 0,
-      quotient: 4,
-      negativeQuotient: -4,
-      normalizedZero: 0,
-    });
-    expect(Object.is((result.finalStat as { normalizedZero: number }).normalizedZero, -0)).toBe(false);
+    expect(result.finalStat).toEqual({ a: 3, b: 4 });
   });
 
-  it('普通 JSON 继续直接赋值，四种旧字符串始终保持字面值', () => {
+  it('保留普通 JSON 赋值，旧运算符全部 fail-closed', () => {
     const result = apply(
       edit({
-        number: 2,
-        text: 'next',
-        enabled: false,
-        nullable: null,
-        object: { child: 'changed' },
-        oldInc: '+=2',
-        oldDec: '-=2',
-        oldMul: '*=2',
-        oldDiv: '/=2',
+        direct: 2,
+        text: '+=2',
+        legacy: { $inc: 2 },
+        sibling: { $expr: 'sibling + 4' },
+        malformed: { $expr: 'malformed + 1', note: true },
       }),
-      {
-        number: 1,
-        text: 'old',
-        enabled: true,
-        nullable: 'value',
-        object: { child: 'old' },
-        oldInc: 1,
-        oldDec: 1,
-        oldMul: 1,
-        oldDiv: 1,
-      },
+      { direct: 1, text: 'old', legacy: 3, sibling: 1, malformed: 2 },
     );
-
-    expect(result.finalStat).toMatchObject({ oldInc: '+=2', oldDec: '-=2', oldMul: '*=2', oldDiv: '/=2' });
-    expect(result.diagnostics).toEqual([]);
-  });
-
-  it('无效字段逐项跳过、合法兄弟继续，并产生准确 code/path', () => {
-    const result = apply(
-      edit({
-        good: { $inc: 2 },
-        wrongOperand: { $inc: '2' },
-        nonNumeric: { $mul: 2 },
-        zeroDivisor: { $div: 0 },
-        negativeZeroDivisor: { $div: -0 },
-        overflow: { $mul: 1e308 },
-        unknown: { $pow: 2 },
-        multiple: { $inc: 1, $mul: 2 },
-        extra: { $inc: 1, note: true },
-      }),
-      {
-        good: 3,
-        wrongOperand: 4,
-        nonNumeric: '4',
-        zeroDivisor: 4,
-        negativeZeroDivisor: 4,
-        overflow: 1e308,
-        unknown: 4,
-        multiple: 4,
-        extra: 4,
-      },
-    );
-
-    expect(result.finalStat).toMatchObject({
-      good: 5,
-      wrongOperand: 4,
-      nonNumeric: '4',
-      zeroDivisor: 4,
-      negativeZeroDivisor: 4,
-      overflow: 1e308,
-      unknown: 4,
-      multiple: 4,
-      extra: 4,
-    });
+    expect(result.finalStat).toEqual({ direct: 2, text: '+=2', legacy: 3, sibling: 5, malformed: 2 });
     expect(result.diagnostics.map(({ code, path }) => ({ code, path }))).toEqual([
-      { code: 'ERA_EDIT_OPERATOR_INVALID', path: 'wrongOperand' },
-      { code: 'ERA_EDIT_TARGET_NOT_NUMERIC', path: 'nonNumeric' },
-      { code: 'ERA_EDIT_DIVIDE_BY_ZERO', path: 'zeroDivisor' },
-      { code: 'ERA_EDIT_DIVIDE_BY_ZERO', path: 'negativeZeroDivisor' },
-      { code: 'ERA_EDIT_RESULT_NON_FINITE', path: 'overflow' },
-      { code: 'ERA_EDIT_OPERATOR_INVALID', path: 'unknown' },
-      { code: 'ERA_EDIT_OPERATOR_INVALID', path: 'multiple' },
-      { code: 'ERA_EDIT_OPERATOR_INVALID', path: 'extra' },
+      { code: 'ERA_EDIT_OPERATOR_INVALID', path: 'legacy' },
+      { code: 'ERA_EDIT_OPERATOR_INVALID', path: 'malformed' },
     ]);
-    expect(result.editLog).toEqual([{ op: 'update', path: 'good', value_old: 3, value_new: 5 }]);
-  });
-
-  it('非有限操作数 fail-closed，且不存在和受保护路径保持既有 no-op', () => {
-    expect(resolveRelativeEdit({ $inc: Number.POSITIVE_INFINITY }, 1, 'value')).toMatchObject({
+    expect(resolveRelativeEdit({ $set: 1 }, 1, 'a')).toMatchObject({
       kind: 'invalid',
-      diagnostic: { code: 'ERA_EDIT_OPERATOR_INVALID', path: 'value' },
+      diagnostic: { code: 'ERA_EDIT_OPERATOR_INVALID', path: 'a' },
     });
-    const result = apply(edit({ missing: { $inc: 2 }, locked: { hp: { $inc: 2 } }, open: { hp: { $inc: 2 } } }), {
-      locked: { $meta: { updatable: false }, hp: 5 },
-      open: { hp: 5 },
-    });
-    expect(result.finalStat).toEqual({
-      locked: { $meta: { updatable: false }, hp: 5 },
-      open: { hp: 7 },
-    });
-    expect(result.diagnostics).toEqual([]);
   });
 
-  it('updateByObject 与 updateByPath 只封装相同 VariableEdit，并由同一 CRUD 入口计算', () => {
-    const objectDirective = prepareApiWriteDirective('era:updateByObject', { player: { hp: { $inc: 3 } } });
-    const pathDirective = prepareApiWriteDirective('era:updateByPath', {
-      path: 'player.hp',
-      value: { $inc: 3 },
-    });
-    expect(objectDirective.blockContent).toEqual(pathDirective.blockContent);
-    expect(apply(objectDirective.block, { player: { hp: 4 } }).finalStat).toEqual({ player: { hp: 7 } });
-    expect(apply(pathDirective.block, { player: { hp: 4 } }).finalStat).toEqual({ player: { hp: 7 } });
+  it('Function Insert/Edit/Delete 与变量命令按原文交错，并支持 @函数快照闭包', () => {
+    const content = [
+      tag('FunctionEdit', { f: { params: ['x'], expr: 'g(x) + 1' } }),
+      tag('FunctionEdit', { g: { params: ['x'], expr: 'x * 3' } }),
+      edit({ snapshot: { $expr: '@f(a)' } }),
+      edit({ current: { $expr: 'f(a)' } }),
+      tag('FunctionDelete', { f: {} }),
+    ].join('\n');
+    const result = apply(
+      content,
+      { a: 2, snapshot: 0, current: 0 },
+      {
+        f: { params: ['x'], expr: 'g(x) + 1' },
+        g: { params: ['x'], expr: 'x * 2' },
+      },
+    );
+
+    expect(result.finalStat).toEqual({ a: 2, snapshot: 5, current: 7 });
+    expect(result.finalStatFunc).toEqual({ g: { params: ['x'], expr: 'x * 3' } });
+    expect(result.functionEditLog).toEqual([
+      {
+        op: 'update',
+        name: 'f',
+        value_old: { params: ['x'], expr: 'g(x) + 1' },
+        value_new: { params: ['x'], expr: 'g(x) + 1' },
+      },
+      {
+        op: 'update',
+        name: 'g',
+        value_old: { params: ['x'], expr: 'x * 2' },
+        value_new: { params: ['x'], expr: 'x * 3' },
+      },
+      { op: 'delete', name: 'f', value_old: { params: ['x'], expr: 'g(x) + 1' } },
+    ]);
   });
 
-  it('full sync 重放不会重复累计，相同操作会从回滚后的前序状态重新计算', () => {
+  it('函数库变更是原子的：递归、缺失和错误删除均不污染当前库', () => {
+    const result = apply(
+      [
+        tag('FunctionInsert', { f: { params: ['x'], expr: 'f(x)' } }),
+        tag('FunctionEdit', { absent: { params: ['x'], expr: 'x' } }),
+        tag('FunctionDelete', { g: { nope: true } }),
+        edit({ result: { $expr: 'g(a)' } }),
+      ].join('\n'),
+      { a: 2, result: 0 },
+      {
+        g: { params: ['x'], expr: 'x + 1' },
+      },
+    );
+    expect(result.finalStat).toEqual({ a: 2, result: 3 });
+    expect(result.finalStatFunc).toEqual({ g: { params: ['x'], expr: 'x + 1' } });
+    expect(result.diagnostics.map(item => item.code)).toEqual([
+      'ERA_EXPR_FUNCTION_RECURSION',
+      'ERA_FUNCTION_NOT_FOUND',
+      'ERA_FUNCTION_DELETE_INVALID',
+    ]);
+  });
+
+  it('同一 FunctionInsert 支持前向声明与嵌套调用，并拒绝整体递归库', () => {
+    const accepted = apply(
+      `${tag('FunctionInsert', {
+        f: { params: ['x'], expr: 'g(x) + 1' },
+        g: { params: ['x'], expr: 'x * 2' },
+      })}${edit({ result: { $expr: 'f(value)' } })}`,
+      { value: 3, result: 0 },
+    );
+    expect(accepted.finalStat).toEqual({ value: 3, result: 7 });
+    expect(accepted.finalStatFunc).toMatchObject({ f: expect.any(Object), g: expect.any(Object) });
+    const rejected = apply(
+      tag('FunctionInsert', {
+        f: { params: ['x'], expr: 'g(x)' },
+        g: { params: ['x'], expr: 'f(x)' },
+      }),
+      {},
+      {},
+    );
+    expect(rejected.finalStatFunc).toEqual({});
+    expect(rejected.diagnostics.map(item => item.code)).toEqual(['ERA_EXPR_FUNCTION_RECURSION']);
+  });
+
+  it('完整同步会重放函数库和变量，而不是在第二次 full rebuild 中重复累计', () => {
     const messages = [
-      message(0, 'mk-base', insert({ player: { hp: 10 } })),
-      message(1, 'mk-relative', edit({ player: { hp: { $inc: 5 } } })),
+      message(0, 'mk-functions', tag('FunctionInsert', { f: { params: ['x'], expr: 'x + 5' } })),
+      message(1, 'mk-expression', edit({ hp: { $expr: 'f(hp)' } })),
     ];
     const first = planEraSync({
       messages,
-      stat: {},
-      meta: { SelectedMks: [], EditLogs: {} },
+      stat: { hp: 10 },
+      statFunc: {},
+      meta: { SelectedMks: [], EditLogs: {}, FunctionEditLogs: {} },
       reason: 'manual',
       forceFullRebuild: true,
-      processingMk: 'mk-relative',
+      processingMk: 'mk-expression',
       consecutiveState: null,
     });
-    expect(first.stat).toEqual({ player: { hp: 15 } });
-    expect((first.meta.EditLogs as Record<string, unknown>)['mk-relative']).toEqual([
-      { op: 'update', path: 'player.hp', value_old: 10, value_new: 15 },
-    ]);
-
+    expect(first.stat).toEqual({ hp: 15 });
+    expect(first.statFunc).toEqual({ f: { params: ['x'], expr: 'x + 5' } });
     const replay = planEraSync({
       messages,
       stat: first.stat,
+      statFunc: first.statFunc,
       meta: first.meta,
       reason: 'manual',
       forceFullRebuild: true,
-      processingMk: 'mk-relative',
+      processingMk: 'mk-expression',
       consecutiveState: first.nextConsecutiveState,
     });
-    expect(replay.stat).toEqual({ player: { hp: 15 } });
+    expect(replay.stat).toEqual({ hp: 15 });
+    expect(replay.statFunc).toEqual(first.statFunc);
   });
 
-  it('Swipe 分支改变前序状态后，相对运算按新分支重新求值', () => {
-    const oldMessages = [
-      message(0, 'mk-a', insert({ player: { hp: 10 } })),
-      message(1, 'mk-relative', edit({ player: { hp: { $mul: 2 } } })),
+  it('仅封存的 AI 楼层会压缩为从 @快照可重放的最小命令', () => {
+    const messages = [
+      message(
+        0,
+        'mk-sealed',
+        [
+          edit({ a: { $expr: 'a + 1' } }),
+          edit({ a: { $expr: 'a + 2' } }),
+          tag('FunctionInsert', { f: { params: ['x'], expr: 'x + 3' } }),
+        ].join('\n'),
+      ),
+      message(1, 'mk-latest', '最新 AI 楼层保持原样。'),
     ];
-    const oldPlan = planEraSync({
-      messages: oldMessages,
-      stat: {},
-      meta: { SelectedMks: [], EditLogs: {} },
-      reason: 'manual',
-      forceFullRebuild: true,
-      processingMk: 'mk-relative',
-      consecutiveState: null,
-    });
-    expect(oldPlan.stat).toEqual({ player: { hp: 20 } });
-
-    const newMessages = [
-      message(0, 'mk-b', insert({ player: { hp: 30 } })),
-      message(1, 'mk-relative', edit({ player: { hp: { $mul: 2 } } })),
-    ];
-    const newPlan = planEraSync({
-      messages: newMessages,
-      stat: oldPlan.stat,
-      meta: oldPlan.meta,
-      reason: 'swipe-regeneration',
-      processingMk: 'mk-relative',
-      consecutiveState: oldPlan.nextConsecutiveState,
-    });
-    expect(newPlan.stat).toEqual({ player: { hp: 60 } });
-    expect((newPlan.meta.EditLogs as Record<string, unknown>)['mk-relative']).toEqual([
-      { op: 'update', path: 'player.hp', value_old: 30, value_new: 60 },
-    ]);
-  });
-
-  it('同步诊断补充消息索引，世界书只教授新的 JSON 格式', () => {
     const plan = planEraSync({
-      messages: [message(0, 'mk-invalid', edit({ hp: { $div: 0 }, gold: { $inc: 2 } }))],
-      stat: { hp: 8, gold: 1 },
-      meta: { SelectedMks: [], EditLogs: {} },
+      messages,
+      stat: { a: 1 },
+      statFunc: {},
+      meta: { SelectedMks: [], EditLogs: {}, FunctionEditLogs: {} },
       reason: 'manual',
       forceFullRebuild: true,
-      processingMk: 'mk-invalid',
+      processingMk: 'mk-latest',
       consecutiveState: null,
     });
-    expect(plan.stat).toEqual({ hp: 8, gold: 3 });
-    expect(plan.diagnostics).toEqual([
-      expect.objectContaining({ code: 'ERA_EDIT_DIVIDE_BY_ZERO', path: 'hp', messageIndex: 0 }),
-    ]);
+    expect(plan.status).toBe('recalculated');
+    expect(plan.stat).toEqual({ a: 4 });
+    expect(plan.statFunc).toEqual({ f: { params: ['x'], expr: 'x + 3' } });
+    expect(plan.messageUpdates).toHaveLength(1);
+    const compact = (plan.messageUpdates[0] as { content: { text: string } }).content.text;
+    expect(compact).toContain('"$expr":"@a + 3"');
+    expect(compact).toContain('<FunctionInsert>');
+    expect(compact).not.toContain('a + 1');
+    expect((plan.meta.CompressedEraCommands as Record<string, unknown>)['mk-sealed']).toMatchObject({ version: 1 });
+    const replay = planEraSync({
+      messages: plan.messages,
+      stat: { a: 1 },
+      statFunc: {},
+      meta: { SelectedMks: [], EditLogs: {}, FunctionEditLogs: {} },
+      reason: 'manual',
+      forceFullRebuild: true,
+      processingMk: 'mk-latest',
+      consecutiveState: null,
+    });
+    expect(replay.stat).toEqual(plan.stat);
+    expect(replay.statFunc).toEqual(plan.statFunc);
+  });
 
-    const rule = String(getEraWorldbookEntries()[0]?.content ?? '');
-    expect(rule).toContain('{"$inc": -10}');
-    expect(rule).toContain('{"$mul": 1.2}');
-    expect(rule).toContain('{"$div": 2}');
-    expect(rule).toContain('禁止输出 `"+=2"`');
-    expect(rule).toContain('"hp": { "$inc": -5 }');
+  it('追加新的 AI 楼层时会重算最早未压缩的封存指令楼层', () => {
+    const messages = [
+      message(0, 'mk-sealed', edit({ a: { $expr: 'a + 1' } })),
+      message(1, 'mk-latest', '新的 AI 楼层使前一层封存。'),
+    ];
+    expect(
+      findSyncDivergence(messages, ['mk-sealed'], {
+        SelectedMks: ['mk-sealed'],
+        EditLogs: { 'mk-sealed': [{ op: 'update', path: 'a', value_old: 1, value_new: 2 }] },
+        FunctionEditLogs: {},
+        CompressedEraCommands: {},
+      }),
+    ).toEqual({ type: 'FULL_RECALC', recalcId: 0, cause: 'divergence' });
+    expect(
+      findSyncDivergence(messages, ['mk-sealed'], {
+        SelectedMks: ['mk-sealed'],
+        EditLogs: { 'mk-sealed': [{ op: 'update', path: 'a', value_old: 1, value_new: 2 }] },
+        FunctionEditLogs: {},
+        CompressedEraCommands: {
+          'mk-sealed': { compressedHash: 'fnv1a-not-the-current-content' },
+        },
+      }),
+    ).toEqual({ type: 'FULL_RECALC', recalcId: 0, cause: 'divergence' });
+  });
+
+  it('解析器保留六类标签的确切出现顺序', () => {
+    const types = parseMessageCommands({
+      content: [
+        tag('FunctionInsert', { f: { params: ['x'], expr: 'x' } }),
+        edit({ a: { $expr: 'a + 1' } }),
+        tag('FunctionDelete', { f: {} }),
+      ].join('\n'),
+    }).map(command => command.type);
+    expect(types).toEqual(['function-insert', 'edit', 'function-delete']);
+  });
+
+  it('公开函数 API 只生成标准函数标签，随后由同一同步链重放', () => {
+    const insert = prepareApiWriteDirective('era:functionInsertByObject', {
+      f: { params: ['x'], expr: 'x + 2' },
+    });
+    const editFunction = prepareApiWriteDirective('era:functionEditByObject', {
+      f: { params: ['x'], expr: 'x * 3' },
+    });
+    const remove = prepareApiWriteDirective('era:functionDeleteByObject', { f: {} });
+    expect(insert.blockTag).toBe('FunctionInsert');
+    expect(editFunction.blockTag).toBe('FunctionEdit');
+    expect(remove.blockTag).toBe('FunctionDelete');
+    const result = apply(
+      `${insert.block}${edit({ value: { $expr: 'f(value)' } })}${editFunction.block}${remove.block}`,
+      { value: 2 },
+    );
+    expect(result.finalStat).toEqual({ value: 4 });
+    expect(result.finalStatFunc).toEqual({});
   });
 });

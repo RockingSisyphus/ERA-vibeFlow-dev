@@ -104,6 +104,12 @@ const plannerUrl = new URL('../../../javascript_project/service/base_lib/domain/
   .href;
 const servicePlanner = (await import(/* @vite-ignore */ plannerUrl)) as PlannerModule;
 
+const functionApiTypes = [
+  'era:functionInsertByObject',
+  'era:functionEditByObject',
+  'era:functionDeleteByObject',
+] as const;
+
 function rawEvent(sequence: number, type: string, occurredAt: number, args: readonly unknown[] = []): RawEvent {
   return { id: `event-${sequence}`, sequence, type, args, occurredAt };
 }
@@ -227,11 +233,28 @@ describe('VibeFlow Service 事件规划器差分', () => {
     });
     const groups = servicePlanner.getEventGroups();
     for (const [group, candidateEvents] of Object.entries(CANDIDATE_EVENT_GROUPS)) {
-      expect(groups[group]?.filter(eventType => !eventType.startsWith('era.ui.'))).toEqual(candidateEvents);
+      const actual = groups[group]?.filter(eventType => !eventType.startsWith('era.ui.')) ?? [];
+      expect(
+        actual.filter(eventType => !functionApiTypes.includes(eventType as (typeof functionApiTypes)[number])),
+      ).toEqual(
+        candidateEvents.filter(eventType => !functionApiTypes.includes(eventType as (typeof functionApiTypes)[number])),
+      );
+      if (group === 'API')
+        expect(
+          actual.filter(eventType => functionApiTypes.includes(eventType as (typeof functionApiTypes)[number])),
+        ).toEqual(functionApiTypes);
     }
-    expect(servicePlanner.getListenedEventTypes().filter(eventType => !eventType.startsWith('era.ui.'))).toEqual(
-      CANDIDATE_LISTENED_EVENT_TYPES,
+    const listened = servicePlanner.getListenedEventTypes().filter(eventType => !eventType.startsWith('era.ui.'));
+    expect(
+      listened.filter(eventType => !functionApiTypes.includes(eventType as (typeof functionApiTypes)[number])),
+    ).toEqual(
+      CANDIDATE_LISTENED_EVENT_TYPES.filter(
+        eventType => !functionApiTypes.includes(eventType as (typeof functionApiTypes)[number]),
+      ),
     );
+    expect(
+      listened.filter(eventType => functionApiTypes.includes(eventType as (typeof functionApiTypes)[number])),
+    ).toEqual(functionApiTypes);
     for (const eventType of [...CANDIDATE_LISTENED_EVENT_TYPES, 'future-event']) {
       expect(servicePlanner.getEventDefinition(eventType)).toEqual(getCandidateEventDefinition(eventType));
       expect(servicePlanner.getEventGroup(eventType)).toBe(getCandidateEventGroup(eventType));
@@ -251,15 +274,29 @@ describe('VibeFlow Service 事件规划器差分', () => {
     );
   });
 
-  it('完整登记并等价规划全部 13 个公开输入 API', () => {
+  it('保留既有 13 个 API 差分，并额外登记三项函数 API', () => {
     const apiTypes = Object.values(ERA_API_EVENTS);
-    expect(apiTypes).toHaveLength(13);
+    expect(apiTypes).toHaveLength(16);
     expect(servicePlanner.getApiEventTypes()).toEqual(apiTypes);
-    for (const [index, eventType] of apiTypes.entries()) {
+    const legacyApiTypes = apiTypes.filter(
+      eventType => !functionApiTypes.includes(eventType as (typeof functionApiTypes)[number]),
+    );
+    for (const [index, eventType] of legacyApiTypes.entries()) {
       const event = rawEvent(index + 1, eventType, 1_000 + index, [{ marker: index }]);
       expect(servicePlanner.getEventGroup(eventType)).toBe('API');
       expect(servicePlanner.getCollectionWindowMs(eventType)).toBe(0);
       expectDifferential([event]);
+    }
+    for (const [index, eventType] of functionApiTypes.entries()) {
+      const event = toTransportEvent(
+        rawEvent(100 + index, eventType, 2_000 + index, [{ f: { params: ['x'], expr: 'x' } }]),
+      );
+      const [step] = servicePlanner.planEventBatch([event]);
+      expect(step).toMatchObject({
+        kind: 'execute',
+        taskRoute: 'api',
+        task: { kind: 'api', intent: 'message-write', eventType },
+      });
     }
   });
 

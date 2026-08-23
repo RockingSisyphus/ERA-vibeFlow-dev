@@ -202,7 +202,7 @@ export function createSidecarAdapter() {
     commit_metadata: commitSidecarPointer,
     create_id: (_input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown => {
       throwIfAborted(context.signal);
-      return { sidecarId: `era_chat_${crypto.randomUUID()}` };
+      return { sidecarId: `era_chat_${globalThis.crypto.randomUUID()}` };
     },
     present_prompt: (input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown => {
       throwIfAborted(context.signal);

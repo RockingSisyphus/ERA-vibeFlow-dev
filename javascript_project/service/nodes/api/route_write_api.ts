@@ -8,7 +8,10 @@ type WriteRoute =
   | "insert-by-path"
   | "update-by-path"
   | "delete-by-object"
-  | "delete-by-path";
+  | "delete-by-path"
+  | "function-insert-by-object"
+  | "function-edit-by-object"
+  | "function-delete-by-object";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -28,6 +31,12 @@ function routeOf(eventType: string): WriteRoute {
       return "delete-by-object";
     case "era:deleteByPath":
       return "delete-by-path";
+    case "era:functionInsertByObject":
+      return "function-insert-by-object";
+    case "era:functionEditByObject":
+      return "function-edit-by-object";
+    case "era:functionDeleteByObject":
+      return "function-delete-by-object";
     default:
       throw new TypeError(`不是已登记的 ERA 写入 API：${eventType}`);
   }

@@ -2,7 +2,7 @@
   "kind": "base_lib",
   "id": "era.crud.engine",
   "display_name": "ERA 变量增删改纯计算引擎",
-  "description": "纯函数按消息内原始顺序解析并执行 VariableInsert、VariableEdit 与 VariableDelete；VariableEdit 在唯一领域入口支持严格单键 $inc/$mul/$div 数值运算和逐字段诊断，并保持 JSONL、繁转简、保护、历史重算与具体编辑日志语义；不访问或写入宿主。",
+  "description": "纯函数按消息内原始顺序解析并执行 VariableInsert/Edit/Delete 与 FunctionInsert/Edit/Delete；VariableEdit 在唯一领域入口支持严格单键 $expr、变量/函数双快照、函数调用图和逐字段诊断，并保持 JSONL、繁转简、保护、历史重算与具体编辑日志语义；不访问或写入宿主。",
   "category": "变量增删改",
   "version": "1.1.0",
   "implementations": [
@@ -16,5 +16,5 @@
     }
   ],
   "dependencies": ["era.snapshot.query"],
-  "external_packages": ["opencc-js"]
+  "external_packages": ["opencc-js", "@era/vibeflow-expression"]
 }

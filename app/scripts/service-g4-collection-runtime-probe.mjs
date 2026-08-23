@@ -1,7 +1,7 @@
 /// <reference types="node" />
 
 import { createHash } from 'node:crypto';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -10,6 +10,17 @@ const buildRoot = process.env.ERA_SERVICE_BUILD_DIR ?? resolve(projectRoot, 'gen
 const generatedModuleUrl = pathToFileURL(resolve(buildRoot, 'workflow.js'));
 const manifestPath = resolve(buildRoot, 'vibeflow-build.json');
 const reportPath = resolve(projectRoot, 'reports/service-g4-collection-runtime.json');
+
+/** 与 G3 探针一致：保持生成物字节不变，但从 app 包解析运行时依赖。 */
+async function importGeneratedWorkflow() {
+  const directory = await mkdtemp(resolve(import.meta.dirname, '.era-generated-workflow-'));
+  const stagedPath = resolve(directory, 'workflow.mjs');
+  await writeFile(stagedPath, await readFile(generatedModuleUrl), 'utf8');
+  return {
+    workflow: await import(pathToFileURL(stagedPath).href),
+    cleanup: () => rm(directory, { recursive: true, force: true }),
+  };
+}
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -78,29 +89,31 @@ function createTavernCapabilities() {
       upsert: async () => ({ status: 'committed' }),
     },
     'era.tavern.identity': { read: () => ({ characterName: 'G4 窗口探针角色', isGroup: false }) },
-    'era.tavern.installation_scope': { read: () => ({ scriptId: 'era-g4', scopes: ['character'], readStatus: 'complete' }) },
+    'era.tavern.installation_scope': {
+      read: () => ({ scriptId: 'era-g4', scopes: ['character'], readStatus: 'complete' }),
+    },
     'era.tavern.startup_gate': { activate: () => ({ activated: true }), dormant: () => ({ activated: false }) },
     'era.tavern.sidecar': (() => {
       const records = new Map();
       const current = { identity: { characterId: 'g4-card', groupId: null, chatId: 'g4-chat' }, meta: {}, stat: {} };
       return {
-      read_current: async () => structuredClone(current),
-      read_record: async input => {
-        const record = records.get(input.sidecarId);
-        return record === undefined ? { status: 'missing' } : { status: 'found', record };
-      },
-      write_record: async input => {
-        records.set(input.sidecarId, structuredClone(input.record));
-        return { status: 'committed' };
-      },
-      commit_metadata: async input => {
-        current.meta = { SidecarId: input.sidecarId };
-        current.stat = null;
-        return { status: 'committed' };
-      },
-      create_id: () => ({ sidecarId: 'era_chat_g4-probe-12345678' }),
-      present_prompt: () => ({ status: 'presented' }),
-      clear_prompt: () => ({ status: 'cleared' }),
+        read_current: async () => structuredClone(current),
+        read_record: async input => {
+          const record = records.get(input.sidecarId);
+          return record === undefined ? { status: 'missing' } : { status: 'found', record };
+        },
+        write_record: async input => {
+          records.set(input.sidecarId, structuredClone(input.record));
+          return { status: 'committed' };
+        },
+        commit_metadata: async input => {
+          current.meta = { SidecarId: input.sidecarId };
+          current.stat = null;
+          return { status: 'committed' };
+        },
+        create_id: () => ({ sidecarId: 'era_chat_g4-probe-12345678' }),
+        present_prompt: () => ({ status: 'presented' }),
+        clear_prompt: () => ({ status: 'cleared' }),
       };
     })(),
   };
@@ -196,7 +209,8 @@ function assertBatch(frame, expectedSequences) {
   assert(new Set(actual).size === actual.length, '一个批次内出现重复结算。');
 }
 
-const workflow = await import(generatedModuleUrl.href);
+const stagedWorkflow = await importGeneratedWorkflow();
+const workflow = stagedWorkflow.workflow;
 assert(workflow.VIBEFLOW_WORKFLOW_ABI === 'vibeflow.workflow.v4', 'Workflow ABI 不是 v4。');
 
 const controller = new AbortController();
@@ -296,4 +310,5 @@ const report = {
 
 await mkdir(resolve(reportPath, '..'), { recursive: true });
 await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
+await stagedWorkflow.cleanup();
 process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);

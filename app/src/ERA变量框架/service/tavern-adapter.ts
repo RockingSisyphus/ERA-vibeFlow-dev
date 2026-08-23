@@ -44,8 +44,8 @@ const BUTTON_EVENTS: ReadonlyArray<readonly [string, string]> = [
   ['强制完全重算', INPUT_EVENT.MANUAL_FULL_SYNC],
 ];
 
-/** 22 个目录事件 + 3 个真实脚本按钮，生产页面只允许这一套监听。 */
-export const ERA_TAVERN_LISTENER_COUNT = 25;
+/** 22 个目录事件、3 个角色脚本按钮和 3 个函数 API，生产页面只允许这一套监听。 */
+export const ERA_TAVERN_LISTENER_COUNT = 28;
 
 export interface EraTavernAdapterOptions {
   readonly onScriptVariablesCommitted?: () => void;
@@ -141,7 +141,7 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
   }
 
   /**
-   * 一次性登记 25 个生产监听器。重复订阅必须失败，否则同一 Tavern 事件
+   * 一次性登记 28 个生产监听器。重复订阅必须失败，否则同一 Tavern 事件
    * 会产生两个 receipt，并破坏 FIFO 与 high-water barrier。
    */
   subscribe(listener: (event: EraInboundEvent) => EraAdmissionResult): () => void {

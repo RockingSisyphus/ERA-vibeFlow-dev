@@ -77,11 +77,11 @@ function fakeTavern(message: JsonRecord, initialMeta: JsonRecord, options: FakeO
     message: structuredClone(message),
     meta: structuredClone(initialMeta),
     sidecar: {
-      schemaVersion: 2,
+      schemaVersion: 3,
       sidecarId,
       owner: { characterId: 'card-update-mk', groupId: null, chatId: 'chat-update-mk' },
       revision: 1,
-      state: { statData: {}, eraMeta: structuredClone(initialMeta) },
+      state: { statData: {}, eraMeta: structuredClone(initialMeta), statFunc: {} },
     },
     scriptVariables: structuredClone(options.scriptVariables ?? {}),
   };

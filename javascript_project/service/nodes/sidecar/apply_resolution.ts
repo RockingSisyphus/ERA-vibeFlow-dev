@@ -1,9 +1,11 @@
 import {
+  durableFunctionRestoreInstruction,
   durableRestoreInstruction,
   enrich,
   factsWithRecord,
   inspectSidecar,
   recordFor,
+  stateForIndependentCopy,
   stateFromRecord,
   type SidecarFactsV1,
   type SidecarRecordV1,
@@ -106,12 +108,20 @@ function stateFromSync(sync: SyncContextV1, facts: SidecarFactsV1): SidecarState
   // V1 用户文件没有聊天内 legacy stat_data 时，文件本身就是升级的唯一旧
   // 状态来源。不得把它误降级为空对象，否则一次格式升级会丢失变量。
   if (facts.legacyRecord !== null) {
-    return { statData: facts.legacyRecord.statData, eraMeta: {} };
+    return {
+      statData: facts.legacyRecord.statData,
+      eraMeta: facts.legacyRecord.eraMeta ?? {},
+      statFunc: {},
+    };
   }
   const value = variablesFromSync(sync);
   const eraMeta = isRecord(value.ERAMetaData) ? { ...value.ERAMetaData } : {};
   delete eraMeta.SidecarId;
-  return { statData: value.stat_data ?? {}, eraMeta };
+  return {
+    statData: value.stat_data ?? {},
+    eraMeta,
+    statFunc: isRecord(value.statFunc) ? { ...value.statFunc } : {},
+  };
 }
 
 async function publish(context: Ctx, record: SidecarRecordV1): Promise<void> {
@@ -123,7 +133,7 @@ async function publish(context: Ctx, record: SidecarRecordV1): Promise<void> {
   }
 }
 
-async function commitV2(context: Ctx, record: SidecarRecordV1): Promise<void> {
+async function commitV3(context: Ctx, record: SidecarRecordV1): Promise<void> {
   await context.capabilities["era.tavern.sidecar"].write_record({ sidecarId: record.sidecarId, record });
   // 指针绝不能先于文件公开。回读同时让上传成功但落盘内容异常的情况
   // 停在旧聊天状态，避免产生“指针已切换、唯一状态却不可读取”的半事务。
@@ -172,7 +182,7 @@ export async function run(inputs: Readonly<{
     const targetId = context.capabilities["era.tavern.sidecar"].create_id({}).sidecarId;
     const resolved = withSidecarId(sync, targetId);
     const record = recordFor(targetId, facts.current, stateFromSync(resolved, facts), null);
-    await commitV2(context, record);
+    await commitV3(context, record);
     // `apply` 只属于本 Nodeset 内部的决议阶段；事务已经完成后，输出给
     // task_sync 的同步上下文必须是可继续的正式路由。把它泄露为 `apply`
     // 会在工作流数据合同校验处被拒绝，导致已经完成的宿主写入无法结算。
@@ -182,7 +192,7 @@ export async function run(inputs: Readonly<{
     const targetId = facts.sidecarId ?? context.capabilities["era.tavern.sidecar"].create_id({}).sidecarId;
     const resolved = withSidecarId(sync, targetId);
     const record = recordFor(targetId, facts.current, stateFromSync(resolved, facts), facts.record ?? facts.legacyRecord);
-    await commitV2(context, record);
+    await commitV3(context, record);
     return { sidecar_applied_context: enrich(resolved, factsWithRecord(facts, record), "continue", choice), sidecar_binding_route: "continue" };
   }
   if ((facts.status === "invalid" || facts.status === "matched") && facts.current !== null && choice === "repair") {
@@ -203,7 +213,7 @@ export async function run(inputs: Readonly<{
     // repair 处理的是“文件镜像落后于已提交聊天变量”的情形。同步上下文可能
     // 来自该次 UI 选择之前的规划快照，不能拿它覆盖刚刚由 API 写入的当前状态。
     const record = recordFor(targetId, rereadFacts.current, rereadFacts.record === null ? stateFromSync(resolved, rereadFacts) : stateFromRecord(rereadFacts.record), rereadFacts.record);
-    await commitV2(context, record);
+    await commitV3(context, record);
     context.capabilities["era.tavern.sidecar"].clear_prompt({});
     // 文件失败前已经确认写入的 Variable 指令是唯一可重放事实。repair 先恢复
     // 一个经过回读验证的 V2 基线，再强制完整同步，使该指令重新得出状态；绝不
@@ -231,8 +241,18 @@ export async function run(inputs: Readonly<{
     const messages = (sync.messagesRaw as { readonly messages?: readonly { readonly messageId: number; readonly role: string; readonly content: string }[] })?.messages ?? [];
     const lastAi = [...messages].reverse().find((item) => item.role === "assistant");
     if (lastAi === undefined) throw new TypeError("当前聊天没有可追加恢复指令的 AI 消息。");
-    const restore = durableRestoreInstruction(stateFromSync(sync, facts).statData, facts.record.state.statData);
-    if (restore === null) throw new TypeError("当前聊天含有无法安全替换的受保护变量；请先修复当前聊天。");
+    const restoreVariables = durableRestoreInstruction(
+      stateFromSync(sync, facts).statData,
+      facts.record.state.statData,
+    );
+    const restoreFunctions = durableFunctionRestoreInstruction(
+      stateFromSync(sync, facts).statFunc,
+      facts.record.state.statFunc,
+    );
+    if (restoreVariables === null || restoreFunctions === null) {
+      throw new TypeError("当前聊天含有无法安全替换的受保护变量或函数库；请先修复当前聊天。");
+    }
+    const restore = `${restoreVariables}${restoreFunctions}`;
     await context.capabilities["era.tavern.messages"].update_content({
       messageId: lastAi.messageId,
       content: `${lastAi.content}${restore}`,
@@ -242,9 +262,13 @@ export async function run(inputs: Readonly<{
   }
 
   resolved = withSidecarId(resolved, targetId);
-  const state = choice === "independent" ? stateFromSync(resolved, facts) : stateFromRecord(facts.record);
+  const state = choice === "independent"
+    ? stateFromSync(resolved, facts)
+    : choice === "copy"
+      ? stateForIndependentCopy(facts.record)
+      : stateFromRecord(facts.record);
   const record = recordFor(targetId, facts.current, state, choice === "migrate" ? facts.record : null);
-  await commitV2(context, record);
+  await commitV3(context, record);
   context.capabilities["era.tavern.sidecar"].clear_prompt({});
   // 同上：选择已经被事务消费，后续完整同步只接收规范的 continue 路由。
   return { sidecar_applied_context: enrich(resolved, factsWithRecord(facts, record), "continue", choice), sidecar_binding_route: "continue" };

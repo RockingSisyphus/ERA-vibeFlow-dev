@@ -14,7 +14,7 @@ export const HIDE_ERA_METADATA_REGEX: Omit<TavernRegex, 'id' | 'scope'> = {
   script_name: 'ERA 元数据隐藏正则',
   enabled: true,
   run_on_edit: true,
-  find_regex: String.raw`/<era_data>\s*(?=[\s\S]*?\S[\s\S]*?<\/era_data>)((?:(?!<(?:era_data|variable(?:think|insert|edit|delete))>|<\/era_data>)[\s\S])*?)\s*<\/era_data>/gi`,
+  find_regex: String.raw`/<era_data>\s*(?=[\s\S]*?\S[\s\S]*?<\/era_data>)((?:(?!<(?:era_data|variable(?:think|insert|edit|delete)|function(?:insert|edit|delete))>|<\/era_data>)[\s\S])*?)\s*<\/era_data>/gi`,
   replace_string: '',
   trim_strings: [],
   source: {

@@ -17,6 +17,9 @@ function classify(eventType: string): ApiRoute {
     case "era:updateByPath":
     case "era:deleteByObject":
     case "era:deleteByPath":
+    case "era:functionInsertByObject":
+    case "era:functionEditByObject":
+    case "era:functionDeleteByObject":
       return "write";
     case "era:getCurrentVars":
     case "era:getSnapshotAtMk":

@@ -72,6 +72,7 @@ export interface SyncCommitRequestV1 {
   readonly payload: SyncPayloadV1;
   readonly messageWrites: readonly SyncMessageWriteV1[];
   readonly stat: unknown;
+  readonly statFunc: Readonly<Record<string, unknown>>;
   readonly meta: Readonly<Record<string, unknown>>;
 }
 
@@ -469,6 +470,11 @@ export function planSyncWork(context: SyncContextV1): SyncWorkV1 {
     }
     const variables = variablesRecord(context.variablesRaw);
     const stat = cloneSyncJson(variables.stat_data ?? variables.stat ?? {});
+    const statFuncCandidate = variables.statFunc ?? {};
+    if (!isPlainRecord(statFuncCandidate)) {
+      throw new TypeError("Sidecar statFunc 不是对象。");
+    }
+    const statFunc = cloneSyncJson(statFuncCandidate);
     const metaCandidate = variables.ERAMetaData ?? variables.meta ?? {};
     if (!isRecord(metaCandidate)) {
       throw new TypeError("ERAMetaData 不是对象。");
@@ -483,6 +489,7 @@ export function planSyncWork(context: SyncContextV1): SyncWorkV1 {
         plan: planEraSync({
           messages: [],
           stat,
+          statFunc,
           meta,
           reason: step.task.kind === "sync" ? step.task.reason : "manual",
           processingMk: prepared.processingMk,
@@ -521,6 +528,7 @@ export function planSyncWork(context: SyncContextV1): SyncWorkV1 {
         planEraSync({
           messages: preparedMessages,
           stat,
+          statFunc,
           meta,
           reason: task.reason,
           forceFullRebuild: task.fullRebuild,
@@ -612,6 +620,7 @@ export function buildSyncCommitRequest(work: SyncWorkV1): SyncCommitRequestV1 {
     payload: work.payload,
     messageWrites,
     stat: cloneSyncJson(plan.stat),
+    statFunc: cloneSyncJson(plan.statFunc),
     meta: cloneSyncJson(plan.meta),
   };
 }
@@ -712,6 +721,7 @@ export function validateSyncCommitEnvelope(
         throw new TypeError("消息提交项无效。");
     }
     cloneEraPortableJsonV1(request.stat);
+    cloneEraPortableJsonV1(request.statFunc);
     cloneEraPortableJsonV1(request.meta);
     cloneEraPortableJsonV1(request.payload);
     return {

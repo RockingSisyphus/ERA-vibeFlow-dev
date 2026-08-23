@@ -1,10 +1,27 @@
 /// <reference types="node" />
 
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { performance } from 'node:perf_hooks';
+import { resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 const generatedModuleUrl = new URL('../../generated/era-service/workflow.js', import.meta.url);
 const reportUrl = new URL('../../reports/service-g3-runtime.json', import.meta.url);
+
+/**
+ * 生成的 Service workflow 位于仓库根目录，而它的 browser runtime 依赖属于
+ * app 包。为让 Node 探针按与 webpack 相同的 package root 解析这些依赖，临时
+ * 复制完全相同的生成物到 app 下再导入；绝不改写或重新打包 workflow 内容。
+ */
+async function importGeneratedWorkflow() {
+  const directory = await mkdtemp(resolve(import.meta.dirname, '.era-generated-workflow-'));
+  const stagedPath = resolve(directory, 'workflow.mjs');
+  await writeFile(stagedPath, await readFile(generatedModuleUrl), 'utf8');
+  return {
+    workflow: await import(pathToFileURL(stagedPath).href),
+    cleanup: () => rm(directory, { recursive: true, force: true }),
+  };
+}
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -19,7 +36,11 @@ function createAdapter() {
   let chatVariables = { stat_data: {}, ERAMetaData: { SelectedMks: [], EditLogs: {} } };
   let scriptVariables = {};
   const sidecarRecords = new Map();
-  const sidecarCurrent = { identity: { characterId: 'probe-card', groupId: null, chatId: 'probe-chat' }, meta: {}, stat: {} };
+  const sidecarCurrent = {
+    identity: { characterId: 'probe-card', groupId: null, chatId: 'probe-chat' },
+    meta: {},
+    stat: {},
+  };
   const messages = [{ message_id: 0, role: 'assistant', is_user: false, message: '运行时探针消息' }];
   return {
     adapter: {
@@ -149,7 +170,9 @@ async function probeGeneratedHost(workflow) {
       workflowStopped,
       new Promise(resolve => setTimeout(() => resolve({ kind: 'pending' }), 10)),
     ]);
-    throw new Error(`workflow allow 未登记 Tavern 监听器：${JSON.stringify(stopped)}，trace=${JSON.stringify(traceEvents.slice(-30))}`);
+    throw new Error(
+      `workflow allow 未登记 Tavern 监听器：${JSON.stringify(stopped)}，trace=${JSON.stringify(traceEvents.slice(-30))}`,
+    );
   }
 
   const outcomes = [];
@@ -308,7 +331,8 @@ async function probeWorkflowFrames(workflow) {
   return { kinds, frameIds, throughSequences: [1, 2], settlementSequences: [1, 2], executionCode };
 }
 
-const workflow = await import(generatedModuleUrl.href);
+const stagedWorkflow = await importGeneratedWorkflow();
+const workflow = stagedWorkflow.workflow;
 assert(workflow.VIBEFLOW_WORKFLOW_ABI === 'vibeflow.workflow.v4', 'Workflow ABI 不是 v4。');
 assert(workflow.VIBEFLOW_PLUGIN_ABI === 'vibeflow.plugin.v1', 'Plugin ABI 不是 v1。');
 
@@ -323,4 +347,5 @@ const report = {
 
 await mkdir(new URL('.', reportUrl), { recursive: true });
 await writeFile(reportUrl, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
+await stagedWorkflow.cleanup();
 process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);

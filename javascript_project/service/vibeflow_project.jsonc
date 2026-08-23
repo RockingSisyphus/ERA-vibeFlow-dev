@@ -9,7 +9,10 @@
   },
   "javascript": {
     "package_root": ".",
-    "external_packages": []
+    "external_packages": [
+      "mathjs",
+      "@stdlib/math-base-special-gamma"
+    ]
   },
   "quality_enabled": true,
   "architecture": {

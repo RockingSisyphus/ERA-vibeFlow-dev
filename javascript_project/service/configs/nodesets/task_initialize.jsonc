@@ -55,7 +55,7 @@
         "id": "plan_resources",
         "type_used": "era.initialize.plan",
         "display_name": "规划资源与相对更新规则",
-        "description": "以纯计算方式生成设置、世界书和正则动作，并把 $inc/$mul/$div 的严格 JSON 格式及旧字符串表达式禁用规则写入 ERA 变量操作世界书；MK 与占位符仍由统一任务上下文准备独占处理。"
+        "description": "以纯计算方式生成设置、世界书和正则动作，并把 $expr、Function 标签与双快照格式及旧运算符禁用规则写入 ERA 变量操作世界书；MK 与占位符仍由统一任务上下文准备独占处理。"
       },
       {
         "id": "preserve_resources",

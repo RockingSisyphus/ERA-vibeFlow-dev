@@ -386,18 +386,16 @@ function baselineOperationRuleContent(): string {
 }
 
 function operationRuleContent(): string {
-  const relativeRules = `    - **相对数值更新**: 仅在需要基于当前数值计算时，把目标值写成以下恰好一个键的 JSON 对象：
-        - 加减: \`{"$inc": 25}\`；减法使用负数，例如 \`{"$inc": -10}\`。
-        - 乘法: \`{"$mul": 1.2}\`。
-        - 除法: \`{"$div": 2}\`，除数不能为 0。
-    - 操作数和目标当前值必须是有限数字；不要组合多个操作符或添加其他字段。
-    - 禁止输出 \`"+=2"\`、\`"-=2"\`、\`"*=2"\`、\`"/=2"\`、\`$sub\`、\`$set\` 或任意表达式；这些字符串只会被当成普通文本。`;
+  const relativeRules = `    - **数值表达式更新**: 仅在需要基于已有变量计算时，把目标值写成只含 \`$expr\` 的对象，例如 \`{"hp":{"$expr":"hp - damage"}}\`。普通数值仍是直接赋值。
+    - \`a\` 读取当前消息内已经更新后的 a；\`@a\` 读取本条消息开始时的 a。表达式结果与被引用变量都必须是有限数字。
+    - 可先用 \`<FunctionInsert>\`、\`<FunctionEdit>\`、\`<FunctionDelete>\` 管理纯函数库；\`f(x)\` 使用当前函数，\`@f(x)\` 使用本消息开始时函数闭包。
+    - 禁止输出 \`$inc\`、\`$mul\`、\`$div\`、\`$sub\`、\`$set\` 及 \`"+=2"\`、\`"-=2"\`、\`"*=2"\`、\`"/=2"\`；旧运算对象会被跳过，字符串仍只是普通字符串。`;
   return baselineOperationRuleContent()
     .replace(
       "- **`<VariableEdit>`**:\n    - **只改不增**: 用于修改已存在的数据，它绝不会在不存在的路径上创建新数据。",
       `- **\`<VariableEdit>\`**:\n    - **只改不增**: 用于修改已存在的数据，它绝不会在不存在的路径上创建新数据。\n${relativeRules}`,
     )
-    .replace('"hp": 10', '"hp": { "$inc": -5 }');
+    .replace('"hp": 10', '"hp": { "$expr": "hp - 5" }');
 }
 
 function worldbookEntry(
@@ -549,11 +547,11 @@ function statusBarHtml(): string {
   return baselineStatusBarHtml()
     .replace(
       "    - **`era:updateByObject`**: 修改一个或多个已存在的变量。\n      `eventEmit('era:updateByObject', { player: { level: 2 } });`",
-      "    - **`era:updateByObject`**: 修改一个或多个已存在的变量；数值可用单键 `$inc/$mul/$div` 对象做相对更新。\n      `eventEmit('era:updateByObject', { player: { level: 2, hp: { $inc: -10 } } });`",
+      "    - **`era:updateByObject`**: 修改一个或多个已存在的变量；直接值是普通赋值，数值表达式使用唯一 `$expr` 对象。\n      `eventEmit('era:updateByObject', { player: { level: 2, hp: { $expr: 'player.hp - 10' } } });`",
     )
     .replace(
       "    - **`era:updateByPath`**: 修改指定路径的变量，支持数学运算。\n      `eventEmit('era:updateByPath', { path: 'player.hp', value: '-=10' });`",
-      '    - **`era:updateByPath`**: 修改指定路径的变量；相对数值更新使用严格 JSON 运算对象。\n      `eventEmit(\'era:updateByPath\', { path: \'player.hp\', value: { $inc: -10 } });`\n      不支持 `"+=2"`、`"-=2"`、`"*=2"`、`"/=2"` 字符串表达式；它们会作为普通字符串保存。',
+      '    - **`era:updateByPath`**: 修改指定路径的变量；数学更新使用唯一 `$expr` 对象。\n      `eventEmit(\'era:updateByPath\', { path: \'player.hp\', value: { $expr: \'player.hp - 10\' } });`\n      不支持 `$inc/$mul/$div/$sub/$set` 或 `"+=2"`、`"-=2"`、`"*=2"`、`"/=2"`；旧对象会被拒绝，字符串仍是普通字符串。',
     );
 }
 
@@ -562,7 +560,7 @@ export function getEraRegexPayloads(): readonly EraRegexPayloadV1[] {
   return cloneResourcePlanValue([
     regexPayload(
       "ERA 数据隐藏正则",
-      "/<(variable(?:insert|edit|delete))>\\s*(?=[\\s\\S]*?\\S[\\s\\S]*?<\\/\\1>)((?:(?!<(?:era_data|variable(?:think|insert|edit|delete))>|<\\/\\1>)[\\s\\S])*?)\\s*<\\/\\1>/gi",
+      "/<((?:variable|function)(?:insert|edit|delete))>\\s*(?=[\\s\\S]*?\\S[\\s\\S]*?<\\/\\1>)((?:(?!<(?:era_data|variable(?:think|insert|edit|delete)|function(?:insert|edit|delete))>|<\\/\\1>)[\\s\\S])*?)\\s*<\\/\\1>/gi",
       "",
       true,
       true,
@@ -576,7 +574,7 @@ export function getEraRegexPayloads(): readonly EraRegexPayloadV1[] {
     ),
     regexPayload(
       "ERA 元数据隐藏正则",
-      "/<era_data>\\s*(?=[\\s\\S]*?\\S[\\s\\S]*?<\\/era_data>)((?:(?!<(?:era_data|variable(?:think|insert|edit|delete))>|<\\/era_data>)[\\s\\S])*?)\\s*<\\/era_data>/gi",
+      "/<era_data>\\s*(?=[\\s\\S]*?\\S[\\s\\S]*?<\\/era_data>)((?:(?!<(?:era_data|variable(?:think|insert|edit|delete)|function(?:insert|edit|delete))>|<\\/era_data>)[\\s\\S])*?)\\s*<\\/era_data>/gi",
       "",
       true,
       true,

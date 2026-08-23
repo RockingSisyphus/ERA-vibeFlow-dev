@@ -3,7 +3,7 @@
   "status": "implemented",
   "flow_kind": "process",
   "display_name": "ERA Sidecar 状态存储",
-  "description": "ERA 聊天状态的唯一领域存储节点集。它检查聊天 SidecarId 指针与身份，读取或迁移 V2 用户文件状态，处理冲突选择，并在成功读取或写入后发布易失宏快照。聊天变量仅保留 ERAMetaData.SidecarId；stat_data、SelectedMks、EditLogs 和其余 ERA 元数据只在 Sidecar 文件中读写。",
+  "description": "ERA 聊天状态的唯一领域存储节点集。它检查聊天 SidecarId 指针与身份，读取或迁移用户文件状态，处理冲突选择，并在成功读取或写入后发布易失宏快照。聊天变量仅保留 ERAMetaData.SidecarId；stat_data、SelectedMks、EditLogs、函数日志及 statFunc 只在 Sidecar 文件中读写。",
   "requires": [
     {
       "type": "era.sync.context",
@@ -31,10 +31,20 @@
     "max_steps": 10,
     "nodes": [
       {"id": "start", "type_used": "era.service.terminal", "display_name": "Sidecar 状态存储启动", "description": "开始一次当前聊天状态加载或绑定事务。"},
-      {"id": "inspect_current", "type_used": "era.sidecar_binding.inspect_current", "display_name": "检查聊天指针与身份", "description": "读取当前身份、聊天 SidecarId 指针和 V2 文件；旧聊天状态只在迁移时读取。"},
+      {
+        "id": "inspect_current",
+        "type_used": "era.sidecar_binding.inspect_current",
+        "display_name": "检查 Sidecar V3 指针、身份与状态",
+        "description": "读取当前身份、聊天 SidecarId 和本地 V1/V2/V3 文件事实。无指针新聊天进入 create；旧聊天仅在一次迁移事务读取聊天旧状态；V3 只读 statData、eraMeta 与 statFunc。"
+      },
       {"id": "resolve_choice", "type_used": "era.sidecar_binding.resolve_choice", "display_name": "解析绑定选择", "description": "纯规则决定继续、阻塞或迁移/独立/复制事务。"},
       {"id": "publish_choice_prompt", "type_used": "era.sidecar_binding.publish_choice_prompt", "display_name": "发布 Sidecar 冲突选择", "description": "显示 workflow 已决定的不可关闭选择提示。"},
-      {"id": "apply_resolution", "type_used": "era.sidecar_binding.apply_resolution", "display_name": "应用绑定与状态决议", "description": "执行 V2 文件、聊天指针与运行时快照的受控事务。"},
+      {
+        "id": "apply_resolution",
+        "type_used": "era.sidecar_binding.apply_resolution",
+        "display_name": "应用 Sidecar V3 绑定决议",
+        "description": "以 revision 复核执行迁移、独立或复制。迁移/复制同时恢复 statData、eraMeta 与 statFunc；复制深拷贝变量和函数定义，不复制 SelectedMks 或任何编辑日志。"
+      },
       {"id": "end", "type_used": "era.service.terminal", "display_name": "Sidecar 状态存储结束", "description": "输出已加载的同步上下文及路由。"}
     ],
     "edges": [

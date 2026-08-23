@@ -1,0 +1,27 @@
+{
+  "type_key": "era.expression.execute_era_commands",
+  "display_name": "执行 ERA 表达式命令",
+  "description": "跨 root 的实际表达式 Nodeset 边界：Service 传入 Sidecar 同步 DTO，桥接节点调用本地版本化 @era/vibeflow-expression 包。表达式语法、嵌套函数、递归拒绝、双快照和数学后端均在 expression root；本 Nodeset 不做 Tavern I/O。",
+  "requires": [
+    {"type":"era.expression.command.request","cardinality":"exactly_one","display_name":"表达式命令请求"}
+  ],
+  "provides": [
+    {"key":"expression_command_result","type":"era.expression.command.result","display_name":"表达式命令结果"}
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {"key":"expression_command_request","type":"era.expression.command.request","display_name":"表达式命令请求","required":true}
+    ],
+    "max_steps": 3,
+    "nodes": [
+      {"id":"start","type_used":"era.service.terminal","display_name":"表达式命令开始","description":"进入不含宿主 I/O 的跨 root 计算边界。"},
+      {"id":"execute","type_used":"era.expression.execute_era_commands.bridge","display_name":"调用 expression root","description":"以受限 DTO 调用已验证的表达式引擎；不复制 lexer、AST 或数学实现。"},
+      {"id":"end","type_used":"era.service.terminal","display_name":"表达式命令结束","description":"返回纯同步工作项。"}
+    ],
+    "edges": [["start","execute"],["execute","end"]],
+    "outputs": [
+      {"type":"era.expression.command.result","cardinality":"exactly_one","display_name":"表达式命令结果","as":"expressionCommandResult"}
+    ]
+  }
+}
