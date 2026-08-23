@@ -18,7 +18,8 @@
   "dependencies": [
     "era.snapshot.query",
     "era.crud.engine",
-    "era.service.mk_engine"
+    "era.service.mk_engine",
+    "era.service.command_compaction_marker"
   ],
   "external_packages": []
 }

@@ -14,6 +14,11 @@ import {
   // @ts-ignore TypeScript 会对 app rootDir 外的 VibeFlow 源码报告 TS6059。
 } from '../../../javascript_project/service/base_lib/domain/sync_engine';
 import {
+  applySealedCommandCompaction,
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- 产品测试直接验证 VibeFlow 纯编排源码。
+  // @ts-ignore TypeScript 会对 app rootDir 外的 VibeFlow 源码报告 TS6059。
+} from '../../../javascript_project/service/base_lib/command_compaction';
+import {
   prepareApiWriteDirective,
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- 产品测试直接验证 VibeFlow 纯领域源码。
   // @ts-ignore TypeScript 会对 app rootDir 外的 VibeFlow 源码报告 TS6059。
@@ -335,7 +340,7 @@ describe('ERA $expr 与函数指令', () => {
       ),
       message(1, 'mk-latest', '最新 AI 楼层保持原样。'),
     ];
-    const plan = planEraSync({
+    const rawPlan = planEraSync({
       messages,
       stat: { a: 1 },
       statFunc: {},
@@ -345,6 +350,7 @@ describe('ERA $expr 与函数指令', () => {
       processingMk: 'mk-latest',
       consecutiveState: null,
     });
+    const plan = applySealedCommandCompaction(rawPlan);
     expect(plan.status).toBe('recalculated');
     expect(plan.stat).toEqual({ a: 4 });
     expect(plan.statFunc).toEqual({ f: { params: ['x'], expr: 'x + 3' } });
@@ -353,7 +359,7 @@ describe('ERA $expr 与函数指令', () => {
     expect(compact).toContain('"$expr":"@a + 3"');
     expect(compact).toContain('<FunctionInsert>');
     expect(compact).not.toContain('a + 1');
-    expect((plan.meta.CompressedEraCommands as Record<string, unknown>)['mk-sealed']).toMatchObject({ version: 1 });
+    expect((plan.meta.CommandCompaction as Record<string, unknown>)['mk-sealed']).toMatchObject({ version: 1 });
     const replay = planEraSync({
       messages: plan.messages,
       stat: { a: 1 },
@@ -378,7 +384,7 @@ describe('ERA $expr 与函数指令', () => {
         SelectedMks: ['mk-sealed'],
         EditLogs: { 'mk-sealed': [{ op: 'update', path: 'a', value_old: 1, value_new: 2 }] },
         FunctionEditLogs: {},
-        CompressedEraCommands: {},
+        CommandCompaction: {},
       }),
     ).toEqual({ type: 'FULL_RECALC', recalcId: 0, cause: 'divergence' });
     expect(
@@ -386,11 +392,57 @@ describe('ERA $expr 与函数指令', () => {
         SelectedMks: ['mk-sealed'],
         EditLogs: { 'mk-sealed': [{ op: 'update', path: 'a', value_old: 1, value_new: 2 }] },
         FunctionEditLogs: {},
-        CompressedEraCommands: {
-          'mk-sealed': { compressedHash: 'fnv1a-not-the-current-content' },
+        CommandCompaction: {
+          'mk-sealed': { version: 1, mk: 'mk-sealed', contentHash: 'fnv1a-not-the-current-content', status: 'compacted' },
         },
       }),
     ).toEqual({ type: 'FULL_RECALC', recalcId: 0, cause: 'divergence' });
+  });
+
+  it('压缩后的中间楼层在更早楼层编辑后仍按 @快照重放', () => {
+    const original = [
+      message(0, 'mk-base', edit({ a: { $expr: 'a + 2' } })),
+      message(
+        1,
+        'mk-sealed',
+        [
+          edit({ a: { $expr: 'a + 1' } }),
+          edit({ b: { $expr: 'a * 2' } }),
+          edit({ a: { $expr: 'a + 1' } }),
+        ].join('\n'),
+      ),
+      message(2, 'mk-latest', '用于封存前一条 AI 消息。'),
+    ];
+    const compacted = applySealedCommandCompaction(
+      planEraSync({
+        messages: original,
+        stat: { a: 10, b: 0 },
+        statFunc: {},
+        meta: { SelectedMks: [], EditLogs: {}, FunctionEditLogs: {} },
+        reason: 'manual',
+        forceFullRebuild: true,
+        processingMk: 'mk-latest',
+        consecutiveState: null,
+      }),
+    );
+    const sealed = (compacted.messages[1] as { content: { text: string } }).content.text;
+    expect(sealed).toContain('"b":{"$expr":"(@a + 1) * 2"}');
+
+    const editedHistory = compacted.messages.map((item) => ({ ...item }));
+    editedHistory[0] = message(0, 'mk-base', edit({ a: { $expr: 'a + 5' } }));
+    const replay = applySealedCommandCompaction(
+      planEraSync({
+        messages: editedHistory,
+        stat: { a: 10, b: 0 },
+        statFunc: {},
+        meta: { SelectedMks: [], EditLogs: {}, FunctionEditLogs: {} },
+        reason: 'edited',
+        forceFullRebuild: true,
+        processingMk: 'mk-latest',
+        consecutiveState: null,
+      }),
+    );
+    expect(replay.stat).toEqual({ a: 17, b: 32 });
   });
 
   it('解析器保留六类标签的确切出现顺序', () => {

@@ -92,7 +92,7 @@ describe('ERA Sidecar 绑定纯规则', () => {
           SelectedMks: ['old-mk'],
           EditLogs: { 'old-mk': [{ path: 'player.hp' }] },
           FunctionEditLogs: { 'old-mk': [{ name: 'scale' }] },
-          CompressedEraCommands: { 'old-mk': { version: 1 } },
+          CommandCompaction: { 'old-mk': { version: 1 } },
           userSetting: 'preserved',
         },
       },
@@ -107,7 +107,7 @@ describe('ERA Sidecar 绑定纯规则', () => {
     expect(copied.eraMeta).not.toHaveProperty('SelectedMks');
     expect(copied.eraMeta).not.toHaveProperty('EditLogs');
     expect(copied.eraMeta).not.toHaveProperty('FunctionEditLogs');
-    expect(copied.eraMeta).not.toHaveProperty('CompressedEraCommands');
+    expect(copied.eraMeta).not.toHaveProperty('CommandCompaction');
     (copied.statData as { player: { hp: number } }).player.hp = 99;
     expect((record.state.statData as { player: { hp: number } }).player.hp).toBe(10);
   });

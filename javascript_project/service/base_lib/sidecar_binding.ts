@@ -168,7 +168,7 @@ export function stateForIndependentCopy(record: SidecarRecordV1): SidecarStateV2
   delete state.eraMeta.SelectedMks;
   delete state.eraMeta.EditLogs;
   delete state.eraMeta.FunctionEditLogs;
-  delete state.eraMeta.CompressedEraCommands;
+  delete state.eraMeta.CommandCompaction;
   return state;
 }
 

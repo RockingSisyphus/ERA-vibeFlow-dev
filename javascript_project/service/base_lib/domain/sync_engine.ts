@@ -7,8 +7,6 @@
 
 import {
   applyMessageCommands,
-  type EraCrudEditLog,
-  type EraFunctionEditLog,
 } from "./crud_engine.ts";
 import {
   ensureMessageKey,
@@ -23,6 +21,10 @@ import {
   parseEditLog,
   rollbackStatToMK,
 } from "./snapshot_query.ts";
+import {
+  commandCompactionMarkerIsCurrent,
+  commandCompactionMarkersOf,
+} from "./command_compaction_marker.ts";
 
 export type EraSyncReasonV1 =
   "history-changed" | "edited" | "swipe-regeneration" | "manual" | "api-write";
@@ -85,6 +87,19 @@ export interface EraSyncDiagnosticV1 {
   readonly path?: string;
 }
 
+/** A sealed assistant layer eligible for the pure command-compaction Nodeset. */
+export interface EraSealedCompactionCandidateV1 {
+  readonly messageId: number;
+  readonly messageIndex: number;
+  readonly mk: string;
+  readonly layerStartStat: unknown;
+  readonly layerStartStatFunc: Readonly<Record<string, unknown>>;
+  readonly layerEndStat: unknown;
+  readonly layerEndStatFunc: Readonly<Record<string, unknown>>;
+  readonly eraMeta: Readonly<Record<string, unknown>>;
+  readonly traditionalToSimplified: boolean;
+}
+
 export type EraSyncPlanV1 =
   | {
       readonly kind: "sync";
@@ -96,6 +111,8 @@ export type EraSyncPlanV1 =
       readonly meta: Readonly<Record<string, unknown>>;
       readonly messages: readonly EraMkMessageV1[];
       readonly messageUpdates: readonly EraSyncMessageUpdateV1[];
+      /** Internal pure-workflow hand-off; never itself becomes persistent state. */
+      readonly sealedCompactionCandidates: readonly EraSealedCompactionCandidateV1[];
       readonly recalculatedMessageIndexes: readonly number[];
       readonly rollback: {
         readonly applied: boolean;
@@ -117,6 +134,7 @@ export type EraSyncPlanV1 =
       readonly meta: Readonly<Record<string, unknown>>;
       readonly messages: readonly EraMkMessageV1[];
       readonly messageUpdates: readonly [];
+      readonly sealedCompactionCandidates: readonly [];
       readonly recalculatedMessageIndexes: readonly [];
       readonly rollback: {
         readonly applied: false;
@@ -202,230 +220,8 @@ function metaWith(
   return result;
 }
 
-function compactionMarkersOf(
-  meta: Readonly<Record<string, unknown>>,
-): Record<string, unknown> {
-  return isPlainRecord(meta[COMPACTION_META_KEY])
-    ? cloneSnapshotValue(meta[COMPACTION_META_KEY])
-    : {};
-}
-
-function metaWithCompactionMarkers(
-  meta: Readonly<Record<string, unknown>>,
-  markers: Readonly<Record<string, unknown>>,
-): Record<string, unknown> {
-  const result = cloneSnapshotValue(meta) as Record<string, unknown>;
-  defineOwn(result, COMPACTION_META_KEY, cloneSnapshotValue(markers));
-  return result;
-}
-
 function cloneMessages(messages: readonly EraMkMessageV1[]): EraMkMessageV1[] {
   return cloneSnapshotValue(messages) as EraMkMessageV1[];
-}
-
-const COMPACTION_META_KEY = "CompressedEraCommands";
-
-/** Fresh global matcher per invocation: VibeFlow forbids sticky RegExp state. */
-function eraCommandBlockPattern(): RegExp {
-  return /<((?:Variable|Function)(?:Insert|Edit|Delete))>\s*[\s\S]*?<\/\1>\s*/giu;
-}
-
-function sameJson(left: unknown, right: unknown): boolean {
-  if (Object.is(left, right)) return true;
-  if (Array.isArray(left) && Array.isArray(right)) {
-    return (
-      left.length === right.length &&
-      left.every((value, index) => sameJson(value, right[index]))
-    );
-  }
-  if (!isPlainRecord(left) || !isPlainRecord(right)) return false;
-  const leftKeys = Object.keys(left).sort();
-  const rightKeys = Object.keys(right).sort();
-  return (
-    leftKeys.length === rightKeys.length &&
-    leftKeys.every(
-      (key, index) =>
-        key === rightKeys[index] && sameJson(left[key], right[key]),
-    )
-  );
-}
-
-/** A deterministic, browser/Node-stable marker hash; it is a skip hint, not integrity. */
-function compactHash(value: string): string {
-  let hash = 2_166_136_261;
-  for (let index = 0; index < value.length; index += 1) {
-    hash ^= value.charCodeAt(index);
-    hash = Math.imul(hash, 16_777_619);
-  }
-  return `fnv1a-${(hash >>> 0).toString(16)}`;
-}
-
-function rootIsProtected(value: unknown): boolean {
-  return (
-    isPlainRecord(value) &&
-    isPlainRecord(value.$meta) &&
-    (value.$meta.necessary === "self" || value.$meta.necessary === "all")
-  );
-}
-
-function serializableRootChanges(start: unknown, end: unknown): string | null {
-  if (!isPlainRecord(start) || !isPlainRecord(end)) return null;
-  const deletes: Record<string, null> = {};
-  const inserts: Record<string, unknown> = {};
-  const edits: Record<string, unknown> = {};
-  const roots = new Set([...Object.keys(start), ...Object.keys(end)]);
-  for (const root of [...roots].sort()) {
-    if (root === "$meta" || sameJson(start[root], end[root])) continue;
-    if (rootIsProtected(start[root]) || rootIsProtected(end[root])) return null;
-    const existed = Object.prototype.hasOwnProperty.call(start, root);
-    const remains = Object.prototype.hasOwnProperty.call(end, root);
-    if (!remains) {
-      deletes[root] = null;
-      continue;
-    }
-    if (!existed) {
-      inserts[root] = cloneSnapshotValue(end[root]);
-      continue;
-    }
-    const oldValue = start[root];
-    const newValue = end[root];
-    if (
-      typeof oldValue === "number" &&
-      Number.isFinite(oldValue) &&
-      typeof newValue === "number" &&
-      Number.isFinite(newValue) &&
-      /^[A-Za-z_][A-Za-z0-9_]*$/u.test(root)
-    ) {
-      const delta = newValue - oldValue;
-      if (!Number.isFinite(delta)) return null;
-      edits[root] = {
-        $expr: delta === 0 ? `@${root}` : `@${root} + ${JSON.stringify(delta)}`,
-      };
-      continue;
-    }
-    // VariableInsert retains its established merge semantics, so replace a complex
-    // root through an explicit delete+insert pair rather than guessing a patch.
-    deletes[root] = null;
-    inserts[root] = cloneSnapshotValue(newValue);
-  }
-  const blocks: string[] = [];
-  if (Object.keys(deletes).length > 0) {
-    blocks.push(
-      `<VariableDelete>\n${JSON.stringify(deletes)}\n</VariableDelete>`,
-    );
-  }
-  if (Object.keys(inserts).length > 0) {
-    blocks.push(
-      `<VariableInsert>\n${JSON.stringify(inserts)}\n</VariableInsert>`,
-    );
-  }
-  if (Object.keys(edits).length > 0) {
-    blocks.push(`<VariableEdit>\n${JSON.stringify(edits)}\n</VariableEdit>`);
-  }
-  return blocks.join("\n");
-}
-
-function serializableFunctionChanges(
-  start: Readonly<Record<string, unknown>>,
-  end: Readonly<Record<string, unknown>>,
-): string {
-  const deletes: Record<string, Record<string, never>> = {};
-  const inserts: Record<string, unknown> = {};
-  const edits: Record<string, unknown> = {};
-  const names = new Set([...Object.keys(start), ...Object.keys(end)]);
-  for (const name of [...names].sort()) {
-    if (sameJson(start[name], end[name])) continue;
-    const existed = Object.prototype.hasOwnProperty.call(start, name);
-    const remains = Object.prototype.hasOwnProperty.call(end, name);
-    if (!remains) deletes[name] = {};
-    else if (!existed) inserts[name] = cloneSnapshotValue(end[name]);
-    else edits[name] = cloneSnapshotValue(end[name]);
-  }
-  const blocks: string[] = [];
-  // Creating new definitions before editing existing definitions is the least
-  // disruptive order for forward references. A replay proof below remains the
-  // authority: mutually dependent ordering that cannot be preserved simply is
-  // deliberately left uncompressed.
-  if (Object.keys(inserts).length > 0)
-    blocks.push(
-      `<FunctionInsert>\n${JSON.stringify(inserts)}\n</FunctionInsert>`,
-    );
-  if (Object.keys(edits).length > 0)
-    blocks.push(`<FunctionEdit>\n${JSON.stringify(edits)}\n</FunctionEdit>`);
-  if (Object.keys(deletes).length > 0)
-    blocks.push(
-      `<FunctionDelete>\n${JSON.stringify(deletes)}\n</FunctionDelete>`,
-    );
-  return blocks.join("\n");
-}
-
-export interface EraSealedMessageCompactionV1 {
-  readonly message: EraMkMessageV1;
-  readonly content: string;
-  readonly editLog: readonly EraCrudEditLog[];
-  readonly functionEditLog: readonly EraFunctionEditLog[];
-  readonly marker: Readonly<Record<string, unknown>>;
-}
-
-/**
- * Compress one sealed text assistant message. It never trusts algebra alone:
- * the generated candidate is replayed through the same six-command CRUD engine
- * from the exact layer snapshot, and is accepted only when state, function
- * library and diagnostics are observationally identical.
- */
-export function compactSealedMessageCommands(
-  message: EraMkMessageV1,
-  mk: string,
-  startStat: unknown,
-  startFunctions: Readonly<Record<string, unknown>>,
-  endStat: unknown,
-  endFunctions: Readonly<Record<string, unknown>>,
-  meta: Readonly<Record<string, unknown>>,
-  traditionalToSimplified = false,
-): EraSealedMessageCompactionV1 | null {
-  if (message.role !== "assistant" || message.content.kind !== "text")
-    return null;
-  const original = message.content.text;
-  if (!eraCommandBlockPattern().test(original)) return null;
-  const compactVariables = serializableRootChanges(startStat, endStat);
-  if (compactVariables === null) return null;
-  const compactFunctions = serializableFunctionChanges(
-    startFunctions,
-    endFunctions,
-  );
-  const compactCommands = [compactVariables, compactFunctions]
-    .filter(Boolean)
-    .join("\n");
-  const withoutCommands = original
-    .replace(eraCommandBlockPattern(), "")
-    .trimEnd();
-  const content = `${withoutCommands}${compactCommands ? `\n${compactCommands}` : ""}\n`;
-  const replay = applyMessageCommands({
-    content,
-    messageId: message.messageId,
-    initialStat: startStat,
-    initialStatFunc: startFunctions,
-    meta,
-    traditionalToSimplified,
-  });
-  if (
-    replay.diagnostics.length > 0 ||
-    !sameJson(replay.finalStat, endStat) ||
-    !sameJson(replay.finalStatFunc ?? {}, endFunctions)
-  )
-    return null;
-  return {
-    message: { ...message, content: { kind: "text", text: content } },
-    content,
-    editLog: cloneSnapshotValue(replay.editLog),
-    functionEditLog: cloneSnapshotValue(replay.functionEditLog ?? []),
-    marker: {
-      version: 1,
-      mk,
-      sourceHash: compactHash(original),
-      compressedHash: compactHash(content),
-    },
-  };
 }
 
 /** Reverse the function logs for the same MK interval as variable rollback. */
@@ -543,7 +339,7 @@ function firstUncompactedSealedAssistant(
   messages: readonly EraMkMessageV1[],
   meta: Readonly<Record<string, unknown>>,
 ): number | null {
-  const markers = compactionMarkersOf(meta);
+  const markers = commandCompactionMarkersOf(meta);
   for (let index = 0; index < messages.length - 1; index += 1) {
     const message = messages[index];
     if (message.role !== "assistant" || message.content.kind !== "text")
@@ -555,12 +351,18 @@ function firstUncompactedSealedAssistant(
     )
       continue;
     const content = readMkMessageText(message);
-    if (!eraCommandBlockPattern().test(content)) continue;
+    if (!/<((?:Variable|Function)(?:Insert|Edit|Delete))>\s*[\s\S]*?<\/\1>/iu.test(content))
+      continue;
     const mk = readMessageKey(message);
     const marker = mk === null ? null : markers[mk];
-    const compacted =
-      isPlainRecord(marker) && marker.compressedHash === compactHash(content);
-    if (!compacted) return index;
+    const selectedPrefix = messages
+      .slice(0, index)
+      .map((candidate) => readMessageKey(candidate));
+    if (
+      mk === null ||
+      !commandCompactionMarkerIsCurrent(marker, mk, content, selectedPrefix)
+    )
+      return index;
   }
   return null;
 }
@@ -653,6 +455,7 @@ function failedPlan(
     meta: cloneSnapshotValue(input.meta),
     messages: cloneMessages(input.messages),
     messageUpdates: [],
+    sealedCompactionCandidates: [],
     recalculatedMessageIndexes: [],
     rollback: { applied: false, fromMk: null, toMk: null },
     actionsTaken: createSyncActionsTaken(input.reason, false),
@@ -679,6 +482,7 @@ export function planEraSync(input: EraSyncInputV1): EraSyncPlanV1 {
       meta: cloneSnapshotValue(input.meta),
       messages: [],
       messageUpdates: [],
+      sealedCompactionCandidates: [],
       recalculatedMessageIndexes: [],
       rollback: { applied: false, fromMk: null, toMk: null },
       actionsTaken: createSyncActionsTaken(input.reason, false),
@@ -742,6 +546,7 @@ export function planEraSync(input: EraSyncInputV1): EraSyncPlanV1 {
       meta,
       messages: cloneMessages(input.messages),
       messageUpdates: [],
+      sealedCompactionCandidates: [],
       recalculatedMessageIndexes: [],
       rollback: { applied: false, fromMk: null, toMk: null },
       actionsTaken: createSyncActionsTaken(input.reason, true),
@@ -799,8 +604,8 @@ export function planEraSync(input: EraSyncInputV1): EraSyncPlanV1 {
   const newSelectedMks = oldSelectedMks.slice(0, firstRecalcId);
   const editLogs = editLogsOf(input.meta);
   const functionEditLogs = functionEditLogsOf(input.meta);
-  const compactionMarkers = compactionMarkersOf(input.meta);
   const messageUpdates: EraSyncMessageUpdateV1[] = [];
+  const sealedCompactionCandidates: EraSealedCompactionCandidateV1[] = [];
   const recalculatedMessageIndexes: number[] = [];
   const diagnostics: EraSyncDiagnosticV1[] = [];
 
@@ -831,14 +636,11 @@ export function planEraSync(input: EraSyncInputV1): EraSyncPlanV1 {
       });
     }
 
-    const contextMeta = metaWithCompactionMarkers(
-      metaWith(
-        input.meta,
-        newSelectedMks.slice(0, index),
-        editLogs,
-        functionEditLogs,
-      ),
-      compactionMarkers,
+    const contextMeta = metaWith(
+      input.meta,
+      newSelectedMks.slice(0, index),
+      editLogs,
+      functionEditLogs,
     );
     const layerStartStat = cloneSnapshotValue(statForRecalc);
     const layerStartFunctions = cloneSnapshotValue(statFuncForRecalc) as Record<
@@ -865,8 +667,8 @@ export function planEraSync(input: EraSyncInputV1): EraSyncPlanV1 {
         path: diagnostic.path,
       })),
     );
-    let effectiveEditLog = cloneSnapshotValue(applied.editLog);
-    let effectiveFunctionEditLog = cloneSnapshotValue(
+    const effectiveEditLog = cloneSnapshotValue(applied.editLog);
+    const effectiveFunctionEditLog = cloneSnapshotValue(
       applied.functionEditLog ?? [],
     );
     // An assistant floor becomes immutable only after a later assistant message
@@ -875,46 +677,27 @@ export function planEraSync(input: EraSyncInputV1): EraSyncPlanV1 {
     const hasLaterAssistant = messages
       .slice(index + 1)
       .some((item) => item.role === "assistant");
-    const storedMarker = compactionMarkers[ensured.mk];
-    const alreadyCompacted =
-      isPlainRecord(storedMarker) &&
-      storedMarker.compressedHash ===
-        compactHash(readMkMessageText(ensured.message));
     if (
       hasLaterAssistant &&
       applied.diagnostics.length === 0 &&
-      !alreadyCompacted
-    ) {
-      const compacted = compactSealedMessageCommands(
-        ensured.message,
+      !commandCompactionMarkerIsCurrent(
+        commandCompactionMarkersOf(input.meta)[ensured.mk],
         ensured.mk,
-        layerStartStat,
-        layerStartFunctions,
-        applied.finalStat,
-        applied.finalStatFunc ?? layerStartFunctions,
-        contextMeta,
-        input.traditionalToSimplified ?? false,
-      );
-      if (compacted !== null) {
-        messages[index] = compacted.message;
-        effectiveEditLog = cloneSnapshotValue(compacted.editLog);
-        effectiveFunctionEditLog = cloneSnapshotValue(
-          compacted.functionEditLog,
-        );
-        defineOwn(compactionMarkers, ensured.mk, compacted.marker);
-        const update = {
-          kind: "update-message-content" as const,
-          messageId: compacted.message.messageId,
-          messageIndex: index,
-          mk: ensured.mk,
-          content: cloneSnapshotValue(compacted.message.content),
-        };
-        const prior = messageUpdates.findIndex(
-          (candidate) => candidate.messageId === update.messageId,
-        );
-        if (prior === -1) messageUpdates.push(update);
-        else messageUpdates[prior] = update;
-      }
+        readMkMessageText(ensured.message),
+        newSelectedMks.slice(0, index),
+      )
+    ) {
+      sealedCompactionCandidates.push({
+        messageId: ensured.message.messageId,
+        messageIndex: index,
+        mk: ensured.mk,
+        layerStartStat: cloneSnapshotValue(layerStartStat),
+        layerStartStatFunc: cloneSnapshotValue(layerStartFunctions) as Record<string, unknown>,
+        layerEndStat: cloneSnapshotValue(applied.finalStat),
+        layerEndStatFunc: cloneSnapshotValue(applied.finalStatFunc ?? layerStartFunctions) as Record<string, unknown>,
+        eraMeta: cloneSnapshotValue(contextMeta) as Record<string, unknown>,
+        traditionalToSimplified: input.traditionalToSimplified ?? false,
+      });
     }
     defineOwn(editLogs, ensured.mk, effectiveEditLog);
     defineOwn(functionEditLogs, ensured.mk, effectiveFunctionEditLog);
@@ -922,10 +705,7 @@ export function planEraSync(input: EraSyncInputV1): EraSyncPlanV1 {
     recalculatedMessageIndexes.push(index);
   }
 
-  const finalMeta = metaWithCompactionMarkers(
-    metaWith(input.meta, newSelectedMks, editLogs, functionEditLogs),
-    compactionMarkers,
-  );
+  const finalMeta = metaWith(input.meta, newSelectedMks, editLogs, functionEditLogs);
   return {
     kind: "sync",
     status: "recalculated",
@@ -936,6 +716,7 @@ export function planEraSync(input: EraSyncInputV1): EraSyncPlanV1 {
     meta: finalMeta,
     messages,
     messageUpdates,
+    sealedCompactionCandidates,
     recalculatedMessageIndexes,
     rollback: {
       applied: rollbackApplied,

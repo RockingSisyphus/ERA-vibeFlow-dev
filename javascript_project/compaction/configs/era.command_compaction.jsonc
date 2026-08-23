@@ -1,20 +1,16 @@
 {
+  "nodeset_imports": [
+    {"path":"nodesets/compact_layer.jsonc"}
+  ],
   "pipeline": {
     "entry_mode": "sync",
     "inputs": [{"key":"compaction_request","type":"era.command_compaction.request","display_name":"ERA 命令层压缩请求","required":true}],
     "nodes": [
       {"id":"start","type_used":"era.command_compaction.terminal","display_name":"命令层压缩启动","description":"启动独立、无宿主副作用的 ERA 命令层压缩。"},
-      {"id":"parse_command_blocks","type_used":"era.command_compaction.parse_command_blocks","display_name":"解析真实 ERA 指令标签","description":"按原文顺序解析六类 Variable/Function 标签，保留非 ERA 文本、块位置和定位诊断。"},
-      {"id":"execute_original_semantics","type_used":"era.command_compaction.execute_original_semantics","display_name":"执行原始严格语义","description":"重放 Insert/Edit/Delete、模板、$meta、函数库和快照，得到原始可观察结果。"},
-      {"id":"derive_replay_invariants","type_used":"era.command_compaction.derive_replay_invariants","display_name":"建立重放不变量","description":"为路径、函数、存在性、$meta、模板和快照闭包建立保守符号不变量。"},
-      {"id":"partition_safe_regions","type_used":"era.command_compaction.partition_safe_regions","display_name":"划分安全压缩区间","description":"把未知条件、无效命令、模板或保护规则屏障与可独立证明的局部区域分离。"},
-      {"id":"symbolize_dependencies","type_used":"era.command_compaction.symbolize_dependencies","display_name":"符号化变量与函数依赖","description":"调用已实现表达式引擎推导 $expr、@path 与 @f 快照闭包，不复制 AST 或函数计算。"},
-      {"id":"rewrite_safe_regions","type_used":"era.command_compaction.rewrite_safe_regions","display_name":"局部重写标准标签","description":"只合并可证明等价的 Insert/Edit/Delete 和函数变更；不安全残余保留原命令。"},
-      {"id":"verify_equivalence","type_used":"era.command_compaction.verify_replay_equivalence","display_name":"证明重放等价","description":"以保守符号规则与真实重放验证候选；不成立时退回较细粒度候选或原命令。"},
-      {"id":"render_result","type_used":"era.command_compaction.render_compaction_result","display_name":"输出规范压缩结果","description":"回填保留的非 ERA 文本和已验证标签，输出状态、理由、最终状态与函数库。"},
+      {"id":"compact_layer","type_used":"era.command_compaction.compact_layer","display_name":"执行命令层安全压缩","description":"调用独立 Nodeset 解析六类真实 ERA 标签、保留重放不变量并输出可验证的候选。"},
       {"id":"end","type_used":"era.command_compaction.terminal","display_name":"命令层压缩结束","description":"结束纯压缩工作流并返回规范结果。"}
     ],
-    "edges": [["start","parse_command_blocks"],["parse_command_blocks","execute_original_semantics"],["execute_original_semantics","derive_replay_invariants"],["derive_replay_invariants","partition_safe_regions"],["partition_safe_regions","symbolize_dependencies"],["symbolize_dependencies","rewrite_safe_regions"],["rewrite_safe_regions","verify_equivalence"],["verify_equivalence","render_result"],["render_result","end"]],
+    "edges": [["start","compact_layer"],["compact_layer","end"]],
     "outputs": [{"type":"era.command_compaction.response","cardinality":"exactly_one","display_name":"ERA 命令层压缩结果","as":"compactionResponse"}]
   }
 }

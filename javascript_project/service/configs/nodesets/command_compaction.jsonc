@@ -1,0 +1,29 @@
+{
+  "type_key": "era.command_compaction.apply_sealed_layers",
+  "status": "implemented",
+  "flow_kind": "process",
+  "display_name": "应用已封存 ERA 命令层压缩",
+  "description": "跨 root 纯计算边界：读取既有同步工作项的封存楼层候选，调用版本化 @era/vibeflow-command-compaction，复放确认后回填消息更新、EditLog、FunctionEditLog 与非阻塞 marker。",
+  "requires": [
+    {"type":"era.expression.command.result","cardinality":"exactly_one","display_name":"表达式命令同步结果"}
+  ],
+  "provides": [
+    {"key":"command_compaction_result","type":"era.command_compaction.result","display_name":"已处理封存压缩的同步结果"}
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {"key":"expression_command_result","type":"era.expression.command.result","display_name":"表达式命令同步结果","required":true}
+    ],
+    "max_steps": 3,
+    "nodes": [
+      {"id":"start","type_used":"era.service.terminal","display_name":"封存压缩开始","description":"进入不含 Tavern I/O 的跨 root 压缩边界。"},
+      {"id":"apply","type_used":"era.command_compaction.apply_sealed_layers.bridge","display_name":"调用命令压缩 root","description":"只接受纯压缩器输出经现有 CRUD 重放确认后的更新。"},
+      {"id":"end","type_used":"era.service.terminal","display_name":"封存压缩结束","description":"返回仍由既有 Sidecar 事务提交的同步工作项。"}
+    ],
+    "edges": [["start","apply"],["apply","end"]],
+    "outputs": [
+      {"type":"era.command_compaction.result","cardinality":"exactly_one","display_name":"已处理封存压缩的同步结果","as":"commandCompactionResult"}
+    ]
+  }
+}

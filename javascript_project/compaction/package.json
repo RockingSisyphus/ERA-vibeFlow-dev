@@ -1,6 +1,6 @@
 {
   "name": "@era/vibeflow-command-compaction",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "exports": {
@@ -14,9 +14,11 @@
     "test:workflow": "node scripts/workflow_execution_probe.mjs"
   },
   "dependencies": {
-    "@era/vibeflow-expression": "file:vendor/era-vibeflow-expression-0.1.1.tgz",
     "@stdlib/math-base-special-gamma": "^0.3.1",
     "mathjs": "^15.2.0"
+  },
+  "peerDependencies": {
+    "@era/vibeflow-expression": ">=0.1.0 <1.0.0"
   },
   "devDependencies": {
     "esbuild": "^0.28.1",

@@ -1,8 +1,12 @@
 # ERA 命令层安全压缩器
 
 `@era/vibeflow-command-compaction` 是一个独立、纯同步的 VibeFlow JavaScript root。
-它尚未接入 ERA Service，也不读取或写入 Tavern、Sidecar、消息或 API；调用方必须显式
-提供一条消息的原文及该层开始时的变量、函数状态。
+它不读取或写入 Tavern、Sidecar、消息或 API；调用方必须显式提供一条消息的原文及该层
+开始时的变量、函数状态。
+
+当前 ERA Service 已通过 `era.command_compaction.apply_sealed_layers` 作为薄 Nodeset
+调用它：Service 提供已封存 assistant 楼层候选、再用自身 CRUD 引擎复放确认，最后才把
+已证明的文本更新和编辑日志交给既有 Sidecar 事务提交。压缩器本身仍不拥有任何宿主 I/O。
 
 ## 输入与输出
 
@@ -69,5 +73,4 @@ npm --prefix javascript_project/compaction run test:workflow
 ```
 
 `examples/era_command_compaction_sandbox` 的 JSON fixture 会同时执行直接引擎、Node AOT
-和 Browser AOT，并对原文本与冻结压缩文本做重放对照。该 root 完成独立验收后，才应在
-单独的 Service 审核中作为薄 Nodeset 调用。
+和 Browser AOT，并对原文本与冻结压缩文本做重放对照。

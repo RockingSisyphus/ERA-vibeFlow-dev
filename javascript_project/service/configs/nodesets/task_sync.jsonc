@@ -5,6 +5,9 @@
     },
     {
       "path": "expression_engine_bridge.jsonc"
+    },
+    {
+      "path": "command_compaction.jsonc"
     }
   ],
   "type_key": "era.task.sync",
@@ -76,6 +79,12 @@
         "type_used": "era.expression.execute_era_commands",
         "display_name": "调用函数表达式 Nodeset",
         "description": "调用独立 expression root 的已实现 Nodeset 执行变量与函数命令，并在既有按消息顺序的函数 CRUD 事务内实施可解锁 $meta 保护。数学语义、函数嵌套、递归拒绝与 @path/@function 快照由该 root 提供；Service 只保留顺序同步、Sidecar 状态和封存楼层压缩编排。"
+      },
+      {
+        "id": "apply_command_compaction",
+        "type_used": "era.command_compaction.apply_sealed_layers",
+        "display_name": "压缩已封存 ERA 指令楼层",
+        "description": "把同步重放产生的已封存候选交给独立命令压缩 root，再由 Service 复放确认消息、日志与 marker；不接触 Tavern 或 Sidecar I/O。"
       },
       {
         "id": "assemble_expression_sync_plan",
@@ -184,7 +193,8 @@
         "when": "sync_route == 'reconcile'"
       },
       ["prepare_expression_command_request", "execute_expression_commands"],
-      ["execute_expression_commands", "assemble_expression_sync_plan"],
+      ["execute_expression_commands", "apply_command_compaction"],
+      ["apply_command_compaction", "assemble_expression_sync_plan"],
       ["no_sync_change", "build_commit_request"],
       ["crud_write", "build_commit_request"],
       ["compute_reconciliation", "build_commit_request"],

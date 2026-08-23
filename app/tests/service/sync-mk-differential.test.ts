@@ -393,10 +393,10 @@ describe('VibeFlow 历史同步纯引擎差分', () => {
       diagnostics: [{ code: 'ERA_SYNC_MK_SEED_REQUIRED', messageIndex: 2 }],
     });
     expect(plan.meta.SelectedMks).toEqual(['mk-0', 'era_mk_100_seedaa', null]);
-    // message 1 receives its deterministic MK; the now-sealed message 0 is also
-    // eligible for the new replay-proved command compaction, so both writes are
-    // expected and target distinct messages.
-    expect(plan.messageUpdates.map(update => update.messageId).sort()).toEqual([0, 1]);
+    // `planEraSync` now only carries a sealed-layer candidate. The separate
+    // command-compaction Nodeset may later add a message-0 rewrite, while this
+    // pure planner must only write the deterministic MK for message 1.
+    expect(plan.messageUpdates.map(update => update.messageId).sort()).toEqual([1]);
     expect(plan.messages[2]).toEqual(messages[2]);
   });
 

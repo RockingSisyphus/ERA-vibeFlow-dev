@@ -15,7 +15,7 @@
     "contains_global_state": false,
     "summary": {
       "nodes": 9,
-      "nodesets": 14,
+      "nodesets": 15,
       "explicit_edges": 9,
       "data_edges": 0,
       "reported_edges": 9,
@@ -559,7 +559,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 8,
-          "nodesets": 14,
+          "nodesets": 15,
           "explicit_edges": 10,
           "data_edges": 2,
           "reported_edges": 10,
@@ -1109,7 +1109,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 12,
-          "nodesets": 14,
+          "nodesets": 15,
           "explicit_edges": 21,
           "data_edges": 6,
           "reported_edges": 21,
@@ -1934,7 +1934,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 26,
-          "nodesets": 14,
+          "nodesets": 15,
           "explicit_edges": 47,
           "data_edges": 11,
           "reported_edges": 47,
@@ -3607,6 +3607,210 @@
         ]
       }
     },
+    "era.command_compaction.apply_sealed_layers": {
+      "type_key": "era.command_compaction.apply_sealed_layers",
+      "source": {
+        "root_id": "era-service",
+        "path": "configs/nodesets/command_compaction.jsonc"
+      },
+      "display_name": "应用已封存 ERA 命令层压缩",
+      "description": "跨 root 纯计算边界：读取既有同步工作项的封存楼层候选，调用版本化 @era/vibeflow-command-compaction，复放确认后回填消息更新、EditLog、FunctionEditLog 与非阻塞 marker。",
+      "status": "implemented",
+      "flow_kind": "process",
+      "effect_scope": "none",
+      "reachable_from_workflow": true,
+      "requires": [
+        {
+          "type": "era.expression.command.result",
+          "cardinality": "exactly_one",
+          "display_name": "表达式命令同步结果"
+        }
+      ],
+      "provides": [
+        {
+          "key": "command_compaction_result",
+          "type": "era.command_compaction.result",
+          "display_name": "已处理封存压缩的同步结果"
+        }
+      ],
+      "global_config": {},
+      "body": {
+        "source": {
+          "root_id": "era-service",
+          "path": "configs/nodesets/command_compaction.jsonc"
+        },
+        "inputs": [
+          {
+            "key": "expression_command_result",
+            "type": "era.expression.command.result",
+            "display_name": "表达式命令同步结果",
+            "required": true
+          }
+        ],
+        "outputs": [
+          {
+            "type": "era.command_compaction.result",
+            "cardinality": "exactly_one",
+            "display_name": "已处理封存压缩的同步结果",
+            "as": "commandCompactionResult"
+          }
+        ],
+        "max_steps": 3,
+        "entry_mode": "async",
+        "execution_lock": null,
+        "contains_global_state": false,
+        "summary": {
+          "nodes": 3,
+          "nodesets": 15,
+          "explicit_edges": 2,
+          "data_edges": 0,
+          "reported_edges": 2,
+          "contains_global_state": false
+        },
+        "entry_nodes": [
+          "start"
+        ],
+        "terminal_nodes": [
+          "end"
+        ],
+        "god_nodes": [],
+        "nodes": [
+          {
+            "id": "start",
+            "type_used": "era.service.terminal",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/command_compaction.jsonc"
+            },
+            "role": {
+              "display_name": "封存压缩开始",
+              "description": "进入不含 Tavern I/O 的跨 root 压缩边界。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "terminal",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [],
+            "provides": [],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "apply",
+            "type_used": "era.command_compaction.apply_sealed_layers.bridge",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/command_compaction.jsonc"
+            },
+            "role": {
+              "display_name": "调用命令压缩 root",
+              "description": "只接受纯压缩器输出经现有 CRUD 重放确认后的更新。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "process",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.expression.command.result",
+                "cardinality": "exactly_one",
+                "display_name": "表达式命令同步结果"
+              }
+            ],
+            "provides": [
+              {
+                "key": "command_compaction_result",
+                "type": "era.command_compaction.result",
+                "display_name": "已处理封存压缩的同步结果"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "end",
+            "type_used": "era.service.terminal",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/command_compaction.jsonc"
+            },
+            "role": {
+              "display_name": "封存压缩结束",
+              "description": "返回仍由既有 Sidecar 事务提交的同步工作项。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "terminal",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [],
+            "provides": [],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": "start",
+            "to": "apply",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "apply",
+            "to": "end",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          }
+        ]
+      }
+    },
     "era.dispatch.prepare_context": {
       "type_key": "era.dispatch.prepare_context",
       "source": {
@@ -3694,7 +3898,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 9,
-          "nodesets": 14,
+          "nodesets": 15,
           "explicit_edges": 10,
           "data_edges": 0,
           "reported_edges": 10,
@@ -4278,7 +4482,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 3,
-          "nodesets": 14,
+          "nodesets": 15,
           "explicit_edges": 2,
           "data_edges": 0,
           "reported_edges": 2,
@@ -4482,7 +4686,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 8,
-          "nodesets": 14,
+          "nodesets": 15,
           "explicit_edges": 8,
           "data_edges": 0,
           "reported_edges": 8,
@@ -5004,7 +5208,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 7,
-          "nodesets": 14,
+          "nodesets": 15,
           "explicit_edges": 10,
           "data_edges": 3,
           "reported_edges": 10,
@@ -5478,7 +5682,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 10,
-          "nodesets": 14,
+          "nodesets": 15,
           "explicit_edges": 14,
           "data_edges": 4,
           "reported_edges": 14,
@@ -6133,7 +6337,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 10,
-          "nodesets": 14,
+          "nodesets": 15,
           "explicit_edges": 14,
           "data_edges": 1,
           "reported_edges": 14,
@@ -6856,7 +7060,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 6,
-          "nodesets": 14,
+          "nodesets": 15,
           "explicit_edges": 7,
           "data_edges": 2,
           "reported_edges": 7,
@@ -7273,7 +7477,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 9,
-          "nodesets": 14,
+          "nodesets": 15,
           "explicit_edges": 11,
           "data_edges": 0,
           "reported_edges": 11,
@@ -7888,7 +8092,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 11,
-          "nodesets": 14,
+          "nodesets": 15,
           "explicit_edges": 12,
           "data_edges": 0,
           "reported_edges": 12,
@@ -8586,11 +8790,11 @@
         "execution_lock": null,
         "contains_global_state": false,
         "summary": {
-          "nodes": 17,
-          "nodesets": 14,
-          "explicit_edges": 21,
+          "nodes": 18,
+          "nodesets": 15,
+          "explicit_edges": 22,
           "data_edges": 0,
-          "reported_edges": 21,
+          "reported_edges": 22,
           "contains_global_state": false
         },
         "entry_nodes": [
@@ -8833,6 +9037,55 @@
             }
           },
           {
+            "id": "apply_command_compaction",
+            "type_used": "era.command_compaction.apply_sealed_layers",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/task_sync.jsonc"
+            },
+            "role": {
+              "display_name": "压缩已封存 ERA 指令楼层",
+              "description": "把同步重放产生的已封存候选交给独立命令压缩 root，再由 Service 复放确认消息、日志与 marker；不接触 Tavern 或 Sidecar I/O。"
+            },
+            "contract_source": "nodeset",
+            "flow_kind": "predefined",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.expression.command.result",
+                "cardinality": "exactly_one",
+                "display_name": "表达式命令同步结果"
+              }
+            ],
+            "provides": [
+              {
+                "key": "command_compaction_result",
+                "type": "era.command_compaction.result",
+                "display_name": "已处理封存压缩的同步结果"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": {
+              "kind": "nodeset",
+              "target": "era.command_compaction.apply_sealed_layers",
+              "target_status": "implemented"
+            },
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
             "id": "assemble_expression_sync_plan",
             "type_used": "era.sync.assemble_expression_plan",
             "source": {
@@ -8854,9 +9107,9 @@
             "planned_behavior": null,
             "requires": [
               {
-                "type": "era.expression.command.result",
+                "type": "era.command_compaction.result",
                 "cardinality": "exactly_one",
-                "display_name": "表达式命令结果"
+                "display_name": "已验证封存压缩结果"
               }
             ],
             "provides": [
@@ -9469,6 +9722,16 @@
           },
           {
             "from": "execute_expression_commands",
+            "to": "apply_command_compaction",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "apply_command_compaction",
             "to": "assemble_expression_sync_plan",
             "when": "",
             "roles": [
@@ -9644,7 +9907,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 4,
-          "nodesets": 14,
+          "nodesets": 15,
           "explicit_edges": 3,
           "data_edges": 0,
           "reported_edges": 3,
@@ -12046,6 +12309,57 @@
           "source": {
             "kind": "file",
             "ref": "nodes/api/route_write_api.ts",
+            "export": "run"
+          },
+          "completion": "immediate"
+        }
+      ]
+    },
+    "era.command_compaction.apply_sealed_layers.bridge": {
+      "display_name": "应用已封存命令层压缩",
+      "description": "调用版本化 @era/vibeflow-command-compaction；只接受无诊断且经 Service CRUD 复放确认的候选，失败时保留原消息。",
+      "category": "命令压缩集成",
+      "version": "1.0.0",
+      "flow_kind": "process",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.expression.command.result",
+            "cardinality": "exactly_one",
+            "display_name": "表达式命令同步结果"
+          }
+        ],
+        "provides": [
+          {
+            "key": "command_compaction_result",
+            "type": "era.command_compaction.result",
+            "display_name": "已处理封存压缩的同步结果"
+          }
+        ],
+        "input_semantics": {
+          "era.expression.command.result": [
+            "输入：原始消息重放已形成的同步工作项及封存候选。"
+          ]
+        },
+        "output_semantics": {
+          "command_compaction_result": [
+            "输出：仅回填已证明等价的消息更新、日志与调度 marker 的同步工作项。"
+          ]
+        },
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser",
+            "node"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/sync/apply_command_compaction.ts",
             "export": "run"
           },
           "completion": "immediate"
@@ -14599,16 +14913,16 @@
     },
     "era.sync.assemble_expression_plan": {
       "display_name": "组装表达式同步计划",
-      "description": "把表达式 root 的纯结果映射为现有 no-op、CRUD 或历史协调分支；不重新计算表达式。",
+      "description": "把表达式 root 和封存压缩 root 的纯结果映射为现有 no-op、CRUD 或历史协调分支；不重新计算表达式。",
       "category": "同步规划",
       "version": "1.0.0",
       "flow_kind": "decision",
       "contract": {
         "requires": [
           {
-            "type": "era.expression.command.result",
+            "type": "era.command_compaction.result",
             "cardinality": "exactly_one",
-            "display_name": "表达式命令结果"
+            "display_name": "已验证封存压缩结果"
           }
         ],
         "provides": [
@@ -14624,8 +14938,8 @@
           }
         ],
         "input_semantics": {
-          "era.expression.command.result": [
-            "输入：已完成表达式求值的同步工作项。"
+          "era.command_compaction.result": [
+            "输入：已完成表达式求值并完成封存压缩复放确认的同步工作项。"
           ]
         },
         "output_semantics": {
@@ -30919,6 +31233,18 @@
           "additionalProperties": false
         }
       },
+      "era.command_compaction.result": {
+        "kind": "data_schema",
+        "type_key": "era.command_compaction.result",
+        "representation": "json",
+        "display_name": "已验证封存压缩同步结果",
+        "description": "表达式命令同步工作项经纯命令层压缩与 Service CRUD 复放确认后的结果。",
+        "schema": {
+          "type": "object",
+          "additionalProperties": true,
+          "$schema": "https://json-schema.org/draft/2020-12/schema"
+        }
+      },
       "era.crud.applied": {
         "kind": "data_schema",
         "type_key": "era.crud.applied",
@@ -41322,6 +41648,63 @@
         ],
         "external_packages": []
       },
+      "era.service.command_compaction": {
+        "kind": "base_lib",
+        "id": "era.service.command_compaction",
+        "display_name": "Service 命令压缩编排",
+        "description": "把纯压缩器输出经既有 CRUD 引擎复放确认后回填同步计划；不包含标签解析或代数重写。",
+        "category": "命令压缩集成",
+        "version": "1.0.0",
+        "implementations": [
+          {
+            "language": "typescript",
+            "targets": [
+              "browser",
+              "node"
+            ],
+            "source": {
+              "kind": "file",
+              "ref": "base_lib/command_compaction.ts"
+            },
+            "completion": "immediate"
+          }
+        ],
+        "dependencies": [
+          "era.service.sync_transaction",
+          "era.crud.engine",
+          "era.service.sync_engine",
+          "era.service.command_compaction_marker"
+        ],
+        "external_packages": [
+          "@era/vibeflow-command-compaction"
+        ]
+      },
+      "era.service.command_compaction_marker": {
+        "kind": "base_lib",
+        "id": "era.service.command_compaction_marker",
+        "display_name": "封存命令层压缩标记",
+        "description": "为已检查的封存消息提供可失效、非完整性门禁的内容指纹调度提示。",
+        "category": "命令压缩集成",
+        "version": "1.0.0",
+        "implementations": [
+          {
+            "language": "typescript",
+            "targets": [
+              "browser",
+              "node"
+            ],
+            "source": {
+              "kind": "file",
+              "ref": "base_lib/domain/command_compaction_marker.ts"
+            },
+            "completion": "immediate"
+          }
+        ],
+        "dependencies": [
+          "era.snapshot.query"
+        ],
+        "external_packages": []
+      },
       "era.service.dispatch_preparation": {
         "kind": "base_lib",
         "id": "era.service.dispatch_preparation",
@@ -41530,7 +41913,8 @@
         "dependencies": [
           "era.snapshot.query",
           "era.crud.engine",
-          "era.service.mk_engine"
+          "era.service.mk_engine",
+          "era.service.command_compaction_marker"
         ],
         "external_packages": []
       },
