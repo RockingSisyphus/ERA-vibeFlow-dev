@@ -1,0 +1,56 @@
+{
+  "kind": "node",
+  "type_key": "era.api.build_no_refresh_append",
+  "display_name": "构造无刷新消息追加",
+  "category": "公共 Facade",
+  "description": "追加独立 era_tx 并固定 refresh none。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.api.commit.target",
+        "cardinality": "exactly_one",
+        "display_name": "era.api.commit.target"
+      }
+    ],
+    "provides": [
+      {
+        "key": "facade_commit_append_request",
+        "type": "era.api.commit.append.request",
+        "display_name": "facade_commit_append_request"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.api.commit.target": [
+        "输入：era.api.commit.target。"
+      ]
+    },
+    "output_semantics": {
+      "facade_commit_append_request": [
+        "输出：facade_commit_append_request。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/api/facade_build_append.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.facade_nodes"
+  ],
+  "capabilities": []
+}

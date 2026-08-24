@@ -7,12 +7,31 @@
   "schema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
-    "required": ["classification", "route", "warn"],
+    "required": [
+      "classification",
+      "route",
+      "warn"
+    ],
     "additionalProperties": false,
     "properties": {
-      "classification": {"enum": ["character", "global", "preset", "ambiguous", "unknown"]},
-      "route": {"enum": ["allow", "dormant"]},
-      "warn": {"type": "boolean"}
+      "classification": {
+        "enum": [
+          "character",
+          "global",
+          "preset",
+          "ambiguous",
+          "unknown"
+        ]
+      },
+      "route": {
+        "enum": [
+          "allow",
+          "dormant"
+        ]
+      },
+      "warn": {
+        "type": "boolean"
+      }
     }
   }
 }

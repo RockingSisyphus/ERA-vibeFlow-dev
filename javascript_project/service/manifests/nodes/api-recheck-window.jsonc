@@ -1,0 +1,78 @@
+{
+  "kind": "node",
+  "type_key": "era.api.recheck_window",
+  "display_name": "写入前复核窗口",
+  "category": "公共 Facade",
+  "description": "在真正写入前复核身份与生命周期 token。",
+  "version": "1.0.0",
+  "flow_kind": "decision",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.api.commit.append.request",
+        "cardinality": "exactly_one",
+        "display_name": "era.api.commit.append.request"
+      }
+    ],
+    "provides": [
+      {
+        "key": "window_recheck_route",
+        "type": "era.api.window.recheck.route",
+        "display_name": "window_recheck_route"
+      },
+      {
+        "key": "facade_commit_rechecked",
+        "type": "era.api.commit.rechecked",
+        "display_name": "facade_commit_rechecked"
+      },
+      {
+        "key": "facade_commit_recheck_failure",
+        "type": "era.api.commit.failure_context",
+        "display_name": "facade_commit_failure_context"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.api.commit.append.request": [
+        "输入：era.api.commit.append.request。"
+      ]
+    },
+    "output_semantics": {
+      "window_recheck_route": [
+        "输出：window_recheck_route。"
+      ],
+      "facade_commit_rechecked": [
+        "输出：facade_commit_rechecked。"
+      ],
+      "facade_commit_recheck_failure": [
+        "输出：facade_commit_failure_context。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/api/facade_recheck_window.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.facade_nodes"
+  ],
+  "capabilities": [
+    {
+      "id": "era.tavern.identity",
+      "operations": [
+        "read"
+      ]
+    }
+  ]
+}

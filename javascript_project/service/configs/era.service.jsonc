@@ -101,8 +101,8 @@
       {
         "id": "initialize_state",
         "type_used": "era.service.initialize_state",
-        "display_name": "初始化服务状态",
-        "description": "创建有界服务携带状态，用于事件收集、定时器、迭代跟踪和连续 MK 计数。"
+        "display_name": "初始化服务与 Scope 窗口状态",
+        "description": "创建有界事件、定时器、迭代与连续 MK 状态，并增加仅存在于当前页面实例的单调窗口 token 和未解析准入缓存；stop、pagehide、reload 或重新初始化随服务状态一并清除，不写消息或 Sidecar。"
       },
       {
         "id": "service_loop",

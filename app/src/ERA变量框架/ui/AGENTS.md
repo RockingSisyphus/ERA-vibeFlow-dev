@@ -1,8 +1,8 @@
 # ERA UI 宿主与表现层
 
 此目录只负责 Vue/DOM 表现、用户意图收集和领域 UI 状态展示。UI 通过受限 ERA Service 调用与
-`era:writeDone`、`era:queryResult`
-等公开事件获取结果；不得直接调用世界书、正则或变量 API 来改变 ERA 业务状态，也不得重复实现 Service 的同步/回滚逻辑。
+`ERA.get()` / `ERA.subscribe()` 获取只读状态，通过 `ERA.sync()` 提交用户同步意图；不得直接调用世界书、
+正则或变量 API 来改变 ERA 业务状态，也不得重复实现 Service 的同步/回滚逻辑。
 
 修改前阅读：
 

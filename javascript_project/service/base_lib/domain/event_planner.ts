@@ -11,22 +11,8 @@ import type {
   JsonValue,
 } from "@era/vibeflow-contracts";
 
-const API_INSERT_BY_OBJECT = "era:insertByObject";
-const API_UPDATE_BY_OBJECT = "era:updateByObject";
-const API_INSERT_BY_PATH = "era:insertByPath";
-const API_UPDATE_BY_PATH = "era:updateByPath";
-const API_DELETE_BY_OBJECT = "era:deleteByObject";
-const API_DELETE_BY_PATH = "era:deleteByPath";
-const API_FUNCTION_INSERT_BY_OBJECT = "era:functionInsertByObject";
-const API_FUNCTION_EDIT_BY_OBJECT = "era:functionEditByObject";
-const API_FUNCTION_DELETE_BY_OBJECT = "era:functionDeleteByObject";
-const API_GET_CURRENT_VARS = "era:getCurrentVars";
-const API_GET_SNAPSHOT_AT_MK = "era:getSnapshotAtMk";
-const API_GET_SNAPSHOTS_BETWEEN_MKS = "era:getSnapshotsBetweenMks";
-const API_GET_SNAPSHOT_AT_MID = "era:getSnapshotAtMId";
-const API_GET_SNAPSHOTS_BETWEEN_MIDS = "era:getSnapshotsBetweenMIds";
-const API_REQUEST_WRITE_DONE = "era:requestWriteDone";
-const API_FORCE_SYNC = "era:forceSync";
+const API_FACADE_COMMIT = "era.facade.commit";
+const API_FACADE_SYNC = "era.facade.sync";
 
 const EVENT_APP_READY = "app_ready";
 const EVENT_MESSAGE_SWIPED = "message_swiped";
@@ -132,26 +118,9 @@ export interface EventPlanCoverageV1 {
   readonly mismatchedEventIds: readonly number[];
 }
 
-/** 返回 ERA 的 16 个公开输入 API；每次调用产生独立只读值。 */
+/** 只返回公共 Facade 在 Service 内部使用的两个命令；它们不是 Tavern 事件 ABI。 */
 export function getApiEventTypes(): readonly string[] {
-  return [
-    API_INSERT_BY_OBJECT,
-    API_UPDATE_BY_OBJECT,
-    API_INSERT_BY_PATH,
-    API_UPDATE_BY_PATH,
-    API_DELETE_BY_OBJECT,
-    API_DELETE_BY_PATH,
-    API_FUNCTION_INSERT_BY_OBJECT,
-    API_FUNCTION_EDIT_BY_OBJECT,
-    API_FUNCTION_DELETE_BY_OBJECT,
-    API_GET_CURRENT_VARS,
-    API_GET_SNAPSHOT_AT_MK,
-    API_GET_SNAPSHOTS_BETWEEN_MKS,
-    API_GET_SNAPSHOT_AT_MID,
-    API_GET_SNAPSHOTS_BETWEEN_MIDS,
-    API_REQUEST_WRITE_DONE,
-    API_FORCE_SYNC,
-  ];
+  return [API_FACADE_COMMIT, API_FACADE_SYNC];
 }
 
 /** 返回酒馆与 ERA 内部入口的稳定事件名。 */
@@ -224,27 +193,7 @@ export function getListenedEventTypes(): readonly string[] {
 }
 
 function isApiEventType(eventType: string): boolean {
-  switch (eventType) {
-    case API_INSERT_BY_OBJECT:
-    case API_UPDATE_BY_OBJECT:
-    case API_INSERT_BY_PATH:
-    case API_UPDATE_BY_PATH:
-    case API_DELETE_BY_OBJECT:
-    case API_DELETE_BY_PATH:
-    case API_FUNCTION_INSERT_BY_OBJECT:
-    case API_FUNCTION_EDIT_BY_OBJECT:
-    case API_FUNCTION_DELETE_BY_OBJECT:
-    case API_GET_CURRENT_VARS:
-    case API_GET_SNAPSHOT_AT_MK:
-    case API_GET_SNAPSHOTS_BETWEEN_MKS:
-    case API_GET_SNAPSHOT_AT_MID:
-    case API_GET_SNAPSHOTS_BETWEEN_MIDS:
-    case API_REQUEST_WRITE_DONE:
-    case API_FORCE_SYNC:
-      return true;
-    default:
-      return false;
-  }
+  return eventType === API_FACADE_COMMIT || eventType === API_FACADE_SYNC;
 }
 
 export function getEventDefinition(
@@ -443,20 +392,6 @@ function isManualSyncEvent(eventType: string): boolean {
  * 修复本地镜像只重试 Sidecar 文件提交，绝不能把 API/当前状态回退到聊天文本
  * 的全量重算结果。迁移、独立和复制则需要完整重放，才能把其受控恢复指令固化。
  */
-function isApiMessageWriteEvent(eventType: string): boolean {
-  return (
-    eventType === API_INSERT_BY_OBJECT ||
-    eventType === API_UPDATE_BY_OBJECT ||
-    eventType === API_INSERT_BY_PATH ||
-    eventType === API_UPDATE_BY_PATH ||
-    eventType === API_DELETE_BY_OBJECT ||
-    eventType === API_DELETE_BY_PATH ||
-    eventType === API_FUNCTION_INSERT_BY_OBJECT ||
-    eventType === API_FUNCTION_EDIT_BY_OBJECT ||
-    eventType === API_FUNCTION_DELETE_BY_OBJECT
-  );
-}
-
 function findComboRule(
   firstType: string,
   nextType: string,
@@ -552,13 +487,9 @@ function createDomainTask(unit: WorkUnitV1): DomainTaskV1 | null {
 
   if (group === "API") {
     const intent: ApiTaskV1["intent"] =
-      unit.effectiveType === API_FORCE_SYNC
-        ? "state-sync"
-        : isApiMessageWriteEvent(unit.effectiveType)
-          ? "message-write"
-          : "query";
+      unit.effectiveType === API_FACADE_SYNC ? "state-sync" : "message-write";
     return {
-      ...taskBase(unit, intent === "query" ? "none" : "latest-message-with-mk"),
+      ...taskBase(unit, "latest-message-with-mk"),
       kind: "api",
       intent,
       eventType: unit.effectiveType,

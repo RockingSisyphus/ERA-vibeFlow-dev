@@ -1,0 +1,88 @@
+{
+  "kind": "node",
+  "type_key": "era.api.plan_facade_sync",
+  "display_name": "校验并构造同步步骤",
+  "category": "公共 Facade",
+  "description": "适配 auto、latest、full 与 rollbackTo。",
+  "version": "1.0.0",
+  "flow_kind": "decision",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.api.request",
+        "cardinality": "exactly_one",
+        "display_name": "era.api.request"
+      },
+      {
+        "type": "era.batch.execution.state",
+        "cardinality": "exactly_one",
+        "display_name": "era.batch.execution.state"
+      }
+    ],
+    "provides": [
+      {
+        "key": "facade_sync_route",
+        "type": "era.api.sync.route",
+        "display_name": "facade_sync_route"
+      },
+      {
+        "key": "facade_sync_step",
+        "type": "era.step.request.routed",
+        "display_name": "facade_sync_step"
+      },
+      {
+        "key": "facade_sync_context",
+        "type": "era.api.sync.context",
+        "display_name": "facade_sync_context"
+      },
+      {
+        "key": "facade_sync_execution_state",
+        "type": "era.batch.execution.state",
+        "display_name": "facade_sync_execution_state"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.api.request": [
+        "输入：era.api.request。"
+      ],
+      "era.batch.execution.state": [
+        "输入：共享同步事务需要的当前批次执行状态。"
+      ]
+    },
+    "output_semantics": {
+      "facade_sync_route": [
+        "输出：facade_sync_route。"
+      ],
+      "facade_sync_step": [
+        "输出：facade_sync_step。"
+      ],
+      "facade_sync_context": [
+        "输出：facade_sync_context。"
+      ],
+      "facade_sync_execution_state": [
+        "将批次执行状态显式透传给共享同步 Nodeset。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/api/facade_plan_sync.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.facade_nodes"
+  ],
+  "capabilities": []
+}

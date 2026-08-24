@@ -18,11 +18,6 @@ import {
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- 产品测试直接验证 VibeFlow 纯编排源码。
   // @ts-ignore TypeScript 会对 app rootDir 外的 VibeFlow 源码报告 TS6059。
 } from '../../../javascript_project/service/base_lib/command_compaction';
-import {
-  prepareApiWriteDirective,
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- 产品测试直接验证 VibeFlow 纯领域源码。
-  // @ts-ignore TypeScript 会对 app rootDir 外的 VibeFlow 源码报告 TS6059。
-} from '../../../javascript_project/service/base_lib/domain/api_write_engine';
 
 function tag(name: string, value: unknown): string {
   return `<${name}>${JSON.stringify(value)}</${name}>`;
@@ -393,7 +388,12 @@ describe('ERA $expr 与函数指令', () => {
         EditLogs: { 'mk-sealed': [{ op: 'update', path: 'a', value_old: 1, value_new: 2 }] },
         FunctionEditLogs: {},
         CommandCompaction: {
-          'mk-sealed': { version: 1, mk: 'mk-sealed', contentHash: 'fnv1a-not-the-current-content', status: 'compacted' },
+          'mk-sealed': {
+            version: 1,
+            mk: 'mk-sealed',
+            contentHash: 'fnv1a-not-the-current-content',
+            status: 'compacted',
+          },
         },
       }),
     ).toEqual({ type: 'FULL_RECALC', recalcId: 0, cause: 'divergence' });
@@ -405,11 +405,7 @@ describe('ERA $expr 与函数指令', () => {
       message(
         1,
         'mk-sealed',
-        [
-          edit({ a: { $expr: 'a + 1' } }),
-          edit({ b: { $expr: 'a * 2' } }),
-          edit({ a: { $expr: 'a + 1' } }),
-        ].join('\n'),
+        [edit({ a: { $expr: 'a + 1' } }), edit({ b: { $expr: 'a * 2' } }), edit({ a: { $expr: 'a + 1' } })].join('\n'),
       ),
       message(2, 'mk-latest', '用于封存前一条 AI 消息。'),
     ];
@@ -428,7 +424,7 @@ describe('ERA $expr 与函数指令', () => {
     const sealed = (compacted.messages[1] as { content: { text: string } }).content.text;
     expect(sealed).toContain('"b":{"$expr":"(@a + 1) * 2"}');
 
-    const editedHistory = compacted.messages.map((item) => ({ ...item }));
+    const editedHistory = compacted.messages.map(item => ({ ...item }));
     editedHistory[0] = message(0, 'mk-base', edit({ a: { $expr: 'a + 5' } }));
     const replay = applySealedCommandCompaction(
       planEraSync({
@@ -454,24 +450,5 @@ describe('ERA $expr 与函数指令', () => {
       ].join('\n'),
     }).map(command => command.type);
     expect(types).toEqual(['function-insert', 'edit', 'function-delete']);
-  });
-
-  it('公开函数 API 只生成标准函数标签，随后由同一同步链重放', () => {
-    const insert = prepareApiWriteDirective('era:functionInsertByObject', {
-      f: { params: ['x'], expr: 'x + 2' },
-    });
-    const editFunction = prepareApiWriteDirective('era:functionEditByObject', {
-      f: { params: ['x'], expr: 'x * 3' },
-    });
-    const remove = prepareApiWriteDirective('era:functionDeleteByObject', { f: {} });
-    expect(insert.blockTag).toBe('FunctionInsert');
-    expect(editFunction.blockTag).toBe('FunctionEdit');
-    expect(remove.blockTag).toBe('FunctionDelete');
-    const result = apply(
-      `${insert.block}${edit({ value: { $expr: 'f(value)' } })}${editFunction.block}${remove.block}`,
-      { value: 2 },
-    );
-    expect(result.finalStat).toEqual({ value: 4 });
-    expect(result.finalStatFunc).toEqual({});
   });
 });

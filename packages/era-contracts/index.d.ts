@@ -58,6 +58,13 @@ export interface EraServiceStateV1 {
   readonly consecutiveProcessingCount: number;
   readonly consecutiveMk: string | null;
   readonly timerToken: string | null;
+  readonly scopeWindow: EraScopeWindowStateV1;
+}
+
+export interface EraScopeWindowStateV1 {
+  readonly token: number | null;
+  readonly messageAdmission: boolean | null;
+  readonly branchAdmission: boolean | null;
 }
 
 export type EraCollectionRouteV1 = "wait" | "execute";
@@ -104,7 +111,7 @@ export interface EraDispatchContextV2 {
   readonly failure: EraFailureV1 | null;
 }
 export type EraSyncReasonV1 =
-  "history-changed" | "edited" | "swipe-regeneration" | "manual" | "api-write";
+  "history-changed" | "edited" | "swipe-regeneration" | "manual" | "facade-commit";
 export type EraSyncTargetV1 =
   | { readonly kind: "auto" }
   | {
@@ -239,6 +246,7 @@ export type EraTaskStatusV1 = "committed" | "no-op" | "failed" | "fatal";
 export interface EraTaskStateUpdateV1 {
   readonly consecutiveMk: string | null;
   readonly consecutiveProcessingCount: number;
+  readonly scopeWindow?: EraScopeWindowStateV1;
 }
 
 export interface EraTaskResultV1 {

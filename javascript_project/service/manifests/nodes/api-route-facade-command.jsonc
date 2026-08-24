@@ -1,0 +1,80 @@
+{
+  "kind": "node",
+  "type_key": "era.api.route_facade_command",
+  "display_name": "路由 Facade 命令",
+  "category": "公共 Facade",
+  "description": "只接受 commit 与 sync 内部命令。",
+  "version": "1.0.0",
+  "flow_kind": "decision",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.step.request.routed",
+        "cardinality": "exactly_one",
+        "display_name": "era.step.request.routed"
+      },
+      {
+        "type": "era.batch.execution.state",
+        "cardinality": "exactly_one",
+        "display_name": "era.batch.execution.state"
+      }
+    ],
+    "provides": [
+      {
+        "key": "facade_request",
+        "type": "era.api.request",
+        "display_name": "facade_request"
+      },
+      {
+        "key": "facade_route",
+        "type": "era.api.route",
+        "display_name": "facade_route"
+      },
+      {
+        "key": "facade_execution_state",
+        "type": "era.batch.execution.state",
+        "display_name": "facade_execution_state"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.step.request.routed": [
+        "输入：era.step.request.routed。"
+      ],
+      "era.batch.execution.state": [
+        "输入：era.batch.execution.state。"
+      ]
+    },
+    "output_semantics": {
+      "facade_request": [
+        "输出：facade_request。"
+      ],
+      "facade_route": [
+        "输出：facade_route。"
+      ],
+      "facade_execution_state": [
+        "输出：facade_execution_state。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/api/facade_route.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.facade_nodes"
+  ],
+  "capabilities": []
+}

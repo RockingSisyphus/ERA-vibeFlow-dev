@@ -548,7 +548,7 @@ function snapshotItem(
   };
 }
 
-/** `era:getCurrentVars` 的纯结果计算。 */
+/** 当前 Sidecar 快照的纯结果计算，供 Facade 读取与历史查询复用。 */
 export function queryCurrentVars(
   variables: EraSnapshotVariables,
   messages: readonly unknown[],
@@ -704,7 +704,7 @@ function isQueryType(value: unknown): value is EraSnapshotQueryType {
 }
 
 /**
- * 形成可直接声明为 `era:queryResult` 第一个参数的完整兼容 payload。
+ * 形成 Facade history 查询使用的完整可序列化结果。
  * 查询参数错误保留在 payload.result 中；非五类查询才返回稳定失败 DTO。
  */
 export function executeSnapshotQuery(

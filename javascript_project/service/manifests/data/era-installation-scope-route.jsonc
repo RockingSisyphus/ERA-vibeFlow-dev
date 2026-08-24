@@ -1,1 +1,15 @@
-{"kind":"data_schema","type_key":"era.installation.scope.route","representation":"json","display_name":"ERA 安装作用域路由","description":"主 workflow 的启动分支路由。","schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"string","enum":["allow","dormant"]}}
+{
+  "kind": "data_schema",
+  "type_key": "era.installation.scope.route",
+  "representation": "json",
+  "display_name": "ERA 安装作用域路由",
+  "description": "主 workflow 的启动分支路由。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "string",
+    "enum": [
+      "allow",
+      "dormant"
+    ]
+  }
+}

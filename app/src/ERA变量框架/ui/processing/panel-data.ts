@@ -1,14 +1,14 @@
 /**
  * @file panel-data.ts
- * @description Processes raw event data and generates static HTML for the EraDataPanel component.
+ * @description 将公共 Sidecar 状态转换为 EraDataPanel 使用的静态 HTML。
  */
 
-import type { WriteDonePayload } from '../../utils/constants';
+import type { EraPublicState } from '../../service/public-api';
 
-// --- HTML Generation Functions ---
+// --- HTML 生成函数 ---
 
 /**
- * Recursively converts a JSON object to a static HTML string, mimicking JsonNode.vue.
+ * 递归把 JSON 对象转换为与 JsonNode.vue 一致的静态 HTML。
  */
 function jsonToHtml(data: any, level = 0, maxDepth = Infinity, defaultCollapsed = true): string {
   const type = (() => {
@@ -102,16 +102,16 @@ function createTabsHtml(tabs: { key: string; label: string; content: string }[])
  * @param payload The raw event payload.
  * @returns A static HTML string.
  */
-export function createPanelBodyHtml(payload: WriteDonePayload | null): string {
+export function createPanelBodyHtml(payload: EraPublicState | null): string {
   if (!payload) {
-    return '<div class="empty">等待 era:writeDone 事件数据…</div>';
+    return '<div class="empty">等待 ERA 运行时状态…</div>';
   }
 
   const metaHtml = `
     <div class="meta-header">
       <span>MK: ${payload.mk}</span>
       <span>Message ID: ${payload.message_id}</span>
-      <span>来源: ${payload.is_user ? '用户' : 'AI'}</span>
+      <span>Sidecar revision: ${payload.revision ?? '-'}</span>
     </div>
   `;
 

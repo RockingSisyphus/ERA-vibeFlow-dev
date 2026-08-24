@@ -1,1 +1,20 @@
-{"kind":"data_schema","type_key":"era.sidecar.binding.input","representation":"json","display_name":"Sidecar 绑定输入","description":"仅在 Sidecar Nodeset 内部传递的同步上下文封装。","schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","required":["sync"],"additionalProperties":false,"properties":{"sync":{"type":"object"}}}}
+{
+  "kind": "data_schema",
+  "type_key": "era.sidecar.binding.input",
+  "representation": "json",
+  "display_name": "Sidecar 绑定输入",
+  "description": "仅在 Sidecar Nodeset 内部传递的同步上下文封装。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": [
+      "sync"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "sync": {
+        "type": "object"
+      }
+    }
+  }
+}

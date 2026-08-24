@@ -7,11 +7,25 @@
   "schema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
-    "required": ["status", "reason"],
+    "required": [
+      "status",
+      "reason"
+    ],
     "additionalProperties": false,
     "properties": {
-      "status": {"enum": ["character", "global", "preset", "ambiguous", "unknown"]},
-      "reason": {"type": "string", "minLength": 1}
+      "status": {
+        "enum": [
+          "character",
+          "global",
+          "preset",
+          "ambiguous",
+          "unknown"
+        ]
+      },
+      "reason": {
+        "type": "string",
+        "minLength": 1
+      }
     }
   }
 }

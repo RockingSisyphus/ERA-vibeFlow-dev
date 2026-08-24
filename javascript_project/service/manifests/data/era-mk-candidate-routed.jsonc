@@ -7,17 +7,61 @@
   "schema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
-    "required": ["schemaVersion", "step", "disposition", "mk", "messageUpdate", "metaUpdate", "messageWriteRequired", "variableWriteRequired", "failure"],
+    "required": [
+      "schemaVersion",
+      "step",
+      "disposition",
+      "mk",
+      "messageUpdate",
+      "metaUpdate",
+      "messageWriteRequired",
+      "variableWriteRequired",
+      "failure"
+    ],
     "properties": {
-      "schemaVersion": {"const": 1},
-      "step": {"type": "object"},
-      "disposition": {"type": "string", "enum": ["ready", "failed"]},
-      "mk": {"type": ["string", "null"]},
-      "messageUpdate": {"type": ["object", "null"]},
-      "metaUpdate": {"type": ["object", "null"]},
-      "messageWriteRequired": {"type": "boolean"},
-      "variableWriteRequired": {"type": "boolean"},
-      "failure": {"type": ["object", "null"]}
+      "schemaVersion": {
+        "const": 1
+      },
+      "step": {
+        "type": "object"
+      },
+      "disposition": {
+        "type": "string",
+        "enum": [
+          "ready",
+          "failed"
+        ]
+      },
+      "mk": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "messageUpdate": {
+        "type": [
+          "object",
+          "null"
+        ]
+      },
+      "metaUpdate": {
+        "type": [
+          "object",
+          "null"
+        ]
+      },
+      "messageWriteRequired": {
+        "type": "boolean"
+      },
+      "variableWriteRequired": {
+        "type": "boolean"
+      },
+      "failure": {
+        "type": [
+          "object",
+          "null"
+        ]
+      }
     },
     "additionalProperties": false
   }

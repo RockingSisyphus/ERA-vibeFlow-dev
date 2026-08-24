@@ -16,7 +16,7 @@
           <SnapshotManager :latest-data="data" />
         </template>
         <template v-else>
-          <div class="empty">等待 era:writeDone 事件数据…</div>
+          <div class="empty">等待 ERA 运行时状态…</div>
         </template>
       </div>
     </div>
@@ -24,7 +24,7 @@
 </template>
 
 <script setup lang="ts">
-import type { WriteDonePayload } from '../../utils/constants';
+import type { EraPublicState } from '../../service/public-api';
 import { Logger } from '../../utils/log';
 import EraAccordion from '../template/EraAccordion.vue';
 import MetaHeader from './EraPanelContent/MetaHeader.vue';
@@ -36,7 +36,7 @@ type TabItem = { key: 'pure' | 'full'; label: string };
 const logger = new Logger();
 
 defineProps<{
-  data: WriteDonePayload | null;
+  data: EraPublicState | null;
 }>();
 
 const requestSwitchView = (viewName: 'FloatingBall' | 'ExpandedView') => {

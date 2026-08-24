@@ -17,6 +17,7 @@ import {
   type EraPageLifecycleTarget,
 } from './service/lifecycle';
 import { TavernEraServiceAdapter } from './service/tavern-adapter';
+import { installEraPublicApi } from './service/public-api';
 import type {
   EraAdmissionResult,
   EraRuntimeAdapter,
@@ -60,6 +61,7 @@ function productionDependencies(): EraApplicationDependencies {
     createAdapter: options => new TavernEraServiceAdapter(options),
     createHost: () => createWorkflowHost() as EraWorkflowHost,
     startMacro: startEraMacroSubsystem,
+    startPublicApi: installEraPublicApi,
     startUi: startEraUi,
     refreshSettings: initEraSettings,
     dispatchSettingsUpdated,

@@ -58,8 +58,8 @@
       {
         "id": "classify_context",
         "type_used": "era.dispatch.classify_context",
-        "display_name": "分类任务与上下文",
-        "description": "验证 PlannedStep，确定 initialize、sync、api、update-mk 或 ignore 路由，并将 context:none、latest-message、latest-message-with-mk 映射为明确准备模式。"
+        "display_name": "分类生命周期与公共对象上下文",
+        "description": "验证 PlannedStep，保留 initialize、sync、update-mk 与 ignore；将直接公共对象 commit/sync 归为 api。Commit 的 Scope 准入和消息目标仍留在专用 workflow。"
       },
       {
         "id": "build_no_host_context",

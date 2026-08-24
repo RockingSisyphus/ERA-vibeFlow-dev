@@ -21,6 +21,7 @@ beforeEach(() => {
     identity: { characterId: 'card-a', groupId: null, chatId: 'chat-a' },
     revision: 1,
     statData: { character: { hp: 7 } },
+    statFunc: {},
     eraMeta: {},
   });
 });

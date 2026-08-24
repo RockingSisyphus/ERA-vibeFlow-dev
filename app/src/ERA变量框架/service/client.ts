@@ -32,6 +32,12 @@ export function requestEraService(
   return activeAdapter.enqueue(type, source, args);
 }
 
+/** 捕获调用进入 FIFO 前的当前 Tavern 生命周期，用于写入前陈旧请求复核。 */
+export function captureEraLifecycleToken(): number {
+  if (!activeAdapter) throw new Error('ERA_APP_SERVICE_UNAVAILABLE: ERA Service client 尚未连接。');
+  return activeAdapter.currentLifecycleToken();
+}
+
 export function requireAccepted(result: EraAdmissionResult): EraAdmissionAccepted {
   if (!result.accepted) throw new Error(`${result.code}: ${result.message}`);
   return result;

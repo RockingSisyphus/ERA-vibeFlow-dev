@@ -1,0 +1,1 @@
+{"kind":"data_schema","type_key":"era.command_compaction.partitioned","representation":"json","display_name":"已划分同 Scope 段","description":"按正文和 scope 硬边界划分连续段的压缩上下文。","schema":{"type":"object","additionalProperties":true}}

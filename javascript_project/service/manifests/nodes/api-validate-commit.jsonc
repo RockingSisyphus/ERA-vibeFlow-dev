@@ -1,0 +1,72 @@
+{
+  "kind": "node",
+  "type_key": "era.api.validate_commit",
+  "display_name": "校验 Scope 与有序操作",
+  "category": "公共 Facade",
+  "description": "校验窗口 token、scope、操作并决定 commit、skipped 或 failed。",
+  "version": "1.0.0",
+  "flow_kind": "decision",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.api.commit.inspected",
+        "cardinality": "exactly_one",
+        "display_name": "era.api.commit.inspected"
+      }
+    ],
+    "provides": [
+      {
+        "key": "commit_admission_route",
+        "type": "era.api.commit.admission.route",
+        "display_name": "commit_admission_route"
+      },
+      {
+        "key": "facade_commit_validated",
+        "type": "era.api.commit.validated",
+        "display_name": "facade_commit_validated"
+      },
+      {
+        "key": "facade_commit_validation_failure",
+        "type": "era.api.commit.failure_context",
+        "display_name": "facade_commit_failure_context"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.api.commit.inspected": [
+        "输入：era.api.commit.inspected。"
+      ]
+    },
+    "output_semantics": {
+      "commit_admission_route": [
+        "输出：commit_admission_route。"
+      ],
+      "facade_commit_validated": [
+        "输出：facade_commit_validated。"
+      ],
+      "facade_commit_validation_failure": [
+        "输出：facade_commit_failure_context。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/api/facade_validate_commit.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.facade_nodes"
+  ],
+  "capabilities": []
+}

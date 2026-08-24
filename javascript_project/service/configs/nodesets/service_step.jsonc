@@ -18,7 +18,7 @@
   ],
   "type_key": "era.service.step",
   "display_name": "ERA 规划步骤",
-  "description": "选择一个严格 PlannedStep，经显式任务路由执行 initialize、sync、api、update-mk 或 ignore，并更新有界批次执行状态。",
+  "description": "选择一个严格 PlannedStep，经显式任务路由执行 initialize、sync、公共对象 commit/sync、update-mk 或 ignore，并更新有界批次执行状态。",
   "requires": [
     {
       "type": "era.batch.execution.state",
@@ -83,8 +83,8 @@
       {
         "id": "task_api",
         "type_used": "era.task.api",
-        "display_name": "执行外部 API 任务",
-        "description": "进入十三个公开 API 的显式二级路由，执行六个写入、五个查询、writeDone 重放或强制同步。"
+        "display_name": "执行 ERA 公共对象任务",
+        "description": "进入新的公共对象二级路由：一次 ERA.commit 对应一次即时消息与 Sidecar 事务，ERA.sync 复用共享同步；读取和订阅不进入 Service 事件任务。"
       },
       {
         "id": "task_update_mk",

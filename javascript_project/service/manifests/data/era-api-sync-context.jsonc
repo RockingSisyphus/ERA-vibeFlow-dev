@@ -1,0 +1,1 @@
+{"kind":"data_schema","type_key":"era.api.sync.context","representation":"json","display_name":"公共对象同步上下文","description":"同步步骤或输入失败上下文。","schema":{"type":"object","additionalProperties":true}}

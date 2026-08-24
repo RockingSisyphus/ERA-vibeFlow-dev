@@ -1,0 +1,1 @@
+{"kind":"data_schema","type_key":"era.api.window.recheck.route","representation":"json","display_name":"窗口复核路由","description":"选择 current 或 changed。","schema":{"type":"string","enum":["current","changed"]}}

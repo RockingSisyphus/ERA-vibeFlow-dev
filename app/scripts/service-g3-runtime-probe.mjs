@@ -109,7 +109,17 @@ function createAdapter() {
         read: async () => ({ enabled: false, regexes: [] }),
         upsert: async () => ({ status: 'committed' }),
       },
-      identity: { read: () => ({ characterName: '运行时探针角色', isGroup: false }) },
+      identity: {
+        read: () => ({
+          characterName: '运行时探针角色',
+          isGroup: false,
+          characterId: 'probe-card',
+          groupId: null,
+          chatId: 'probe-chat',
+          scriptId: 'era-probe',
+          lifecycleToken: 1,
+        }),
+      },
       installation_scope: {
         read: () => ({ scriptId: 'era-probe', scopes: ['character'], readStatus: 'complete' }),
       },
@@ -141,7 +151,14 @@ function createAdapter() {
       return listener(event);
     },
     snapshot() {
-      return { registrations, removals, notifications: notifications.length, warnings: warnings.length };
+      return {
+        registrations,
+        removals,
+        notifications: notifications.length,
+        warnings: warnings.length,
+        message: messages.at(-1)?.message ?? '',
+        sidecarRecords: sidecarRecords.size,
+      };
     },
   };
 }
@@ -177,23 +194,13 @@ async function probeGeneratedHost(workflow) {
 
   const outcomes = [];
   for (let sequence = 1; sequence <= 4; sequence += 1) {
-    const type =
-      sequence === 1
-        ? 'message_received'
-        : sequence === 2
-          ? 'era:getCurrentVars'
-          : sequence === 3
-            ? 'era:insertByObject'
-            : 'era:forceSync';
+    const type = sequence === 1 ? 'message_received' : sequence === 3 ? 'era.facade.commit' : 'era.facade.sync';
     const admission = fake.emit({
       type,
       source: sequence === 1 ? 'tavern' : 'era-api',
-      args:
-        sequence === 3
-          ? [{ __eraRuntimeProbe: { value: sequence } }]
-          : sequence === 4
-            ? [{ mode: 'latest' }]
-            : [{ sequence }],
+      args: sequence === 3
+        ? [{ scope: 'always', operations: [{ insert: { __eraRuntimeProbe: { value: sequence } } }], windowToken: 1 }]
+        : sequence === 1 ? [] : [{ mode: 'full' }],
       occurredAt: 1_000 + sequence,
     });
     assert(admission.accepted === true, `第 ${sequence} 个事件未被接纳。`);
@@ -228,9 +235,10 @@ async function probeGeneratedHost(workflow) {
   assert(afterStop.removals === 1, 'host.stop() 必须只注销一次监听器。');
   assert(
     outcomes.every(outcome => outcome.status === 'completed'),
-    '真实同步与查询事件必须完整结算。',
+    '真实同步与 Facade 事件必须完整结算。',
   );
-  assert(afterStop.notifications >= 5, '写入 API 和 forceSync 必须在真实 Host 路径中发出兼容通知。');
+  assert(afterStop.message.includes('<era_tx s="a">'), 'ERA.commit 必须写入独立 always 事务。');
+  assert(afterStop.sidecarRecords >= 1, '即时 commit 必须提交 Sidecar。');
   assert(executionCode === 'VF_ABORTED', `永久 workflow 停止码异常：${String(executionCode)}`);
   assert(stopMs <= 1_000, `Host 停止耗时 ${stopMs}ms，超过 1 秒。`);
 
@@ -245,7 +253,7 @@ async function probeWorkflowFrames(workflow) {
       schemaVersion: 1,
       eventId: 'probe:event:1',
       sequence: 1,
-      type: 'era:getCurrentVars',
+      type: 'era.facade.sync',
       occurredAt: 1_001,
       source: 'era-api',
       args: [],
@@ -255,7 +263,7 @@ async function probeWorkflowFrames(workflow) {
       schemaVersion: 1,
       eventId: 'probe:event:2',
       sequence: 2,
-      type: 'era:getCurrentVars',
+      type: 'era.facade.sync',
       occurredAt: 1_002,
       source: 'era-api',
       args: [],

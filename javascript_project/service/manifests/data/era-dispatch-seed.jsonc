@@ -1,1 +1,12 @@
-{"kind":"data_schema","type_key":"era.dispatch.seed","representation":"json","display_name":"ERA 派发准备种子","description":"携带规划步骤、批次状态、显式任务来源和上下文要求。","schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":true}}
+{
+  "kind": "data_schema",
+  "type_key": "era.dispatch.seed",
+  "representation": "json",
+  "display_name": "ERA 派发准备种子",
+  "description": "携带规划步骤、批次状态、显式任务来源和上下文要求。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": true
+  }
+}

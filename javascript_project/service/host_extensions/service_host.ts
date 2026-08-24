@@ -169,7 +169,6 @@ export interface EraHostDiagnosticsSnapshot {
   readonly started: boolean;
   readonly stopping: boolean;
   readonly fatal: boolean;
-  readonly cachedWriteDone: boolean;
   readonly accepted: number;
   readonly settled: number;
   readonly queueEvents: number;
@@ -255,12 +254,10 @@ interface PreparedBatch {
   readonly notifications: readonly EraPreparedNotification[];
   readonly diagnostics: readonly EraDiagnosticV1[];
   readonly fatal: boolean;
-  readonly cachedWriteDoneArgs: readonly unknown[] | null;
 }
 
 interface PreparedNotifications {
   readonly values: readonly EraPreparedNotification[];
-  readonly cachedWriteDoneArgs: readonly unknown[] | null;
 }
 
 interface LinkedSignal {
@@ -272,13 +269,6 @@ const DEFAULT_INBOUND_PORT = "era.service.in";
 const DEFAULT_OUTBOUND_PORT = "era.service.out";
 const DEFAULT_ADAPTER_GLOBAL_KEY = "__ERA_VIBEFLOW_SERVICE_ADAPTER__";
 const MAX_PROCESSED_FRAMES = 4096;
-
-/** Tavern 可观察的写入完成通知类型。 */
-export const ERA_WRITE_DONE_NOTIFICATION_TYPE = "era:writeDone";
-
-/** 仅在 Host 内部消费：请求重播最近一次 era:writeDone，不得透传给 Tavern。 */
-export const ERA_INTERNAL_REPLAY_WRITE_DONE_NOTIFICATION_TYPE =
-  "era:internal:replayWriteDone";
 
 export class EraServiceHostError extends Error {
   readonly code: string;
@@ -553,7 +543,6 @@ class ServiceHostRuntime {
   private stopping = false;
   private fatalTransitioning = false;
   private fatalLatched = false;
-  private cachedWriteDoneArgs: readonly unknown[] | null = null;
   private nextSequence = 1;
   private acceptedCount = 0;
   private settledCount = 0;
@@ -788,7 +777,6 @@ class ServiceHostRuntime {
       started: this.started,
       stopping: this.stopping,
       fatal: this.fatalLatched || this.fatalTransitioning,
-      cachedWriteDone: this.cachedWriteDoneArgs !== null,
       accepted: this.acceptedCount,
       settled: this.settledCount,
       queueEvents: this.queue.length,
@@ -1236,7 +1224,6 @@ class ServiceHostRuntime {
       notifications: notifications.values,
       diagnostics: frame.diagnostics,
       fatal: frame.fatal,
-      cachedWriteDoneArgs: notifications.cachedWriteDoneArgs,
     };
   }
 
@@ -1244,41 +1231,16 @@ class ServiceHostRuntime {
     value: readonly EraNotificationV1[],
   ): PreparedNotifications {
     const values: EraPreparedNotification[] = [];
-    let cachedWriteDoneArgs = this.cachedWriteDoneArgs;
     for (const notification of value) {
-      if (
-        notification.type ===
-        ERA_INTERNAL_REPLAY_WRITE_DONE_NOTIFICATION_TYPE
-      ) {
-        if (notification.args.length !== 0) {
-          throw new EraServiceHostError(
-            "ERA_HOST_FRAME_INVALID",
-            "内部 writeDone 重播命令不得携带参数。",
-          );
-        }
-        if (cachedWriteDoneArgs !== null) {
-          values.push(
-            Object.freeze({
-              type: ERA_WRITE_DONE_NOTIFICATION_TYPE,
-              args: cachedWriteDoneArgs,
-            }),
-          );
-        }
-        continue;
-      }
       const args = notification.args.map((arg) => this.decodeTransportArg(arg));
       const prepared = Object.freeze({
         type: notification.type,
         args: Object.freeze(args),
       });
-      if (prepared.type === ERA_WRITE_DONE_NOTIFICATION_TYPE) {
-        cachedWriteDoneArgs = prepared.args;
-      }
       values.push(prepared);
     }
     return Object.freeze({
       values: Object.freeze(values),
-      cachedWriteDoneArgs,
     });
   }
 
@@ -1305,7 +1267,6 @@ class ServiceHostRuntime {
       this.settleRecord(settlement.sequence, settlement);
     }
     if (batch.fatal) this.latchFatal();
-    this.cachedWriteDoneArgs = batch.cachedWriteDoneArgs;
     for (const diagnostic of batch.diagnostics) {
       this.warn("ERA 工作流诊断。", {
         code: diagnostic.code,
@@ -1677,7 +1638,6 @@ class ServiceHostRuntime {
     this.references.clear();
     this.failureLedger.clear();
     this.processedFrames.clear();
-    this.cachedWriteDoneArgs = null;
     this.fatalTransitioning = false;
     this.fatalLatched = false;
 

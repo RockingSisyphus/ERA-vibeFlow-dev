@@ -1,0 +1,56 @@
+{
+  "kind": "node",
+  "type_key": "era.api.merge_facade_result",
+  "display_name": "合并公共对象任务结果",
+  "category": "公共 Facade",
+  "description": "commit 或 sync 恰好产生一个现有任务结果。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.api.facade.result",
+        "cardinality": "all",
+        "display_name": "era.api.facade.result"
+      }
+    ],
+    "provides": [
+      {
+        "key": "api_task_result",
+        "type": "era.task.result",
+        "display_name": "api_task_result"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.api.facade.result": [
+        "输入：era.api.facade.result。"
+      ]
+    },
+    "output_semantics": {
+      "api_task_result": [
+        "互斥 Facade 分支的唯一标准任务结果。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/api/facade_merge_result.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.facade_nodes"
+  ],
+  "capabilities": []
+}

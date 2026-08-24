@@ -122,6 +122,8 @@ export interface EraTavernAdapter {
 /** 应用启动器和 UI client 共用的最小入站接口。 */
 export interface EraServiceIngress {
   enqueue(type: string, source: Exclude<EraEventSource, 'timer'>, args?: readonly unknown[]): EraAdmissionResult;
+  /** 当前页面实例的单调 Tavern 生命周期 token；只作为 Service 的原始输入事实。 */
+  currentLifecycleToken(): number;
   stopAccepting(): void;
 }
 

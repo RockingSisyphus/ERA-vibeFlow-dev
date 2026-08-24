@@ -1,35 +1,32 @@
 {
   "nodeset_imports": [
     {
-      "path": "api_query.jsonc"
+      "path": "api_commit.jsonc"
     },
     {
-      "path": "api_write.jsonc"
-    },
-    {
-      "path": "api_force_sync.jsonc"
+      "path": "api_sync.jsonc"
     }
   ],
   "type_key": "era.task.api",
-  "display_name": "ERA 外部 API 任务",
-  "description": "将十三个公开 era:* 输入事件明确路由到六个写入、五个只读查询、writeDone 重放或强制同步语义。",
+  "display_name": "ERA 公共对象任务",
+  "description": "把唯一公共 Facade 的 commit 或 sync 命令路由到实际事务。",
   "requires": [
     {
       "type": "era.step.request.routed",
       "cardinality": "exactly_one",
-      "display_name": "已路由步骤"
+      "display_name": "era.step.request.routed"
     },
     {
       "type": "era.batch.execution.state",
       "cardinality": "exactly_one",
-      "display_name": "当前批次执行状态"
+      "display_name": "era.batch.execution.state"
     }
   ],
   "provides": [
     {
       "key": "api_task_result",
       "type": "era.task.result",
-      "display_name": "API 结果"
+      "display_name": "api_task_result"
     }
   ],
   "pipeline": {
@@ -38,120 +35,80 @@
       {
         "key": "routed_step",
         "type": "era.step.request.routed",
-        "display_name": "已路由步骤",
-        "required": true
+        "required": true,
+        "display_name": "routed_step"
       },
       {
         "key": "execution_state",
         "type": "era.batch.execution.state",
-        "display_name": "当前批次执行状态",
-        "required": true
+        "required": true,
+        "display_name": "execution_state"
       }
     ],
-    "max_steps": 20,
+    "max_steps": 10,
     "nodes": [
       {
         "id": "start",
         "type_used": "era.service.terminal",
-        "display_name": "API 任务开始",
-        "description": "开始一次公开 API 任务。"
+        "display_name": "公共对象任务开始",
+        "description": "执行公共对象任务开始。"
       },
       {
-        "id": "route_api",
-        "type_used": "era.api.route",
-        "display_name": "路由十三个公开 API",
-        "description": "从已准备步骤读取 dispatchClass=api 和 tagged transport args，无损提取请求，并明确选择 write、query、request-write-done 或 force-sync；不改变连续状态 carry。"
+        "id": "route_facade_command",
+        "type_used": "era.api.route_facade_command",
+        "display_name": "路由 commit 与 sync",
+        "description": "执行路由 commit 与 sync。"
       },
       {
-        "id": "write_api",
-        "type_used": "era.api.write",
-        "display_name": "执行六个写入 API",
-        "description": "先确认指令消息写入，再复用共享同步事务提交变量并按兼容顺序声明 apiWrite/writeDone。"
+        "id": "commit",
+        "type_used": "era.api.commit",
+        "display_name": "执行即时 ERA.commit",
+        "description": "执行执行即时 ERA.commit。"
       },
       {
-        "id": "query_api",
-        "type_used": "era.api.query",
-        "display_name": "执行五个只读查询 API",
-        "description": "只读取得变量和消息上下文，并通过快照纯函数形成 era:queryResult 通知。"
+        "id": "sync",
+        "type_used": "era.api.sync",
+        "display_name": "执行 ERA.sync",
+        "description": "执行执行 ERA.sync。"
       },
       {
-        "id": "request_write_done",
-        "type_used": "era.api.request_write_done",
-        "display_name": "处理 writeDone 重放请求",
-        "description": "声明 Host 内部重放命令，在结算后广播最近一次已确认的 writeDone 载荷。"
-      },
-      {
-        "id": "force_sync",
-        "type_used": "era.api.force_sync",
-        "display_name": "执行强制同步",
-        "description": "执行 full、latest、auto 或 rollbackTo，并复用与普通事件相同的共享同步事务。"
-      },
-      {
-        "id": "merge_api_result",
-        "type_used": "era.api.merge_result",
-        "display_name": "合并互斥 API 结果",
-        "description": "将四条互斥分支之一的中间结果转换为唯一公共任务结果。"
-      },
-      {
-        "id": "export_api_result",
-        "type_used": "era.api.export_result",
-        "display_name": "确认 API 结果已导出",
-        "description": "在结束前确认唯一任务结果已经形成；不再次提供同类型候选。"
+        "id": "merge_facade_result",
+        "type_used": "era.api.merge_facade_result",
+        "display_name": "合并公共对象任务结果",
+        "description": "执行合并公共对象任务结果。"
       },
       {
         "id": "end",
         "type_used": "era.service.terminal",
-        "display_name": "API 任务结束",
-        "description": "结束一次公开 API 任务。"
+        "display_name": "公共对象任务结束",
+        "description": "执行公共对象任务结束。"
       }
     ],
     "edges": [
       [
         "start",
-        "route_api"
+        "route_facade_command"
       ],
       {
-        "from": "route_api",
-        "to": "write_api",
-        "when": "api_route == 'write'"
+        "from": "route_facade_command",
+        "to": "commit",
+        "when": "facade_route == 'commit'"
       },
       {
-        "from": "route_api",
-        "to": "query_api",
-        "when": "api_route == 'query'"
-      },
-      {
-        "from": "route_api",
-        "to": "request_write_done",
-        "when": "api_route == 'request-write-done'"
-      },
-      {
-        "from": "route_api",
-        "to": "force_sync",
-        "when": "api_route == 'force-sync'"
+        "from": "route_facade_command",
+        "to": "sync",
+        "when": "facade_route == 'sync'"
       },
       [
-        "write_api",
-        "merge_api_result"
+        "commit",
+        "merge_facade_result"
       ],
       [
-        "query_api",
-        "merge_api_result"
+        "sync",
+        "merge_facade_result"
       ],
       [
-        "request_write_done",
-        "merge_api_result"
-      ],
-      [
-        "force_sync",
-        "merge_api_result"
-      ],
-      [
-        "merge_api_result",
-        "export_api_result"
-      ],
-      [
-        "export_api_result",
+        "merge_facade_result",
         "end"
       ]
     ],
@@ -159,8 +116,8 @@
       {
         "type": "era.task.result",
         "cardinality": "exactly_one",
-        "display_name": "API 结果",
-        "as": "apiTaskResult"
+        "as": "apiTaskResult",
+        "display_name": "apiTaskResult"
       }
     ]
   }

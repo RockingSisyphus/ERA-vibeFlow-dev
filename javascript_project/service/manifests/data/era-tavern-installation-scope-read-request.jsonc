@@ -1,1 +1,12 @@
-{"kind":"data_schema","type_key":"era.tavern.installation_scope.read.request","representation":"json","display_name":"安装作用域读取请求","description":"无输入的启动期脚本树读取请求。","schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false}}
+{
+  "kind": "data_schema",
+  "type_key": "era.tavern.installation_scope.read.request",
+  "representation": "json",
+  "display_name": "安装作用域读取请求",
+  "description": "无输入的启动期脚本树读取请求。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false
+  }
+}

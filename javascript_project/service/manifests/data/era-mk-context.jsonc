@@ -7,39 +7,111 @@
   "schema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
-    "required": ["schemaVersion", "step", "status", "message", "meta", "placeholderSettings", "failure"],
+    "required": [
+      "schemaVersion",
+      "step",
+      "status",
+      "message",
+      "meta",
+      "placeholderSettings",
+      "failure"
+    ],
     "properties": {
-      "schemaVersion": {"const": 1},
-      "step": {"type": "object"},
-      "status": {"type": "string", "enum": ["ready", "failed"]},
-      "message": {
-        "type": ["object", "null"],
-        "properties": {
-          "messageId": {"type": "integer", "minimum": 0},
-          "role": {"type": "string", "minLength": 1},
-          "activeText": {"type": "string"}
-        },
-        "required": ["messageId", "role", "activeText"]
+      "schemaVersion": {
+        "const": 1
       },
-      "meta": {"type": ["object", "null"]},
-      "placeholderSettings": {
-        "type": ["object", "null"],
+      "step": {
+        "type": "object"
+      },
+      "status": {
+        "type": "string",
+        "enum": [
+          "ready",
+          "failed"
+        ]
+      },
+      "message": {
+        "type": [
+          "object",
+          "null"
+        ],
         "properties": {
-          "enabled": {"type": "boolean"},
-          "value": {"type": "string"}
+          "messageId": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "role": {
+            "type": "string",
+            "minLength": 1
+          },
+          "activeText": {
+            "type": "string"
+          }
         },
-        "required": ["enabled", "value"],
+        "required": [
+          "messageId",
+          "role",
+          "activeText"
+        ]
+      },
+      "meta": {
+        "type": [
+          "object",
+          "null"
+        ]
+      },
+      "placeholderSettings": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "value": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "enabled",
+          "value"
+        ],
         "additionalProperties": false
       },
       "failure": {
-        "type": ["object", "null"],
+        "type": [
+          "object",
+          "null"
+        ],
         "properties": {
-          "code": {"type": "string", "minLength": 1},
-          "message": {"type": "string", "minLength": 1},
-          "category": {"type": "string", "enum": ["input", "domain", "tavern", "cancelled"]},
-          "retryable": {"const": false}
+          "code": {
+            "type": "string",
+            "minLength": 1
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "input",
+              "domain",
+              "tavern",
+              "cancelled"
+            ]
+          },
+          "retryable": {
+            "const": false
+          }
         },
-        "required": ["code", "message", "category", "retryable"]
+        "required": [
+          "code",
+          "message",
+          "category",
+          "retryable"
+        ]
       }
     },
     "additionalProperties": false

@@ -1,5 +1,0 @@
-{
-  "kind": "data_schema", "type_key": "era.api.write.append.result", "representation": "json",
-  "display_name": "ERA·API·消息·追加·结果", "description": "区分消息更新已确认提交、已确认未应用和提交状态未知。",
-  "schema": {"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "additionalProperties": true}
-}

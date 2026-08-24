@@ -3,7 +3,7 @@
   "type_key": "era.sync.build_notification",
   "display_name": "构造同步结算与通知",
   "category": "同步事务",
-  "description": "按提交状态形成每个来源的唯一结算、状态更新、诊断和锁外 writeDone 通知。",
+  "description": "按提交状态形成每个来源的唯一结算、状态更新和诊断；状态订阅由 Sidecar 快照发布负责。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

@@ -1,0 +1,76 @@
+{
+  "kind": "node",
+  "type_key": "era.api.read_window_admission",
+  "display_name": "读取窗口准入与目标",
+  "category": "公共 Facade",
+  "description": "读取真实消息、身份与内存窗口准入。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.api.request",
+        "cardinality": "exactly_one",
+        "display_name": "era.api.request"
+      },
+      {
+        "type": "era.batch.execution.state",
+        "cardinality": "exactly_one",
+        "display_name": "era.batch.execution.state"
+      }
+    ],
+    "provides": [
+      {
+        "key": "facade_commit_inspected",
+        "type": "era.api.commit.inspected",
+        "display_name": "facade_commit_inspected"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.api.request": [
+        "输入：era.api.request。"
+      ],
+      "era.batch.execution.state": [
+        "输入：era.batch.execution.state。"
+      ]
+    },
+    "output_semantics": {
+      "facade_commit_inspected": [
+        "输出：facade_commit_inspected。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser"
+      ],
+      "completion": "suspend",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/api/facade_read_window.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.facade_nodes"
+  ],
+  "capabilities": [
+    {
+      "id": "era.tavern.messages",
+      "operations": [
+        "read_context"
+      ]
+    },
+    {
+      "id": "era.tavern.identity",
+      "operations": [
+        "read"
+      ]
+    }
+  ]
+}

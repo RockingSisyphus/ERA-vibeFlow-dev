@@ -1,5 +1,0 @@
-{
-  "kind": "data_schema", "type_key": "era.api.write.append.route", "representation": "json",
-  "display_name": "ERA·API·消息·追加·路由", "description": "选择继续共享同步、普通失败或 fatal。",
-  "schema": {"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "string", "enum": ["sync", "failed", "fatal"]}
-}

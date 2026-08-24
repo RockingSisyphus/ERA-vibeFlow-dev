@@ -1,0 +1,1 @@
+{"kind":"data_schema","type_key":"era.command_compaction.replayed","representation":"json","display_name":"Service 重放结果","description":"包含真实 CRUD 重放及等价判定的 Service 压缩上下文。","schema":{"type":"object","additionalProperties":true}}

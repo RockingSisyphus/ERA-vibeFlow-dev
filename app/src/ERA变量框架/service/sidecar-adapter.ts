@@ -156,6 +156,7 @@ async function commitSidecarPointer(
       !Number.isSafeInteger(revision) ||
       !isRecord(state) ||
       !isRecord(state.eraMeta) ||
+      !isRecord(state.statFunc) ||
       !Object.prototype.hasOwnProperty.call(state, 'statData')
     ) {
       throw new TypeError('ERA Sidecar 提交后的快照无效。');
@@ -171,6 +172,7 @@ async function commitSidecarPointer(
         identity: owner,
         revision: revision as number,
         statData: clonePortable(state.statData),
+        statFunc: clonePortable(state.statFunc),
         eraMeta: clonePortable(state.eraMeta),
       });
     }

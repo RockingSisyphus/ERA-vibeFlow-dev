@@ -44,6 +44,10 @@ export interface CommandCompactionRequest {
   readonly content: string;
   readonly initialStatData: Readonly<Record<string, unknown>>;
   readonly initialStatFunc?: Readonly<Record<string, unknown>>;
+  /** 整条消息开始时的变量快照；分段压缩时与当前段起点不同。 */
+  readonly snapshotStatData?: Readonly<Record<string, unknown>>;
+  /** 整条消息开始时的函数快照；供 @f(...) 在任意 scope 段保持同一闭包。 */
+  readonly snapshotStatFunc?: Readonly<Record<string, unknown>>;
   readonly eraMeta?: Readonly<Record<string, unknown>>;
   readonly templateContext?: Readonly<Record<string, unknown>>;
 }
@@ -139,6 +143,12 @@ export function parseCommandLayer(input: unknown): ParsedLayer {
     content: typeof source.content === "string" ? source.content : "",
     initialStatData: plain(source.initialStatData) ? clone(source.initialStatData) : {},
     initialStatFunc: plain(source.initialStatFunc) ? clone(source.initialStatFunc) : {},
+    snapshotStatData: plain(source.snapshotStatData)
+      ? clone(source.snapshotStatData)
+      : plain(source.initialStatData) ? clone(source.initialStatData) : {},
+    snapshotStatFunc: plain(source.snapshotStatFunc)
+      ? clone(source.snapshotStatFunc)
+      : plain(source.initialStatFunc) ? clone(source.initialStatFunc) : {},
     eraMeta: plain(source.eraMeta) ? clone(source.eraMeta) : {},
     templateContext: plain(source.templateContext) ? clone(source.templateContext) : {},
   };
@@ -436,9 +446,9 @@ function applyFunction(
 
 export function executeOriginalSemantics(parsed: ParsedLayer): SemanticTrace {
   const stat = clone(parsed.request.initialStatData) as Record<string, unknown>;
-  const start = clone(parsed.request.initialStatData) as Record<string, unknown>;
+  const start = clone(parsed.request.snapshotStatData ?? parsed.request.initialStatData) as Record<string, unknown>;
   let functions = clone(parsed.request.initialStatFunc ?? {}) as Record<string, unknown>;
-  const startFunctions = clone(functions);
+  const startFunctions = clone(parsed.request.snapshotStatFunc ?? parsed.request.initialStatFunc ?? {}) as Record<string, unknown>;
   const diagnostics = [...parsed.diagnostics];
   for (const command of parsed.commands) {
     if (command.data.length === 0) continue;
@@ -530,9 +540,9 @@ function compactEditRun(trace: SemanticTrace, commands: readonly ParsedCommand[]
   }
   const response = executeExpressionLayer({
     initialState: trace.request.initialStatData,
-    snapshotState: trace.request.initialStatData,
+    snapshotState: trace.request.snapshotStatData ?? trace.request.initialStatData,
     functionLibrary: trace.request.initialStatFunc ?? {},
-    snapshotFunctionLibrary: trace.request.initialStatFunc ?? {},
+    snapshotFunctionLibrary: trace.request.snapshotStatFunc ?? trace.request.initialStatFunc ?? {},
     allowSnapshots: true,
     operations,
   });
@@ -610,7 +620,7 @@ function equivalent(trace: SemanticTrace, content: string): boolean {
   return sameDiagnostics && equal(replay.finalStatData, trace.finalStatData) && equal(replay.finalStatFunc, trace.finalStatFunc);
 }
 
-export function compactCommandLayer(input: unknown): CommandCompactionResponse {
+function compactBareCommandLayer(input: unknown): CommandCompactionResponse {
   const parsed = parseCommandLayer(input);
   const trace = executeOriginalSemantics(parsed);
   if (parsed.diagnostics.length > 0) return { status: "invalid", content: parsed.request.content, finalStatData: trace.finalStatData, finalStatFunc: trace.finalStatFunc, diagnostics: trace.diagnostics, reasons: ["标签 JSON 无效，未改写消息。"], parsedCommands: parsed.commands };
@@ -620,6 +630,143 @@ export function compactCommandLayer(input: unknown): CommandCompactionResponse {
   if (!equivalent(trace, content)) return { status: "unchanged", content: trace.request.content, finalStatData: trace.finalStatData, finalStatFunc: trace.finalStatFunc, diagnostics: trace.diagnostics, reasons: [...candidate.reasons, "候选未通过同一起点真实重放，已退回原命令。"], parsedCommands: trace.commands };
   const all = trace.commands.every((command) => candidate.replacements.has(command.index));
   return { status: all ? "compacted" : "partial", content, finalStatData: trace.finalStatData, finalStatFunc: trace.finalStatFunc, diagnostics: trace.diagnostics, reasons: candidate.reasons, parsedCommands: trace.commands };
+}
+
+interface ScopedTransaction {
+  readonly start: number;
+  readonly end: number;
+  readonly raw: string;
+  readonly body: string;
+  readonly scope: "m" | "b" | "a" | null;
+}
+
+function scopedTransactions(content: string): readonly ScopedTransaction[] {
+  const result: ScopedTransaction[] = [];
+  const pattern = /<era_tx\b([^>]*)>([\s\S]*?)<\/era_tx>/giu;
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(content)) !== null) {
+    const scopeMatch = /\bs\s*=\s*["']([^"']+)["']/iu.exec(match[1] ?? "");
+    const rawScope = scopeMatch?.[1] ?? "";
+    result.push({
+      start: match.index,
+      end: match.index + match[0].length,
+      raw: match[0],
+      body: match[2] ?? "",
+      scope: rawScope === "m" || rawScope === "b" || rawScope === "a" ? rawScope : null,
+    });
+  }
+  return result;
+}
+
+function withStartState(
+  request: CommandCompactionRequest,
+  content: string,
+  statData: Readonly<Record<string, unknown>>,
+  statFunc: Readonly<Record<string, unknown>>,
+): CommandCompactionRequest {
+  return { ...request, content, initialStatData: statData, initialStatFunc: statFunc };
+}
+
+/**
+ * era_tx 的 scope 是不可跨越的语义边界。只有相邻、同 scope 且中间只有空白的
+ * wrapper 才合并为一个候选；不同 scope、非法 wrapper 与普通正文均保留原顺序。
+ */
+export function compactCommandLayer(input: unknown): CommandCompactionResponse {
+  const parsed = parseCommandLayer(input);
+  const transactions = scopedTransactions(parsed.request.content);
+  if (transactions.length === 0) return compactBareCommandLayer(parsed.request);
+
+  let cursor = 0;
+  let statData = clone(parsed.request.initialStatData);
+  let statFunc = clone(parsed.request.initialStatFunc ?? {});
+  let content = "";
+  let changed = false;
+  let commandSegments = 0;
+  let rewrittenSegments = 0;
+  const diagnostics: CommandDiagnostic[] = [];
+  const reasons: string[] = [];
+
+  const consume = (text: string, allowRewrite: boolean): string => {
+    const result = compactBareCommandLayer(withStartState(parsed.request, text, statData, statFunc));
+    statData = clone(result.finalStatData);
+    statFunc = clone(result.finalStatFunc);
+    diagnostics.push(...result.diagnostics);
+    reasons.push(...result.reasons);
+    if (result.parsedCommands.length > 0) {
+      commandSegments += 1;
+      if (allowRewrite && result.content !== text && result.diagnostics.length === 0) {
+        rewrittenSegments += 1;
+        changed = true;
+        return result.content;
+      }
+    }
+    return text;
+  };
+
+  for (let index = 0; index < transactions.length;) {
+    const current = transactions[index]!;
+    const prefix = parsed.request.content.slice(cursor, current.start);
+    content += consume(prefix, true);
+
+    if (current.scope === null) {
+      consume(current.body, false);
+      content += current.raw;
+      cursor = current.end;
+      index += 1;
+      continue;
+    }
+
+    let endIndex = index;
+    let combinedBody = current.body;
+    let rawGroup = current.raw;
+    while (endIndex + 1 < transactions.length) {
+      const next = transactions[endIndex + 1]!;
+      const between = parsed.request.content.slice(transactions[endIndex]!.end, next.start);
+      if (next.scope !== current.scope || between.trim().length > 0) break;
+      combinedBody += `${between}${next.body}`;
+      rawGroup += `${between}${next.raw}`;
+      endIndex += 1;
+    }
+
+    // 单个事务不是 API 分段压缩目标；避免只因规范化空白或改写为 @path
+    // 而制造无收益的消息变更。只有至少两个相邻同 scope 事务才允许合并。
+    const compactedBody = consume(combinedBody, endIndex > index);
+    if (compactedBody !== combinedBody) {
+      content += `<era_tx s="${current.scope}">${compactedBody}</era_tx>`;
+    } else {
+      content += rawGroup;
+    }
+    cursor = transactions[endIndex]!.end;
+    index = endIndex + 1;
+  }
+
+  content += consume(parsed.request.content.slice(cursor), true);
+  const originalTrace = executeOriginalSemantics(parsed);
+  const replay = executeOriginalSemantics(parseCommandLayer({ ...parsed.request, content }));
+  const equivalentResult = equal(originalTrace.finalStatData, replay.finalStatData) &&
+    equal(originalTrace.finalStatFunc, replay.finalStatFunc) &&
+    originalTrace.diagnostics.length === replay.diagnostics.length &&
+    originalTrace.diagnostics.every((issue, index) => issue.code === replay.diagnostics[index]?.code && issue.path === replay.diagnostics[index]?.path);
+  if (!changed || !equivalentResult) {
+    return {
+      status: diagnostics.length > 0 ? "invalid" : "unchanged",
+      content: parsed.request.content,
+      finalStatData: originalTrace.finalStatData,
+      finalStatFunc: originalTrace.finalStatFunc,
+      diagnostics: originalTrace.diagnostics,
+      reasons: equivalentResult ? reasons : [...reasons, "同 scope 分段候选未通过整层真实重放，已保留原事务。"],
+      parsedCommands: parsed.commands,
+    };
+  }
+  return {
+    status: rewrittenSegments === commandSegments ? "compacted" : "partial",
+    content,
+    finalStatData: originalTrace.finalStatData,
+    finalStatFunc: originalTrace.finalStatFunc,
+    diagnostics: originalTrace.diagnostics,
+    reasons,
+    parsedCommands: parsed.commands,
+  };
 }
 
 type Inputs = any;

@@ -72,3 +72,40 @@ test("无效标签不修改消息且报告诊断", () => {
   assert.equal(result.content, `<VariableEdit>{not-json}</VariableEdit>`);
   assert.equal(result.diagnostics[0].code, "ERA_COMPACT_COMMAND_JSON_INVALID");
 });
+
+test("相邻同 scope 事务合并为一个 wrapper 并保留快照依赖", () => {
+  const result = run(
+    `<era_tx s="m"><VariableEdit>{"a":{"$expr":"a+1"}}</VariableEdit></era_tx>\n` +
+      `<era_tx s="m"><VariableEdit>{"b":{"$expr":"a*2"}}</VariableEdit></era_tx>\n` +
+      `<era_tx s="m"><VariableEdit>{"a":{"$expr":"a+1"}}</VariableEdit></era_tx>`,
+    { a: 10, b: 0 },
+  );
+  assert.equal(result.status, "compacted");
+  assert.equal((result.content.match(/<era_tx s="m">/gu) ?? []).length, 1);
+  assert.match(result.content, /"a":\{"\$expr":"@a \+ 2"\}/u);
+  assert.match(result.content, /"b":\{"\$expr":"\(@a \+ 1\) \* 2"\}/u);
+  assert.deepEqual(result.finalStatData, { a: 12, b: 22 });
+});
+
+test("不同 scope 是硬边界且相同 scope 不跨越合并", () => {
+  const original =
+    `<era_tx s="m"><VariableEdit>{"a":{"$expr":"a+1"}}</VariableEdit></era_tx>` +
+    `<era_tx s="m"><VariableEdit>{"a":{"$expr":"a+1"}}</VariableEdit></era_tx>` +
+    `<era_tx s="a"><VariableEdit>{"a":{"$expr":"a+1"}}</VariableEdit></era_tx>` +
+    `<era_tx s="m"><VariableEdit>{"a":{"$expr":"a+1"}}</VariableEdit></era_tx>`;
+  const result = run(original, { a: 0 });
+  assert.equal((result.content.match(/<era_tx s="m">/gu) ?? []).length, 2);
+  assert.equal((result.content.match(/<era_tx s="a">/gu) ?? []).length, 1);
+  assert.doesNotMatch(result.content, /s="m,a"|s="m,b"/u);
+  assert.deepEqual(result.finalStatData, { a: 4 });
+});
+
+test("普通正文阻止相同 scope 跨段合并", () => {
+  const original =
+    `<era_tx s="b"><VariableEdit>{"a":{"$expr":"a+1"}}</VariableEdit></era_tx>` +
+    `正文边界` +
+    `<era_tx s="b"><VariableEdit>{"a":{"$expr":"a+1"}}</VariableEdit></era_tx>`;
+  const result = run(original, { a: 1 });
+  assert.equal(result.content, original);
+  assert.deepEqual(result.finalStatData, { a: 3 });
+});

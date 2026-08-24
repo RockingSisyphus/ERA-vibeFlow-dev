@@ -1,0 +1,68 @@
+{
+  "kind": "node",
+  "type_key": "era.api.read_target_message",
+  "display_name": "读取最新 AI 消息",
+  "category": "公共 Facade",
+  "description": "写入前重新读取真实目标。",
+  "version": "1.0.0",
+  "flow_kind": "io",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.api.commit.transaction",
+        "cardinality": "exactly_one",
+        "display_name": "era.api.commit.transaction"
+      }
+    ],
+    "provides": [
+      {
+        "key": "facade_commit_target",
+        "type": "era.api.commit.target",
+        "display_name": "facade_commit_target"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.api.commit.transaction": [
+        "输入：era.api.commit.transaction。"
+      ]
+    },
+    "output_semantics": {
+      "facade_commit_target": [
+        "输出：facade_commit_target。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser"
+      ],
+      "completion": "suspend",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/api/facade_read_target.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.facade_nodes"
+  ],
+  "capabilities": [
+    {
+      "id": "era.tavern.messages",
+      "operations": [
+        "read_context"
+      ]
+    },
+    {
+      "id": "era.tavern.identity",
+      "operations": [
+        "read"
+      ]
+    }
+  ]
+}

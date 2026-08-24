@@ -1,0 +1,1 @@
+{"kind":"data_schema","type_key":"era.api.sync.route","representation":"json","display_name":"公共对象同步路由","description":"选择 sync 或 failed。","schema":{"type":"string","enum":["sync","failed"]}}

@@ -1,0 +1,1 @@
+{"kind":"data_schema","type_key":"era.command_compaction.written","representation":"json","display_name":"已回填压缩结果","description":"已回填消息更新和变量函数日志、等待 marker 结算的上下文。","schema":{"type":"object","additionalProperties":true}}

@@ -1,0 +1,1 @@
+{"kind":"data_schema","type_key":"era.api.commit.readback.route","representation":"json","display_name":"Commit 回读路由","description":"选择 sync 或 failed。","schema":{"type":"string","enum":["sync","failed"]}}

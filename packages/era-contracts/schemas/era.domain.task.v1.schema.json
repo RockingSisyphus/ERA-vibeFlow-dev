@@ -685,7 +685,7 @@
             "edited",
             "swipe-regeneration",
             "manual",
-            "api-write"
+            "facade-commit"
           ]
         },
         "target": {

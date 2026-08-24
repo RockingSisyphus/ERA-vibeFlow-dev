@@ -44,7 +44,7 @@
         "id": "build_mk_result",
         "type_used": "era.mk.build_result",
         "display_name": "构造 MK 任务结果",
-        "description": "对全部 step.sources 恰好结算一次，不发送 writeDone，不推进连续 MK 状态，并保留普通失败或 fatal 身份。"
+        "description": "对全部 step.sources 恰好结算一次，不额外发布业务事件，不推进连续 MK 状态，并保留普通失败或 fatal 身份。"
       },
       {
         "id": "end",

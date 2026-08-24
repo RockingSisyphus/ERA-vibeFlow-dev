@@ -37,7 +37,7 @@ function event(sequence, type, occurredAt, options = {}) {
     sequence,
     type,
     occurredAt,
-    source: options.source ?? (type.startsWith('era:') ? 'era-api' : 'tavern'),
+    source: options.source ?? (type.startsWith('era.') ? 'era-api' : 'tavern'),
     args: options.args ?? [],
     encodedBytes: options.encodedBytes ?? 64,
   };
@@ -88,7 +88,17 @@ function createTavernCapabilities() {
       read: async () => ({ enabled: false, regexes: [] }),
       upsert: async () => ({ status: 'committed' }),
     },
-    'era.tavern.identity': { read: () => ({ characterName: 'G4 窗口探针角色', isGroup: false }) },
+    'era.tavern.identity': {
+      read: () => ({
+        characterName: 'G4 窗口探针角色',
+        isGroup: false,
+        characterId: 'g4-card',
+        groupId: null,
+        chatId: 'g4-chat',
+        scriptId: 'era-g4',
+        lifecycleToken: 1,
+      }),
+    },
     'era.tavern.installation_scope': {
       read: () => ({ scriptId: 'era-g4', scopes: ['character'], readStatus: 'complete' }),
     },
@@ -251,7 +261,7 @@ const updatedClose = await port.exchange(timer(6, 4_500, updatedSchedule.token),
 ]);
 assertBatch(updatedClose[1], [5, 6]);
 
-const apiFrames = await port.exchange(event(7, 'era:getCurrentVars', 5_000), ['collection-control', 'batch-result']);
+const apiFrames = await port.exchange(event(7, 'era.facade.sync', 5_000), ['collection-control', 'batch-result']);
 assertBatch(apiFrames[1], [7]);
 
 const dryRunFrames = await port.exchange(

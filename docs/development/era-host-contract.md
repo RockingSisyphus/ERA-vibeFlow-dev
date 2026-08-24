@@ -20,7 +20,7 @@ Tavern Helper / SillyTavern / ERA UI
 
 Sidecar 的身份检查、旧聊天迁移、冲突决策和迁移/独立/复制事务属于 Service 的
 `era.sidecar.store` Nodeset。聊天变量只保存 `ERAMetaData.SidecarId`；ERA 状态只保存在
-Sidecar V2 用户文件中。Tavern adapter/Host 只提供当前身份、聊天指针、原生 files、受限内存
+Sidecar V3 用户文件中。Tavern adapter/Host 只提供当前身份、聊天指针、原生 files、受限内存
 快照与 UI 通知这几项技术能力；它不能自行决定 owner、迁移或变量恢复。宏只能读取身份匹配的
 内存快照，快照缺失时必须为空，不能回退读取聊天变量。
 
@@ -38,7 +38,8 @@ Sidecar V2 用户文件中。Tavern adapter/Host 只提供当前身份、聊天�
 
 以下内容的变更须单独审查、更新文档并有合同测试：
 
-- `era:*` 公开事件及 payload；
+- `ERA.get/subscribe/commit/sync/history` 公共对象及 receipt；
+- `message`、`branch`、`always` scope 与消息中的 `<era_tx s="...">`；
 - `{{ERA:...}}`、`{{ERA-withmeta:...}}` 的宏语法和缺失值语义；
 - 持久化的 `ERAMetaData`、MK、EditLogs 或设置结构；
 - receipt 结算、写入确认、通知的可观察顺序；

@@ -353,7 +353,6 @@ describe('VibeFlow 历史同步纯引擎差分', () => {
         apply: false,
         resync: true,
         api: false,
-        apiWrite: false,
         editedResync: false,
         swipedRollback: false,
       },
@@ -447,14 +446,13 @@ describe('VibeFlow 历史同步纯引擎差分', () => {
       apply: false,
       resync: true,
       api: false,
-      apiWrite: false,
       editedResync: true,
       swipedRollback: false,
     });
     expect(syncEngine.createSyncActionsTaken('swipe-regeneration', true)).toMatchObject({
       swipedRollback: true,
     });
-    expect(syncEngine.createSyncActionsTaken('api-write', true)).toMatchObject({ apiWrite: true });
+    expect(syncEngine.createSyncActionsTaken('facade-commit', true)).toMatchObject({ api: false });
     expect(syncEngine.advanceConsecutiveMkState({ mk: 'same', count: 2 }, 'same')).toEqual({
       state: { mk: 'same', count: 3 },
       count: 3,

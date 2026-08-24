@@ -1,0 +1,1 @@
+{"kind":"data_schema","type_key":"era.api.commit.append.result","representation":"json","display_name":"即时 Commit 消息结果","description":"Tavern 对单次 era_tx 写入的确认。","schema":{"type":"object","additionalProperties":true}}

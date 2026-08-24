@@ -27,14 +27,13 @@ import {
 } from "./command_compaction_marker.ts";
 
 export type EraSyncReasonV1 =
-  "history-changed" | "edited" | "swipe-regeneration" | "manual" | "api-write";
+  "history-changed" | "edited" | "swipe-regeneration" | "manual" | "facade-commit";
 
 export interface EraActionsTakenV1 {
   readonly rollback: boolean;
   readonly apply: boolean;
   readonly resync: boolean;
   readonly api: boolean;
-  readonly apiWrite: boolean;
   readonly editedResync: boolean;
   readonly swipedRollback: boolean;
 }
@@ -278,7 +277,6 @@ export function createSyncActionsTaken(
     apply: false,
     resync,
     api: false,
-    apiWrite: reason === "api-write",
     editedResync: reason === "edited",
     swipedRollback: reason === "swipe-regeneration",
   };

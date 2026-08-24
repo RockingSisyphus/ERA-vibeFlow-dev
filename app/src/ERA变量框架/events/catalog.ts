@@ -1,7 +1,5 @@
 'use strict';
 
-import { ERA_API_EVENTS } from '../utils/constants';
-
 /**
  * 本文件是 ERA 所有输入事件的唯一目录。
  *
@@ -55,8 +53,6 @@ export interface EventCollisionRule {
 
 export const DEFAULT_COLLECTION_WINDOW_MS = 100;
 
-const API_EVENT_TYPES = Object.values(ERA_API_EVENTS);
-
 const EVENT_DEFINITIONS: EventDefinition[] = [
   {
     type: INPUT_EVENT.APP_READY,
@@ -80,16 +76,6 @@ const EVENT_DEFINITIONS: EventDefinition[] = [
         listenerOrder: 'normal',
         awaitMode: 'detached',
         collectionWindowMs: type === INPUT_EVENT.MESSAGE_SWIPED ? 500 : undefined,
-      }) satisfies EventDefinition,
-  ),
-  ...API_EVENT_TYPES.map(
-    type =>
-      ({
-        type,
-        group: 'API',
-        listenerOrder: 'normal',
-        awaitMode: 'detached',
-        collectionWindowMs: 0,
       }) satisfies EventDefinition,
   ),
   {

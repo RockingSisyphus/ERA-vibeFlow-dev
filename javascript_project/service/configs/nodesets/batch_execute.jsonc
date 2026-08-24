@@ -45,8 +45,8 @@
       {
         "id": "plan_batch",
         "type_used": "era.service.plan_batch",
-        "display_name": "规划动态批次",
-        "description": "将事件集转换为有序 PlannedStep 数组，不执行领域任务。"
+        "display_name": "规划生命周期与公共对象任务",
+        "description": "保留 Tavern 生命周期事件的既有组合规划；将每个 ERA.commit 和 ERA.sync 直接规划为独立步骤并保持 FIFO 来源一一对应。"
       },
       {
         "id": "validate_coverage",

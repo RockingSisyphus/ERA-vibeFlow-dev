@@ -195,7 +195,7 @@ describe('VibeFlow Service 事件集协议', () => {
 
   it('generation、API 0ms 与 dry-run 首事件立即执行，swipe 组合提前取消定时器', () => {
     const initial = protocol.createInitialServiceState();
-    const api = event(1, 'era:getCurrentVars', 1_000);
+    const api = event(1, 'era.facade.commit', 1_000, { source: 'era-api' });
     expect(protocol.reduceForProtocolSlice(initial, api, {}).reduction.route).toBe('execute');
 
     const dryRun = event(2, 'generation_started', 2_000, {
@@ -303,7 +303,7 @@ describe('VibeFlow Service 事件集协议', () => {
   });
 
   it('合并任务结果时原子推进易失连续处理状态，不向事件或持久数据添加版本字段', () => {
-    const api = event(1, 'era:getCurrentVars', 1_000);
+    const api = event(1, 'era.facade.commit', 1_000, { source: 'era-api' });
     const reduction = protocol.reduceForProtocolSlice(protocol.createInitialServiceState(), api, {}).reduction;
     const plan = protocol.planProtocolBatch(reduction);
     const execution = protocol.createExecutionState(plan).state;

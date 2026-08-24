@@ -2,8 +2,6 @@ import { describe, expect, it } from 'vitest';
 
 import {
   createHostExtension,
-  ERA_INTERNAL_REPLAY_WRITE_DONE_NOTIFICATION_TYPE,
-  ERA_WRITE_DONE_NOTIFICATION_TYPE,
   type EraAdmissionResult,
   type EraInboundEvent,
   type EraPreparedNotification,
@@ -447,7 +445,6 @@ describe('ERA 服务 Host Extension 核心', () => {
     await host.stop();
     expect(host.diagnostics.snapshot()).toMatchObject({
       fatal: false,
-      cachedWriteDone: false,
       queueEvents: 0,
       pendingReceipts: 0,
       timers: 0,
@@ -455,100 +452,6 @@ describe('ERA 服务 Host Extension 核心', () => {
       notifications: 0,
       portWaiters: 0,
       processedFrames: 0,
-    });
-  });
-
-  it('无 writeDone 缓存时内部重播命令是 no-op，且不透传给外部', async () => {
-    const { adapter, host } = createFixture();
-    host.start();
-    const receive = host.capabilities['vibeflow.port'].receive({ port: 'era.service.in' });
-    const admission = assertAccepted(adapter.emit({ type: 'replay-empty', source: 'ui', args: [] }));
-    await receive;
-
-    host.capabilities['vibeflow.port'].send({
-      port: 'era.service.out',
-      value: ignoredBatch('batch:replay-empty', admission, [
-        { type: ERA_INTERNAL_REPLAY_WRITE_DONE_NOTIFICATION_TYPE, args: [] },
-      ]),
-    });
-
-    await admission.done;
-    expect(adapter.notifications).toEqual([]);
-    expect(host.diagnostics.snapshot()).toMatchObject({ cachedWriteDone: false });
-    await host.stop();
-  });
-
-  it('缓存完整已解码 writeDone 参数，并以原公共类型精确重播', async () => {
-    const { adapter, host } = createFixture();
-    host.start();
-    const port = host.capabilities['vibeflow.port'];
-    const callback = () => '宿主引用';
-    const firstReceive = port.receive({ port: 'era.service.in' });
-    const first = assertAccepted(
-      adapter.emit({
-        type: 'write-source',
-        source: 'ui',
-        args: [{ nested: [1, null, { ok: true }] }, undefined, callback],
-        receipt: {
-          settle: () => adapter.lifecycleOrder.push('settle:writeDone'),
-        },
-      }),
-    );
-    const firstEvent = (await firstReceive).value;
-
-    port.send({
-      port: 'era.service.out',
-      value: ignoredBatch('batch:cache-writeDone', first, [
-        { type: ERA_WRITE_DONE_NOTIFICATION_TYPE, args: firstEvent.args },
-      ]),
-    });
-    await first.done;
-
-    expect(adapter.notifications).toHaveLength(1);
-    expect(adapter.notifications[0]).toMatchObject({
-      type: ERA_WRITE_DONE_NOTIFICATION_TYPE,
-      args: [{ nested: [1, null, { ok: true }] }, undefined, callback],
-    });
-    expect(adapter.notifications[0]?.args[2]).toBe(callback);
-    expect(host.diagnostics.snapshot()).toMatchObject({
-      cachedWriteDone: true,
-      hostRefs: 0,
-    });
-
-    const replayReceive = port.receive({ port: 'era.service.in' });
-    const replay = assertAccepted(
-      adapter.emit({
-        type: 'replay-request',
-        source: 'era-api',
-        args: [],
-        receipt: {
-          settle: () => adapter.lifecycleOrder.push('settle:replay'),
-        },
-      }),
-    );
-    await replayReceive;
-    port.send({
-      port: 'era.service.out',
-      value: ignoredBatch('batch:replay-writeDone', replay, [
-        { type: ERA_INTERNAL_REPLAY_WRITE_DONE_NOTIFICATION_TYPE, args: [] },
-      ]),
-    });
-    await replay.done;
-
-    expect(adapter.notifications).toHaveLength(2);
-    expect(adapter.notifications[1]).toEqual(adapter.notifications[0]);
-    expect(adapter.notifications[1]?.type).toBe(ERA_WRITE_DONE_NOTIFICATION_TYPE);
-    expect(adapter.notifications[1]?.args[2]).toBe(callback);
-    expect(adapter.notifications.some(item => item.type === ERA_INTERNAL_REPLAY_WRITE_DONE_NOTIFICATION_TYPE)).toBe(
-      false,
-    );
-    expect(adapter.lifecycleOrder.slice(-2)).toEqual(['settle:replay', `notify:${ERA_WRITE_DONE_NOTIFICATION_TYPE}`]);
-
-    await host.stop();
-    expect(host.diagnostics.snapshot()).toMatchObject({
-      cachedWriteDone: false,
-      hostRefs: 0,
-      notifications: 0,
     });
   });
 

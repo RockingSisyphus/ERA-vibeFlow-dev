@@ -1,0 +1,56 @@
+{
+  "kind": "node",
+  "type_key": "era.api.build_single_era_tx",
+  "display_name": "生成单次 era_tx",
+  "category": "公共 Facade",
+  "description": "按原操作顺序生成一个且仅一个短 scope wrapper。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.api.commit.validated",
+        "cardinality": "exactly_one",
+        "display_name": "era.api.commit.validated"
+      }
+    ],
+    "provides": [
+      {
+        "key": "facade_commit_transaction",
+        "type": "era.api.commit.transaction",
+        "display_name": "facade_commit_transaction"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.api.commit.validated": [
+        "输入：era.api.commit.validated。"
+      ]
+    },
+    "output_semantics": {
+      "facade_commit_transaction": [
+        "输出：facade_commit_transaction。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/api/facade_build_transaction.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.facade_nodes"
+  ],
+  "capabilities": []
+}

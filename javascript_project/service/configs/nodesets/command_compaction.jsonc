@@ -1,29 +1,77 @@
 {
   "type_key": "era.command_compaction.apply_sealed_layers",
-  "status": "implemented",
-  "flow_kind": "process",
-  "display_name": "应用已封存 ERA 命令层压缩",
-  "description": "跨 root 纯计算边界：读取既有同步工作项的封存楼层候选，调用版本化 @era/vibeflow-command-compaction，复放确认后回填消息更新、EditLog、FunctionEditLog 与非阻塞 marker。",
+  "display_name": "应用同 Scope 封存命令压缩",
+  "description": "从既有同步工作项识别封存楼层，按 era_tx 原文顺序把相邻相同 scope 划成连续段，逐段调用已验证安全压缩 root，并经 Service 真实重放后回填消息、日志与 marker。",
   "requires": [
-    {"type":"era.expression.command.result","cardinality":"exactly_one","display_name":"表达式命令同步结果"}
+    {"type": "era.expression.command.result", "cardinality": "exactly_one", "display_name": "表达式命令同步结果"}
   ],
   "provides": [
-    {"key":"command_compaction_result","type":"era.command_compaction.result","display_name":"已处理封存压缩的同步结果"}
+    {"key": "command_compaction_result", "type": "era.command_compaction.result", "display_name": "已处理封存压缩的同步结果"}
   ],
   "pipeline": {
     "entry_mode": "async",
     "inputs": [
-      {"key":"expression_command_result","type":"era.expression.command.result","display_name":"表达式命令同步结果","required":true}
+      {"key": "expression_command_result", "type": "era.expression.command.result", "display_name": "表达式命令同步结果", "required": true}
     ],
-    "max_steps": 3,
+    "max_steps": 10,
     "nodes": [
-      {"id":"start","type_used":"era.service.terminal","display_name":"封存压缩开始","description":"进入不含 Tavern I/O 的跨 root 压缩边界。"},
-      {"id":"apply","type_used":"era.command_compaction.apply_sealed_layers.bridge","display_name":"调用命令压缩 root","description":"只接受纯压缩器输出经现有 CRUD 重放确认后的更新。"},
-      {"id":"end","type_used":"era.service.terminal","display_name":"封存压缩结束","description":"返回仍由既有 Sidecar 事务提交的同步工作项。"}
+      {"id": "start", "type_used": "era.service.terminal", "display_name": "封存压缩开始", "description": "进入不含 Tavern I/O 的封存压缩编排边界。"},
+      {
+        "id": "identify_sealed_layers",
+        "type_used": "era.command_compaction.identify_sealed",
+        "display_name": "识别已封存楼层",
+        "description": "只选择当前活动分支中已有后续 AI 消息的楼层；最新 AI 楼层保持原文，并按 marker 版本、MK 与文本指纹判断是否需要重新检查。"
+      },
+      {
+        "id": "parse_scoped_transactions",
+        "type_used": "era.command_compaction.parse_scopes",
+        "display_name": "解析 era_tx 与 Scope",
+        "description": "按原文顺序解析每个 era_tx，只接受 s=m、s=b、s=a；保留非 ERA 正文、模板、保护规则、未知或无法证明的文本屏障。"
+      },
+      {
+        "id": "partition_same_scope_segments",
+        "type_used": "era.command_compaction.partition_scopes",
+        "display_name": "划分相邻同 Scope 段",
+        "description": "仅把原文中相邻且 s 完全相同的事务放入同一段；scope 变化是硬边界，相同 scope 被其他 scope 隔开时不得跨越，禁止生成混合 scope。"
+      },
+      {
+        "id": "compact_each_segment",
+        "type_used": "era.command_compaction.compact_segments",
+        "display_name": "逐段调用安全压缩 Nodeset",
+        "description": "以每段开始前的 statData/statFunc 快照调用已实现 @era/vibeflow-command-compaction；API workflow 从不调用压缩器。"
+      },
+      {
+        "id": "replay_with_service_engine",
+        "type_used": "era.command_compaction.replay_service",
+        "display_name": "用 Service 真实语义重放",
+        "description": "逐段重放原始与候选，要求变量、函数库、变量/函数日志和诊断一致；无法证明时仅保留该段原始事务，不让压缩失败升级为同步失败。"
+      },
+      {
+        "id": "write_single_scope_segments",
+        "type_used": "era.command_compaction.write_segments",
+        "display_name": "回填单一 Scope 事务",
+        "description": "每个成功段最多写回一个保持原 s 的 era_tx；partial/unchanged 段保持局部顺序，不跨越正文或其他 scope，并更新对应 EditLog、FunctionEditLog 与 messageUpdates。"
+      },
+      {
+        "id": "update_compaction_markers",
+        "type_used": "era.command_compaction.update_markers",
+        "display_name": "更新压缩调度 Marker",
+        "description": "记录版本、MK、当前文本指纹与结果状态；编辑、插入、删除、分支切换或指纹不匹配时自动失效，不保存 API 窗口或修订游标。"
+      },
+      {"id": "end", "type_used": "era.service.terminal", "display_name": "封存压缩结束", "description": "返回仍由既有 Sidecar 事务提交的同步工作项。"}
     ],
-    "edges": [["start","apply"],["apply","end"]],
+    "edges": [
+      ["start", "identify_sealed_layers"],
+      ["identify_sealed_layers", "parse_scoped_transactions"],
+      ["parse_scoped_transactions", "partition_same_scope_segments"],
+      ["partition_same_scope_segments", "compact_each_segment"],
+      ["compact_each_segment", "replay_with_service_engine"],
+      ["replay_with_service_engine", "write_single_scope_segments"],
+      ["write_single_scope_segments", "update_compaction_markers"],
+      ["update_compaction_markers", "end"]
+    ],
     "outputs": [
-      {"type":"era.command_compaction.result","cardinality":"exactly_one","display_name":"已处理封存压缩的同步结果","as":"commandCompactionResult"}
+      {"type": "era.command_compaction.result", "cardinality": "exactly_one", "display_name": "已处理封存压缩的同步结果", "as": "commandCompactionResult"}
     ]
   }
 }

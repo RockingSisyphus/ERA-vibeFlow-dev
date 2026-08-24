@@ -1,0 +1,78 @@
+{
+  "kind": "node",
+  "type_key": "era.api.verify_facade_message",
+  "display_name": "回读确认独立事务",
+  "category": "公共 Facade",
+  "description": "回读消息并构造严格同步上下文。",
+  "version": "1.0.0",
+  "flow_kind": "io",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.api.commit.append.result",
+        "cardinality": "exactly_one",
+        "display_name": "era.api.commit.append.result"
+      }
+    ],
+    "provides": [
+      {
+        "key": "commit_readback_route",
+        "type": "era.api.commit.readback.route",
+        "display_name": "commit_readback_route"
+      },
+      {
+        "key": "facade_commit_verified",
+        "type": "era.api.commit.verified",
+        "display_name": "facade_commit_verified"
+      },
+      {
+        "key": "facade_commit_readback_failure",
+        "type": "era.api.commit.failure_context",
+        "display_name": "facade_commit_failure_context"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.api.commit.append.result": [
+        "输入：era.api.commit.append.result。"
+      ]
+    },
+    "output_semantics": {
+      "commit_readback_route": [
+        "输出：commit_readback_route。"
+      ],
+      "facade_commit_verified": [
+        "输出：facade_commit_verified。"
+      ],
+      "facade_commit_readback_failure": [
+        "输出：facade_commit_failure_context。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser"
+      ],
+      "completion": "suspend",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/api/facade_verify_commit.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.facade_nodes"
+  ],
+  "capabilities": [
+    {
+      "id": "era.tavern.messages",
+      "operations": [
+        "read_context"
+      ]
+    }
+  ]
+}

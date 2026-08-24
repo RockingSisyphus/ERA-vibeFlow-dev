@@ -33,6 +33,7 @@ export interface EraApplicationDependencies {
   createAdapter(options: EraLifecycleAdapterOptions): EraRuntimeAdapter;
   createHost(): EraWorkflowHost;
   startMacro(): () => void;
+  startPublicApi?(): () => void;
   startUi(): EraUiLifecycle;
   refreshSettings(): void;
   dispatchSettingsUpdated(): void;
@@ -101,6 +102,7 @@ class EraRuntimeController implements EraAppRuntime {
   private currentUi: EraUiLifecycle = Object.freeze({ mounted: false, stop: () => undefined });
   private disconnectClient = (): void => undefined;
   private stopMacro = (): void => undefined;
+  private stopPublicApi = (): void => undefined;
   private detachPagehide = (): void => undefined;
   private stoppingState = false;
   private stopPromise: Promise<void> | null = null;
@@ -143,6 +145,10 @@ class EraRuntimeController implements EraAppRuntime {
     this.stopMacro = cleanup;
   }
 
+  bindPublicApi(cleanup: () => void): void {
+    this.stopPublicApi = cleanup;
+  }
+
   bindUi(ui: EraUiLifecycle): void {
     this.currentUi = ui;
   }
@@ -169,6 +175,7 @@ class EraRuntimeController implements EraAppRuntime {
     runCleanup(this.detachPagehide, this.dependencies);
     runCleanup(() => this.adapter.stopAccepting(), this.dependencies);
     runCleanup(this.stopMacro, this.dependencies);
+    runCleanup(this.stopPublicApi, this.dependencies);
     clearSidecarRuntimeSnapshot();
     runCleanup(() => this.currentUi.stop(), this.dependencies);
     runCleanup(this.disconnectClient, this.dependencies);
@@ -218,6 +225,7 @@ export async function startEraApplication(dependencies: EraApplicationDependenci
       return runtime;
     }
     runtime.bindClient(installEraServiceClient(adapter));
+    runtime.bindPublicApi(dependencies.startPublicApi?.() ?? (() => undefined));
     dependencies.globals[ERA_RUNTIME_GLOBAL_KEY] = runtime;
     await awaitStartupAdmission(adapter, dependencies);
     dependencies.refreshSettings();

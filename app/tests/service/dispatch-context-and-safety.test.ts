@@ -51,7 +51,7 @@ function syncStep(
       primaryEvent: sourceEvent,
       context,
       kind: 'sync',
-      reason: dispatchClass === 'api' ? 'api-write' : 'edited',
+      reason: dispatchClass === 'api' ? 'facade-commit' : 'edited',
       target: { kind: 'auto' },
       fullRebuild: false,
     },
@@ -354,7 +354,7 @@ describe('严格 DTO、安全对象与 API 状态策略', () => {
       variablesRaw: variables,
       failure: null,
     });
-    expect(apiWork.payload).toMatchObject({ consecutiveProcessingCount: 1, actions: { api: true, apiWrite: true } });
+    expect(apiWork.payload).toMatchObject({ consecutiveProcessingCount: 1, actions: { api: true } });
     expect(apiWork.plan?.nextConsecutiveState).toEqual({ mk: 'mk-existing', count: 4 });
 
     const normalStep = syncStep('sync', 'latest-message-with-mk', messages.messages, 'mk-existing');

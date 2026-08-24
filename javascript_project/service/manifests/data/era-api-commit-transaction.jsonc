@@ -1,0 +1,1 @@
+{"kind":"data_schema","type_key":"era.api.commit.transaction","representation":"json","display_name":"单次 era_tx","description":"本次调用独立生成的单 scope 事务。","schema":{"type":"object","additionalProperties":true}}

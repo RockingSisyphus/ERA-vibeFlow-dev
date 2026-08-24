@@ -145,42 +145,14 @@ ERA 提供了一套强大的宏，允许您在发送给 AI 的消息中动态地
 
 > 更多详细信息，请参阅 [**ERA 宏参考文档**](./doc/适合提供给ai的状态栏html开发文档（只包含html状态栏代码书写部分）/ERA_MACRO_DOCUMENT.md)。
 
-## 事件与 API (开发者)
+## 公共对象 API (开发者)
 
-ERA 框架采用**事件驱动架构**与外部脚本进行交互。您不直接调用 ERA 的函数，而是通过酒馆的 `eventEmit` 和 `eventOn` 系统来发送和接收消息，以实现高度解耦和系统稳定性。
+ERA 通过 `initializeGlobal('ERA', facade)` 发布唯一公共对象。作者先调用
+`await waitGlobalInitialized('ERA')`，随后使用 `ERA.get()`、`ERA.subscribe()`、
+`ERA.commit()`、`ERA.sync()` 与 `ERA.history.atMessage()`。
 
-### 监听的事件 (外部 -> ERA)
-
-您可以通过 `eventEmit` 发送以下事件来操作变量。所有事件的参数都应放在 `detail` 对象中。
-
-#### 写入类事件
-
-* `era:insertByObject`: 非破坏性地插入一个对象。
-* `era:updateByObject`: 修改一个已存在的对象。
-* `era:insertByPath`: 在指定路径插入一个值。
-* `era:updateByPath`: 修改指定路径的值（支持 `+=` 等运算）。
-* `era:deleteByObject`: 根据对象结构删除一个或多个键。
-* `era:deleteByPath`: 删除指定路径的键。
-
-#### 查询类事件
-
-所有查询类事件都会触发一个统一的 `era:queryResult` 事件作为响应。
-
-* `era:getCurrentVars`: 请求获取当前最新的变量状态。
-* `era:getSnapshotAtMk`: 请求获取指定消息密钥（MK）所在时间点的历史变量快照。
-* `era:getSnapshotsBetweenMks`: 请求获取两个消息密钥（MK）之间（包含两者）的所有历史变量快照。
-* `era:getSnapshotAtMId`: 请求获取指定**消息 ID** 所在时间点的历史变量快照。
-* `era:getSnapshotsBetweenMIds`: 请求获取两个**消息 ID** 之间（包含两者）的所有历史变量快照。
-
-#### 其他事件
-
-* `era:requestWriteDone`: 请求 ERA 框架重新广播上一次的 `era:writeDone` 事件，用于 UI 初始化等场景。
-
-### 广播的事件 (ERA -> 外部)
-
-ERA 在完成操作后会向外广播以下事件：
-
-* `era:writeDone`: **仅在写入/同步操作成功后**广播。其 `payload` 对象包含了本次写入操作的完整上下文，如 `mk`、`message_id`、`is_user` (布尔值，表示该消息是否由用户发出)、变更后的完整变量 `stat` 等，用于通知外部脚本**当前**的变量状态已发生改变。
-* `era:queryResult`: 作为所有**查询类 API 事件**的统一响应事件。如果查询过程中发生错误（如参数缺失、找不到目标等），响应的 `payload` 中会包含一个 `error` 字段。
+旧 `eventEmit('era:*')` 写入/查询、`writeDone`、`queryResult` 与外部 `forceSync` 已删除。每次
+`ERA.commit()` 都立即写入独立 `<era_tx>` 并同步 Sidecar；scope 只允许默认 `message`、`branch`
+与 `always`。
 
 > 更多详细信息，请参阅 [**ERA 框架 API 接口文档**](./doc/适合提供给ai的状态栏html开发文档（只包含html状态栏代码书写部分）/ERA_API_DOCUMENT.md)。

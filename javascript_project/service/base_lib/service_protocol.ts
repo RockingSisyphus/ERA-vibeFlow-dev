@@ -97,6 +97,11 @@ export function createInitialServiceState(): EraServiceStateV1 {
     consecutiveProcessingCount: 0,
     consecutiveMk: null,
     timerToken: null,
+    scopeWindow: {
+      token: null,
+      messageAdmission: null,
+      branchAdmission: null,
+    },
   };
 }
 
@@ -624,6 +629,8 @@ export function mergeTaskResult(
               consecutiveMk: result.stateUpdate.consecutiveMk,
               consecutiveProcessingCount:
                 result.stateUpdate.consecutiveProcessingCount,
+              scopeWindow:
+                result.stateUpdate.scopeWindow ?? state.nextState.scopeWindow,
             },
       index: nextIndex,
       settlements: [...state.settlements, ...result.settlements],

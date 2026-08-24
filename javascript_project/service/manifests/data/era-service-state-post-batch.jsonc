@@ -188,6 +188,48 @@
             "type": "null"
           }
         ]
+      },
+      "scopeWindow": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "oneOf": [
+              {
+                "type": "integer",
+                "minimum": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "messageAdmission": {
+            "oneOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "branchAdmission": {
+            "oneOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "token",
+          "messageAdmission",
+          "branchAdmission"
+        ],
+        "additionalProperties": false
       }
     },
     "required": [
@@ -197,9 +239,9 @@
       "iteration",
       "consecutiveProcessingCount",
       "consecutiveMk",
-      "timerToken"
+      "timerToken",
+      "scopeWindow"
     ],
     "additionalProperties": false
   }
 }
-

@@ -160,7 +160,7 @@
     </div>
 
     <script>
-      document.addEventListener('DOMContentLoaded', () => {
+      $(() => {
         const playerName = document.getElementById('player-name');
         const playerLevel = document.getElementById('player-level');
         const playerHp = document.getElementById('player-hp');
@@ -214,13 +214,12 @@
           isInitialLoad = false;
         }
 
-        eventOn('era:writeDone', detail => {
-          if (detail && detail.statWithoutMeta) {
-            updateUI(detail.statWithoutMeta);
-          }
+        let unsubscribe = () => {};
+        void waitGlobalInitialized('ERA').then(() => {
+          updateUI(ERA.get().statWithoutMeta);
+          unsubscribe = ERA.subscribe(state => updateUI(state.statWithoutMeta));
         });
-
-        eventEmit('era:requestWriteDone');
+        $(window).on('pagehide', () => unsubscribe());
       });
     </script>
 
@@ -234,59 +233,17 @@
     - **用法**: 直接在 HTML 中写入 `{{ERA:路径.到.变量}}` 宏。
     - **优点**: 非常简单，无需编写任何 JavaScript。
     - **缺点**: 需要在 ERA 设置中开启“强制重载状态栏”，每次变量更新都会导致整个状态栏闪烁刷新。
-    - **建议**: 你作为ai，最好提醒一下角色卡作者使用era的api，监听writeDone事件是更优雅更稳健的解决方案。
+    - **建议**: 需要平滑更新和交互写入时，使用下面的 ERA 公共对象 API。
     - **示例**: `<div class="era-statusbar-item-value">{{ERA:player.hp}} / {{ERA:player.max_hp}}</div>`
 
     ---
 
     ### API 模式 (进阶，推荐)
-    - **用法**: 使用 JavaScript 监听和发送 ERA 框架的事件，来动态地读写变量。
-    - **优点**: 更新平滑无闪烁，性能更好，可以实现复杂的前端交互。
-
-    #### 核心事件与数据结构
-    
-    **1. `era:writeDone` 事件**: 这是响应数据变化的**唯一推荐方式**。当任何变量发生改变后，ERA 都会广播此事件，其回调函数会接收一个包含详细信息的 `detail` 对象。
-    
-    **`writeDone` 事件的 `detail` 对象 (`WriteDonePayload`) 结构如下:**
-    ```typescript
-    {
-      mk: string; // 本次更新的消息密钥
-      message_id: number; // 本次更新的消息 ID
-      actions: {
-        rollback: boolean; // 是否执行了回滚
-        apply: boolean;    // 是否应用了来自AI输出的变量变更
-        resync: boolean;   // 是否因历史记录变化而执行了再同步
-        api: boolean;      // 是否由API直接调用触发
-        apiWrite: boolean; // 是否由API写入操作(如update/insert)触发
-      };
-      selectedMks: (string | null)[]; // 当前聊天的主干消息密钥链
-      editLogs: { [key: string]: any[] }; // 完整的编辑日志
-      stat: any; // 包含 $meta 字段的完整变量状态
-      statWithoutMeta: any; // 不含 $meta 的纯净变量状态 (推荐使用)
-      consecutiveProcessingCount: number; // 对当前消息的连续处理次数
-    }
-    ```
-
-    **2. 核心读取事件**:
-    - **`eventOn('era:writeDone', callback)`**: 监听变量写入完成。
-      `eventOn('era:writeDone', (detail) => { console.log(detail.statWithoutMeta); });`
-    - **`eventEmit('era:requestWriteDone')`**: 主动请求一次最新变量，ERA 会以一个 `era:writeDone` 事件来响应。
-
-    **3. 核心写入事件 (通过 `eventEmit` 发送)**:
-    - **注意**: 所有写入事件最终都会触发一次 `era:writeDone`。为避免无限循环（例如：API写入 -> `writeDone` -> API写入），你可以在 `writeDone` 的监听器中检查 `detail.actions.apiWrite` 字段。
-      `eventOn('era:writeDone', (detail) => { if (detail.actions.apiWrite) return; /* 避免响应由API自身触发的更新 */ });`
-    
-    - **`era:insertByObject`**: 非破坏性地插入一个或多个变量。
-      `eventEmit('era:insertByObject', { player: { score: 0 } });`
-    - **`era:updateByObject`**: 修改一个或多个已存在的变量；直接值是普通赋值，数值表达式使用唯一 `$expr` 对象。
-      `eventEmit('era:updateByObject', { player: { level: 2, hp: { $expr: 'player.hp - 10' } } });`
-    - **`era:insertByPath`**: 在指定路径插入一个新变量。
-      `eventEmit('era:insertByPath', { path: 'inventory.item_002', value: { name: '新物品' } });`
-    - **`era:updateByPath`**: 修改指定路径的变量；数学更新使用唯一 `$expr` 对象。
-      `eventEmit('era:updateByPath', { path: 'player.hp', value: { $expr: 'player.hp - 10' } });`
-      不支持 `$inc/$mul/$div/$sub/$set` 或 `"+=2"`、`"-=2"`、`"*=2"`、`"/=2"`；旧对象会被拒绝，字符串仍是普通字符串。
-    - **`era:deleteByPath`**: 删除指定路径的变量。
-      `eventEmit('era:deleteByPath', { path: 'inventory.item_001' });`
+    - 先 `await waitGlobalInitialized('ERA')`。
+    - `ERA.get()` 立即取得当前只读状态；`ERA.subscribe(render)` 在 Sidecar 成功提交后更新界面。
+    - `ERA.commit([{ edit: { player: { hp: { $expr: 'player.hp - 10' } } } }])` 立即写入并提交。
+    - scope 只允许 `message`（默认）、`branch`、`always`；没有 edit scope、业务 key 或旧事件 API。
+    - 每次 commit 都独立返回 receipt；调用返回前消息与 Sidecar 已经完成本次结算。
     ================================================================
   --></body>
 </html>

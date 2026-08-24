@@ -8,15 +8,23 @@
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "additionalProperties": false,
-    "required": ["projection", "range"],
+    "required": [
+      "projection",
+      "range"
+    ],
     "properties": {
       "projection": {
         "const": "era-active-message-v1"
       },
       "range": {
         "oneOf": [
-          { "type": "string", "minLength": 1 },
-          { "type": "integer" }
+          {
+            "type": "string",
+            "minLength": 1
+          },
+          {
+            "type": "integer"
+          }
         ]
       },
       "purpose": {

@@ -1,4 +1,0 @@
-{"kind":"node","type_key":"era.api.read_force_sync_messages","display_name":"读取强制同步消息","category":"外部 API","description":"挂起读取含 swipe 的完整消息历史，用于解析 latest 目标。","version":"1.0.0","flow_kind":"data_store","contract":{"requires":[{"type":"era.api.request","cardinality":"exactly_one","display_name":"规范化 API 请求"}],"provides":[{"key":"force_sync_messages","type":"era.tavern.messages.read_context.outcome","display_name":"强制同步消息上下文"}],"params_schema":{},"params_defaults":{},
-    "input_semantics": {"era.api.request":["输入：规范化 API 请求。"]},
-    "output_semantics": {"force_sync_messages":["输出：强制同步消息上下文。"]}
-  },"implementations":[{"language":"typescript","targets":["browser"],"completion":"suspend","source":{"kind":"file","ref":"nodes/api/read_force_sync_messages.ts","export":"run"}}],"base_libs":[],"capabilities":[{"id":"era.tavern.messages","operations":["read_context"]}]}

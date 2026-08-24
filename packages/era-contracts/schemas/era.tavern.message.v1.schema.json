@@ -2,16 +2,37 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "messageId", "role", "activeText", "swipeIndex"],
+  "required": [
+    "schemaVersion",
+    "messageId",
+    "role",
+    "activeText",
+    "swipeIndex"
+  ],
   "properties": {
-    "schemaVersion": { "const": 1 },
-    "messageId": { "type": "integer", "minimum": 0 },
-    "role": { "type": "string", "minLength": 1 },
-    "activeText": { "type": "string" },
+    "schemaVersion": {
+      "const": 1
+    },
+    "messageId": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "role": {
+      "type": "string",
+      "minLength": 1
+    },
+    "activeText": {
+      "type": "string"
+    },
     "swipeIndex": {
       "oneOf": [
-        { "type": "integer", "minimum": 0 },
-        { "type": "null" }
+        {
+          "type": "integer",
+          "minimum": 0
+        },
+        {
+          "type": "null"
+        }
       ]
     }
   }

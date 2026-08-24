@@ -1,0 +1,1 @@
+{"kind":"data_schema","type_key":"era.command_compaction.compacted","representation":"json","display_name":"安全压缩候选","description":"包含纯压缩 root 输出候选的 Service 压缩上下文。","schema":{"type":"object","additionalProperties":true}}

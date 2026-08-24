@@ -1,1 +1,12 @@
-{"kind":"data_schema","type_key":"era.tavern.sidecar.clear_prompt.request","representation":"json","display_name":"Sidecar 弹窗清理请求","description":"清理当前 Sidecar 弹窗。","schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false}}
+{
+  "kind": "data_schema",
+  "type_key": "era.tavern.sidecar.clear_prompt.request",
+  "representation": "json",
+  "display_name": "Sidecar 弹窗清理请求",
+  "description": "清理当前 Sidecar 弹窗。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false
+  }
+}

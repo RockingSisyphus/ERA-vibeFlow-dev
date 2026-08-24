@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
-import type { WriteDonePayload } from '../utils/constants';
+import type { EraPublicState } from '../service/public-api';
 
 export type SidecarBindingPrompt = Readonly<{
   kind: 'conflict' | 'repair';
@@ -13,7 +13,7 @@ export type SidecarBindingPrompt = Readonly<{
 
 export const useUiStore = defineStore('ui', () => {
   const currentView = ref<'FloatingBall' | 'ExpandedView'>('FloatingBall');
-  const eventData = ref<WriteDonePayload | null>(null);
+  const eventData = ref<EraPublicState | null>(null);
   const sidecarBindingPrompt = ref<SidecarBindingPrompt | null>(null);
 
   function switchView(viewName: 'FloatingBall' | 'ExpandedView') {
@@ -22,7 +22,7 @@ export const useUiStore = defineStore('ui', () => {
     }
   }
 
-  function setEventData(data: WriteDonePayload | null) {
+  function setEventData(data: EraPublicState | null) {
     eventData.value = data;
   }
 

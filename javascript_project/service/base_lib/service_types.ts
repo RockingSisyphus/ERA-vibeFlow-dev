@@ -42,6 +42,11 @@ export interface EraServiceStateV1 {
   readonly consecutiveProcessingCount: number;
   readonly consecutiveMk: string | null;
   readonly timerToken: string | null;
+  readonly scopeWindow: {
+    readonly token: number | null;
+    readonly messageAdmission: boolean | null;
+    readonly branchAdmission: boolean | null;
+  };
 }
 
 export type CollectionCommand =
@@ -69,8 +74,11 @@ export interface CollectionReductionV1 {
   readonly throughSequence: number | null;
 }
 
-export type PlannedStepV1 = ContractPlannedStepV1 &
-  Readonly<Record<string, unknown>>;
+type ContractExecuteStepV1 = Extract<ContractPlannedStepV1, { readonly kind: "execute" }>;
+type ContractIgnoreStepV1 = Extract<ContractPlannedStepV1, { readonly kind: "ignore" }>;
+export type PlannedStepV1 =
+  | (ContractExecuteStepV1 & { readonly dispatchContext?: unknown })
+  | ContractIgnoreStepV1;
 
 export interface BatchPlanV1 {
   readonly [key: string]: unknown;
@@ -121,8 +129,7 @@ export interface DiagnosticV1 {
   readonly sequence: number | null;
 }
 
-export type TaskResultV1 = ContractTaskResultV1 &
-  Readonly<Record<string, unknown>>;
+export type TaskResultV1 = ContractTaskResultV1;
 
 export interface BatchSourceV1 {
   readonly eventId: string;

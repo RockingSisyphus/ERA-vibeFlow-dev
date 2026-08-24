@@ -77,6 +77,7 @@ function publishFixtureForLegacy(fixture: Fixture): void {
     identity: { characterId: 'card-snapshot-query', groupId: null, chatId: 'chat-snapshot-query' },
     revision: 1,
     statData: fixture.variables.stat,
+    statFunc: {},
     eraMeta: fixture.variables.meta,
   });
 }

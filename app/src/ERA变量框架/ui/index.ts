@@ -1,8 +1,6 @@
 import { createPinia } from 'pinia';
 import { createApp, type App as VueApp } from 'vue';
-import { ERA_EVENT_EMITTER, type WriteDonePayload } from '../utils/constants';
-import { ERA_API_EVENTS } from '../utils/constants';
-import { requestEraService } from '../service/client';
+import { createEraFacade, type EraPublicState } from '../service/public-api';
 import { settings } from '../utils/era_data';
 import { Logger } from '../utils/log';
 import App from './App.vue';
@@ -44,10 +42,10 @@ export function startEraUi(): EraUiHandle {
   const uiStore = useUiStore(pinia);
   let active = true;
   const switchView = (viewName: 'FloatingBall' | 'ExpandedView') => uiStore.switchView(viewName);
-  const writeDoneHandler = (data: WriteDonePayload) => {
+  const facade = createEraFacade();
+  const stateHandler = (data: EraPublicState) => {
     if (!active) return;
-    logger.log(ERA_EVENT_EMITTER.WRITE_DONE, '接收到 writeDone，更新 UI store。', data);
-    uiStore.setEventData(data);
+    uiStore.setEventData(data.status === 'ready' ? data : null);
   };
 
   const eraWindow = window as Window & {
@@ -57,32 +55,14 @@ export function startEraUi(): EraUiHandle {
   eraWindow.eraUiStore = uiStore;
   eraWindow.eraUiSwitchView = switchView;
   teleportStyle();
-  eventOn(ERA_EVENT_EMITTER.WRITE_DONE, writeDoneHandler);
-
-  // UI 可能在最后一次 writeDone 之后才启动。通过现有 Service 回放入口
-  // 取得缓存的最新状态，而不是直接读取或写入聊天变量。
-  const replay = requestEraService(ERA_API_EVENTS.REQUEST_WRITE_DONE, [], 'ui');
-  if (!replay.accepted) {
-    logger.warn('startEraUi', `请求最新 writeDone 被拒绝：${replay.code}`);
-  } else {
-    void replay.done
-      .then(settlement => {
-        if (!active) return;
-        if (settlement.status !== 'completed' && settlement.status !== 'ignored') {
-          logger.warn('startEraUi', `请求最新 writeDone 未完成：${settlement.status}`);
-        }
-      })
-      .catch(error => {
-        if (active) logger.warn('startEraUi', '请求最新 writeDone 失败。', error);
-      });
-  }
+  const unsubscribeState = facade.subscribe(stateHandler);
 
   let stopped = false;
   const stop = (): void => {
     if (stopped) return;
     stopped = true;
     active = false;
-    eventRemoveListener(ERA_EVENT_EMITTER.WRITE_DONE, writeDoneHandler);
+    unsubscribeState();
     vueApp.unmount();
 
     // 旧 handle 在新实例已接管后只能清理它自己的 Vue/监听器，不能误删新实例的

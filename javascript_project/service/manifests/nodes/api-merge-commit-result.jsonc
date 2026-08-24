@@ -1,0 +1,56 @@
+{
+  "kind": "node",
+  "type_key": "era.api.merge_commit_result",
+  "display_name": "合并即时 Commit 结果",
+  "category": "公共 Facade",
+  "description": "要求三条互斥分支恰好产生一个结果。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.api.commit.result",
+        "cardinality": "all",
+        "display_name": "era.api.commit.result"
+      }
+    ],
+    "provides": [
+      {
+        "key": "commit_result",
+        "type": "era.api.facade.result",
+        "display_name": "commit_result"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.api.commit.result": [
+        "输入：era.api.commit.result。"
+      ]
+    },
+    "output_semantics": {
+      "commit_result": [
+        "输出：commit_result。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/api/facade_merge_commit.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.facade_nodes"
+  ],
+  "capabilities": []
+}

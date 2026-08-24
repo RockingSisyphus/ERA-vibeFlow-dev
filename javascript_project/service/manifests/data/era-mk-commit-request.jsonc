@@ -7,23 +7,55 @@
   "schema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
-    "required": ["schemaVersion", "step", "mk", "messageUpdate", "metaUpdate", "messageWriteRequired", "variableWriteRequired"],
+    "required": [
+      "schemaVersion",
+      "step",
+      "mk",
+      "messageUpdate",
+      "metaUpdate",
+      "messageWriteRequired",
+      "variableWriteRequired"
+    ],
     "properties": {
-      "schemaVersion": {"const": 1},
-      "step": {"type": "object"},
-      "mk": {"type": "string", "minLength": 1},
+      "schemaVersion": {
+        "const": 1
+      },
+      "step": {
+        "type": "object"
+      },
+      "mk": {
+        "type": "string",
+        "minLength": 1
+      },
       "messageUpdate": {
-        "type": ["object", "null"],
+        "type": [
+          "object",
+          "null"
+        ],
         "properties": {
-          "messageId": {"type": "integer", "minimum": 0},
-          "content": {"type": "string"}
+          "messageId": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "content": {
+            "type": "string"
+          }
         },
-        "required": ["messageId", "content"],
+        "required": [
+          "messageId",
+          "content"
+        ],
         "additionalProperties": false
       },
-      "metaUpdate": {"type": "object"},
-      "messageWriteRequired": {"type": "boolean"},
-      "variableWriteRequired": {"type": "boolean"}
+      "metaUpdate": {
+        "type": "object"
+      },
+      "messageWriteRequired": {
+        "type": "boolean"
+      },
+      "variableWriteRequired": {
+        "type": "boolean"
+      }
     },
     "additionalProperties": false
   }

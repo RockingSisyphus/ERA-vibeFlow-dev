@@ -86,7 +86,7 @@ async function runEvents(adapter, count, collectDurations, heapCheckpoints) {
     const receipts = [];
     for (let index = 0; index < currentBatch; index += 1) {
       const admission = adapter.emit({
-        type: 'era:getCurrentVars',
+        type: 'era.facade.sync',
         source: 'era-api',
         args: [],
         occurredAt: offset + index,

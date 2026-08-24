@@ -1,0 +1,1 @@
+{"kind":"data_schema","type_key":"era.api.commit.validated","representation":"json","display_name":"已校验即时 Commit","description":"携带 scope 与有序操作的已准入或 skipped 上下文。","schema":{"type":"object","additionalProperties":true}}

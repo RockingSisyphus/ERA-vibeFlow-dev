@@ -1,0 +1,1 @@
+{"kind":"data_schema","type_key":"era.api.sync.result","representation":"json","display_name":"公共对象同步分支结果","description":"互斥的同步成功或输入失败结果。","schema":{"type":"object","additionalProperties":true}}

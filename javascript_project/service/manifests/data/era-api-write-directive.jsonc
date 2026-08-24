@@ -1,5 +1,0 @@
-{
-  "kind": "data_schema", "type_key": "era.api.write.directive", "representation": "json",
-  "display_name": "ERA·API·写入·指令", "description": "保存公开 API 请求、候选 Variable 指令块及全部来源。",
-  "schema": {"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "additionalProperties": true}
-}

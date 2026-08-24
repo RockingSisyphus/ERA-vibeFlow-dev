@@ -1,0 +1,56 @@
+{
+  "kind": "node",
+  "type_key": "era.api.build_facade_sync_failure",
+  "display_name": "构造同步输入失败",
+  "category": "公共 Facade",
+  "description": "非法 sync 模式不触碰宿主。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.api.sync.context",
+        "cardinality": "exactly_one",
+        "display_name": "era.api.sync.context"
+      }
+    ],
+    "provides": [
+      {
+        "key": "facade_sync_failed_result",
+        "type": "era.api.sync.result",
+        "display_name": "facade_sync_result"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.api.sync.context": [
+        "输入：era.api.sync.context。"
+      ]
+    },
+    "output_semantics": {
+      "facade_sync_failed_result": [
+        "输出：facade_sync_result。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/api/facade_sync_failure.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.facade_nodes"
+  ],
+  "capabilities": []
+}

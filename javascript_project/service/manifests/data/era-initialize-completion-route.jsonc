@@ -1,1 +1,15 @@
-{"kind":"data_schema","type_key":"era.initialize.completion.route","representation":"json","display_name":"初始化完成路由","description":"选择直接结算或继续启动同步。","schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"string","enum":["sync","finish"]}}
+{
+  "kind": "data_schema",
+  "type_key": "era.initialize.completion.route",
+  "representation": "json",
+  "display_name": "初始化完成路由",
+  "description": "选择直接结算或继续启动同步。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "string",
+    "enum": [
+      "sync",
+      "finish"
+    ]
+  }
+}

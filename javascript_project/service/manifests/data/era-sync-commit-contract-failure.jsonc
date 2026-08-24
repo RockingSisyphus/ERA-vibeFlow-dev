@@ -6,9 +6,16 @@
   "description": "携带无效 processing MK、公开 payload、连续状态或 TaskResult 候选的预提交失败证据；valid 路由下为 null。",
   "schema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "type": ["object", "null"],
+    "type": [
+      "object",
+      "null"
+    ],
     "additionalProperties": false,
-    "required": ["schemaVersion", "step", "failure"],
+    "required": [
+      "schemaVersion",
+      "step",
+      "failure"
+    ],
     "properties": {
       "schemaVersion": {
         "const": 1
@@ -52,10 +59,16 @@
                           "type": "object",
                           "properties": {
                             "source": {
-                              "enum": ["tavern", "ui", "era-api"]
+                              "enum": [
+                                "tavern",
+                                "ui",
+                                "era-api"
+                              ]
                             }
                           },
-                          "required": ["source"]
+                          "required": [
+                            "source"
+                          ]
                         },
                         {
                           "type": "object",
@@ -67,7 +80,10 @@
                               "const": "era.service.collection_timer"
                             }
                           },
-                          "required": ["source", "type"]
+                          "required": [
+                            "source",
+                            "type"
+                          ]
                         }
                       ]
                     }
@@ -93,7 +109,12 @@
                     },
                     "source": {
                       "type": "string",
-                      "enum": ["tavern", "ui", "era-api", "timer"]
+                      "enum": [
+                        "tavern",
+                        "ui",
+                        "era-api",
+                        "timer"
+                      ]
                     },
                     "args": {
                       "type": "array",
@@ -107,7 +128,10 @@
                               },
                               "value": {}
                             },
-                            "required": ["kind", "value"],
+                            "required": [
+                              "kind",
+                              "value"
+                            ],
                             "additionalProperties": false
                           },
                           {
@@ -117,7 +141,9 @@
                                 "const": "undefined"
                               }
                             },
-                            "required": ["kind"],
+                            "required": [
+                              "kind"
+                            ],
                             "additionalProperties": false
                           },
                           {
@@ -135,7 +161,11 @@
                                 "minLength": 1
                               }
                             },
-                            "required": ["kind", "token", "refKind"],
+                            "required": [
+                              "kind",
+                              "token",
+                              "refKind"
+                            ],
                             "additionalProperties": false
                           }
                         ]
@@ -162,7 +192,12 @@
               },
               "taskRoute": {
                 "type": "string",
-                "enum": ["initialize", "sync", "api", "update-mk"]
+                "enum": [
+                  "initialize",
+                  "sync",
+                  "api",
+                  "update-mk"
+                ]
               },
               "task": {
                 "oneOf": [
@@ -186,10 +221,16 @@
                                   "type": "object",
                                   "properties": {
                                     "source": {
-                                      "enum": ["tavern", "ui", "era-api"]
+                                      "enum": [
+                                        "tavern",
+                                        "ui",
+                                        "era-api"
+                                      ]
                                     }
                                   },
-                                  "required": ["source"]
+                                  "required": [
+                                    "source"
+                                  ]
                                 },
                                 {
                                   "type": "object",
@@ -201,7 +242,10 @@
                                       "const": "era.service.collection_timer"
                                     }
                                   },
-                                  "required": ["source", "type"]
+                                  "required": [
+                                    "source",
+                                    "type"
+                                  ]
                                 }
                               ]
                             }
@@ -227,7 +271,12 @@
                             },
                             "source": {
                               "type": "string",
-                              "enum": ["tavern", "ui", "era-api", "timer"]
+                              "enum": [
+                                "tavern",
+                                "ui",
+                                "era-api",
+                                "timer"
+                              ]
                             },
                             "args": {
                               "type": "array",
@@ -241,7 +290,10 @@
                                       },
                                       "value": {}
                                     },
-                                    "required": ["kind", "value"],
+                                    "required": [
+                                      "kind",
+                                      "value"
+                                    ],
                                     "additionalProperties": false
                                   },
                                   {
@@ -251,7 +303,9 @@
                                         "const": "undefined"
                                       }
                                     },
-                                    "required": ["kind"],
+                                    "required": [
+                                      "kind"
+                                    ],
                                     "additionalProperties": false
                                   },
                                   {
@@ -269,7 +323,11 @@
                                         "minLength": 1
                                       }
                                     },
-                                    "required": ["kind", "token", "refKind"],
+                                    "required": [
+                                      "kind",
+                                      "token",
+                                      "refKind"
+                                    ],
                                     "additionalProperties": false
                                   }
                                 ]
@@ -303,10 +361,16 @@
                                 "type": "object",
                                 "properties": {
                                   "source": {
-                                    "enum": ["tavern", "ui", "era-api"]
+                                    "enum": [
+                                      "tavern",
+                                      "ui",
+                                      "era-api"
+                                    ]
                                   }
                                 },
-                                "required": ["source"]
+                                "required": [
+                                  "source"
+                                ]
                               },
                               {
                                 "type": "object",
@@ -318,7 +382,10 @@
                                     "const": "era.service.collection_timer"
                                   }
                                 },
-                                "required": ["source", "type"]
+                                "required": [
+                                  "source",
+                                  "type"
+                                ]
                               }
                             ]
                           }
@@ -344,7 +411,12 @@
                           },
                           "source": {
                             "type": "string",
-                            "enum": ["tavern", "ui", "era-api", "timer"]
+                            "enum": [
+                              "tavern",
+                              "ui",
+                              "era-api",
+                              "timer"
+                            ]
                           },
                           "args": {
                             "type": "array",
@@ -358,7 +430,10 @@
                                     },
                                     "value": {}
                                   },
-                                  "required": ["kind", "value"],
+                                  "required": [
+                                    "kind",
+                                    "value"
+                                  ],
                                   "additionalProperties": false
                                 },
                                 {
@@ -368,7 +443,9 @@
                                       "const": "undefined"
                                     }
                                   },
-                                  "required": ["kind"],
+                                  "required": [
+                                    "kind"
+                                  ],
                                   "additionalProperties": false
                                 },
                                 {
@@ -386,7 +463,11 @@
                                       "minLength": 1
                                     }
                                   },
-                                  "required": ["kind", "token", "refKind"],
+                                  "required": [
+                                    "kind",
+                                    "token",
+                                    "refKind"
+                                  ],
                                   "additionalProperties": false
                                 }
                               ]
@@ -423,7 +504,11 @@
                       },
                       "operation": {
                         "type": "string",
-                        "enum": ["startup", "resources", "settings-update"]
+                        "enum": [
+                          "startup",
+                          "resources",
+                          "settings-update"
+                        ]
                       },
                       "args": {
                         "type": "array",
@@ -437,7 +522,10 @@
                                 },
                                 "value": {}
                               },
-                              "required": ["kind", "value"],
+                              "required": [
+                                "kind",
+                                "value"
+                              ],
                               "additionalProperties": false
                             },
                             {
@@ -447,7 +535,9 @@
                                   "const": "undefined"
                                 }
                               },
-                              "required": ["kind"],
+                              "required": [
+                                "kind"
+                              ],
                               "additionalProperties": false
                             },
                             {
@@ -465,7 +555,11 @@
                                   "minLength": 1
                                 }
                               },
-                              "required": ["kind", "token", "refKind"],
+                              "required": [
+                                "kind",
+                                "token",
+                                "refKind"
+                              ],
                               "additionalProperties": false
                             }
                           ]
@@ -503,10 +597,16 @@
                                   "type": "object",
                                   "properties": {
                                     "source": {
-                                      "enum": ["tavern", "ui", "era-api"]
+                                      "enum": [
+                                        "tavern",
+                                        "ui",
+                                        "era-api"
+                                      ]
                                     }
                                   },
-                                  "required": ["source"]
+                                  "required": [
+                                    "source"
+                                  ]
                                 },
                                 {
                                   "type": "object",
@@ -518,7 +618,10 @@
                                       "const": "era.service.collection_timer"
                                     }
                                   },
-                                  "required": ["source", "type"]
+                                  "required": [
+                                    "source",
+                                    "type"
+                                  ]
                                 }
                               ]
                             }
@@ -544,7 +647,12 @@
                             },
                             "source": {
                               "type": "string",
-                              "enum": ["tavern", "ui", "era-api", "timer"]
+                              "enum": [
+                                "tavern",
+                                "ui",
+                                "era-api",
+                                "timer"
+                              ]
                             },
                             "args": {
                               "type": "array",
@@ -558,7 +666,10 @@
                                       },
                                       "value": {}
                                     },
-                                    "required": ["kind", "value"],
+                                    "required": [
+                                      "kind",
+                                      "value"
+                                    ],
                                     "additionalProperties": false
                                   },
                                   {
@@ -568,7 +679,9 @@
                                         "const": "undefined"
                                       }
                                     },
-                                    "required": ["kind"],
+                                    "required": [
+                                      "kind"
+                                    ],
                                     "additionalProperties": false
                                   },
                                   {
@@ -586,7 +699,11 @@
                                         "minLength": 1
                                       }
                                     },
-                                    "required": ["kind", "token", "refKind"],
+                                    "required": [
+                                      "kind",
+                                      "token",
+                                      "refKind"
+                                    ],
                                     "additionalProperties": false
                                   }
                                 ]
@@ -620,10 +737,16 @@
                                 "type": "object",
                                 "properties": {
                                   "source": {
-                                    "enum": ["tavern", "ui", "era-api"]
+                                    "enum": [
+                                      "tavern",
+                                      "ui",
+                                      "era-api"
+                                    ]
                                   }
                                 },
-                                "required": ["source"]
+                                "required": [
+                                  "source"
+                                ]
                               },
                               {
                                 "type": "object",
@@ -635,7 +758,10 @@
                                     "const": "era.service.collection_timer"
                                   }
                                 },
-                                "required": ["source", "type"]
+                                "required": [
+                                  "source",
+                                  "type"
+                                ]
                               }
                             ]
                           }
@@ -661,7 +787,12 @@
                           },
                           "source": {
                             "type": "string",
-                            "enum": ["tavern", "ui", "era-api", "timer"]
+                            "enum": [
+                              "tavern",
+                              "ui",
+                              "era-api",
+                              "timer"
+                            ]
                           },
                           "args": {
                             "type": "array",
@@ -675,7 +806,10 @@
                                     },
                                     "value": {}
                                   },
-                                  "required": ["kind", "value"],
+                                  "required": [
+                                    "kind",
+                                    "value"
+                                  ],
                                   "additionalProperties": false
                                 },
                                 {
@@ -685,7 +819,9 @@
                                       "const": "undefined"
                                     }
                                   },
-                                  "required": ["kind"],
+                                  "required": [
+                                    "kind"
+                                  ],
                                   "additionalProperties": false
                                 },
                                 {
@@ -703,7 +839,11 @@
                                       "minLength": 1
                                     }
                                   },
-                                  "required": ["kind", "token", "refKind"],
+                                  "required": [
+                                    "kind",
+                                    "token",
+                                    "refKind"
+                                  ],
                                   "additionalProperties": false
                                 }
                               ]
@@ -745,7 +885,7 @@
                           "edited",
                           "swipe-regeneration",
                           "manual",
-                          "api-write"
+                          "facade-commit"
                         ]
                       },
                       "target": {
@@ -757,7 +897,9 @@
                                 "const": "auto"
                               }
                             },
-                            "required": ["kind"],
+                            "required": [
+                              "kind"
+                            ],
                             "additionalProperties": false
                           },
                           {
@@ -791,7 +933,10 @@
                                 "const": true
                               }
                             },
-                            "required": ["kind", "stopAfterTarget"],
+                            "required": [
+                              "kind",
+                              "stopAfterTarget"
+                            ],
                             "additionalProperties": false
                           }
                         ]
@@ -832,10 +977,16 @@
                                   "type": "object",
                                   "properties": {
                                     "source": {
-                                      "enum": ["tavern", "ui", "era-api"]
+                                      "enum": [
+                                        "tavern",
+                                        "ui",
+                                        "era-api"
+                                      ]
                                     }
                                   },
-                                  "required": ["source"]
+                                  "required": [
+                                    "source"
+                                  ]
                                 },
                                 {
                                   "type": "object",
@@ -847,7 +998,10 @@
                                       "const": "era.service.collection_timer"
                                     }
                                   },
-                                  "required": ["source", "type"]
+                                  "required": [
+                                    "source",
+                                    "type"
+                                  ]
                                 }
                               ]
                             }
@@ -873,7 +1027,12 @@
                             },
                             "source": {
                               "type": "string",
-                              "enum": ["tavern", "ui", "era-api", "timer"]
+                              "enum": [
+                                "tavern",
+                                "ui",
+                                "era-api",
+                                "timer"
+                              ]
                             },
                             "args": {
                               "type": "array",
@@ -887,7 +1046,10 @@
                                       },
                                       "value": {}
                                     },
-                                    "required": ["kind", "value"],
+                                    "required": [
+                                      "kind",
+                                      "value"
+                                    ],
                                     "additionalProperties": false
                                   },
                                   {
@@ -897,7 +1059,9 @@
                                         "const": "undefined"
                                       }
                                     },
-                                    "required": ["kind"],
+                                    "required": [
+                                      "kind"
+                                    ],
                                     "additionalProperties": false
                                   },
                                   {
@@ -915,7 +1079,11 @@
                                         "minLength": 1
                                       }
                                     },
-                                    "required": ["kind", "token", "refKind"],
+                                    "required": [
+                                      "kind",
+                                      "token",
+                                      "refKind"
+                                    ],
                                     "additionalProperties": false
                                   }
                                 ]
@@ -949,10 +1117,16 @@
                                 "type": "object",
                                 "properties": {
                                   "source": {
-                                    "enum": ["tavern", "ui", "era-api"]
+                                    "enum": [
+                                      "tavern",
+                                      "ui",
+                                      "era-api"
+                                    ]
                                   }
                                 },
-                                "required": ["source"]
+                                "required": [
+                                  "source"
+                                ]
                               },
                               {
                                 "type": "object",
@@ -964,7 +1138,10 @@
                                     "const": "era.service.collection_timer"
                                   }
                                 },
-                                "required": ["source", "type"]
+                                "required": [
+                                  "source",
+                                  "type"
+                                ]
                               }
                             ]
                           }
@@ -990,7 +1167,12 @@
                           },
                           "source": {
                             "type": "string",
-                            "enum": ["tavern", "ui", "era-api", "timer"]
+                            "enum": [
+                              "tavern",
+                              "ui",
+                              "era-api",
+                              "timer"
+                            ]
                           },
                           "args": {
                             "type": "array",
@@ -1004,7 +1186,10 @@
                                     },
                                     "value": {}
                                   },
-                                  "required": ["kind", "value"],
+                                  "required": [
+                                    "kind",
+                                    "value"
+                                  ],
                                   "additionalProperties": false
                                 },
                                 {
@@ -1014,7 +1199,9 @@
                                       "const": "undefined"
                                     }
                                   },
-                                  "required": ["kind"],
+                                  "required": [
+                                    "kind"
+                                  ],
                                   "additionalProperties": false
                                 },
                                 {
@@ -1032,7 +1219,11 @@
                                       "minLength": 1
                                     }
                                   },
-                                  "required": ["kind", "token", "refKind"],
+                                  "required": [
+                                    "kind",
+                                    "token",
+                                    "refKind"
+                                  ],
                                   "additionalProperties": false
                                 }
                               ]
@@ -1069,7 +1260,11 @@
                       },
                       "intent": {
                         "type": "string",
-                        "enum": ["query", "message-write", "state-sync"]
+                        "enum": [
+                          "query",
+                          "message-write",
+                          "state-sync"
+                        ]
                       },
                       "eventType": {
                         "type": "string",
@@ -1087,7 +1282,10 @@
                                 },
                                 "value": {}
                               },
-                              "required": ["kind", "value"],
+                              "required": [
+                                "kind",
+                                "value"
+                              ],
                               "additionalProperties": false
                             },
                             {
@@ -1097,7 +1295,9 @@
                                   "const": "undefined"
                                 }
                               },
-                              "required": ["kind"],
+                              "required": [
+                                "kind"
+                              ],
                               "additionalProperties": false
                             },
                             {
@@ -1115,7 +1315,11 @@
                                   "minLength": 1
                                 }
                               },
-                              "required": ["kind", "token", "refKind"],
+                              "required": [
+                                "kind",
+                                "token",
+                                "refKind"
+                              ],
                               "additionalProperties": false
                             }
                           ]
@@ -1154,10 +1358,16 @@
                                   "type": "object",
                                   "properties": {
                                     "source": {
-                                      "enum": ["tavern", "ui", "era-api"]
+                                      "enum": [
+                                        "tavern",
+                                        "ui",
+                                        "era-api"
+                                      ]
                                     }
                                   },
-                                  "required": ["source"]
+                                  "required": [
+                                    "source"
+                                  ]
                                 },
                                 {
                                   "type": "object",
@@ -1169,7 +1379,10 @@
                                       "const": "era.service.collection_timer"
                                     }
                                   },
-                                  "required": ["source", "type"]
+                                  "required": [
+                                    "source",
+                                    "type"
+                                  ]
                                 }
                               ]
                             }
@@ -1195,7 +1408,12 @@
                             },
                             "source": {
                               "type": "string",
-                              "enum": ["tavern", "ui", "era-api", "timer"]
+                              "enum": [
+                                "tavern",
+                                "ui",
+                                "era-api",
+                                "timer"
+                              ]
                             },
                             "args": {
                               "type": "array",
@@ -1209,7 +1427,10 @@
                                       },
                                       "value": {}
                                     },
-                                    "required": ["kind", "value"],
+                                    "required": [
+                                      "kind",
+                                      "value"
+                                    ],
                                     "additionalProperties": false
                                   },
                                   {
@@ -1219,7 +1440,9 @@
                                         "const": "undefined"
                                       }
                                     },
-                                    "required": ["kind"],
+                                    "required": [
+                                      "kind"
+                                    ],
                                     "additionalProperties": false
                                   },
                                   {
@@ -1237,7 +1460,11 @@
                                         "minLength": 1
                                       }
                                     },
-                                    "required": ["kind", "token", "refKind"],
+                                    "required": [
+                                      "kind",
+                                      "token",
+                                      "refKind"
+                                    ],
                                     "additionalProperties": false
                                   }
                                 ]
@@ -1271,10 +1498,16 @@
                                 "type": "object",
                                 "properties": {
                                   "source": {
-                                    "enum": ["tavern", "ui", "era-api"]
+                                    "enum": [
+                                      "tavern",
+                                      "ui",
+                                      "era-api"
+                                    ]
                                   }
                                 },
-                                "required": ["source"]
+                                "required": [
+                                  "source"
+                                ]
                               },
                               {
                                 "type": "object",
@@ -1286,7 +1519,10 @@
                                     "const": "era.service.collection_timer"
                                   }
                                 },
-                                "required": ["source", "type"]
+                                "required": [
+                                  "source",
+                                  "type"
+                                ]
                               }
                             ]
                           }
@@ -1312,7 +1548,12 @@
                           },
                           "source": {
                             "type": "string",
-                            "enum": ["tavern", "ui", "era-api", "timer"]
+                            "enum": [
+                              "tavern",
+                              "ui",
+                              "era-api",
+                              "timer"
+                            ]
                           },
                           "args": {
                             "type": "array",
@@ -1326,7 +1567,10 @@
                                     },
                                     "value": {}
                                   },
-                                  "required": ["kind", "value"],
+                                  "required": [
+                                    "kind",
+                                    "value"
+                                  ],
                                   "additionalProperties": false
                                 },
                                 {
@@ -1336,7 +1580,9 @@
                                       "const": "undefined"
                                     }
                                   },
-                                  "required": ["kind"],
+                                  "required": [
+                                    "kind"
+                                  ],
                                   "additionalProperties": false
                                 },
                                 {
@@ -1354,7 +1600,11 @@
                                       "minLength": 1
                                     }
                                   },
-                                  "required": ["kind", "token", "refKind"],
+                                  "required": [
+                                    "kind",
+                                    "token",
+                                    "refKind"
+                                  ],
                                   "additionalProperties": false
                                 }
                               ]
@@ -1417,10 +1667,16 @@
                               "type": "object",
                               "properties": {
                                 "source": {
-                                  "enum": ["tavern", "ui", "era-api"]
+                                  "enum": [
+                                    "tavern",
+                                    "ui",
+                                    "era-api"
+                                  ]
                                 }
                               },
-                              "required": ["source"]
+                              "required": [
+                                "source"
+                              ]
                             },
                             {
                               "type": "object",
@@ -1432,7 +1688,10 @@
                                   "const": "era.service.collection_timer"
                                 }
                               },
-                              "required": ["source", "type"]
+                              "required": [
+                                "source",
+                                "type"
+                              ]
                             }
                           ]
                         }
@@ -1458,7 +1717,12 @@
                         },
                         "source": {
                           "type": "string",
-                          "enum": ["tavern", "ui", "era-api", "timer"]
+                          "enum": [
+                            "tavern",
+                            "ui",
+                            "era-api",
+                            "timer"
+                          ]
                         },
                         "args": {
                           "type": "array",
@@ -1472,7 +1736,10 @@
                                   },
                                   "value": {}
                                 },
-                                "required": ["kind", "value"],
+                                "required": [
+                                  "kind",
+                                  "value"
+                                ],
                                 "additionalProperties": false
                               },
                               {
@@ -1482,7 +1749,9 @@
                                     "const": "undefined"
                                   }
                                 },
-                                "required": ["kind"],
+                                "required": [
+                                  "kind"
+                                ],
                                 "additionalProperties": false
                               },
                               {
@@ -1500,7 +1769,11 @@
                                     "minLength": 1
                                   }
                                 },
-                                "required": ["kind", "token", "refKind"],
+                                "required": [
+                                  "kind",
+                                  "token",
+                                  "refKind"
+                                ],
                                 "additionalProperties": false
                               }
                             ]
@@ -1526,10 +1799,17 @@
                     },
                     "relation": {
                       "type": "string",
-                      "enum": ["primary", "combined", "coalesced"]
+                      "enum": [
+                        "primary",
+                        "combined",
+                        "coalesced"
+                      ]
                     }
                   },
-                  "required": ["event", "relation"],
+                  "required": [
+                    "event",
+                    "relation"
+                  ],
                   "additionalProperties": false
                 }
               },
@@ -1553,13 +1833,26 @@
                     "const": 2
                   },
                   "status": {
-                    "enum": ["ready", "failed"]
+                    "enum": [
+                      "ready",
+                      "failed"
+                    ]
                   },
                   "dispatchClass": {
-                    "enum": ["initialize", "sync", "api", "update-mk", "ignore"]
+                    "enum": [
+                      "initialize",
+                      "sync",
+                      "api",
+                      "update-mk",
+                      "ignore"
+                    ]
                   },
                   "requirement": {
-                    "enum": ["none", "latest-message", "latest-message-with-mk"]
+                    "enum": [
+                      "none",
+                      "latest-message",
+                      "latest-message-with-mk"
+                    ]
                   },
                   "messages": {
                     "type": "array",
@@ -1631,7 +1924,12 @@
                             "type": "string"
                           },
                           "category": {
-                            "enum": ["input", "domain", "tavern", "cancelled"]
+                            "enum": [
+                              "input",
+                              "domain",
+                              "tavern",
+                              "cancelled"
+                            ]
                           },
                           "retryable": {
                             "type": "boolean"
@@ -1749,10 +2047,16 @@
                           "type": "object",
                           "properties": {
                             "source": {
-                              "enum": ["tavern", "ui", "era-api"]
+                              "enum": [
+                                "tavern",
+                                "ui",
+                                "era-api"
+                              ]
                             }
                           },
-                          "required": ["source"]
+                          "required": [
+                            "source"
+                          ]
                         },
                         {
                           "type": "object",
@@ -1764,7 +2068,10 @@
                               "const": "era.service.collection_timer"
                             }
                           },
-                          "required": ["source", "type"]
+                          "required": [
+                            "source",
+                            "type"
+                          ]
                         }
                       ]
                     }
@@ -1790,7 +2097,12 @@
                     },
                     "source": {
                       "type": "string",
-                      "enum": ["tavern", "ui", "era-api", "timer"]
+                      "enum": [
+                        "tavern",
+                        "ui",
+                        "era-api",
+                        "timer"
+                      ]
                     },
                     "args": {
                       "type": "array",
@@ -1804,7 +2116,10 @@
                               },
                               "value": {}
                             },
-                            "required": ["kind", "value"],
+                            "required": [
+                              "kind",
+                              "value"
+                            ],
                             "additionalProperties": false
                           },
                           {
@@ -1814,7 +2129,9 @@
                                 "const": "undefined"
                               }
                             },
-                            "required": ["kind"],
+                            "required": [
+                              "kind"
+                            ],
                             "additionalProperties": false
                           },
                           {
@@ -1832,7 +2149,11 @@
                                 "minLength": 1
                               }
                             },
-                            "required": ["kind", "token", "refKind"],
+                            "required": [
+                              "kind",
+                              "token",
+                              "refKind"
+                            ],
                             "additionalProperties": false
                           }
                         ]
@@ -1884,13 +2205,26 @@
                     "const": 2
                   },
                   "status": {
-                    "enum": ["ready", "failed"]
+                    "enum": [
+                      "ready",
+                      "failed"
+                    ]
                   },
                   "dispatchClass": {
-                    "enum": ["initialize", "sync", "api", "update-mk", "ignore"]
+                    "enum": [
+                      "initialize",
+                      "sync",
+                      "api",
+                      "update-mk",
+                      "ignore"
+                    ]
                   },
                   "requirement": {
-                    "enum": ["none", "latest-message", "latest-message-with-mk"]
+                    "enum": [
+                      "none",
+                      "latest-message",
+                      "latest-message-with-mk"
+                    ]
                   },
                   "messages": {
                     "type": "array",
@@ -1962,7 +2296,12 @@
                             "type": "string"
                           },
                           "category": {
-                            "enum": ["input", "domain", "tavern", "cancelled"]
+                            "enum": [
+                              "input",
+                              "domain",
+                              "tavern",
+                              "cancelled"
+                            ]
                           },
                           "retryable": {
                             "type": "boolean"
@@ -2056,7 +2395,12 @@
           },
           "category": {
             "type": "string",
-            "enum": ["input", "domain", "tavern", "cancelled"]
+            "enum": [
+              "input",
+              "domain",
+              "tavern",
+              "cancelled"
+            ]
           },
           "retryable": {
             "type": "boolean"
@@ -2066,7 +2410,12 @@
             "additionalProperties": true
           }
         },
-        "required": ["code", "message", "category", "retryable"],
+        "required": [
+          "code",
+          "message",
+          "category",
+          "retryable"
+        ],
         "additionalProperties": false
       }
     }

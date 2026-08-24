@@ -17,6 +17,7 @@ import type {
   EraTavernAdapter,
   EraWaitThroughResult,
 } from './types';
+import { currentEraMessageText, updateEraMessageContent } from './message-writer';
 import { readInstallationScopeFacts } from './installation-scope';
 import { projectMessage } from './message-projection';
 
@@ -44,8 +45,17 @@ const BUTTON_EVENTS: ReadonlyArray<readonly [string, string]> = [
   ['强制完全重算', INPUT_EVENT.MANUAL_FULL_SYNC],
 ];
 
-/** 22 个目录事件、3 个角色脚本按钮和 3 个函数 API，生产页面只允许这一套监听。 */
-export const ERA_TAVERN_LISTENER_COUNT = 28;
+/** 9 个 Tavern 生命周期/业务事件与 3 个角色脚本按钮；公共 API 不再注册事件监听。 */
+export const ERA_TAVERN_LISTENER_COUNT = 12;
+
+const WINDOW_LIFECYCLE_EVENTS = new Set<string>([
+  INPUT_EVENT.MESSAGE_RECEIVED,
+  INPUT_EVENT.MESSAGE_EDITED,
+  INPUT_EVENT.MESSAGE_DELETED,
+  INPUT_EVENT.MESSAGE_UPDATED,
+  INPUT_EVENT.MESSAGE_SWIPED,
+  INPUT_EVENT.CHAT_CHANGED,
+]);
 
 export interface EraTavernAdapterOptions {
   readonly onScriptVariablesCommitted?: () => void;
@@ -122,6 +132,8 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
   private accepting = true;
   private startupGate: Promise<EraStartupGateDecision>;
   private resolveStartupGate: ((decision: EraStartupGateDecision) => void) | null = null;
+  private lifecycleToken = 1;
+  private readonly internalMessageWrites = new Map<number, string>();
 
   constructor(private readonly options: EraTavernAdapterOptions = {}) {
     this.startupGate = new Promise<EraStartupGateDecision>(resolve => {
@@ -140,8 +152,33 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
     resolve(Object.freeze({ ...decision }));
   }
 
+  currentLifecycleToken(): number {
+    return this.lifecycleToken;
+  }
+
+  private rotateLifecycleWindow(): void {
+    if (this.lifecycleToken >= Number.MAX_SAFE_INTEGER) this.lifecycleToken = 1;
+    else this.lifecycleToken += 1;
+  }
+
+  /** ERA 自己的 MK/API/压缩写回不能制造新业务窗口，也不能重新入队同步。 */
+  private consumeInternalMessageUpdate(eventType: string, args: readonly unknown[]): boolean {
+    if (eventType !== INPUT_EVENT.MESSAGE_UPDATED) return false;
+    const rawId = args[0];
+    if (!Number.isSafeInteger(rawId) || Number(rawId) < 0) return false;
+    const id = Number(rawId);
+    const expected = this.internalMessageWrites.get(id);
+    if (expected === undefined) return false;
+    if (currentEraMessageText(id) !== expected) {
+      this.internalMessageWrites.delete(id);
+      return false;
+    }
+    this.internalMessageWrites.delete(id);
+    return true;
+  }
+
   /**
-   * 一次性登记 28 个生产监听器。重复订阅必须失败，否则同一 Tavern 事件
+   * 一次性登记 12 个生产监听器。重复订阅必须失败，否则同一 Tavern 事件
    * 会产生两个 receipt，并破坏 FIFO 与 high-water barrier。
    */
   subscribe(listener: (event: EraInboundEvent) => EraAdmissionResult): () => void {
@@ -170,6 +207,8 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
         const definition = getEventDefinition(type);
         /** 只有 generation barrier 事件返回 Promise，普通通知保持 Tavern 原时序。 */
         const handler = (...args: unknown[]): void | Promise<void> => {
+          if (this.consumeInternalMessageUpdate(type, args)) return undefined;
+          if (WINDOW_LIFECYCLE_EVENTS.has(type)) this.rotateLifecycleWindow();
           const result = this.enqueue(type, eventSource(type), args);
           if (
             !result.accepted ||
@@ -235,6 +274,7 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
 
   stopAccepting(): void {
     this.accepting = false;
+    this.internalMessageWrites.clear();
   }
 
   async notify(notification: EraPreparedNotification, context: EraCapabilityContext): Promise<void> {
@@ -300,28 +340,7 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
       context: EraCapabilityContext,
     ): Promise<unknown> => {
       throwIfAborted(context.signal);
-      const updates = Array.isArray(input.updates)
-        ? clonePortable(input.updates)
-        : isRecord(input.update)
-          ? [clonePortable(input.update)]
-          : null;
-      const refresh = input.refresh === 'affected' || input.refresh === 'all' ? input.refresh : 'none';
-      if (updates) {
-        await setChatMessages(updates as Array<{ message_id: number }>, { refresh });
-      } else {
-        const id = messageId(input);
-        const content = input.content;
-        if (typeof content !== 'string') throw new TypeError('消息更新请求缺少文本 content。');
-        const current = getChatMessages(id, { include_swipes: true })[0];
-        if (!current) throw new Error(`找不到消息 #${id}。`);
-        if (Array.isArray(current.swipes)) {
-          const swipes = [...current.swipes];
-          swipes[Number(current.swipe_id ?? 0)] = content;
-          await setChatMessages([{ message_id: id, swipes }], { refresh });
-        } else {
-          await setChatMessages([{ message_id: id, message: content }], { refresh });
-        }
-      }
+      await updateEraMessageContent(input, this.internalMessageWrites);
       throwIfAborted(context.signal);
       return { status: 'committed' };
     },
@@ -414,6 +433,7 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
         isGroup: Boolean(SillyTavern.groupId),
         chatId: SillyTavern.getCurrentChatId(),
         scriptId: getScriptId(),
+        lifecycleToken: this.lifecycleToken,
       });
     },
   };

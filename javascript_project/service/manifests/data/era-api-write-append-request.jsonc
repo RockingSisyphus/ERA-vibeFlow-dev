@@ -1,5 +1,0 @@
-{
-  "kind": "data_schema", "type_key": "era.api.write.append.request", "representation": "json",
-  "display_name": "ERA·API·消息·追加·请求", "description": "定义一条已纯计算完成、等待 Capability 提交的消息局部更新。",
-  "schema": {"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "additionalProperties": true}
-}

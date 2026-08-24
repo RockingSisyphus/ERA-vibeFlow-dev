@@ -1,0 +1,237 @@
+{
+  "type_key": "era.api.commit",
+  "display_name": "ERA 即时 Scope Commit",
+  "description": "一次 commit 独立追加单 scope era_tx，回读后立即复用 Sidecar 同步事务。",
+  "requires": [
+    {
+      "type": "era.api.request",
+      "cardinality": "exactly_one",
+      "display_name": "era.api.request"
+    },
+    {
+      "type": "era.batch.execution.state",
+      "cardinality": "exactly_one",
+      "display_name": "era.batch.execution.state"
+    }
+  ],
+  "provides": [
+    {
+      "key": "commit_result",
+      "type": "era.api.facade.result",
+      "display_name": "commit_result"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "facade_request",
+        "type": "era.api.request",
+        "required": true,
+        "display_name": "facade_request"
+      },
+      {
+        "key": "execution_state",
+        "type": "era.batch.execution.state",
+        "required": true,
+        "display_name": "execution_state"
+      }
+    ],
+    "max_steps": 20,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.service.terminal",
+        "display_name": "即时 Commit 开始",
+        "description": "执行即时 Commit 开始。"
+      },
+      {
+        "id": "read_window_admission",
+        "type_used": "era.api.read_window_admission",
+        "display_name": "读取窗口准入与当前目标",
+        "description": "执行读取窗口准入与当前目标。"
+      },
+      {
+        "id": "validate_scope_and_operations",
+        "type_used": "era.api.validate_commit",
+        "display_name": "校验 Scope 与有序操作",
+        "description": "执行校验 Scope 与有序操作。"
+      },
+      {
+        "id": "build_single_era_tx",
+        "type_used": "era.api.build_single_era_tx",
+        "display_name": "生成单次 era_tx",
+        "description": "执行生成单次 era_tx。"
+      },
+      {
+        "id": "read_target_messages",
+        "type_used": "era.api.read_target_message",
+        "display_name": "读取最新 AI 消息",
+        "description": "执行读取最新 AI 消息。"
+      },
+      {
+        "id": "build_no_refresh_append",
+        "type_used": "era.api.build_no_refresh_append",
+        "display_name": "构造无刷新消息追加",
+        "description": "执行构造无刷新消息追加。"
+      },
+      {
+        "id": "recheck_window_before_write",
+        "type_used": "era.api.recheck_window",
+        "display_name": "写入前复核窗口",
+        "description": "执行写入前复核窗口。"
+      },
+      {
+        "id": "commit_message_append",
+        "type_used": "era.api.commit_facade_message",
+        "display_name": "无刷新提交 era_tx",
+        "description": "执行无刷新提交 era_tx。"
+      },
+      {
+        "id": "read_and_verify_committed_message",
+        "type_used": "era.api.verify_facade_message",
+        "display_name": "回读确认独立事务",
+        "description": "执行回读确认独立事务。"
+      },
+      {
+        "id": "prepare_immediate_sync_step",
+        "type_used": "era.api.prepare_facade_sync",
+        "display_name": "构造即时同步步骤",
+        "description": "执行构造即时同步步骤。"
+      },
+      {
+        "id": "sync_sidecar_immediately",
+        "type_used": "era.task.sync",
+        "display_name": "立即同步 Sidecar",
+        "description": "执行立即同步 Sidecar。"
+      },
+      {
+        "id": "build_committed_receipt",
+        "type_used": "era.api.build_committed_receipt",
+        "display_name": "返回 committed receipt",
+        "description": "执行返回 committed receipt。"
+      },
+      {
+        "id": "build_skipped_receipt",
+        "type_used": "era.api.build_skipped_receipt",
+        "display_name": "返回 skipped receipt",
+        "description": "执行返回 skipped receipt。"
+      },
+      {
+        "id": "build_commit_failure",
+        "type_used": "era.api.build_commit_failure",
+        "display_name": "构造 Commit 失败",
+        "description": "执行构造 Commit 失败。"
+      },
+      {
+        "id": "merge_commit_result",
+        "type_used": "era.api.merge_commit_result",
+        "display_name": "合并即时 Commit 结果",
+        "description": "执行合并即时 Commit 结果。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.service.terminal",
+        "display_name": "即时 Commit 结束",
+        "description": "执行即时 Commit 结束。"
+      }
+    ],
+    "edges": [
+      [
+        "start",
+        "read_window_admission"
+      ],
+      [
+        "read_window_admission",
+        "validate_scope_and_operations"
+      ],
+      {
+        "from": "validate_scope_and_operations",
+        "to": "build_single_era_tx",
+        "when": "commit_admission_route == 'commit'"
+      },
+      {
+        "from": "validate_scope_and_operations",
+        "to": "build_skipped_receipt",
+        "when": "commit_admission_route == 'skipped'"
+      },
+      {
+        "from": "validate_scope_and_operations",
+        "to": "build_commit_failure",
+        "when": "commit_admission_route == 'failed'"
+      },
+      [
+        "build_single_era_tx",
+        "read_target_messages"
+      ],
+      [
+        "read_target_messages",
+        "build_no_refresh_append"
+      ],
+      [
+        "build_no_refresh_append",
+        "recheck_window_before_write"
+      ],
+      {
+        "from": "recheck_window_before_write",
+        "to": "commit_message_append",
+        "when": "window_recheck_route == 'current'"
+      },
+      {
+        "from": "recheck_window_before_write",
+        "to": "build_commit_failure",
+        "when": "window_recheck_route == 'changed'"
+      },
+      [
+        "commit_message_append",
+        "read_and_verify_committed_message"
+      ],
+      {
+        "from": "read_and_verify_committed_message",
+        "to": "prepare_immediate_sync_step",
+        "when": "commit_readback_route == 'sync'"
+      },
+      {
+        "from": "read_and_verify_committed_message",
+        "to": "build_commit_failure",
+        "when": "commit_readback_route == 'failed'"
+      },
+      [
+        "prepare_immediate_sync_step",
+        "sync_sidecar_immediately"
+      ],
+      [
+        "prepare_immediate_sync_step",
+        "build_committed_receipt"
+      ],
+      [
+        "sync_sidecar_immediately",
+        "build_committed_receipt"
+      ],
+      [
+        "build_committed_receipt",
+        "merge_commit_result"
+      ],
+      [
+        "build_skipped_receipt",
+        "merge_commit_result"
+      ],
+      [
+        "build_commit_failure",
+        "merge_commit_result"
+      ],
+      [
+        "merge_commit_result",
+        "end"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.api.facade.result",
+        "cardinality": "exactly_one",
+        "as": "commitResult",
+        "display_name": "commitResult"
+      }
+    ]
+  }
+}

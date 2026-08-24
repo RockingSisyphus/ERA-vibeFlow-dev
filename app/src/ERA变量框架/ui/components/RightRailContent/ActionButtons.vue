@@ -101,8 +101,8 @@
 import { ref } from 'vue';
 import toastr from 'toastr';
 import { requestEraService } from '../../../service/client';
+import type { EraFacade } from '../../../service/public-api';
 import { ERA_UI_EVENT } from '../../../service/types';
-import { ERA_API_EVENTS } from '../../../utils/constants';
 import { Logger } from '../../../utils/log';
 import { isNonNegativeSafeMessageId } from '../../utils/message-id';
 import { awaitUiSettlement } from '../../utils/service-settlement';
@@ -141,10 +141,18 @@ async function onInjectRegex() {
   }
 }
 
+/** 完全重算通过公共 Facade 进入同一同步事务，避免 UI 自行重放消息。 */
 async function onFullSync() {
   logger.log('onFullSync', '点击“完全重算变量”，直达 ERA Service。');
   try {
-    await runUiCommand('full', ERA_API_EVENTS.FORCE_SYNC, [{ mode: 'full' }], '完全重算');
+    if (pendingAction.value !== null) return;
+    pendingAction.value = 'full';
+    try {
+      const api = await waitGlobalInitialized<EraFacade>('ERA');
+      await api.sync({ mode: 'full' });
+    } finally {
+      pendingAction.value = null;
+    }
     toastr.success('“完全重算变量”已完成。', '操作成功');
   } catch (error) {
     logger.error('onFullSync', '完全重算失败。', error);
@@ -152,10 +160,18 @@ async function onFullSync() {
   }
 }
 
+/** 只重算最新楼层，并等待 Sidecar 提交完成，避免 UI 把入队成功误报为业务成功。 */
 async function onLastSync() {
   logger.log('onLastSync', '点击“重算最后一楼变量”，直达 ERA Service。');
   try {
-    await runUiCommand('latest', ERA_API_EVENTS.FORCE_SYNC, [{ mode: 'latest' }], '最后一楼重算');
+    if (pendingAction.value !== null) return;
+    pendingAction.value = 'latest';
+    try {
+      const api = await waitGlobalInitialized<EraFacade>('ERA');
+      await api.sync({ mode: 'latest' });
+    } finally {
+      pendingAction.value = null;
+    }
     toastr.success('“重算最后一楼变量”已完成。', '操作成功');
   } catch (error) {
     logger.error('onLastSync', '最后一楼重算失败。', error);
@@ -163,6 +179,7 @@ async function onLastSync() {
   }
 }
 
+/** 定向回滚先校验消息 ID，防止无效输入进入 Service FIFO。 */
 async function onRollbackTo() {
   const messageId = rollbackId.value;
   if (!isNonNegativeSafeMessageId(messageId)) {
@@ -171,12 +188,14 @@ async function onRollbackTo() {
   }
   logger.log('onRollbackTo', `点击“回滚到”，直达 ERA Service (message_id: ${messageId})。`);
   try {
-    await runUiCommand(
-      'rollback',
-      ERA_API_EVENTS.FORCE_SYNC,
-      [{ mode: 'rollbackTo', message_id: messageId }],
-      '定向回滚',
-    );
+    if (pendingAction.value !== null) return;
+    pendingAction.value = 'rollback';
+    try {
+      const api = await waitGlobalInitialized<EraFacade>('ERA');
+      await api.sync({ rollbackTo: messageId });
+    } finally {
+      pendingAction.value = null;
+    }
     toastr.success(`已回滚到消息 #${messageId}。`, '操作成功');
   } catch (error) {
     logger.error('onRollbackTo', '定向回滚失败。', error);

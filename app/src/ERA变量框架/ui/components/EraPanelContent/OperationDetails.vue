@@ -16,12 +16,12 @@
 </template>
 
 <script setup lang="ts">
-import type { WriteDonePayload } from '../../../utils/constants';
+import type { EraPublicState } from '../../../service/public-api';
 import EraAccordion from '../../template/EraAccordion.vue';
 import PrettyJsonViewer from '../../template/PrettyJsonViewer.vue';
 
 defineProps<{
-  data: WriteDonePayload;
+  data: EraPublicState;
 }>();
 </script>
 

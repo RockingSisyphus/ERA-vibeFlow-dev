@@ -1,1 +1,11 @@
-{"kind":"data_schema","type_key":"era.command_compaction.result","representation":"json","display_name":"已验证封存压缩同步结果","description":"表达式命令同步工作项经纯命令层压缩与 Service CRUD 复放确认后的结果。","schema":{"type":"object","additionalProperties":true}}
+{
+  "kind": "data_schema",
+  "type_key": "era.command_compaction.result",
+  "representation": "json",
+  "display_name": "已验证封存压缩同步结果",
+  "description": "表达式命令同步工作项经纯命令层压缩与 Service CRUD 复放确认后的结果。",
+  "schema": {
+    "type": "object",
+    "additionalProperties": true
+  }
+}

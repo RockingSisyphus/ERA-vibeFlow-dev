@@ -1,0 +1,64 @@
+{
+  "kind": "node",
+  "type_key": "era.api.adapt_facade_sync",
+  "display_name": "适配 ERA.sync receipt",
+  "category": "公共 Facade",
+  "description": "共享同步成功后结算本次 Promise。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.task.result",
+        "cardinality": "exactly_one",
+        "display_name": "era.task.result"
+      },
+      {
+        "type": "era.api.sync.context",
+        "cardinality": "exactly_one",
+        "display_name": "era.api.sync.context"
+      }
+    ],
+    "provides": [
+      {
+        "key": "facade_sync_committed_result",
+        "type": "era.api.sync.result",
+        "display_name": "facade_sync_result"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.task.result": [
+        "输入：era.task.result。"
+      ],
+      "era.api.sync.context": [
+        "输入：era.api.sync.context。"
+      ]
+    },
+    "output_semantics": {
+      "facade_sync_committed_result": [
+        "输出：facade_sync_result。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/api/facade_adapt_sync.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.facade_nodes"
+  ],
+  "capabilities": []
+}

@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { INPUT_EVENT } from '../../src/ERA变量框架/events/catalog';
 import { ERA_TAVERN_LISTENER_COUNT, TavernEraServiceAdapter } from '../../src/ERA变量框架/service/tavern-adapter';
 import type { EraAdmissionAccepted, EraInboundEvent } from '../../src/ERA变量框架/service/types';
-import { ERA_API_EVENTS } from '../../src/ERA变量框架/utils/constants';
 
 type EventHandler = (...args: unknown[]) => unknown;
 
@@ -66,16 +65,16 @@ describe('ERA Tavern 生产接线', () => {
     vi.restoreAllMocks();
   });
 
-  it('只注册 22 个目录事件与 3 个按钮，13 个对外 API 各一次', () => {
+  it('只注册 9 个 Tavern 生命周期事件与 3 个按钮，不监听旧公共事件 API', () => {
     const adapter = new TavernEraServiceAdapter();
     const listener = vi.fn(() => accepted(async () => ({ throughSequence: 1, outcomes: [], hasFailures: false })));
     const stop = adapter.subscribe(listener);
 
     expect(events.count).toBe(ERA_TAVERN_LISTENER_COUNT);
     expect(events.listeners.size).toBe(ERA_TAVERN_LISTENER_COUNT);
-    for (const apiType of Object.values(ERA_API_EVENTS)) {
-      expect(events.listeners.get(apiType)?.size).toBe(1);
-    }
+    expect(events.listeners.has('era:updateByObject')).toBe(false);
+    expect(events.listeners.has('era:requestWriteDone')).toBe(false);
+    expect(events.listeners.has('era:forceSync')).toBe(false);
     expect(events.listeners.has(INPUT_EVENT.MANUAL_WRITE)).toBe(false);
     expect(events.listeners.has(INPUT_EVENT.MANUAL_SYNC)).toBe(false);
     expect(events.listeners.has(INPUT_EVENT.MANUAL_FULL_SYNC)).toBe(false);
@@ -110,8 +109,7 @@ describe('ERA Tavern 生产接线', () => {
     expect(received[0]).toMatchObject({ type: INPUT_EVENT.GENERATION_STARTED, source: 'tavern' });
     expect(received[0]?.args).toEqual(['type', {}, true]);
 
-    events.only(ERA_API_EVENTS.GET_CURRENT_VARS)({ futureRequest: true });
-    expect(received.at(-1)).toMatchObject({ type: ERA_API_EVENTS.GET_CURRENT_VARS, source: 'era-api' });
+    expect(received.at(-1)).toMatchObject({ type: INPUT_EVENT.GENERATION_STARTED, source: 'tavern' });
     stop();
   });
 

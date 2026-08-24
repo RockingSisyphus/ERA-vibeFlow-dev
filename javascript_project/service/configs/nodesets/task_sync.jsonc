@@ -12,7 +12,7 @@
   ],
   "type_key": "era.task.sync",
   "display_name": "ERA 同步任务",
-  "description": "运行共享同步路径，处理普通协调、full/latest/auto 修复、rollbackTo 定向同步和 CRUD 写入。",
+  "description": "运行共享同步路径，处理普通协调、full/latest/auto 修复、rollbackTo 定向同步、即时 Commit 重放与同 Scope 封存压缩。",
   "requires": [
     {
       "type": "era.step.request.routed",
@@ -83,8 +83,8 @@
       {
         "id": "apply_command_compaction",
         "type_used": "era.command_compaction.apply_sealed_layers",
-        "display_name": "压缩已封存 ERA 指令楼层",
-        "description": "把同步重放产生的已封存候选交给独立命令压缩 root，再由 Service 复放确认消息、日志与 marker；不接触 Tavern 或 Sidecar I/O。"
+        "display_name": "按同 Scope 压缩封存事务",
+        "description": "把同步重放产生的封存候选按 era_tx scope 划分相邻段，再交给独立命令压缩 root；跨 scope、正文与无法证明语义都是硬边界。"
       },
       {
         "id": "assemble_expression_sync_plan",
@@ -137,8 +137,8 @@
       {
         "id": "build_sync_notification",
         "type_used": "era.sync.build_notification",
-        "display_name": "构造同步结果",
-        "description": "仅在提交确认后按候选顺序构造结算及锁外 writeDone/apiWrite 通知，并保持 API 前后的连续状态 carry 完全相同。"
+        "display_name": "构造同步结算结果",
+        "description": "仅在提交确认后构造来源结算、状态与诊断；运行时快照已由 Sidecar 成功提交原子发布，公共对象订阅据此更新。"
       },
       {
         "id": "sidecar_binding_blocked_result",

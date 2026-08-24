@@ -1,0 +1,56 @@
+{
+  "kind": "node",
+  "type_key": "era.api.build_commit_failure",
+  "display_name": "构造 Commit 失败",
+  "category": "公共 Facade",
+  "description": "把输入、窗口或消息失败结算到本次调用。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.api.commit.failure_context",
+        "cardinality": "exactly_one",
+        "display_name": "era.api.commit.failure_context"
+      }
+    ],
+    "provides": [
+      {
+        "key": "facade_commit_failed_result",
+        "type": "era.api.commit.result",
+        "display_name": "facade_commit_result"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.api.commit.failure_context": [
+        "输入：era.api.commit.failure_context。"
+      ]
+    },
+    "output_semantics": {
+      "facade_commit_failed_result": [
+        "输出：facade_commit_result。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/api/facade_commit_failure.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.facade_nodes"
+  ],
+  "capabilities": []
+}

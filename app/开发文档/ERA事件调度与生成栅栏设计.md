@@ -57,28 +57,30 @@ Service Host 只负责宿主投影、队列、资源生命周期和 Capability �
 - `message_sent` 对应的独立 `update-mk` 任务不执行历史同步，因此仍由统一准备阶段提交其
   `SelectedMks` 校准。提交所有权按任务类型确定，不根据事件时序或生成停止状态猜测。
 
-可观察顺序固定为：
+Tavern 生命周期任务的可观察顺序固定为：
 
 ```text
 Capability 写入确认
   → task/batch 结果确定
   → 按 sequence 结算全部 receipt
+  → Sidecar 成功提交后原子发布运行时快照
   → 释放执行锁
-  → 按声明顺序启动 apiWrite / writeDone / queryResult
 ```
 
-通知使用隔离的 all-settled 语义。通知监听器可以重新进入 ERA，但新调用只能形成后续
-事件，不能重入尚未完成的事务。副作用操作不自动重试。
+公共对象订阅者只由已发布的运行时快照驱动。`ERA.commit()` 每次调用形成一个独立 FIFO
+任务，在消息写入、回读和 Sidecar 提交后才结算；不再产生 `apiWrite`、`writeDone` 或
+`queryResult` 通知。副作用操作不自动重试。
 
 ## 取消与热重载
 
-`pagehide` 时先停止接受新命令，再注销 macro/UI 入口，abort 永久 workflow，取消
+`pagehide` 时先停止接受新命令，再注销公共对象、macro/UI 入口，abort 永久 workflow，取消
 receive/timer/receipt，等待 workflow 收口，最后停止 Host 与卸载 UI。监听器、Port
 waiter、timer、host-ref 和 pending notification 必须归零；任何永久 workflow 的非预期
-reject 都转为可见 fatal 状态。
+reject 都转为可见 fatal 状态。内存 scope 窗口与运行时快照同时清除，消息中的 `era_tx`
+scope 标记继续作为下一实例的准入事实。
 
 ## 修改规则
 
 新增或调整事件时，依次修改真实 Config/Nodeset、Data Schema、Node source 和合同测试，
-再运行 VibeFlow review/validate/quality/build。所有可读名称和说明使用中文；公开事件 ABI、
-持久化 Schema 或通知顺序的变化必须单独审核。
+再运行 VibeFlow review/validate/quality/build。所有可读名称和说明使用中文；`ERA` 公共对象 ABI、
+持久化 Schema、scope 语义或结算顺序的变化必须单独审核。

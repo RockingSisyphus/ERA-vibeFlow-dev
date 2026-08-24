@@ -4,28 +4,22 @@ import { readFile } from 'node:fs/promises';
 
 const reportUrl = new URL('../../reports/e2e/real-tavern-summary.json', import.meta.url);
 const report = JSON.parse(await readFile(reportUrl, 'utf8'));
-const expectedInputs = [
-  'era:insertByObject',
-  'era:updateByObject',
-  'era:insertByPath',
-  'era:updateByPath',
-  'era:deleteByPath',
-  'era:deleteByObject',
-  'era:getCurrentVars',
-  'era:getSnapshotAtMk',
-  'era:getSnapshotsBetweenMks',
-  'era:getSnapshotAtMId',
-  'era:getSnapshotsBetweenMIds',
-  'era:requestWriteDone',
-  'era:forceSync',
-];
+const expectedMethods = ['commit', 'get', 'subscribe', 'sync', 'history.atMessage'];
+const receipts = Array.isArray(report.facade?.commitReceipts) ? report.facade.commitReceipts : [];
 
 const passed =
   report.status === 'PASS' &&
-  JSON.stringify(report.inputs) === JSON.stringify(expectedInputs) &&
-  report.outputCounts?.['era:apiWrite'] === 6 &&
-  report.outputCounts?.['era:writeDone'] === 8 &&
-  report.outputCounts?.['era:queryResult'] === 5 &&
+  JSON.stringify(report.facade?.methods) === JSON.stringify(expectedMethods) &&
+  receipts.length >= 3 &&
+  receipts.every(
+    (receipt) =>
+      (receipt?.status === 'committed' || receipt?.status === 'skipped') &&
+      ['message', 'branch', 'always'].includes(receipt?.scope),
+  ) &&
+  report.facade?.legacyPublicEventListenerCount === 0 &&
+  report.facade?.mixedScopeTransactionCount === 0 &&
+  report.sidecar?.stateSource === 'user-file' &&
+  report.sidecar?.chatVariablesContainOnlyPointer === true &&
   report.macro?.hook === 'generate_after_data' &&
   typeof report.macro?.output === 'string' &&
   !report.macro.output.includes('{{ERA:');

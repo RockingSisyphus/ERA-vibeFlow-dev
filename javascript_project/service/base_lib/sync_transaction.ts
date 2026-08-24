@@ -21,6 +21,7 @@ import {
   cloneEraPortableJsonV1,
   isEraDispatchContextV2,
   type EraDispatchContextV2,
+  type JsonValue,
 } from "@era/vibeflow-contracts";
 
 export type SyncFailureCategory = "input" | "domain" | "tavern" | "cancelled";
@@ -30,7 +31,7 @@ export interface SyncFailureV1 {
   readonly message: string;
   readonly category: SyncFailureCategory;
   readonly retryable: false;
-  readonly details?: Readonly<Record<string, unknown>>;
+  readonly details?: Readonly<Record<string, JsonValue>>;
 }
 
 export interface SyncContextV1 {
@@ -155,7 +156,7 @@ export function syncFailure(
   code: string,
   message: string,
   category: SyncFailureCategory,
-  details?: Readonly<Record<string, unknown>>,
+  details?: Readonly<Record<string, JsonValue>>,
 ): SyncFailureV1 {
   return {
     code,
@@ -166,7 +167,9 @@ export function syncFailure(
   };
 }
 
-export function assertSyncStep(value: unknown): PlannedStepV1 {
+export function assertSyncStep(
+  value: unknown,
+): Extract<PlannedStepV1, { readonly kind: "execute" }> {
   if (!isRecord(value) || value.kind !== "execute") {
     throw new TypeError("同步任务只接受 execute 步骤。");
   }
@@ -177,7 +180,7 @@ export function assertSyncStep(value: unknown): PlannedStepV1 {
   if (!Array.isArray(value.sources) || value.sources.length === 0) {
     throw new TypeError("同步任务没有可结算来源。");
   }
-  return value as PlannedStepV1;
+  return value as unknown as Extract<PlannedStepV1, { readonly kind: "execute" }>;
 }
 
 export function assertBatchState(value: unknown): BatchExecutionStateV1 {
@@ -274,7 +277,7 @@ function normalizeMessage(value: unknown, index: number): EraMkMessageV1 {
 }
 
 function dispatchContext(step: PlannedStepV1): EraDispatchContextV2 {
-  const value = step.dispatchContext;
+  const value = assertSyncStep(step).dispatchContext;
   if (!isEraDispatchContextV2(value)) {
     throw new TypeError("同步步骤缺少有效的 EraDispatchContextV2。");
   }
@@ -309,9 +312,10 @@ function seedFor(
 function selectedMks(
   meta: Readonly<Record<string, unknown>>,
 ): (string | null)[] {
-  if (!Array.isArray(meta.SelectedMks)) return [];
-  return Array.from({ length: meta.SelectedMks.length }, (_, index) => {
-    const value = meta.SelectedMks[index];
+  const raw = meta.SelectedMks;
+  if (!Array.isArray(raw)) return [];
+  return Array.from({ length: raw.length }, (_, index) => {
+    const value = raw[index];
     return typeof value === "string" ? value : null;
   });
 }
@@ -342,12 +346,13 @@ function targetIndex(
       ? { stopAtTarget: false }
       : { targetMessageId: previous, stopAtTarget: true };
   }
+  const target = task.target;
   const index = messages.findIndex(
-    (message) => message.messageId === task.target.messageId,
+    (message) => message.messageId === target.messageId,
   );
   return {
-    targetMessageId: index < 0 ? task.target.messageId : index,
-    stopAtTarget: task.target.stopAfterTarget,
+    targetMessageId: index < 0 ? target.messageId : index,
+    stopAtTarget: target.stopAfterTarget,
   };
 }
 
@@ -357,12 +362,10 @@ function actionsForStep(
 ): EraActionsTakenV1 {
   const task = assertSyncStep(step).task;
   if (task.kind !== "sync") throw new TypeError("同步动作收到非同步任务。");
-  const apiWrite = task.reason === "api-write";
   const isApi = dispatchContext(step).dispatchClass === "api";
   return {
     ...actions,
     api: isApi,
-    apiWrite,
   };
 }
 
@@ -675,8 +678,7 @@ export function validateSyncCommitEnvelope(
     step = assertSyncStep(request.step);
     if (
       request.schemaVersion !== 1 ||
-      !isRecord(request.plan) ||
-      request.plan.status === "failed"
+      !isRecord(request.plan)
     ) {
       throw new TypeError("同步提交请求或同步计划无效。");
     }
@@ -915,59 +917,6 @@ function settlementsFor(
   });
 }
 
-function unescapeEraData(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(unescapeEraData);
-  if (isPlainRecord(value)) {
-    const result: Record<string, unknown> = {};
-    for (const key of Object.keys(value)) {
-      const unescaped = key
-        .replaceAll("__DOT__", ".")
-        .replaceAll("__DQUOTE__", '"')
-        .replaceAll("__SQUOTE__", "'");
-      defineOwn(result, unescaped, unescapeEraData(value[key]));
-    }
-    return result;
-  }
-  return typeof value === "string"
-    ? value
-        .replaceAll("__DOT__", ".")
-        .replaceAll("__DQUOTE__", '"')
-        .replaceAll("__SQUOTE__", "'")
-    : value;
-}
-
-function removeMetaFields(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(removeMetaFields);
-  if (!isPlainRecord(value)) return value;
-  const result: Record<string, unknown> = {};
-  for (const key of Object.keys(value)) {
-    if (!key.startsWith("$")) {
-      defineOwn(result, key, removeMetaFields(value[key]));
-    }
-  }
-  return result;
-}
-
-function writeDonePayload(request: SyncCommitRequestV1) {
-  const selected = selectedMks(request.meta);
-  const editLogs = isRecord(request.meta.EditLogs)
-    ? cloneSyncJson(request.meta.EditLogs)
-    : {};
-  return {
-    mk: request.payload.mk,
-    message_id: request.payload.message_id,
-    is_user: request.payload.is_user,
-    actions: cloneSyncJson(request.payload.actions),
-    consecutiveProcessingCount: request.payload.consecutiveProcessingCount,
-    stat: unescapeEraData(cloneSyncJson(request.stat)),
-    statWithoutMeta: unescapeEraData(
-      removeMetaFields(cloneSyncJson(request.stat)),
-    ),
-    selectedMks: selected,
-    editLogs,
-  };
-}
-
 /** 构造无写入分支的最终结果。 */
 export function buildSyncNonCommitResult(work: SyncWorkV1): TaskResultV1 {
   if (work.disposition === "commit") {
@@ -1020,24 +969,10 @@ export function buildSyncContractFailureResult(
   };
 }
 
-/** 只在全部消息与变量写入已确认后声明 writeDone。 */
+/** 只在全部消息与 Sidecar 写入已确认后结算；状态更新通过 runtime snapshot 发布。 */
 export function buildSyncCommittedResult(
   outcome: SyncCommitResultV1,
 ): TaskResultV1 {
-  const notifications =
-    outcome.status === "committed"
-      ? [
-          {
-            type: "era:writeDone",
-            args: [
-              {
-                kind: "json" as const,
-                value: writeDonePayload(outcome),
-              },
-            ],
-          },
-        ]
-      : [];
   const diagnostics = [
     ...diagnosticsForPlan(outcome.plan, outcome.step),
     ...(outcome.failure === null
@@ -1056,7 +991,7 @@ export function buildSyncCommittedResult(
   return {
     status: outcome.status,
     settlements: settlementsFor(outcome.step, outcome.status, outcome.failure),
-    notifications,
+    notifications: [],
     diagnostics,
     ...(stateUpdateForPlan(outcome.plan) === undefined
       ? {}

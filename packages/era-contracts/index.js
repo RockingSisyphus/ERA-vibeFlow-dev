@@ -416,6 +416,7 @@ export function isEraServiceStateV1(value) {
       "consecutiveProcessingCount",
       "consecutiveMk",
       "timerToken",
+      "scopeWindow",
     ])
   ) {
     return false;
@@ -431,7 +432,17 @@ export function isEraServiceStateV1(value) {
     isSafeIntegerAtLeast(value.iteration, 0) &&
     isSafeIntegerAtLeast(value.consecutiveProcessingCount, 0) &&
     (value.consecutiveMk === null || isNonEmptyString(value.consecutiveMk)) &&
-    (value.timerToken === null || isNonEmptyString(value.timerToken))
+    (value.timerToken === null || isNonEmptyString(value.timerToken)) &&
+    isEraScopeWindowStateV1(value.scopeWindow)
+  );
+}
+
+export function isEraScopeWindowStateV1(value) {
+  return (
+    hasOnlyKeys(value, ["token", "messageAdmission", "branchAdmission"]) &&
+    (value.token === null || isSafeIntegerAtLeast(value.token, 1)) &&
+    (value.messageAdmission === null || typeof value.messageAdmission === "boolean") &&
+    (value.branchAdmission === null || typeof value.branchAdmission === "boolean")
   );
 }
 
@@ -443,7 +454,7 @@ const ERA_SYNC_REASONS = [
   "edited",
   "swipe-regeneration",
   "manual",
-  "api-write",
+  "facade-commit",
 ];
 
 function sameEventIdentity(left, right) {
@@ -673,9 +684,10 @@ export function isEraDiagnosticV1(value) {
 /** 判断任务携带的易失连续处理状态更新；该值不属于持久化 Schema。 */
 export function isEraTaskStateUpdateV1(value) {
   return (
-    hasOnlyKeys(value, ["consecutiveMk", "consecutiveProcessingCount"]) &&
+    hasOnlyKeys(value, ["consecutiveMk", "consecutiveProcessingCount"], ["scopeWindow"]) &&
     (value.consecutiveMk === null || isNonEmptyString(value.consecutiveMk)) &&
-    isSafeIntegerAtLeast(value.consecutiveProcessingCount, 0)
+    isSafeIntegerAtLeast(value.consecutiveProcessingCount, 0) &&
+    (!Object.prototype.hasOwnProperty.call(value, "scopeWindow") || isEraScopeWindowStateV1(value.scopeWindow))
   );
 }
 

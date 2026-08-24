@@ -1,4 +1,0 @@
-{"kind":"node","type_key":"era.api.build_force_sync_failure","display_name":"构造强制同步失败","category":"外部 API","description":"把不支持模式、缺失 message_id 或空聊天转成逐来源普通失败。","version":"1.0.0","flow_kind":"process","contract":{"requires":[{"type":"era.api.force_sync.failure","cardinality":"exactly_one","display_name":"强制同步失败上下文"}],"provides":[{"key":"force_sync_failure_result","type":"era.task.result.merged","display_name":"强制同步失败结果"}],"params_schema":{},"params_defaults":{},
-    "input_semantics": {"era.api.force_sync.failure":["输入：强制同步失败上下文。"]},
-    "output_semantics": {"force_sync_failure_result":["输出：强制同步失败结果。"]}
-  },"implementations":[{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/api/build_force_sync_failure.ts","export":"run"}}],"base_libs":[],"capabilities":[]}

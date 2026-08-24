@@ -1,0 +1,64 @@
+{
+  "kind": "node",
+  "type_key": "era.api.build_committed_receipt",
+  "display_name": "返回 committed receipt",
+  "category": "公共 Facade",
+  "description": "同步成功后结算唯一 Promise receipt。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.task.result",
+        "cardinality": "exactly_one",
+        "display_name": "era.task.result"
+      },
+      {
+        "type": "era.api.commit.sync_context",
+        "cardinality": "exactly_one",
+        "display_name": "era.api.commit.sync_context"
+      }
+    ],
+    "provides": [
+      {
+        "key": "facade_commit_committed_result",
+        "type": "era.api.commit.result",
+        "display_name": "facade_commit_result"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.task.result": [
+        "输入：era.task.result。"
+      ],
+      "era.api.commit.sync_context": [
+        "输入：era.api.commit.sync_context。"
+      ]
+    },
+    "output_semantics": {
+      "facade_commit_committed_result": [
+        "输出：facade_commit_result。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/api/facade_committed_receipt.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.facade_nodes"
+  ],
+  "capabilities": []
+}

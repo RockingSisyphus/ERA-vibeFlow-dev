@@ -1,0 +1,1 @@
+{"kind":"data_schema","type_key":"era.api.commit.rechecked","representation":"json","display_name":"已复核即时 Commit","description":"写入前身份与窗口仍匹配的追加请求。","schema":{"type":"object","additionalProperties":true}}

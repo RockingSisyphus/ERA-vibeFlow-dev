@@ -1,0 +1,1 @@
+{"kind":"data_schema","type_key":"era.api.commit.verified","representation":"json","display_name":"已回读即时 Commit","description":"消息文本回读匹配且可进入共享同步。","schema":{"type":"object","additionalProperties":true}}

@@ -69,7 +69,7 @@ export function parseEraMacros(text: string, statWithMeta?: object | null, statW
  * @param generate_data - 包含提示词的对象。
  * @param dry_run - 是否为演习运行。
  */
-const handleGenerateAfterData = (generate_data: { prompt: SillyTavern.SendingMessage[] }, dry_run: boolean) => {
+const handleGenerateAfterData = async (generate_data: { prompt: SillyTavern.SendingMessage[] }, dry_run: boolean) => {
   if (dry_run) {
     return;
   }
@@ -81,50 +81,20 @@ const handleGenerateAfterData = (generate_data: { prompt: SillyTavern.SendingMes
     return;
   }
 
-  // 定义一次性事件处理器
-  const processMacros = (detail: any) => {
-    // 确保这是我们想要的查询结果
-    if (detail.queryType !== 'getCurrentVars') {
-      return;
+  await waitGlobalInitialized('ERA');
+  const snapshot = ERA.get();
+  for (const message of generate_data.prompt) {
+    if (typeof message.content !== 'string' || !message.content.includes('{{ERA')) continue;
+    const originalContent = message.content;
+    message.content = parseEraMacros(
+      originalContent,
+      snapshot.stat as object | null,
+      snapshot.statWithoutMeta as object | null,
+    );
+    if (originalContent !== message.content) {
+      logger.log('handleGenerateAfterData', `成功替换了 role: ${message.role} 消息中的 ERA 宏。`);
     }
-    // 移除监听器，避免内存泄漏和重复执行
-    eventRemoveListener('era:queryResult', processMacros);
-
-    // 检查错误
-    if (detail.result && detail.result.error) {
-      logger.error('handleGenerateAfterData', `ERA 查询 [getCurrentVars] 失败:`, detail.result.error);
-      return;
-    }
-
-    const statWithMeta = detail.result?.stat;
-    const statWithoutMeta = detail.result?.statWithoutMeta;
-
-    if (!statWithMeta || !statWithoutMeta) {
-      logger.warn('handleGenerateAfterData', `无法从 era:queryResult 事件中获取完整的变量快照，跳过宏替换。`);
-      return;
-    }
-
-    logger.debug('handleGenerateAfterData', '成功通过事件获取到当前变量快照，准备替换宏。');
-
-    // 使用快照替换所有消息中的宏
-    for (const message of generate_data.prompt) {
-      if (typeof message.content === 'string' && message.content.includes('{{ERA')) {
-        const originalContent = message.content;
-        // 将两个 stat 对象都传递给新的 parseEraMacros
-        message.content = parseEraMacros(originalContent, statWithMeta, statWithoutMeta);
-        if (originalContent !== message.content) {
-          logger.log('handleGenerateAfterData', `成功替换了 role: ${message.role} 消息中的 ERA 宏。`);
-        }
-      }
-    }
-  };
-
-  // 监听查询结果事件
-  //eventOn('era:queryResult', processMacros);
-
-  // 发送事件请求最新的变量状态
-  logger.debug('handleGenerateAfterData', '发送 era:getCurrentVars 事件以获取宏替换所需的状态。');
-  eventEmit('era:getCurrentVars');
+  }
 };
 
 $(() => {

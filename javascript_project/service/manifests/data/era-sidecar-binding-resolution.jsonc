@@ -1,1 +1,43 @@
-{"kind":"data_schema","type_key":"era.sidecar.binding.resolution","representation":"json","display_name":"Sidecar 绑定决议","description":"纯规则解析出的事实、路由与可选用户选择。","schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","required":["facts","route","choice"],"additionalProperties":false,"properties":{"facts":{"type":"object"},"route":{"type":"string","enum":["continue","blocked","apply"]},"choice":{"type":["string","null"],"enum":["migrate","independent","copy","repair",null]}}}}
+{
+  "kind": "data_schema",
+  "type_key": "era.sidecar.binding.resolution",
+  "representation": "json",
+  "display_name": "Sidecar 绑定决议",
+  "description": "纯规则解析出的事实、路由与可选用户选择。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": [
+      "facts",
+      "route",
+      "choice"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "facts": {
+        "type": "object"
+      },
+      "route": {
+        "type": "string",
+        "enum": [
+          "continue",
+          "blocked",
+          "apply"
+        ]
+      },
+      "choice": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "enum": [
+          "migrate",
+          "independent",
+          "copy",
+          "repair",
+          null
+        ]
+      }
+    }
+  }
+}

@@ -2,22 +2,8 @@
   "findings": [
     {
       "debt": 1,
-      "fingerprint": "22d2e2c5b2f36cdc8d6cc5f68ae740fe1f01e7fdd61efcd10d0afc70135facf3",
-      "objectId": "comment:script: -> import type { WriteDonePayload } from '../../utils/constants';",
-      "ruleId": "COMMENT_CHINESE_PRIMARY",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
       "fingerprint": "bc52a1ab80a10f69b822f16572a6ee0351d0cdd020c27e77f15a59a8207d1983",
       "objectId": "comment:script:const blockContent = match[3]; -> const cleanedBlock = stripCodeFence(blockContent.trim());",
-      "ruleId": "COMMENT_CHINESE_PRIMARY",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "ed4ac5c5831dcf24061be794f6e11adfb18e49dcc582dffc69b9b640993e1d6c",
-      "objectId": "comment:script:import type { WriteDonePayload } from '../../utils/constants'; -> function jsonToHtml(data: any, level = 0, maxDepth = I",
       "ruleId": "COMMENT_CHINESE_PRIMARY",
       "severity": "warning"
     },
@@ -218,23 +204,9 @@
       "severity": "warning"
     },
     {
-      "debt": 1,
-      "fingerprint": "ea035f7e5e79cb1e4d9d6ac40525bf35fbf9ba07944c09531a545ee6411eb8bd",
-      "objectId": "src/ERA变量框架/ui/processing/panel-data#function:jsonToHtml",
-      "ruleId": "COMMENT_CHINESE_PRIMARY",
-      "severity": "warning"
-    },
-    {
       "debt": 12,
       "fingerprint": "91854eafa52f6b7279099585aeda9f0372e339bb92fe1943acece67d4c5c4015",
       "objectId": "src/ERA变量框架/ui/processing/panel-data#function:createPanelBodyHtml",
-      "ruleId": "COMMENT_CRITICAL_DOC_CHINESE",
-      "severity": "warning"
-    },
-    {
-      "debt": 12,
-      "fingerprint": "8bee4d663cd06b0508c7abe196f0f92dde499d6f62047d198750e660fdf86b72",
-      "objectId": "src/ERA变量框架/ui/processing/panel-data#function:jsonToHtml",
       "ruleId": "COMMENT_CRITICAL_DOC_CHINESE",
       "severity": "warning"
     },
@@ -243,55 +215,6 @@
       "fingerprint": "a01e58caefc84f62d41bef9bf2b08a4db6e86332838aa8621d5cfc7a2092b302",
       "objectId": "src/ERA变量框架/utils/era_data#function:updateScriptSettings",
       "ruleId": "COMMENT_CRITICAL_DOC_CHINESE",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "6a37a36d7c69bf55e3711fb06fb4aa0fd8c7b95b2f851fc1b169a60fc35a6598",
-      "objectId": "src/ERA变量框架/events/handlers/api/dispatcher#function:handleApiEvent",
-      "ruleId": "COMMENT_CRITICAL_DOC_MISSING",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "f169341414296e7260ffb00f7c615806b90fec1c7cc72e7a6ed93f22201daf60",
-      "objectId": "src/ERA变量框架/events/scheduler#function:EventScheduler.collectBatch",
-      "ruleId": "COMMENT_CRITICAL_DOC_MISSING",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "5989e383362d3e6bfe048abf498e0b790e5d44ebf9b2df76f033d6b109d99dcf",
-      "objectId": "src/ERA变量框架/events/scheduler#function:EventScheduler.createReceiptRecord",
-      "ruleId": "COMMENT_CRITICAL_DOC_MISSING",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "593cb2004729c34ca748f9e3757aa1e4344ad02d27e447785a1b4238259558b5",
-      "objectId": "src/ERA变量框架/events/scheduler#function:EventScheduler.executeStep",
-      "ruleId": "COMMENT_CRITICAL_DOC_MISSING",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "6e60c257c6c92fd2625fb5b5d3be17550c3c3892a8d13e520fbedd4ce3628efc",
-      "objectId": "src/ERA变量框架/events/scheduler#function:EventScheduler.failedCompletion",
-      "ruleId": "COMMENT_CRITICAL_DOC_MISSING",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "cd22ed85e441e2803ab61842652872e77b8ac82d5c374ebc862d6c37c01e63c8",
-      "objectId": "src/ERA变量框架/events/scheduler#function:EventScheduler.runWorker",
-      "ruleId": "COMMENT_CRITICAL_DOC_MISSING",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "670379accd79bcb5c918d568fbf50975937b89e10305464934d37a13622165c4",
-      "objectId": "src/ERA变量框架/events/scheduler#function:EventScheduler.scheduleNotifications",
-      "ruleId": "COMMENT_CRITICAL_DOC_MISSING",
       "severity": "warning"
     },
     {
@@ -312,13 +235,6 @@
       "debt": 1,
       "fingerprint": "a628ea8bcd0b59ccbd653e6f82043ac627dfd851e7bb5486737231c949e7e3c6",
       "objectId": "src/ERA变量框架/ui/App#function:onMountedCallback[arg0]",
-      "ruleId": "COMMENT_CRITICAL_DOC_MISSING",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "edd890b8cc5fe1ba4d849a125036a248ec8ea588a0ac42978ed9b47e628b022c",
-      "objectId": "src/ERA变量框架/ui/components/SnapshotManager#function:onMountedCallback[arg0]",
       "ruleId": "COMMENT_CRITICAL_DOC_MISSING",
       "severity": "warning"
     },
@@ -487,83 +403,6 @@
       "debt": 1,
       "fingerprint": "c4381e233d0cff28e9f159ffd1e39834a1f1d6e590a44fb733277a60e8496e0a",
       "objectId": "src/ERA变量框架/core/timetravel#function:findLatestNewValue",
-      "ruleId": "COMMENT_CRITICAL_DOC_RATIONALE",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "71a4751f262ac3b7e90769a1cbf5cbecde92811154a404bee24d54215cbb87c6",
-      "objectId": "src/ERA变量框架/events/emitters/events#function:emitQueryResultEvent",
-      "ruleId": "COMMENT_CRITICAL_DOC_RATIONALE",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "c91d431ac60f6bf8214448b447cf0d7d5b6239d3386f2b1d334ffd919de15646",
-      "objectId": "src/ERA变量框架/events/emitters/events#function:emitWriteDoneEvent",
-      "ruleId": "COMMENT_CRITICAL_DOC_RATIONALE",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "15546d32d94556f33ec6cceffec5e09285a07ba21c9aaa2513ef065141aa472c",
-      "objectId": "src/ERA变量框架/events/handlers/api/handler#function:handleGetCurrentVars",
-      "ruleId": "COMMENT_CRITICAL_DOC_RATIONALE",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "bbc1999258e2c069684175811dba3be38dea1e827f49ce07ba7f8c2af79f9b83",
-      "objectId": "src/ERA变量框架/events/handlers/api/handler#function:handleGetSnapshotAtMId",
-      "ruleId": "COMMENT_CRITICAL_DOC_RATIONALE",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "2802e98ee56502cd08f8a3d166188fbb257294871793ecf90089f3ebce54fbde",
-      "objectId": "src/ERA变量框架/events/handlers/api/handler#function:handleGetSnapshotAtMk",
-      "ruleId": "COMMENT_CRITICAL_DOC_RATIONALE",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "0a66f28e5154af163643d6005f0e973242a83289c80b9f858e7a3eac1740afa2",
-      "objectId": "src/ERA变量框架/events/handlers/api/handler#function:handleGetSnapshotsBetweenMIds",
-      "ruleId": "COMMENT_CRITICAL_DOC_RATIONALE",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "853cb28616b86be328bb839747f82d7ee6612dcae9f3b3c13c81c57f25197679",
-      "objectId": "src/ERA变量框架/events/handlers/api/handler#function:handleGetSnapshotsBetweenMks",
-      "ruleId": "COMMENT_CRITICAL_DOC_RATIONALE",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "a91b96cfc0f583477fd784b58adaa711cda7560e7fac4cb924e6206036ed1fca",
-      "objectId": "src/ERA变量框架/events/merger#function:createDomainTask",
-      "ruleId": "COMMENT_CRITICAL_DOC_RATIONALE",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "63d24876868dc535c6d1ccb6a4a5aea57f8958f02f9037054c50bbc8f53c8441",
-      "objectId": "src/ERA变量框架/events/merger#function:hasImmediateCombo",
-      "ruleId": "COMMENT_CRITICAL_DOC_RATIONALE",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "b722ee59af69369b5c5f9c09306b4e57001895341a59dc972aad7693e82596a2",
-      "objectId": "src/ERA变量框架/events/scheduler#function:EventScheduler.dispose",
-      "ruleId": "COMMENT_CRITICAL_DOC_RATIONALE",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "272f647368702b331bd6a4f72c16777a35be17bb541dd3f1d8009493d59f341c",
-      "objectId": "src/ERA变量框架/events/scheduler#function:EventScheduler.enqueue",
       "ruleId": "COMMENT_CRITICAL_DOC_RATIONALE",
       "severity": "warning"
     },
@@ -949,69 +788,6 @@
       "debt": 8,
       "fingerprint": "4a8b4ab1c62eba3913811b9e73b99ea0713ba61add28420e4eb4d110cbc434e0",
       "objectId": "src/ERA变量框架/events/catalog#type:EventDefinition",
-      "ruleId": "COMMENT_EXPORTED_TYPE_DOC",
-      "severity": "warning"
-    },
-    {
-      "debt": 8,
-      "fingerprint": "a23e28136aab9b7200759775277eed2abbf73361de91643f774e6aec9ed1cd13",
-      "objectId": "src/ERA变量框架/events/scheduler#type:EventSchedulerOptions",
-      "ruleId": "COMMENT_EXPORTED_TYPE_DOC",
-      "severity": "warning"
-    },
-    {
-      "debt": 8,
-      "fingerprint": "18a71a9f9a79bc1ea9b759f81ed04f71905511b2ca0ecb106c4314e0bdb4ee0f",
-      "objectId": "src/ERA变量框架/events/scheduler#type:SchedulerClock",
-      "ruleId": "COMMENT_EXPORTED_TYPE_DOC",
-      "severity": "warning"
-    },
-    {
-      "debt": 8,
-      "fingerprint": "9967a2bf6d391e8fbe3840da9fc24c84a90550c091fa9c2a54c992968e2e6770",
-      "objectId": "src/ERA变量框架/events/scheduler#type:WatchdogContext",
-      "ruleId": "COMMENT_EXPORTED_TYPE_DOC",
-      "severity": "warning"
-    },
-    {
-      "debt": 8,
-      "fingerprint": "396af9f322ec24397f5a5b139f3e14599a1982ab07e65c13bc07e6dae10bcb8c",
-      "objectId": "src/ERA变量框架/events/types#type:ApiTask",
-      "ruleId": "COMMENT_EXPORTED_TYPE_DOC",
-      "severity": "warning"
-    },
-    {
-      "debt": 8,
-      "fingerprint": "7931188515f42f344647fa8a3ae250e703b53fa34d7e1bd5225debf2a10fa803",
-      "objectId": "src/ERA变量框架/events/types#type:ExecuteStep",
-      "ruleId": "COMMENT_EXPORTED_TYPE_DOC",
-      "severity": "warning"
-    },
-    {
-      "debt": 8,
-      "fingerprint": "d11dfab9bbd7203caa8a5ddcfb8b783159faaad8b354667cf764a5614eef1029",
-      "objectId": "src/ERA变量框架/events/types#type:IgnoreStep",
-      "ruleId": "COMMENT_EXPORTED_TYPE_DOC",
-      "severity": "warning"
-    },
-    {
-      "debt": 8,
-      "fingerprint": "1e240684be2352d7b5be58e1a0a15c5b8afe229cb13fc5c7af881563a362a1f2",
-      "objectId": "src/ERA变量框架/events/types#type:TaskBase",
-      "ruleId": "COMMENT_EXPORTED_TYPE_DOC",
-      "severity": "warning"
-    },
-    {
-      "debt": 8,
-      "fingerprint": "fe17f364de00b0b33e0bc26192afc27bde084035f9613482fdacfcec4e749de7",
-      "objectId": "src/ERA变量框架/events/types#type:WaitThroughOutcome",
-      "ruleId": "COMMENT_EXPORTED_TYPE_DOC",
-      "severity": "warning"
-    },
-    {
-      "debt": 8,
-      "fingerprint": "3e34d86fbed5b6967d4290c144d27640cbb17d2df75f92c47756be29f761c628",
-      "objectId": "src/ERA变量框架/events/types#type:WaitThroughResult",
       "ruleId": "COMMENT_EXPORTED_TYPE_DOC",
       "severity": "warning"
     },
@@ -1542,41 +1318,6 @@
     },
     {
       "debt": 1,
-      "fingerprint": "6f93edd7b4379f9047b62c191234f71413d093425efe4ad0f9e0be228cb357b7",
-      "objectId": "src/ERA变量框架/events/handlers/api/handler",
-      "ruleId": "COMMENT_MODULE_DOC",
-      "severity": "warning"
-    },
-    {
-      "debt": 12,
-      "fingerprint": "705e89581e49fa67a17202f46cb718ce24c65f5545b0ddf5d6f3ad4913e400a0",
-      "objectId": "src/ERA变量框架/events/merger",
-      "ruleId": "COMMENT_MODULE_DOC",
-      "severity": "warning"
-    },
-    {
-      "debt": 12,
-      "fingerprint": "52ffb298d7b15638548164c1fd27b7144e940c45a8794eac4490a310ebf08666",
-      "objectId": "src/ERA变量框架/events/scheduler",
-      "ruleId": "COMMENT_MODULE_DOC",
-      "severity": "warning"
-    },
-    {
-      "debt": 12,
-      "fingerprint": "f3f727eae880f8a779ced38a9d96100d5a0f5121b5f7d3c4c9dc141a125cb3ce",
-      "objectId": "src/ERA变量框架/events/types",
-      "ruleId": "COMMENT_MODULE_DOC",
-      "severity": "warning"
-    },
-    {
-      "debt": 12,
-      "fingerprint": "2dbb61ab19d7589b6b268add732aa05601eb421452e1506b1f0fdbfc7798dd2c",
-      "objectId": "src/ERA变量框架/utils/constants",
-      "ruleId": "COMMENT_MODULE_DOC",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
       "fingerprint": "3a61607c6fc837f42cae31c382a15c294cb925b51c700852baf5b88fe0a00248",
       "objectId": "src/ERA变量框架/utils/data",
       "ruleId": "COMMENT_MODULE_DOC",
@@ -1619,20 +1360,6 @@
     },
     {
       "debt": 1,
-      "fingerprint": "016b3fcd2b8306a20b27355e719f89eb1c9cc03c9e7d2be5b092f637d1e11966",
-      "objectId": "comment:script: -> import { getStatAtMK, getStatsBetweenMKs } from '../../../core/snapshot';",
-      "ruleId": "COMMENT_STALE_FILE_REFERENCE",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "ad6e249ebe369885ee26904e56e6c4f2d1bceef09af97fdc49647b750dbebb95",
-      "objectId": "comment:script:} -> export function insertByObject(data: object): Promise<number> {",
-      "ruleId": "COMMENT_STALE_FILE_REFERENCE",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
       "fingerprint": "5edb8e4a8eff6f70702a4be255211acd0d7fa01dd7427592aefb7a7854d3fd91",
       "objectId": "comment:script:const newContent = contentWithMk; -> await updateMessageContent(msg, newContent);",
       "ruleId": "COMMENT_STALE_FILE_REFERENCE",
@@ -1654,13 +1381,6 @@
     },
     {
       "debt": 3,
-      "fingerprint": "b009a1fa120c7a7429377ac4456164c10c20154cfc7d35c98ff43821f4f20b0f",
-      "objectId": "src/ERA变量框架/events/merger",
-      "ruleId": "COMMENT_USEFUL_RATIO_LOW",
-      "severity": "warning"
-    },
-    {
-      "debt": 6,
       "fingerprint": "2e3d841e937d44c8ff415f617b0a0d60eeba1b85d05ac1802248a6bfb9d51162",
       "objectId": "src/ERA变量框架/ui/processing/panel-data",
       "ruleId": "COMMENT_USEFUL_RATIO_LOW",
@@ -1737,11 +1457,11 @@
       "severity": "warning"
     },
     {
-      "debt": 8,
+      "debt": 5,
       "fingerprint": "51df9a3118c756de03e7fb10a703aaec850447d28aaf8a2174a4df50fd6a3cb4",
       "objectId": "runtime-dependency-chain",
       "ruleId": "DEPENDENCY_CHAIN",
-      "severity": "error"
+      "severity": "warning"
     },
     {
       "debt": 1,
@@ -2101,20 +1821,6 @@
       "severity": "warning"
     },
     {
-      "debt": 12,
-      "fingerprint": "16198e42452efdded6858e4fc1cffd6aff4b03d3097611857b3899364de5c8d3",
-      "objectId": "src/ERA变量框架/events/scheduler",
-      "ruleId": "STRUCT_FILE_FUNCTIONS",
-      "severity": "warning"
-    },
-    {
-      "debt": 2,
-      "fingerprint": "5f90ffd56d5705ccaaa7ded65bb2b22db20edbaad9634b2f33ea3bce5bbf3991",
-      "objectId": "src/ERA变量框架/events/scheduler",
-      "ruleId": "STRUCT_FILE_LINES",
-      "severity": "warning"
-    },
-    {
       "debt": 8,
       "fingerprint": "55e7584b406dccb00ef7f577f2f7a8de7b382f5a7c395eb39c70be5c1e29bd8f",
       "objectId": "src/ERA变量框架/core/crud/delete#function:applyDeleteAtLevel",
@@ -2139,34 +1845,6 @@
       "debt": 2,
       "fingerprint": "d0ac1c106efc07135bab642c13cf3e08e3cd91b45a5fa63ea84161b7a7c97a83",
       "objectId": "src/ERA变量框架/core/timetravel#function:findLatestNewValue",
-      "ruleId": "STRUCT_FUNCTION_BRANCHES",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "61f845a12575dcd1f33d2bf627dcdd288cc5984e738bdfd2883e301b3304d3b5",
-      "objectId": "src/ERA变量框架/events/handlers/api/handler#function:handleGetSnapshotsBetweenMIds",
-      "ruleId": "STRUCT_FUNCTION_BRANCHES",
-      "severity": "warning"
-    },
-    {
-      "debt": 2,
-      "fingerprint": "633e4bfb94a62ca829cd698a976b9767b6c2bd9cf52fcf3c69fb9ce95f74cf26",
-      "objectId": "src/ERA变量框架/events/merger#function:createDomainTask",
-      "ruleId": "STRUCT_FUNCTION_BRANCHES",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "5e5398a8cb044b74746b8928044763437998f1b19d364a3ebeaed29ed1c05dee",
-      "objectId": "src/ERA变量框架/events/merger#function:planEventBatch",
-      "ruleId": "STRUCT_FUNCTION_BRANCHES",
-      "severity": "warning"
-    },
-    {
-      "debt": 5,
-      "fingerprint": "5ce9deff2ef8ca20725c6e9fb17d8edbb06b9b37c6bb04453c1d1d5ed74386fd",
-      "objectId": "src/ERA变量框架/events/scheduler#function:EventScheduler.runWorker",
       "ruleId": "STRUCT_FUNCTION_BRANCHES",
       "severity": "warning"
     },
@@ -2213,24 +1891,10 @@
       "severity": "warning"
     },
     {
-      "debt": 17,
-      "fingerprint": "264d5500005e52d1f63b20042cfbe0b53300aa2fccab088c1057ad26e547a43b",
-      "objectId": "src/ERA变量框架/events/merger#function:planEventBatch",
-      "ruleId": "STRUCT_FUNCTION_LINES",
-      "severity": "warning"
-    },
-    {
       "debt": 2,
       "fingerprint": "155d05db7f4de56209bd02efb8ffed64ed22ec78a2b8332a0ba5f7db99eb3c81",
       "objectId": "src/ERA变量框架/utils/message#function:extractMessageIdFromDetail",
       "ruleId": "STRUCT_FUNCTION_LINES",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "55c8b7af002dffef502bf170c1816e2ddf719454d17e816ca95c4920e19e13cb",
-      "objectId": "src/ERA变量框架/events/scheduler#function:EventScheduler.runWorker",
-      "ruleId": "STRUCT_FUNCTION_NESTING",
       "severity": "warning"
     },
     {

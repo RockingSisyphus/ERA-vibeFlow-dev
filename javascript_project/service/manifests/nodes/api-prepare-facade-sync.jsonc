@@ -1,0 +1,72 @@
+{
+  "kind": "node",
+  "type_key": "era.api.prepare_facade_sync",
+  "display_name": "构造即时同步步骤",
+  "category": "公共 Facade",
+  "description": "把回读消息接入共享 Sidecar 同步。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.api.commit.verified",
+        "cardinality": "exactly_one",
+        "display_name": "era.api.commit.verified"
+      }
+    ],
+    "provides": [
+      {
+        "key": "commit_sync_step",
+        "type": "era.step.request.routed",
+        "display_name": "commit_sync_step"
+      },
+      {
+        "key": "facade_commit_sync_context",
+        "type": "era.api.commit.sync_context",
+        "display_name": "facade_commit_sync_context"
+      },
+      {
+        "key": "commit_execution_state",
+        "type": "era.batch.execution.state",
+        "display_name": "commit_execution_state"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.api.commit.verified": [
+        "输入：era.api.commit.verified。"
+      ]
+    },
+    "output_semantics": {
+      "commit_sync_step": [
+        "输出：commit_sync_step。"
+      ],
+      "facade_commit_sync_context": [
+        "输出：facade_commit_sync_context。"
+      ],
+      "commit_execution_state": [
+        "将 commit 捕获的批次执行状态显式透传给共享同步 Nodeset。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/api/facade_prepare_sync.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.facade_nodes"
+  ],
+  "capabilities": []
+}

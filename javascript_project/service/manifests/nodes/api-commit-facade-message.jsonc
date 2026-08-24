@@ -1,0 +1,62 @@
+{
+  "kind": "node",
+  "type_key": "era.api.commit_facade_message",
+  "display_name": "无刷新提交 era_tx",
+  "category": "公共 Facade",
+  "description": "每次调用独立写入且不刷新 iframe。",
+  "version": "1.0.0",
+  "flow_kind": "io",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.api.commit.rechecked",
+        "cardinality": "exactly_one",
+        "display_name": "era.api.commit.rechecked"
+      }
+    ],
+    "provides": [
+      {
+        "key": "facade_commit_append_result",
+        "type": "era.api.commit.append.result",
+        "display_name": "facade_commit_append_result"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.api.commit.rechecked": [
+        "输入：era.api.commit.rechecked。"
+      ]
+    },
+    "output_semantics": {
+      "facade_commit_append_result": [
+        "输出：facade_commit_append_result。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser"
+      ],
+      "completion": "suspend",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/api/facade_commit_append.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.facade_nodes"
+  ],
+  "capabilities": [
+    {
+      "id": "era.tavern.messages",
+      "operations": [
+        "update_content"
+      ]
+    }
+  ]
+}

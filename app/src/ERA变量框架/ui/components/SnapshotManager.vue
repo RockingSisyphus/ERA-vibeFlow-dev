@@ -1,5 +1,5 @@
 <!--
-  快照查询面板：只经 ERA Service 请求历史状态并消费 queryResult；不直接读取 Tavern
+  快照查询面板：只经 ERA Facade 请求历史状态；不直接读取 Tavern
   消息或变量。查询世代隔离迟到响应，避免旧请求覆盖用户最后一次选择。
 -->
 <template>
@@ -71,13 +71,11 @@
 <script setup lang="ts">
 /*
  * 快照查询面板负责把用户的 MK/消息 ID 意图交给 ERA Service，并消费公开
- * queryResult 展示结果；边界是不直接读取 Tavern 消息或变量。查询世代必须隔离
+ * history.atMessage 展示结果；边界是不直接读取 Tavern 消息或变量。查询世代必须隔离
  * 迟到响应，否则旧请求会覆盖最后一次选择。
  */
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
-import { requestEraService } from '../../service/client';
-import { ERA_API_EVENTS } from '../../utils/constants';
-import type { QueryResultItem, QueryResultPayload, WriteDonePayload } from '../../utils/constants';
+import { computed, ref, watch } from 'vue';
+import type { EraFacade, EraPublicState } from '../../service/public-api';
 import { Logger } from '../../utils/log';
 import { isNonNegativeSafeMessageId } from '../utils/message-id';
 import EraAccordion from '../template/EraAccordion.vue';
@@ -85,11 +83,11 @@ import PrettyJsonViewer from '../template/PrettyJsonViewer.vue';
 import TabSwitch from '../template/TabSwitch.vue';
 import MetaHeader from './EraPanelContent/MetaHeader.vue';
 
-type DisplayData = Pick<WriteDonePayload, 'mk' | 'message_id' | 'stat' | 'statWithoutMeta'>;
+type DisplayData = Pick<EraPublicState, 'mk' | 'message_id' | 'stat' | 'statWithoutMeta'>;
 type TabItem = { key: 'pure' | 'full'; label: string };
 
 const props = defineProps<{
-  latestData: WriteDonePayload | null;
+  latestData: EraPublicState | null;
 }>();
 
 const logger = new Logger();
@@ -97,11 +95,10 @@ const logger = new Logger();
 const latestMkFromProps = computed(() => props.latestData?.mk ?? null);
 const selectedMk = ref<string | null>(latestMkFromProps.value);
 const messageIdInput = ref<number | string | null>(null);
-const historicalSnapshot = ref<QueryResultItem | null>(null);
+const historicalSnapshot = ref<DisplayData | null>(null);
 const loading = ref(false);
 const error = ref<string | null>(null);
 let nextQueryGeneration = 0;
-let activeQuery: { generation: number; type: string; request: Readonly<Record<string, unknown>> } | null = null;
 
 const tabs: TabItem[] = [
   { key: 'pure', label: '纯净状态数据' },
@@ -113,40 +110,22 @@ const reversedSelectedMks = computed(() => {
   return props.latestData?.selectedMks?.slice().reverse() ?? [];
 });
 
-function sameQueryRequest(left: Readonly<Record<string, unknown>>, right: Readonly<Record<string, unknown>>): boolean {
-  const leftKeys = Object.keys(left);
-  const rightKeys = Object.keys(right);
-  return leftKeys.length === rightKeys.length && leftKeys.every(key => left[key] === right[key]);
-}
-
-function submitQuery(type: string, request: Readonly<Record<string, unknown>>): void {
-  // queryResult ABI 没有单独 request ID；相同键的并发请求无法由公开事件可靠地区分，
-  // 因此当前查询尚未终态时不重复入队，避免旧响应被错误归给后一次点击。
-  if (activeQuery && activeQuery.type === type && sameQueryRequest(activeQuery.request, request)) return;
+async function submitQuery(messageId: number): Promise<void> {
   const generation = ++nextQueryGeneration;
-  activeQuery = { generation, type, request };
-  const admission = requestEraService(type, [request], 'ui');
-  if (!admission.accepted) {
-    if (activeQuery?.generation === generation) {
-      loading.value = false;
-      error.value = `${admission.code}: ${admission.message}`;
-      activeQuery = null;
-    }
-    return;
+  try {
+    const api = await waitGlobalInitialized<EraFacade>('ERA');
+    const snapshot = await api.history.atMessage(messageId);
+    if (nextQueryGeneration !== generation) return;
+    historicalSnapshot.value = snapshot;
+    selectedMk.value = snapshot.mk;
+    loading.value = false;
+    error.value = null;
+  } catch (reason) {
+    if (nextQueryGeneration !== generation) return;
+    loading.value = false;
+    historicalSnapshot.value = null;
+    error.value = reason instanceof Error ? reason.message : String(reason);
   }
-  void admission.done
-    .then(settlement => {
-      if (activeQuery?.generation !== generation || settlement.status === 'completed') return;
-      loading.value = false;
-      error.value = `ERA 查询未完成：${settlement.status}`;
-      activeQuery = null;
-    })
-    .catch(reason => {
-      if (activeQuery?.generation !== generation) return;
-      loading.value = false;
-      error.value = reason instanceof Error ? reason.message : String(reason);
-      activeQuery = null;
-    });
 }
 
 const displayData = computed<DisplayData | null>(() => {
@@ -164,10 +143,6 @@ const displayData = computed<DisplayData | null>(() => {
 
 const isUserMessageComputed = computed(() => {
   if (!displayData.value) return false;
-  // 如果是历史快照(QueryResultItem)，它会包含 is_user 属性
-  if ('is_user' in displayData.value) {
-    return (displayData.value as QueryResultItem).is_user;
-  }
   return props.latestData?.is_user ?? false;
 });
 
@@ -176,7 +151,6 @@ watch(
   latestData => {
     // 当外部数据更新时，重置UI到最新状态
     nextQueryGeneration += 1;
-    activeQuery = null;
     selectedMk.value = latestData?.mk ?? null;
     historicalSnapshot.value = null;
     messageIdInput.value = null;
@@ -199,8 +173,14 @@ const handleSelectionChange = () => {
   }
 
   loading.value = true;
+  const messageId = props.latestData?.selectedMks.findIndex(value => value === mk) ?? -1;
+  if (messageId < 0) {
+    loading.value = false;
+    error.value = `未找到与 MK "${mk}" 相关的快照。`;
+    return;
+  }
   logger.debug('SnapshotManager', `(MK Select) 请求快照, mk: ${mk}`);
-  submitQuery(ERA_API_EVENTS.GET_SNAPSHOT_AT_MK, { mk });
+  void submitQuery(messageId);
 };
 
 const queryByMId = () => {
@@ -216,32 +196,7 @@ const queryByMId = () => {
   loading.value = true;
 
   logger.debug('SnapshotManager', `(ID Query) 请求快照, message_id: ${messageId}`);
-  submitQuery(ERA_API_EVENTS.GET_SNAPSHOT_AT_MID, { message_id: messageId });
-};
-
-const handleQueryResult = (detail: QueryResultPayload) => {
-  const query = activeQuery;
-  if (!query || detail.queryType !== query.type || !sameQueryRequest(detail.request, query.request)) return;
-  loading.value = false;
-
-  const handleResult = (result: QueryResultItem | null, errorMsg: string) => {
-    if (result) {
-      historicalSnapshot.value = result;
-      // 同步下拉框的选中项
-      selectedMk.value = result.mk;
-      error.value = null;
-    } else {
-      historicalSnapshot.value = null;
-      error.value = errorMsg;
-    }
-  };
-
-  if (detail.queryType === 'getSnapshotAtMk' && detail.request.mk === selectedMk.value) {
-    handleResult(detail.result as QueryResultItem | null, `未找到与 MK "${selectedMk.value}" 相关的快照。`);
-  } else if (detail.queryType === 'getSnapshotAtMId' && detail.request.message_id === messageIdInput.value) {
-    handleResult(detail.result as QueryResultItem | null, `未找到与消息 ID "${messageIdInput.value}" 相关的快照。`);
-  }
-  activeQuery = null;
+  void submitQuery(messageId);
 };
 
 const formatMkForDisplay = (mk: string | null, index: number): string => {
@@ -256,14 +211,6 @@ const formatMkForDisplay = (mk: string | null, index: number): string => {
 
   return isLatest ? `${label} (最新)` : label;
 };
-
-onMounted(() => {
-  eventOn('era:queryResult', handleQueryResult);
-});
-
-onUnmounted(() => {
-  eventRemoveListener('era:queryResult', handleQueryResult);
-});
 </script>
 
 <!-- ★ 取消 scoped，统一以 #era-snapshot-ui 作为“伪作用域”根选择器 -->
