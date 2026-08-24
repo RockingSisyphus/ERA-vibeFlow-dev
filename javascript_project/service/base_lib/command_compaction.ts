@@ -20,6 +20,7 @@ import {
   type EraSyncMessageUpdateV1,
   type EraSyncPlanV1,
 } from "./domain/sync_engine.ts";
+import { readMessageKey } from "./domain/mk_engine.ts";
 import { cloneSyncJson, type SyncWorkV1 } from "./sync_transaction.ts";
 
 function record(value: unknown): value is Record<string, unknown> {
@@ -73,7 +74,7 @@ function recordMarker(
 export function applySealedCommandCompaction(
   plan: EraSyncPlanV1,
 ): EraSyncPlanV1 {
-  if (plan.status === "failed" || plan.sealedCompactionCandidates.length === 0) return plan;
+  if (plan.status === "failed") return plan;
 
   const messages = cloneSyncJson(plan.messages) as typeof plan.messages extends readonly (infer T)[] ? T[] : never;
   const messageUpdates = cloneSyncJson(plan.messageUpdates) as EraSyncMessageUpdateV1[];
@@ -81,6 +82,17 @@ export function applySealedCommandCompaction(
   const markers = commandCompactionMarkersOf(meta);
   const editLogs = record(meta.EditLogs) ? cloneSyncJson(meta.EditLogs) as Record<string, unknown> : {};
   const functionEditLogs = record(meta.FunctionEditLogs) ? cloneSyncJson(meta.FunctionEditLogs) as Record<string, unknown> : {};
+
+  // Markers are only scheduling hints for messages that still exist.  A deleted
+  // or branch-discarded message must not leave an orphaned hint in Sidecar.
+  const liveMks = new Set(
+    messages
+      .map(readMessageKey)
+      .filter((mk): mk is string => typeof mk === "string"),
+  );
+  for (const mk of Object.keys(markers)) {
+    if (!liveMks.has(mk)) delete markers[mk];
+  }
 
   for (const candidate of plan.sealedCompactionCandidates) {
     const message = messages[candidate.messageIndex];

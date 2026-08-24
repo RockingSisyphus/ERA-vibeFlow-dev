@@ -41673,6 +41673,7 @@
           "era.service.sync_transaction",
           "era.crud.engine",
           "era.service.sync_engine",
+          "era.service.mk_engine",
           "era.service.command_compaction_marker"
         ],
         "external_packages": [
