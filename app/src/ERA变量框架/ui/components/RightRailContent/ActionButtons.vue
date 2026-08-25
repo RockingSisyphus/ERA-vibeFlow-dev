@@ -101,11 +101,11 @@
 import { ref } from 'vue';
 import toastr from 'toastr';
 import { requestEraService } from '../../../service/client';
-import type { EraFacade } from '../../../service/public-api';
 import { ERA_UI_EVENT } from '../../../service/types';
 import { Logger } from '../../../utils/log';
 import { isNonNegativeSafeMessageId } from '../../utils/message-id';
 import { awaitUiSettlement } from '../../utils/service-settlement';
+import { waitForEraFacade } from '../../utils/facade';
 
 const logger = new Logger();
 const rollbackId = ref<number | string | null>(null);
@@ -148,7 +148,7 @@ async function onFullSync() {
     if (pendingAction.value !== null) return;
     pendingAction.value = 'full';
     try {
-      const api = await waitGlobalInitialized<EraFacade>('ERA');
+      const api = await waitForEraFacade();
       await api.sync({ mode: 'full' });
     } finally {
       pendingAction.value = null;
@@ -167,7 +167,7 @@ async function onLastSync() {
     if (pendingAction.value !== null) return;
     pendingAction.value = 'latest';
     try {
-      const api = await waitGlobalInitialized<EraFacade>('ERA');
+      const api = await waitForEraFacade();
       await api.sync({ mode: 'latest' });
     } finally {
       pendingAction.value = null;
@@ -191,7 +191,7 @@ async function onRollbackTo() {
     if (pendingAction.value !== null) return;
     pendingAction.value = 'rollback';
     try {
-      const api = await waitGlobalInitialized<EraFacade>('ERA');
+      const api = await waitForEraFacade();
       await api.sync({ rollbackTo: messageId });
     } finally {
       pendingAction.value = null;

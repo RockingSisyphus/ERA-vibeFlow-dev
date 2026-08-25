@@ -1,0 +1,12 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.initialize.direct.result",
+  "representation": "json",
+  "display_name": "直接初始化结果",
+  "description": "仅供 resources/settings-update 完成分支消费的专用结果，不得提前满足启动同步的 era.task.result。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": true
+  }
+}

@@ -113,6 +113,7 @@ export interface EraTavernAdapter {
     read_record(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
     write_record(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
     commit_metadata(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
+    publish_snapshot(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
     create_id(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
     present_prompt(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
     clear_prompt(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;

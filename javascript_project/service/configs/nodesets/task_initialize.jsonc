@@ -1,4 +1,7 @@
 {
+  "nodeset_imports": [
+    {"path": "startup_sync.jsonc"}
+  ],
   "type_key": "era.task.initialize",
   "display_name": "ERA 初始化任务",
   "description": "规划并提交幂等设置、世界书、正则和消息资源；启动操作随后复用共享同步事务。",
@@ -52,6 +55,12 @@
         "description": "消费已准备步骤内的严格消息投影，并读取身份、脚本设置、世界书和角色正则快照；不再复制宿主消息对象。"
       },
       {
+        "id": "carry_execution_state",
+        "type_used": "era.initialize.carry_execution_state",
+        "display_name": "携带批次执行状态",
+        "description": "无损携带外层批次执行状态，供条件启动的共享同步事务使用。"
+      },
+      {
         "id": "plan_resources",
         "type_used": "era.initialize.plan",
         "display_name": "规划资源与相对更新规则",
@@ -85,19 +94,19 @@
         "id": "route_completion",
         "type_used": "era.initialize.build_result",
         "display_name": "选择初始化完成方式",
-        "description": "资源或设置操作直接结算；启动成功后构造共享同步步骤。"
+        "description": "将启动同步与资源直接结算分成不同数据类型，防止直接结果提前结束应继续进入 Sidecar 的启动同步。"
       },
       {
         "id": "startup_sync",
-        "type_used": "era.task.sync",
+        "type_used": "era.task.startup_sync",
         "display_name": "执行启动历史同步",
         "description": "启动设置确认后，复用共享同步事务提交历史状态。"
       },
       {
-        "id": "merge_result",
-        "type_used": "era.initialize.merge_result",
-        "display_name": "合并初始化结果",
-        "description": "合并直接资源结果或启动同步结果。"
+        "id": "finalize_direct_result",
+        "type_used": "era.initialize.finalize_direct_result",
+        "display_name": "结算非启动初始化",
+        "description": "仅在 finish 分支将专用的直接初始化结果转为任务结果。"
       },
       {
         "id": "end",
@@ -110,6 +119,10 @@
       [
         "start",
         "read_host_resources"
+      ],
+      [
+        "start",
+        "carry_execution_state"
       ],
       [
         "read_host_resources",
@@ -147,16 +160,21 @@
         "when": "initialize_completion_route == 'sync'"
       },
       {
+        "from": "carry_execution_state",
+        "to": "startup_sync",
+        "schedule": false
+      },
+      {
         "from": "route_completion",
-        "to": "merge_result",
+        "to": "finalize_direct_result",
         "when": "initialize_completion_route == 'finish'"
       },
       [
         "startup_sync",
-        "merge_result"
+        "end"
       ],
       [
-        "merge_result",
+        "finalize_direct_result",
         "end"
       ]
     ],

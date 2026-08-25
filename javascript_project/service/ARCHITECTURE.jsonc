@@ -15,7 +15,7 @@
     "contains_global_state": false,
     "summary": {
       "nodes": 9,
-      "nodesets": 14,
+      "nodesets": 15,
       "explicit_edges": 9,
       "data_edges": 0,
       "reported_edges": 9,
@@ -559,7 +559,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 16,
-          "nodesets": 14,
+          "nodesets": 15,
           "explicit_edges": 20,
           "data_edges": 1,
           "reported_edges": 20,
@@ -1597,7 +1597,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 7,
-          "nodesets": 14,
+          "nodesets": 15,
           "explicit_edges": 8,
           "data_edges": 0,
           "reported_edges": 8,
@@ -2080,7 +2080,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 9,
-          "nodesets": 14,
+          "nodesets": 15,
           "explicit_edges": 8,
           "data_edges": 0,
           "reported_edges": 8,
@@ -2647,7 +2647,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 9,
-          "nodesets": 14,
+          "nodesets": 15,
           "explicit_edges": 10,
           "data_edges": 0,
           "reported_edges": 10,
@@ -3231,7 +3231,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 3,
-          "nodesets": 14,
+          "nodesets": 15,
           "explicit_edges": 2,
           "data_edges": 0,
           "reported_edges": 2,
@@ -3435,7 +3435,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 8,
-          "nodesets": 14,
+          "nodesets": 15,
           "explicit_edges": 8,
           "data_edges": 0,
           "reported_edges": 8,
@@ -3957,7 +3957,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 7,
-          "nodesets": 14,
+          "nodesets": 15,
           "explicit_edges": 10,
           "data_edges": 3,
           "reported_edges": 10,
@@ -4431,7 +4431,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 10,
-          "nodesets": 14,
+          "nodesets": 15,
           "explicit_edges": 14,
           "data_edges": 4,
           "reported_edges": 14,
@@ -5086,7 +5086,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 10,
-          "nodesets": 14,
+          "nodesets": 15,
           "explicit_edges": 14,
           "data_edges": 1,
           "reported_edges": 14,
@@ -5809,7 +5809,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 6,
-          "nodesets": 14,
+          "nodesets": 15,
           "explicit_edges": 7,
           "data_edges": 2,
           "reported_edges": 7,
@@ -6008,8 +6008,8 @@
               "path": "configs/nodesets/sidecar_store.jsonc"
             },
             "role": {
-              "display_name": "应用 Sidecar V3 绑定决议",
-              "description": "以 revision 复核执行迁移、独立或复制。迁移/复制同时恢复 statData、eraMeta 与 statFunc；复制深拷贝变量和函数定义，不复制 SelectedMks 或任何编辑日志。"
+              "display_name": "应用 Sidecar 决议并发布已验证快照",
+              "description": "保留现有 create、migrate、repair、迁移、独立和复制事务；当严格消息派发上下文暂未 ready 时，仍允许将 owner 与当前身份匹配的已验证 V3 记录只读发布到当前页面运行时快照，但禁止迁移、修复、指针或文件写入。正常 ready 路径仍以 revision 复核执行原有受控事务。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -6226,7 +6226,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 6,
-          "nodesets": 14,
+          "nodesets": 15,
           "explicit_edges": 6,
           "data_edges": 0,
           "reported_edges": 6,
@@ -6648,11 +6648,11 @@
         "execution_lock": null,
         "contains_global_state": false,
         "summary": {
-          "nodes": 11,
-          "nodesets": 14,
-          "explicit_edges": 12,
-          "data_edges": 0,
-          "reported_edges": 12,
+          "nodes": 12,
+          "nodesets": 15,
+          "explicit_edges": 14,
+          "data_edges": 1,
+          "reported_edges": 14,
           "contains_global_state": false
         },
         "entry_nodes": [
@@ -6728,6 +6728,51 @@
                 "key": "initialization_context",
                 "type": "era.initialize.context",
                 "display_name": "初始化上下文"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "carry_execution_state",
+            "type_used": "era.initialize.carry_execution_state",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/task_initialize.jsonc"
+            },
+            "role": {
+              "display_name": "携带批次执行状态",
+              "description": "无损携带外层批次执行状态，供条件启动的共享同步事务使用。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "process",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.batch.execution.state",
+                "cardinality": "exactly_one",
+                "display_name": "批次执行状态"
+              }
+            ],
+            "provides": [
+              {
+                "key": "initialize_execution_state",
+                "type": "era.batch.execution.state",
+                "display_name": "初始化批次执行状态"
               }
             ],
             "join_policy": "safe_any",
@@ -6980,7 +7025,7 @@
             },
             "role": {
               "display_name": "选择初始化完成方式",
-              "description": "资源或设置操作直接结算；启动成功后构造共享同步步骤。"
+              "description": "将启动同步与资源直接结算分成不同数据类型，防止直接结果提前结束应继续进入 Sidecar 的启动同步。"
             },
             "contract_source": "node_type",
             "flow_kind": "decision",
@@ -7006,13 +7051,13 @@
               },
               {
                 "key": "startup_sync_step",
-                "type": "era.step.request.routed",
-                "display_name": "启动同步步骤"
+                "type": "era.initialize.startup.sync.step",
+                "display_name": "专用启动同步步骤"
               },
               {
                 "key": "initialize_direct_result",
-                "type": "era.task.result",
-                "display_name": "直接初始化结果"
+                "type": "era.initialize.direct.result",
+                "display_name": "专用直接初始化结果"
               }
             ],
             "join_policy": "safe_any",
@@ -7028,7 +7073,7 @@
           },
           {
             "id": "startup_sync",
-            "type_used": "era.task.sync",
+            "type_used": "era.task.startup_sync",
             "source": {
               "root_id": "era-service",
               "path": "configs/nodesets/task_initialize.jsonc"
@@ -7048,9 +7093,9 @@
             "planned_behavior": null,
             "requires": [
               {
-                "type": "era.step.request.routed",
+                "type": "era.initialize.startup.sync.step",
                 "cardinality": "exactly_one",
-                "display_name": "已路由步骤"
+                "display_name": "专用启动同步步骤"
               },
               {
                 "type": "era.batch.execution.state",
@@ -7060,9 +7105,9 @@
             ],
             "provides": [
               {
-                "key": "sync_task_result",
+                "key": "startup_sync_result",
                 "type": "era.task.result",
-                "display_name": "同步结果"
+                "display_name": "启动同步结果"
               }
             ],
             "join_policy": "safe_any",
@@ -7071,7 +7116,7 @@
             "io": null,
             "invokes": {
               "kind": "nodeset",
-              "target": "era.task.sync",
+              "target": "era.task.startup_sync",
               "target_status": "implemented"
             },
             "config": {
@@ -7081,15 +7126,15 @@
             }
           },
           {
-            "id": "merge_result",
-            "type_used": "era.initialize.merge_result",
+            "id": "finalize_direct_result",
+            "type_used": "era.initialize.finalize_direct_result",
             "source": {
               "root_id": "era-service",
               "path": "configs/nodesets/task_initialize.jsonc"
             },
             "role": {
-              "display_name": "合并初始化结果",
-              "description": "合并直接资源结果或启动同步结果。"
+              "display_name": "结算非启动初始化",
+              "description": "仅在 finish 分支将专用的直接初始化结果转为任务结果。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -7102,16 +7147,16 @@
             "planned_behavior": null,
             "requires": [
               {
-                "type": "era.task.result",
+                "type": "era.initialize.direct.result",
                 "cardinality": "exactly_one",
-                "display_name": "初始化分支结果"
+                "display_name": "专用直接初始化结果"
               }
             ],
             "provides": [
               {
-                "key": "initialize_task_result",
+                "key": "initialize_direct_task_result",
                 "type": "era.task.result",
-                "display_name": "初始化任务结果"
+                "display_name": "直接初始化任务结果"
               }
             ],
             "join_policy": "safe_any",
@@ -7163,6 +7208,16 @@
           {
             "from": "start",
             "to": "read_host_resources",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "start",
+            "to": "carry_execution_state",
             "when": "",
             "roles": [
               "mainline",
@@ -7251,8 +7306,17 @@
             ]
           },
           {
+            "from": "carry_execution_state",
+            "to": "startup_sync",
+            "when": "",
+            "roles": [
+              "data_bypass",
+              "transfer"
+            ]
+          },
+          {
             "from": "route_completion",
-            "to": "merge_result",
+            "to": "finalize_direct_result",
             "when": "initialize_completion_route == 'finish'",
             "roles": [
               "mainline",
@@ -7262,7 +7326,7 @@
           },
           {
             "from": "startup_sync",
-            "to": "merge_result",
+            "to": "end",
             "when": "",
             "roles": [
               "mainline",
@@ -7271,7 +7335,296 @@
             ]
           },
           {
-            "from": "merge_result",
+            "from": "finalize_direct_result",
+            "to": "end",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          }
+        ]
+      }
+    },
+    "era.task.startup_sync": {
+      "type_key": "era.task.startup_sync",
+      "source": {
+        "root_id": "era-service",
+        "path": "configs/nodesets/startup_sync.jsonc"
+      },
+      "display_name": "ERA 启动历史同步",
+      "description": "将初始化专用步骤适配后调用既有共享同步 Nodeset，不复制 Sidecar 或同步业务。",
+      "status": "implemented",
+      "flow_kind": "predefined",
+      "effect_scope": "none",
+      "reachable_from_workflow": true,
+      "requires": [
+        {
+          "type": "era.initialize.startup.sync.step",
+          "cardinality": "exactly_one",
+          "display_name": "专用启动同步步骤"
+        },
+        {
+          "type": "era.batch.execution.state",
+          "cardinality": "exactly_one",
+          "display_name": "当前批次执行状态"
+        }
+      ],
+      "provides": [
+        {
+          "key": "startup_sync_result",
+          "type": "era.task.result",
+          "display_name": "启动同步结果"
+        }
+      ],
+      "global_config": {},
+      "body": {
+        "source": {
+          "root_id": "era-service",
+          "path": "configs/nodesets/startup_sync.jsonc"
+        },
+        "inputs": [
+          {
+            "key": "startup_step",
+            "type": "era.initialize.startup.sync.step",
+            "display_name": "专用启动同步步骤",
+            "required": true
+          },
+          {
+            "key": "execution_state",
+            "type": "era.batch.execution.state",
+            "display_name": "当前批次执行状态",
+            "required": true
+          }
+        ],
+        "outputs": [
+          {
+            "type": "era.task.result",
+            "cardinality": "exactly_one",
+            "display_name": "启动同步结果",
+            "as": "startupSyncResult"
+          }
+        ],
+        "max_steps": 4,
+        "entry_mode": "async",
+        "execution_lock": null,
+        "contains_global_state": false,
+        "summary": {
+          "nodes": 4,
+          "nodesets": 15,
+          "explicit_edges": 3,
+          "data_edges": 0,
+          "reported_edges": 3,
+          "contains_global_state": false
+        },
+        "entry_nodes": [
+          "start"
+        ],
+        "terminal_nodes": [
+          "end"
+        ],
+        "god_nodes": [],
+        "nodes": [
+          {
+            "id": "start",
+            "type_used": "era.service.terminal",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/startup_sync.jsonc"
+            },
+            "role": {
+              "display_name": "启动同步适配开始",
+              "description": "开始启动同步适配。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "terminal",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [],
+            "provides": [],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "adapt_step",
+            "type_used": "era.initialize.adapt_startup_sync_step",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/startup_sync.jsonc"
+            },
+            "role": {
+              "display_name": "适配启动同步步骤",
+              "description": "把专用初始化步骤转为通用 routed step。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "process",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.initialize.startup.sync.step",
+                "cardinality": "exactly_one",
+                "display_name": "专用启动同步步骤"
+              },
+              {
+                "type": "era.batch.execution.state",
+                "cardinality": "exactly_one",
+                "display_name": "批次执行状态"
+              }
+            ],
+            "provides": [
+              {
+                "key": "routed_startup_sync_step",
+                "type": "era.step.request.routed",
+                "display_name": "已路由启动同步步骤"
+              },
+              {
+                "key": "routed_startup_execution_state",
+                "type": "era.batch.execution.state",
+                "display_name": "启动同步批次状态"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "run_shared_sync",
+            "type_used": "era.task.sync",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/startup_sync.jsonc"
+            },
+            "role": {
+              "display_name": "调用共享同步",
+              "description": "调用既有 Sidecar、表达式、压缩与提交链。"
+            },
+            "contract_source": "nodeset",
+            "flow_kind": "predefined",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.step.request.routed",
+                "cardinality": "exactly_one",
+                "display_name": "已路由步骤"
+              },
+              {
+                "type": "era.batch.execution.state",
+                "cardinality": "exactly_one",
+                "display_name": "当前批次执行状态"
+              }
+            ],
+            "provides": [
+              {
+                "key": "sync_task_result",
+                "type": "era.task.result",
+                "display_name": "同步结果"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": {
+              "kind": "nodeset",
+              "target": "era.task.sync",
+              "target_status": "implemented"
+            },
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "end",
+            "type_used": "era.service.terminal",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/startup_sync.jsonc"
+            },
+            "role": {
+              "display_name": "启动同步适配结束",
+              "description": "输出共享同步结果。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "terminal",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [],
+            "provides": [],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": "start",
+            "to": "adapt_step",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "adapt_step",
+            "to": "run_shared_sync",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "run_shared_sync",
             "to": "end",
             "when": "",
             "roles": [
@@ -7348,7 +7701,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 18,
-          "nodesets": 14,
+          "nodesets": 15,
           "explicit_edges": 22,
           "data_edges": 0,
           "reported_edges": 22,
@@ -8464,7 +8817,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 4,
-          "nodesets": 14,
+          "nodesets": 15,
           "explicit_edges": 3,
           "data_edges": 0,
           "reported_edges": 3,
@@ -10582,6 +10935,73 @@
         }
       ]
     },
+    "era.initialize.adapt_startup_sync_step": {
+      "display_name": "适配启动同步步骤",
+      "description": "将初始化专用步骤无损转换为共享同步 Nodeset 的 routed step，避免与外层初始化步骤发生类型碰撞。",
+      "category": "初始化事务",
+      "version": "1.0.0",
+      "flow_kind": "process",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.initialize.startup.sync.step",
+            "cardinality": "exactly_one",
+            "display_name": "专用启动同步步骤"
+          },
+          {
+            "type": "era.batch.execution.state",
+            "cardinality": "exactly_one",
+            "display_name": "批次执行状态"
+          }
+        ],
+        "provides": [
+          {
+            "key": "routed_startup_sync_step",
+            "type": "era.step.request.routed",
+            "display_name": "已路由启动同步步骤"
+          },
+          {
+            "key": "routed_startup_execution_state",
+            "type": "era.batch.execution.state",
+            "display_name": "启动同步批次状态"
+          }
+        ],
+        "input_semantics": {
+          "era.initialize.startup.sync.step": [
+            "输入：初始化分支专用的启动同步步骤。"
+          ],
+          "era.batch.execution.state": [
+            "输入：初始化任务所属的批次执行状态。"
+          ]
+        },
+        "output_semantics": {
+          "routed_startup_sync_step": [
+            "输出：共享 sync Nodeset 可消费的 routed step。"
+          ],
+          "routed_startup_execution_state": [
+            "输出：未经修改的同一批次执行状态。"
+          ]
+        },
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser",
+            "node"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/initialize/adapt_startup_sync_step.ts",
+            "export": "run"
+          },
+          "completion": "immediate"
+        }
+      ]
+    },
     "era.initialize.build_commit": {
       "display_name": "构造初始化提交",
       "description": "把资源变更固定为有序、幂等的 Capability 动作列表。",
@@ -10635,9 +11055,9 @@
     },
     "era.initialize.build_result": {
       "display_name": "规划初始化完成方式",
-      "description": "资源操作直接结算；启动初始化成功时改走共享历史同步后结算。",
+      "description": "将直接初始化结果与启动同步结果分离，避免直接结果抢先结束启动同步。",
       "category": "初始化事务",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "flow_kind": "decision",
       "contract": {
         "requires": [
@@ -10655,13 +11075,13 @@
           },
           {
             "key": "startup_sync_step",
-            "type": "era.step.request.routed",
-            "display_name": "启动同步步骤"
+            "type": "era.initialize.startup.sync.step",
+            "display_name": "专用启动同步步骤"
           },
           {
             "key": "initialize_direct_result",
-            "type": "era.task.result",
-            "display_name": "直接初始化结果"
+            "type": "era.initialize.direct.result",
+            "display_name": "专用直接初始化结果"
           }
         ],
         "input_semantics": {
@@ -10694,6 +11114,57 @@
           "source": {
             "kind": "file",
             "ref": "nodes/initialize/finalize_initialization.ts",
+            "export": "run"
+          },
+          "completion": "immediate"
+        }
+      ]
+    },
+    "era.initialize.carry_execution_state": {
+      "display_name": "携带初始化批次状态",
+      "description": "无损转发初始化任务所属的批次执行状态。",
+      "category": "初始化事务",
+      "version": "1.0.0",
+      "flow_kind": "process",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.batch.execution.state",
+            "cardinality": "exactly_one",
+            "display_name": "批次执行状态"
+          }
+        ],
+        "provides": [
+          {
+            "key": "initialize_execution_state",
+            "type": "era.batch.execution.state",
+            "display_name": "初始化批次执行状态"
+          }
+        ],
+        "input_semantics": {
+          "era.batch.execution.state": [
+            "输入：外层批次执行状态。"
+          ]
+        },
+        "output_semantics": {
+          "initialize_execution_state": [
+            "输出：未经修改的同一批次执行状态。"
+          ]
+        },
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser",
+            "node"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/initialize/carry_execution_state.ts",
             "export": "run"
           },
           "completion": "immediate"
@@ -10751,35 +11222,35 @@
         }
       ]
     },
-    "era.initialize.merge_result": {
-      "display_name": "合并初始化结果",
-      "description": "把直接资源结果或启动同步结果转换为唯一初始化任务结果。",
+    "era.initialize.finalize_direct_result": {
+      "display_name": "结算直接初始化结果",
+      "description": "仅在 finish 分支将专用直接初始化结果转为唯一任务结果。",
       "category": "初始化事务",
       "version": "1.0.0",
       "flow_kind": "process",
       "contract": {
         "requires": [
           {
-            "type": "era.task.result",
+            "type": "era.initialize.direct.result",
             "cardinality": "exactly_one",
-            "display_name": "初始化分支结果"
+            "display_name": "专用直接初始化结果"
           }
         ],
         "provides": [
           {
-            "key": "initialize_task_result",
+            "key": "initialize_direct_task_result",
             "type": "era.task.result",
-            "display_name": "初始化任务结果"
+            "display_name": "直接初始化任务结果"
           }
         ],
         "input_semantics": {
-          "era.task.result": [
-            "输入：初始化分支结果。"
+          "era.initialize.direct.result": [
+            "输入：仅属于 finish 分支的直接结果。"
           ]
         },
         "output_semantics": {
-          "initialize_task_result": [
-            "输出：初始化任务结果。"
+          "initialize_direct_task_result": [
+            "输出：已结算的直接初始化任务结果。"
           ]
         },
         "params_schema": {},
@@ -10795,7 +11266,7 @@
           ],
           "source": {
             "kind": "file",
-            "ref": "nodes/initialize/merge_initialization_result.ts",
+            "ref": "nodes/initialize/finalize_direct_initialization.ts",
             "export": "run"
           },
           "completion": "immediate"
@@ -12359,7 +12830,7 @@
     },
     "era.sidecar_binding.apply_resolution": {
       "display_name": "执行 Sidecar 绑定事务",
-      "description": "执行 workflow 决定的迁移、独立或复制事务。",
+      "description": "执行 workflow 决定的迁移、独立或复制事务；严格消息上下文暂未就绪时只发布已验证 matched V3 快照。",
       "category": "Sidecar 绑定",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -25796,6 +26267,18 @@
           "additionalProperties": true
         }
       },
+      "era.initialize.direct.result": {
+        "kind": "data_schema",
+        "type_key": "era.initialize.direct.result",
+        "representation": "json",
+        "display_name": "直接初始化结果",
+        "description": "仅供 resources/settings-update 完成分支消费的专用结果，不得提前满足启动同步的 era.task.result。",
+        "schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
       "era.initialize.plan": {
         "kind": "data_schema",
         "type_key": "era.initialize.plan",
@@ -25821,6 +26304,18 @@
             "no-op",
             "reconcile"
           ]
+        }
+      },
+      "era.initialize.startup.sync.step": {
+        "kind": "data_schema",
+        "type_key": "era.initialize.startup.sync.step",
+        "representation": "json",
+        "display_name": "启动同步步骤",
+        "description": "初始化分支专用的启动同步步骤，在进入共享 sync Nodeset 前转为通用 routed step。",
+        "schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "additionalProperties": true
         }
       },
       "era.installation.scope.classification": {
@@ -36329,6 +36824,11 @@
             "input_type": "era.tavern.sidecar.commit_metadata.request",
             "output_type": "era.tavern.sidecar.commit_metadata.result",
             "completion": "suspend"
+          },
+          "publish_snapshot": {
+            "input_type": "era.tavern.sidecar.commit_metadata.request",
+            "output_type": "era.tavern.sidecar.commit_metadata.result",
+            "completion": "immediate"
           },
           "create_id": {
             "input_type": "era.tavern.sidecar.create_id.request",

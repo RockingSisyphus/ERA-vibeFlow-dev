@@ -69,6 +69,41 @@ function fileUrl(id: string): string {
   return `/user/files/${encodeURIComponent(fileName(id))}`;
 }
 
+/**
+ * 发布经 Service 验证的当前身份快照。这个机械边界不写聊天变量或
+ * 文件；owner 不匹配时明确返回 ignored，不能把旧聊天状态泄漏给新页面。
+ */
+function publishValidatedSnapshot(input: Readonly<Record<string, unknown>>): boolean {
+  const id = sidecarId(input.sidecarId);
+  if (!isRecord(input.snapshot)) throw new TypeError('ERA Sidecar 运行时发布缺少 snapshot。');
+  const snapshot = input.snapshot;
+  const owner = runtimeIdentity(snapshot.owner);
+  const revision = snapshot.revision;
+  const state = snapshot.state;
+  if (
+    !Number.isSafeInteger(revision) ||
+    !isRecord(state) ||
+    !isRecord(state.eraMeta) ||
+    !isRecord(state.statFunc) ||
+    !Object.prototype.hasOwnProperty.call(state, 'statData')
+  ) {
+    throw new TypeError('ERA Sidecar 提交后的快照无效。');
+  }
+  const actual = runtimeIdentity(currentIdentity());
+  if (actual.characterId !== owner.characterId || actual.groupId !== owner.groupId || actual.chatId !== owner.chatId) {
+    return false;
+  }
+  publishSidecarRuntimeSnapshot({
+    sidecarId: id,
+    identity: owner,
+    revision: revision as number,
+    statData: clonePortable(state.statData),
+    statFunc: clonePortable(state.statFunc),
+    eraMeta: clonePortable(state.eraMeta),
+  });
+  return true;
+}
+
 function requestHeaders(): HeadersInit {
   return typeof SillyTavern.getRequestHeaders === 'function'
     ? SillyTavern.getRequestHeaders()
@@ -147,37 +182,15 @@ async function commitSidecarPointer(
     },
     { type: 'chat' },
   );
-  if (isRecord(input.snapshot)) {
-    const snapshot = input.snapshot;
-    const owner = runtimeIdentity(snapshot.owner);
-    const revision = snapshot.revision;
-    const state = snapshot.state;
-    if (
-      !Number.isSafeInteger(revision) ||
-      !isRecord(state) ||
-      !isRecord(state.eraMeta) ||
-      !isRecord(state.statFunc) ||
-      !Object.prototype.hasOwnProperty.call(state, 'statData')
-    ) {
-      throw new TypeError('ERA Sidecar 提交后的快照无效。');
-    }
-    const actual = runtimeIdentity(currentIdentity());
-    if (
-      actual.characterId === owner.characterId &&
-      actual.groupId === owner.groupId &&
-      actual.chatId === owner.chatId
-    ) {
-      publishSidecarRuntimeSnapshot({
-        sidecarId: id,
-        identity: owner,
-        revision: revision as number,
-        statData: clonePortable(state.statData),
-        statFunc: clonePortable(state.statFunc),
-        eraMeta: clonePortable(state.eraMeta),
-      });
-    }
-  }
+  if (isRecord(input.snapshot)) publishValidatedSnapshot(input);
   return { status: 'committed', sidecarId: id, variables: clonePortable(getVariables({ type: 'chat' })) };
+}
+
+function publishSidecarSnapshot(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown {
+  throwIfAborted(context.signal);
+  const id = sidecarId(input.sidecarId);
+  const published = publishValidatedSnapshot(input);
+  return { status: published ? 'published' : 'ignored', sidecarId: id };
 }
 
 /**
@@ -202,6 +215,8 @@ export function createSidecarAdapter() {
      * 已在 workflow 先确认写入 Sidecar 文件；Host 不判断归属或迁移策略。
      */
     commit_metadata: commitSidecarPointer,
+    /** 只恢复当前页面的易失快照，不写聊天指针或 Sidecar 文件。 */
+    publish_snapshot: publishSidecarSnapshot,
     create_id: (_input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown => {
       throwIfAborted(context.signal);
       return { sidecarId: `era_chat_${globalThis.crypto.randomUUID()}` };

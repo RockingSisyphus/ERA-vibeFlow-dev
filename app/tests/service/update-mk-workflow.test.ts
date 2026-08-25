@@ -180,6 +180,7 @@ function fakeTavern(message: JsonRecord, initialMeta: JsonRecord, options: FakeO
         return { status: 'committed' };
       },
       commit_metadata: async () => ({ status: 'committed' }),
+      publish_snapshot: () => ({ status: 'published' }),
     },
   };
   return { state, counters, order, capabilities };

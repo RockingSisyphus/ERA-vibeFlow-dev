@@ -1,4 +1,0 @@
-{"kind":"node","type_key":"era.initialize.merge_result","display_name":"合并初始化结果","category":"初始化事务","description":"把直接资源结果或启动同步结果转换为唯一初始化任务结果。","version":"1.0.0","flow_kind":"process","contract":{"requires":[{"type":"era.task.result","cardinality":"exactly_one","display_name":"初始化分支结果"}],"provides":[{"key":"initialize_task_result","type":"era.task.result","display_name":"初始化任务结果"}],"params_schema":{},"params_defaults":{},
-    "input_semantics": {"era.task.result":["输入：初始化分支结果。"]},
-    "output_semantics": {"initialize_task_result":["输出：初始化任务结果。"]}
-  },"implementations":[{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/initialize/merge_initialization_result.ts","export":"run"}}],"base_libs":[],"capabilities":[]}

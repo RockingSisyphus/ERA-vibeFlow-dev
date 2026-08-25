@@ -672,6 +672,10 @@ class ServiceHostRuntime {
         input: Readonly<Record<string, unknown>>,
         options: PortCallOptions = {},
       ) => this.invokeSuspend("sidecar", "commit_metadata", input, options),
+      publish_snapshot: (
+        input: Readonly<Record<string, unknown>>,
+        options: PortCallOptions = {},
+      ) => this.invokeImmediate("sidecar", "publish_snapshot", input, options),
       create_id: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
         this.invokeImmediate("sidecar", "create_id", input, options),
       present_prompt: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>

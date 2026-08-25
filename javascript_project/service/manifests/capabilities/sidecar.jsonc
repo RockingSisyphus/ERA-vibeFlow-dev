@@ -9,6 +9,7 @@
     "read_record": { "input_type": "era.tavern.sidecar.read_record.request", "output_type": "era.tavern.sidecar.read_record.result", "completion": "suspend" },
     "write_record": { "input_type": "era.tavern.sidecar.write_record.request", "output_type": "era.tavern.sidecar.write_record.result", "completion": "suspend" },
     "commit_metadata": { "input_type": "era.tavern.sidecar.commit_metadata.request", "output_type": "era.tavern.sidecar.commit_metadata.result", "completion": "suspend" },
+    "publish_snapshot": { "input_type": "era.tavern.sidecar.commit_metadata.request", "output_type": "era.tavern.sidecar.commit_metadata.result", "completion": "immediate" },
     "create_id": { "input_type": "era.tavern.sidecar.create_id.request", "output_type": "era.tavern.sidecar.create_id.result", "completion": "immediate" },
     "present_prompt": { "input_type": "era.tavern.sidecar.present_prompt.request", "output_type": "era.tavern.sidecar.present_prompt.result", "completion": "immediate" },
     "clear_prompt": { "input_type": "era.tavern.sidecar.clear_prompt.request", "output_type": "era.tavern.sidecar.clear_prompt.result", "completion": "immediate" }

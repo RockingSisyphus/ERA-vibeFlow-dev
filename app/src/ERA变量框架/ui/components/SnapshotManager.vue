@@ -75,13 +75,14 @@
  * 迟到响应，否则旧请求会覆盖最后一次选择。
  */
 import { computed, ref, watch } from 'vue';
-import type { EraFacade, EraPublicState } from '../../service/public-api';
+import type { EraPublicState } from '../../service/public-api';
 import { Logger } from '../../utils/log';
 import { isNonNegativeSafeMessageId } from '../utils/message-id';
 import EraAccordion from '../template/EraAccordion.vue';
 import PrettyJsonViewer from '../template/PrettyJsonViewer.vue';
 import TabSwitch from '../template/TabSwitch.vue';
 import MetaHeader from './EraPanelContent/MetaHeader.vue';
+import { waitForEraFacade } from '../utils/facade';
 
 type DisplayData = Pick<EraPublicState, 'mk' | 'message_id' | 'stat' | 'statWithoutMeta'>;
 type TabItem = { key: 'pure' | 'full'; label: string };
@@ -113,7 +114,7 @@ const reversedSelectedMks = computed(() => {
 async function submitQuery(messageId: number): Promise<void> {
   const generation = ++nextQueryGeneration;
   try {
-    const api = await waitGlobalInitialized<EraFacade>('ERA');
+    const api = await waitForEraFacade();
     const snapshot = await api.history.atMessage(messageId);
     if (nextQueryGeneration !== generation) return;
     historicalSnapshot.value = snapshot;

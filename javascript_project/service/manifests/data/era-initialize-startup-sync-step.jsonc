@@ -1,0 +1,12 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.initialize.startup.sync.step",
+  "representation": "json",
+  "display_name": "启动同步步骤",
+  "description": "初始化分支专用的启动同步步骤，在进入共享 sync Nodeset 前转为通用 routed step。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": true
+  }
+}

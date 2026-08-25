@@ -21,6 +21,7 @@ interface Ctx {
       read_record(input: Readonly<Record<string, unknown>>): Promise<unknown>;
       write_record(input: Readonly<Record<string, unknown>>): Promise<unknown>;
       commit_metadata(input: Readonly<Record<string, unknown>>): Promise<unknown>;
+      publish_snapshot(input: Readonly<Record<string, unknown>>): unknown;
       create_id(input: Readonly<Record<string, unknown>>): { sidecarId: string };
       clear_prompt(input: Readonly<Record<string, unknown>>): unknown;
     };
@@ -161,6 +162,18 @@ export async function run(inputs: Readonly<{
   // 聊天状态；否则一个无关的 Tavern 事件错误会制造 Sidecar 半事务。
   const syncStatus = (sync as { readonly status?: unknown }).status;
   if (syncStatus !== undefined && syncStatus !== "ready") {
+    // 严格消息投影尚未 ready 时，禁止任何迁移、修复或持久化事务；但 owner
+    // 已匹配的 V3 文件已经是当前聊天唯一真相，可以安全恢复新页面实例的
+    // 易失只读快照。该能力不触碰聊天指针或用户文件。
+    if (resolution.route === "continue" && facts.status === "matched" && facts.record !== null) {
+      const published = context.capabilities["era.tavern.sidecar"].publish_snapshot({
+        sidecarId: facts.record.sidecarId,
+        snapshot: facts.record,
+      });
+      if (!isRecord(published) || published.status !== "published") {
+        throw new TypeError("ERA 已匹配 Sidecar 运行时快照发布失败。");
+      }
+    }
     return {
       sidecar_applied_context: {
         ...sync,

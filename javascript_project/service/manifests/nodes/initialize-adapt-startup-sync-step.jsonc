@@ -1,0 +1,39 @@
+{
+  "kind": "node",
+  "type_key": "era.initialize.adapt_startup_sync_step",
+  "display_name": "适配启动同步步骤",
+  "category": "初始化事务",
+  "description": "将初始化专用步骤无损转换为共享同步 Nodeset 的 routed step，避免与外层初始化步骤发生类型碰撞。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {"type": "era.initialize.startup.sync.step", "cardinality": "exactly_one", "display_name": "专用启动同步步骤"},
+      {"type": "era.batch.execution.state", "cardinality": "exactly_one", "display_name": "批次执行状态"}
+    ],
+    "provides": [
+      {"key": "routed_startup_sync_step", "type": "era.step.request.routed", "display_name": "已路由启动同步步骤"},
+      {"key": "routed_startup_execution_state", "type": "era.batch.execution.state", "display_name": "启动同步批次状态"}
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.initialize.startup.sync.step": ["输入：初始化分支专用的启动同步步骤。"],
+      "era.batch.execution.state": ["输入：初始化任务所属的批次执行状态。"]
+    },
+    "output_semantics": {
+      "routed_startup_sync_step": ["输出：共享 sync Nodeset 可消费的 routed step。"],
+      "routed_startup_execution_state": ["输出：未经修改的同一批次执行状态。"]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": ["browser", "node"],
+      "completion": "immediate",
+      "source": {"kind": "file", "ref": "nodes/initialize/adapt_startup_sync_step.ts", "export": "run"}
+    }
+  ],
+  "base_libs": [],
+  "capabilities": []
+}

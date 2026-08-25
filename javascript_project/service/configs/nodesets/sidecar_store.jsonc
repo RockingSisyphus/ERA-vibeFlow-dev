@@ -42,8 +42,8 @@
       {
         "id": "apply_resolution",
         "type_used": "era.sidecar_binding.apply_resolution",
-        "display_name": "应用 Sidecar V3 绑定决议",
-        "description": "以 revision 复核执行迁移、独立或复制。迁移/复制同时恢复 statData、eraMeta 与 statFunc；复制深拷贝变量和函数定义，不复制 SelectedMks 或任何编辑日志。"
+        "display_name": "应用 Sidecar 决议并发布已验证快照",
+        "description": "保留现有 create、migrate、repair、迁移、独立和复制事务；当严格消息派发上下文暂未 ready 时，仍允许将 owner 与当前身份匹配的已验证 V3 记录只读发布到当前页面运行时快照，但禁止迁移、修复、指针或文件写入。正常 ready 路径仍以 revision 复核执行原有受控事务。"
       },
       {"id": "end", "type_used": "era.service.terminal", "display_name": "Sidecar 状态存储结束", "description": "输出已加载的同步上下文及路由。"}
     ],

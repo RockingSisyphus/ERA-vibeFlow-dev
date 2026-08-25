@@ -17,8 +17,9 @@ export async function run(inputs: Readonly<{ "era.sync.context": { readonly valu
   const record = typeof id === "string"
     ? await context.capabilities["era.tavern.sidecar"].read_record({ sidecarId: id })
     : null;
+  const facts = inspectSidecar(current, record);
   return {
     sidecar_binding_input: { sync },
-    sidecar_binding_facts: inspectSidecar(current, record),
+    sidecar_binding_facts: facts,
   };
 }

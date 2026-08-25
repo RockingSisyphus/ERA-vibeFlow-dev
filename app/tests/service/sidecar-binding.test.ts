@@ -60,6 +60,67 @@ describe('ERA Sidecar 绑定纯规则', () => {
     });
   });
 
+  it('严格消息上下文失败时只发布已匹配 V3 快照', async () => {
+    const record = recordFor(sidecarId, current, { player: { hp: 10 } }, null);
+    const published: unknown[] = [];
+    const result = await applyResolution(
+      {
+        'era.sidecar.binding.input': {
+          value: {
+            sync: {
+              status: 'failed',
+              variablesRaw: { ERAMetaData: { SidecarId: sidecarId } },
+              messagesRaw: { schemaVersion: 2, messages: [] },
+            },
+          },
+        },
+        'era.sidecar.binding.resolution': {
+          value: {
+            facts: inspectSidecar(currentContext(), { status: 'found', record }),
+            route: 'continue',
+            choice: null,
+          },
+        },
+      },
+      {},
+      {
+        capabilities: {
+          'era.tavern.sidecar': {
+            read_current: async () => {
+              throw new Error('不应重新读取');
+            },
+            read_record: async () => {
+              throw new Error('不应重新读取');
+            },
+            write_record: async () => {
+              throw new Error('不应写入 Sidecar');
+            },
+            commit_metadata: async () => {
+              throw new Error('不应写入聊天指针');
+            },
+            publish_snapshot: (input: unknown) => {
+              published.push(input);
+              return { status: 'published' };
+            },
+            create_id: () => {
+              throw new Error('不应创建 ID');
+            },
+            clear_prompt: () => {
+              throw new Error('不应清理弹窗');
+            },
+          },
+          'era.tavern.messages': {
+            update_content: async () => {
+              throw new Error('不应写入消息');
+            },
+          },
+        },
+      },
+    );
+    expect(result).toMatchObject({ sidecar_binding_route: 'continue' });
+    expect(published).toEqual([{ sidecarId, snapshot: record }]);
+  });
+
   it('所有新提交均为 V3，并把函数库与变量状态一同放入 Sidecar', () => {
     const record = recordFor(
       sidecarId,
@@ -270,6 +331,7 @@ describe('ERA Sidecar 绑定纯规则', () => {
               return { status: 'committed' };
             },
             commit_metadata: async () => ({ status: 'committed' }),
+            publish_snapshot: () => ({ status: 'published' }),
             create_id: () => ({ sidecarId: 'era_chat_unused' }),
             clear_prompt: (input: unknown) => clears.push(input),
           },
@@ -325,6 +387,7 @@ describe('ERA Sidecar 绑定纯规则', () => {
               return { status: 'committed' };
             },
             commit_metadata: async () => ({ status: 'committed' }),
+            publish_snapshot: () => ({ status: 'published' }),
             create_id: () => ({ sidecarId: 'era_chat_unused' }),
             clear_prompt: () => ({}),
           },

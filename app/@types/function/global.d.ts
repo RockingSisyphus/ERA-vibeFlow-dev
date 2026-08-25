@@ -24,4 +24,4 @@ declare function initializeGlobal(global: TypeFest.LiteralUnion<'Mvu', string>, 
  * await waitGlobalInitialized('Mvu');
  * ...此后可以直接使用 Mvu 接口
  */
-declare function waitGlobalInitialized<T>(global: TypeFest.LiteralUnion<'Mvu', string>): Promise<T>;
+declare function waitGlobalInitialized(global: TypeFest.LiteralUnion<'Mvu', string>): Promise<void>;

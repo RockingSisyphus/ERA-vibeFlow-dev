@@ -104,6 +104,7 @@ class FakeAdapter implements EraTavernHostAdapter {
     read_record: async (input: Readonly<Record<string, unknown>>) => ({ ...input }),
     write_record: async (input: Readonly<Record<string, unknown>>) => ({ ...input }),
     commit_metadata: async (input: Readonly<Record<string, unknown>>) => ({ ...input }),
+    publish_snapshot: (input: Readonly<Record<string, unknown>>) => ({ ...input, status: 'published' }),
     create_id: () => ({ sidecarId: 'era_chat_fake-id' }),
     present_prompt: (input: Readonly<Record<string, unknown>>) => ({ ...input }),
     clear_prompt: (input: Readonly<Record<string, unknown>>) => {

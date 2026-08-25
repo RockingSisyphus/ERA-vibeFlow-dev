@@ -1,0 +1,47 @@
+{
+  "kind": "node",
+  "type_key": "era.initialize.carry_execution_state",
+  "display_name": "携带初始化批次状态",
+  "category": "初始化事务",
+  "description": "无损转发初始化任务所属的批次执行状态。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.batch.execution.state",
+        "cardinality": "exactly_one",
+        "display_name": "批次执行状态"
+      }
+    ],
+    "provides": [
+      {
+        "key": "initialize_execution_state",
+        "type": "era.batch.execution.state",
+        "display_name": "初始化批次执行状态"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.batch.execution.state": ["输入：外层批次执行状态。"]
+    },
+    "output_semantics": {
+      "initialize_execution_state": ["输出：未经修改的同一批次执行状态。"]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": ["browser", "node"],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/initialize/carry_execution_state.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [],
+  "capabilities": []
+}
