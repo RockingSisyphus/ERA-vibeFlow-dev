@@ -1,0 +1,24 @@
+{
+  "kind": "node",
+  "type_key": "era.expression.classify_random_calls",
+  "display_name": "标记随机调用与预留规模",
+  "category": "表达式工作流",
+  "description": "保留已编译函数闭包和操作 AST；纯引擎按调用展开顺序静态计算自动随机槽位。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      { "type": "era.expression.function_library.compiled", "cardinality": "exactly_one", "display_name": "已编译函数库" },
+      { "type": "era.expression.operations.parsed", "cardinality": "exactly_one", "display_name": "已解析操作" }
+    ],
+    "provides": [
+      { "key": "random_compiled_function_library", "type": "era.expression.function_library.compiled", "display_name": "已标记随机闭包的函数库" },
+      { "key": "random_parsed_operations", "type": "era.expression.operations.parsed", "display_name": "可预留随机槽位的操作" }
+    ],
+    "params_schema": {}, "params_defaults": {},
+    "input_semantics": { "era.expression.function_library.compiled": ["输入：含随机闭包标记的函数库。"], "era.expression.operations.parsed": ["输入：按原文顺序的操作 AST。"] },
+    "output_semantics": { "random_compiled_function_library": ["输出：不可变函数库。"], "random_parsed_operations": ["输出：不可变操作 AST。"] }
+  },
+  "implementations": [{ "language": "typescript", "targets": ["browser", "node"], "completion": "immediate", "source": { "kind": "file", "ref": "nodes/classify_random_calls.ts", "export": "run" } }],
+  "base_libs": ["era.expression.engine"], "capabilities": []
+}

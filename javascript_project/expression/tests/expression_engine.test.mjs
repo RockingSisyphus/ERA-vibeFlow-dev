@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { executeExpressionLayer } from "../generated/test/expression_engine.mjs";
+import {
+  deterministicRandomUnit,
+  executeExpressionLayer
+} from "../generated/test/expression_engine.mjs";
 
 function run(input) {
   return executeExpressionLayer({
@@ -241,4 +244,135 @@ test("保留可迁移的旧项目基础与嵌套函数使用方式", () => {
   });
   assert.equal(result.status, "ok");
   assert.ok(Math.abs(result.finalState.result - 6.283185307179586) < 1e-12);
+});
+
+test("随机 ABI 的 FNV-1a 与 SplitMix64 黄金向量固定", () => {
+  assert.equal(deterministicRandomUnit("mk-alpha", 0), 0.30650208041326854);
+  assert.equal(deterministicRandomUnit("mk-alpha", 1), 0.7384643669895365);
+  assert.equal(deterministicRandomUnit("mk-beta", 0), 0.6483602777920607);
+  assert.equal(deterministicRandomUnit(42, 0), 0.40473187880575046);
+  assert.equal(deterministicRandomUnit(42, 7), 0.5746334423763603);
+  assert.equal(deterministicRandomUnit(-3.5, 2), 0.29289056087754006);
+});
+
+test("自动随机按表达式顺序连续取号，完全显式调用不消耗游标", () => {
+  const result = run({
+    randomContext: { sourceKey: "mk-alpha", drawOffset: 5 },
+    initialState: { first: 0, seeded: 0, explicit: 0, last: 0 },
+    operations: [
+      { path: "first", expr: "random()" },
+      { path: "seeded", expr: "random(42)" },
+      { path: "explicit", expr: "random(42,7)" },
+      { path: "last", expr: "random()" }
+    ]
+  });
+  assert.equal(result.status, "ok");
+  assert.equal(result.finalState.first, deterministicRandomUnit("mk-alpha", 5));
+  assert.equal(result.finalState.seeded, deterministicRandomUnit(42, 6));
+  assert.equal(result.finalState.explicit, deterministicRandomUnit(42, 7));
+  assert.equal(result.finalState.last, deterministicRandomUnit("mk-alpha", 7));
+  assert.equal(result.randomDrawsConsumed, 3);
+  assert.equal(result.nextDrawOffset, 8);
+  assert.equal(result.containsAutomaticRandom, true);
+});
+
+test("嵌套骰点与技能检定沿函数展开顺序预留随机槽位", () => {
+  const result = run({
+    randomContext: { sourceKey: "dice-layer", drawOffset: 0 },
+    functionLibrary: {
+      dice: {
+        params: ["min", "max"],
+        expr: "floor(random()*(max-min+1))+min"
+      },
+      pair: { params: ["min", "max"], expr: "dice(min,max)+dice(min,max)" },
+      percentCheck: {
+        params: ["skill"],
+        expr: "clamp(skill-dice(1,100)+1,0,1)"
+      }
+    },
+    initialState: { pair: 0, passed: 0 },
+    operations: [
+      { path: "pair", expr: "pair(1,6)" },
+      { path: "passed", expr: "percentCheck(65)" }
+    ]
+  });
+  const die = (draw, sides) =>
+    Math.floor(deterministicRandomUnit("dice-layer", draw) * sides) + 1;
+  assert.equal(result.finalState.pair, die(0, 6) + die(1, 6));
+  assert.equal(result.finalState.passed, Math.min(Math.max(65 - die(2, 100) + 1, 0), 1));
+  assert.equal(result.randomDrawsConsumed, 3);
+});
+
+test("已校验操作即使在随机调用前运行失败也保留其静态槽位", () => {
+  const result = run({
+    randomContext: { sourceKey: "failure-layer", drawOffset: 0 },
+    initialState: { failed: 9, next: 0 },
+    operations: [
+      { path: "failed", expr: "missing+random()" },
+      { path: "next", expr: "random()" }
+    ]
+  });
+  assert.equal(result.finalState.failed, 9);
+  assert.equal(result.finalState.next, deterministicRandomUnit("failure-layer", 1));
+  assert.equal(result.randomDrawsConsumed, 2);
+  assert.ok(codes(result).includes("ERA_EXPR_REFERENCE_NON_NUMERIC"));
+});
+
+test("自动随机需要上下文，完全显式随机可独立重放", () => {
+  const result = run({
+    initialState: { automatic: 0, explicit: 0 },
+    operations: [
+      { path: "automatic", expr: "random()" },
+      { path: "explicit", expr: "random(42,7)" }
+    ]
+  });
+  assert.equal(result.finalState.automatic, 0);
+  assert.equal(result.finalState.explicit, deterministicRandomUnit(42, 7));
+  assert.equal(result.randomDrawsConsumed, 1);
+  assert.ok(codes(result).includes("ERA_EXPR_RANDOM_CONTEXT_REQUIRED"));
+});
+
+test("random draw 参数和随机函数微积分目标有精确诊断", () => {
+  const draw = run({
+    initialState: { value: 1 },
+    operations: [{ path: "value", expr: "random(42,-1)" }]
+  });
+  assert.ok(codes(draw).includes("ERA_EXPR_RANDOM_DRAW_INVALID"));
+  assert.equal(draw.finalState.value, 1);
+
+  const calculus = run({
+    randomContext: { sourceKey: "calculus", drawOffset: 0 },
+    functionLibrary: {
+      noisy: { params: ["x"], expr: "x+random(42,0)" },
+      nested: { params: ["x"], expr: "noisy(x)*2" }
+    },
+    initialState: { derivative: 4, integral: 5 },
+    operations: [
+      { path: "derivative", expr: "derivative(nested,2)" },
+      { path: "integral", expr: "integral(noisy,0,1)" }
+    ]
+  });
+  assert.deepEqual(
+    codes(calculus),
+    ["ERA_EXPR_CALCULUS_RANDOM_FORBIDDEN", "ERA_EXPR_CALCULUS_RANDOM_FORBIDDEN"]
+  );
+  assert.deepEqual(calculus.finalState, { derivative: 4, integral: 5 });
+});
+
+test("自动随机只污染依赖路径，显式随机与无关路径仍可安全压缩", () => {
+  const result = run({
+    randomContext: { sourceKey: "barrier", drawOffset: 0 },
+    initialState: { randomValue: 0, dependent: 0, stable: 1, explicit: 0 },
+    operations: [
+      { path: "stable", expr: "stable+1" },
+      { path: "randomValue", expr: "random()" },
+      { path: "dependent", expr: "randomValue*2" },
+      { path: "explicit", expr: "random(42,7)" },
+      { path: "stable", expr: "stable+2" }
+    ]
+  });
+  assert.deepEqual(result.compressed, {
+    stable: { $expr: "@stable + 3" },
+    explicit: { $expr: "random(42, 7)" }
+  });
 });

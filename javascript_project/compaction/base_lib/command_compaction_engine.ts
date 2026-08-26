@@ -5,7 +5,13 @@
  * plus its layer-start data and returns a replacement text only where the
  * standard ERA command language can be proven safe to shorten.
  */
-import { executeExpressionLayer } from "@era/vibeflow-expression/engine";
+import {
+  compileFunctionLibrary,
+  countAutomaticRandomDraws,
+  executeExpressionLayer,
+  parseExpression,
+  type Ast,
+} from "@era/vibeflow-expression/engine";
 
 export type JsonValue =
   | null
@@ -50,6 +56,11 @@ export interface CommandCompactionRequest {
   readonly snapshotStatFunc?: Readonly<Record<string, unknown>>;
   readonly eraMeta?: Readonly<Record<string, unknown>>;
   readonly templateContext?: Readonly<Record<string, unknown>>;
+  /** Service passes the sealed message MK; no target path or persistent cursor. */
+  readonly randomContext?: {
+    readonly sourceKey: string;
+    readonly drawOffset: number;
+  };
 }
 
 export interface CommandCompactionResponse {
@@ -60,6 +71,7 @@ export interface CommandCompactionResponse {
   readonly diagnostics: readonly CommandDiagnostic[];
   readonly reasons: readonly string[];
   readonly parsedCommands: readonly ParsedCommand[];
+  readonly nextRandomDrawOffset: number;
 }
 
 interface ParsedLayer {
@@ -72,6 +84,7 @@ interface SemanticTrace extends ParsedLayer {
   readonly finalStatData: Readonly<Record<string, unknown>>;
   readonly finalStatFunc: Readonly<Record<string, unknown>>;
   readonly diagnostics: readonly CommandDiagnostic[];
+  readonly nextRandomDrawOffset: number;
 }
 
 interface Candidate extends SemanticTrace {
@@ -151,6 +164,17 @@ export function parseCommandLayer(input: unknown): ParsedLayer {
       : plain(source.initialStatFunc) ? clone(source.initialStatFunc) : {},
     eraMeta: plain(source.eraMeta) ? clone(source.eraMeta) : {},
     templateContext: plain(source.templateContext) ? clone(source.templateContext) : {},
+    randomContext:
+      plain(source.randomContext) &&
+      typeof source.randomContext.sourceKey === "string" &&
+      source.randomContext.sourceKey.length > 0 &&
+      Number.isSafeInteger(source.randomContext.drawOffset) &&
+      (source.randomContext.drawOffset as number) >= 0
+        ? {
+            sourceKey: source.randomContext.sourceKey,
+            drawOffset: source.randomContext.drawOffset as number,
+          }
+        : undefined,
   };
   const commands: ParsedCommand[] = [];
   const diagnostics: CommandDiagnostic[] = [];
@@ -283,6 +307,7 @@ function expressionValue(
   startFunc: Record<string, unknown>,
   path: readonly string[],
   expr: string,
+  randomCursor: { sourceKey: string; drawOffset: number } | null,
 ): { readonly value?: number; readonly diagnostic?: CommandDiagnostic } {
   const request = {
     initialState: stat,
@@ -291,8 +316,10 @@ function expressionValue(
     snapshotFunctionLibrary: startFunc,
     allowSnapshots: true,
     operations: [{ path: path.join("."), expr }],
+    ...(randomCursor ? { randomContext: randomCursor } : {}),
   };
   const response = executeExpressionLayer(request);
+  if (randomCursor) randomCursor.drawOffset = response.nextDrawOffset;
   const value = getAt(response.finalState, path);
   const issue = response.diagnostics[0];
   if (issue || typeof value !== "number" || !Number.isFinite(value)) {
@@ -310,6 +337,7 @@ function applyEditAt(
   patch: unknown,
   diagnostics: CommandDiagnostic[],
   commandIndex: number,
+  randomCursor: { sourceKey: string; drawOffset: number } | null,
 ): void {
   const current = getAt(stat, segments);
   if (segments.length > 0 && current === undefined) return;
@@ -319,7 +347,15 @@ function applyEditAt(
   }
   if (plain(patch) && Object.keys(patch).length === 1 && typeof patch.$expr === "string") {
     if (segments.length === 0 || !hasAt(stat, segments)) return;
-    const resolved = expressionValue(stat, layerStart, statFunc, startFunc, segments, patch.$expr);
+    const resolved = expressionValue(
+      stat,
+      layerStart,
+      statFunc,
+      startFunc,
+      segments,
+      patch.$expr,
+      randomCursor,
+    );
     if (resolved.diagnostic) diagnostics.push({ ...resolved.diagnostic, commandIndex });
     else setAt(stat, segments, resolved.value);
     return;
@@ -329,7 +365,7 @@ function applyEditAt(
     return;
   }
   for (const [key, value] of Object.entries(patch)) {
-    applyEditAt(stat, layerStart, statFunc, startFunc, [...segments, key], value, diagnostics, commandIndex);
+    applyEditAt(stat, layerStart, statFunc, startFunc, [...segments, key], value, diagnostics, commandIndex, randomCursor);
   }
 }
 
@@ -450,14 +486,24 @@ export function executeOriginalSemantics(parsed: ParsedLayer): SemanticTrace {
   let functions = clone(parsed.request.initialStatFunc ?? {}) as Record<string, unknown>;
   const startFunctions = clone(parsed.request.snapshotStatFunc ?? parsed.request.initialStatFunc ?? {}) as Record<string, unknown>;
   const diagnostics = [...parsed.diagnostics];
+  const randomCursor = parsed.request.randomContext
+    ? { ...parsed.request.randomContext }
+    : null;
   for (const command of parsed.commands) {
     if (command.data.length === 0) continue;
     if (command.kind === "insert") for (const patch of command.data) applyInsertAt(stat, [], patch);
-    else if (command.kind === "edit") for (const patch of command.data) applyEditAt(stat, start, functions, startFunctions, [], patch, diagnostics, command.index);
+    else if (command.kind === "edit") for (const patch of command.data) applyEditAt(stat, start, functions, startFunctions, [], patch, diagnostics, command.index, randomCursor);
     else if (command.kind === "delete") for (const patch of command.data) applyDeleteAt(stat, [], patch);
     else functions = applyFunction(functions, command.kind, command.data, diagnostics, command.index);
   }
-  return { ...parsed, finalStatData: stat, finalStatFunc: functions, diagnostics };
+  return {
+    ...parsed,
+    finalStatData: stat,
+    finalStatFunc: functions,
+    diagnostics,
+    nextRandomDrawOffset:
+      randomCursor?.drawOffset ?? parsed.request.randomContext?.drawOffset ?? 0,
+  };
 }
 
 function hasMeta(value: unknown): boolean {
@@ -545,6 +591,9 @@ function compactEditRun(trace: SemanticTrace, commands: readonly ParsedCommand[]
     snapshotFunctionLibrary: trace.request.snapshotStatFunc ?? trace.request.initialStatFunc ?? {},
     allowSnapshots: true,
     operations,
+    ...(trace.request.randomContext
+      ? { randomContext: trace.request.randomContext }
+      : {}),
   });
   if (response.diagnostics.length > 0) return null;
   const sourceByPath = new Map<string, "expr" | "literal" | "mixed">();
@@ -562,6 +611,77 @@ function compactEditRun(trace: SemanticTrace, commands: readonly ParsedCommand[]
       : { path: item.path, value: { $expr: item.value.$expr } };
   }));
   return output && Object.keys(output).length > 0 ? renderTag("VariableEdit", output) : "";
+}
+
+function pathConflict(left: string, right: string): boolean {
+  return left === right || left.startsWith(`${right}.`) || right.startsWith(`${left}.`);
+}
+
+function operationRefs(ast: Ast): readonly string[] {
+  const refs = new Set<string>();
+  const visit = (item: Ast): void => {
+    if (item.kind === "ref") {
+      if (!item.snapshot) refs.add(item.path.join("."));
+      return;
+    }
+    if (item.kind === "unary") visit(item.value);
+    else if (item.kind === "binary") {
+      visit(item.left);
+      visit(item.right);
+    } else if (item.kind === "call") for (const arg of item.args) visit(arg);
+  };
+  visit(ast);
+  return [...refs];
+}
+
+function commandExpressionFacts(
+  trace: SemanticTrace,
+  command: ParsedCommand,
+): {
+  readonly automaticRandom: boolean;
+  readonly paths: readonly string[];
+  readonly refs: readonly string[];
+  readonly flattenable: boolean;
+} {
+  const operations: Array<{
+    readonly path: string;
+    readonly expr: string;
+    readonly source: "expr" | "literal";
+    readonly literal?: number;
+  }> = [];
+  const data = allCommandData(command);
+  if (!data || !flattenNumericEdits(data, [], operations))
+    return { automaticRandom: false, paths: [], refs: [], flattenable: false };
+  const current = compileFunctionLibrary(trace.request.initialStatFunc ?? {});
+  const snapshot = compileFunctionLibrary(
+    trace.request.snapshotStatFunc ?? trace.request.initialStatFunc ?? {},
+  );
+  const refs = new Set<string>();
+  let automaticRandom = false;
+  for (const operation of operations) {
+    const parsed = parseExpression(operation.expr, true);
+    if (!parsed.ast) continue;
+    if (countAutomaticRandomDraws(parsed.ast, current, snapshot) > 0)
+      automaticRandom = true;
+    for (const ref of operationRefs(parsed.ast)) refs.add(ref);
+  }
+  return {
+    automaticRandom,
+    paths: operations.map((operation) => operation.path),
+    refs: [...refs],
+    flattenable: true,
+  };
+}
+
+function segmentDoesNotDependOnPriorChanges(
+  facts: readonly ReturnType<typeof commandExpressionFacts>[],
+  priorPaths: ReadonlySet<string>,
+): boolean {
+  return facts.every((fact) =>
+    fact.refs.every(
+      (ref) => ![...priorPaths].some((path) => pathConflict(ref, path)),
+    ),
+  );
 }
 
 function compactInsertRun(commands: readonly ParsedCommand[]): string | null {
@@ -588,8 +708,46 @@ function candidateFor(trace: SemanticTrace): Candidate {
     const run = trace.commands.slice(cursor, end);
     let replacement: string | null = null;
     if (kind === "edit") {
-      if (cursor === 0) replacement = compactEditRun(trace, run);
-      else reasons.push(`${run.map((command) => command.tag).join("/")} 保留：前序命令会改变该区间的层起始语义。`);
+      if (cursor === 0) {
+        const facts = run.map((command) => commandExpressionFacts(trace, command));
+        const priorPaths = new Set<string>();
+        let segmentStart = 0;
+        const compactSegment = (segmentEnd: number): void => {
+          if (segmentEnd <= segmentStart) return;
+          const segment = run.slice(segmentStart, segmentEnd);
+          const segmentFacts = facts.slice(segmentStart, segmentEnd);
+          if (
+            segmentFacts.every((fact) => fact.flattenable) &&
+            segmentDoesNotDependOnPriorChanges(segmentFacts, priorPaths)
+          ) {
+            const compacted = compactEditRun(trace, segment);
+            if (
+              compacted !== null &&
+              (segment.length > 1 || compacted !== segment[0]!.raw)
+            ) {
+              replacements.set(segment[0]!.index, compacted);
+              for (const command of segment.slice(1))
+                replacements.set(command.index, "");
+            }
+          } else {
+            reasons.push(
+              `${segment.map((command) => command.tag).join("/")} 保留：依赖随机屏障或更早命令改变的路径。`,
+            );
+          }
+          for (const fact of segmentFacts)
+            for (const path of fact.paths) priorPaths.add(path);
+        };
+        for (let index = 0; index < run.length; index += 1) {
+          if (!facts[index]!.automaticRandom) continue;
+          compactSegment(index);
+          for (const path of facts[index]!.paths) priorPaths.add(path);
+          reasons.push(`${run[index]!.tag} 保留：包含自动 random 调用。`);
+          segmentStart = index + 1;
+        }
+        compactSegment(run.length);
+        replacement = null;
+      } else
+        reasons.push(`${run.map((command) => command.tag).join("/")} 保留：前序命令会改变该区间的层起始语义。`);
     }
     else if (kind === "insert") replacement = compactInsertRun(run);
     else reasons.push(`${run.map((command) => command.tag).join("/")} 保留：尚无可证明的通用重写规则。`);
@@ -617,19 +775,22 @@ function equivalent(trace: SemanticTrace, content: string): boolean {
     const expected = trace.diagnostics[index];
     return expected !== undefined && issue.code === expected.code && issue.path === expected.path;
   });
-  return sameDiagnostics && equal(replay.finalStatData, trace.finalStatData) && equal(replay.finalStatFunc, trace.finalStatFunc);
+  return sameDiagnostics &&
+    equal(replay.finalStatData, trace.finalStatData) &&
+    equal(replay.finalStatFunc, trace.finalStatFunc) &&
+    replay.nextRandomDrawOffset === trace.nextRandomDrawOffset;
 }
 
 function compactBareCommandLayer(input: unknown): CommandCompactionResponse {
   const parsed = parseCommandLayer(input);
   const trace = executeOriginalSemantics(parsed);
-  if (parsed.diagnostics.length > 0) return { status: "invalid", content: parsed.request.content, finalStatData: trace.finalStatData, finalStatFunc: trace.finalStatFunc, diagnostics: trace.diagnostics, reasons: ["标签 JSON 无效，未改写消息。"], parsedCommands: parsed.commands };
+  if (parsed.diagnostics.length > 0) return { status: "invalid", content: parsed.request.content, finalStatData: trace.finalStatData, finalStatFunc: trace.finalStatFunc, diagnostics: trace.diagnostics, reasons: ["标签 JSON 无效，未改写消息。"], parsedCommands: parsed.commands, nextRandomDrawOffset: trace.nextRandomDrawOffset };
   const candidate = candidateFor(trace);
-  if (candidate.replacements.size === 0) return { status: "unchanged", content: trace.request.content, finalStatData: trace.finalStatData, finalStatFunc: trace.finalStatFunc, diagnostics: trace.diagnostics, reasons: candidate.reasons.length ? candidate.reasons : ["没有可证明安全的缩写。"], parsedCommands: trace.commands };
+  if (candidate.replacements.size === 0) return { status: "unchanged", content: trace.request.content, finalStatData: trace.finalStatData, finalStatFunc: trace.finalStatFunc, diagnostics: trace.diagnostics, reasons: candidate.reasons.length ? candidate.reasons : ["没有可证明安全的缩写。"], parsedCommands: trace.commands, nextRandomDrawOffset: trace.nextRandomDrawOffset };
   const content = render(trace, candidate.replacements);
-  if (!equivalent(trace, content)) return { status: "unchanged", content: trace.request.content, finalStatData: trace.finalStatData, finalStatFunc: trace.finalStatFunc, diagnostics: trace.diagnostics, reasons: [...candidate.reasons, "候选未通过同一起点真实重放，已退回原命令。"], parsedCommands: trace.commands };
+  if (!equivalent(trace, content)) return { status: "unchanged", content: trace.request.content, finalStatData: trace.finalStatData, finalStatFunc: trace.finalStatFunc, diagnostics: trace.diagnostics, reasons: [...candidate.reasons, "候选未通过同一起点真实重放，已退回原命令。"], parsedCommands: trace.commands, nextRandomDrawOffset: trace.nextRandomDrawOffset };
   const all = trace.commands.every((command) => candidate.replacements.has(command.index));
-  return { status: all ? "compacted" : "partial", content, finalStatData: trace.finalStatData, finalStatFunc: trace.finalStatFunc, diagnostics: trace.diagnostics, reasons: candidate.reasons, parsedCommands: trace.commands };
+  return { status: all ? "compacted" : "partial", content, finalStatData: trace.finalStatData, finalStatFunc: trace.finalStatFunc, diagnostics: trace.diagnostics, reasons: candidate.reasons, parsedCommands: trace.commands, nextRandomDrawOffset: trace.nextRandomDrawOffset };
 }
 
 interface ScopedTransaction {
@@ -679,6 +840,7 @@ export function compactCommandLayer(input: unknown): CommandCompactionResponse {
   let cursor = 0;
   let statData = clone(parsed.request.initialStatData);
   let statFunc = clone(parsed.request.initialStatFunc ?? {});
+  let randomDrawOffset = parsed.request.randomContext?.drawOffset ?? 0;
   let content = "";
   let changed = false;
   let commandSegments = 0;
@@ -687,9 +849,27 @@ export function compactCommandLayer(input: unknown): CommandCompactionResponse {
   const reasons: string[] = [];
 
   const consume = (text: string, allowRewrite: boolean): string => {
-    const result = compactBareCommandLayer(withStartState(parsed.request, text, statData, statFunc));
+    const result = compactBareCommandLayer(
+      withStartState(
+        {
+          ...parsed.request,
+          ...(parsed.request.randomContext
+            ? {
+                randomContext: {
+                  sourceKey: parsed.request.randomContext.sourceKey,
+                  drawOffset: randomDrawOffset,
+                },
+              }
+            : {}),
+        },
+        text,
+        statData,
+        statFunc,
+      ),
+    );
     statData = clone(result.finalStatData);
     statFunc = clone(result.finalStatFunc);
+    randomDrawOffset = result.nextRandomDrawOffset;
     diagnostics.push(...result.diagnostics);
     reasons.push(...result.reasons);
     if (result.parsedCommands.length > 0) {
@@ -745,6 +925,7 @@ export function compactCommandLayer(input: unknown): CommandCompactionResponse {
   const replay = executeOriginalSemantics(parseCommandLayer({ ...parsed.request, content }));
   const equivalentResult = equal(originalTrace.finalStatData, replay.finalStatData) &&
     equal(originalTrace.finalStatFunc, replay.finalStatFunc) &&
+    originalTrace.nextRandomDrawOffset === replay.nextRandomDrawOffset &&
     originalTrace.diagnostics.length === replay.diagnostics.length &&
     originalTrace.diagnostics.every((issue, index) => issue.code === replay.diagnostics[index]?.code && issue.path === replay.diagnostics[index]?.path);
   if (!changed || !equivalentResult) {
@@ -756,6 +937,7 @@ export function compactCommandLayer(input: unknown): CommandCompactionResponse {
       diagnostics: originalTrace.diagnostics,
       reasons: equivalentResult ? reasons : [...reasons, "同 scope 分段候选未通过整层真实重放，已保留原事务。"],
       parsedCommands: parsed.commands,
+      nextRandomDrawOffset: originalTrace.nextRandomDrawOffset,
     };
   }
   return {
@@ -766,6 +948,7 @@ export function compactCommandLayer(input: unknown): CommandCompactionResponse {
     diagnostics: originalTrace.diagnostics,
     reasons,
     parsedCommands: parsed.commands,
+    nextRandomDrawOffset: originalTrace.nextRandomDrawOffset,
   };
 }
 
@@ -778,6 +961,11 @@ function input<T>(inputs: Inputs, key: string): T {
 export function parseCommandBlocksNode(inputs: any): any { return { parsed: parseCommandLayer(input(inputs, "era.command_compaction.request")) }; }
 export function executeOriginalSemanticsNode(inputs: any): any { return { trace: executeOriginalSemantics(input(inputs, "era.command_compaction.parsed")) }; }
 export function deriveReplayInvariantsNode(inputs: any): any { const trace = input<SemanticTrace>(inputs, "era.command_compaction.semantic_trace"); return { invariants: { trace, conservative: true } }; }
+export function classifyRandomBarriersNode(inputs: any): any {
+  return {
+    random_invariants: input(inputs, "era.command_compaction.invariants"),
+  };
+}
 export function partitionSafeRegionsNode(inputs: any): any { const invariants = input<{ trace: SemanticTrace }>(inputs, "era.command_compaction.invariants"); return { regions: { ...invariants, regions: invariants.trace.commands.map((command) => ({ index: command.index, kind: command.kind })) } }; }
 export function symbolizeDependenciesNode(inputs: any): any { return { symbols: input(inputs, "era.command_compaction.regions") }; }
 export function rewriteSafeRegionsNode(inputs: any): any { const payload = input<{ trace: SemanticTrace }>(inputs, "era.command_compaction.symbols"); return { candidate: candidateFor(payload.trace) }; }

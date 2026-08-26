@@ -71,14 +71,14 @@
       {
         "id": "prepare_expression_command_request",
         "type_used": "era.sync.prepare_expression_command_request",
-        "display_name": "整理表达式命令与双快照",
-        "description": "在既有 Sidecar V3 上下文中整理同步 DTO，并保留 full/latest/rollback/Swipe 的既有同步范围；它不重新实现解析、函数调用图或数学求值。"
+        "display_name": "整理表达式命令、双快照与消息身份",
+        "description": "在既有 Sidecar V3 上下文中整理同步 DTO，并为每个重放楼层携带已确认的 MK；保留 full/latest/rollback/Swipe 的既有同步范围，不重新实现解析、函数调用图、随机算法或数学求值。"
       },
       {
         "id": "execute_expression_commands",
         "type_used": "era.expression.execute_era_commands",
-        "display_name": "调用函数表达式 Nodeset",
-        "description": "调用独立 expression root 的已实现 Nodeset 执行变量与函数命令，并在既有按消息顺序的函数 CRUD 事务内实施可解锁 $meta 保护。数学语义、函数嵌套、递归拒绝与 @path/@function 快照由该 root 提供；Service 只保留顺序同步、Sidecar 状态和封存楼层压缩编排。"
+        "display_name": "调用可重放函数表达式 Nodeset",
+        "description": "调用独立 expression root，按消息 MK 和原文顺序执行变量、函数与随机表达式；同楼层普通标签与 era_tx 共用自动 draw 序列。数学语义、随机算法、函数嵌套、递归拒绝与双快照由该 root 提供。"
       },
       {
         "id": "apply_command_compaction",

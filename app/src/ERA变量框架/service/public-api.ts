@@ -92,7 +92,11 @@ function currentMessage(selected: readonly (string | null)[]): {
 }
 
 /** 把内部快照裁剪为稳定、深拷贝且不可写的作者视图。 */
-function project(snapshot: SidecarRuntimeSnapshot | null, statOverride?: unknown): EraPublicState {
+function project(
+  snapshot: SidecarRuntimeSnapshot | null,
+  statOverride?: unknown,
+  statFuncOverride?: Readonly<Record<string, unknown>>,
+): EraPublicState {
   const meta = snapshot?.eraMeta ?? {};
   const selected = selectedMks(meta);
   const latest = currentMessage(selected);
@@ -103,7 +107,7 @@ function project(snapshot: SidecarRuntimeSnapshot | null, statOverride?: unknown
     sidecarId: snapshot?.sidecarId ?? null,
     revision: snapshot?.revision ?? null,
     statData: structuredClone(stat),
-    statFunc: structuredClone(snapshot?.statFunc ?? {}),
+    statFunc: structuredClone(statFuncOverride ?? snapshot?.statFunc ?? {}),
     eraMeta: structuredClone(meta),
     stat: structuredClone(stat),
     statWithoutMeta: removeMetaFields(stat),
@@ -211,21 +215,45 @@ function revertLogEntry(stat: unknown, entry: unknown): void {
  * 从当前 Sidecar 副本逆向应用 EditLog。历史读取必须保持纯只读，否则查看旧楼层
  * 会改变当前变量或与正在进行的 commit 竞争。
  */
-function rollbackToMessage(snapshot: SidecarRuntimeSnapshot, messageId: number): unknown {
+function revertFunctionLogEntry(statFunc: Record<string, unknown>, entry: unknown): void {
+  if (!record(entry) || typeof entry.name !== 'string') return;
+  if (String(entry.op).toLowerCase() === 'insert') {
+    delete statFunc[entry.name];
+    return;
+  }
+  if (Object.prototype.hasOwnProperty.call(entry, 'value_old')) {
+    statFunc[entry.name] = structuredClone(entry.value_old);
+    return;
+  }
+  delete statFunc[entry.name];
+}
+
+interface HistoricalProjection {
+  readonly statData: unknown;
+  readonly statFunc: Readonly<Record<string, unknown>>;
+}
+
+function rollbackToMessage(snapshot: SidecarRuntimeSnapshot, messageId: number): HistoricalProjection {
   if (!Number.isSafeInteger(messageId) || messageId < 0) throw new TypeError('messageId 必须是非负安全整数。');
   const selected = selectedMks(snapshot.eraMeta);
   if (messageId >= selected.length || selected[messageId] === null)
     throw new RangeError(`消息 #${messageId} 没有 ERA 快照。`);
   const logs = record(snapshot.eraMeta.EditLogs) ? snapshot.eraMeta.EditLogs : {};
+  const functionLogs = record(snapshot.eraMeta.FunctionEditLogs) ? snapshot.eraMeta.FunctionEditLogs : {};
   const stat = structuredClone(snapshot.statData);
+  const statFunc = structuredClone(snapshot.statFunc);
   for (let index = selected.length - 1; index > messageId; index -= 1) {
     const mk = selected[index];
     const entries = mk === null || !Array.isArray(logs[mk]) ? [] : logs[mk];
     for (let cursor = entries.length - 1; cursor >= 0; cursor -= 1) {
       revertLogEntry(stat, entries[cursor]);
     }
+    const functionEntries = mk === null || !Array.isArray(functionLogs[mk]) ? [] : functionLogs[mk];
+    for (let cursor = functionEntries.length - 1; cursor >= 0; cursor -= 1) {
+      revertFunctionLogEntry(statFunc, functionEntries[cursor]);
+    }
   }
-  return stat;
+  return { statData: stat, statFunc };
 }
 
 /** 订阅只接收当前身份的已提交快照，避免 UI 用事件重放模拟状态。 */
@@ -270,7 +298,8 @@ export function createEraFacade(): EraFacade {
       async atMessage(messageId: number) {
         const snapshot = readActiveSidecarRuntimeSnapshot();
         if (snapshot === null || !currentIdentityMatches(snapshot)) throw new Error('ERA_STATE_NOT_READY');
-        return project(snapshot, rollbackToMessage(snapshot, messageId));
+        const historical = rollbackToMessage(snapshot, messageId);
+        return project(snapshot, historical.statData, historical.statFunc);
       },
     }),
   });

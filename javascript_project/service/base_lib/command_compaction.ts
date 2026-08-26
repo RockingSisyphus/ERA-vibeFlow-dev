@@ -133,7 +133,13 @@ export function partitionSameScopeSegments(context: ServiceCompactionContext): S
 export function compactEachSegment(context: ServiceCompactionContext): ServiceCompactionContext {
   return mapCandidates(context, (entry) => entry.original === null ? entry : {
     ...entry,
-    compaction: compactCommandLayer({ content: entry.original, initialStatData: entry.candidate.layerStartStat as Record<string, unknown>, initialStatFunc: entry.candidate.layerStartStatFunc, eraMeta: entry.candidate.eraMeta }),
+    compaction: compactCommandLayer({
+      content: entry.original,
+      initialStatData: entry.candidate.layerStartStat as Record<string, unknown>,
+      initialStatFunc: entry.candidate.layerStartStatFunc,
+      eraMeta: entry.candidate.eraMeta,
+      randomContext: { sourceKey: entry.candidate.mk, drawOffset: 0 },
+    }),
   });
 }
 
@@ -142,8 +148,8 @@ export function replayWithServiceEngine(context: ServiceCompactionContext): Serv
   return mapCandidates(context, (entry) => {
     const compacted = entry.compaction;
     if (entry.original === null || compacted === null || (compacted.status !== "compacted" && compacted.status !== "partial") || compacted.diagnostics.length !== 0 || compacted.content === entry.original) return entry;
-    const replay = applyMessageCommands({ content: compacted.content, messageId: entry.candidate.messageId, initialStat: entry.candidate.layerStartStat, initialStatFunc: entry.candidate.layerStartStatFunc, meta: entry.candidate.eraMeta, traditionalToSimplified: entry.candidate.traditionalToSimplified });
-    const accepted = replay.diagnostics.length === 0 && equal(replay.finalStat, entry.candidate.layerEndStat) && equal(replay.finalStatFunc ?? {}, entry.candidate.layerEndStatFunc);
+    const replay = applyMessageCommands({ content: compacted.content, messageId: entry.candidate.messageId, initialStat: entry.candidate.layerStartStat, initialStatFunc: entry.candidate.layerStartStatFunc, randomSourceKey: entry.candidate.mk, meta: entry.candidate.eraMeta, traditionalToSimplified: entry.candidate.traditionalToSimplified });
+    const accepted = replay.diagnostics.length === 0 && equal(replay.finalStat, entry.candidate.layerEndStat) && equal(replay.finalStatFunc ?? {}, entry.candidate.layerEndStatFunc) && replay.nextRandomDrawOffset === compacted.nextRandomDrawOffset;
     return { ...entry, replay, accepted };
   });
 }

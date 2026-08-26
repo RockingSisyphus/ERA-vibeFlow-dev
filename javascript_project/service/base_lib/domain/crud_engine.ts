@@ -88,6 +88,14 @@ export interface EraEditContext {
   /** Current and message-start function libraries supplied by Sidecar replay. */
   readonly statFunc?: Readonly<Record<string, unknown>>;
   readonly layerStartStatFunc?: Readonly<Record<string, unknown>>;
+  /**
+   * Ephemeral per-message cursor.  It is created from the message MK by the Service and is
+   * deliberately shared by every `$expr` leaf in source/JSON order.  It is never persisted.
+   */
+  readonly randomCursor?: {
+    readonly sourceKey: string;
+    drawOffset: number;
+  };
 }
 
 export interface EraApplyMessageCommandsInput {
@@ -97,12 +105,17 @@ export interface EraApplyMessageCommandsInput {
   readonly meta: Readonly<Record<string, unknown>>;
   /** Current Sidecar function library. It is never read from chat variables. */
   readonly initialStatFunc?: Readonly<Record<string, unknown>>;
+  /** Stable message MK used as the default deterministic-random seed. */
+  readonly randomSourceKey?: string;
   readonly traditionalToSimplified?: boolean;
 }
 
 export interface EraApplyMessageCommandsResult extends EraCrudResult {
   readonly commands: readonly EraCrudCommand[];
   readonly diagnostics: readonly EraCrudDiagnostic[];
+  /** Present when `randomSourceKey` was supplied; remains an in-memory replay result only. */
+  readonly randomDrawsConsumed?: number;
+  readonly nextRandomDrawOffset?: number;
 }
 
 interface PositionedCommand extends EraCrudCommand {
@@ -700,8 +713,19 @@ export function resolveRelativeEdit(
     snapshotFunctionLibrary:
       context.layerStartStatFunc ?? context.statFunc ?? {},
     allowSnapshots: true,
+    ...(context.randomCursor === undefined
+      ? {}
+      : {
+          randomContext: {
+            sourceKey: context.randomCursor.sourceKey,
+            drawOffset: context.randomCursor.drawOffset,
+          },
+        }),
     operations: [{ path: publicEditPath(path), expr: operand }],
   });
+  if (context.randomCursor !== undefined) {
+    context.randomCursor.drawOffset = response.nextDrawOffset;
+  }
   const result = getAtPath(response.finalState, publicEditPath(path));
   if (
     response.diagnostics.length > 0 ||
@@ -1169,6 +1193,10 @@ export function applyMessageCommands(
   const layerStartStatFunc = cloneCrudValue(
     input.initialStatFunc ?? {},
   ) as Record<string, unknown>;
+  const randomCursor =
+    typeof input.randomSourceKey === "string" && input.randomSourceKey.length > 0
+      ? { sourceKey: input.randomSourceKey, drawOffset: 0 }
+      : undefined;
   try {
     const commands = parseMessageCommands({
       content: input.content,
@@ -1193,6 +1221,7 @@ export function applyMessageCommands(
           layerStartStat: initial,
           statFunc: currentStatFunc,
           layerStartStatFunc,
+          randomCursor,
         });
         diagnostics.push(...editResult.diagnostics);
         result = editResult;
@@ -1226,6 +1255,12 @@ export function applyMessageCommands(
         : {}),
       commands,
       diagnostics,
+      ...(randomCursor === undefined
+        ? {}
+        : {
+            randomDrawsConsumed: randomCursor.drawOffset,
+            nextRandomDrawOffset: randomCursor.drawOffset,
+          }),
     };
   } catch {
     const exposesFunctionState = Object.keys(layerStartStatFunc).length > 0;
@@ -1237,6 +1272,12 @@ export function applyMessageCommands(
         : {}),
       commands: [],
       diagnostics: [],
+      ...(randomCursor === undefined
+        ? {}
+        : {
+            randomDrawsConsumed: randomCursor.drawOffset,
+            nextRandomDrawOffset: randomCursor.drawOffset,
+          }),
     };
   }
 }

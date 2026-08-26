@@ -110,6 +110,7 @@
     "yaml-loader": "^0.9.0"
   },
   "dependencies": {
+    "@era/vibeflow-expression": "file:vendor/era-vibeflow-expression-0.2.0.tgz",
     "@stdlib/math-base-special-gamma": "^0.3.1",
     "@pixi/react": "8.0.5",
     "@vueuse/components": "^14.3.0",

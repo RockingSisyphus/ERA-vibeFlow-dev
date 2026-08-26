@@ -7,6 +7,15 @@ function run(content, initialStatData, initialStatFunc = {}) {
   return compactCommandLayer({ content, initialStatData, initialStatFunc });
 }
 
+function runRandom(content, initialStatData, initialStatFunc = {}) {
+  return compactCommandLayer({
+    content,
+    initialStatData,
+    initialStatFunc,
+    randomContext: { sourceKey: "compact-random", drawOffset: 0 }
+  });
+}
+
 test("跨变量表达式保留层起始快照依赖", () => {
   const result = run(
     `<VariableEdit>{"a":{"$expr":"a+1"}}</VariableEdit>\n<VariableEdit>{"b":{"$expr":"a*2"}}</VariableEdit>\n<VariableEdit>{"a":{"$expr":"a+1"}}</VariableEdit>`,
@@ -108,4 +117,77 @@ test("普通正文阻止相同 scope 跨段合并", () => {
   const result = run(original, { a: 1 });
   assert.equal(result.content, original);
   assert.deepEqual(result.finalStatData, { a: 3 });
+});
+
+test("自动 random 是局部屏障，前后独立确定性区间仍各自压缩", () => {
+  const randomCommand = `<VariableEdit>{"roll":{"$expr":"random()"}}</VariableEdit>`;
+  const result = runRandom(
+    `<VariableEdit>{"stable":{"$expr":"stable+1"}}</VariableEdit>` +
+      `<VariableEdit>{"stable":{"$expr":"stable+1"}}</VariableEdit>` +
+      randomCommand +
+      `<VariableEdit>{"tail":{"$expr":"tail+1"}}</VariableEdit>` +
+      `<VariableEdit>{"tail":{"$expr":"tail+1"}}</VariableEdit>`,
+    { stable: 0, roll: 0, tail: 0 }
+  );
+  assert.equal(result.status, "partial");
+  assert.match(result.content, /"stable":\{"\$expr":"@stable \+ 2"\}/u);
+  assert.match(result.content, /"tail":\{"\$expr":"@tail \+ 2"\}/u);
+  assert.ok(result.content.includes(randomCommand));
+  assert.equal((result.content.match(/random\(\)/gu) ?? []).length, 1);
+  assert.deepEqual(result.finalStatData, {
+    stable: 2,
+    roll: 0.16960479729646394,
+    tail: 2
+  });
+  assert.equal(result.nextRandomDrawOffset, 1);
+});
+
+test("通过 statFunc 间接调用自动 random 同样保留原命令", () => {
+  const content =
+    `<VariableEdit>{"before":{"$expr":"before+1"}}</VariableEdit>` +
+    `<VariableEdit>{"before":{"$expr":"before+1"}}</VariableEdit>` +
+    `<VariableEdit>{"roll":{"$expr":"dice(1,6)"}}</VariableEdit>`;
+  const result = runRandom(
+    content,
+    { before: 0, roll: 0 },
+    {
+      dice: {
+        params: ["min", "max"],
+        expr: "floor(random()*(max-min+1))+min"
+      }
+    }
+  );
+  assert.equal(result.status, "partial");
+  assert.match(result.content, /"before":\{"\$expr":"@before \+ 2"\}/u);
+  assert.match(result.content, /"roll":\{"\$expr":"dice\(1,6\)"\}/u);
+  assert.equal(result.finalStatData.roll, 2);
+  assert.equal(result.nextRandomDrawOffset, 1);
+});
+
+test("完全显式 random(seed,draw) 可作为普通确定性表达式压缩", () => {
+  const result = run(
+    `<VariableEdit>{"value":{"$expr":"random(42,7)"}}</VariableEdit>` +
+      `<VariableEdit>{"value":{"$expr":"value+1"}}</VariableEdit>`,
+    { value: 0 }
+  );
+  assert.equal(result.status, "compacted");
+  assert.equal((result.content.match(/<VariableEdit>/gu) ?? []).length, 1);
+  assert.match(result.content, /random\(42, 7\) \+ 1/u);
+  assert.equal(result.finalStatData.value, 1.5746334423763604);
+  assert.equal(result.nextRandomDrawOffset, 0);
+});
+
+test("普通标签与 era_tx 之间共享同一消息随机抽取序号", () => {
+  const content =
+    `<VariableEdit>{"first":{"$expr":"random()"}}</VariableEdit>` +
+    `<era_tx s="m"><VariableEdit>{"second":{"$expr":"random()"}}</VariableEdit></era_tx>` +
+    `<era_tx s="m"><VariableEdit>{"third":{"$expr":"random()"}}</VariableEdit></era_tx>`;
+  const result = runRandom(content, { first: 0, second: 0, third: 0 });
+  assert.equal(result.content, content);
+  assert.deepEqual(result.finalStatData, {
+    first: 0.16960479729646394,
+    second: 0.9561148643509833,
+    third: 0.9098112177707088
+  });
+  assert.equal(result.nextRandomDrawOffset, 3);
 });

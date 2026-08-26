@@ -38,6 +38,12 @@ ERA 已使用 Sidecar 用户文件作为唯一变量持久化源，聊天变量�
 `@path`、自定义函数与函数快照 `@f(...)`。函数库持久化在 Sidecar
 `state.statFunc`；`$inc/$mul/$div/$sub/$set` 均被拒绝。
 
+表达式还提供可重放的确定性随机函数：`random()` 使用当前消息 MK 和消息内自动抽取
+序号，`random(seed)` 使用显式有限数值种子和自动序号，`random(seed, draw)` 同时固定
+种子与非负安全整数序号。它不读取系统时间、`Math.random()` 或变量目标路径；因此同一
+消息在 full sync、历史编辑恢复和切回既有 Swipe 时会得到相同结果。插入或删除更早的
+自动随机调用会顺移后续序号，需要永久固定某次抽取时应使用三参数形式。
+
 ## Sidecar 唯一存储
 
 ERA 聊天在 `ERAMetaData.SidecarId` 保存稳定的 `era_chat_<uuid>`，对应的

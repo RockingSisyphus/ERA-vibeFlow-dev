@@ -1,7 +1,7 @@
 {
   "type_key": "era.expression.execute_era_commands",
   "display_name": "执行 ERA 表达式命令",
-  "description": "跨 root 的实际表达式 Nodeset 边界：Service 传入 Sidecar 同步 DTO，桥接节点调用本地版本化 @era/vibeflow-expression 包。表达式语法、嵌套函数、递归拒绝、双快照和数学后端均在 expression root；本 Nodeset 不做 Tavern I/O。",
+  "description": "跨 root 的实际表达式 Nodeset 边界：Service 以消息 MK 建立随机 sourceKey，在同一消息全部普通标签与 era_tx 间连续传递 drawOffset，再调用本地版本化 @era/vibeflow-expression 包；本 Nodeset 不做 Tavern I/O。",
   "requires": [
     {"type":"era.expression.command.request","cardinality":"exactly_one","display_name":"表达式命令请求"}
   ],
@@ -13,13 +13,25 @@
     "inputs": [
       {"key":"expression_command_request","type":"era.expression.command.request","display_name":"表达式命令请求","required":true}
     ],
-    "max_steps": 3,
+    "max_steps": 5,
     "nodes": [
       {"id":"start","type_used":"era.service.terminal","display_name":"表达式命令开始","description":"进入不含宿主 I/O 的跨 root 计算边界。"},
-      {"id":"execute","type_used":"era.expression.execute_era_commands.bridge","display_name":"调用 expression root","description":"以受限 DTO 调用已验证的表达式引擎；不复制 lexer、AST 或数学实现。"},
+      {
+        "id": "attach_message_random_context",
+        "type_used": "era.expression.attach_message_random_context",
+        "display_name": "从消息 MK 建立随机上下文",
+        "description": "为每个被重放消息使用其稳定 MK 作为 sourceKey，并把本楼层 drawOffset 初始化为零；不使用变量目标路径、时间或 Sidecar 游标。"
+      },
+      {"id":"execute","type_used":"era.expression.execute_era_commands.bridge","display_name":"调用 expression root","description":"以受限 DTO 按原文顺序调用已验证的表达式引擎；跨 VariableEdit 叶子、普通标签、函数调用与 era_tx 连续传递自动抽取序号。"},
+      {
+        "id": "publish_message_random_cursor",
+        "type_used": "era.expression.publish_message_random_cursor",
+        "display_name": "发布楼层随机游标结果",
+        "description": "把 randomDrawsConsumed 与 nextDrawOffset 保留在纯同步工作项中，供候选复放校验；游标不写入消息或 Sidecar。"
+      },
       {"id":"end","type_used":"era.service.terminal","display_name":"表达式命令结束","description":"返回纯同步工作项。"}
     ],
-    "edges": [["start","execute"],["execute","end"]],
+    "edges": [["start","attach_message_random_context"],["attach_message_random_context","execute"],["execute","publish_message_random_cursor"],["publish_message_random_cursor","end"]],
     "outputs": [
       {"type":"era.expression.command.result","cardinality":"exactly_one","display_name":"表达式命令结果","as":"expressionCommandResult"}
     ]

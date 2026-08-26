@@ -21,4 +21,5 @@ npm --prefix javascript_project/compaction run test:sandbox
 
 现有用例覆盖跨变量快照、严格 Insert、模板、变量/函数 `$meta`、函数 Insert/Edit/Delete、
 前向和嵌套调用、`@f` 的完整快照闭包、非法函数事务、Insert/Edit/Delete 链、混合直接赋值
-与 `$expr`，以及 JSON/表达式错误不污染状态。
+与 `$expr`、自动随机局部屏障、间接随机函数、完全显式随机压缩、普通标签与 `era_tx` 的
+共享抽取顺序，以及 JSON/表达式错误不污染状态。

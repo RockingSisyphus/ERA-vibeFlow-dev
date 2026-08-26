@@ -1,0 +1,20 @@
+{
+  "kind": "node",
+  "type_key": "era.expression.attach_message_random_context",
+  "display_name": "从消息 MK 建立随机上下文",
+  "category": "表达式集成",
+  "description": "保留带稳定消息 MK 的纯同步 DTO；CRUD 引擎在逐楼层重放时以 MK 建立零起始、仅内存存在的抽取游标。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [{"type":"era.expression.command.request","cardinality":"exactly_one","display_name":"表达式命令请求"}],
+    "provides": [{"key":"message_random_command_request","type":"era.expression.command.request","display_name":"带消息随机身份的命令请求"}],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {"era.expression.command.request":["输入：每个可重放消息均已确认 MK 的纯同步 DTO。"]},
+    "output_semantics": {"message_random_command_request":["输出：不含宿主引用、持久化游标或目标路径种子的请求。"]}
+  },
+  "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/sync/attach_message_random_context.ts","export":"run"}}],
+  "base_libs": ["era.crud.engine"],
+  "capabilities": []
+}

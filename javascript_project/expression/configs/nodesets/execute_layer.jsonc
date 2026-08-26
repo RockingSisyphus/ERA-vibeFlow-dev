@@ -3,7 +3,7 @@
   "type_key": "era.expression.execute_layer",
   "flow_kind": "process",
   "display_name": "ERA 函数表达式层执行",
-  "description": "独立处理函数表达式的受限语法、纯函数库、任意嵌套调用、顺序变量状态与消息层压缩；不访问 Tavern、Sidecar、ERA API 或浏览器全局状态。",
+  "description": "独立处理函数表达式的受限语法、纯函数库、任意嵌套调用、可重放随机序列、顺序变量状态与消息层压缩；随机身份只来自显式 sourceKey，不访问 Tavern、Sidecar、ERA API 或浏览器全局状态。",
   "requires": [
     {
       "type": "era.expression.request",
@@ -28,7 +28,7 @@
         "required": true
       }
     ],
-    "max_steps": 16,
+    "max_steps": 19,
     "nodes": [
       {
         "id": "start",
@@ -41,6 +41,12 @@
         "type_used": "era.expression.validate_request",
         "display_name": "验证表达式请求",
         "description": "验证有限数值初始状态、函数库 JSON 形状与有序操作输入，不读取外部状态。"
+      },
+      {
+        "id": "validate_random_context",
+        "type_used": "era.expression.validate_random_context",
+        "display_name": "验证可重放随机上下文",
+        "description": "验证可选 sourceKey 与非负安全整数 drawOffset；不读取变量目标路径、系统时间、Math.random 或持久化游标。"
       },
       {
         "id": "parse_function_definitions",
@@ -85,10 +91,17 @@
         "description": "解析路径与用户表达式，禁止用户输入 @path，并完整保留操作出现顺序。"
       },
       {
+        "id": "classify_random_calls",
+        "type_used": "era.expression.classify_random_calls",
+        "display_name": "标记随机调用与预留规模",
+        "description": "沿无环函数调用图展开 random 调用，区分自动序号和完全显式 draw，按操作、参数与函数体顺序计算槽位，并拒绝直接或间接包含 random 的导数/积分目标。",
+        "join_policy": "all"
+      },
+      {
         "id": "initialize_sequence_state",
-        "type_used": "era.expression.initialize_sequence_state",
-        "display_name": "初始化顺序状态",
-        "description": "冻结本消息层起始状态并创建可变当前状态、操作游标、已编译函数库和待执行 AST。"
+        "type_used": "era.expression.initialize_random_sequence_state",
+        "display_name": "初始化顺序状态与随机游标",
+        "description": "冻结本消息层起始状态，以 drawOffset 为起点预留自动随机槽位，并创建变量操作游标、随机游标、已编译函数库和待执行 AST。"
       },
       {
         "id": "operation_loop",
@@ -132,6 +145,12 @@
         "description": "以冻结的层起始状态建立 @path 环境，按已完成的顺序操作推导每个变量的最终表达式。"
       },
       {
+        "id": "guard_random_compaction",
+        "type_used": "era.expression.guard_random_compaction",
+        "display_name": "保护自动随机压缩边界",
+        "description": "保留 random()、random(seed) 及其间接函数调用的原始顺序，禁止折叠为常数或跨越合并；完全显式 random(seed, draw) 仍按普通确定性调用证明。"
+      },
+      {
         "id": "normalize_compaction",
         "type_used": "era.expression.normalize_compaction",
         "display_name": "规范化压缩表达式",
@@ -146,7 +165,8 @@
     ],
     "edges": [
       ["start", "validate_request"],
-      ["validate_request", "parse_function_definitions"],
+      ["validate_request", "validate_random_context"],
+      ["validate_random_context", "parse_function_definitions"],
       ["parse_function_definitions", "extract_function_dependencies"],
       ["parse_function_definitions", "validate_function_purity"],
       ["extract_function_dependencies", "validate_function_purity"],
@@ -155,10 +175,11 @@
       ["build_function_call_graph", "reject_recursive_functions"],
       ["parse_function_definitions", "compile_callable_functions"],
       ["reject_recursive_functions", "compile_callable_functions"],
-      ["validate_request", "parse_operations"],
-      ["validate_request", "initialize_sequence_state"],
-      ["compile_callable_functions", "initialize_sequence_state"],
-      ["parse_operations", "initialize_sequence_state"],
+      ["validate_random_context", "parse_operations"],
+      ["compile_callable_functions", "classify_random_calls"],
+      ["parse_operations", "classify_random_calls"],
+      ["validate_random_context", "initialize_sequence_state"],
+      ["classify_random_calls", "initialize_sequence_state"],
       ["initialize_sequence_state", "operation_loop"],
       ["initialize_sequence_state", "derive_symbolic_layer"],
       {
@@ -167,7 +188,8 @@
         "schedule": false
       },
       ["operation_loop", "derive_symbolic_layer"],
-      ["derive_symbolic_layer", "normalize_compaction"],
+      ["derive_symbolic_layer", "guard_random_compaction"],
+      ["guard_random_compaction", "normalize_compaction"],
       ["operation_loop", "normalize_compaction"],
       ["normalize_compaction", "end"]
     ],

@@ -45,8 +45,17 @@ export interface ParsedFunction {
 
 export interface CompiledLibrary {
   readonly functions: Readonly<Record<string, ParsedFunction>>;
+  /** Custom functions that directly or transitively contain any random call. */
+  readonly randomFunctions: readonly string[];
   readonly diagnostics: readonly Diagnostic[];
   readonly valid: boolean;
+}
+
+export interface RandomContext {
+  /** Stable message identity. ERA Service passes the message MK. */
+  readonly sourceKey: string;
+  /** First automatic draw index available to this request. */
+  readonly drawOffset: number;
 }
 
 export interface ParsedOperation {
@@ -63,6 +72,7 @@ export interface NormalizedRequest {
   readonly functionLibrary: Readonly<Record<string, unknown>>;
   readonly snapshotFunctionLibrary: Readonly<Record<string, unknown>> | null;
   readonly allowSnapshots: boolean;
+  readonly randomContext: RandomContext | null;
   readonly operations: readonly {
     readonly path: string;
     readonly expr: string;
@@ -78,6 +88,9 @@ export interface SequenceState {
   readonly snapshotCompiled: CompiledLibrary;
   readonly operations: readonly ParsedOperation[];
   readonly cursor: number;
+  readonly randomContext: RandomContext | null;
+  /** Statically reserved automatic draws, including failed runtime operations. */
+  readonly randomDrawsConsumed: number;
   readonly diagnostics: readonly Diagnostic[];
 }
 
@@ -90,6 +103,9 @@ export interface ExpressionResponse {
     readonly path: string;
     readonly value: { readonly $expr: string };
   }[];
+  readonly randomDrawsConsumed: number;
+  readonly nextDrawOffset: number;
+  readonly containsAutomaticRandom: boolean;
 }
 
 interface Token {
@@ -129,7 +145,8 @@ function isBuiltin(name: string): boolean {
     "factorial",
     "gamma",
     "derivative",
-    "integral"
+    "integral",
+    "random"
   ].includes(name);
 }
 
@@ -466,6 +483,27 @@ export function normaliseRequest(input: unknown): NormalizedRequest {
         "snapshotFunctionLibrary 必须是对象。"
       )
     );
+  let randomContext: RandomContext | null = null;
+  if (request.randomContext !== undefined) {
+    if (
+      !isRecord(request.randomContext) ||
+      typeof request.randomContext.sourceKey !== "string" ||
+      request.randomContext.sourceKey.length === 0 ||
+      !Number.isSafeInteger(request.randomContext.drawOffset) ||
+      (request.randomContext.drawOffset as number) < 0
+    )
+      diagnostics.push(
+        diagnostic(
+          "ERA_EXPR_RANDOM_CONTEXT_INVALID",
+          "randomContext 需要非空 sourceKey 与非负安全整数 drawOffset。"
+        )
+      );
+    else
+      randomContext = {
+        sourceKey: request.randomContext.sourceKey,
+        drawOffset: request.randomContext.drawOffset as number
+      };
+  }
   const rawOperations = Array.isArray(request.operations)
     ? request.operations
     : [];
@@ -498,6 +536,7 @@ export function normaliseRequest(input: unknown): NormalizedRequest {
     functionLibrary,
     snapshotFunctionLibrary,
     allowSnapshots: request.allowSnapshots === true,
+    randomContext,
     operations,
     diagnostics,
     valid: diagnostics.length === 0
@@ -626,6 +665,14 @@ export function validateFunctionPurity(
           )
         );
       if (item.kind === "call") {
+        if (item.name === "random" && item.args.length > 2)
+          diagnostics.push(
+            diagnostic(
+              "ERA_EXPR_BUILTIN_ARITY",
+              `函数 ${functionDef.name} 中的 random 只接受零个、一个或两个参数。`,
+              { path: functionDef.name }
+            )
+          );
         if (!isBuiltin(item.name) && !functions.has(item.name))
           diagnostics.push(
             diagnostic(
@@ -677,6 +724,32 @@ export function rejectRecursiveFunctions(
   return diagnostics;
 }
 
+function findRandomFunctions(
+  parsed: readonly ParsedFunction[]
+): readonly string[] {
+  const functions = new Map(parsed.map((item) => [item.name, item]));
+  const memo = new Map<string, boolean>();
+  const visiting = new Set<string>();
+  const contains = (name: string): boolean => {
+    const cached = memo.get(name);
+    if (cached !== undefined) return cached;
+    if (visiting.has(name)) return false;
+    visiting.add(name);
+    const definition = functions.get(name);
+    let found = false;
+    if (definition?.ast)
+      walk(definition.ast, (item) => {
+        if (item.kind !== "call" || found) return;
+        if (item.name === "random") found = true;
+        else if (functions.has(item.name) && contains(item.name)) found = true;
+      });
+    visiting.delete(name);
+    memo.set(name, found);
+    return found;
+  };
+  return [...functions.keys()].filter(contains).sort();
+}
+
 export function compileCallableFunctions(
   parsed: readonly ParsedFunction[],
   diagnostics: readonly Diagnostic[]
@@ -688,6 +761,7 @@ export function compileCallableFunctions(
         .filter((item) => item.ast !== null)
         .map((item) => [item.name, item])
     ),
+    randomFunctions: findRandomFunctions(parsed),
     diagnostics: all,
     valid: all.length === 0
   };
@@ -703,6 +777,7 @@ export function compileFunctionLibrary(
     functionLibrary,
     snapshotFunctionLibrary: null,
     allowSnapshots: false,
+    randomContext: null,
     operations: [],
     diagnostics: [],
     valid: true
@@ -713,6 +788,60 @@ export function compileFunctionLibrary(
     ...validateFunctionPurity(parsed),
     ...rejectRecursiveFunctions(dependencies)
   ]);
+}
+
+export function countAutomaticRandomDraws(
+  ast: Ast,
+  currentLibrary: CompiledLibrary,
+  snapshotLibrary: CompiledLibrary = currentLibrary
+): number {
+  const visiting = new Set<ParsedFunction>();
+  const count = (item: Ast, library: CompiledLibrary): number => {
+    if (item.kind === "literal" || item.kind === "ref") return 0;
+    if (item.kind === "unary") return count(item.value, library);
+    if (item.kind === "binary")
+      return count(item.left, library) + count(item.right, library);
+    let total = item.args.reduce(
+      (sum, arg) => sum + count(arg, library),
+      0
+    );
+    if (item.name === "random") return total + (item.args.length < 2 ? 1 : 0);
+    if (isBuiltin(item.name)) return total;
+    const targetLibrary = item.snapshot ? snapshotLibrary : library;
+    const target = targetLibrary.functions[item.name];
+    if (target?.ast && !visiting.has(target)) {
+      visiting.add(target);
+      total += count(target.ast, targetLibrary);
+      visiting.delete(target);
+    }
+    return total;
+  };
+  return count(ast, currentLibrary);
+}
+
+export function containsAnyRandomCall(
+  ast: Ast,
+  currentLibrary: CompiledLibrary,
+  snapshotLibrary: CompiledLibrary = currentLibrary
+): boolean {
+  const visiting = new Set<ParsedFunction>();
+  const visit = (item: Ast, library: CompiledLibrary): boolean => {
+    if (item.kind === "literal" || item.kind === "ref") return false;
+    if (item.kind === "unary") return visit(item.value, library);
+    if (item.kind === "binary")
+      return visit(item.left, library) || visit(item.right, library);
+    if (item.args.some((arg) => visit(arg, library))) return true;
+    if (item.name === "random") return true;
+    if (isBuiltin(item.name)) return false;
+    const targetLibrary = item.snapshot ? snapshotLibrary : library;
+    const target = targetLibrary.functions[item.name];
+    if (!target?.ast || visiting.has(target)) return false;
+    visiting.add(target);
+    const found = visit(target.ast, targetLibrary);
+    visiting.delete(target);
+    return found;
+  };
+  return visit(ast, currentLibrary);
 }
 
 export function parseOperations(
@@ -757,6 +886,8 @@ export function initializeSequenceState(
     snapshotCompiled,
     operations,
     cursor: 0,
+    randomContext: request.randomContext,
+    randomDrawsConsumed: 0,
     diagnostics: [...request.diagnostics, ...compiled.diagnostics]
   };
 }
@@ -781,6 +912,10 @@ interface BuiltinFrame {
   readonly name: string;
   readonly count: number;
 }
+interface RandomFrame {
+  readonly kind: "random";
+  readonly count: number;
+}
 interface CustomFrame {
   readonly kind: "custom";
   readonly name: string;
@@ -799,6 +934,7 @@ type EvalFrameEntry =
   | UnaryFrame
   | BinaryFrame
   | BuiltinFrame
+  | RandomFrame
   | CustomFrame
   | CalculusFrame;
 
@@ -806,6 +942,7 @@ export interface AstFrameState {
   readonly sequence: SequenceState;
   readonly stack: readonly EvalFrameEntry[];
   readonly values: readonly number[];
+  readonly automaticRandomDrawCursor: number;
   readonly done: boolean;
   readonly result: number | null;
   readonly diagnostics: readonly Diagnostic[];
@@ -841,11 +978,90 @@ function popValues(
   values: readonly number[],
   count: number
 ): { readonly values: readonly number[]; readonly args: readonly number[] } {
+  if (count === 0) return { values, args: [] };
   if (values.length < count)
     throw new ExpressionFailure(
       diagnostic("ERA_EXPR_EVALUATION_STACK", "表达式求值栈缺少子表达式结果。")
     );
   return { values: values.slice(0, -count), args: values.slice(-count) };
+}
+
+const UINT64_MASK = (1n << 64n) - 1n;
+const FNV64_OFFSET = 0xcbf29ce484222325n;
+const FNV64_PRIME = 0x100000001b3n;
+const SPLITMIX_GAMMA = 0x9e3779b97f4a7c15n;
+const SPLITMIX_MUL_1 = 0xbf58476d1ce4e5b9n;
+const SPLITMIX_MUL_2 = 0x94d049bb133111ebn;
+const TWO_POW_53 = 9007199254740992;
+
+function fnv1a64(bytes: Uint8Array): bigint {
+  return bytes.reduce(
+    (hash, byte) => ((hash ^ BigInt(byte)) * FNV64_PRIME) & UINT64_MASK,
+    FNV64_OFFSET
+  );
+}
+
+function randomSeedHash(seed: string | number): bigint {
+  if (typeof seed === "string") return fnv1a64(new TextEncoder().encode(seed));
+  const normalized = Object.is(seed, -0) ? 0 : seed;
+  const buffer = new ArrayBuffer(8);
+  new DataView(buffer).setFloat64(0, normalized, true);
+  return fnv1a64(new Uint8Array(buffer));
+}
+
+/** Stable public ABI used by Node, Browser and test-pack reference vectors. */
+export function deterministicRandomUnit(
+  seed: string | number,
+  draw: number
+): number {
+  if (
+    (typeof seed === "number" && !Number.isFinite(seed)) ||
+    !Number.isSafeInteger(draw) ||
+    draw < 0
+  )
+    throw new ExpressionFailure(
+      diagnostic(
+        "ERA_EXPR_RANDOM_DRAW_INVALID",
+        "random 的 seed 必须有限，draw 必须是非负安全整数。"
+      )
+    );
+  const mixed0 =
+    (randomSeedHash(seed) + BigInt(draw) + SPLITMIX_GAMMA) & UINT64_MASK;
+  const mixed1 = ((mixed0 ^ (mixed0 >> 30n)) * SPLITMIX_MUL_1) & UINT64_MASK;
+  const mixed2 = ((mixed1 ^ (mixed1 >> 27n)) * SPLITMIX_MUL_2) & UINT64_MASK;
+  const mixed3 = mixed2 ^ (mixed2 >> 31n);
+  return Number((mixed3 & UINT64_MASK) >> 11n) / TWO_POW_53;
+}
+
+function calculateRandom(
+  args: readonly number[],
+  context: RandomContext | null,
+  automaticDraw: number
+): number {
+  if (args.length > 2)
+    throw new ExpressionFailure(
+      diagnostic(
+        "ERA_EXPR_BUILTIN_ARITY",
+        "random 只接受零个、一个或两个参数。"
+      )
+    );
+  if (args.length < 2 && !context)
+    throw new ExpressionFailure(
+      diagnostic(
+        "ERA_EXPR_RANDOM_CONTEXT_REQUIRED",
+        "random() 与 random(seed) 需要消息随机上下文。"
+      )
+    );
+  const seed = args.length === 0 ? context!.sourceKey : args[0]!;
+  const draw = args.length === 2 ? args[1]! : automaticDraw;
+  if (!Number.isSafeInteger(draw) || draw < 0)
+    throw new ExpressionFailure(
+      diagnostic(
+        "ERA_EXPR_RANDOM_DRAW_INVALID",
+        "random 的 draw 必须是非负安全整数。"
+      )
+    );
+  return deterministicRandomUnit(seed, draw);
 }
 
 function calculateBuiltin(name: string, args: readonly number[]): number {
@@ -992,6 +1208,8 @@ function evaluateFunctionAt(
     snapshotCompiled: library,
     operations: [],
     cursor: 0,
+    randomContext: null,
+    randomDrawsConsumed: 0,
     diagnostics: []
   };
   let frame = createAstFrameState(
@@ -1023,6 +1241,14 @@ function calculateCalculus(
       diagnostic(
         "ERA_EXPR_CALCULUS_TARGET",
         `${name} 只接受已定义的一元纯函数。`,
+        { path: target }
+      )
+    );
+  if (library.randomFunctions.includes(target))
+    throw new ExpressionFailure(
+      diagnostic(
+        "ERA_EXPR_CALCULUS_RANDOM_FORBIDDEN",
+        `${name} 不能以直接或间接调用 random 的函数为目标。`,
         { path: target }
       )
     );
@@ -1180,6 +1406,8 @@ export function createAstFrameState(
     sequence,
     stack: [{ kind: "eval", ast, env, allowState, library }],
     values: [],
+    automaticRandomDrawCursor:
+      (sequence.randomContext?.drawOffset ?? 0) + sequence.randomDrawsConsumed,
     done: false,
     result: null,
     diagnostics: []
@@ -1196,18 +1424,20 @@ function complete(
 
 export function astFrameRoute(
   state: AstFrameState
-): "value" | "operator" | "builtin" | "custom" | "return" {
+): "value" | "operator" | "builtin" | "random" | "custom" | "return" {
   const top = state.stack[state.stack.length - 1];
   if (!top) return "return";
   if (top.kind === "eval") {
     if (top.ast.kind === "literal" || top.ast.kind === "ref") return "value";
     if (top.ast.kind === "unary" || top.ast.kind === "binary")
       return "operator";
+    if (top.ast.name === "random") return "random";
     if (isBuiltin(top.ast.name)) return "builtin";
     return "custom";
   }
   if (top.kind === "unary" || top.kind === "binary") return "operator";
   if (top.kind === "builtin" || top.kind === "calculus") return "builtin";
+  if (top.kind === "random") return "random";
   if (top.kind === "custom") return "custom";
   return "return";
 }
@@ -1228,6 +1458,7 @@ export function advanceAstFrame(
       );
     const stack = [...state.stack];
     const values = [...state.values];
+    let automaticRandomDrawCursor = state.automaticRandomDrawCursor;
     const top = stack.pop();
     if (!top) return complete({ ...state, stack, values });
     if (top.kind === "eval") {
@@ -1293,6 +1524,23 @@ export function advanceAstFrame(
             library: top.library
           });
           for (const arg of [...top.ast.args.slice(1)].reverse())
+            stack.push({
+              kind: "eval",
+              ast: arg,
+              env: top.env,
+              allowState: top.allowState,
+              library: top.library
+            });
+        } else if (top.ast.name === "random") {
+          if (top.ast.snapshot)
+            throw new ExpressionFailure(
+              diagnostic(
+                "ERA_EXPR_SNAPSHOT_FUNCTION_REQUIRED",
+                "@ 仅可用于自定义函数调用。"
+              )
+            );
+          stack.push({ kind: "random", count: top.ast.args.length });
+          for (const arg of [...top.ast.args].reverse())
             stack.push({
               kind: "eval",
               ast: arg,
@@ -1385,6 +1633,16 @@ export function advanceAstFrame(
         ...popped.values,
         calculateBuiltin(top.name, popped.args)
       );
+    } else if (top.kind === "random") {
+      const popped = popValues(values, top.count);
+      const draw = automaticRandomDrawCursor;
+      if (top.count < 2) automaticRandomDrawCursor += 1;
+      values.splice(
+        0,
+        values.length,
+        ...popped.values,
+        calculateRandom(popped.args, state.sequence.randomContext, draw)
+      );
     } else if (top.kind === "calculus") {
       const popped = popValues(values, top.count);
       values.splice(
@@ -1429,7 +1687,7 @@ export function advanceAstFrame(
         library: top.library
       });
     }
-    return complete({ ...state, stack, values });
+    return complete({ ...state, stack, values, automaticRandomDrawCursor });
   } catch (error) {
     const detail =
       error instanceof ExpressionFailure
@@ -1454,6 +1712,7 @@ export function runOperationStep(state: SequenceState): {
   readonly operationExecutionResult: {
     readonly finalState: JsonValue;
     readonly diagnostics: readonly Diagnostic[];
+    readonly randomDrawsConsumed: number;
   };
 } {
   const operation = state.operations[state.cursor];
@@ -1463,7 +1722,8 @@ export function runOperationStep(state: SequenceState): {
       sequenceDone: true,
       operationExecutionResult: {
         finalState: state.currentState,
-        diagnostics: state.diagnostics
+        diagnostics: state.diagnostics,
+        randomDrawsConsumed: state.randomDrawsConsumed
       }
     };
   if (!state.compiled.valid) {
@@ -1477,7 +1737,8 @@ export function runOperationStep(state: SequenceState): {
       sequenceDone: next.cursor >= next.operations.length,
       operationExecutionResult: {
         finalState: next.currentState,
-        diagnostics: next.diagnostics
+        diagnostics: next.diagnostics,
+        randomDrawsConsumed: next.randomDrawsConsumed
       }
     };
   }
@@ -1492,10 +1753,16 @@ export function runOperationStep(state: SequenceState): {
       sequenceDone: next.cursor >= next.operations.length,
       operationExecutionResult: {
         finalState: next.currentState,
-        diagnostics: next.diagnostics
+        diagnostics: next.diagnostics,
+        randomDrawsConsumed: next.randomDrawsConsumed
       }
     };
   }
+  const randomDraws = countAutomaticRandomDraws(
+    operation.ast,
+    state.compiled,
+    state.snapshotCompiled
+  );
   let frame = createAstFrameState(state, operation.ast);
   while (!frame.done) frame = advanceAstFrame(frame);
   const diagnostics = [...state.diagnostics, ...frame.diagnostics];
@@ -1507,6 +1774,7 @@ export function runOperationStep(state: SequenceState): {
     ...state,
     currentState,
     cursor: state.cursor + 1,
+    randomDrawsConsumed: state.randomDrawsConsumed + randomDraws,
     diagnostics
   };
   return {
@@ -1514,7 +1782,8 @@ export function runOperationStep(state: SequenceState): {
     sequenceDone: next.cursor >= next.operations.length,
     operationExecutionResult: {
       finalState: next.currentState,
-      diagnostics: next.diagnostics
+      diagnostics: next.diagnostics,
+      randomDrawsConsumed: next.randomDrawsConsumed
     }
   };
 }
@@ -1529,6 +1798,7 @@ export function commitOperationResult(
   readonly operationExecutionResult: {
     readonly finalState: JsonValue;
     readonly diagnostics: readonly Diagnostic[];
+    readonly randomDrawsConsumed: number;
   };
 } {
   const operation = state.operations[state.cursor];
@@ -1538,7 +1808,8 @@ export function commitOperationResult(
       sequenceDone: true,
       operationExecutionResult: {
         finalState: state.currentState,
-        diagnostics: state.diagnostics
+        diagnostics: state.diagnostics,
+        randomDrawsConsumed: state.randomDrawsConsumed
       }
     };
   const diagnostics = [
@@ -1553,10 +1824,19 @@ export function commitOperationResult(
     value !== null
       ? setPath(state.currentState, operation.path, value)
       : state.currentState;
+  const randomDraws =
+    state.compiled.valid && operation.ast && operation.diagnostics.length === 0
+      ? countAutomaticRandomDraws(
+          operation.ast,
+          state.compiled,
+          state.snapshotCompiled
+        )
+      : 0;
   const next: SequenceState = {
     ...state,
     currentState,
     cursor: state.cursor + 1,
+    randomDrawsConsumed: state.randomDrawsConsumed + randomDraws,
     diagnostics
   };
   return {
@@ -1564,7 +1844,8 @@ export function commitOperationResult(
     sequenceDone: next.cursor >= next.operations.length,
     operationExecutionResult: {
       finalState: next.currentState,
-      diagnostics: next.diagnostics
+      diagnostics: next.diagnostics,
+      randomDrawsConsumed: next.randomDrawsConsumed
     }
   };
 }
@@ -1748,11 +2029,38 @@ export function deriveSymbolicLayer(
   sequence: SequenceState
 ): Readonly<Record<string, Ast>> {
   const symbols: Record<string, Ast> = {};
+  const tainted = new Set<string>();
+  const conflicts = (left: string, right: string): boolean =>
+    left === right || left.startsWith(`${right}.`) || right.startsWith(`${left}.`);
+  const referencesTainted = (ast: Ast): boolean => {
+    let found = false;
+    walk(ast, (item) => {
+      if (
+        item.kind === "ref" &&
+        !item.snapshot &&
+        [...tainted].some((path) => conflicts(item.path.join("."), path))
+      )
+        found = true;
+    });
+    return found;
+  };
   for (const operation of sequence.operations) {
     if (!operation.ast || operation.diagnostics.length > 0) continue;
-    symbols[operation.path.join(".")] = simplify(
-      substituteSymbolic(operation.ast, symbols)
-    );
+    const path = operation.path.join(".");
+    if (
+      countAutomaticRandomDraws(
+        operation.ast,
+        sequence.compiled,
+        sequence.snapshotCompiled
+      ) > 0 ||
+      referencesTainted(operation.ast)
+    ) {
+      tainted.add(path);
+      for (const existing of Object.keys(symbols))
+        if (conflicts(existing, path)) delete symbols[existing];
+      continue;
+    }
+    symbols[path] = simplify(substituteSymbolic(operation.ast, symbols));
   }
   return symbols;
 }
@@ -1781,7 +2089,20 @@ export function normaliseCompaction(
     compactedOperations: Object.entries(compressed).map(([path, value]) => ({
       path,
       value
-    }))
+    })),
+    randomDrawsConsumed: sequence.randomDrawsConsumed,
+    nextDrawOffset:
+      (sequence.randomContext?.drawOffset ?? 0) + sequence.randomDrawsConsumed,
+    containsAutomaticRandom: sequence.operations.some(
+      (operation) =>
+        operation.ast !== null &&
+        operation.diagnostics.length === 0 &&
+        countAutomaticRandomDraws(
+          operation.ast,
+          sequence.compiled,
+          sequence.snapshotCompiled
+        ) > 0
+    )
   };
 }
 
@@ -1832,6 +2153,14 @@ export function validateRequestNode(inputs: NodeInputs): any {
   return {
     normalized_expression_request: normaliseRequest(
       nodeInput(inputs, "era.expression.request")
+    )
+  };
+}
+export function validateRandomContextNode(inputs: NodeInputs): any {
+  return {
+    validated_random_request: nodeInput(
+      inputs,
+      "era.expression.request.normalized"
     )
   };
 }
@@ -1910,17 +2239,38 @@ export function parseOperationsNode(inputs: NodeInputs): any {
     )
   };
 }
+export function classifyRandomCallsNode(inputs: NodeInputs): any {
+  return {
+    random_compiled_function_library: nodeInput(
+      inputs,
+      "era.expression.function_library.compiled"
+    ),
+    random_parsed_operations: nodeInput(inputs, "era.expression.operations.parsed")
+  };
+}
 export function initializeSequenceStateNode(inputs: NodeInputs): any {
+  const request = nodeInput<NormalizedRequest>(
+    inputs,
+    "era.expression.request.normalized"
+  );
+  const compiled = nodeInput<CompiledLibrary>(
+    inputs,
+    "era.expression.function_library.compiled"
+  );
+  const snapshotCompiled = request.snapshotFunctionLibrary
+    ? compileFunctionLibrary(request.snapshotFunctionLibrary)
+    : compiled;
   return {
     sequence_state: initializeSequenceState(
-      nodeInput(inputs, "era.expression.request.normalized"),
-      nodeInput<CompiledLibrary>(
-        inputs,
-        "era.expression.function_library.compiled"
-      ),
-      nodeInput(inputs, "era.expression.operations.parsed")
+      request,
+      compiled,
+      nodeInput(inputs, "era.expression.operations.parsed"),
+      snapshotCompiled
     )
   };
+}
+export function initializeRandomSequenceStateNode(inputs: NodeInputs): any {
+  return initializeSequenceStateNode(inputs);
 }
 export function selectNextOperationNode(inputs: NodeInputs): any {
   const sequenceState = nodeInput<SequenceState>(
@@ -1991,6 +2341,9 @@ export function evaluateOperatorFrameNode(inputs: NodeInputs): any {
 export function evaluateBuiltinFrameNode(inputs: NodeInputs): any {
   return advanceNode(inputs, "builtin", "frame_transition_builtin");
 }
+export function evaluateCounterRandomNode(inputs: NodeInputs): any {
+  return advanceNode(inputs, "random", "ast_frame_transition");
+}
 export function bindCustomFunctionFrameNode(inputs: NodeInputs): any {
   return advanceNode(inputs, "custom", "frame_transition_custom");
 }
@@ -2033,12 +2386,15 @@ function completeNodeState(
   execution: {
     finalState: SequenceState["currentState"];
     diagnostics: readonly Diagnostic[];
+    randomDrawsConsumed?: number;
   }
 ): SequenceState {
   return {
     ...initial,
     currentState: execution.finalState,
     diagnostics: execution.diagnostics,
+    randomDrawsConsumed:
+      execution.randomDrawsConsumed ?? initial.randomDrawsConsumed,
     cursor: initial.operations.length
   };
 }
@@ -2050,9 +2406,18 @@ export function deriveSymbolicLayerNode(inputs: NodeInputs): any {
   const execution = nodeInput<{
     finalState: SequenceState["currentState"];
     diagnostics: readonly Diagnostic[];
+    randomDrawsConsumed?: number;
   }>(inputs, "era.expression.execution.result");
   return {
     symbolic_layer: deriveSymbolicLayer(completeNodeState(sequence, execution))
+  };
+}
+export function guardRandomCompactionNode(inputs: NodeInputs): any {
+  return {
+    random_guarded_symbolic_layer: nodeInput(
+      inputs,
+      "era.expression.symbolic.layer"
+    )
   };
 }
 export function normalizeCompactionNode(inputs: NodeInputs): any {
@@ -2063,6 +2428,7 @@ export function normalizeCompactionNode(inputs: NodeInputs): any {
   const execution = nodeInput<{
     finalState: SequenceState["currentState"];
     diagnostics: readonly Diagnostic[];
+    randomDrawsConsumed?: number;
   }>(inputs, "era.expression.execution.result");
   return {
     expression_response: normaliseCompaction(

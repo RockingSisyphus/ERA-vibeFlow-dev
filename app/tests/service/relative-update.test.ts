@@ -18,6 +18,11 @@ import {
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- 产品测试直接验证 VibeFlow 纯编排源码。
   // @ts-ignore TypeScript 会对 app rootDir 外的 VibeFlow 源码报告 TS6059。
 } from '../../../javascript_project/service/base_lib/command_compaction';
+import {
+  deterministicRandomUnit,
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- 产品测试验证跨 root 的固定随机 ABI。
+  // @ts-ignore TypeScript 会对 app rootDir 外的 VibeFlow 源码报告 TS6059。
+} from '../../../javascript_project/expression/base_lib/expression_engine';
 
 function tag(name: string, value: unknown): string {
   return `<${name}>${JSON.stringify(value)}</${name}>`;
@@ -50,6 +55,59 @@ function message(messageId: number, mk: string, body: string) {
 }
 
 describe('ERA $expr 与函数指令', () => {
+  it('整条消息以 MK 为种子并跨标签、era_tx 与函数调用连续抽取', () => {
+    const content = [
+      edit({ first: { $expr: 'random()' } }),
+      '<era_tx s="a">' + edit({ pair: { $expr: 'dice(1,6)+dice(1,6)' } }) + '</era_tx>',
+      edit({ explicit: { $expr: 'random(42,7)' }, last: { $expr: 'random()' } }),
+    ].join('\n');
+    const result = applyMessageCommands({
+      content,
+      messageId: 1,
+      randomSourceKey: 'mk-alpha',
+      initialStat: { first: 0, pair: 0, explicit: 0, last: 0 },
+      initialStatFunc: {
+        dice: { params: ['min', 'max'], expr: 'floor(random()*(max-min+1))+min' },
+      },
+      meta: { SelectedMks: [], EditLogs: {}, FunctionEditLogs: {} },
+    });
+    const die = (draw: number) => Math.floor(deterministicRandomUnit('mk-alpha', draw) * 6) + 1;
+    expect(result.finalStat).toEqual({
+      first: deterministicRandomUnit('mk-alpha', 0),
+      pair: die(1) + die(2),
+      explicit: deterministicRandomUnit(42, 7),
+      last: deterministicRandomUnit('mk-alpha', 3),
+    });
+    expect(result.randomDrawsConsumed).toBe(4);
+    expect(result.nextRandomDrawOffset).toBe(4);
+    expect(result.diagnostics).toEqual([]);
+  });
+
+  it('full sync 对同一 MK 重放随机值稳定，不把游标写入 Sidecar meta', () => {
+    const messages = [message(0, 'mk-random-replay', edit({ roll: { $expr: 'random()' } }))];
+    const input = {
+      messages,
+      stat: { roll: 0 },
+      statFunc: {},
+      meta: { SelectedMks: [], EditLogs: {}, FunctionEditLogs: {} },
+      reason: 'manual' as const,
+      forceFullRebuild: true,
+      processingMk: 'mk-random-replay',
+      consecutiveState: null,
+    };
+    const first = planEraSync(input);
+    const second = planEraSync({
+      ...input,
+      stat: first.stat,
+      meta: first.meta,
+      consecutiveState: first.nextConsecutiveState,
+    });
+    expect(first.stat).toEqual({ roll: deterministicRandomUnit('mk-random-replay', 0) });
+    expect(second.stat).toEqual(first.stat);
+    expect(first.meta).not.toHaveProperty('RandomCursor');
+    expect(first.meta).not.toHaveProperty('randomContext');
+  });
+
   it('按原文顺序执行 $expr，并记录具体 old/new', () => {
     const result = apply(
       [

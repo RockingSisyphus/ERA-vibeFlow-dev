@@ -330,6 +330,24 @@ function parse_configuration(entry: Entry, is_release = false): (_env: any, argv
           exclude: /node_modules/,
         },
         {
+          // `@era/vibeflow-expression` is a versioned local source package. It
+          // deliberately publishes its TypeScript engine so the expression
+          // root remains the single implementation; transpile that one package
+          // while keeping the rest of node_modules outside the application
+          // TypeScript loader.
+          test: /\.tsx?$/,
+          include: fs.realpathSync(path.join(import.meta.dirname, 'node_modules/@era/vibeflow-expression')),
+          loader: 'ts-loader',
+          options: {
+            transpileOnly: true,
+            onlyCompileBundledFiles: true,
+            compilerOptions: {
+              noUnusedLocals: false,
+              noUnusedParameters: false,
+            },
+          },
+        },
+        {
           oneOf: [
             {
               test: /\.tsx?$/,
@@ -682,6 +700,8 @@ function parse_configuration(entry: Entry, is_release = false): (_env: any, argv
         '/node_modules/seedrandom/',
       ];
       if (
+        request === '@era/vibeflow-expression' ||
+        request.startsWith('@era/vibeflow-expression/') ||
         request === 'mathjs' ||
         request.startsWith('mathjs/') ||
         request === '@stdlib/math-base-special-gamma' ||

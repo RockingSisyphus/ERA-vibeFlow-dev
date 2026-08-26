@@ -63,6 +63,9 @@
         <template #full>
           <PrettyJsonViewer :value="displayData.stat" :default-collapsed="true" :max-depth="Infinity" />
         </template>
+        <template #functions>
+          <PrettyJsonViewer :value="displayData.statFunc" :default-collapsed="true" :max-depth="Infinity" />
+        </template>
       </TabSwitch>
     </template>
   </div>
@@ -84,8 +87,8 @@ import TabSwitch from '../template/TabSwitch.vue';
 import MetaHeader from './EraPanelContent/MetaHeader.vue';
 import { waitForEraFacade } from '../utils/facade';
 
-type DisplayData = Pick<EraPublicState, 'mk' | 'message_id' | 'stat' | 'statWithoutMeta'>;
-type TabItem = { key: 'pure' | 'full'; label: string };
+type DisplayData = Pick<EraPublicState, 'mk' | 'message_id' | 'stat' | 'statWithoutMeta' | 'statFunc'>;
+type TabItem = { key: 'pure' | 'full' | 'functions'; label: string };
 
 const props = defineProps<{
   latestData: EraPublicState | null;
@@ -104,8 +107,9 @@ let nextQueryGeneration = 0;
 const tabs: TabItem[] = [
   { key: 'pure', label: '纯净状态数据' },
   { key: 'full', label: '完整状态数据' },
+  { key: 'functions', label: '函数库' },
 ];
-const activeTab = ref<'pure' | 'full'>('pure');
+const activeTab = ref<'pure' | 'full' | 'functions'>('pure');
 
 const reversedSelectedMks = computed(() => {
   return props.latestData?.selectedMks?.slice().reverse() ?? [];

@@ -39,6 +39,11 @@ const receipt = await ERA.commit([
 
 数学更新只使用 `$expr`。没有 `$inc/$sub/$mul/$div/$set`、路径快捷 API、批次会话或防抖合并。
 
+需要随机数时使用可重放表达式 `random()`、`random(seed)` 或 `random(seed, draw)`。默认
+随机序列由当前 AI 消息 MK 决定，所以编辑后重算不会重新“抽一次”；同一消息里所有普通
+指令与 API 事务按原文顺序共享抽取序号。三参数形式固定某次抽取且不占用自动序号。不要
+使用系统时间或 `Math.random()` 模拟需要历史重放的游戏结果。
+
 ## Scope
 
 `scope` 只允许三种值；省略时为 `message`：

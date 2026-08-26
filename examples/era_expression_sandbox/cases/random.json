@@ -1,0 +1,121 @@
+[
+  {
+    "id": "random-golden-auto-seeded-and-explicit",
+    "request": {
+      "functionLibrary": {},
+      "randomContext": { "sourceKey": "sandbox-mk", "drawOffset": 0 },
+      "initialState": { "a": 0, "b": 0, "c": 0 },
+      "operations": [
+        { "path": "a", "expr": "random()" },
+        { "path": "b", "expr": "random(42)" },
+        { "path": "c", "expr": "random(42,7)" }
+      ]
+    },
+    "expect": {
+      "status": "ok",
+      "finalState": { "a": 0.2233971330078326, "b": 0.8935308362231511, "c": 0.5746334423763603 },
+      "diagnostics": [],
+      "compressed": { "c": { "$expr": "random(42, 7)" } },
+      "randomDrawsConsumed": 2,
+      "nextDrawOffset": 2,
+      "containsAutomaticRandom": true
+    }
+  },
+  {
+    "id": "random-dice-and-skill-library",
+    "request": {
+      "functionLibrary": {
+        "dice": { "params": ["min", "max"], "expr": "floor(random()*(max-min+1))+min" },
+        "d20Check": { "params": ["modifier", "difficulty"], "expr": "clamp(dice(1,20)+modifier-difficulty+1,0,1)" },
+        "percentCheck": { "params": ["skill"], "expr": "clamp(skill-dice(1,100)+1,0,1)" }
+      },
+      "randomContext": { "sourceKey": "sandbox-dice", "drawOffset": 0 },
+      "initialState": { "roll": 0, "d20": 0, "percent": 0 },
+      "operations": [
+        { "path": "roll", "expr": "dice(1,100)" },
+        { "path": "d20", "expr": "d20Check(5,15)" },
+        { "path": "percent", "expr": "percentCheck(65)" }
+      ]
+    },
+    "expect": {
+      "status": "ok",
+      "finalState": { "roll": 8, "d20": 1, "percent": 0 },
+      "diagnostics": [],
+      "randomDrawsConsumed": 3,
+      "nextDrawOffset": 3,
+      "containsAutomaticRandom": true
+    }
+  },
+  {
+    "id": "random-runtime-failure-still-reserves-slots",
+    "request": {
+      "functionLibrary": {},
+      "randomContext": { "sourceKey": "sandbox-fail", "drawOffset": 0 },
+      "initialState": { "bad": 7, "next": 0 },
+      "operations": [
+        { "path": "bad", "expr": "missing+random()" },
+        { "path": "next", "expr": "random()" }
+      ]
+    },
+    "expect": {
+      "status": "partial",
+      "finalState": { "bad": 7, "next": 0.9032255598313311 },
+      "diagnostics": ["ERA_EXPR_REFERENCE_NON_NUMERIC"],
+      "randomDrawsConsumed": 2,
+      "nextDrawOffset": 2,
+      "containsAutomaticRandom": true
+    }
+  },
+  {
+    "id": "random-explicit-does-not-need-context",
+    "request": {
+      "functionLibrary": {},
+      "initialState": { "value": 0 },
+      "operations": [{ "path": "value", "expr": "random(42,7)" }]
+    },
+    "expect": {
+      "status": "ok",
+      "finalState": { "value": 0.5746334423763603 },
+      "diagnostics": [],
+      "compressed": { "value": { "$expr": "random(42, 7)" } },
+      "randomDrawsConsumed": 0,
+      "nextDrawOffset": 0,
+      "containsAutomaticRandom": false
+    }
+  },
+  {
+    "id": "random-auto-requires-context",
+    "request": {
+      "functionLibrary": {},
+      "initialState": { "value": 9 },
+      "operations": [{ "path": "value", "expr": "random()" }]
+    },
+    "expect": {
+      "status": "partial",
+      "finalState": { "value": 9 },
+      "diagnostics": ["ERA_EXPR_RANDOM_CONTEXT_REQUIRED"],
+      "randomDrawsConsumed": 1,
+      "nextDrawOffset": 1,
+      "containsAutomaticRandom": true
+    }
+  },
+  {
+    "id": "random-calculus-target-rejected",
+    "request": {
+      "functionLibrary": {
+        "noisy": { "params": ["x"], "expr": "x+random(42,0)" },
+        "nested": { "params": ["x"], "expr": "noisy(x)*2" }
+      },
+      "initialState": { "value": 5 },
+      "operations": [{ "path": "value", "expr": "derivative(nested,2)" }]
+    },
+    "expect": {
+      "status": "partial",
+      "finalState": { "value": 5 },
+      "diagnostics": ["ERA_EXPR_CALCULUS_RANDOM_FORBIDDEN"],
+      "randomDrawsConsumed": 0,
+      "nextDrawOffset": 0,
+      "containsAutomaticRandom": false
+    }
+  }
+]

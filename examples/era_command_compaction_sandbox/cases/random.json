@@ -1,0 +1,62 @@
+[
+  {
+    "id": "automatic-random-is-a-local-barrier",
+    "request": {
+      "content": "<VariableEdit>{\"stable\":{\"$expr\":\"stable+1\"}}</VariableEdit><VariableEdit>{\"stable\":{\"$expr\":\"stable+1\"}}</VariableEdit><VariableEdit>{\"roll\":{\"$expr\":\"random()\"}}</VariableEdit><VariableEdit>{\"tail\":{\"$expr\":\"tail+1\"}}</VariableEdit><VariableEdit>{\"tail\":{\"$expr\":\"tail+1\"}}</VariableEdit>",
+      "initialStatData": {"stable":0,"roll":0,"tail":0},
+      "randomContext": {"sourceKey":"mk-alpha","drawOffset":0}
+    },
+    "expect": {
+      "status": "partial",
+      "stat": {"stable":2,"roll":0.30650208041326854,"tail":2},
+      "includes": ["@stable + 2", "\"$expr\":\"random()\"", "@tail + 2"],
+      "nextRandomDrawOffset": 1
+    },
+    "variants": [{"stable":5,"roll":99,"tail":-2}]
+  },
+  {
+    "id": "nested-random-function-is-a-barrier",
+    "request": {
+      "content": "<VariableEdit>{\"before\":{\"$expr\":\"before+1\"}}</VariableEdit><VariableEdit>{\"before\":{\"$expr\":\"before+1\"}}</VariableEdit><VariableEdit>{\"roll\":{\"$expr\":\"dice(1,6)\"}}</VariableEdit>",
+      "initialStatData": {"before":0,"roll":0},
+      "initialStatFunc": {"dice":{"params":["min","max"],"expr":"floor(random()*(max-min+1))+min"}},
+      "randomContext": {"sourceKey":"mk-alpha","drawOffset":0}
+    },
+    "expect": {
+      "status": "partial",
+      "stat": {"before":2,"roll":2},
+      "includes": ["@before + 2", "dice(1,6)"],
+      "nextRandomDrawOffset": 1
+    },
+    "variants": [{"before":7,"roll":0}]
+  },
+  {
+    "id": "fully-explicit-random-remains-compressible",
+    "request": {
+      "content": "<VariableEdit>{\"value\":{\"$expr\":\"random(42,7)\"}}</VariableEdit><VariableEdit>{\"value\":{\"$expr\":\"value+1\"}}</VariableEdit>",
+      "initialStatData": {"value":0}
+    },
+    "expect": {
+      "status": "compacted",
+      "stat": {"value":1.5746334423763604},
+      "includes": ["random(42, 7) + 1"],
+      "nextRandomDrawOffset": 0
+    },
+    "variants": [{"value":9}]
+  },
+  {
+    "id": "normal-labels-and-era-tx-share-source-order",
+    "request": {
+      "content": "<VariableEdit>{\"first\":{\"$expr\":\"random()\"}}</VariableEdit><era_tx s=\"m\"><VariableEdit>{\"second\":{\"$expr\":\"random()\"}}</VariableEdit></era_tx><era_tx s=\"m\"><VariableEdit>{\"third\":{\"$expr\":\"random()\"}}</VariableEdit></era_tx>",
+      "initialStatData": {"first":0,"second":0,"third":0},
+      "randomContext": {"sourceKey":"mk-alpha","drawOffset":0}
+    },
+    "expect": {
+      "status": "unchanged",
+      "stat": {"first":0.30650208041326854,"second":0.7384643669895365,"third":0.5841945479459073},
+      "includes": ["s=\"m\"", "random()"],
+      "nextRandomDrawOffset": 3
+    },
+    "variants": [{"first":1,"second":2,"third":3}]
+  }
+]

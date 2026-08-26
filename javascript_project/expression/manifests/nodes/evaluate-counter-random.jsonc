@@ -1,0 +1,18 @@
+{
+  "kind": "node",
+  "type_key": "era.expression.evaluate_counter_random",
+  "display_name": "计算可重放随机数",
+  "category": "表达式调用帧",
+  "description": "用 FNV-1a 64 位种子哈希、SplitMix64 和预分配 draw 生成确定性 [0,1) 数值。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [{ "type": "era.expression.ast_frame.current", "cardinality": "exactly_one", "display_name": "当前随机调用帧" }],
+    "provides": [{ "key": "ast_frame_transition", "type": "era.expression.ast_frame.transition", "display_name": "随机调用帧迁移" }],
+    "params_schema": {}, "params_defaults": {},
+    "input_semantics": { "era.expression.ast_frame.current": ["输入：random 调用及已完成实参。"] },
+    "output_semantics": { "ast_frame_transition": ["输出：随机结果与更新后的自动 draw 游标。"] }
+  },
+  "implementations": [{ "language": "typescript", "targets": ["browser", "node"], "completion": "immediate", "source": { "kind": "file", "ref": "nodes/evaluate_counter_random.ts", "export": "run" } }],
+  "base_libs": ["era.expression.engine"], "capabilities": []
+}

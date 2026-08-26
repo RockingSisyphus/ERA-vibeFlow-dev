@@ -10,6 +10,9 @@ importers:
 
   app:
     dependencies:
+      '@era/vibeflow-expression':
+        specifier: file:vendor/era-vibeflow-expression-0.2.0.tgz
+        version: file:app/vendor/era-vibeflow-expression-0.2.0.tgz
       '@pixi/react':
         specifier: 8.0.5
         version: 8.0.5(@types/react@19.2.18)(pixi.js@8.20.0)(react@19.2.8)
@@ -376,6 +379,11 @@ packages:
 
   '@emnapi/wasi-threads@1.2.1':
     resolution: {integrity: sha512-uTII7OYF+/Mes/MrcIOYp5yOtSMLBWSIoLPpcgwipoiKbli6k322tcoFsxoIIxPDqW01SQGAgko4EzZi2BNv2w==}
+
+  '@era/vibeflow-expression@file:app/vendor/era-vibeflow-expression-0.2.0.tgz':
+    resolution: {integrity: sha512-ul8noHKgyLhcxNaVxKUzemKAH5mmsj93bgQaLAm2pjek/AzkRD/pgvGPr+7ZLmIpVkEU3b8/AbFvdC5ujY+Ftw==, tarball: file:app/vendor/era-vibeflow-expression-0.2.0.tgz}
+    version: 0.2.0
+    engines: {node: '>=24.18.0'}
 
   '@eslint-community/eslint-utils@4.10.1':
     resolution: {integrity: sha512-cuadcxVFE8sDK6iWJbs8Sn0av2Nrh2QSGQhVlBW9AaAHqHwjWsZHT8LJ4hFGPh7ASBV2deFdM7H/DPjulmh8rg==}
@@ -5596,6 +5604,13 @@ snapshots:
     dependencies:
       tslib: 2.8.1
     optional: true
+
+  '@era/vibeflow-expression@file:app/vendor/era-vibeflow-expression-0.2.0.tgz':
+    dependencies:
+      '@stdlib/math-base-special-gamma': 0.3.1
+      mathjs: 15.2.0
+    transitivePeerDependencies:
+      - supports-color
 
   '@eslint-community/eslint-utils@4.10.1(eslint@10.9.0(jiti@2.7.0))':
     dependencies:

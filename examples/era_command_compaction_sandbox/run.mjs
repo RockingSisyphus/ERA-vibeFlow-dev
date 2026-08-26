@@ -51,7 +51,10 @@ async function entrypoints(temp) {
 
 const temp = await mkdtemp(path.join(os.tmpdir(), "era-command-compaction-sandbox-"));
 try {
-  const cases = JSON.parse(await readFile(path.join(here, "cases/core.json"), "utf8"));
+  const cases = [
+    ...JSON.parse(await readFile(path.join(here, "cases/core.json"), "utf8")),
+    ...JSON.parse(await readFile(path.join(here, "cases/random.json"), "utf8")),
+  ];
   const { engine, node, browser } = await entrypoints(temp);
   for (const testCase of cases) {
     const direct = engine.compactCommandLayer(testCase.request);
@@ -65,6 +68,7 @@ try {
     for (const value of testCase.expect.includes ?? []) assert.ok(direct.content.includes(value), `${testCase.id}: includes ${value}`);
     for (const value of testCase.expect.excludes ?? []) assert.ok(!direct.content.includes(value), `${testCase.id}: excludes ${value}`);
     if (testCase.expect.diagnostics) assert.deepEqual(direct.diagnostics.map((item) => item.code), testCase.expect.diagnostics, `${testCase.id}: diagnostics`);
+    if (typeof testCase.expect.nextRandomDrawOffset === "number") assert.equal(direct.nextRandomDrawOffset, testCase.expect.nextRandomDrawOffset, `${testCase.id}: random draw offset`);
     checkEquivalent(engine, direct, direct, testCase.request, `${testCase.id}: base`);
     for (const [index, variant] of (testCase.variants ?? []).entries()) {
       const variantRequest = withState(testCase.request, variant);

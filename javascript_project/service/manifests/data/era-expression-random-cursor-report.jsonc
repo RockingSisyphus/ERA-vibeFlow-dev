@@ -1,0 +1,17 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.expression.random.cursor.report",
+  "representation": "json",
+  "display_name": "ERA·表达式·消息随机游标报告",
+  "description": "当前消息重放消耗的自动随机槽位审计值；仅在工作流内存在，不进入消息、Sidecar 或公共 API。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": ["randomDrawsConsumed", "nextRandomDrawOffset"],
+    "properties": {
+      "randomDrawsConsumed": {"type": "integer", "minimum": 0},
+      "nextRandomDrawOffset": {"type": "integer", "minimum": 0}
+    },
+    "additionalProperties": false
+  }
+}

@@ -42,6 +42,36 @@
 
 `derivative(f, at[, order])` 和 `integral(f, start, end)` 都只接受已定义的一元纯函数。导数阶数为任意正安全整数；无法表示或求值时返回诊断而不是伪造结果。
 
+## 可重放随机与骰点
+
+`random` 是表达式语言 ABI 中的确定性内建函数：
+
+```text
+random()            # randomContext.sourceKey + 自动 draw
+random(seed)        # 有限数值 seed + 自动 draw
+random(seed, draw)  # 显式 seed 与非负安全整数 draw
+```
+
+前两种形式需要调用方提供 `{ sourceKey, drawOffset }`。自动序号按操作、JSON 字段、参数和
+函数展开的原始顺序预留；完全显式形式不消耗序号。算法固定为 UTF-8/IEEE-754 的 FNV-1a
+64 位规范哈希、SplitMix64 混合和高 53 位映射到 `[0,1)`，Node 与 Browser 逐位一致。
+实现不读取系统时间或 `Math.random()`。包含直接或间接随机调用的函数不能作为
+`derivative`/`integral` 目标。
+
+骰点规则不是内建语义，可以按游戏需要存入 `statFunc`：
+
+```json
+{
+  "dice": { "params": ["min", "max"], "expr": "floor(random()*(max-min+1))+min" },
+  "diceSeeded": { "params": ["min", "max", "seed"], "expr": "floor(random(seed)*(max-min+1))+min" },
+  "diceAt": { "params": ["min", "max", "seed", "draw"], "expr": "floor(random(seed,draw)*(max-min+1))+min" },
+  "d20Check": { "params": ["modifier", "difficulty"], "expr": "clamp(dice(1,20)+modifier-difficulty+1,0,1)" },
+  "percentCheck": { "params": ["skill"], "expr": "clamp(skill-dice(1,100)+1,0,1)" }
+}
+```
+
+检定用有限数值 `1` 表示通过、`0` 表示失败。
+
 ## 可审计工作流
 
 根 Nodeset `era.expression.execute_layer` 明确展示：请求验证 → 函数定义解析 → 依赖/纯度/调用图 → DFS 递归拒绝 → 编译 → 顺序操作循环 → 符号推导 → 规范化压缩。
@@ -65,7 +95,7 @@ python ../../run.py build --config configs/era.expression.jsonc --target browser
 npm run test:workflow
 ```
 
-单元测试覆盖直接表达式、前向与嵌套调用、直接/间接递归、函数纯度、Gamma/阶乘/五阶导数/积分、顺序求值、`@` 禁止、无效操作保持原状态，以及来自旧参考项目的基础和嵌套调用样例。工作流探针同时执行 Node 与 browser AOT，并断言两端结果一致。
+单元测试覆盖直接表达式、前向与嵌套调用、直接/间接递归、函数纯度、Gamma/阶乘/五阶导数/积分、顺序求值、`@` 禁止、无效操作保持原状态、随机黄金向量、自动/显式抽取、骰点与技能检定，以及来自旧参考项目的基础和嵌套调用样例。工作流探针同时执行 Node 与 browser AOT，并断言两端结果一致。
 
 ## 旧项目参考与差异
 

@@ -650,6 +650,7 @@ export function planEraSync(input: EraSyncInputV1): EraSyncPlanV1 {
       messageId: ensured.message.messageId,
       initialStat: layerStartStat,
       initialStatFunc: layerStartFunctions,
+      randomSourceKey: ensured.mk,
       meta: contextMeta,
       traditionalToSimplified: input.traditionalToSimplified,
     });

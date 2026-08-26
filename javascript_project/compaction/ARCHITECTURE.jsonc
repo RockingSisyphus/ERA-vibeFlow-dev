@@ -190,7 +190,7 @@
         "path": "configs/nodesets/compact_layer.jsonc"
       },
       "display_name": "ERA 命令层安全压缩",
-      "description": "纯计算 Nodeset：解析真实六类 ERA 指令，重放原语义，建立跨历史重算仍成立的不变量，输出已证明安全的局部压缩候选。",
+      "description": "纯计算 Nodeset：解析真实六类 ERA 指令，使用显式楼层随机上下文重放原语义，建立跨历史重算仍成立的不变量，并把自动随机闭包作为局部屏障后输出已证明安全的候选。",
       "status": "implemented",
       "flow_kind": "process",
       "effect_scope": "none",
@@ -231,16 +231,16 @@
             "as": "compactionResponse"
           }
         ],
-        "max_steps": 10,
+        "max_steps": 11,
         "entry_mode": "sync",
         "execution_lock": null,
         "contains_global_state": false,
         "summary": {
-          "nodes": 10,
+          "nodes": 11,
           "nodesets": 1,
-          "explicit_edges": 9,
+          "explicit_edges": 10,
           "data_edges": 0,
-          "reported_edges": 9,
+          "reported_edges": 10,
           "contains_global_state": false
         },
         "entry_nodes": [
@@ -383,7 +383,7 @@
             },
             "role": {
               "display_name": "建立重放不变量",
-              "description": "标注不能跨越的存在性、锁和快照条件。"
+              "description": "标注不能跨越的存在性、锁、快照与函数版本条件。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -420,6 +420,51 @@
             }
           },
           {
+            "id": "classify_random_barriers",
+            "type_used": "era.command_compaction.classify_random_barriers",
+            "source": {
+              "root_id": "era-command-compaction",
+              "path": "configs/nodesets/compact_layer.jsonc"
+            },
+            "role": {
+              "display_name": "划定自动随机局部屏障",
+              "description": "识别 random()、random(seed) 以及通过 statFunc 间接调用它们的闭包，禁止常数折叠、删除或跨越合并；random(seed, draw) 保持普通确定性证明资格。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "process",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.command_compaction.invariants",
+                "cardinality": "exactly_one",
+                "display_name": "命令重放不变量"
+              }
+            ],
+            "provides": [
+              {
+                "key": "random_invariants",
+                "type": "era.command_compaction.invariants",
+                "display_name": "含随机屏障的不变量"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
             "id": "regions",
             "type_used": "era.command_compaction.partition_safe_regions",
             "source": {
@@ -428,7 +473,7 @@
             },
             "role": {
               "display_name": "划分安全区间",
-              "description": "把不可证明区域作为局部屏障。"
+              "description": "把存在性、保护、模板、无效命令与自动随机等不可证明区域作为局部屏障。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -711,6 +756,16 @@
           },
           {
             "from": "invariants",
+            "to": "classify_random_barriers",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "classify_random_barriers",
             "to": "regions",
             "when": "",
             "roles": [
@@ -774,6 +829,57 @@
     }
   },
   "node_types": {
+    "era.command_compaction.classify_random_barriers": {
+      "display_name": "划定自动随机局部屏障",
+      "description": "把直接或间接自动 random 命令作为局部屏障；显式 random(seed,draw) 保持确定性资格。",
+      "category": "ERA 命令压缩",
+      "version": "1.0.0",
+      "flow_kind": "process",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.command_compaction.invariants",
+            "cardinality": "exactly_one",
+            "display_name": "命令重放不变量"
+          }
+        ],
+        "provides": [
+          {
+            "key": "random_invariants",
+            "type": "era.command_compaction.invariants",
+            "display_name": "含随机屏障的不变量"
+          }
+        ],
+        "input_semantics": {
+          "era.command_compaction.invariants": [
+            "输入：原命令重放不变量。"
+          ]
+        },
+        "output_semantics": {
+          "random_invariants": [
+            "输出：由纯引擎执行局部随机屏障规则的不变量。"
+          ]
+        },
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser",
+            "node"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/classify_random_barriers.ts",
+            "export": "run"
+          },
+          "completion": "immediate"
+        }
+      ]
+    },
     "era.command_compaction.derive_replay_invariants": {
       "display_name": "建立重放不变量",
       "description": "标注存在性、保护和快照等不可丢失条件。",

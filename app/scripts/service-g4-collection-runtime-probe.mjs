@@ -121,6 +121,7 @@ function createTavernCapabilities() {
           current.stat = null;
           return { status: 'committed' };
         },
+        publish_snapshot: input => ({ status: 'published', snapshot: structuredClone(input.snapshot ?? null) }),
         create_id: () => ({ sidecarId: 'era_chat_g4-probe-12345678' }),
         present_prompt: () => ({ status: 'presented' }),
         clear_prompt: () => ({ status: 'cleared' }),

@@ -1,7 +1,7 @@
 <template>
   <div class="era-panel">
     <header class="panel-top">
-      <h3 class="panel-title">ERA 数据面板</h3>
+      <h3 class="panel-title">ERA 变量与函数工作台</h3>
       <button class="btn-close" aria-label="关闭" @click="requestSwitchView('FloatingBall')">×</button>
     </header>
     <div class="panel-body">
@@ -13,7 +13,7 @@
 
           <OperationDetails :data="data" />
 
-          <SnapshotManager :latest-data="data" />
+          <DataWorkbench :data="data" />
         </template>
         <template v-else>
           <div class="empty">等待 ERA 运行时状态…</div>
@@ -29,9 +29,7 @@ import { Logger } from '../../utils/log';
 import EraAccordion from '../template/EraAccordion.vue';
 import MetaHeader from './EraPanelContent/MetaHeader.vue';
 import OperationDetails from './EraPanelContent/OperationDetails.vue';
-import SnapshotManager from './SnapshotManager.vue';
-
-type TabItem = { key: 'pure' | 'full'; label: string };
+import DataWorkbench from './workbench/DataWorkbench.vue';
 
 const logger = new Logger();
 

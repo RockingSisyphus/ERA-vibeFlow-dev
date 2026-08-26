@@ -2,7 +2,7 @@
   "type_key": "era.expression.ast_frame_step",
   "flow_kind": "process",
   "display_name": "执行一个 AST 调用帧",
-  "description": "显式处理字面量、路径、运算符、内建函数和自定义函数帧；自定义函数绑定实参后压入函数体，任意嵌套返回后回传父帧。",
+  "description": "显式处理字面量、路径、运算符、确定性数学函数、可重放随机函数和自定义函数帧；自定义函数绑定实参后压入函数体，任意嵌套返回后回传父帧。",
   "requires": [
     {
       "type": "era.expression.ast_frame.state",
@@ -37,7 +37,7 @@
         "required": true
       }
     ],
-    "max_steps": 10,
+    "max_steps": 11,
     "nodes": [
       {
         "id": "start",
@@ -74,6 +74,12 @@
         "type_used": "era.expression.evaluate_builtin_frame",
         "display_name": "计算内建函数帧",
         "description": "普通函数调用 Math/@stdlib；导数将已验证的一元纯函数 AST 交给受控 Math.js；积分以同一纯 AST 回调 Simpson。"
+      },
+      {
+        "id": "evaluate_counter_random",
+        "type_used": "era.expression.evaluate_counter_random",
+        "display_name": "计算可重放随机数",
+        "description": "以 MK/sourceKey 或显式有限数值种子、预分配 draw 和固定 FNV-1a 64 + SplitMix64 算法生成 [0,1)；完全显式 draw 不消耗自动游标。"
       },
       {
         "id": "bind_custom_function_frame",
@@ -120,6 +126,11 @@
       },
       {
         "from": "route_frame",
+        "to": "evaluate_counter_random",
+        "when": "ast_frame_route == 'random'"
+      },
+      {
+        "from": "route_frame",
         "to": "bind_custom_function_frame",
         "when": "ast_frame_route == 'custom'"
       },
@@ -131,6 +142,7 @@
       ["resolve_value_frame", "publish_frame_transition"],
       ["evaluate_operator_frame", "publish_frame_transition"],
       ["evaluate_builtin_frame", "publish_frame_transition"],
+      ["evaluate_counter_random", "publish_frame_transition"],
       ["bind_custom_function_frame", "publish_frame_transition"],
       ["return_child_value", "publish_frame_transition"],
       ["publish_frame_transition", "end"]

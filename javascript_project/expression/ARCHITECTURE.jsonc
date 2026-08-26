@@ -190,7 +190,7 @@
         "path": "configs/nodesets/ast_frame_step.jsonc"
       },
       "display_name": "执行一个 AST 调用帧",
-      "description": "显式处理字面量、路径、运算符、内建函数和自定义函数帧；自定义函数绑定实参后压入函数体，任意嵌套返回后回传父帧。",
+      "description": "显式处理字面量、路径、运算符、确定性数学函数、可重放随机函数和自定义函数帧；自定义函数绑定实参后压入函数体，任意嵌套返回后回传父帧。",
       "status": "implemented",
       "flow_kind": "process",
       "effect_scope": "none",
@@ -253,16 +253,16 @@
             "as": "evaluatedExpression"
           }
         ],
-        "max_steps": 10,
+        "max_steps": 11,
         "entry_mode": "sync",
         "execution_lock": null,
         "contains_global_state": false,
         "summary": {
-          "nodes": 10,
+          "nodes": 11,
           "nodesets": 3,
-          "explicit_edges": 13,
+          "explicit_edges": 15,
           "data_edges": 0,
-          "reported_edges": 13,
+          "reported_edges": 15,
           "contains_global_state": false
         },
         "entry_nodes": [
@@ -274,11 +274,11 @@
         "god_nodes": [
           {
             "node": "publish_frame_transition",
-            "degree": 6
+            "degree": 7
           },
           {
             "node": "route_frame",
-            "degree": 6
+            "degree": 7
           }
         ],
         "nodes": [
@@ -546,6 +546,51 @@
             }
           },
           {
+            "id": "evaluate_counter_random",
+            "type_used": "era.expression.evaluate_counter_random",
+            "source": {
+              "root_id": "era-expression",
+              "path": "configs/nodesets/ast_frame_step.jsonc"
+            },
+            "role": {
+              "display_name": "计算可重放随机数",
+              "description": "以 MK/sourceKey 或显式有限数值种子、预分配 draw 和固定 FNV-1a 64 + SplitMix64 算法生成 [0,1)；完全显式 draw 不消耗自动游标。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "process",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.expression.ast_frame.current",
+                "cardinality": "exactly_one",
+                "display_name": "当前随机调用帧"
+              }
+            ],
+            "provides": [
+              {
+                "key": "ast_frame_transition",
+                "type": "era.expression.ast_frame.transition",
+                "display_name": "随机调用帧迁移"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
             "id": "bind_custom_function_frame",
             "type_used": "era.expression.bind_custom_function_frame",
             "source": {
@@ -777,6 +822,16 @@
           },
           {
             "from": "route_frame",
+            "to": "evaluate_counter_random",
+            "when": "ast_frame_route == 'random'",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "route_frame",
             "to": "bind_custom_function_frame",
             "when": "ast_frame_route == 'custom'",
             "roles": [
@@ -826,6 +881,16 @@
             ]
           },
           {
+            "from": "evaluate_counter_random",
+            "to": "publish_frame_transition",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
             "from": "bind_custom_function_frame",
             "to": "publish_frame_transition",
             "when": "",
@@ -865,7 +930,7 @@
         "path": "configs/nodesets/execute_layer.jsonc"
       },
       "display_name": "ERA 函数表达式层执行",
-      "description": "独立处理函数表达式的受限语法、纯函数库、任意嵌套调用、顺序变量状态与消息层压缩；不访问 Tavern、Sidecar、ERA API 或浏览器全局状态。",
+      "description": "独立处理函数表达式的受限语法、纯函数库、任意嵌套调用、可重放随机序列、顺序变量状态与消息层压缩；随机身份只来自显式 sourceKey，不访问 Tavern、Sidecar、ERA API 或浏览器全局状态。",
       "status": "implemented",
       "flow_kind": "process",
       "effect_scope": "none",
@@ -906,16 +971,16 @@
             "as": "expressionResponse"
           }
         ],
-        "max_steps": 16,
+        "max_steps": 19,
         "entry_mode": "sync",
         "execution_lock": null,
         "contains_global_state": false,
         "summary": {
-          "nodes": 14,
+          "nodes": 17,
           "nodesets": 3,
-          "explicit_edges": 21,
+          "explicit_edges": 24,
           "data_edges": 7,
-          "reported_edges": 21,
+          "reported_edges": 24,
           "contains_global_state": false
         },
         "entry_nodes": [
@@ -991,6 +1056,51 @@
                 "key": "normalized_expression_request",
                 "type": "era.expression.request.normalized",
                 "display_name": "规范表达式请求"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "validate_random_context",
+            "type_used": "era.expression.validate_random_context",
+            "source": {
+              "root_id": "era-expression",
+              "path": "configs/nodesets/execute_layer.jsonc"
+            },
+            "role": {
+              "display_name": "验证可重放随机上下文",
+              "description": "验证可选 sourceKey 与非负安全整数 drawOffset；不读取变量目标路径、系统时间、Math.random 或持久化游标。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "process",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.expression.request.normalized",
+                "cardinality": "exactly_one",
+                "display_name": "规范表达式请求"
+              }
+            ],
+            "provides": [
+              {
+                "key": "validated_random_request",
+                "type": "era.expression.request.normalized",
+                "display_name": "带随机上下文的规范请求"
               }
             ],
             "join_policy": "safe_any",
@@ -1335,15 +1445,70 @@
             }
           },
           {
-            "id": "initialize_sequence_state",
-            "type_used": "era.expression.initialize_sequence_state",
+            "id": "classify_random_calls",
+            "type_used": "era.expression.classify_random_calls",
             "source": {
               "root_id": "era-expression",
               "path": "configs/nodesets/execute_layer.jsonc"
             },
             "role": {
-              "display_name": "初始化顺序状态",
-              "description": "冻结本消息层起始状态并创建可变当前状态、操作游标、已编译函数库和待执行 AST。"
+              "display_name": "标记随机调用与预留规模",
+              "description": "沿无环函数调用图展开 random 调用，区分自动序号和完全显式 draw，按操作、参数与函数体顺序计算槽位，并拒绝直接或间接包含 random 的导数/积分目标。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "process",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.expression.function_library.compiled",
+                "cardinality": "exactly_one",
+                "display_name": "已编译函数库"
+              },
+              {
+                "type": "era.expression.operations.parsed",
+                "cardinality": "exactly_one",
+                "display_name": "已解析操作"
+              }
+            ],
+            "provides": [
+              {
+                "key": "random_compiled_function_library",
+                "type": "era.expression.function_library.compiled",
+                "display_name": "已标记随机闭包的函数库"
+              },
+              {
+                "key": "random_parsed_operations",
+                "type": "era.expression.operations.parsed",
+                "display_name": "可预留随机槽位的操作"
+              }
+            ],
+            "join_policy": "all",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "initialize_sequence_state",
+            "type_used": "era.expression.initialize_random_sequence_state",
+            "source": {
+              "root_id": "era-expression",
+              "path": "configs/nodesets/execute_layer.jsonc"
+            },
+            "role": {
+              "display_name": "初始化顺序状态与随机游标",
+              "description": "冻结本消息层起始状态，以 drawOffset 为起点预留自动随机槽位，并创建变量操作游标、随机游标、已编译函数库和待执行 AST。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -1368,14 +1533,14 @@
               {
                 "type": "era.expression.operations.parsed",
                 "cardinality": "exactly_one",
-                "display_name": "已解析顺序操作"
+                "display_name": "已解析操作"
               }
             ],
             "provides": [
               {
                 "key": "sequence_state",
                 "type": "era.expression.sequence.state",
-                "display_name": "表达式顺序执行状态"
+                "display_name": "含随机游标的顺序状态"
               }
             ],
             "join_policy": "safe_any",
@@ -1509,6 +1674,51 @@
             }
           },
           {
+            "id": "guard_random_compaction",
+            "type_used": "era.expression.guard_random_compaction",
+            "source": {
+              "root_id": "era-expression",
+              "path": "configs/nodesets/execute_layer.jsonc"
+            },
+            "role": {
+              "display_name": "保护自动随机压缩边界",
+              "description": "保留 random()、random(seed) 及其间接函数调用的原始顺序，禁止折叠为常数或跨越合并；完全显式 random(seed, draw) 仍按普通确定性调用证明。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "process",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.expression.symbolic.layer",
+                "cardinality": "exactly_one",
+                "display_name": "表达式符号变化"
+              }
+            ],
+            "provides": [
+              {
+                "key": "random_guarded_symbolic_layer",
+                "type": "era.expression.symbolic.layer",
+                "display_name": "带随机屏障的符号变化"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
             "id": "normalize_compaction",
             "type_used": "era.expression.normalize_compaction",
             "source": {
@@ -1610,6 +1820,16 @@
           },
           {
             "from": "validate_request",
+            "to": "validate_random_context",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "validate_random_context",
             "to": "parse_function_definitions",
             "when": "",
             "roles": [
@@ -1696,7 +1916,7 @@
             ]
           },
           {
-            "from": "validate_request",
+            "from": "validate_random_context",
             "to": "parse_operations",
             "when": "",
             "roles": [
@@ -1706,17 +1926,8 @@
             ]
           },
           {
-            "from": "validate_request",
-            "to": "initialize_sequence_state",
-            "when": "",
-            "roles": [
-              "data_bypass",
-              "transfer"
-            ]
-          },
-          {
             "from": "compile_callable_functions",
-            "to": "initialize_sequence_state",
+            "to": "classify_random_calls",
             "when": "",
             "roles": [
               "mainline",
@@ -1726,6 +1937,25 @@
           },
           {
             "from": "parse_operations",
+            "to": "classify_random_calls",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "validate_random_context",
+            "to": "initialize_sequence_state",
+            "when": "",
+            "roles": [
+              "data_bypass",
+              "transfer"
+            ]
+          },
+          {
+            "from": "classify_random_calls",
             "to": "initialize_sequence_state",
             "when": "",
             "roles": [
@@ -1774,6 +2004,16 @@
           },
           {
             "from": "derive_symbolic_layer",
+            "to": "guard_random_compaction",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "guard_random_compaction",
             "to": "normalize_compaction",
             "when": "",
             "roles": [
@@ -2355,6 +2595,73 @@
         }
       ]
     },
+    "era.expression.classify_random_calls": {
+      "display_name": "标记随机调用与预留规模",
+      "description": "保留已编译函数闭包和操作 AST；纯引擎按调用展开顺序静态计算自动随机槽位。",
+      "category": "表达式工作流",
+      "version": "1.0.0",
+      "flow_kind": "process",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.expression.function_library.compiled",
+            "cardinality": "exactly_one",
+            "display_name": "已编译函数库"
+          },
+          {
+            "type": "era.expression.operations.parsed",
+            "cardinality": "exactly_one",
+            "display_name": "已解析操作"
+          }
+        ],
+        "provides": [
+          {
+            "key": "random_compiled_function_library",
+            "type": "era.expression.function_library.compiled",
+            "display_name": "已标记随机闭包的函数库"
+          },
+          {
+            "key": "random_parsed_operations",
+            "type": "era.expression.operations.parsed",
+            "display_name": "可预留随机槽位的操作"
+          }
+        ],
+        "input_semantics": {
+          "era.expression.function_library.compiled": [
+            "输入：含随机闭包标记的函数库。"
+          ],
+          "era.expression.operations.parsed": [
+            "输入：按原文顺序的操作 AST。"
+          ]
+        },
+        "output_semantics": {
+          "random_compiled_function_library": [
+            "输出：不可变函数库。"
+          ],
+          "random_parsed_operations": [
+            "输出：不可变操作 AST。"
+          ]
+        },
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser",
+            "node"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/classify_random_calls.ts",
+            "export": "run"
+          },
+          "completion": "immediate"
+        }
+      ]
+    },
     "era.expression.commit_operation_result": {
       "display_name": "提交表达式操作结果",
       "description": "在当前帧成功后更新当前状态、游标和累计结果。",
@@ -2599,6 +2906,57 @@
         }
       ]
     },
+    "era.expression.evaluate_counter_random": {
+      "display_name": "计算可重放随机数",
+      "description": "用 FNV-1a 64 位种子哈希、SplitMix64 和预分配 draw 生成确定性 [0,1) 数值。",
+      "category": "表达式调用帧",
+      "version": "1.0.0",
+      "flow_kind": "process",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.expression.ast_frame.current",
+            "cardinality": "exactly_one",
+            "display_name": "当前随机调用帧"
+          }
+        ],
+        "provides": [
+          {
+            "key": "ast_frame_transition",
+            "type": "era.expression.ast_frame.transition",
+            "display_name": "随机调用帧迁移"
+          }
+        ],
+        "input_semantics": {
+          "era.expression.ast_frame.current": [
+            "输入：random 调用及已完成实参。"
+          ]
+        },
+        "output_semantics": {
+          "ast_frame_transition": [
+            "输出：随机结果与更新后的自动 draw 游标。"
+          ]
+        },
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser",
+            "node"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/evaluate_counter_random.ts",
+            "export": "run"
+          },
+          "completion": "immediate"
+        }
+      ]
+    },
     "era.expression.evaluate_operator_frame": {
       "display_name": "计算运算符帧",
       "description": "推进一元或二元 AST 帧。",
@@ -2701,6 +3059,57 @@
         }
       ]
     },
+    "era.expression.guard_random_compaction": {
+      "display_name": "保护自动随机压缩边界",
+      "description": "保留纯引擎已剔除自动随机及其依赖路径后的局部符号候选。",
+      "category": "表达式工作流",
+      "version": "1.0.0",
+      "flow_kind": "process",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.expression.symbolic.layer",
+            "cardinality": "exactly_one",
+            "display_name": "表达式符号变化"
+          }
+        ],
+        "provides": [
+          {
+            "key": "random_guarded_symbolic_layer",
+            "type": "era.expression.symbolic.layer",
+            "display_name": "带随机屏障的符号变化"
+          }
+        ],
+        "input_semantics": {
+          "era.expression.symbolic.layer": [
+            "输入：局部安全符号变化。"
+          ]
+        },
+        "output_semantics": {
+          "random_guarded_symbolic_layer": [
+            "输出：不跨自动随机边界的符号变化。"
+          ]
+        },
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser",
+            "node"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/guard_random_compaction.ts",
+            "export": "run"
+          },
+          "completion": "immediate"
+        }
+      ]
+    },
     "era.expression.initialize_ast_frames": {
       "display_name": "初始化 AST 调用帧栈",
       "description": "为一条操作建立显式后序求值栈。",
@@ -2746,6 +3155,73 @@
           "source": {
             "kind": "file",
             "ref": "nodes/initialize_ast_frames.ts",
+            "export": "run"
+          },
+          "completion": "immediate"
+        }
+      ]
+    },
+    "era.expression.initialize_random_sequence_state": {
+      "display_name": "初始化顺序状态与随机游标",
+      "description": "冻结层起始状态并创建操作游标、随机上下文和已消耗槽位计数。",
+      "category": "表达式工作流",
+      "version": "1.0.0",
+      "flow_kind": "process",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.expression.request.normalized",
+            "cardinality": "exactly_one",
+            "display_name": "规范表达式请求"
+          },
+          {
+            "type": "era.expression.function_library.compiled",
+            "cardinality": "exactly_one",
+            "display_name": "已编译函数库"
+          },
+          {
+            "type": "era.expression.operations.parsed",
+            "cardinality": "exactly_one",
+            "display_name": "已解析操作"
+          }
+        ],
+        "provides": [
+          {
+            "key": "sequence_state",
+            "type": "era.expression.sequence.state",
+            "display_name": "含随机游标的顺序状态"
+          }
+        ],
+        "input_semantics": {
+          "era.expression.request.normalized": [
+            "输入：带 randomContext 的请求。"
+          ],
+          "era.expression.function_library.compiled": [
+            "输入：函数库。"
+          ],
+          "era.expression.operations.parsed": [
+            "输入：操作 AST。"
+          ]
+        },
+        "output_semantics": {
+          "sequence_state": [
+            "输出：消息层顺序状态和随机槽位计数。"
+          ]
+        },
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser",
+            "node"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/initialize_random_sequence_state.ts",
             "export": "run"
           },
           "completion": "immediate"
@@ -3459,6 +3935,57 @@
         }
       ]
     },
+    "era.expression.validate_random_context": {
+      "display_name": "验证可重放随机上下文",
+      "description": "确认可选 sourceKey 与非负安全整数 drawOffset 已由请求规范器验证。",
+      "category": "表达式工作流",
+      "version": "1.0.0",
+      "flow_kind": "process",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.expression.request.normalized",
+            "cardinality": "exactly_one",
+            "display_name": "规范表达式请求"
+          }
+        ],
+        "provides": [
+          {
+            "key": "validated_random_request",
+            "type": "era.expression.request.normalized",
+            "display_name": "带随机上下文的规范请求"
+          }
+        ],
+        "input_semantics": {
+          "era.expression.request.normalized": [
+            "输入：已规范并验证随机上下文的请求。"
+          ]
+        },
+        "output_semantics": {
+          "validated_random_request": [
+            "输出：同一不可变规范请求。"
+          ]
+        },
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser",
+            "node"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/validate_random_context.ts",
+            "export": "run"
+          },
+          "completion": "immediate"
+        }
+      ]
+    },
     "era.expression.validate_request": {
       "display_name": "验证表达式请求",
       "description": "规范化初始状态、函数库与有序操作。",
@@ -3541,7 +4068,7 @@
         "type_key": "era.expression.ast_frame.route",
         "representation": "json",
         "display_name": "AST 调用帧路由",
-        "description": "决定将栈顶帧交给值、运算符、内建函数、自定义函数或返回处理。",
+        "description": "决定将栈顶帧交给值、运算符、内建函数、随机函数、自定义函数或返回处理。",
         "schema": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
           "type": "string",
@@ -3549,6 +4076,7 @@
             "value",
             "operator",
             "builtin",
+            "random",
             "custom",
             "return"
           ]
@@ -3695,7 +4223,7 @@
         "type_key": "era.expression.request",
         "representation": "json",
         "display_name": "函数表达式请求",
-        "description": "显式携带函数库、有限数值初始状态和有序表达式操作的独立 root 输入。",
+        "description": "显式携带函数库、有限数值初始状态、有序表达式操作及可选随机上下文的独立 root 输入。",
         "schema": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
           "type": "object",
@@ -3708,8 +4236,35 @@
             "functionLibrary": {
               "type": "object"
             },
+            "snapshotFunctionLibrary": {
+              "type": "object"
+            },
             "initialState": {
               "type": "object"
+            },
+            "snapshotState": {
+              "type": "object"
+            },
+            "allowSnapshots": {
+              "type": "boolean"
+            },
+            "randomContext": {
+              "type": "object",
+              "required": [
+                "sourceKey",
+                "drawOffset"
+              ],
+              "properties": {
+                "sourceKey": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "drawOffset": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "additionalProperties": false
             },
             "operations": {
               "type": "array"
@@ -3735,14 +4290,17 @@
         "type_key": "era.expression.response",
         "representation": "json",
         "display_name": "函数表达式结果",
-        "description": "独立表达式 root 的最终数值状态、诊断和可重放压缩候选。",
+        "description": "独立表达式 root 的最终数值状态、诊断、随机槽位计数和可重放压缩候选。",
         "schema": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
           "type": "object",
           "required": [
             "finalState",
             "diagnostics",
-            "compactedOperations"
+            "compactedOperations",
+            "randomDrawsConsumed",
+            "nextDrawOffset",
+            "containsAutomaticRandom"
           ],
           "properties": {
             "finalState": {
@@ -3753,6 +4311,17 @@
             },
             "compactedOperations": {
               "type": "array"
+            },
+            "randomDrawsConsumed": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "nextDrawOffset": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "containsAutomaticRandom": {
+              "type": "boolean"
             }
           },
           "additionalProperties": true

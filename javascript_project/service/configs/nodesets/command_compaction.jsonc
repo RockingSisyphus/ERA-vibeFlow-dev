@@ -13,7 +13,7 @@
     "inputs": [
       {"key": "expression_command_result", "type": "era.expression.command.result", "display_name": "表达式命令同步结果", "required": true}
     ],
-    "max_steps": 10,
+    "max_steps": 11,
     "nodes": [
       {"id": "start", "type_used": "era.service.terminal", "display_name": "封存压缩开始", "description": "进入不含 Tavern I/O 的封存压缩编排边界。"},
       {
@@ -35,10 +35,16 @@
         "description": "仅把原文中相邻且 s 完全相同的事务放入同一段；scope 变化是硬边界，相同 scope 被其他 scope 隔开时不得跨越，禁止生成混合 scope。"
       },
       {
+        "id": "attach_random_context",
+        "type_used": "era.command_compaction.attach_random_context",
+        "display_name": "附加封存楼层随机上下文",
+        "description": "为每个封存楼层及其候选复放附加相同 MK/sourceKey 和零起始 drawOffset，确保原始命令、候选与历史重算使用同一随机序列。"
+      },
+      {
         "id": "compact_each_segment",
         "type_used": "era.command_compaction.compact_segments",
         "display_name": "逐段调用安全压缩 Nodeset",
-        "description": "以每段开始前的 statData/statFunc 快照调用已实现 @era/vibeflow-command-compaction；API workflow 从不调用压缩器。"
+        "description": "以每段开始前的 statData/statFunc 快照和楼层 MK 调用 @era/vibeflow-command-compaction；自动随机闭包保持局部原文，API workflow 从不调用压缩器。"
       },
       {
         "id": "replay_with_service_engine",
@@ -64,7 +70,8 @@
       ["start", "identify_sealed_layers"],
       ["identify_sealed_layers", "parse_scoped_transactions"],
       ["parse_scoped_transactions", "partition_same_scope_segments"],
-      ["partition_same_scope_segments", "compact_each_segment"],
+      ["partition_same_scope_segments", "attach_random_context"],
+      ["attach_random_context", "compact_each_segment"],
       ["compact_each_segment", "replay_with_service_engine"],
       ["replay_with_service_engine", "write_single_scope_segments"],
       ["write_single_scope_segments", "update_compaction_markers"],

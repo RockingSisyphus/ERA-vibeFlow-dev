@@ -3,7 +3,7 @@
   "status": "implemented",
   "flow_kind": "process",
   "display_name": "ERA 命令层安全压缩",
-  "description": "纯计算 Nodeset：解析真实六类 ERA 指令，重放原语义，建立跨历史重算仍成立的不变量，输出已证明安全的局部压缩候选。",
+  "description": "纯计算 Nodeset：解析真实六类 ERA 指令，使用显式楼层随机上下文重放原语义，建立跨历史重算仍成立的不变量，并把自动随机闭包作为局部屏障后输出已证明安全的候选。",
   "requires": [
     {"type":"era.command_compaction.request","cardinality":"exactly_one","display_name":"ERA 命令层压缩请求"}
   ],
@@ -15,20 +15,26 @@
     "inputs": [
       {"key":"compaction_request","type":"era.command_compaction.request","display_name":"ERA 命令层压缩请求","required":true}
     ],
-    "max_steps": 10,
+    "max_steps": 11,
     "nodes": [
       {"id":"start","type_used":"era.command_compaction.terminal","display_name":"压缩开始","description":"进入无副作用的命令层压缩。"},
       {"id":"parse","type_used":"era.command_compaction.parse_command_blocks","display_name":"解析真实标签","description":"按原文顺序读取六类 ERA 标签。"},
       {"id":"execute","type_used":"era.command_compaction.execute_original_semantics","display_name":"重放原始语义","description":"执行原始变量、函数、meta 与快照语义。"},
-      {"id":"invariants","type_used":"era.command_compaction.derive_replay_invariants","display_name":"建立重放不变量","description":"标注不能跨越的存在性、锁和快照条件。"},
-      {"id":"regions","type_used":"era.command_compaction.partition_safe_regions","display_name":"划分安全区间","description":"把不可证明区域作为局部屏障。"},
+      {"id":"invariants","type_used":"era.command_compaction.derive_replay_invariants","display_name":"建立重放不变量","description":"标注不能跨越的存在性、锁、快照与函数版本条件。"},
+      {
+        "id": "classify_random_barriers",
+        "type_used": "era.command_compaction.classify_random_barriers",
+        "display_name": "划定自动随机局部屏障",
+        "description": "识别 random()、random(seed) 以及通过 statFunc 间接调用它们的闭包，禁止常数折叠、删除或跨越合并；random(seed, draw) 保持普通确定性证明资格。"
+      },
+      {"id":"regions","type_used":"era.command_compaction.partition_safe_regions","display_name":"划分安全区间","description":"把存在性、保护、模板、无效命令与自动随机等不可证明区域作为局部屏障。"},
       {"id":"symbols","type_used":"era.command_compaction.symbolize_dependencies","display_name":"符号化依赖","description":"复用 expression root 处理表达式和快照依赖。"},
       {"id":"rewrite","type_used":"era.command_compaction.rewrite_safe_regions","display_name":"局部重写","description":"只缩写已经证明安全的命令片段。"},
       {"id":"verify","type_used":"era.command_compaction.verify_replay_equivalence","display_name":"验证候选","description":"以真实重放拒绝不等价候选。"},
       {"id":"render","type_used":"era.command_compaction.render_compaction_result","display_name":"输出压缩结果","description":"保留非 ERA 文本并返回规范候选。"},
       {"id":"end","type_used":"era.command_compaction.terminal","display_name":"压缩结束","description":"返回纯计算结果。"}
     ],
-    "edges": [["start","parse"],["parse","execute"],["execute","invariants"],["invariants","regions"],["regions","symbols"],["symbols","rewrite"],["rewrite","verify"],["verify","render"],["render","end"]],
+    "edges": [["start","parse"],["parse","execute"],["execute","invariants"],["invariants","classify_random_barriers"],["classify_random_barriers","regions"],["regions","symbols"],["symbols","rewrite"],["rewrite","verify"],["verify","render"],["render","end"]],
     "outputs": [
       {"type":"era.command_compaction.response","cardinality":"exactly_one","display_name":"ERA 命令层压缩结果","as":"compactionResponse"}
     ]

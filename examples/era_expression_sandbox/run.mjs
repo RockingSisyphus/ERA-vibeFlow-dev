@@ -8,7 +8,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "../..");
 const expressionRoot = path.join(root, "javascript_project/expression");
-const caseFiles = ["valid.json", "compaction.json", "invalid.json"];
+const caseFiles = ["valid.json", "random.json", "compaction.json", "invalid.json"];
 
 function command(file, args, options = {}) {
   try {
@@ -90,8 +90,11 @@ function replayCompaction(engine, request, response) {
     startState: structuredClone(normalized.initialState),
     currentState: structuredClone(normalized.initialState),
     compiled,
+    snapshotCompiled: compiled,
     operations: [],
     cursor: 0,
+    randomContext: normalized.randomContext,
+    randomDrawsConsumed: 0,
     diagnostics: []
   };
   let replayed = structuredClone(normalized.initialState);
@@ -120,6 +123,8 @@ function assertExpected(testCase, result, engine) {
   );
   if ("compressed" in expect)
     assert.deepEqual(result.compressed, expect.compressed, `${testCase.id}: compressed`);
+  for (const key of ["randomDrawsConsumed", "nextDrawOffset", "containsAutomaticRandom"])
+    if (key in expect) assert.equal(result[key], expect[key], `${testCase.id}: ${key}`);
   if (expect.replayCompression) {
     const replayed = replayCompaction(engine, testCase.request, result);
     assertApprox(replayed, expect.finalState, tolerance, `${testCase.id}: compressed replay`);

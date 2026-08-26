@@ -1,0 +1,18 @@
+{
+  "kind": "node",
+  "type_key": "era.command_compaction.classify_random_barriers",
+  "display_name": "划定自动随机局部屏障",
+  "category": "ERA 命令压缩",
+  "description": "把直接或间接自动 random 命令作为局部屏障；显式 random(seed,draw) 保持确定性资格。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [{ "type": "era.command_compaction.invariants", "cardinality": "exactly_one", "display_name": "命令重放不变量" }],
+    "provides": [{ "key": "random_invariants", "type": "era.command_compaction.invariants", "display_name": "含随机屏障的不变量" }],
+    "params_schema": {}, "params_defaults": {},
+    "input_semantics": { "era.command_compaction.invariants": ["输入：原命令重放不变量。"] },
+    "output_semantics": { "random_invariants": ["输出：由纯引擎执行局部随机屏障规则的不变量。"] }
+  },
+  "implementations": [{ "language": "typescript", "targets": ["browser", "node"], "completion": "immediate", "source": { "kind": "file", "ref": "nodes/classify_random_barriers.ts", "export": "run" } }],
+  "base_libs": ["era.command_compaction.engine"], "capabilities": []
+}

@@ -25,6 +25,11 @@ compactCommandLayer({
 `FunctionInsert`、`FunctionEdit` 和 `FunctionDelete`。`$expr`、`@path`、`@f(...)`、
 函数调用图及数学函数均委托 `@era/vibeflow-expression`，不会复制表达式解释器。
 
+请求可携带仅本次计算使用的 `randomContext: { sourceKey, drawOffset }`。直接或经
+`statFunc` 间接调用 `random()`/`random(seed)` 的命令是局部硬边界：命令与顺序保持原样，
+屏障两侧互不依赖的确定性区间仍可各自压缩。`random(seed,draw)` 不消耗自动序号，可作为
+普通确定性表达式参与证明。等价校验同时比较最终状态、函数库、诊断和下一个抽取序号。
+
 ## 保守改写规则
 
 压缩不是“把当前数值算出来再写回”。候选必须保留层起始依赖：
