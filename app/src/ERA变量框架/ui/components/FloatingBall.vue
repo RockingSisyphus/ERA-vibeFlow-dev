@@ -1,11 +1,25 @@
 <template>
   <button
     id="era-floating-ball"
+    ref="ballElement"
     class="floating-ball"
+    :class="{ 'is-interacting': isInteracting, 'is-dragging': isDragging }"
+    :style="positionStyle"
+    :data-position-mode="positionMode"
+    :data-dragging="isDragging ? 'true' : 'false'"
     type="button"
     tabindex="0"
     aria-label="打开 ERA 面板"
-    @click="$emit('click')"
+    @click="handleClick"
+    @pointerdown="handlePointerDown"
+    @pointermove="handlePointerMove"
+    @pointerup="handlePointerUp"
+    @pointercancel="handlePointerCancel"
+    @lostpointercapture="handleLostPointerCapture"
+    @pointerenter="activate"
+    @pointerleave="handlePointerLeave"
+    @focus="activate"
+    @blur="scheduleIdle"
   >
     <span class="era-logo" aria-hidden="true">ERA</span>
     <!-- 仅显示用；不拦截事件 -->
@@ -13,7 +27,229 @@
 </template>
 
 <script setup lang="ts">
-defineEmits<{ click: [] }>();
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
+import {
+  calculateFloatingBallPlacement,
+  clampFloatingBallTop,
+  type FloatingBallPlacementBounds,
+} from '../utils/floating-ball-position';
+
+const props = withDefaults(defineProps<{ panelOpen?: boolean }>(), { panelOpen: false });
+const emit = defineEmits<{ click: [] }>();
+
+const DRAG_THRESHOLD = 6;
+const IDLE_DELAY_MS = 800;
+const DEFAULT_BALL_SIZE = 50;
+
+interface PointerSession {
+  pointerId: number;
+  startClientY: number;
+  startTop: number;
+  moved: boolean;
+}
+
+const ballElement = ref<HTMLButtonElement | null>(null);
+const top = ref<number | null>(null);
+const positionMode = ref<'default' | 'dragged'>('default');
+const isPressed = ref(false);
+const isDragging = ref(false);
+const recentlyActive = ref(false);
+let pointerSession: PointerSession | null = null;
+let bounds: FloatingBallPlacementBounds = { minTop: 12, maxTop: 12, defaultTop: 12 };
+let idleTimer: number | null = null;
+let clickSuppressionTimer: number | null = null;
+let suppressNextClick = false;
+let ballResizeObserver: ResizeObserver | null = null;
+let sendFormResizeObserver: ResizeObserver | null = null;
+let observedSendForm: Element | null = null;
+let hostWindow: Window = window;
+let hostDocument: Document = document;
+
+const isInteracting = computed(() => props.panelOpen || isPressed.value || isDragging.value || recentlyActive.value);
+const positionStyle = computed(() => (top.value === null ? undefined : { top: `${top.value}px` }));
+
+function safeAreaValue(name: '--era-safe-top' | '--era-safe-bottom'): number {
+  const element = ballElement.value;
+  if (element === null) return 0;
+  const parsed = Number.parseFloat(hostWindow.getComputedStyle(element).getPropertyValue(name));
+  return Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
+}
+
+function visibleSendFormTop(): number | null {
+  const sendForm = hostDocument.querySelector<HTMLElement>('#send_form');
+  if (sendForm === null) return null;
+  const style = hostWindow.getComputedStyle(sendForm);
+  const rectangle = sendForm.getBoundingClientRect();
+  if (style.display === 'none' || style.visibility === 'hidden' || rectangle.width <= 0 || rectangle.height <= 0) {
+    return null;
+  }
+  return rectangle.top;
+}
+
+function refreshSendFormObserver(): void {
+  if (typeof ResizeObserver === 'undefined') return;
+  const sendForm = hostDocument.querySelector('#send_form');
+  if (sendForm === observedSendForm) return;
+  sendFormResizeObserver?.disconnect();
+  observedSendForm = sendForm;
+  if (sendForm !== null) {
+    sendFormResizeObserver = new ResizeObserver(reflow);
+    sendFormResizeObserver.observe(sendForm);
+  } else {
+    sendFormResizeObserver = null;
+  }
+}
+
+function reflow(): void {
+  const element = ballElement.value;
+  if (element === null) return;
+  refreshSendFormObserver();
+  const visualViewport = hostWindow.visualViewport;
+  const viewportTop = visualViewport?.offsetTop ?? 0;
+  const viewportHeight = visualViewport?.height ?? hostWindow.innerHeight;
+  const ballHeight = element.getBoundingClientRect().height || element.offsetHeight || DEFAULT_BALL_SIZE;
+  bounds = calculateFloatingBallPlacement({
+    viewportTop,
+    viewportHeight,
+    ballHeight,
+    safeTop: safeAreaValue('--era-safe-top'),
+    safeBottom: safeAreaValue('--era-safe-bottom'),
+    sendFormTop: visibleSendFormTop(),
+  });
+  top.value =
+    positionMode.value === 'default' || top.value === null
+      ? bounds.defaultTop
+      : clampFloatingBallTop(top.value, bounds);
+}
+
+function clearIdleTimer(): void {
+  if (idleTimer !== null) {
+    hostWindow.clearTimeout(idleTimer);
+    idleTimer = null;
+  }
+}
+
+function activate(): void {
+  clearIdleTimer();
+  recentlyActive.value = true;
+}
+
+function scheduleIdle(): void {
+  clearIdleTimer();
+  idleTimer = hostWindow.setTimeout(() => {
+    idleTimer = null;
+    recentlyActive.value = false;
+  }, IDLE_DELAY_MS);
+}
+
+function releasePointerCapture(pointerId: number): void {
+  const element = ballElement.value;
+  if (element?.hasPointerCapture(pointerId) === true) element.releasePointerCapture(pointerId);
+}
+
+function finishPointerSession(cancelled: boolean): void {
+  const session = pointerSession;
+  if (session === null) return;
+  pointerSession = null;
+  isPressed.value = false;
+  isDragging.value = false;
+  if (!cancelled && session.moved) {
+    suppressNextClick = true;
+    if (clickSuppressionTimer !== null) hostWindow.clearTimeout(clickSuppressionTimer);
+    clickSuppressionTimer = hostWindow.setTimeout(() => {
+      clickSuppressionTimer = null;
+      suppressNextClick = false;
+    }, 0);
+  }
+  releasePointerCapture(session.pointerId);
+  scheduleIdle();
+}
+
+function handlePointerDown(event: PointerEvent): void {
+  if (!event.isPrimary || (event.pointerType === 'mouse' && event.button !== 0)) return;
+  const element = ballElement.value;
+  if (element === null) return;
+  reflow();
+  activate();
+  isPressed.value = true;
+  pointerSession = {
+    pointerId: event.pointerId,
+    startClientY: event.clientY,
+    startTop: top.value ?? bounds.defaultTop,
+    moved: false,
+  };
+  element.setPointerCapture(event.pointerId);
+}
+
+function handlePointerMove(event: PointerEvent): void {
+  const session = pointerSession;
+  if (session === null || session.pointerId !== event.pointerId) return;
+  const deltaY = event.clientY - session.startClientY;
+  if (!session.moved && Math.abs(deltaY) < DRAG_THRESHOLD) return;
+  session.moved = true;
+  isDragging.value = true;
+  positionMode.value = 'dragged';
+  top.value = clampFloatingBallTop(session.startTop + deltaY, bounds);
+  event.preventDefault();
+}
+
+function handlePointerUp(event: PointerEvent): void {
+  if (pointerSession?.pointerId === event.pointerId) finishPointerSession(false);
+}
+
+function handlePointerCancel(event: PointerEvent): void {
+  if (pointerSession?.pointerId === event.pointerId) finishPointerSession(true);
+}
+
+function handleLostPointerCapture(event: PointerEvent): void {
+  if (pointerSession?.pointerId === event.pointerId) finishPointerSession(true);
+}
+
+function handlePointerLeave(): void {
+  if (!isPressed.value) scheduleIdle();
+}
+
+function handleClick(event: MouseEvent): void {
+  if (suppressNextClick) {
+    suppressNextClick = false;
+    event.preventDefault();
+    event.stopPropagation();
+    return;
+  }
+  activate();
+  emit('click');
+}
+
+function handleHostBlur(): void {
+  finishPointerSession(true);
+}
+
+onMounted(() => {
+  const element = ballElement.value;
+  hostDocument = element?.ownerDocument ?? document;
+  hostWindow = hostDocument.defaultView ?? window;
+  hostWindow.addEventListener('resize', reflow);
+  hostWindow.addEventListener('blur', handleHostBlur);
+  hostWindow.visualViewport?.addEventListener('resize', reflow);
+  hostWindow.visualViewport?.addEventListener('scroll', reflow);
+  if (typeof ResizeObserver !== 'undefined' && element !== null) {
+    ballResizeObserver = new ResizeObserver(reflow);
+    ballResizeObserver.observe(element);
+  }
+  void nextTick().then(reflow);
+});
+
+onBeforeUnmount(() => {
+  finishPointerSession(true);
+  clearIdleTimer();
+  if (clickSuppressionTimer !== null) hostWindow.clearTimeout(clickSuppressionTimer);
+  hostWindow.removeEventListener('resize', reflow);
+  hostWindow.removeEventListener('blur', handleHostBlur);
+  hostWindow.visualViewport?.removeEventListener('resize', reflow);
+  hostWindow.visualViewport?.removeEventListener('scroll', reflow);
+  ballResizeObserver?.disconnect();
+  sendFormResizeObserver?.disconnect();
+});
 </script>
 
 <style scoped>
@@ -44,6 +280,7 @@ defineEmits<{ click: [] }>();
   cursor: pointer; /* 手型光标（仅视觉，不改逻辑） */
   user-select: none; /* 防止误选中文本 */
   -webkit-tap-highlight-color: transparent; /* 移动端点击高亮去除 */
+  touch-action: none; /* Pointer Events 独占球上的纵向拖动，不影响球外页面滚动 */
   background:
     radial-gradient(
       120% 120% at 30% 28%,
@@ -62,7 +299,8 @@ defineEmits<{ click: [] }>();
     box-shadow 0.28s ease,
     filter 0.28s ease; /* 悬停时的平滑过渡 */
   will-change: transform, box-shadow, filter; /* 提示浏览器优化 */
-  animation: ball-bob 3.2s ease-in-out infinite; /* 轻微上下浮动 */
+  --era-safe-top: env(safe-area-inset-top, 0px);
+  --era-safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 /* 光晕外环（纯视觉层），不占点击区域 */
@@ -140,17 +378,6 @@ defineEmits<{ click: [] }>();
   .floating-ball::after {
     animation: none;
   } /* 停止外环旋转 */
-}
-
-/* 轻微上下浮动（循环） */
-@keyframes ball-bob {
-  0%,
-  100% {
-    transform: translateY(0);
-  } /* 起点/终点：原位 */
-  50% {
-    transform: translateY(-2px);
-  } /* 中点：上浮 2px */
 }
 
 /* 外环慢速旋转（不刺眼） */
@@ -249,7 +476,7 @@ defineEmits<{ click: [] }>();
 /* 1) 默认闲置态：几乎不可见，但仍可点击/触发 hover */
 .floating-ball {
   /* 可调“隐身强度”参数（需要更透明可把 0.08 调小到 0.04~0.06） */
-  --idle-opacity: 0.08; /* 闲置不聚焦时的不透明度 */
+  --idle-opacity: 0.12; /* 全平台统一的闲置不透明度 */
   --idle-filter: saturate(0.45) brightness(0.95) blur(0.2px); /* 轻微去饱和与柔化 */
 
   opacity: var(--idle-opacity); /* 应用闲置透明度 */
@@ -263,22 +490,14 @@ defineEmits<{ click: [] }>();
 
 /* 2) 交互显现：鼠标悬停或键盘聚焦时恢复为清晰可见 */
 .floating-ball:hover,
-.floating-ball:focus-visible {
+.floating-ball:focus-visible,
+.floating-ball.is-interacting {
   opacity: 1; /* 完全不透明 */
   filter: none; /* 清除柔化/去饱和 */
 }
 
-/* 3) 触屏/无 hover 设备：保持可见，避免用户“找不到球” */
-@media (hover: none), (pointer: coarse) {
-  .floating-ball {
-    opacity: 0.96; /* 触屏几乎完全可见 */
-    filter: none; /* 不做柔化 */
-  }
+.floating-ball.is-dragging {
+  cursor: grabbing;
+  animation: none;
 }
-
-/* 4) 可选：离开后再慢一点回到隐身（需要时可解注释）
-.floating-ball:not(:hover):not(:focus-visible) {
-  transition-delay: 0.25s;             // 鼠标离开 250ms 后再开始变淡
-}
-*/
 </style>

@@ -2,7 +2,11 @@
   <div class="era-app-container" :class="{ 'dark-theme': isDarkMode }">
     <ThemeManager ref="themeManager" />
     <SidecarBindingDialog />
-    <FloatingBall v-show="currentComponent === 'FloatingBall'" @click="requestSwitchView('ExpandedView')" />
+    <FloatingBall
+      v-show="currentComponent === 'FloatingBall'"
+      :panel-open="currentComponent === 'ExpandedView'"
+      @click="requestSwitchView('ExpandedView')"
+    />
     <div
       v-show="currentComponent === 'ExpandedView'"
       ref="expandedLayer"
@@ -189,15 +193,14 @@ watch(currentComponent, async viewName => {
   }
 }
 
-/* ===[新增] 悬浮球：固定在右下角 + 开启点击 === */
+/* 悬浮球统一贴右定位；纵向 top 由组件按可视视口与酒馆输入栏实时计算。 */
 :deep(.floating-ball) {
   /* 选中子组件根元素（scoped 下用 deep） */
   position: absolute; /* 相对唯一的 viewport mount 定位，避免宿主嵌套 fixed 偏移 */
   right: max(16px, env(safe-area-inset-right)); /* 右侧安全区 + 基础边距 */
-  bottom: max(90px, env(safe-area-inset-bottom)); /* 底部安全区 + 基础边距 */
+  top: 52svh; /* 脚本初始化前的安全占位，挂载后由组件写入精确 top */
   z-index: 2147483647; /* 高于容器根，确保始终可点 */
   pointer-events: auto; /* 启用点击（父容器是 none） */
-  touch-action: manipulation; /* 移动端减少点击延迟 */
   will-change: transform; /* 提前分层，避免站点 3D/滤镜影响 */
 }
 
