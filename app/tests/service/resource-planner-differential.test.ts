@@ -4,6 +4,10 @@ import { HIDE_ERA_DATA_REGEX } from '../../src/ERA变量框架/initer/manual/reg
 import { HIDE_ERA_METADATA_REGEX } from '../../src/ERA变量框架/initer/manual/regex_objects/hide_era_metadata';
 import { HIDE_ERA_THINKING_REGEX } from '../../src/ERA变量框架/initer/manual/regex_objects/hide_era_thinking';
 import { REPLACE_PLACEHOLDER_REGEX } from '../../src/ERA变量框架/initer/manual/regex_objects/replace_placeholder';
+import {
+  FOLD_ERA_AGENT_REPORTS_REGEX,
+  STRIP_ERA_AGENT_REPORTS_REGEX,
+} from '../../src/ERA变量框架/initer/manual/regex_objects/agent_reports';
 import { eraVarIntentEntry } from '../../src/ERA变量框架/initer/manual/worldbook_entries/era_var_intent';
 import { eraVarOperationRuleEntry } from '../../src/ERA变量框架/initer/manual/worldbook_entries/era_var_operation_rule';
 import { SettingsSchema } from '../../src/ERA变量框架/utils/constants';
@@ -238,12 +242,14 @@ describe('VibeFlow Service 宿主资源规划器差分', () => {
     ).toMatchObject({ status: 'skipped', actions: [], details: [] });
   });
 
-  it('逐字段保持四条局部正则载荷和注入顺序', () => {
+  it('逐字段保持局部正则载荷和注入顺序', () => {
     const candidateRegexes = [
       HIDE_ERA_DATA_REGEX,
       REPLACE_PLACEHOLDER_REGEX,
       HIDE_ERA_METADATA_REGEX,
       HIDE_ERA_THINKING_REGEX,
+      FOLD_ERA_AGENT_REPORTS_REGEX,
+      STRIP_ERA_AGENT_REPORTS_REGEX,
     ];
     expect(planner.getEraRegexPayloads()).toEqual(candidateRegexes);
 
@@ -281,7 +287,7 @@ describe('VibeFlow Service 宿主资源规划器差分', () => {
       existingRegexes: existing,
     });
     expect(plan.details[0]).toEqual({ regexName: 'ERA 数据隐藏正则', status: 'exists' });
-    expect(plan.actions).toHaveLength(3);
+    expect(plan.actions).toHaveLength(5);
     expect(plan.actions.some(action => action.regex.script_name === 'ERA 数据隐藏正则')).toBe(false);
     expect(existing).toEqual(before);
   });

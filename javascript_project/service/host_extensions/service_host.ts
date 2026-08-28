@@ -98,6 +98,24 @@ export type EraAsyncHostOperation = (
 ) => unknown | Promise<unknown>;
 
 export interface EraTavernCapabilityAdapter {
+  readonly agent: {
+    readonly read_context: EraAsyncHostOperation;
+    readonly write_configuration: EraAsyncHostOperation;
+    readonly capture_preset: EraHostOperation;
+    readonly read_configuration_sources: EraHostOperation;
+    readonly upsert_connection_profile: EraAsyncHostOperation;
+    readonly delete_connection_profile: EraAsyncHostOperation;
+    readonly clear_connection_profile_key: EraAsyncHostOperation;
+    readonly list_connection_models: EraAsyncHostOperation;
+    readonly generate: EraAsyncHostOperation;
+    readonly generate_story: EraAsyncHostOperation;
+    readonly inject_once: EraHostOperation;
+    readonly write_session: EraHostOperation;
+    readonly clear_session: EraHostOperation;
+    readonly write_message: EraAsyncHostOperation;
+    readonly create_error_message: EraAsyncHostOperation;
+    readonly stop_native_generation: EraHostOperation;
+  };
   readonly variables: {
     readonly read: EraAsyncHostOperation;
     readonly commit: EraAsyncHostOperation;
@@ -595,6 +613,40 @@ class ServiceHostRuntime {
         options: PortCallOptions = {},
       ) => this.invokeSuspend("variables", "commit", input, options),
     },
+    "era.tavern.agent": {
+      read_context: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
+        this.invokeSuspend("agent", "read_context", input, options),
+      write_configuration: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
+        this.invokeSuspend("agent", "write_configuration", input, options),
+      capture_preset: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
+        this.invokeImmediate("agent", "capture_preset", input, options),
+      read_configuration_sources: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
+        this.invokeImmediate("agent", "read_configuration_sources", input, options),
+      upsert_connection_profile: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
+        this.invokeSuspend("agent", "upsert_connection_profile", input, options),
+      delete_connection_profile: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
+        this.invokeSuspend("agent", "delete_connection_profile", input, options),
+      clear_connection_profile_key: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
+        this.invokeSuspend("agent", "clear_connection_profile_key", input, options),
+      list_connection_models: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
+        this.invokeSuspend("agent", "list_connection_models", input, options),
+      generate: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
+        this.invokeSuspend("agent", "generate", input, options),
+      generate_story: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
+        this.invokeSuspend("agent", "generate_story", input, options),
+      inject_once: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
+        this.invokeImmediate("agent", "inject_once", input, options),
+      write_session: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
+        this.invokeImmediate("agent", "write_session", input, options),
+      clear_session: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
+        this.invokeImmediate("agent", "clear_session", input, options),
+      write_message: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
+        this.invokeSuspend("agent", "write_message", input, options),
+      create_error_message: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
+        this.invokeSuspend("agent", "create_error_message", input, options),
+      stop_native_generation: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
+        this.invokeImmediate("agent", "stop_native_generation", input, options),
+    },
     "era.tavern.messages": {
       read_context: (
         input: Readonly<Record<string, unknown>>,
@@ -813,6 +865,17 @@ class ServiceHostRuntime {
     const required: ReadonlyArray<readonly [unknown, string]> = [
       [adapter.subscribe, "subscribe"],
       [adapter.notify, "notify"],
+      [adapter.agent?.read_context, "agent.read_context"],
+      [adapter.agent?.write_configuration, "agent.write_configuration"],
+      [adapter.agent?.capture_preset, "agent.capture_preset"],
+      [adapter.agent?.generate, "agent.generate"],
+      [adapter.agent?.generate_story, "agent.generate_story"],
+      [adapter.agent?.inject_once, "agent.inject_once"],
+      [adapter.agent?.write_session, "agent.write_session"],
+      [adapter.agent?.clear_session, "agent.clear_session"],
+      [adapter.agent?.write_message, "agent.write_message"],
+      [adapter.agent?.create_error_message, "agent.create_error_message"],
+      [adapter.agent?.stop_native_generation, "agent.stop_native_generation"],
       [adapter.variables?.read, "variables.read"],
       [adapter.variables?.commit, "variables.commit"],
       [adapter.messages?.read_context, "messages.read_context"],

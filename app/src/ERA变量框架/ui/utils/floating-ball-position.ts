@@ -1,3 +1,4 @@
+/** 描述当前可视视口、安全区与宿主输入栏的纯几何输入。 */
 export interface FloatingBallPlacementInput {
   viewportTop: number;
   viewportHeight: number;
@@ -9,6 +10,7 @@ export interface FloatingBallPlacementInput {
   fallbackBottomReserve?: number;
 }
 
+/** 描述悬浮球允许的纵向范围与本页实例的安全默认位置。 */
 export interface FloatingBallPlacementBounds {
   minTop: number;
   maxTop: number;

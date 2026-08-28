@@ -23,12 +23,15 @@ const EVENT_MESSAGE_DELETED = "message_deleted";
 const EVENT_MESSAGE_UPDATED = "message_updated";
 const EVENT_CHAT_CHANGED = "chat_id_changed";
 const EVENT_GENERATION_STARTED = "generation_started";
+const EVENT_GENERATION_STOPPED = "generation_stopped";
 const EVENT_MANUAL_WRITE = "manual_write";
 const EVENT_MANUAL_SYNC = "manual_sync";
 const EVENT_MANUAL_FULL_SYNC = "manual_full_sync";
 const EVENT_UI_INITIALIZE_RESOURCES = "era.ui.initialize_resources";
 const EVENT_UI_UPDATE_SETTINGS = "era.ui.update_settings";
 const EVENT_UI_SIDECAR_BINDING_CHOICE = "era.ui.sidecar_binding_choice";
+const EVENT_UI_AGENT_CONFIGURATION = "era.ui.agent_configuration";
+const EVENT_UI_AGENT_RETRY = "era.ui.agent_retry";
 
 export type EventGroup =
   | "INIT"
@@ -98,7 +101,9 @@ interface WorkUnitV1 {
   readonly combo?: ComboSemantic;
 }
 
-type DraftExecuteStepV1 = Pick<ExecuteStepV1, "kind" | "task" | "sources">;
+type DraftExecuteStepV1 = Pick<ExecuteStepV1, "kind" | "task" | "sources"> & {
+  readonly taskRoute?: ExecuteStepV1["taskRoute"];
+};
 type DraftIgnoreStepV1 = Pick<IgnoreStepV1, "kind" | "events" | "reason">;
 type DraftPlanStepV1 = DraftExecuteStepV1 | DraftIgnoreStepV1;
 
@@ -135,12 +140,15 @@ export function getInputEvents() {
     MESSAGE_UPDATED: EVENT_MESSAGE_UPDATED,
     CHAT_CHANGED: EVENT_CHAT_CHANGED,
     GENERATION_STARTED: EVENT_GENERATION_STARTED,
+    GENERATION_STOPPED: EVENT_GENERATION_STOPPED,
     MANUAL_WRITE: EVENT_MANUAL_WRITE,
     MANUAL_SYNC: EVENT_MANUAL_SYNC,
     MANUAL_FULL_SYNC: EVENT_MANUAL_FULL_SYNC,
     UI_INITIALIZE_RESOURCES: EVENT_UI_INITIALIZE_RESOURCES,
     UI_UPDATE_SETTINGS: EVENT_UI_UPDATE_SETTINGS,
     UI_SIDECAR_BINDING_CHOICE: EVENT_UI_SIDECAR_BINDING_CHOICE,
+    UI_AGENT_CONFIGURATION: EVENT_UI_AGENT_CONFIGURATION,
+    UI_AGENT_RETRY: EVENT_UI_AGENT_RETRY,
   } as const;
 }
 
@@ -177,6 +185,8 @@ export function getListenedEventTypes(): readonly string[] {
     EVENT_UI_INITIALIZE_RESOURCES,
     EVENT_UI_UPDATE_SETTINGS,
     EVENT_UI_SIDECAR_BINDING_CHOICE,
+    EVENT_UI_AGENT_CONFIGURATION,
+    EVENT_UI_AGENT_RETRY,
     EVENT_MANUAL_WRITE,
     EVENT_MESSAGE_RECEIVED,
     EVENT_MESSAGE_DELETED,
@@ -187,6 +197,7 @@ export function getListenedEventTypes(): readonly string[] {
     ...getApiEventTypes(),
     EVENT_MESSAGE_SENT,
     EVENT_GENERATION_STARTED,
+    EVENT_GENERATION_STOPPED,
     EVENT_MESSAGE_UPDATED,
     EVENT_MESSAGE_EDITED,
   ];
@@ -212,7 +223,25 @@ export function getEventDefinition(
     };
   }
   if (eventType === EVENT_UI_SIDECAR_BINDING_CHOICE) {
-    return { type: eventType, group: "SYNC", listenerOrder: "normal", awaitMode: "detached", collectionWindowMs: 0 };
+    return {
+      type: eventType,
+      group: "SYNC",
+      listenerOrder: "normal",
+      awaitMode: "detached",
+      collectionWindowMs: 0,
+    };
+  }
+  if (
+    eventType === EVENT_UI_AGENT_CONFIGURATION ||
+    eventType === EVENT_UI_AGENT_RETRY
+  ) {
+    return {
+      type: eventType,
+      group: "UPDATE_MK_ONLY",
+      listenerOrder: "normal",
+      awaitMode: "detached",
+      collectionWindowMs: 0,
+    };
   }
   if (isApiEventType(eventType)) {
     return {
@@ -255,8 +284,10 @@ export function getEventDefinition(
       return {
         type: eventType,
         group: "UPDATE_MK_ONLY",
-        listenerOrder: "normal",
-        awaitMode: "detached",
+        listenerOrder: "first",
+        awaitMode: "generation-barrier",
+        collectionWindowMs: 0,
+        closesCollectionWindow: true,
       };
     case EVENT_GENERATION_STARTED:
       return {
@@ -266,6 +297,14 @@ export function getEventDefinition(
         awaitMode: "generation-barrier",
         collectionWindowMs: 0,
         closesCollectionWindow: true,
+      };
+    case EVENT_GENERATION_STOPPED:
+      return {
+        type: eventType,
+        group: "UPDATE_MK_ONLY",
+        listenerOrder: "normal",
+        awaitMode: "detached",
+        collectionWindowMs: 0,
       };
     case EVENT_MESSAGE_UPDATED:
       return {
@@ -466,7 +505,8 @@ function createDomainTask(unit: WorkUnitV1): DomainTaskV1 | null {
         : "history-changed",
       target: { kind: "auto" },
       context: "latest-message-with-mk",
-      fullRebuild: unit.effectiveType === EVENT_MANUAL_FULL_SYNC ||
+      fullRebuild:
+        unit.effectiveType === EVENT_MANUAL_FULL_SYNC ||
         unit.effectiveType === EVENT_UI_SIDECAR_BINDING_CHOICE,
     });
   }
@@ -504,7 +544,25 @@ function createDomainTask(unit: WorkUnitV1): DomainTaskV1 | null {
     };
   }
 
+  if (group === "COLLISION_DETECTORS") {
+    return {
+      ...taskBase(unit, "latest-message-with-mk"),
+      kind: "update-mk",
+    };
+  }
+
   return null;
+}
+
+function usesAgentGenerationSession(unit: WorkUnitV1): boolean {
+  return (
+    unit.primaryEvent.type === EVENT_GENERATION_STARTED ||
+    unit.primaryEvent.type === EVENT_GENERATION_STOPPED ||
+    unit.primaryEvent.type === EVENT_MESSAGE_SENT ||
+    unit.primaryEvent.type === EVENT_MESSAGE_RECEIVED ||
+    unit.primaryEvent.type === EVENT_UI_AGENT_CONFIGURATION ||
+    unit.primaryEvent.type === EVENT_UI_AGENT_RETRY
+  );
 }
 
 function firstSequenceOf(events: readonly EraTransportEventV1[]): number {
@@ -610,7 +668,14 @@ export function planEventBatch(
     if (task !== null) {
       ordered.push({
         firstSequence: firstSequenceOf(unitEvents),
-        step: { kind: "execute", task, sources: unit.sources },
+        step: {
+          kind: "execute",
+          task,
+          sources: unit.sources,
+          ...(usesAgentGenerationSession(unit)
+            ? { taskRoute: "agent-generation-session" as const }
+            : {}),
+        },
       });
       continue;
     }
@@ -641,7 +706,7 @@ export function planEventBatch(
           sourceSequences: step.events.map((event) => event.sequence),
         };
       }
-      const taskRoute = step.task.kind;
+      const taskRoute = step.taskRoute ?? step.task.kind;
       const sourceSequences = step.sources.map(
         (source) => source.event.sequence,
       );

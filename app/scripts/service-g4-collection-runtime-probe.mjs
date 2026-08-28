@@ -1,6 +1,7 @@
 /// <reference types="node" />
 
 import { createHash } from 'node:crypto';
+import { rmSync } from 'node:fs';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -14,6 +15,7 @@ const reportPath = resolve(projectRoot, 'reports/service-g4-collection-runtime.j
 /** 与 G3 探针一致：保持生成物字节不变，但从 app 包解析运行时依赖。 */
 async function importGeneratedWorkflow() {
   const directory = await mkdtemp(resolve(import.meta.dirname, '.era-generated-workflow-'));
+  process.once('exit', () => rmSync(directory, { recursive: true, force: true }));
   const stagedPath = resolve(directory, 'workflow.mjs');
   await writeFile(stagedPath, await readFile(generatedModuleUrl), 'utf8');
   return {
@@ -101,6 +103,24 @@ function createTavernCapabilities() {
     },
     'era.tavern.installation_scope': {
       read: () => ({ scriptId: 'era-g4', scopes: ['character'], readStatus: 'complete' }),
+    },
+    'era.tavern.agent': {
+      read_context: async () => ({ status: 'ready', context: null }),
+      write_configuration: async () => ({ status: 'committed' }),
+      capture_preset: () => ({ status: 'captured', preset: null }),
+      read_configuration_sources: () => ({ presetNames: [], currentPresetName: null, connectionProfiles: [] }),
+      upsert_connection_profile: async () => ({ status: 'created' }),
+      delete_connection_profile: async () => ({ status: 'deleted' }),
+      clear_connection_profile_key: async () => ({ status: 'cleared' }),
+      list_connection_models: async () => ({ models: [] }),
+      generate: async () => ({ status: 'completed', text: '{}' }),
+      generate_story: async () => ({ status: 'completed', text: '' }),
+      inject_once: () => ({ status: 'injected' }),
+      write_session: () => ({ status: 'committed' }),
+      clear_session: () => ({ status: 'cleared' }),
+      write_message: async () => ({ status: 'committed' }),
+      create_error_message: async () => ({ status: 'committed' }),
+      stop_native_generation: () => ({ status: 'stopped' }),
     },
     'era.tavern.startup_gate': { activate: () => ({ activated: true }), dormant: () => ({ activated: false }) },
     'era.tavern.sidecar': (() => {

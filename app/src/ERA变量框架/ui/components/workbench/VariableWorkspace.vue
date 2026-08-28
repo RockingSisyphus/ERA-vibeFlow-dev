@@ -167,6 +167,11 @@
 </template>
 
 <script setup lang="ts">
+/*
+ * 模块职责：提供变量树搜索、JSON 草稿、表达式试用和保护选择。
+ * 模块边界：只产生有序操作，持久化由上层统一执行，不直接修改 Sidecar。
+ * 编辑会话固定聊天身份、revision 和原子树，因此能拒绝陈旧草稿覆盖。
+ */
 import { computed, ref, watch } from 'vue';
 import type { EraCommitOperation } from '../../../service/public-api';
 import { waitForEraFacade } from '../../utils/facade';
@@ -255,6 +260,7 @@ function textForValue(value: unknown, type: typeof valueType.value): string {
   return String(value ?? '');
 }
 
+/** 关闭抽屉时清空类型、诊断和保护选择，避免草稿在目标间串线。 */
 function resetEditor(): void {
   error.value = '';
   success.value = '';
@@ -263,6 +269,7 @@ function resetEditor(): void {
   keyInput.value = '';
 }
 
+/** 打开抽屉时克隆原子树，后续表单输入不得改动当前状态引用。 */
 function openEditor(mode: EditorState['mode'], path: readonly string[], initial: unknown): void {
   resetEditor();
   editor.value = {
@@ -300,6 +307,16 @@ function closeEditor(): void {
   editor.value = null;
 }
 
+/** 按选定类型校验数组或对象，避免结构类型在保存时静默漂移。 */
+function parseStructuredDraft(kind: 'array' | 'object'): unknown {
+  const value = JSON.parse(valueText.value);
+  const valid =
+    kind === 'array' ? Array.isArray(value) : value !== null && typeof value === 'object' && !Array.isArray(value);
+  if (!valid) throw new TypeError(kind === 'array' ? '请输入 JSON 数组。' : '请输入 JSON 对象。');
+  return value;
+}
+
+/** 把当前编辑控件转换为类型明确的草稿，任何非法输入都在产生操作前失败。 */
 function parseDraft(): unknown {
   if (inputMode.value === 'json' || editor.value?.mode === 'batch') return JSON.parse(jsonText.value);
   if (valueType.value === 'null') return null;
@@ -309,20 +326,11 @@ function parseDraft(): unknown {
     if (!Number.isFinite(value)) throw new TypeError('数值必须是有限数字。');
     return value;
   }
-  if (valueType.value === 'array' || valueType.value === 'object') {
-    const value = JSON.parse(valueText.value);
-    if (
-      valueType.value === 'array'
-        ? !Array.isArray(value)
-        : value === null || typeof value !== 'object' || Array.isArray(value)
-    ) {
-      throw new TypeError(valueType.value === 'array' ? '请输入 JSON 数组。' : '请输入 JSON 对象。');
-    }
-    return value;
-  }
+  if (valueType.value === 'array' || valueType.value === 'object') return parseStructuredDraft(valueType.value);
   return valueText.value;
 }
 
+/** 新键在产生 Insert 前必须检查冲突，已有键不能被静默覆盖。 */
 function targetPath(): readonly string[] {
   if (editor.value?.mode !== 'add') return editor.value?.path ?? [];
   const key = keyInput.value.trim();
@@ -371,6 +379,7 @@ const mutationKind = computed<VariableMutationKind>(() => {
   return 'edit';
 });
 
+/** 保护集合来自目标和祖先，不能只根据当前节点的元数据。 */
 const protections = computed<readonly VariableProtection[]>(() => {
   if (!editor.value) return [];
   try {
@@ -385,6 +394,7 @@ const protections = computed<readonly VariableProtection[]>(() => {
   }
 });
 
+/** 预览与最终提交共用同一操作计划，避免确认前后出现顺序漂移。 */
 const preview = computed<readonly EraCommitOperation[]>(() => {
   try {
     const operations = basePlan();
@@ -395,6 +405,7 @@ const preview = computed<readonly EraCommitOperation[]>(() => {
   }
 });
 
+/** 对比打开时与当前子树，同一目标外部变化后必须重载。 */
 function assertFresh(): void {
   if (!editor.value) throw new Error('编辑器已经关闭。');
   if (editor.value.identityKey !== props.identityKey) throw new Error('聊天已经切换，请重新打开编辑器。');
@@ -403,6 +414,7 @@ function assertFresh(): void {
   if (!jsonEqual(current, editor.value.initial)) throw new Error('该变量在编辑期间已经变化，请重新载入后再保存。');
 }
 
+/** 根据编辑模式生成差异，并在发出事件前统一处理祖先保护。 */
 async function save(): Promise<void> {
   if (!editor.value || busy.value) return;
   error.value = '';
@@ -434,157 +446,4 @@ async function save(): Promise<void> {
 }
 </script>
 
-<style scoped>
-.workspace-section {
-  position: relative;
-  min-height: 280px;
-  border: 1px solid var(--border-normal);
-  border-radius: 13px;
-  background: var(--bg-soft);
-  overflow: hidden;
-}
-.workspace-toolbar {
-  display: flex;
-  align-items: end;
-  gap: 8px;
-  padding: 12px;
-  border-bottom: 1px solid var(--border-soft);
-}
-.search-field {
-  min-width: 0;
-  flex: 1 1 auto;
-}
-.search-field,
-.editor-form label {
-  display: grid;
-  gap: 5px;
-  color: var(--text-subtitle);
-  font-size: 11px;
-  font-weight: 700;
-}
-.workspace-toolbar input,
-.editor-form input,
-.editor-form select,
-.editor-form textarea {
-  width: 100%;
-  border: 1px solid var(--border-normal);
-  border-radius: 9px;
-  background: var(--bg-solid);
-  color: var(--text-title);
-  padding: 9px 10px;
-  font: inherit;
-}
-.workspace-toolbar button,
-.editor-actions button,
-.mode-switch button {
-  border: 1px solid var(--border-normal);
-  border-radius: 9px;
-  background: var(--bg-solid);
-  color: var(--text-subtitle);
-  padding: 9px 11px;
-  cursor: pointer;
-  white-space: nowrap;
-}
-.workspace-hint {
-  margin: 0;
-  padding: 8px 12px;
-  color: var(--text-normal);
-  font-size: 11px;
-}
-.variable-tree {
-  margin: 0;
-  padding: 0;
-  max-height: 420px;
-  overflow: auto;
-}
-.workspace-empty {
-  padding: 42px 18px;
-  text-align: center;
-  color: var(--text-normal);
-}
-.editor-form {
-  display: grid;
-  gap: 14px;
-}
-.mode-switch {
-  display: flex;
-  gap: 6px;
-}
-.mode-switch button.active {
-  border-color: #60a5fa;
-  color: #2563eb;
-  background: rgba(96, 165, 250, 0.12);
-}
-.editor-form textarea {
-  resize: vertical;
-  line-height: 1.5;
-}
-.editor-form small {
-  color: var(--text-normal);
-  font-weight: 400;
-}
-.delete-warning,
-.protection-box,
-.operation-preview {
-  border: 1px solid var(--border-normal);
-  border-radius: 10px;
-  padding: 11px;
-  color: var(--text-subtitle);
-  background: var(--bg-solid);
-  font-size: 12px;
-}
-.protection-box {
-  border-color: #f59e0b;
-}
-.protection-box ul {
-  padding-left: 18px;
-}
-.operation-preview pre {
-  max-height: 190px;
-  overflow: auto;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  color: var(--text-normal);
-  font-size: 10px;
-}
-.editor-error,
-.editor-success {
-  margin: 0;
-  padding: 9px 10px;
-  border-radius: 9px;
-}
-.editor-error {
-  color: #b91c1c;
-  background: rgba(254, 226, 226, 0.75);
-}
-.editor-success {
-  color: #047857;
-  background: rgba(209, 250, 229, 0.72);
-}
-.editor-actions {
-  position: sticky;
-  bottom: -16px;
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  padding: 12px 0 0;
-  background: var(--bg-blur-heavy);
-}
-.editor-actions .primary {
-  border-color: #60a5fa;
-  color: #0f172a;
-  background: linear-gradient(180deg, #dbeafe, #bfdbfe);
-}
-.editor-actions button:disabled {
-  opacity: 0.6;
-  cursor: wait;
-}
-@media (max-width: 560px) {
-  .workspace-toolbar {
-    flex-wrap: wrap;
-  }
-  .search-field {
-    flex-basis: 100%;
-  }
-}
-</style>
+<style scoped src="./VariableWorkspace.css"></style>

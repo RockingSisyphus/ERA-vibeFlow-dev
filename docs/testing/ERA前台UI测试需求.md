@@ -652,6 +652,28 @@ UI 操作：
 每条路径同时核对实际 UI 交互、单个 `s="a"` 事务、公开状态、Sidecar、变量/函数
 日志、聊天中只保留 Sidecar 指针，以及取消/校验失败/试算的无持久化副作用。
 
+### 4.22 Agent 故事编排设置
+
+**用例：AGENT-SET-001～014（P0/P1）**
+
+进入路径：打开悬浮球面板，切换“故事编排”。群聊中只显示不支持状态并禁用配置。
+
+操作与预期：
+
+- 规划和结算开关、重试次数及尝试列表相互独立；旧卡默认关闭，V1 读取后按 V2 展示。
+- 每次尝试的预设下拉包含 ERA 内建、当前正在使用及酒馆已导入预设；选中后展示来源名称，
+  实际保存脱敏快照，刷新和重新捕获行为明确。
+- 模型来源可选择酒馆当前连接与模型，或 ERA 本机自定义 API。自定义模式可创建、修改、删除
+  连接方案，加载模型列表、选择模型或手动填写模型名。
+- 密钥输入不会回显；空值保留旧密钥，显式清除才删除。模型加载失败不改动已保存选择。
+- PNG、JSON、CharX 导出导入保留阶段配置、快照、模型名及方案引用，但不得包含 API URL、
+  密钥或本机方案库；缺失方案显示“需要重新绑定”，不得静默回退。
+- 生成进行中保存的新设置只影响下一轮。切角色卡、切聊天和 reload 后读取正确配置。
+- 最近会话显示阶段状态，并仅为最新消息最新 cycle 提供合法的规划、故事和结算重试按钮。
+
+每条 required evaluation 同时检查实际控件交互、角色卡扩展字段、Service settlement、模型请求中的
+预设标记/provider alias/模型，以及消息、Sidecar、console、trace 和 Artifact 中不存在密钥。
+
 ## 5. 需要补充的 Harness 能力
 
 现有 `open-era`、`close-era`、`open-era-snapshots`、
@@ -666,6 +688,7 @@ UI 操作：
 | 快照       | 选择指定 MK、按消息 ID 查询、切页签、控制 queryResult 顺序、读取 loading/error      |
 | 快捷操作   | 点击 full/latest/rollback/init，输入 rollback ID，关联唯一 receipt/settlement/toast |
 | 设置       | 展开、重新读取、编辑各类型、丢弃、保存，读取 busy、toast、主题和持久化值            |
+| Agent      | 预设枚举/捕获、阶段尝试、连接方案、模型加载、重绑定、会话状态和手动重试             |
 | 视觉与适配 | 设置桌面基准或手机触屏 viewport/pointer，读取裁切、命中、overflow 与 computed style |
 
 每个 completed action 必须有专属 completion evidence；“点击成功”不能替代以下证据：
@@ -677,13 +700,18 @@ UI 操作：
 
 ## 6. 建议套件
 
-| Suite                    | 内容                                                                             |                                并发建议 |
-| ------------------------ | -------------------------------------------------------------------------------- | --------------------------------------: |
-| `era-ui-smoke`           | 启动、悬浮球开关、首屏数据、主面板、一个快照查询、四个快捷操作成功路径、设置保存 |                                       4 |
-| `era-ui-functional`      | 本文全部 P0/P1 功能、输入边界、Service 失败和并发/迟到响应                       |                                       4 |
-| `era-ui-data-management` | 变量/函数 CRUD、表达式、保护、试算、历史与移动端 28 条路径                       |                                       1 |
-| `era-ui-visual`          | 桌面基准、手机触屏竖横屏、亮/暗主题、长内容、截图与 overflow                     | 4；point target 时按 Harness 规则降为 1 |
-| `era-ui-lifecycle`       | 热重载、pagehide、stop、样式/监听器/DOM 所有权                                   |                                       1 |
+自动 suite 默认尽量以 4 worker 运行。Project Config 需配置 `execution.maxWorkers: 4`
+与 4 个唯一 `fixture.workerOrigins`；人工 headed 验收或 Harness 明确降级的路径
+使用其实际并发数。
+
+| Suite                    | 内容                                                                             | 并发建议 |
+| ------------------------ | -------------------------------------------------------------------------------- | -------: |
+| `era-ui-smoke`           | 启动、悬浮球开关、首屏数据、主面板、一个快照查询、四个快捷操作成功路径、设置保存 |        4 |
+| `era-ui-functional`      | 本文全部 P0/P1 功能、输入边界、Service 失败和并发/迟到响应                       |        4 |
+| `era-ui-data-management` | 变量/函数 CRUD、表达式、保护、试算、历史与移动端 28 条路径                       |        4 |
+| `era-agent-settings-ui`  | Agent V2 开关、预设快照、模型来源、本机 API 方案、迁移与导入导出 14 条路径       |        4 |
+| `era-ui-visual`          | 桌面基准、手机触屏竖横屏、亮/暗主题、长内容、截图与 overflow                     |        4 |
+| `era-ui-lifecycle`       | 热重载、pagehide、stop、样式/监听器/DOM 所有权                                   |        4 |
 
 普通 path 失败后仍继续执行其他 path；所有已选择路径都必须产生终态。最终 summary 将
 recording 与 evaluation 分开，并列出每个失败功能、稳定错误码和 evidence refs。

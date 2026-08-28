@@ -286,21 +286,13 @@ export async function updateMessageContent(
   newContent: string,
   refresh: 'none' | 'affected' | 'all' = 'none',
 ) {
-  //log.debug('updateMessageContent', '更新后的消息内容:', newContent);
-
-  const updatePayload: { message_id: number; message?: string; swipes?: string[] } = {
+  // Tavern Helper 的 `message` 字段就是“当前消息页”的文本更新，
+  // 它会自行同步当前 swipe，同时保留该页的 extra。回写整个 swipes
+  // 会触发 extra <- swipe_info 的重建，可能擦除刚上传的媒体附件。
+  const updatePayload: { message_id: number; message: string } = {
     message_id: message.message_id,
+    message: newContent,
   };
-
-  if (Array.isArray(message.swipes)) {
-    const sid = Number(message.swipe_id ?? 0);
-    const newSwipes = [...message.swipes];
-    newSwipes[sid] = newContent;
-    updatePayload.swipes = newSwipes;
-  } else {
-    updatePayload.message = newContent;
-  }
-
   await setChatMessages([updatePayload], { refresh });
 }
 

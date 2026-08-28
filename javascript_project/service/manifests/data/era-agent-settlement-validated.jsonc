@@ -1,0 +1,20 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.agent.settlement.validated",
+  "representation": "json",
+  "display_name": "ERA 已校验变量结算",
+  "description": "携带成功试执行后的规范单一 message scope 事务，或不写错误事务的未结算状态。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["schemaVersion", "status", "operations", "eraTx", "diagnostics"],
+    "properties": {
+      "schemaVersion": {"const": 1},
+      "status": {"enum": ["ready", "unsettled", "failed", "cancelled"]},
+      "operations": {"type": "array", "maxItems": 128, "items": {"type": "object", "additionalProperties": true}},
+      "eraTx": {"oneOf": [{"type": "string", "minLength": 1, "maxLength": 1048576, "pattern": "^<era_tx s=\\\"m\\\">"}, {"type": "null"}]},
+      "diagnostics": {"type": "array", "maxItems": 128, "items": {"type": "string", "maxLength": 4096}}
+    }
+  }
+}

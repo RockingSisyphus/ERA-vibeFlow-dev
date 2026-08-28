@@ -86,11 +86,14 @@ Host 仅承担读写技术能力：读取当前身份和聊天指针、读写原
 - 文件缺失、损坏、写入失败、迁移中断及无聊天变量回退；
 - 切换、reload、热重载与 pagehide 时的宏快照隔离。
 
-每条路径以 action-addressed evidence 同时断言聊天 `ERAMetaData.SidecarId`、聊天中不存在 ERA 状态字段、V2 文件 owner/revision/state、最终变量、真实 prompt、恢复指令、Service 结算、弹窗状态和跨聊天隔离。该 suite 单 worker 运行，因为当前 Tavern 身份是共享的真实页面状态。
+每条路径以 action-addressed evidence 同时断言聊天 `ERAMetaData.SidecarId`、聊天中不存在 ERA 状态字段、V2 文件 owner/revision/state、最终变量、真实 prompt、恢复指令、Service 结算、弹窗状态和跨聊天隔离。每条 path 使用独立 sandbox、ST origin、BrowserContext 和 Lab namespace，因此该 suite 尽量以 4 worker 运行；单条 path 内部的切卡、切聊天和 reload 步骤仍按场景顺序执行。
 
 ```text
-pnpm --silent era-test -- test --project <ST-Harness project> --era-bundle <ERA bundle> --suite era-sidecar-binding --workers 1
+pnpm --silent era-test -- test --project <ST-Harness project> --era-bundle <ERA bundle> --suite era-sidecar-binding --workers 4
 ```
+
+上述命令要求 Project Config 已设置 `execution.maxWorkers: 4` 并提供 4 个唯一
+`fixture.workerOrigins`；`--workers` 只能降低 project 允许的并发数。
 
 ## 不在本轮实现的能力
 

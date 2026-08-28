@@ -1,0 +1,35 @@
+{
+  "type_key":"era.agent.generation_session",
+  "display_name":"ERA 三阶段故事生成会话",
+  "description":"以一个 Service 会话包装 generation lifecycle；关闭功能时恢复并调用原 task.kind，开启时先归一化不含密钥的辅助阶段配置，再执行规划、纯函数、故事衔接和变量结算并复用既有同步。",
+  "requires":[{"type":"era.step.request.routed","cardinality":"exactly_one","display_name":"Agent 包装步骤"},{"type":"era.batch.execution.state","cardinality":"exactly_one","display_name":"当前批次状态"}],
+  "provides":[{"key":"agent_task_result","type":"era.task.result","display_name":"生成会话任务结果"}],
+  "pipeline":{
+    "entry_mode":"async",
+    "inputs":[{"key":"routed_step","type":"era.step.request.routed","display_name":"Agent 包装步骤","required":true},{"key":"execution_state","type":"era.batch.execution.state","display_name":"当前批次状态","required":true}],
+    "max_steps":16,
+    "nodes":[
+      {"id":"start","type_used":"era.service.terminal","display_name":"生成会话开始","description":"进入一个 FIFO 内的生成阶段。"},
+      {
+        "id":"prepare_auxiliary_execution_request",
+        "type_used":"era.agent.prepare_auxiliary_execution_request",
+        "display_name":"准备辅助阶段预设与模型请求",
+        "description":"在单一 AgentGenerationSession 内迁移或读取角色卡 V1/V2 配置，把预设脱敏快照、酒馆当前模型选择或本机连接方案引用归一化为不含 URL 与密钥正文的执行请求；设置变更只影响下一轮冻结会话。"
+      },
+      {
+        "id":"execute_agent_phase_v2",
+        "type_used":"era.agent.execute_session_v2",
+        "display_name":"按独立来源执行当前 Agent 阶段",
+        "description":"按规划或结算尝试的预设快照、模型来源和本机方案引用调用既有 Agent Host；Host 私下解析 URL 与密钥，Service 负责重试切换、缺失方案诊断和结果语义，正文故事仍使用酒馆当前预设、连接与模型。"
+      },
+      {"id":"route_agent_transition","type_used":"era.agent.route_transition","display_name":"路由阶段结果","description":"决定直接结算还是恢复原任务。"},
+      {"id":"adapt_legacy_step","type_used":"era.agent.adapt_legacy_step","display_name":"恢复原任务","description":"把 Agent 外层步骤恢复为原 sync 或 update-mk。"},
+      {"id":"legacy_sync","type_used":"era.task.sync","display_name":"复用原同步任务","description":"故事组合后或默认模式下执行既有 Sidecar、表达式、压缩和历史同步。"},
+      {"id":"legacy_update_mk","type_used":"era.task.update_mk","display_name":"复用原 MK 任务","description":"规划注入后保持既有 message_sent MK 语义。"},
+      {"id":"build_direct_result","type_used":"era.agent.build_result","display_name":"构造直接结果","description":"结算设置、生成栅栏、失败或默认 ignore。"},
+      {"id":"end","type_used":"era.service.terminal","display_name":"生成会话结束","description":"返回单一任务结果。"}
+    ],
+    "edges":[["start","prepare_auxiliary_execution_request"],["prepare_auxiliary_execution_request","execute_agent_phase_v2"],["execute_agent_phase_v2","route_agent_transition"],{"from":"route_agent_transition","to":"adapt_legacy_step","when":"agent_route == 'legacy'"},{"from":"route_agent_transition","to":"build_direct_result","when":"agent_route == 'direct'"},{"from":"adapt_legacy_step","to":"legacy_sync","when":"legacy_task_route == 'sync'"},{"from":"adapt_legacy_step","to":"legacy_update_mk","when":"legacy_task_route == 'update-mk'"},["legacy_sync","end"],["legacy_update_mk","end"],["build_direct_result","end"]],
+    "outputs":[{"type":"era.task.result","cardinality":"exactly_one","display_name":"生成会话任务结果","as":"agentTaskResult"}]
+  }
+}

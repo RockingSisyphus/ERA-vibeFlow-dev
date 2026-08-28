@@ -1,11 +1,16 @@
 import { compileFunctionLibrary, executeExpressionLayer, type Diagnostic } from '@era/vibeflow-expression/engine';
 
+/** 函数或变量表达式试算的纯内存结果，不含任何持久化回执。 */
 export interface FunctionTrialResult {
   readonly ok: boolean;
   readonly value: number | null;
   readonly diagnostics: readonly Diagnostic[];
 }
 
+/**
+ * 在当前状态副本上试用变量表达式。非标识符路径不能安全
+ * 嵌入表达式操作，因此必须在进入引擎前明确拒绝。
+ */
 export function validateVariableExpression(
   expr: string,
   state: unknown,
@@ -46,6 +51,10 @@ export function validateFunctionLibrary(library: Readonly<Record<string, unknown
   return compileFunctionLibrary(library).diagnostics;
 }
 
+/**
+ * 通过真实表达式引擎试算自定义函数，因为参数数量、递归与
+ * 有限数结果必须和正式 commit 共用同一语义；试算不得写消息或 Sidecar。
+ */
 export function runFunctionTrial(
   name: string,
   args: readonly number[],

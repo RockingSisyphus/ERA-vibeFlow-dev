@@ -646,13 +646,6 @@
     },
     {
       "debt": 1,
-      "fingerprint": "239fafd14ceaf5a8437ea72cd9c51860370943c622afda96db372bfa5e238788",
-      "objectId": "comment:style:} -> :deep(.floating-ball) {",
-      "ruleId": "COMMENT_DEVELOPMENT_HISTORY",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
       "fingerprint": "9dda24d91a726556b816b2b686b5284372996b0e091353424a1c67c15a7be83c",
       "objectId": "comment:style:} -> .floating-ball {",
       "ruleId": "COMMENT_DEVELOPMENT_HISTORY",
@@ -717,13 +710,6 @@
     {
       "debt": 1,
       "fingerprint": "0c1b2dba74e057d9852aa49f9c162d61a961f83f6b976682c966d9110bd64715",
-      "objectId": "comment:script:onMounted(() => { -> });",
-      "ruleId": "COMMENT_DISABLED_CODE",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "4cb5ee68b24eeb2ecee691b1bf7b965a5248108ddb840d77470fcf1b2d6622f4",
       "objectId": "comment:script:onMounted(() => { -> });",
       "ruleId": "COMMENT_DISABLED_CODE",
       "severity": "warning"
@@ -1384,13 +1370,6 @@
       "fingerprint": "2e3d841e937d44c8ff415f617b0a0d60eeba1b85d05ac1802248a6bfb9d51162",
       "objectId": "src/ERA变量框架/ui/processing/panel-data",
       "ruleId": "COMMENT_USEFUL_RATIO_LOW",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "47b9b1e65c4536a91d270bf20da04058bf1301ba65c54600d336ce685fdd1e13",
-      "objectId": "comment:script: { computed, defineComponent, onMounted, type PropType, ref, watch } from 'vue'; -> import { Logger } from '../../utils/",
-      "ruleId": "COMMENT_WHAT_NARRATION",
       "severity": "warning"
     },
     {

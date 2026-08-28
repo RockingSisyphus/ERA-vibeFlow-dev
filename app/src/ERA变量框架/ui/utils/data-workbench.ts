@@ -1,15 +1,23 @@
+/*
+ * 模块职责：本模块负责将工作台中的 JSON 草稿转换为有序 ERA commit 操作，
+ * 并计算变量、函数及其祖先元数据的保护解锁序列。
+ * 模块边界：不读取 UI、消息或 Sidecar，因此所有函数必须是可重算的纯转换。
+ */
+
 import type { EraCommitOperation } from '../../service/public-api';
 
 export type JsonContainer = Record<string, unknown>;
 export type VariableMutationKind = 'insert' | 'edit' | 'delete';
 export type ProtectionChoice = 'temporary' | 'unlock';
 
+/** 记录一个实际阻断操作的元数据字段、所在路径与原值。 */
 export interface VariableProtection {
   readonly path: readonly string[];
   readonly field: 'updatable' | 'unInsertAble' | 'necessary';
   readonly value: unknown;
 }
 
+/** 包含变量草稿差异的有序操作、人类可读路径与保护检查事实。 */
 export interface VariablePlan {
   readonly operations: readonly EraCommitOperation[];
   readonly changedPaths: readonly string[];
@@ -34,6 +42,7 @@ function defineOwn(target: Record<string, unknown>, key: string, value: unknown)
   });
 }
 
+/** 按 JSON 结构比较两个草稿；必须忽略对象键顺序，否则纯排序会制造假操作。 */
 export function jsonEqual(left: unknown, right: unknown): boolean {
   if (Object.is(left, right)) return true;
   if (Array.isArray(left) || Array.isArray(right)) {
@@ -53,6 +62,7 @@ export function jsonEqual(left: unknown, right: unknown): boolean {
   );
 }
 
+/** 只沿自有键读取子树，避免原型属性被误当作可编辑的 ERA 变量。 */
 export function valueAtPath(root: unknown, path: readonly string[]): unknown {
   let cursor = root;
   for (const segment of path) {
@@ -63,6 +73,7 @@ export function valueAtPath(root: unknown, path: readonly string[]): unknown {
   return cursor;
 }
 
+/** 把子树包装成 ERA CRUD 的嵌套 payload；必须克隆草稿，避免后续输入反向篡改 commit。 */
 export function payloadAtPath(path: readonly string[], value: unknown): JsonContainer {
   if (path.length === 0) {
     if (!isRecord(value)) throw new TypeError('变量根操作必须是对象。');
@@ -102,9 +113,9 @@ function diffAtPath(
   changes: VariableChange[],
 ): void {
   if (jsonEqual(original, draft)) return;
-  // `$template` is an ERA control field. The CRUD engine rejects unknown `$`
-  // keys in VariableEdit, so an existing template is maintained through the
-  // already-supported ordered Delete -> Insert pair. `$meta` remains editable.
+  // `$template` 是 ERA 控制字段；CRUD 引擎会拒绝 VariableEdit 中的未知 `$` 键。
+  // 因此已有模板必须通过受支持的 Delete -> Insert 有序操作更新。
+  // `$meta` 仍可直接编辑，不需要经过这个类型替换边界。
   if (path.at(-1) === '$template') {
     operations.push(operation('delete', path, {}));
     operations.push(operation('insert', path, draft));
@@ -182,6 +193,46 @@ function metaAt(value: unknown): Record<string, unknown> {
   return isRecord(value) && isRecord(value.$meta) ? value.$meta : {};
 }
 
+/** 将一层祖先元数据投影为最多一个阻断事实，避免同一锁重复解锁。 */
+function protectionAtDepth(
+  root: unknown,
+  path: readonly string[],
+  kind: VariableMutationKind,
+  depth: number,
+): VariableProtection | null {
+  const ancestorPath = path.slice(0, depth);
+  const meta = metaAt(valueAtPath(root, ancestorPath));
+  if (kind === 'edit' && meta.updatable === false) {
+    return { path: ancestorPath, field: 'updatable', value: false };
+  }
+  if (kind === 'insert' && meta.unInsertAble === 'all') {
+    return { path: ancestorPath, field: 'unInsertAble', value: 'all' };
+  }
+  if (kind === 'insert' && depth === path.length - 1 && meta.unInsertAble === 'self') {
+    return { path: ancestorPath, field: 'unInsertAble', value: 'self' };
+  }
+  return kind === 'delete' ? deletionProtection(ancestorPath, meta, depth, path.length) : null;
+}
+
+/** 删除保护的 self、children 和 all 传递范围独立计算，避免污染其他操作分支。 */
+function deletionProtection(
+  path: readonly string[],
+  meta: Record<string, unknown>,
+  depth: number,
+  targetDepth: number,
+): VariableProtection | null {
+  if (meta.necessary === 'all' || (depth === targetDepth && meta.necessary === 'self')) {
+    return { path, field: 'necessary', value: meta.necessary };
+  }
+  return depth === targetDepth - 1 && meta.necessary === 'children'
+    ? { path, field: 'necessary', value: 'children' }
+    : null;
+}
+
+/**
+ * 收集目标及其所有祖先的变量保护。祖先限制会传递给子路径，
+ * 所以只检查直接目标会让 UI 生成必然失败的 commit。
+ */
 export function variableProtections(
   root: unknown,
   path: readonly string[],
@@ -189,27 +240,8 @@ export function variableProtections(
 ): VariableProtection[] {
   const result: VariableProtection[] = [];
   for (let depth = 0; depth <= path.length; depth += 1) {
-    const ancestorPath = path.slice(0, depth);
-    const value = valueAtPath(root, ancestorPath);
-    const meta = metaAt(value);
-    if (kind === 'edit' && meta.updatable === false) {
-      result.push({ path: ancestorPath, field: 'updatable', value: false });
-    }
-    if (kind === 'insert') {
-      if (meta.unInsertAble === 'all') {
-        result.push({ path: ancestorPath, field: 'unInsertAble', value: 'all' });
-      } else if (depth === path.length - 1 && meta.unInsertAble === 'self') {
-        result.push({ path: ancestorPath, field: 'unInsertAble', value: 'self' });
-      }
-    }
-    if (kind === 'delete') {
-      const directChild = depth === path.length - 1;
-      if (meta.necessary === 'all' || (depth === path.length && meta.necessary === 'self')) {
-        result.push({ path: ancestorPath, field: 'necessary', value: meta.necessary });
-      } else if (directChild && meta.necessary === 'children') {
-        result.push({ path: ancestorPath, field: 'necessary', value: 'children' });
-      }
-    }
+    const protection = protectionAtDepth(root, path, kind, depth);
+    if (protection !== null) result.push(protection);
   }
   return result.filter(
     (item, index, items) =>
@@ -234,6 +266,7 @@ function metaDelete(path: readonly string[], field: string): EraCommitOperation 
   return operation('delete', path, { $meta: { [field]: {} } });
 }
 
+/** 解锁与可选恢复必须包在同一次 commit，否则中间失败会留下意外解锁状态。 */
 export function wrapVariableProtection(
   operations: readonly EraCommitOperation[],
   protections: readonly VariableProtection[],
@@ -254,6 +287,7 @@ export function wrapVariableProtection(
   return [...unlocks, ...operations, ...restores];
 }
 
+/** 包含整个函数库草稿的有序差异及被改动的函数名。 */
 export interface FunctionPlan {
   readonly operations: readonly EraCommitOperation[];
   readonly changedNames: readonly string[];
@@ -265,6 +299,7 @@ export interface FunctionChange {
   readonly kind: 'insert' | 'edit' | 'delete';
 }
 
+/** 函数库必须按 Insert、Edit、Delete 分批，因为引用关系要在删除前看到新定义。 */
 export function planFunctionLibraryDiff(
   original: Readonly<Record<string, unknown>>,
   draft: Readonly<Record<string, unknown>>,
@@ -300,6 +335,7 @@ export interface NamedFunctionProtection extends VariableProtection {
   readonly name: string;
 }
 
+/** 只读取与当前操作相关的函数保护，避免解锁不影响本次提交的元数据。 */
 export function functionProtection(definition: unknown, kind: 'edit' | 'delete'): VariableProtection[] {
   const meta = metaAt(definition);
   if (kind === 'edit' && meta.updatable === false) {
@@ -311,6 +347,7 @@ export function functionProtection(definition: unknown, kind: 'edit' | 'delete')
   return [];
 }
 
+/** 函数解锁必须环绕原操作且不改顺序，否则表达式重放将看到不同定义。 */
 export function wrapFunctionProtection(
   name: string,
   operations: readonly EraCommitOperation[],
@@ -333,6 +370,7 @@ export function wrapFunctionProtection(
   return [...unlocks, ...operations, ...restores];
 }
 
+/** 批量草稿必须保留保护对应的函数名，否则无法向正确定义发出解锁。 */
 export function functionPlanProtections(
   original: Readonly<Record<string, unknown>>,
   plan: FunctionPlan,
@@ -347,6 +385,7 @@ export function functionPlanProtections(
     );
 }
 
+/** 批量解锁先集中前置、恢复再逆序后置，避免父子保护的恢复顺序相反。 */
 export function wrapFunctionPlanProtections(
   operations: readonly EraCommitOperation[],
   protections: readonly NamedFunctionProtection[],

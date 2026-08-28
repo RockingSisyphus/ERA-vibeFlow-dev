@@ -3,7 +3,7 @@
   "type_key": "era.task.route",
   "representation": "json",
   "display_name": "ERA 任务路由",
-  "description": "显式区分初始化、同步、API、MK 更新与忽略步骤。",
+  "description": "显式区分初始化、同步、API、MK 更新、Agent 生成会话与忽略步骤。",
   "schema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "string",
@@ -12,6 +12,7 @@
       "sync",
       "api",
       "update-mk",
+      "agent-generation-session",
       "ignore"
     ]
   }

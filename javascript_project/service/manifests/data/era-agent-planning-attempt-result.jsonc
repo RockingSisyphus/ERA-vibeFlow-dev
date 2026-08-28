@@ -1,0 +1,46 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.agent.planning.attempt_result",
+  "representation": "json",
+  "display_name": "ERA 规划尝试结果",
+  "description": "保存有界规划尝试、严格故事计划、最多 32 项函数调用表及可定位诊断。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["schemaVersion", "status", "attempts", "storyPlan", "calls"],
+    "properties": {
+      "schemaVersion": {"const": 1},
+      "status": {"enum": ["ready", "exhausted", "failed", "cancelled"]},
+      "attempts": {
+        "type": "array",
+        "maxItems": 17,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["index", "output", "diagnostics"],
+          "properties": {
+            "index": {"type": "integer", "minimum": 0, "maximum": 16},
+            "output": {"type": "string", "maxLength": 262144},
+            "diagnostics": {"type": "array", "maxItems": 128, "items": {"type": "string", "maxLength": 4096}}
+          }
+        }
+      },
+      "storyPlan": {"oneOf": [{"type": "object", "additionalProperties": true}, {"type": "null"}]},
+      "calls": {
+        "type": "array",
+        "maxItems": 32,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["function", "args"],
+          "properties": {
+            "function": {"type": "string", "minLength": 1, "maxLength": 256},
+            "args": {"type": "array", "maxItems": 32, "items": {"type": "number"}},
+            "purpose": {"type": "string", "maxLength": 4096}
+          }
+        }
+      }
+    }
+  }
+}

@@ -15,7 +15,7 @@
     "contains_global_state": false,
     "summary": {
       "nodes": 9,
-      "nodesets": 15,
+      "nodesets": 16,
       "explicit_edges": 9,
       "data_edges": 0,
       "reported_edges": 9,
@@ -494,6 +494,624 @@
     ]
   },
   "nodesets": {
+    "era.agent.generation_session": {
+      "type_key": "era.agent.generation_session",
+      "source": {
+        "root_id": "era-service",
+        "path": "configs/nodesets/agent_generation_session.jsonc"
+      },
+      "display_name": "ERA 三阶段故事生成会话",
+      "description": "以一个 Service 会话包装 generation lifecycle；关闭功能时恢复并调用原 task.kind，开启时先归一化不含密钥的辅助阶段配置，再执行规划、纯函数、故事衔接和变量结算并复用既有同步。",
+      "status": "implemented",
+      "flow_kind": "predefined",
+      "effect_scope": "none",
+      "reachable_from_workflow": true,
+      "requires": [
+        {
+          "type": "era.step.request.routed",
+          "cardinality": "exactly_one",
+          "display_name": "Agent 包装步骤"
+        },
+        {
+          "type": "era.batch.execution.state",
+          "cardinality": "exactly_one",
+          "display_name": "当前批次状态"
+        }
+      ],
+      "provides": [
+        {
+          "key": "agent_task_result",
+          "type": "era.task.result",
+          "display_name": "生成会话任务结果"
+        }
+      ],
+      "global_config": {},
+      "body": {
+        "source": {
+          "root_id": "era-service",
+          "path": "configs/nodesets/agent_generation_session.jsonc"
+        },
+        "inputs": [
+          {
+            "key": "routed_step",
+            "type": "era.step.request.routed",
+            "display_name": "Agent 包装步骤",
+            "required": true
+          },
+          {
+            "key": "execution_state",
+            "type": "era.batch.execution.state",
+            "display_name": "当前批次状态",
+            "required": true
+          }
+        ],
+        "outputs": [
+          {
+            "type": "era.task.result",
+            "cardinality": "exactly_one",
+            "display_name": "生成会话任务结果",
+            "as": "agentTaskResult"
+          }
+        ],
+        "max_steps": 16,
+        "entry_mode": "async",
+        "execution_lock": null,
+        "contains_global_state": false,
+        "summary": {
+          "nodes": 9,
+          "nodesets": 16,
+          "explicit_edges": 10,
+          "data_edges": 0,
+          "reported_edges": 10,
+          "contains_global_state": false
+        },
+        "entry_nodes": [
+          "start"
+        ],
+        "terminal_nodes": [
+          "end"
+        ],
+        "god_nodes": [],
+        "nodes": [
+          {
+            "id": "start",
+            "type_used": "era.service.terminal",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/agent_generation_session.jsonc"
+            },
+            "role": {
+              "display_name": "生成会话开始",
+              "description": "进入一个 FIFO 内的生成阶段。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "terminal",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [],
+            "provides": [],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "prepare_auxiliary_execution_request",
+            "type_used": "era.agent.prepare_auxiliary_execution_request",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/agent_generation_session.jsonc"
+            },
+            "role": {
+              "display_name": "准备辅助阶段预设与模型请求",
+              "description": "在单一 AgentGenerationSession 内迁移或读取角色卡 V1/V2 配置，把预设脱敏快照、酒馆当前模型选择或本机连接方案引用归一化为不含 URL 与密钥正文的执行请求；设置变更只影响下一轮冻结会话。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "process",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.step.request.routed",
+                "cardinality": "exactly_one",
+                "display_name": "Agent 包装步骤"
+              },
+              {
+                "type": "era.batch.execution.state",
+                "cardinality": "exactly_one",
+                "display_name": "当前批次执行状态"
+              }
+            ],
+            "provides": [
+              {
+                "key": "agent_auxiliary_execution_request",
+                "type": "era.agent.auxiliary.execution_request",
+                "display_name": "不含密钥的辅助阶段执行请求"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "execute_agent_phase_v2",
+            "type_used": "era.agent.execute_session_v2",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/agent_generation_session.jsonc"
+            },
+            "role": {
+              "display_name": "按独立来源执行当前 Agent 阶段",
+              "description": "按规划或结算尝试的预设快照、模型来源和本机方案引用调用既有 Agent Host；Host 私下解析 URL 与密钥，Service 负责重试切换、缺失方案诊断和结果语义，正文故事仍使用酒馆当前预设、连接与模型。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "process",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.agent.auxiliary.execution_request",
+                "cardinality": "exactly_one",
+                "display_name": "不含密钥的辅助阶段执行请求"
+              }
+            ],
+            "provides": [
+              {
+                "key": "agent_transition",
+                "type": "era.agent.session.transition",
+                "display_name": "Agent 阶段转换"
+              },
+              {
+                "key": "agent_execution_state",
+                "type": "era.batch.execution.state",
+                "display_name": "Agent 批次执行状态"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "route_agent_transition",
+            "type_used": "era.agent.route_transition",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/agent_generation_session.jsonc"
+            },
+            "role": {
+              "display_name": "路由阶段结果",
+              "description": "决定直接结算还是恢复原任务。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "decision",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.agent.session.transition",
+                "cardinality": "exactly_one",
+                "display_name": "Agent 转换"
+              },
+              {
+                "type": "era.batch.execution.state",
+                "cardinality": "exactly_one",
+                "display_name": "当前批次执行状态"
+              }
+            ],
+            "provides": [
+              {
+                "key": "agent_route",
+                "type": "era.agent.session.route",
+                "display_name": "Agent 路由"
+              },
+              {
+                "key": "agent_transition_routed",
+                "type": "era.agent.session.transition",
+                "display_name": "已路由 Agent 转换"
+              },
+              {
+                "key": "agent_execution_state_routed",
+                "type": "era.batch.execution.state",
+                "display_name": "已路由批次执行状态"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "adapt_legacy_step",
+            "type_used": "era.agent.adapt_legacy_step",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/agent_generation_session.jsonc"
+            },
+            "role": {
+              "display_name": "恢复原任务",
+              "description": "把 Agent 外层步骤恢复为原 sync 或 update-mk。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "decision",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.agent.session.transition",
+                "cardinality": "exactly_one",
+                "display_name": "Agent 转换"
+              },
+              {
+                "type": "era.batch.execution.state",
+                "cardinality": "exactly_one",
+                "display_name": "当前批次执行状态"
+              }
+            ],
+            "provides": [
+              {
+                "key": "legacy_routed_step",
+                "type": "era.step.request.routed",
+                "display_name": "原领域步骤"
+              },
+              {
+                "key": "legacy_task_route",
+                "type": "era.task.route",
+                "display_name": "原领域路由"
+              },
+              {
+                "key": "legacy_execution_state",
+                "type": "era.batch.execution.state",
+                "display_name": "原领域批次状态"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "legacy_sync",
+            "type_used": "era.task.sync",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/agent_generation_session.jsonc"
+            },
+            "role": {
+              "display_name": "复用原同步任务",
+              "description": "故事组合后或默认模式下执行既有 Sidecar、表达式、压缩和历史同步。"
+            },
+            "contract_source": "nodeset",
+            "flow_kind": "predefined",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.step.request.routed",
+                "cardinality": "exactly_one",
+                "display_name": "已路由步骤"
+              },
+              {
+                "type": "era.batch.execution.state",
+                "cardinality": "exactly_one",
+                "display_name": "当前批次执行状态"
+              }
+            ],
+            "provides": [
+              {
+                "key": "sync_task_result",
+                "type": "era.task.result",
+                "display_name": "同步结果"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": {
+              "kind": "nodeset",
+              "target": "era.task.sync",
+              "target_status": "implemented"
+            },
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "legacy_update_mk",
+            "type_used": "era.task.update_mk",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/agent_generation_session.jsonc"
+            },
+            "role": {
+              "display_name": "复用原 MK 任务",
+              "description": "规划注入后保持既有 message_sent MK 语义。"
+            },
+            "contract_source": "nodeset",
+            "flow_kind": "predefined",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.step.request.routed",
+                "cardinality": "exactly_one",
+                "display_name": "已准备路由步骤"
+              }
+            ],
+            "provides": [
+              {
+                "key": "update_mk_task_result",
+                "type": "era.task.result",
+                "display_name": "MK 更新结果"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": {
+              "kind": "nodeset",
+              "target": "era.task.update_mk",
+              "target_status": "implemented"
+            },
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "build_direct_result",
+            "type_used": "era.agent.build_result",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/agent_generation_session.jsonc"
+            },
+            "role": {
+              "display_name": "构造直接结果",
+              "description": "结算设置、生成栅栏、失败或默认 ignore。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "process",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.agent.session.transition",
+                "cardinality": "exactly_one",
+                "display_name": "Agent 转换"
+              }
+            ],
+            "provides": [
+              {
+                "key": "agent_task_result_direct",
+                "type": "era.task.result",
+                "display_name": "Agent 直接结果"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "end",
+            "type_used": "era.service.terminal",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/agent_generation_session.jsonc"
+            },
+            "role": {
+              "display_name": "生成会话结束",
+              "description": "返回单一任务结果。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "terminal",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [],
+            "provides": [],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": "start",
+            "to": "prepare_auxiliary_execution_request",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "prepare_auxiliary_execution_request",
+            "to": "execute_agent_phase_v2",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "execute_agent_phase_v2",
+            "to": "route_agent_transition",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "route_agent_transition",
+            "to": "adapt_legacy_step",
+            "when": "agent_route == 'legacy'",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "route_agent_transition",
+            "to": "build_direct_result",
+            "when": "agent_route == 'direct'",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "adapt_legacy_step",
+            "to": "legacy_sync",
+            "when": "legacy_task_route == 'sync'",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "adapt_legacy_step",
+            "to": "legacy_update_mk",
+            "when": "legacy_task_route == 'update-mk'",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "legacy_sync",
+            "to": "end",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "legacy_update_mk",
+            "to": "end",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "build_direct_result",
+            "to": "end",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          }
+        ]
+      }
+    },
     "era.api.commit": {
       "type_key": "era.api.commit",
       "source": {
@@ -559,7 +1177,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 16,
-          "nodesets": 15,
+          "nodesets": 16,
           "explicit_edges": 20,
           "data_edges": 1,
           "reported_edges": 20,
@@ -1597,7 +2215,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 7,
-          "nodesets": 15,
+          "nodesets": 16,
           "explicit_edges": 8,
           "data_edges": 0,
           "reported_edges": 8,
@@ -2080,7 +2698,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 10,
-          "nodesets": 15,
+          "nodesets": 16,
           "explicit_edges": 9,
           "data_edges": 0,
           "reported_edges": 9,
@@ -2702,7 +3320,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 9,
-          "nodesets": 15,
+          "nodesets": 16,
           "explicit_edges": 10,
           "data_edges": 0,
           "reported_edges": 10,
@@ -3286,7 +3904,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 5,
-          "nodesets": 15,
+          "nodesets": 16,
           "explicit_edges": 4,
           "data_edges": 0,
           "reported_edges": 4,
@@ -3600,7 +4218,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 8,
-          "nodesets": 15,
+          "nodesets": 16,
           "explicit_edges": 8,
           "data_edges": 0,
           "reported_edges": 8,
@@ -4122,7 +4740,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 7,
-          "nodesets": 15,
+          "nodesets": 16,
           "explicit_edges": 10,
           "data_edges": 3,
           "reported_edges": 10,
@@ -4596,7 +5214,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 10,
-          "nodesets": 15,
+          "nodesets": 16,
           "explicit_edges": 14,
           "data_edges": 4,
           "reported_edges": 14,
@@ -5193,7 +5811,7 @@
         "path": "configs/nodesets/service_step.jsonc"
       },
       "display_name": "ERA 规划步骤",
-      "description": "选择一个严格 PlannedStep，经显式任务路由执行 initialize、sync、公共对象 commit/sync、update-mk 或 ignore，并更新有界批次执行状态。",
+      "description": "选择一个严格 PlannedStep，经显式任务路由执行 initialize、sync、公共对象 commit/sync、update-mk、三阶段故事生成会话或 ignore，并更新有界批次执行状态。",
       "status": "implemented",
       "flow_kind": "predefined",
       "effect_scope": "none",
@@ -5250,11 +5868,11 @@
         "execution_lock": null,
         "contains_global_state": false,
         "summary": {
-          "nodes": 10,
-          "nodesets": 15,
-          "explicit_edges": 14,
+          "nodes": 11,
+          "nodesets": 16,
+          "explicit_edges": 16,
           "data_edges": 1,
-          "reported_edges": 14,
+          "reported_edges": 16,
           "contains_global_state": false
         },
         "entry_nodes": [
@@ -5266,11 +5884,11 @@
         "god_nodes": [
           {
             "node": "merge_task_result",
-            "degree": 7
+            "degree": 8
           },
           {
             "node": "prepare_dispatch_context",
-            "degree": 7
+            "degree": 8
           }
         ],
         "nodes": [
@@ -5633,6 +6251,60 @@
             }
           },
           {
+            "id": "task_agent_generation_session",
+            "type_used": "era.agent.generation_session",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/service_step.jsonc"
+            },
+            "role": {
+              "display_name": "执行三阶段故事生成会话",
+              "description": "统一包装生成生命周期与故事编排设置；功能关闭或不适用时委托既有 ERA 行为，开启时在同一 FIFO、生成栅栏和取消域内执行规划、函数、故事衔接与变量结算。"
+            },
+            "contract_source": "nodeset",
+            "flow_kind": "predefined",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.step.request.routed",
+                "cardinality": "exactly_one",
+                "display_name": "Agent 包装步骤"
+              },
+              {
+                "type": "era.batch.execution.state",
+                "cardinality": "exactly_one",
+                "display_name": "当前批次状态"
+              }
+            ],
+            "provides": [
+              {
+                "key": "agent_task_result",
+                "type": "era.task.result",
+                "display_name": "生成会话任务结果"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": {
+              "kind": "nodeset",
+              "target": "era.agent.generation_session",
+              "target_status": "implemented"
+            },
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
             "id": "task_ignore",
             "type_used": "era.task.ignore",
             "source": {
@@ -5829,6 +6501,16 @@
           },
           {
             "from": "prepare_dispatch_context",
+            "to": "task_agent_generation_session",
+            "when": "prepared_task_route == 'agent-generation-session'",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "prepare_dispatch_context",
             "to": "task_ignore",
             "when": "prepared_task_route == 'ignore'",
             "roles": [
@@ -5869,6 +6551,16 @@
           },
           {
             "from": "task_update_mk",
+            "to": "merge_task_result",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "task_agent_generation_session",
             "to": "merge_task_result",
             "when": "",
             "roles": [
@@ -5974,7 +6666,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 6,
-          "nodesets": 15,
+          "nodesets": 16,
           "explicit_edges": 7,
           "data_edges": 2,
           "reported_edges": 7,
@@ -6391,7 +7083,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 6,
-          "nodesets": 15,
+          "nodesets": 16,
           "explicit_edges": 6,
           "data_edges": 0,
           "reported_edges": 6,
@@ -6814,7 +7506,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 12,
-          "nodesets": 15,
+          "nodesets": 16,
           "explicit_edges": 14,
           "data_edges": 1,
           "reported_edges": 14,
@@ -7577,7 +8269,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 4,
-          "nodesets": 15,
+          "nodesets": 16,
           "explicit_edges": 3,
           "data_edges": 0,
           "reported_edges": 3,
@@ -7866,7 +8558,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 18,
-          "nodesets": 15,
+          "nodesets": 16,
           "explicit_edges": 22,
           "data_edges": 0,
           "reported_edges": 22,
@@ -8982,7 +9674,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 4,
-          "nodesets": 15,
+          "nodesets": 16,
           "explicit_edges": 3,
           "data_edges": 0,
           "reported_edges": 3,
@@ -9189,6 +9881,323 @@
     }
   },
   "node_types": {
+    "era.agent.adapt_legacy_step": {
+      "display_name": "恢复原领域任务路由",
+      "description": "移除 Agent 外层路由并恢复 task.kind，使默认模式与 Agent 后置同步直接调用既有 Nodeset。",
+      "category": "故事生成会话",
+      "version": "1.0.0",
+      "flow_kind": "decision",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.agent.session.transition",
+            "cardinality": "exactly_one",
+            "display_name": "Agent 转换"
+          },
+          {
+            "type": "era.batch.execution.state",
+            "cardinality": "exactly_one",
+            "display_name": "当前批次执行状态"
+          }
+        ],
+        "provides": [
+          {
+            "key": "legacy_routed_step",
+            "type": "era.step.request.routed",
+            "display_name": "原领域步骤"
+          },
+          {
+            "key": "legacy_task_route",
+            "type": "era.task.route",
+            "display_name": "原领域路由"
+          },
+          {
+            "key": "legacy_execution_state",
+            "type": "era.batch.execution.state",
+            "display_name": "原领域批次状态"
+          }
+        ],
+        "input_semantics": {
+          "era.agent.session.transition": [
+            "输入：保留包装步骤的转换。"
+          ],
+          "era.batch.execution.state": [
+            "输入：保持原任务提交顺序的批次状态。"
+          ]
+        },
+        "output_semantics": {
+          "legacy_routed_step": [
+            "输出：taskRoute 恢复为 task.kind。"
+          ],
+          "legacy_task_route": [
+            "输出：原任务路由。"
+          ],
+          "legacy_execution_state": [
+            "输出：未经修改的当前批次执行状态。"
+          ]
+        },
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser",
+            "node"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/agent/adapt_legacy_step.ts",
+            "export": "run"
+          },
+          "completion": "immediate"
+        }
+      ]
+    },
+    "era.agent.build_result": {
+      "display_name": "构造 Agent 直接任务结果",
+      "description": "对设置、重试、生成栅栏 no-op 或失败步骤按来源恰好结算一次。",
+      "category": "故事生成会话",
+      "version": "1.0.0",
+      "flow_kind": "process",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.agent.session.transition",
+            "cardinality": "exactly_one",
+            "display_name": "Agent 转换"
+          }
+        ],
+        "provides": [
+          {
+            "key": "agent_task_result_direct",
+            "type": "era.task.result",
+            "display_name": "Agent 直接结果"
+          }
+        ],
+        "input_semantics": {
+          "era.agent.session.transition": [
+            "输入：无需原任务的阶段结果。"
+          ]
+        },
+        "output_semantics": {
+          "agent_task_result_direct": [
+            "输出：恰好一次结算。"
+          ]
+        },
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser",
+            "node"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/agent/build_agent_result.ts",
+            "export": "run"
+          },
+          "completion": "immediate"
+        }
+      ]
+    },
+    "era.agent.execute_session_v2": {
+      "display_name": "执行 AgentGenerationSession V2 阶段",
+      "description": "由 Service 决定配置、阶段、重试、严格解析、函数执行、故事隔离、变量试应用和消息组合；Host 仅执行声明式 I/O。",
+      "category": "故事生成会话",
+      "version": "1.0.0",
+      "flow_kind": "process",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.agent.auxiliary.execution_request",
+            "cardinality": "exactly_one",
+            "display_name": "不含密钥的辅助阶段执行请求"
+          }
+        ],
+        "provides": [
+          {
+            "key": "agent_transition",
+            "type": "era.agent.session.transition",
+            "display_name": "Agent 阶段转换"
+          },
+          {
+            "key": "agent_execution_state",
+            "type": "era.batch.execution.state",
+            "display_name": "Agent 批次执行状态"
+          }
+        ],
+        "input_semantics": {
+          "era.agent.auxiliary.execution_request": [
+            "输入：已冻结的 V2 阶段配置、宿主事实与本机方案引用。"
+          ]
+        },
+        "output_semantics": {
+          "agent_transition": [
+            "输出：阶段副作用完成后的显式委托或直接结算路由。"
+          ],
+          "agent_execution_state": [
+            "输出：未经修改的当前批次执行状态。"
+          ]
+        },
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/agent/execute_generation_session.ts",
+            "export": "run"
+          },
+          "completion": "suspend"
+        }
+      ]
+    },
+    "era.agent.prepare_auxiliary_execution_request": {
+      "display_name": "准备 Agent 辅助阶段执行请求",
+      "description": "读取一次宿主上下文，将角色卡 V1/V2 配置归一化为只含预设快照、模型来源与本机方案引用的 V2 执行请求。",
+      "category": "故事生成会话",
+      "version": "1.0.0",
+      "flow_kind": "process",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.step.request.routed",
+            "cardinality": "exactly_one",
+            "display_name": "Agent 包装步骤"
+          },
+          {
+            "type": "era.batch.execution.state",
+            "cardinality": "exactly_one",
+            "display_name": "当前批次执行状态"
+          }
+        ],
+        "provides": [
+          {
+            "key": "agent_auxiliary_execution_request",
+            "type": "era.agent.auxiliary.execution_request",
+            "display_name": "不含密钥的辅助阶段执行请求"
+          }
+        ],
+        "input_semantics": {
+          "era.step.request.routed": [
+            "输入：保留原领域任务的 Agent 包装步骤。"
+          ],
+          "era.batch.execution.state": [
+            "输入：透传给后续恢复的原领域任务。"
+          ]
+        },
+        "output_semantics": {
+          "agent_auxiliary_execution_request": [
+            "输出：一次读取并归一化的 V2 配置、宿主事实与诊断；不得包含本机 API 密钥。"
+          ]
+        },
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/agent/prepare_auxiliary_execution_request.ts",
+            "export": "run"
+          },
+          "completion": "suspend"
+        }
+      ]
+    },
+    "era.agent.route_transition": {
+      "display_name": "路由 Agent 阶段结果",
+      "description": "将完整 Agent 阶段模式折叠为委托原任务与直接结算两条互斥工作流分支。",
+      "category": "故事生成会话",
+      "version": "1.0.0",
+      "flow_kind": "decision",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.agent.session.transition",
+            "cardinality": "exactly_one",
+            "display_name": "Agent 转换"
+          },
+          {
+            "type": "era.batch.execution.state",
+            "cardinality": "exactly_one",
+            "display_name": "当前批次执行状态"
+          }
+        ],
+        "provides": [
+          {
+            "key": "agent_route",
+            "type": "era.agent.session.route",
+            "display_name": "Agent 路由"
+          },
+          {
+            "key": "agent_transition_routed",
+            "type": "era.agent.session.transition",
+            "display_name": "已路由 Agent 转换"
+          },
+          {
+            "key": "agent_execution_state_routed",
+            "type": "era.batch.execution.state",
+            "display_name": "已路由批次执行状态"
+          }
+        ],
+        "input_semantics": {
+          "era.agent.session.transition": [
+            "输入：保留完整 mode 的阶段结果。"
+          ],
+          "era.batch.execution.state": [
+            "输入：随委托分支继续传递的批次状态。"
+          ]
+        },
+        "output_semantics": {
+          "agent_route": [
+            "输出：legacy 或 direct 互斥后续路由。"
+          ],
+          "agent_transition_routed": [
+            "透传完整阶段结果，供被选中的后续分支消费。"
+          ],
+          "agent_execution_state_routed": [
+            "透传当前批次执行状态。"
+          ]
+        },
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser",
+            "node"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/agent/route_transition.ts",
+            "export": "run"
+          },
+          "completion": "immediate"
+        }
+      ]
+    },
     "era.api.adapt_facade_sync": {
       "display_name": "适配 ERA.sync receipt",
       "description": "共享同步成功后结算本次 Promise。",
@@ -14433,6 +15442,823 @@
   },
   "resources": {
     "data_schemas": {
+      "era.agent.auxiliary.execution_request": {
+        "kind": "data_schema",
+        "type_key": "era.agent.auxiliary.execution_request",
+        "representation": "json",
+        "display_name": "ERA Agent 辅助阶段执行请求",
+        "description": "归一化规划与变量结算的角色卡配置、预设脱敏快照和模型来源引用；只允许本机连接方案 ID 与名称提示进入领域 DTO，禁止 URL 与密钥正文。",
+        "schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "schemaVersion",
+            "routedStep",
+            "executionState",
+            "hostContext",
+            "configurationVersion",
+            "migrationMode",
+            "configuration",
+            "stages",
+            "diagnostics"
+          ],
+          "properties": {
+            "schemaVersion": {
+              "const": 2
+            },
+            "routedStep": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "executionState": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "hostContext": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "configurationVersion": {
+              "oneOf": [
+                {
+                  "enum": [
+                    "1",
+                    "2"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "migrationMode": {
+              "enum": [
+                "not-applicable",
+                "v1-preserved",
+                "v2"
+              ]
+            },
+            "configuration": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "stages": {
+              "type": "array",
+              "maxItems": 2,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "stage",
+                  "enabled",
+                  "retryCount",
+                  "attempts"
+                ],
+                "properties": {
+                  "stage": {
+                    "enum": [
+                      "planning",
+                      "settlement"
+                    ]
+                  },
+                  "enabled": {
+                    "type": "boolean"
+                  },
+                  "retryCount": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 16
+                  },
+                  "attempts": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 17,
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "preset",
+                        "modelSource"
+                      ],
+                      "properties": {
+                        "preset": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "source"
+                          ],
+                          "properties": {
+                            "source": {
+                              "enum": [
+                                "builtin",
+                                "snapshot"
+                              ]
+                            },
+                            "sourceName": {
+                              "type": "string",
+                              "maxLength": 256
+                            },
+                            "orderedPrompts": {
+                              "type": "array",
+                              "maxItems": 256,
+                              "items": {
+                                "oneOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "object",
+                                    "additionalProperties": true
+                                  }
+                                ]
+                              }
+                            },
+                            "settings": {
+                              "type": "object",
+                              "additionalProperties": true
+                            }
+                          }
+                        },
+                        "modelSource": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "kind"
+                          ],
+                          "properties": {
+                            "kind": {
+                              "enum": [
+                                "tavern-current",
+                                "custom-profile"
+                              ]
+                            },
+                            "profileId": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 256
+                            },
+                            "profileNameHint": {
+                              "type": "string",
+                              "maxLength": 256
+                            },
+                            "model": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 512
+                            },
+                            "legacyModelOverride": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 512
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "diagnostics": {
+              "type": "array",
+              "maxItems": 128,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "code",
+                  "message"
+                ],
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  "message": {
+                    "type": "string",
+                    "maxLength": 4096
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "era.agent.function_call.result": {
+        "kind": "data_schema",
+        "type_key": "era.agent.function_call.result",
+        "representation": "json",
+        "display_name": "ERA Agent 纯函数调用结果",
+        "description": "按原调用顺序保存已验证函数、有限数值结果、候选消息 MK 与可重放随机抽取区间。",
+        "schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "schemaVersion",
+            "status",
+            "messageMk",
+            "drawStart",
+            "drawEnd",
+            "calls",
+            "diagnostics"
+          ],
+          "properties": {
+            "schemaVersion": {
+              "const": 1
+            },
+            "status": {
+              "enum": [
+                "ready",
+                "planning-exhausted",
+                "failed",
+                "cancelled"
+              ]
+            },
+            "messageMk": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 512
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "drawStart": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "drawEnd": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "calls": {
+              "type": "array",
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "index",
+                  "function",
+                  "args",
+                  "result"
+                ],
+                "properties": {
+                  "index": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 31
+                  },
+                  "function": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  "args": {
+                    "type": "array",
+                    "maxItems": 32,
+                    "items": {
+                      "type": "number"
+                    }
+                  },
+                  "result": {
+                    "oneOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            "diagnostics": {
+              "type": "array",
+              "maxItems": 128,
+              "items": {
+                "type": "string",
+                "maxLength": 4096
+              }
+            }
+          }
+        }
+      },
+      "era.agent.host.request": {
+        "kind": "data_schema",
+        "type_key": "era.agent.host.request",
+        "representation": "json",
+        "display_name": "ERA Agent 宿主请求",
+        "description": "Service 已决定的有界 Agent 酒馆或模型 I/O 请求；Host 不解释阶段业务。",
+        "schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "era.agent.host.result": {
+        "kind": "data_schema",
+        "type_key": "era.agent.host.result",
+        "representation": "json",
+        "display_name": "ERA Agent 宿主结果",
+        "description": "Agent Host capability 返回的脱敏、可序列化、有界事实或模型原文。",
+        "schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "era.agent.planning.attempt_result": {
+        "kind": "data_schema",
+        "type_key": "era.agent.planning.attempt_result",
+        "representation": "json",
+        "display_name": "ERA 规划尝试结果",
+        "description": "保存有界规划尝试、严格故事计划、最多 32 项函数调用表及可定位诊断。",
+        "schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "schemaVersion",
+            "status",
+            "attempts",
+            "storyPlan",
+            "calls"
+          ],
+          "properties": {
+            "schemaVersion": {
+              "const": 1
+            },
+            "status": {
+              "enum": [
+                "ready",
+                "exhausted",
+                "failed",
+                "cancelled"
+              ]
+            },
+            "attempts": {
+              "type": "array",
+              "maxItems": 17,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "index",
+                  "output",
+                  "diagnostics"
+                ],
+                "properties": {
+                  "index": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 16
+                  },
+                  "output": {
+                    "type": "string",
+                    "maxLength": 262144
+                  },
+                  "diagnostics": {
+                    "type": "array",
+                    "maxItems": 128,
+                    "items": {
+                      "type": "string",
+                      "maxLength": 4096
+                    }
+                  }
+                }
+              }
+            },
+            "storyPlan": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "calls": {
+              "type": "array",
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "function",
+                  "args"
+                ],
+                "properties": {
+                  "function": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  "args": {
+                    "type": "array",
+                    "maxItems": 32,
+                    "items": {
+                      "type": "number"
+                    }
+                  },
+                  "purpose": {
+                    "type": "string",
+                    "maxLength": 4096
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "era.agent.session.context": {
+        "kind": "data_schema",
+        "type_key": "era.agent.session.context",
+        "representation": "json",
+        "display_name": "ERA 故事生成会话上下文",
+        "description": "Service 从已路由事件与 Host 脱敏投影组合出的有界角色卡、聊天、分支、消息、配置和活动会话上下文。",
+        "schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "schemaVersion",
+            "eventType",
+            "chatKey",
+            "branchKey",
+            "speakerKey",
+            "messageId",
+            "swipeIndex",
+            "revision",
+            "configuration",
+            "session"
+          ],
+          "properties": {
+            "schemaVersion": {
+              "const": 1
+            },
+            "eventType": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "chatKey": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512
+            },
+            "branchKey": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512
+            },
+            "speakerKey": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512
+            },
+            "messageId": {
+              "oneOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "swipeIndex": {
+              "oneOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "revision": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512
+            },
+            "configuration": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "session": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "era.agent.session.route": {
+        "kind": "data_schema",
+        "type_key": "era.agent.session.route",
+        "representation": "json",
+        "display_name": "ERA 故事生成会话路由",
+        "description": "把四种阶段模式折叠为委托原任务或直接结算两条互斥工作流分支；完整模式仍保留在 transition 中。",
+        "schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "string",
+          "enum": [
+            "legacy",
+            "direct"
+          ]
+        }
+      },
+      "era.agent.session.transition": {
+        "kind": "data_schema",
+        "type_key": "era.agent.session.transition",
+        "representation": "json",
+        "display_name": "ERA 故事生成会话转换结果",
+        "description": "统一承载默认委托、阶段推进、设置保存、取消和失败后的会话状态更新与任务结算候选。",
+        "schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "schemaVersion",
+            "step",
+            "mode",
+            "status",
+            "diagnostics"
+          ],
+          "properties": {
+            "schemaVersion": {
+              "const": 1
+            },
+            "step": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "mode": {
+              "enum": [
+                "legacy",
+                "legacy-ignore",
+                "execute-legacy",
+                "execute-only"
+              ]
+            },
+            "status": {
+              "enum": [
+                "committed",
+                "no-op",
+                "failed"
+              ]
+            },
+            "value": {},
+            "diagnostics": {
+              "type": "array",
+              "maxItems": 128,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "code",
+                  "message"
+                ],
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  "message": {
+                    "type": "string",
+                    "maxLength": 4096
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "era.agent.settlement.attempt_result": {
+        "kind": "data_schema",
+        "type_key": "era.agent.settlement.attempt_result",
+        "representation": "json",
+        "display_name": "ERA 变量分析尝试结果",
+        "description": "保存有界变量分析尝试、最终分析文本、候选有序 operations 与精确诊断。",
+        "schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "schemaVersion",
+            "status",
+            "attempts",
+            "analysis",
+            "operations"
+          ],
+          "properties": {
+            "schemaVersion": {
+              "const": 1
+            },
+            "status": {
+              "enum": [
+                "ready",
+                "exhausted",
+                "failed",
+                "cancelled"
+              ]
+            },
+            "attempts": {
+              "type": "array",
+              "maxItems": 17,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "index",
+                  "output",
+                  "diagnostics"
+                ],
+                "properties": {
+                  "index": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 16
+                  },
+                  "output": {
+                    "type": "string",
+                    "maxLength": 262144
+                  },
+                  "diagnostics": {
+                    "type": "array",
+                    "maxItems": 128,
+                    "items": {
+                      "type": "string",
+                      "maxLength": 4096
+                    }
+                  }
+                }
+              }
+            },
+            "analysis": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "maxLength": 262144
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "operations": {
+              "type": "array",
+              "maxItems": 128,
+              "items": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      },
+      "era.agent.settlement.validated": {
+        "kind": "data_schema",
+        "type_key": "era.agent.settlement.validated",
+        "representation": "json",
+        "display_name": "ERA 已校验变量结算",
+        "description": "携带成功试执行后的规范单一 message scope 事务，或不写错误事务的未结算状态。",
+        "schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "schemaVersion",
+            "status",
+            "operations",
+            "eraTx",
+            "diagnostics"
+          ],
+          "properties": {
+            "schemaVersion": {
+              "const": 1
+            },
+            "status": {
+              "enum": [
+                "ready",
+                "unsettled",
+                "failed",
+                "cancelled"
+              ]
+            },
+            "operations": {
+              "type": "array",
+              "maxItems": 128,
+              "items": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            },
+            "eraTx": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1048576,
+                  "pattern": "^<era_tx s=\\\"m\\\">"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "diagnostics": {
+              "type": "array",
+              "maxItems": 128,
+              "items": {
+                "type": "string",
+                "maxLength": 4096
+              }
+            }
+          }
+        }
+      },
+      "era.agent.story.capture": {
+        "kind": "data_schema",
+        "type_key": "era.agent.story.capture",
+        "representation": "json",
+        "display_name": "ERA Agent 故事捕获",
+        "description": "保存当前 Swipe 的干净故事、被隔离的故事模型 ERA 标签、故事前状态引用及计划函数证据。",
+        "schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "schemaVersion",
+            "messageId",
+            "swipeIndex",
+            "revision",
+            "story",
+            "isolatedEraTags",
+            "baseline"
+          ],
+          "properties": {
+            "schemaVersion": {
+              "const": 1
+            },
+            "messageId": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "swipeIndex": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "revision": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512
+            },
+            "story": {
+              "type": "string",
+              "maxLength": 1048576
+            },
+            "isolatedEraTags": {
+              "type": "array",
+              "maxItems": 256,
+              "items": {
+                "type": "string",
+                "maxLength": 262144
+              }
+            },
+            "baseline": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        }
+      },
       "era.api.commit.admission.route": {
         "kind": "data_schema",
         "type_key": "era.api.commit.admission.route",
@@ -15189,7 +17015,8 @@
                           "initialize",
                           "sync",
                           "api",
-                          "update-mk"
+                          "update-mk",
+                          "agent-generation-session"
                         ]
                       },
                       "task": {
@@ -17770,7 +19597,8 @@
                           "initialize",
                           "sync",
                           "api",
-                          "update-mk"
+                          "update-mk",
+                          "agent-generation-session"
                         ]
                       },
                       "task": {
@@ -20351,7 +22179,8 @@
                           "initialize",
                           "sync",
                           "api",
-                          "update-mk"
+                          "update-mk",
+                          "agent-generation-session"
                         ]
                       },
                       "task": {
@@ -23612,7 +25441,8 @@
                           "initialize",
                           "sync",
                           "api",
-                          "update-mk"
+                          "update-mk",
+                          "agent-generation-session"
                         ]
                       },
                       "task": {
@@ -28560,7 +30390,8 @@
                     "initialize",
                     "sync",
                     "api",
-                    "update-mk"
+                    "update-mk",
+                    "agent-generation-session"
                   ]
                 },
                 "task": {
@@ -30563,7 +32394,8 @@
                     "initialize",
                     "sync",
                     "api",
-                    "update-mk"
+                    "update-mk",
+                    "agent-generation-session"
                   ]
                 },
                 "task": {
@@ -32949,7 +34781,8 @@
                         "initialize",
                         "sync",
                         "api",
-                        "update-mk"
+                        "update-mk",
+                        "agent-generation-session"
                       ]
                     },
                     "task": {
@@ -35615,7 +37448,7 @@
         "type_key": "era.task.route",
         "representation": "json",
         "display_name": "ERA 任务路由",
-        "description": "显式区分初始化、同步、API、MK 更新与忽略步骤。",
+        "description": "显式区分初始化、同步、API、MK 更新、Agent 生成会话与忽略步骤。",
         "schema": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
           "type": "string",
@@ -35624,6 +37457,7 @@
             "sync",
             "api",
             "update-mk",
+            "agent-generation-session",
             "ignore"
           ]
         }
@@ -36657,6 +38491,35 @@
           "@era/vibeflow-expression"
         ]
       },
+      "era.service.agent_generation_session": {
+        "kind": "base_lib",
+        "id": "era.service.agent_generation_session",
+        "display_name": "ERA 三阶段故事生成会话纯逻辑",
+        "description": "规范化角色卡配置、严格解析规划与变量操作、执行白名单有限数值函数、隔离故事命令并构造有界消息报告；不访问 Tavern、模型、消息或 Sidecar。",
+        "category": "故事生成会话",
+        "version": "1.0.0",
+        "implementations": [
+          {
+            "language": "typescript",
+            "targets": [
+              "browser",
+              "node"
+            ],
+            "source": {
+              "kind": "file",
+              "ref": "base_lib/agent_generation_session.ts"
+            },
+            "completion": "immediate"
+          }
+        ],
+        "dependencies": [
+          "era.crud.engine"
+        ],
+        "external_packages": [
+          "@era/vibeflow-contracts",
+          "@era/vibeflow-expression"
+        ]
+      },
       "era.service.command_compaction": {
         "kind": "base_lib",
         "id": "era.service.command_compaction",
@@ -37061,6 +38924,97 @@
       }
     },
     "capabilities": {
+      "era.tavern.agent": {
+        "kind": "capability",
+        "id": "era.tavern.agent",
+        "targets": [
+          "browser"
+        ],
+        "display_name": "ERA 故事编排宿主 I/O",
+        "description": "只执行 Service 已声明的角色卡、页面会话、独立模型请求、一次性注入和消息机械操作；不决定阶段、重试、函数或变量语义。",
+        "operations": {
+          "read_context": {
+            "input_type": "era.agent.host.request",
+            "output_type": "era.agent.host.result",
+            "completion": "suspend"
+          },
+          "write_configuration": {
+            "input_type": "era.agent.host.request",
+            "output_type": "era.agent.host.result",
+            "completion": "suspend"
+          },
+          "capture_preset": {
+            "input_type": "era.agent.host.request",
+            "output_type": "era.agent.host.result",
+            "completion": "immediate"
+          },
+          "read_configuration_sources": {
+            "input_type": "era.agent.host.request",
+            "output_type": "era.agent.host.result",
+            "completion": "immediate"
+          },
+          "upsert_connection_profile": {
+            "input_type": "era.agent.host.request",
+            "output_type": "era.agent.host.result",
+            "completion": "suspend"
+          },
+          "delete_connection_profile": {
+            "input_type": "era.agent.host.request",
+            "output_type": "era.agent.host.result",
+            "completion": "suspend"
+          },
+          "clear_connection_profile_key": {
+            "input_type": "era.agent.host.request",
+            "output_type": "era.agent.host.result",
+            "completion": "suspend"
+          },
+          "list_connection_models": {
+            "input_type": "era.agent.host.request",
+            "output_type": "era.agent.host.result",
+            "completion": "suspend"
+          },
+          "generate": {
+            "input_type": "era.agent.host.request",
+            "output_type": "era.agent.host.result",
+            "completion": "suspend"
+          },
+          "generate_story": {
+            "input_type": "era.agent.host.request",
+            "output_type": "era.agent.host.result",
+            "completion": "suspend"
+          },
+          "inject_once": {
+            "input_type": "era.agent.host.request",
+            "output_type": "era.agent.host.result",
+            "completion": "immediate"
+          },
+          "write_session": {
+            "input_type": "era.agent.host.request",
+            "output_type": "era.agent.host.result",
+            "completion": "immediate"
+          },
+          "clear_session": {
+            "input_type": "era.agent.host.request",
+            "output_type": "era.agent.host.result",
+            "completion": "immediate"
+          },
+          "write_message": {
+            "input_type": "era.agent.host.request",
+            "output_type": "era.agent.host.result",
+            "completion": "suspend"
+          },
+          "create_error_message": {
+            "input_type": "era.agent.host.request",
+            "output_type": "era.agent.host.result",
+            "completion": "suspend"
+          },
+          "stop_native_generation": {
+            "input_type": "era.agent.host.request",
+            "output_type": "era.agent.host.result",
+            "completion": "immediate"
+          }
+        }
+      },
       "era.tavern.identity": {
         "kind": "capability",
         "id": "era.tavern.identity",
@@ -37271,13 +39225,14 @@
         "status": "implemented",
         "display_name": "ERA 酒馆服务宿主",
         "category": "宿主接线",
-        "description": "连接 SillyTavern 与 Tavern Helper，管理单一先进先出队列、回执、高水位屏障、绝对截止时间定时器、宿主引用和出站帧幂等，并提供服务端口、酒馆能力、Sidecar 机械接线与分阶段启动闸门；消息读取按 era-active-message-v1 投影，Host 不承载 CRUD、同步、合并、回滚或身份判定规则。",
+        "description": "连接 SillyTavern 与 Tavern Helper，管理单一先进先出队列、回执、高水位屏障、绝对截止时间定时器、宿主引用和出站帧幂等，并提供服务端口、Agent 独立请求、酒馆能力、Sidecar 机械接线与分阶段启动闸门；消息读取按 era-active-message-v1 投影，Host 不承载 Agent 重试、函数、CRUD、同步、合并、回滚或身份判定规则。",
         "version": "0.1.0",
         "targets": [
           "browser"
         ],
         "provides": [
           "vibeflow.port",
+          "era.tavern.agent",
           "era.tavern.variables",
           "era.tavern.messages",
           "era.tavern.worldbook",

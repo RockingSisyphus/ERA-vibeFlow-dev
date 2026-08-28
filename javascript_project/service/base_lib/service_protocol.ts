@@ -483,7 +483,7 @@ export function createExecutionState(plan: BatchPlanV1): {
       }
     } else {
       if (
-        step.taskRoute !== step.task.kind ||
+        (step.taskRoute !== "agent-generation-session" && step.taskRoute !== step.task.kind) ||
         step.sources.length !== step.events.length ||
         step.task.sourceEvents.length !== step.events.length ||
         step.sources.some(

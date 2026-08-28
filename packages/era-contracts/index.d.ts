@@ -77,9 +77,10 @@ export interface EraCollectionReductionV1 {
   readonly throughSequence: number | null;
 }
 
-export type EraExecutableTaskRouteV1 =
+export type EraDispatchClassV1 =
   "initialize" | "sync" | "api" | "update-mk";
-export type EraDispatchClassV1 = EraExecutableTaskRouteV1;
+export type EraExecutableTaskRouteV1 =
+  EraDispatchClassV1 | "agent-generation-session";
 export type EraTaskRouteV1 = EraExecutableTaskRouteV1 | "ignore";
 export type EraEventRelationV1 = "primary" | "combined" | "coalesced";
 export type EraTaskContextRequirementV1 =
@@ -175,6 +176,7 @@ export type EraPlannedStepV1 =
   | (EraPlannedStepBaseV1 & {
       readonly kind: "execute";
       readonly taskRoute: EraExecutableTaskRouteV1;
+      /** Agent 路由包装既有领域任务；关闭功能时必须原样委托 task.kind。 */
       readonly task: EraDomainTaskV1;
       readonly sources: readonly EraPlannedSourceV1[];
     })

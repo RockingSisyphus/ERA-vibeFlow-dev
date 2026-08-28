@@ -27,6 +27,11 @@
 </template>
 
 <script setup lang="ts">
+/*
+ * 模块职责：在桌面与触屏统一提供淡隐、显现、右侧纵向拖动与输入栏避让。
+ * 模块边界：位置只存在当前页面，不读写角色卡、消息或 Sidecar。
+ * Pointer Events 状态机只在超过阈值后抑制 click，确保触屏首次点按仍能打开面板。
+ */
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import {
   calculateFloatingBallPlacement,
@@ -65,6 +70,7 @@ let observedSendForm: Element | null = null;
 let hostWindow: Window = window;
 let hostDocument: Document = document;
 
+/** 可见态合并面板、按压、拖动和短暂唤醒，避免各输入设备维护不同透明度分支。 */
 const isInteracting = computed(() => props.panelOpen || isPressed.value || isDragging.value || recentlyActive.value);
 const positionStyle = computed(() => (top.value === null ? undefined : { top: `${top.value}px` }));
 
@@ -100,6 +106,7 @@ function refreshSendFormObserver(): void {
   }
 }
 
+/** 重新读取可视视口和输入栏几何，拖动位置只做边界夹取。 */
 function reflow(): void {
   const element = ballElement.value;
   if (element === null) return;
@@ -147,6 +154,7 @@ function releasePointerCapture(pointerId: number): void {
   if (element?.hasPointerCapture(pointerId) === true) element.releasePointerCapture(pointerId);
 }
 
+/** 统一结束 pointerup、cancel、失去捕获和窗口失焦，确保不留下拖动态。 */
 function finishPointerSession(cancelled: boolean): void {
   const session = pointerSession;
   if (session === null) return;
@@ -165,6 +173,7 @@ function finishPointerSession(cancelled: boolean): void {
   scheduleIdle();
 }
 
+/** 只接受主指针和鼠标左键，避免多指或右键建立两个拖动会话。 */
 function handlePointerDown(event: PointerEvent): void {
   if (!event.isPrimary || (event.pointerType === 'mouse' && event.button !== 0)) return;
   const element = ballElement.value;
@@ -181,6 +190,7 @@ function handlePointerDown(event: PointerEvent): void {
   element.setPointerCapture(event.pointerId);
 }
 
+/** 横向位置始终由容器锚定，手势只改变夹取后的纵向坐标。 */
 function handlePointerMove(event: PointerEvent): void {
   const session = pointerSession;
   if (session === null || session.pointerId !== event.pointerId) return;
@@ -209,6 +219,7 @@ function handlePointerLeave(): void {
   if (!isPressed.value) scheduleIdle();
 }
 
+/** 拖动完成后只抑制紧随的一次 click，不影响下一次真实点按。 */
 function handleClick(event: MouseEvent): void {
   if (suppressNextClick) {
     suppressNextClick = false;
@@ -224,12 +235,18 @@ function handleHostBlur(): void {
   finishPointerSession(true);
 }
 
-onMounted(() => {
+/** 窗口失焦等价于手势取消，因为此时无法再可靠收到 pointerup。 */
+function cancelPointerOnHostBlur(): void {
+  handleHostBlur();
+}
+
+/** 挂载时只登记当前宿主窗口的视口监听，重复初始化不得共享旧句柄。 */
+function mountFloatingBall(): void {
   const element = ballElement.value;
   hostDocument = element?.ownerDocument ?? document;
   hostWindow = hostDocument.defaultView ?? window;
   hostWindow.addEventListener('resize', reflow);
-  hostWindow.addEventListener('blur', handleHostBlur);
+  hostWindow.addEventListener('blur', cancelPointerOnHostBlur);
   hostWindow.visualViewport?.addEventListener('resize', reflow);
   hostWindow.visualViewport?.addEventListener('scroll', reflow);
   if (typeof ResizeObserver !== 'undefined' && element !== null) {
@@ -237,14 +254,16 @@ onMounted(() => {
     ballResizeObserver.observe(element);
   }
   void nextTick().then(reflow);
-});
+}
+
+onMounted(mountFloatingBall);
 
 onBeforeUnmount(() => {
   finishPointerSession(true);
   clearIdleTimer();
   if (clickSuppressionTimer !== null) hostWindow.clearTimeout(clickSuppressionTimer);
   hostWindow.removeEventListener('resize', reflow);
-  hostWindow.removeEventListener('blur', handleHostBlur);
+  hostWindow.removeEventListener('blur', cancelPointerOnHostBlur);
   hostWindow.visualViewport?.removeEventListener('resize', reflow);
   hostWindow.visualViewport?.removeEventListener('scroll', reflow);
   ballResizeObserver?.disconnect();

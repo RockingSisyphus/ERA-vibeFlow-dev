@@ -222,10 +222,18 @@ describe('VibeFlow Service 事件集协议', () => {
     const plan = protocol.planProtocolBatch(combined.reduction);
     expect(plan.steps).toHaveLength(1);
     expect(plan.steps[0]).toMatchObject({
-      taskRoute: 'sync',
+      taskRoute: 'agent-generation-session',
       sourceSequences: [3, 4],
     });
     expect(protocol.createExecutionState(plan).route).toBe('execute');
+
+    const stopped = event(5, 'generation_stopped', 3_700);
+    const stoppedReduction = protocol.reduceForProtocolSlice(initial, stopped, {}).reduction;
+    expect(stoppedReduction.route).toBe('execute');
+    expect(protocol.planProtocolBatch(stoppedReduction).steps[0]).toMatchObject({
+      taskRoute: 'agent-generation-session',
+      sourceSequences: [5],
+    });
   });
 
   it('迟到 token 不关闭有效窗口，并在匹配 token 到达时让每个 timer 恰好覆盖一次', () => {

@@ -11,6 +11,8 @@ export const ERA_UI_EVENT = {
   INITIALIZE_RESOURCES: 'era.ui.initialize_resources',
   UPDATE_SETTINGS: 'era.ui.update_settings',
   SIDECAR_BINDING_CHOICE: 'era.ui.sidecar_binding_choice',
+  AGENT_CONFIGURATION: 'era.ui.agent_configuration',
+  AGENT_RETRY: 'era.ui.agent_retry',
 } as const;
 
 /** 单个入站事件在 Host receipt 上可观察到的最终结算。 */
@@ -81,6 +83,33 @@ export interface EraCapabilityContext {
 export interface EraTavernAdapter {
   subscribe(listener: (event: EraInboundEvent) => EraAdmissionResult): () => void;
   notify(notification: EraPreparedNotification, context: EraCapabilityContext): Promise<void>;
+  readonly agent: {
+    read_context(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
+    write_configuration(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
+    capture_preset(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
+    read_configuration_sources(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
+    upsert_connection_profile(
+      input: Readonly<Record<string, unknown>>,
+      context: EraCapabilityContext,
+    ): Promise<unknown>;
+    delete_connection_profile(
+      input: Readonly<Record<string, unknown>>,
+      context: EraCapabilityContext,
+    ): Promise<unknown>;
+    clear_connection_profile_key(
+      input: Readonly<Record<string, unknown>>,
+      context: EraCapabilityContext,
+    ): Promise<unknown>;
+    list_connection_models(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
+    generate(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
+    generate_story(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
+    inject_once(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
+    write_session(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
+    clear_session(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
+    write_message(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
+    create_error_message(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
+    stop_native_generation(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
+  };
   readonly variables: {
     read(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
     commit(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;

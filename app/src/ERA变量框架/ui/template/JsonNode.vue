@@ -50,8 +50,7 @@
 </template>
 
 <script lang="ts">
-import { computed, defineComponent, onMounted, type PropType, ref, watch } from 'vue'; // 引入响应式/组件工具
-import { Logger } from '../../utils/log';
+import { computed, defineComponent, type PropType, ref } from 'vue'; // 引入响应式/组件工具
 
 export default defineComponent({
   name: 'JsonNode', // 关键：为自递归提供组件名
@@ -64,12 +63,6 @@ export default defineComponent({
     maxDepth: { type: Number, default: 3 }, // 初次展开的最大深度
   },
   setup(p) {
-    const logger = new Logger();
-
-    onMounted(() => {
-      //logger.debug('onMounted', '组件已挂载', { props: p });
-    });
-
     // 节点类型判定
     const type = computed(() => {
       const val = p.v;
@@ -90,10 +83,6 @@ export default defineComponent({
 
     // 初始开合：不超过 maxDepth 的层级默认展开；否则遵循 defaultCollapsed
     const open = ref<boolean>(p.level <= (p.maxDepth ?? 3) ? true : !p.defaultCollapsed);
-
-    watch(open, newOpenState => {
-      logger.debug('watch:open', `折叠状态改变为: ${newOpenState ? '展开' : '收起'}`);
-    });
 
     // 原始值渲染文本（补足 undefined / bigint / symbol）
     const primitiveText = computed(() => {

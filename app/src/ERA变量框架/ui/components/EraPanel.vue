@@ -49,6 +49,8 @@ const requestSwitchView = (viewName: 'FloatingBall' | 'ExpandedView') => {
 
 <style scoped>
 .era-panel {
+  /* 为工作台编辑抽屉提供局部定位块，避免它锚到视口并被右侧栏覆盖。 */
+  position: relative;
   flex: 2 1 600px;
   min-width: 0;
   max-width: 100%;

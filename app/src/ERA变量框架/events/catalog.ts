@@ -17,6 +17,7 @@ export const INPUT_EVENT = {
   MESSAGE_UPDATED: 'message_updated',
   CHAT_CHANGED: 'chat_id_changed',
   GENERATION_STARTED: 'generation_started',
+  GENERATION_STOPPED: 'generation_stopped',
   MANUAL_WRITE: 'manual_write',
   MANUAL_SYNC: 'manual_sync',
   MANUAL_FULL_SYNC: 'manual_full_sync',
@@ -81,8 +82,10 @@ const EVENT_DEFINITIONS: EventDefinition[] = [
   {
     type: INPUT_EVENT.MESSAGE_SENT,
     group: 'UPDATE_MK_ONLY',
-    listenerOrder: 'normal',
-    awaitMode: 'detached',
+    listenerOrder: 'first',
+    awaitMode: 'generation-barrier',
+    collectionWindowMs: 0,
+    closesCollectionWindow: true,
   },
   {
     type: INPUT_EVENT.GENERATION_STARTED,
@@ -91,6 +94,13 @@ const EVENT_DEFINITIONS: EventDefinition[] = [
     awaitMode: 'generation-barrier',
     collectionWindowMs: 0,
     closesCollectionWindow: true,
+  },
+  {
+    type: INPUT_EVENT.GENERATION_STOPPED,
+    group: 'UPDATE_MK_ONLY',
+    listenerOrder: 'normal',
+    awaitMode: 'detached',
+    collectionWindowMs: 0,
   },
   {
     type: INPUT_EVENT.MESSAGE_UPDATED,

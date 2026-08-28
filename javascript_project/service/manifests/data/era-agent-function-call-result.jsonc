@@ -1,0 +1,36 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.agent.function_call.result",
+  "representation": "json",
+  "display_name": "ERA Agent 纯函数调用结果",
+  "description": "按原调用顺序保存已验证函数、有限数值结果、候选消息 MK 与可重放随机抽取区间。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["schemaVersion", "status", "messageMk", "drawStart", "drawEnd", "calls", "diagnostics"],
+    "properties": {
+      "schemaVersion": {"const": 1},
+      "status": {"enum": ["ready", "planning-exhausted", "failed", "cancelled"]},
+      "messageMk": {"oneOf": [{"type": "string", "minLength": 1, "maxLength": 512}, {"type": "null"}]},
+      "drawStart": {"type": "integer", "minimum": 0},
+      "drawEnd": {"type": "integer", "minimum": 0},
+      "calls": {
+        "type": "array",
+        "maxItems": 32,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["index", "function", "args", "result"],
+          "properties": {
+            "index": {"type": "integer", "minimum": 0, "maximum": 31},
+            "function": {"type": "string", "minLength": 1, "maxLength": 256},
+            "args": {"type": "array", "maxItems": 32, "items": {"type": "number"}},
+            "result": {"oneOf": [{"type": "number"}, {"type": "null"}]}
+          }
+        }
+      },
+      "diagnostics": {"type": "array", "maxItems": 128, "items": {"type": "string", "maxLength": 4096}}
+    }
+  }
+}

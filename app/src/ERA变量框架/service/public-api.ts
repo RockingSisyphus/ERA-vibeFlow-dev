@@ -233,6 +233,20 @@ interface HistoricalProjection {
   readonly statFunc: Readonly<Record<string, unknown>>;
 }
 
+/**
+ * 将一个 MK 的日志投影为可逆序遍历的数组。空 MK 和损坏日志
+ * 必须当作无操作，因为历史查看不得修复或猜测 Sidecar 内容。
+ */
+function entriesForMk(logs: Record<string, unknown>, mk: string | null): unknown[] {
+  if (mk === null) return [];
+  const entries = logs[mk];
+  return Array.isArray(entries) ? entries : [];
+}
+
+/**
+ * 从当前 Sidecar 副本逆向回放到指定楼层。这个投影必须纯读，
+ * 否则查看旧快照会与并发 commit 竞争并改变当前聊天状态。
+ */
 function rollbackToMessage(snapshot: SidecarRuntimeSnapshot, messageId: number): HistoricalProjection {
   if (!Number.isSafeInteger(messageId) || messageId < 0) throw new TypeError('messageId 必须是非负安全整数。');
   const selected = selectedMks(snapshot.eraMeta);
@@ -244,11 +258,11 @@ function rollbackToMessage(snapshot: SidecarRuntimeSnapshot, messageId: number):
   const statFunc = structuredClone(snapshot.statFunc);
   for (let index = selected.length - 1; index > messageId; index -= 1) {
     const mk = selected[index];
-    const entries = mk === null || !Array.isArray(logs[mk]) ? [] : logs[mk];
+    const entries = entriesForMk(logs, mk);
     for (let cursor = entries.length - 1; cursor >= 0; cursor -= 1) {
       revertLogEntry(stat, entries[cursor]);
     }
-    const functionEntries = mk === null || !Array.isArray(functionLogs[mk]) ? [] : functionLogs[mk];
+    const functionEntries = entriesForMk(functionLogs, mk);
     for (let cursor = functionEntries.length - 1; cursor >= 0; cursor -= 1) {
       revertFunctionLogEntry(statFunc, functionEntries[cursor]);
     }

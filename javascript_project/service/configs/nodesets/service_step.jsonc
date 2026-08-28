@@ -14,11 +14,14 @@
     },
     {
       "path": "task_update_mk.jsonc"
+    },
+    {
+      "path": "agent_generation_session.jsonc"
     }
   ],
   "type_key": "era.service.step",
   "display_name": "ERA 规划步骤",
-  "description": "选择一个严格 PlannedStep，经显式任务路由执行 initialize、sync、公共对象 commit/sync、update-mk 或 ignore，并更新有界批次执行状态。",
+  "description": "选择一个严格 PlannedStep，经显式任务路由执行 initialize、sync、公共对象 commit/sync、update-mk、三阶段故事生成会话或 ignore，并更新有界批次执行状态。",
   "requires": [
     {
       "type": "era.batch.execution.state",
@@ -93,6 +96,12 @@
         "description": "确保当前消息拥有稳定 MK，并按逻辑提交边界更新消息文本与 SelectedMks。"
       },
       {
+        "id": "task_agent_generation_session",
+        "type_used": "era.agent.generation_session",
+        "display_name": "执行三阶段故事生成会话",
+        "description": "统一包装生成生命周期与故事编排设置；功能关闭或不适用时委托既有 ERA 行为，开启时在同一 FIFO、生成栅栏和取消域内执行规划、函数、故事衔接与变量结算。"
+      },
+      {
         "id": "task_ignore",
         "type_used": "era.task.ignore",
         "display_name": "结算忽略步骤",
@@ -142,6 +151,11 @@
       },
       {
         "from": "prepare_dispatch_context",
+        "to": "task_agent_generation_session",
+        "when": "prepared_task_route == 'agent-generation-session'"
+      },
+      {
+        "from": "prepare_dispatch_context",
         "to": "task_ignore",
         "when": "prepared_task_route == 'ignore'"
       },
@@ -159,6 +173,10 @@
       ],
       [
         "task_update_mk",
+        "merge_task_result"
+      ],
+      [
+        "task_agent_generation_session",
         "merge_task_result"
       ],
       [

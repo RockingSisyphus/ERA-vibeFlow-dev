@@ -446,7 +446,13 @@ export function isEraScopeWindowStateV1(value) {
   );
 }
 
-const ERA_EXECUTABLE_TASK_ROUTES = ["initialize", "sync", "api", "update-mk"];
+const ERA_EXECUTABLE_TASK_ROUTES = [
+  "initialize",
+  "sync",
+  "api",
+  "update-mk",
+  "agent-generation-session",
+];
 const ERA_EVENT_RELATIONS = ["primary", "combined", "coalesced"];
 const ERA_TASK_CONTEXTS = ["none", "latest-message", "latest-message-with-mk"];
 const ERA_SYNC_REASONS = [
@@ -586,7 +592,8 @@ export function isEraPlannedStepV1(value) {
     !hasOnlyKeys(value, [...baseKeys, "task", "sources"]) ||
     !ERA_EXECUTABLE_TASK_ROUTES.includes(value.taskRoute) ||
     !isEraDomainTaskV1(value.task) ||
-    value.task.kind !== value.taskRoute ||
+    (value.taskRoute !== "agent-generation-session" &&
+      value.task.kind !== value.taskRoute) ||
     !Array.isArray(value.sources) ||
     value.sources.length !== value.events.length ||
     !value.sources.every(isEraPlannedSourceV1) ||

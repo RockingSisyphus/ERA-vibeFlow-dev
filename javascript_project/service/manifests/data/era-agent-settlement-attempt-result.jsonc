@@ -1,0 +1,33 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.agent.settlement.attempt_result",
+  "representation": "json",
+  "display_name": "ERA 变量分析尝试结果",
+  "description": "保存有界变量分析尝试、最终分析文本、候选有序 operations 与精确诊断。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["schemaVersion", "status", "attempts", "analysis", "operations"],
+    "properties": {
+      "schemaVersion": {"const": 1},
+      "status": {"enum": ["ready", "exhausted", "failed", "cancelled"]},
+      "attempts": {
+        "type": "array",
+        "maxItems": 17,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["index", "output", "diagnostics"],
+          "properties": {
+            "index": {"type": "integer", "minimum": 0, "maximum": 16},
+            "output": {"type": "string", "maxLength": 262144},
+            "diagnostics": {"type": "array", "maxItems": 128, "items": {"type": "string", "maxLength": 4096}}
+          }
+        }
+      },
+      "analysis": {"oneOf": [{"type": "string", "maxLength": 262144}, {"type": "null"}]},
+      "operations": {"type": "array", "maxItems": 128, "items": {"type": "object", "additionalProperties": true}}
+    }
+  }
+}

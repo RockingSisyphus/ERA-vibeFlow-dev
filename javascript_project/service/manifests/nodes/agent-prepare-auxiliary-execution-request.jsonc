@@ -1,0 +1,34 @@
+{
+  "kind": "node",
+  "type_key": "era.agent.prepare_auxiliary_execution_request",
+  "display_name": "准备 Agent 辅助阶段执行请求",
+  "category": "故事生成会话",
+  "description": "读取一次宿主上下文，将角色卡 V1/V2 配置归一化为只含预设快照、模型来源与本机方案引用的 V2 执行请求。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {"type":"era.step.request.routed","cardinality":"exactly_one","display_name":"Agent 包装步骤"},
+      {"type":"era.batch.execution.state","cardinality":"exactly_one","display_name":"当前批次执行状态"}
+    ],
+    "provides": [
+      {"key":"agent_auxiliary_execution_request","type":"era.agent.auxiliary.execution_request","display_name":"不含密钥的辅助阶段执行请求"}
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.step.request.routed": ["输入：保留原领域任务的 Agent 包装步骤。"],
+      "era.batch.execution.state": ["输入：透传给后续恢复的原领域任务。"]
+    },
+    "output_semantics": {
+      "agent_auxiliary_execution_request": ["输出：一次读取并归一化的 V2 配置、宿主事实与诊断；不得包含本机 API 密钥。"]
+    }
+  },
+  "implementations": [
+    {"language":"typescript","targets":["browser"],"completion":"suspend","source":{"kind":"file","ref":"nodes/agent/prepare_auxiliary_execution_request.ts","export":"run"}}
+  ],
+  "base_libs": ["era.service.agent_generation_session", "era.service.types"],
+  "capabilities": [
+    {"id":"era.tavern.agent","operations":["read_context"]}
+  ]
+}

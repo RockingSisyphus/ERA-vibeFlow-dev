@@ -63,8 +63,7 @@ defineEmits<{ close: [] }>();
 }
 @media (max-width: 560px) {
   .workbench-drawer {
-    /* EraPanel creates a containing block. Anchor the mobile editor to that
-       panel so transformed ancestors cannot shift it above the viewport. */
+    /* EraPanel 提供定位块；移动端编辑器必须锚定在面板内，避免变换祖先将其移出视口。 */
     position: absolute;
     inset: 0;
     width: 100%;

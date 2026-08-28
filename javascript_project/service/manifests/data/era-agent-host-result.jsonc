@@ -1,0 +1,12 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.agent.host.result",
+  "representation": "json",
+  "display_name": "ERA Agent 宿主结果",
+  "description": "Agent Host capability 返回的脱敏、可序列化、有界事实或模型原文。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": true
+  }
+}

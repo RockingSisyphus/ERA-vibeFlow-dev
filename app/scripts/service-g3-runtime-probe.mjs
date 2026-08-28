@@ -1,5 +1,6 @@
 /// <reference types="node" />
 
+import { rmSync } from 'node:fs';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { performance } from 'node:perf_hooks';
 import { resolve } from 'node:path';
@@ -15,6 +16,7 @@ const reportUrl = new URL('../../reports/service-g3-runtime.json', import.meta.u
  */
 async function importGeneratedWorkflow() {
   const directory = await mkdtemp(resolve(import.meta.dirname, '.era-generated-workflow-'));
+  process.once('exit', () => rmSync(directory, { recursive: true, force: true }));
   const stagedPath = resolve(directory, 'workflow.mjs');
   await writeFile(stagedPath, await readFile(generatedModuleUrl), 'utf8');
   return {
@@ -123,6 +125,24 @@ function createAdapter() {
       installation_scope: {
         read: () => ({ scriptId: 'era-probe', scopes: ['character'], readStatus: 'complete' }),
       },
+      agent: {
+        read_context: async () => ({ status: 'ready', context: null }),
+        write_configuration: async () => ({ status: 'committed' }),
+        capture_preset: () => ({ status: 'captured', preset: null }),
+        read_configuration_sources: () => ({ presetNames: [], currentPresetName: null, connectionProfiles: [] }),
+        upsert_connection_profile: async () => ({ status: 'created' }),
+        delete_connection_profile: async () => ({ status: 'deleted' }),
+        clear_connection_profile_key: async () => ({ status: 'cleared' }),
+        list_connection_models: async () => ({ models: [] }),
+        generate: async () => ({ status: 'completed', text: '{}' }),
+        generate_story: async () => ({ status: 'completed', text: '' }),
+        inject_once: () => ({ status: 'injected' }),
+        write_session: () => ({ status: 'committed' }),
+        clear_session: () => ({ status: 'cleared' }),
+        write_message: async () => ({ status: 'committed' }),
+        create_error_message: async () => ({ status: 'committed' }),
+        stop_native_generation: () => ({ status: 'stopped' }),
+      },
       sidecar: {
         read_current: async () => structuredClone(sidecarCurrent),
         read_record: async input => {
@@ -199,9 +219,12 @@ async function probeGeneratedHost(workflow) {
     const admission = fake.emit({
       type,
       source: sequence === 1 ? 'tavern' : 'era-api',
-      args: sequence === 3
-        ? [{ scope: 'always', operations: [{ insert: { __eraRuntimeProbe: { value: sequence } } }], windowToken: 1 }]
-        : sequence === 1 ? [] : [{ mode: 'full' }],
+      args:
+        sequence === 3
+          ? [{ scope: 'always', operations: [{ insert: { __eraRuntimeProbe: { value: sequence } } }], windowToken: 1 }]
+          : sequence === 1
+            ? []
+            : [{ mode: 'full' }],
       occurredAt: 1_000 + sequence,
     });
     assert(admission.accepted === true, `第 ${sequence} 个事件未被接纳。`);
@@ -308,6 +331,7 @@ async function probeWorkflowFrames(workflow) {
           'era.tavern.regex': directAdapter.regex,
           'era.tavern.identity': directAdapter.identity,
           'era.tavern.installation_scope': directAdapter.installation_scope,
+          'era.tavern.agent': directAdapter.agent,
           'era.tavern.startup_gate': { activate: () => ({ activated: true }), dormant: () => ({ activated: false }) },
           'era.tavern.sidecar': directAdapter.sidecar,
         },

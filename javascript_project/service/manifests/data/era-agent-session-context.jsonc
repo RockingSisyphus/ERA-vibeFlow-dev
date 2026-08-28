@@ -1,0 +1,25 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.agent.session.context",
+  "representation": "json",
+  "display_name": "ERA 故事生成会话上下文",
+  "description": "Service 从已路由事件与 Host 脱敏投影组合出的有界角色卡、聊天、分支、消息、配置和活动会话上下文。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["schemaVersion", "eventType", "chatKey", "branchKey", "speakerKey", "messageId", "swipeIndex", "revision", "configuration", "session"],
+    "properties": {
+      "schemaVersion": {"const": 1},
+      "eventType": {"type": "string", "minLength": 1, "maxLength": 128},
+      "chatKey": {"type": "string", "minLength": 1, "maxLength": 512},
+      "branchKey": {"type": "string", "minLength": 1, "maxLength": 512},
+      "speakerKey": {"type": "string", "minLength": 1, "maxLength": 512},
+      "messageId": {"oneOf": [{"type": "integer", "minimum": 0}, {"type": "null"}]},
+      "swipeIndex": {"oneOf": [{"type": "integer", "minimum": 0}, {"type": "null"}]},
+      "revision": {"type": "string", "minLength": 1, "maxLength": 512},
+      "configuration": {"type": "object", "additionalProperties": true},
+      "session": {"oneOf": [{"type": "object", "additionalProperties": true}, {"type": "null"}]}
+    }
+  }
+}

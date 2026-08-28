@@ -12,11 +12,16 @@ const commitUrl = new URL('../../../javascript_project/service/nodes/dispatch/co
   .href;
 const readUrl = new URL('../../../javascript_project/service/nodes/dispatch/read_canonical_context.ts', import.meta.url)
   .href;
+const finalizeUrl = new URL(
+  '../../../javascript_project/service/nodes/dispatch/finalize_dispatch_context.ts',
+  import.meta.url,
+).href;
 
 const preparation = await import(/* @vite-ignore */ preparationUrl);
 const transaction = await import(/* @vite-ignore */ transactionUrl);
 const commitNode = await import(/* @vite-ignore */ commitUrl);
 const readNode = await import(/* @vite-ignore */ readUrl);
+const finalizeNode = await import(/* @vite-ignore */ finalizeUrl);
 
 function event(sequence = 1) {
   return {
@@ -127,6 +132,19 @@ function strictMessages(activeText = '正文', role = 'assistant') {
 }
 
 describe('统一执行前上下文', () => {
+  it('preserves an Agent wrapper route while keeping the underlying dispatch class', () => {
+    const step = { ...updateMkStep(), taskRoute: 'agent-generation-session' };
+    const classified = preparation.classifyDispatch(step, state(step));
+    expect(classified.seed.dispatchClass).toBe('update-mk');
+    const finalized = finalizeNode.run({
+      'era.dispatch.preparation.outcome': {
+        value: preparation.buildNoHostOutcome(classified.seed),
+      },
+    });
+    expect(finalized.prepared_task_route).toBe('agent-generation-session');
+    expect(finalized.prepared_routed_step.dispatchContext.dispatchClass).toBe('update-mk');
+  });
+
   it('context:none 不触发任何 Host 读取，latest-message 只读取消息', async () => {
     const noHostStep = syncStep('sync', 'none');
     const classified = preparation.classifyDispatch(noHostStep, state(noHostStep));

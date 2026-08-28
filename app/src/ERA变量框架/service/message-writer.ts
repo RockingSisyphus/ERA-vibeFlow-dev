@@ -60,16 +60,13 @@ async function updateOneMessage(
   const id = messageId(input);
   const content = input.content;
   if (typeof content !== 'string') throw new TypeError('消息更新请求缺少文本 content。');
-  const current = getChatMessages(id, { include_swipes: true })[0];
+  const current = getChatMessages(id)[0];
   if (!current) throw new Error(`找不到消息 #${id}。`);
   internalMessageWrites.set(id, content);
-  if (!Array.isArray(current.swipes)) {
-    await setChatMessages([{ message_id: id, message: content }], { refresh });
-    return;
-  }
-  const swipes = [...current.swipes];
-  swipes[Number(current.swipe_id ?? 0)] = content;
-  await setChatMessages([{ message_id: id, swipes }], { refresh });
+  // Tavern Helper 会把 `message` 同步到当前 swipe，且不触碰该页的 extra。
+  // 若改为回写整个 `swipes`，它会同时以 swipe_info 重建 extra；新用户消息
+  // 在 swipe_info 尚未携带附件时会因此丢失图片、音频等宿主元数据。
+  await setChatMessages([{ message_id: id, message: content }], { refresh });
 }
 
 /**

@@ -3,6 +3,7 @@ import { HIDE_ERA_DATA_REGEX } from './regex_objects/hide_era_data';
 import { HIDE_ERA_METADATA_REGEX } from './regex_objects/hide_era_metadata';
 import { HIDE_ERA_THINKING_REGEX } from './regex_objects/hide_era_thinking';
 import { REPLACE_PLACEHOLDER_REGEX } from './regex_objects/replace_placeholder';
+import { FOLD_ERA_AGENT_REPORTS_REGEX, STRIP_ERA_AGENT_REPORTS_REGEX } from './regex_objects/agent_reports';
 import { Logger } from '../../utils/log';
 
 const logger = new Logger();
@@ -38,6 +39,8 @@ export async function initEraCharacterRegexes(): Promise<InitRegexResult> {
     REPLACE_PLACEHOLDER_REGEX,
     HIDE_ERA_METADATA_REGEX,
     HIDE_ERA_THINKING_REGEX,
+    FOLD_ERA_AGENT_REPORTS_REGEX,
+    STRIP_ERA_AGENT_REPORTS_REGEX,
   ];
   const results = [];
   let allSuccess = true;

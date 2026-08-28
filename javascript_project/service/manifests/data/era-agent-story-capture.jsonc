@@ -1,0 +1,22 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.agent.story.capture",
+  "representation": "json",
+  "display_name": "ERA Agent 故事捕获",
+  "description": "保存当前 Swipe 的干净故事、被隔离的故事模型 ERA 标签、故事前状态引用及计划函数证据。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["schemaVersion", "messageId", "swipeIndex", "revision", "story", "isolatedEraTags", "baseline"],
+    "properties": {
+      "schemaVersion": {"const": 1},
+      "messageId": {"type": "integer", "minimum": 0},
+      "swipeIndex": {"type": "integer", "minimum": 0},
+      "revision": {"type": "string", "minLength": 1, "maxLength": 512},
+      "story": {"type": "string", "maxLength": 1048576},
+      "isolatedEraTags": {"type": "array", "maxItems": 256, "items": {"type": "string", "maxLength": 262144}},
+      "baseline": {"type": "object", "additionalProperties": true}
+    }
+  }
+}

@@ -115,6 +115,11 @@
 </template>
 
 <script setup lang="ts">
+/*
+ * 模块职责：本组件负责展示当前函数库，并将各类编辑和试算转换为工作台事件。
+ * 模块边界：不直接写入消息或 Sidecar，也不在组件内复制表达式引擎。
+ * 编辑器始终保留打开时的 revision 和原函数库，避免陈旧草稿覆盖新状态。
+ */
 import { computed, ref, watch } from 'vue';
 import type { EraCommitOperation } from '../../../service/public-api';
 import { waitForEraFacade } from '../../utils/facade';
@@ -217,6 +222,7 @@ const editorTitle = computed(() => {
   }
 });
 
+/** 每次关闭都丢弃试算结果与错误，避免下一个函数继承旧诊断。 */
 function reset(): void {
   nameInput.value = '';
   paramsInput.value = '';
@@ -232,6 +238,7 @@ function reset(): void {
   success.value = '';
 }
 
+/** 打开编辑器时固定原定义，以便保存前能检查并发 revision。 */
 function open(mode: EditorState['mode'], name = ''): void {
   reset();
   const initial = name ? props.library[name] : mode === 'batch' ? props.library : null;
@@ -262,6 +269,7 @@ function closeEditor(): void {
   if (!busy.value) editor.value = null;
 }
 
+/** 从抽屉草稿构造完整函数定义，不保留 UI 专用字段。 */
 function parseDefinition(): FunctionDefinition {
   if (advanced.value) return JSON.parse(definitionInput.value) as FunctionDefinition;
   const params = paramsInput.value
@@ -272,6 +280,7 @@ function parseDefinition(): FunctionDefinition {
   return { params, expr: exprInput.value, ...(meta ? { $meta: meta } : {}) };
 }
 
+/** 在副本函数库上试用草稿，以便完整库校验不污染当前状态。 */
 function draftLibrary(): Record<string, unknown> {
   if (!editor.value) return {};
   if (editor.value.mode === 'batch') {
@@ -294,6 +303,7 @@ function draftLibrary(): Record<string, unknown> {
   return draft;
 }
 
+/** 只根据编辑模式生成 CRUD，保护解锁由后续统一包装。 */
 function baseOperations(): readonly EraCommitOperation[] {
   const draft = draftLibrary();
   const diagnostics = validateFunctionLibrary(draft);
@@ -301,6 +311,7 @@ function baseOperations(): readonly EraCommitOperation[] {
   return planFunctionLibraryDiff(props.library, draft).operations;
 }
 
+/** 函数保护必须基于原定义计算，不能读已解锁的草稿。 */
 const protections = computed(() => {
   if (!editor.value) return [];
   if (editor.value.mode === 'batch') {
@@ -315,6 +326,7 @@ const protections = computed(() => {
   return functionProtection(props.library[editor.value.name], editor.value.mode as 'edit' | 'delete');
 });
 
+/** 预览保留解锁、业务操作和恢复的真实顺序，保存时不再排序。 */
 const preview = computed<readonly EraCommitOperation[]>(() => {
   try {
     let operations = baseOperations();
@@ -330,6 +342,7 @@ const preview = computed<readonly EraCommitOperation[]>(() => {
   }
 });
 
+/** 身份或目标定义已变化时拒绝保存，否则会造成丢失更新。 */
 function assertFresh(): void {
   if (!editor.value) throw new Error('编辑器已经关闭。');
   if (editor.value.identityKey !== props.identityKey) throw new Error('聊天已经切换，请重新打开编辑器。');
@@ -338,6 +351,7 @@ function assertFresh(): void {
   if (!jsonEqual(current, editor.value.initial)) throw new Error('该函数在编辑期间已经变化，请重新载入后再保存。');
 }
 
+/** 保存前先在内存中校验整个函数库，失败时不发出任何 commit。 */
 async function save(): Promise<void> {
   if (!editor.value || busy.value) return;
   error.value = '';
@@ -370,6 +384,7 @@ async function save(): Promise<void> {
   }
 }
 
+/** 试算只更新抽屉中的结果和诊断，不会产生函数修改日志。 */
 function trial(): void {
   error.value = '';
   trialOutput.value = '';
@@ -389,179 +404,4 @@ function trial(): void {
 }
 </script>
 
-<style scoped>
-.function-workspace {
-  position: relative;
-  min-height: 280px;
-  border: 1px solid var(--border-normal);
-  border-radius: 13px;
-  background: var(--bg-soft);
-  overflow: hidden;
-}
-.function-toolbar {
-  display: flex;
-  align-items: end;
-  gap: 8px;
-  padding: 12px;
-  border-bottom: 1px solid var(--border-soft);
-}
-.function-toolbar label,
-.function-form label {
-  display: grid;
-  gap: 5px;
-  color: var(--text-subtitle);
-  font-size: 11px;
-  font-weight: 700;
-}
-.function-toolbar label {
-  min-width: 0;
-  flex: 1;
-}
-.function-toolbar input,
-.function-form input,
-.function-form textarea,
-.function-form select {
-  width: 100%;
-  border: 1px solid var(--border-normal);
-  border-radius: 9px;
-  background: var(--bg-solid);
-  color: var(--text-title);
-  padding: 9px 10px;
-  font: inherit;
-}
-.function-toolbar button,
-.function-actions button,
-.function-footer button,
-.mode-switch button,
-.trial-button {
-  border: 1px solid var(--border-normal);
-  border-radius: 9px;
-  background: var(--bg-solid);
-  color: var(--text-subtitle);
-  padding: 8px 10px;
-  cursor: pointer;
-  white-space: nowrap;
-}
-.function-grid {
-  display: grid;
-  gap: 9px;
-  padding: 12px;
-  max-height: 440px;
-  overflow: auto;
-}
-.function-card {
-  display: grid;
-  gap: 9px;
-  padding: 11px;
-  border: 1px solid var(--border-normal);
-  border-radius: 11px;
-  background: var(--bg-solid);
-}
-.function-card header {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  color: var(--text-title);
-}
-.function-expression {
-  display: block;
-  padding: 8px 10px;
-  border: 1px solid var(--border-soft);
-  border-radius: 8px;
-  background: var(--bg-soft);
-  color: var(--text-title);
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-.lock-chip {
-  border-radius: 999px;
-  padding: 2px 7px;
-  color: #b91c1c;
-  background: rgba(254, 226, 226, 0.72);
-  font-size: 10px;
-}
-.function-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-}
-.function-actions .danger {
-  color: #b91c1c;
-}
-.function-empty {
-  padding: 42px 18px;
-  text-align: center;
-  color: var(--text-normal);
-}
-.function-form {
-  display: grid;
-  gap: 14px;
-}
-.function-form textarea {
-  resize: vertical;
-  line-height: 1.5;
-}
-.mode-switch {
-  display: flex;
-  gap: 6px;
-}
-.mode-switch button.active {
-  border-color: #60a5fa;
-  color: #2563eb;
-  background: rgba(96, 165, 250, 0.12);
-}
-.delete-warning,
-.protection-box,
-.operation-preview,
-.trial-output {
-  border: 1px solid var(--border-normal);
-  border-radius: 10px;
-  padding: 11px;
-  color: var(--text-subtitle);
-  background: var(--bg-solid);
-  font-size: 12px;
-}
-.protection-box {
-  border-color: #f59e0b;
-}
-.operation-preview pre {
-  max-height: 190px;
-  overflow: auto;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  font-size: 10px;
-  color: var(--text-normal);
-}
-.editor-error,
-.editor-success {
-  margin: 0;
-  padding: 9px 10px;
-  border-radius: 9px;
-}
-.editor-error {
-  color: #b91c1c;
-  background: rgba(254, 226, 226, 0.75);
-}
-.editor-success {
-  color: #047857;
-  background: rgba(209, 250, 229, 0.72);
-}
-.function-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
-.function-footer .primary {
-  border-color: #60a5fa;
-  background: linear-gradient(180deg, #dbeafe, #bfdbfe);
-  color: #0f172a;
-}
-@media (max-width: 560px) {
-  .function-toolbar {
-    flex-wrap: wrap;
-  }
-  .function-toolbar label {
-    flex-basis: 100%;
-  }
-}
-</style>
+<style scoped src="./FunctionWorkspace.css"></style>

@@ -63,6 +63,25 @@ class FakeAdapter implements EraTavernHostAdapter {
   notificationImplementation: (notification: EraPreparedNotification, signal: AbortSignal) => void | Promise<void> =
     () => undefined;
 
+  readonly agent = {
+    read_context: async (input: Readonly<Record<string, unknown>>) => ({ ...input }),
+    write_configuration: async (input: Readonly<Record<string, unknown>>) => ({ ...input }),
+    capture_preset: (input: Readonly<Record<string, unknown>>) => ({ ...input }),
+    read_configuration_sources: (input: Readonly<Record<string, unknown>>) => ({ ...input }),
+    upsert_connection_profile: async (input: Readonly<Record<string, unknown>>) => ({ ...input }),
+    delete_connection_profile: async (input: Readonly<Record<string, unknown>>) => ({ ...input }),
+    clear_connection_profile_key: async (input: Readonly<Record<string, unknown>>) => ({ ...input }),
+    list_connection_models: async (input: Readonly<Record<string, unknown>>) => ({ ...input, models: [] }),
+    generate: async (input: Readonly<Record<string, unknown>>) => ({ ...input, response: '{}' }),
+    generate_story: async (input: Readonly<Record<string, unknown>>) => ({ ...input, response: 'story' }),
+    inject_once: (input: Readonly<Record<string, unknown>>) => ({ ...input }),
+    write_session: (input: Readonly<Record<string, unknown>>) => ({ ...input }),
+    clear_session: (input: Readonly<Record<string, unknown>>) => ({ ...input }),
+    write_message: async (input: Readonly<Record<string, unknown>>) => ({ ...input }),
+    create_error_message: async (input: Readonly<Record<string, unknown>>) => ({ ...input }),
+    stop_native_generation: (input: Readonly<Record<string, unknown>>) => ({ ...input }),
+  };
+
   readonly variables = {
     read: async (input: Readonly<Record<string, unknown>>) => ({ ...input }),
     commit: async (input: Readonly<Record<string, unknown>>) => ({ ...input }),

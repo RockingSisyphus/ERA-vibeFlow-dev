@@ -20,6 +20,8 @@ import type {
 import { currentEraMessageText, updateEraMessageContent } from './message-writer';
 import { readInstallationScopeFacts } from './installation-scope';
 import { projectMessage } from './message-projection';
+import { AgentTavernHost } from './agent-tavern-host';
+import { currentCharacterRegexEnabled, requireMessageId, withoutButtonInputEvents } from './tavern-browser-host';
 
 const logger = new Logger();
 
@@ -46,7 +48,7 @@ const BUTTON_EVENTS: ReadonlyArray<readonly [string, string]> = [
 ];
 
 /** 9 个 Tavern 生命周期/业务事件与 3 个角色脚本按钮；公共 API 不再注册事件监听。 */
-export const ERA_TAVERN_LISTENER_COUNT = 12;
+export const ERA_TAVERN_LISTENER_COUNT = 13;
 
 const WINDOW_LIFECYCLE_EVENTS = new Set<string>([
   INPUT_EVENT.MESSAGE_RECEIVED,
@@ -102,25 +104,20 @@ function eventSource(eventType: string): Exclude<EraEventSource, 'timer'> {
 
 function reportBarrierFailure(result: EraWaitThroughResult): void {
   if (!result.hasFailures) return;
+  const agentPlanningBlocked = result.outcomes.some(({ outcome }) => {
+    if (outcome.status !== 'failed' || !isRecord(outcome.error)) return false;
+    return outcome.error.code === 'ERA_AGENT_PLANNING_EXHAUSTED';
+  });
+  if (agentPlanningBlocked) {
+    logger.warn('generationBarrier', 'Agent 规划尝试耗尽，原生故事生成已按会话合同阻断。', result);
+    return;
+  }
   logger.error('generationBarrier', '生成前 ERA 状态任务执行失败，按兼容的 fail-open 策略放行。', result);
   try {
     toastr.error('ERA 生成前状态同步失败，本次请求可能读到旧变量；请查看 Console。', 'ERA 生成栅栏');
   } catch (error) {
     console.error('ERA 生成栅栏错误提示失败。', error);
   }
-}
-
-function messageId(input: Readonly<Record<string, unknown>>): number {
-  const value = input.messageId ?? input.message_id;
-  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0) {
-    throw new TypeError('消息更新请求缺少非负整数 messageId。');
-  }
-  return value;
-}
-
-/** 按钮由独立 Tavern button 事件接入，目录监听不得重复登记。 */
-function isNonButtonInputEvent(value: string): boolean {
-  return !BUTTON_INPUT_EVENTS.has(value);
 }
 
 /**
@@ -134,11 +131,18 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
   private resolveStartupGate: ((decision: EraStartupGateDecision) => void) | null = null;
   private lifecycleToken = 1;
   private readonly internalMessageWrites = new Map<number, string>();
+  private readonly agentHost: AgentTavernHost;
+  readonly agent: EraTavernAdapter['agent'];
 
   constructor(private readonly options: EraTavernAdapterOptions = {}) {
     this.startupGate = new Promise<EraStartupGateDecision>(resolve => {
       this.resolveStartupGate = resolve;
     });
+    this.agentHost = new AgentTavernHost({
+      internalMessageWrites: this.internalMessageWrites,
+      readIdentity: (input, context) => this.identity.read(input, context),
+    });
+    this.agent = this.agentHost.operations;
   }
 
   waitForStartupGate(): Promise<EraStartupGateDecision> {
@@ -203,11 +207,13 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
     };
 
     try {
-      for (const type of LISTENED_EVENT_TYPES.filter(isNonButtonInputEvent)) {
+      for (const type of withoutButtonInputEvents(LISTENED_EVENT_TYPES, BUTTON_INPUT_EVENTS)) {
         const definition = getEventDefinition(type);
         /** 只有 generation barrier 事件返回 Promise，普通通知保持 Tavern 原时序。 */
         const handler = (...args: unknown[]): void | Promise<void> => {
+          if (type === INPUT_EVENT.GENERATION_STARTED && this.agentHost.isAuxiliaryGenerationActive()) return undefined;
           if (this.consumeInternalMessageUpdate(type, args)) return undefined;
+          if (type === INPUT_EVENT.CHAT_CHANGED) this.agentHost.clearSessions();
           if (WINDOW_LIFECYCLE_EVENTS.has(type)) this.rotateLifecycleWindow();
           const result = this.enqueue(type, eventSource(type), args);
           if (
@@ -254,6 +260,7 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
       if (stopped) return;
       stopped = true;
       this.accepting = false;
+      this.agentHost.stop();
       for (const registration of registrations) {
         eventRemoveListener(registration.eventType, registration.handler);
       }
@@ -275,6 +282,7 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
   stopAccepting(): void {
     this.accepting = false;
     this.internalMessageWrites.clear();
+    this.agentHost.stop();
   }
 
   async notify(notification: EraPreparedNotification, context: EraCapabilityContext): Promise<void> {
@@ -347,7 +355,7 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
     refresh: async (input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown> => {
       throwIfAborted(context.signal);
       if (input.mode === 'all') await SillyTavern.reloadCurrentChat();
-      else await refreshOneMessage(messageId(input));
+      else await refreshOneMessage(requireMessageId(input));
       throwIfAborted(context.signal);
       return { status: 'completed' };
     },
@@ -403,7 +411,7 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
     /** 读取角色局部正则开关与完整列表，选择规则留给纯规划器。 */
     read: async (_input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown> => {
       throwIfAborted(context.signal);
-      const enabled = isCharacterTavernRegexesEnabled();
+      const enabled = currentCharacterRegexEnabled();
       const regexes = enabled ? clonePortable(getTavernRegexes({ type: 'character' })) : [];
       return { enabled, regexes };
     },

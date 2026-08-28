@@ -55,7 +55,15 @@ describe('ERA Tavern 生产接线', () => {
     vi.stubGlobal('eventOn', (type: string, handler: EventHandler) => events.register(type, handler, 'normal'));
     vi.stubGlobal('eventMakeFirst', (type: string, handler: EventHandler) => events.register(type, handler, 'first'));
     vi.stubGlobal('eventMakeLast', (type: string, handler: EventHandler) => events.register(type, handler, 'last'));
+    vi.stubGlobal('eventOnce', (type: string, handler: EventHandler) => {
+      const once = (...args: unknown[]) => {
+        events.remove(type, once);
+        return handler(...args);
+      };
+      return events.register(type, once, 'normal');
+    });
     vi.stubGlobal('eventRemoveListener', (type: string, handler: EventHandler) => events.remove(type, handler));
+    vi.stubGlobal('tavern_events', { GENERATION_AFTER_COMMANDS: 'GENERATION_AFTER_COMMANDS' });
     vi.stubGlobal('getButtonEvent', (name: string) => `era-button:${name}`);
     vi.stubGlobal('toastr', { error: vi.fn() });
   });
@@ -65,7 +73,7 @@ describe('ERA Tavern 生产接线', () => {
     vi.restoreAllMocks();
   });
 
-  it('只注册 9 个 Tavern 生命周期事件与 3 个按钮，不监听旧公共事件 API', () => {
+  it('只注册 10 个 Tavern 生命周期事件与 3 个按钮，不监听旧公共事件 API', () => {
     const adapter = new TavernEraServiceAdapter();
     const listener = vi.fn(() => accepted(async () => ({ throughSequence: 1, outcomes: [], hasFailures: false })));
     const stop = adapter.subscribe(listener);
@@ -82,6 +90,7 @@ describe('ERA Tavern 生产接线', () => {
     expect(events.listeners.has('era-button:手动同步状态')).toBe(true);
     expect(events.listeners.has('era-button:强制完全重算')).toBe(true);
     expect(events.orders.get(INPUT_EVENT.GENERATION_STARTED)).toBe('first');
+    expect(events.orders.get(INPUT_EVENT.GENERATION_STOPPED)).toBe('normal');
     expect(() => adapter.subscribe(listener)).toThrowError('不允许重复注册');
 
     stop();
@@ -113,12 +122,60 @@ describe('ERA Tavern 生产接线', () => {
     stop();
   });
 
+  it('Agent 规划失败时在原生控制器尚未建立的场景延后到 after-commands 阻断，并随适配器清理', () => {
+    const stopNative = vi.fn().mockReturnValueOnce(false).mockReturnValueOnce(true);
+    const stopAuxiliary = vi.fn(() => true);
+    vi.stubGlobal('stopAllGeneration', stopAuxiliary);
+    vi.stubGlobal('SillyTavern', {
+      getContext: () => ({ stopGeneration: stopNative }),
+    });
+
+    const adapter = new TavernEraServiceAdapter();
+    const stopAdapter = adapter.subscribe(() =>
+      accepted(async () => ({
+        throughSequence: 1,
+        outcomes: [],
+        hasFailures: false,
+      })),
+    );
+    const result = adapter.agent.stop_native_generation(
+      { reason: 'planning-exhausted' },
+      { signal: new AbortController().signal },
+    );
+
+    expect(result).toMatchObject({ status: 'deferred', nativeStopped: false, auxiliaryStopped: true });
+    expect(stopAuxiliary).toHaveBeenCalledTimes(1);
+    expect(stopNative).toHaveBeenCalledTimes(1);
+    expect(events.listeners.has('GENERATION_AFTER_COMMANDS')).toBe(true);
+
+    events.only('GENERATION_AFTER_COMMANDS')('regenerate', {}, false);
+    expect(stopNative).toHaveBeenCalledTimes(2);
+    expect(events.listeners.has('GENERATION_AFTER_COMMANDS')).toBe(false);
+
+    adapter.agent.stop_native_generation({}, { signal: new AbortController().signal });
+    expect(events.listeners.has('GENERATION_AFTER_COMMANDS')).toBe(true);
+    stopAdapter();
+    expect(events.listeners.has('GENERATION_AFTER_COMMANDS')).toBe(false);
+  });
+
   it('能力严格投影消息、局部更新保留宿主字段，并在操作前后尊重 AbortSignal', async () => {
     const variables = {
       stat_data: { known: 1 },
       frameworkUnknown: { nested: [1, null, { future: true }] },
     };
-    const setMessages = vi.fn(async () => undefined);
+    const setMessages = vi.fn(async (updates: Array<Record<string, unknown>>) => {
+      for (const update of updates) {
+        if (typeof update.message === 'string') {
+          hostMessage.message = update.message;
+          hostMessage.swipes[hostMessage.swipe_id] = update.message;
+        }
+        if (Array.isArray(update.swipes)) {
+          hostMessage.swipes = [...update.swipes] as string[];
+          hostMessage.message = hostMessage.swipes[hostMessage.swipe_id] ?? '';
+          hostMessage.extra = hostMessage.swipes_info[hostMessage.swipe_id] ?? {};
+        }
+      }
+    });
     const emitted = vi.fn(async () => undefined);
     const replaceEntries = vi.fn(async () => undefined);
     const updateRegexes = vi.fn(async (updater: (value: unknown[]) => unknown[]) =>
@@ -136,6 +193,10 @@ describe('ERA Tavern 生产接线', () => {
       message: 'hello',
       swipe_id: 1,
       swipes: ['旧分支', 'hello', '备用分支'],
+      swipes_info: [{}, {}, {}],
+      extra: {
+        media: [{ type: 'image', url: 'asset://keep' }],
+      },
       attachments: [{ type: 'image', url: 'asset://keep' }],
       send_date: new Date('2026-08-08T00:00:00Z'),
       futureMessageField: { keep: true },
@@ -205,9 +266,12 @@ describe('ERA Tavern 生产接线', () => {
       },
       context,
     );
-    expect(setMessages).toHaveBeenCalledWith([{ message_id: 0, swipes: ['旧分支', 'next', '备用分支'] }], {
+    expect(setMessages).toHaveBeenCalledWith([{ message_id: 0, message: 'next' }], {
       refresh: 'affected',
     });
+    expect(hostMessage.message).toBe('next');
+    expect(hostMessage.swipes).toEqual(['旧分支', 'next', '备用分支']);
+    expect(hostMessage.extra).toEqual({ media: [{ type: 'image', url: 'asset://keep' }] });
     expect(hostMessage.attachments).toEqual([{ type: 'image', url: 'asset://keep' }]);
     expect(hostMessage.futureMessageField).toEqual({ keep: true });
 

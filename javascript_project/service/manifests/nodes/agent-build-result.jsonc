@@ -1,0 +1,12 @@
+{
+  "kind":"node",
+  "type_key":"era.agent.build_result",
+  "display_name":"构造 Agent 直接任务结果",
+  "category":"故事生成会话",
+  "description":"对设置、重试、生成栅栏 no-op 或失败步骤按来源恰好结算一次。",
+  "version":"1.0.0",
+  "flow_kind":"process",
+  "contract":{"requires":[{"type":"era.agent.session.transition","cardinality":"exactly_one","display_name":"Agent 转换"}],"provides":[{"key":"agent_task_result_direct","type":"era.task.result","display_name":"Agent 直接结果"}],"params_schema":{},"params_defaults":{},"input_semantics":{"era.agent.session.transition":["输入：无需原任务的阶段结果。"]},"output_semantics":{"agent_task_result_direct":["输出：恰好一次结算。"]}},
+  "implementations":[{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/agent/build_agent_result.ts","export":"run"}}],
+  "base_libs":["era.service.types"],"capabilities":[]
+}

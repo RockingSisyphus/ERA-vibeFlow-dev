@@ -1,0 +1,12 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.agent.host.request",
+  "representation": "json",
+  "display_name": "ERA Agent 宿主请求",
+  "description": "Service 已决定的有界 Agent 酒馆或模型 I/O 请求；Host 不解释阶段业务。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": true
+  }
+}

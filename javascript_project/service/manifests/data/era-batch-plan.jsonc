@@ -591,7 +591,8 @@
                     "initialize",
                     "sync",
                     "api",
-                    "update-mk"
+                    "update-mk",
+                    "agent-generation-session"
                   ]
                 },
                 "task": {
