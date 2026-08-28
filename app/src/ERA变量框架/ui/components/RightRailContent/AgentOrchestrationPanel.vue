@@ -348,4 +348,6 @@ const {
 } = useAgentOrchestrationPanel();
 </script>
 
-<style scoped src="./AgentOrchestrationPanel.css"></style>
+<style scoped>
+@import './AgentOrchestrationPanel.css';
+</style>
