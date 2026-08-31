@@ -2,7 +2,7 @@
   "kind": "capability",
   "id": "era.tavern.agent",
   "targets": ["browser"],
-  "display_name": "ERA 故事编排宿主 I/O",
+  "display_name": "ERA 多阶段生成宿主 I/O",
   "description": "只执行 Service 已声明的角色卡、页面会话、独立模型请求、一次性注入和消息机械操作；不决定阶段、重试、函数或变量语义。",
   "operations": {
     "read_context": {"input_type": "era.agent.host.request", "output_type": "era.agent.host.result", "completion": "suspend"},
@@ -13,6 +13,7 @@
     "delete_connection_profile": {"input_type": "era.agent.host.request", "output_type": "era.agent.host.result", "completion": "suspend"},
     "clear_connection_profile_key": {"input_type": "era.agent.host.request", "output_type": "era.agent.host.result", "completion": "suspend"},
     "list_connection_models": {"input_type": "era.agent.host.request", "output_type": "era.agent.host.result", "completion": "suspend"},
+    "list_connection_models_draft": {"input_type": "era.agent.host.request", "output_type": "era.agent.host.result", "completion": "suspend"},
     "generate": {"input_type": "era.agent.host.request", "output_type": "era.agent.host.result", "completion": "suspend"},
     "generate_story": {"input_type": "era.agent.host.request", "output_type": "era.agent.host.result", "completion": "suspend"},
     "inject_once": {"input_type": "era.agent.host.request", "output_type": "era.agent.host.result", "completion": "immediate"},

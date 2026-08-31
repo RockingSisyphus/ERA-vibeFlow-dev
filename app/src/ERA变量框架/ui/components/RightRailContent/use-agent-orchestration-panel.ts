@@ -44,7 +44,7 @@ export function useAgentOrchestrationPanel() {
     if (state.busy.value) return;
     state.busy.value = true;
     try {
-      await awaitUiSettlement(requestEraService(ERA_UI_EVENT.AGENT_RETRY, [{ kind }], 'ui'), '重试故事编排阶段');
+      await awaitUiSettlement(requestEraService(ERA_UI_EVENT.AGENT_RETRY, [{ kind }], 'ui'), '重试多阶段生成阶段');
       toastr.success('最新 Agent 周期已按所选阶段级联重试。');
       state.busy.value = false;
       await stage.load();
@@ -58,24 +58,21 @@ export function useAgentOrchestrationPanel() {
   return {
     ...state,
     addAttempt: stage.addAttempt.bind(stage),
-    clearConnectionKey: connection.clearConnectionKey.bind(connection),
+    connectionDraft: connection.draft.bind(connection),
     connectionMissing: stage.connectionMissing.bind(stage),
     deleteConnectionProfile: connection.deleteConnectionProfile.bind(connection),
-    editConnectionProfile: connection.editConnectionProfile.bind(connection),
     legacyModel: stage.legacyModel.bind(stage),
     load: stage.load.bind(stage),
     loadModels: connection.loadModels.bind(connection),
-    modelsFor: stage.modelsFor.bind(stage),
+    newConnection: connection.newConnection.bind(connection),
     presetLabel: stage.presetLabel.bind(stage),
     presetSelection: stage.presetSelection.bind(stage),
     refreshSources: stage.refreshSources.bind(stage),
     removeAttempt: stage.removeAttempt.bind(stage),
-    resetProfileDraft: connection.resetProfileDraft.bind(connection),
     retry,
     retryPlanningEnabled,
     retrySettlementEnabled,
     save: stage.save.bind(stage),
-    saveConnectionProfile: connection.saveConnectionProfile.bind(connection),
     selectConnectionProfile: stage.selectConnectionProfile.bind(stage),
     selectModelSource: stage.selectModelSource.bind(stage),
     selectPreset: stage.selectPreset.bind(stage),

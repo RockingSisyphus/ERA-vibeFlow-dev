@@ -99,7 +99,7 @@
         "id": "task_agent_generation_session",
         "type_used": "era.agent.generation_session",
         "display_name": "执行三阶段故事生成会话",
-        "description": "统一包装生成生命周期与故事编排设置；功能关闭或不适用时委托既有 ERA 行为，开启时在同一 FIFO、生成栅栏和取消域内执行规划、函数、故事衔接与变量结算。"
+        "description": "统一包装生成生命周期与多阶段生成设置；功能关闭或不适用时委托既有 ERA 行为，开启时在同一 FIFO、生成栅栏和取消域内执行规划、函数、故事衔接与变量结算。"
       },
       {
         "id": "task_ignore",

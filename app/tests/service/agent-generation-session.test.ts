@@ -70,6 +70,110 @@ describe('AgentGenerationSession pure contracts', () => {
     expect(normalized.settlement.retryCount).toBe(3);
   });
 
+  it('creates a pending custom connection before strict configuration normalization', async () => {
+    const writeConfiguration = vi.fn(async () => ({ status: 'committed' }));
+    const upsertConnectionProfile = vi.fn(async () => ({
+      status: 'created',
+      profile: {
+        id: 'profile-created-by-host',
+        name: 'Fixture API',
+        apiUrl: 'http://127.0.0.1:19002',
+        hasKey: false,
+      },
+    }));
+    const result = await runAgentSessionNode(
+      {
+        'era.step.request.routed': {
+          value: {
+            kind: 'execute',
+            taskRoute: 'agent-generation-session',
+            task: {
+              primaryEvent: {
+                eventId: 'event-agent-save-with-new-profile',
+                sequence: 6,
+                type: 'era.ui.agent_configuration',
+                args: [
+                  {
+                    kind: 'json',
+                    value: {
+                      action: 'write-with-connections',
+                      configuration: {
+                        schemaVersion: '2',
+                        planning: {
+                          enabled: true,
+                          retryCount: 0,
+                          attempts: [
+                            {
+                              preset: { source: 'builtin' },
+                              modelSource: {
+                                kind: 'custom-profile',
+                                profileId: '',
+                                model: 'fixture-model',
+                              },
+                            },
+                          ],
+                        },
+                        settlement: {
+                          enabled: false,
+                          retryCount: 0,
+                          attempts: [{ preset: { source: 'builtin' }, modelSource: { kind: 'tavern-current' } }],
+                        },
+                      },
+                      connectionMutations: [
+                        {
+                          stage: 'planning',
+                          index: 0,
+                          name: 'Fixture API',
+                          apiUrl: 'http://127.0.0.1:19002',
+                          clearKey: false,
+                        },
+                      ],
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+        'era.batch.execution.state': { value: { schemaVersion: 1 } },
+      },
+      {},
+      {
+        capabilities: {
+          'era.tavern.agent': {
+            read_context: vi.fn(async () => ({ configuration: null })),
+            upsert_connection_profile: upsertConnectionProfile,
+            write_configuration: writeConfiguration,
+            read_configuration_sources: vi.fn(() => ({ connectionProfiles: [] })),
+          } as never,
+        },
+      },
+    );
+
+    expect(upsertConnectionProfile).toHaveBeenCalledWith({
+      name: 'Fixture API',
+      apiUrl: 'http://127.0.0.1:19002',
+      clearKey: false,
+    });
+    expect(writeConfiguration).toHaveBeenCalledWith({
+      configuration: expect.objectContaining({
+        planning: expect.objectContaining({
+          attempts: [
+            expect.objectContaining({
+              modelSource: {
+                kind: 'custom-profile',
+                profileId: 'profile-created-by-host',
+                profileNameHint: 'Fixture API',
+                model: 'fixture-model',
+              },
+            }),
+          ],
+        }),
+      }),
+    });
+    expect(result.agent_transition).toMatchObject({ status: 'committed' });
+  });
+
   it('sanitizes embedded presets to prompts and common sampling values', () => {
     expect(
       sanitizePresetSnapshot({
@@ -289,7 +393,6 @@ describe('AgentGenerationSession pure contracts', () => {
           'era.tavern.agent': {
             read_context: vi.fn(async () => ({
               identity: { chatId: 'chat-agent-idle' },
-              regexEnabled: true,
               configuration: {
                 schemaVersion: '1',
                 planning: { enabled: false, retryCount: 0, attempts: [{ preset: { source: 'builtin' } }] },
@@ -334,7 +437,6 @@ describe('AgentGenerationSession pure contracts', () => {
           'era.tavern.agent': {
             read_context: vi.fn(async () => ({
               identity: { chatId: 'chat-agent-next' },
-              regexEnabled: true,
               configuration: {
                 schemaVersion: '1',
                 planning: { enabled: false, retryCount: 0, attempts: [{ preset: { source: 'builtin' } }] },
@@ -393,7 +495,6 @@ describe('AgentGenerationSession pure contracts', () => {
           'era.tavern.agent': {
             read_context: vi.fn(async () => ({
               identity: { chatId: 'chat-agent-greeting' },
-              regexEnabled: true,
               configuration: {
                 schemaVersion: '1',
                 planning: { enabled: true, retryCount: 0, attempts: [{ preset: { source: 'builtin' } }] },
@@ -447,7 +548,6 @@ describe('AgentGenerationSession pure contracts', () => {
           'era.tavern.agent': {
             read_context: vi.fn(async () => ({
               identity: { chatId: 'chat-agent-planning-only' },
-              regexEnabled: true,
               configuration: {
                 schemaVersion: '1',
                 planning: { enabled: true, retryCount: 0, attempts: [{ preset: { source: 'builtin' } }] },
@@ -512,7 +612,6 @@ describe('AgentGenerationSession pure contracts', () => {
           'era.tavern.agent': {
             read_context: vi.fn(async () => ({
               identity: { chatId: 'chat-agent-frozen', groupId: null },
-              regexEnabled: true,
               configuration: {
                 schemaVersion: '1',
                 planning: { enabled: false, retryCount: 0, attempts: [{ preset: { source: 'builtin' } }] },
@@ -574,7 +673,6 @@ describe('AgentGenerationSession pure contracts', () => {
           'era.tavern.agent': {
             read_context: vi.fn(async () => ({
               identity: { chatId: 'chat-agent-frozen-settlement', groupId: null },
-              regexEnabled: true,
               configuration: null,
               session: {
                 schemaVersion: 1,
@@ -638,7 +736,6 @@ describe('AgentGenerationSession pure contracts', () => {
           'era.tavern.agent': {
             read_context: vi.fn(async () => ({
               identity: { chatId: 'chat-profile-retry', groupId: null },
-              regexEnabled: true,
               configuration: {
                 schemaVersion: '2',
                 planning: {
@@ -715,7 +812,6 @@ describe('AgentGenerationSession pure contracts', () => {
           'era.tavern.agent': {
             read_context: vi.fn(async () => ({
               identity: { chatId: 'chat-agent-group', groupId: 'group-1' },
-              regexEnabled: true,
               configuration: {
                 schemaVersion: '1',
                 planning: { enabled: true, retryCount: 0, attempts: [{ preset: { source: 'builtin' } }] },

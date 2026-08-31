@@ -22,6 +22,7 @@ import { readInstallationScopeFacts } from './installation-scope';
 import { projectMessage } from './message-projection';
 import { AgentTavernHost } from './agent-tavern-host';
 import { currentCharacterRegexEnabled, requireMessageId, withoutButtonInputEvents } from './tavern-browser-host';
+import { refreshDisplayedEraTechnicalBlocks, registerEraTechnicalBlockProjection } from './technical-block-projection';
 
 const logger = new Logger();
 
@@ -190,6 +191,7 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
     this.listener = listener;
     this.accepting = true;
     const registrations: RegisteredListener[] = [];
+    const stopTechnicalProjection = registerEraTechnicalBlockProjection();
 
     const registeredTypes = new Set<string>();
     /** 统一记录卸载句柄，并在登记失败时按原顺序完整回收。 */
@@ -247,6 +249,7 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
         throw new Error(`ERA 生产监听数量应为 ${ERA_TAVERN_LISTENER_COUNT}，实际为 ${registrations.length}。`);
       }
     } catch (error) {
+      stopTechnicalProjection();
       for (const registration of registrations) {
         eventRemoveListener(registration.eventType, registration.handler);
       }
@@ -261,6 +264,7 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
       stopped = true;
       this.accepting = false;
       this.agentHost.stop();
+      stopTechnicalProjection();
       for (const registration of registrations) {
         eventRemoveListener(registration.eventType, registration.handler);
       }
@@ -348,7 +352,8 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
       context: EraCapabilityContext,
     ): Promise<unknown> => {
       throwIfAborted(context.signal);
-      await updateEraMessageContent(input, this.internalMessageWrites);
+      const affectedMessageIds = await updateEraMessageContent(input, this.internalMessageWrites);
+      refreshDisplayedEraTechnicalBlocks(affectedMessageIds);
       throwIfAborted(context.signal);
       return { status: 'committed' };
     },

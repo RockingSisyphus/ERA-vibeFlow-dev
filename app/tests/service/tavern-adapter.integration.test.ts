@@ -187,7 +187,18 @@ describe('ERA Tavern 生产接线', () => {
     vi.stubGlobal('updateVariablesWith', (updater: (value: Record<string, unknown>) => Record<string, unknown>) =>
       updater(variables),
     );
-    const hostMessage = {
+    const hostMessage: {
+      message_id: number;
+      role: string;
+      message: string;
+      swipe_id: number;
+      swipes: string[];
+      swipes_info: Record<string, unknown>[];
+      extra: Record<string, unknown>;
+      attachments: Record<string, unknown>[];
+      send_date: Date;
+      futureMessageField: Record<string, unknown>;
+    } = {
       message_id: 0,
       role: 'assistant',
       message: 'hello',

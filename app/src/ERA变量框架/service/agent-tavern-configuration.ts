@@ -151,7 +151,7 @@ function capturePrompt(
 export function capturePreset(input: Readonly<Record<string, unknown>>): unknown {
   const context = currentTavernContext();
   if (typeof context.groupId === 'string' && context.groupId.length > 0) {
-    throw new TypeError('群聊不支持 ERA 故事编排预设。');
+    throw new TypeError('群聊不支持 ERA 多阶段生成预设。');
   }
   const name = typeof input.name === 'string' && input.name.trim().length > 0 ? input.name.trim() : 'in_use';
   const preset = getPreset(name);

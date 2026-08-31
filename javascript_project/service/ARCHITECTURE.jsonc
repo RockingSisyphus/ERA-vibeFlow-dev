@@ -614,8 +614,8 @@
               "path": "configs/nodesets/agent_generation_session.jsonc"
             },
             "role": {
-              "display_name": "准备辅助阶段预设与模型请求",
-              "description": "在单一 AgentGenerationSession 内迁移或读取角色卡 V1/V2 配置，把预设脱敏快照、酒馆当前模型选择或本机连接方案引用归一化为不含 URL 与密钥正文的执行请求；设置变更只影响下一轮冻结会话。"
+              "display_name": "准备多阶段生成与内联连接草稿",
+              "description": "在单一 AgentGenerationSession 内冻结角色卡 V1/V2 开关、尝试预设与模型来源；设置命令同时整理每张尝试卡内联编辑的本机连接草稿，生成阶段不再读取角色卡局部正则开关，且任何领域请求均不包含密钥正文。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -664,8 +664,8 @@
               "path": "configs/nodesets/agent_generation_session.jsonc"
             },
             "role": {
-              "display_name": "按独立来源执行当前 Agent 阶段",
-              "description": "按规划或结算尝试的预设快照、模型来源和本机方案引用调用既有 Agent Host；Host 私下解析 URL 与密钥，Service 负责重试切换、缺失方案诊断和结果语义，正文故事仍使用酒馆当前预设、连接与模型。"
+              "display_name": "执行多阶段生成、方案绑定与模型枚举诊断",
+              "description": "设置保存时先验证全部尝试，再协调本机方案创建或更新、方案 ID 绑定与角色卡写入；模型枚举必须区分合法空列表与宿主请求失败，并把失败交给现有 UI 反馈链。生成时仅由角色卡开关及既有生成资格决定规划和结算；长期显示与提示投影属于现有 Service Host 生命周期，不在本节点建立第二状态机。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -6259,7 +6259,7 @@
             },
             "role": {
               "display_name": "执行三阶段故事生成会话",
-              "description": "统一包装生成生命周期与故事编排设置；功能关闭或不适用时委托既有 ERA 行为，开启时在同一 FIFO、生成栅栏和取消域内执行规划、函数、故事衔接与变量结算。"
+              "description": "统一包装生成生命周期与多阶段生成设置；功能关闭或不适用时委托既有 ERA 行为，开启时在同一 FIFO、生成栅栏和取消域内执行规划、函数、故事衔接与变量结算。"
             },
             "contract_source": "nodeset",
             "flow_kind": "predefined",
@@ -38930,7 +38930,7 @@
         "targets": [
           "browser"
         ],
-        "display_name": "ERA 故事编排宿主 I/O",
+        "display_name": "ERA 多阶段生成宿主 I/O",
         "description": "只执行 Service 已声明的角色卡、页面会话、独立模型请求、一次性注入和消息机械操作；不决定阶段、重试、函数或变量语义。",
         "operations": {
           "read_context": {
@@ -38969,6 +38969,11 @@
             "completion": "suspend"
           },
           "list_connection_models": {
+            "input_type": "era.agent.host.request",
+            "output_type": "era.agent.host.result",
+            "completion": "suspend"
+          },
+          "list_connection_models_draft": {
             "input_type": "era.agent.host.request",
             "output_type": "era.agent.host.result",
             "completion": "suspend"
@@ -39225,7 +39230,7 @@
         "status": "implemented",
         "display_name": "ERA 酒馆服务宿主",
         "category": "宿主接线",
-        "description": "连接 SillyTavern 与 Tavern Helper，管理单一先进先出队列、回执、高水位屏障、绝对截止时间定时器、宿主引用和出站帧幂等，并提供服务端口、Agent 独立请求、酒馆能力、Sidecar 机械接线与分阶段启动闸门；消息读取按 era-active-message-v1 投影，Host 不承载 Agent 重试、函数、CRUD、同步、合并、回滚或身份判定规则。",
+        "description": "连接 SillyTavern 与 Tavern Helper，管理单一先进先出队列、回执、高水位屏障、绝对截止时间定时器、宿主引用和出站帧幂等，并提供服务端口、Agent 独立请求、酒馆能力、Sidecar 机械接线与分阶段启动闸门；生命周期登记幂等消息显示投影与 GENERATE_AFTER_DATA 最后提示投影，二者只改变 DOM 或本次出站副本。消息读取仍按 era-active-message-v1 投影，Host 不承载 Agent 重试、函数、CRUD、同步、合并、回滚或身份判定规则。",
         "version": "0.1.0",
         "targets": [
           "browser"

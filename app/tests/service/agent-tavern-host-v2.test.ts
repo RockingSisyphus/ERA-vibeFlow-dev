@@ -8,7 +8,7 @@ const capabilityContext = { signal };
 describe('AgentTavernHost V2 local routes', () => {
   const saveSettingsDebounced = vi.fn(async () => undefined);
   const writeExtensionField = vi.fn(async () => undefined);
-  const getModelListMock = vi.fn(async () => ['model-a', 'model-b']);
+  const fetchMock = vi.fn();
   const generateRawMock = vi.fn(async () => '{"storyPlan":{},"calls":[]}');
 
   beforeEach(() => {
@@ -19,6 +19,7 @@ describe('AgentTavernHost V2 local routes', () => {
       extensionSettings: {},
       saveSettingsDebounced,
       writeExtensionField,
+      getRequestHeaders: () => ({ 'Content-Type': 'application/json', 'X-CSRF-TOKEN': 'test-token' }),
     });
     vi.stubGlobal(
       'getPresetNames',
@@ -40,7 +41,14 @@ describe('AgentTavernHost V2 local routes', () => {
         extensions: { regex_scripts: [{ find_regex: 'secret' }], apiKey: 'secret' },
       })),
     );
-    vi.stubGlobal('getModelList', getModelListMock);
+    fetchMock.mockReset();
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ data: [{ id: 'model-b' }, { id: 'model-a' }, { id: 'model-a' }] }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
     vi.stubGlobal('generateRaw', generateRawMock);
     vi.stubGlobal(
       'generate',
@@ -85,7 +93,7 @@ describe('AgentTavernHost V2 local routes', () => {
   it('stores keys locally while exposing only summaries and preserving an empty edit key', async () => {
     const operations = host().operations;
     const created = (await operations.upsert_connection_profile(
-      { id: 'lab-a', name: 'Lab A', apiUrl: 'http://127.0.0.1:4010/v1', key: 'top-secret-key' },
+      { id: 'lab-a', name: 'Lab A', apiUrl: 'http://127.0.0.1:4010/v1', keyProvider: () => 'top-secret-key' },
       capabilityContext,
     )) as Record<string, unknown>;
     expect(JSON.stringify(created)).not.toContain('top-secret-key');
@@ -94,7 +102,7 @@ describe('AgentTavernHost V2 local routes', () => {
     );
 
     await operations.upsert_connection_profile(
-      { id: 'lab-a', name: 'Lab A renamed', apiUrl: 'http://127.0.0.1:4010/v1', key: '' },
+      { id: 'lab-a', name: 'Lab A renamed', apiUrl: 'http://127.0.0.1:4010/v1' },
       capabilityContext,
     );
     const local = SillyTavern.extensionSettings.era_agent.connectionProfiles['lab-a'];
@@ -105,15 +113,22 @@ describe('AgentTavernHost V2 local routes', () => {
   it('loads and generates through the selected local profile without returning the key', async () => {
     const operations = host().operations;
     await operations.upsert_connection_profile(
-      { id: 'lab-b', name: 'Lab B', apiUrl: 'http://127.0.0.1:4020/v1', key: 'another-secret' },
+      { id: 'lab-b', name: 'Lab B', apiUrl: 'http://127.0.0.1:4020/v1', keyProvider: () => 'another-secret' },
       capabilityContext,
     );
     const listed = await operations.list_connection_models({ id: 'lab-b' }, capabilityContext);
     expect(listed).toMatchObject({ models: ['model-a', 'model-b'] });
-    expect(getModelListMock).toHaveBeenCalledWith({
-      apiurl: 'http://127.0.0.1:4020/v1',
-      key: 'another-secret',
-    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/backends/chat-completions/status',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          reverse_proxy: 'http://127.0.0.1:4020/v1',
+          proxy_password: 'another-secret',
+          chat_completion_source: 'openai',
+        }),
+      }),
+    );
 
     const generated = await operations.generate(
       {
@@ -138,6 +153,30 @@ describe('AgentTavernHost V2 local routes', () => {
     expect(generated).toMatchObject({
       route: { kind: 'custom-profile', profileId: 'lab-b', model: 'model-b' },
     });
+  });
+
+  it('distinguishes a legitimate empty model list from a failed status request', async () => {
+    const operations = host().operations;
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ data: [] }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+    await expect(
+      operations.list_connection_models_draft(
+        { apiUrl: 'http://127.0.0.1:4020/v1', keyProvider: () => 'placeholder-key' },
+        capabilityContext,
+      ),
+    ).resolves.toEqual({ models: [] });
+
+    fetchMock.mockResolvedValueOnce(new Response('provider unavailable', { status: 503 }));
+    await expect(
+      operations.list_connection_models_draft(
+        { apiUrl: 'http://127.0.0.1:4020/v1', keyProvider: () => 'placeholder-key' },
+        capabilityContext,
+      ),
+    ).rejects.toThrow('ERA_AGENT_MODEL_LIST_FAILED');
   });
 
   it('never silently falls back when a referenced local profile is missing', async () => {

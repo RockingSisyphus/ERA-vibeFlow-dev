@@ -45,28 +45,34 @@ async function updateManyMessages(
   updates: unknown[],
   refresh: 'none' | 'affected' | 'all',
   internalMessageWrites: Map<number, string>,
-): Promise<void> {
+): Promise<readonly number[]> {
+  const messageIds = new Set<number>();
   for (const update of updates) {
-    if (isRecord(update)) rememberExpectedUpdate(update, internalMessageWrites);
+    if (!isRecord(update)) continue;
+    rememberExpectedUpdate(update, internalMessageWrites);
+    const rawId = update.message_id ?? update.messageId;
+    if (Number.isSafeInteger(rawId) && Number(rawId) >= 0) messageIds.add(Number(rawId));
   }
   await setChatMessages(updates as Array<{ message_id: number }>, { refresh });
+  return [...messageIds];
 }
 
 async function updateOneMessage(
   input: Readonly<Record<string, unknown>>,
   refresh: 'none' | 'affected' | 'all',
   internalMessageWrites: Map<number, string>,
-): Promise<void> {
+): Promise<readonly number[]> {
   const id = messageId(input);
   const content = input.content;
   if (typeof content !== 'string') throw new TypeError('消息更新请求缺少文本 content。');
   const current = getChatMessages(id)[0];
   if (!current) throw new Error(`找不到消息 #${id}。`);
   internalMessageWrites.set(id, content);
-  // Tavern Helper 会把 `message` 同步到当前 swipe，且不触碰该页的 extra。
-  // 若改为回写整个 `swipes`，它会同时以 swipe_info 重建 extra；新用户消息
-  // 在 swipe_info 尚未携带附件时会因此丢失图片、音频等宿主元数据。
+  // 必须只写 `message`：Tavern Helper 会同步当前 swipe 且保留该页 extra。
+  // 整体回写 `swipes` 会从 swipe_info 重建 extra；新用户消息的 swipe_info
+  // 尚未携带附件，因此那条路径会丢失图片、音频等宿主元数据。
   await setChatMessages([{ message_id: id, message: content }], { refresh });
+  return [id];
 }
 
 /**
@@ -76,7 +82,7 @@ async function updateOneMessage(
 export async function updateEraMessageContent(
   input: Readonly<Record<string, unknown>>,
   internalMessageWrites: Map<number, string>,
-): Promise<void> {
+): Promise<readonly number[]> {
   const updates = Array.isArray(input.updates)
     ? structuredClone(input.updates)
     : isRecord(input.update)
@@ -84,8 +90,7 @@ export async function updateEraMessageContent(
       : null;
   const refresh = input.refresh === 'affected' || input.refresh === 'all' ? input.refresh : 'none';
   if (updates) {
-    await updateManyMessages(updates, refresh, internalMessageWrites);
-    return;
+    return updateManyMessages(updates, refresh, internalMessageWrites);
   }
-  await updateOneMessage(input, refresh, internalMessageWrites);
+  return updateOneMessage(input, refresh, internalMessageWrites);
 }

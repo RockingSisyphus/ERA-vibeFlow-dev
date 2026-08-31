@@ -688,13 +688,6 @@
     },
     {
       "debt": 1,
-      "fingerprint": "fcdf345a67fd1a8ebc6eb4763e8d7e5de8f85c81cbfd6dab25990d3ed5e38cfc",
-      "objectId": "comment:script:) { -> const updatePayload: { message_id: number; message?: string; swipes?: string[] }",
-      "ruleId": "COMMENT_DISABLED_CODE",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
       "fingerprint": "2daeb6af68237e8694d9373c35f5ea9fdca18f158b5ffae16f5d0b9caa4f3af6",
       "objectId": "comment:script:const content = getMessageContent(msg); -> const mk = parseEraData(content)?.['era-message-key'] || '';",
       "ruleId": "COMMENT_DISABLED_CODE",

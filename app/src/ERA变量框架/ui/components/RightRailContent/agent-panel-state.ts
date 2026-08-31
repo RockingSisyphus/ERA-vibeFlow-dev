@@ -23,10 +23,21 @@ export type Profile = {
 };
 /** 单个辅助阶段的开关、有限重试次数以及逐次尝试配置。 */
 export type Stage = { enabled: boolean; retryCount: number; attempts: Profile[] };
-/** 角色卡 V2 故事编排配置，规划和结算阶段保持完全独立。 */
+/** 角色卡 V2 多阶段生成配置，规划和结算阶段保持完全独立。 */
 export type Configuration = { schemaVersion: '2'; planning: Stage; settlement: Stage };
 /** Host 返回给 UI 的本机方案脱敏摘要，hasKey 只表示是否已保存。 */
 export type ConnectionSummary = { id: string; name: string; apiUrl: string; hasKey: boolean };
+/** 页面实例内的连接草稿；key 和模型枚举不得进入角色卡配置或跨角色复用。 */
+export type ConnectionDraft = {
+  boundProfileId: string;
+  name: string;
+  apiUrl: string;
+  key: string;
+  clearKey: boolean;
+  saveAs: boolean;
+  models: string[];
+};
+export type AgentStageName = 'planning' | 'settlement';
 
 function blankStage(): Stage {
   return {
@@ -46,14 +57,12 @@ export function createAgentPanelState() {
     }),
     open: ref(false),
     busy: ref(false),
-    regexEnabled: ref(true),
     groupChat: ref(false),
     session: ref<Record<string, unknown> | null>(null),
     presetNames: ref<string[]>([]),
     currentPresetName: ref(''),
     connectionProfiles: ref<ConnectionSummary[]>([]),
-    modelLists: reactive<Record<string, string[]>>({}),
-    profileDraft: reactive({ id: '', name: '', apiUrl: '', key: '' }),
+    connectionDrafts: reactive<Record<AgentStageName, ConnectionDraft[]>>({ planning: [], settlement: [] }),
   };
 }
 
@@ -99,6 +108,48 @@ export function assignSources(state: AgentPanelState, value: unknown): void {
         ),
       )
     : [];
+  resetConnectionDrafts(state);
+}
+
+function draftForProfile(state: AgentPanelState, profile: Profile): ConnectionDraft {
+  const id = profile.modelSource.kind === 'custom-profile' ? profile.modelSource.profileId : '';
+  const summary = state.connectionProfiles.value.find(item => item.id === id);
+  return {
+    boundProfileId: id,
+    name:
+      summary?.name ??
+      (profile.modelSource.kind === 'custom-profile' ? (profile.modelSource.profileNameHint ?? '') : ''),
+    apiUrl: summary?.apiUrl ?? '',
+    key: '',
+    clearKey: false,
+    saveAs: false,
+    models: [],
+  };
+}
+
+/** 重读角色或来源时清空所有密码草稿，防止未保存密钥跨角色或聊天残留。 */
+export function resetConnectionDrafts(state: AgentPanelState): void {
+  for (const stage of ['planning', 'settlement'] as const) {
+    state.connectionDrafts[stage].splice(
+      0,
+      state.connectionDrafts[stage].length,
+      ...state.configuration[stage].attempts.map(profile => draftForProfile(state, profile)),
+    );
+  }
+}
+
+/**
+ * 按当前尝试的方案引用返回草稿；引用变化时必须重建，否则会把上一方案的密码带入新方案。
+ */
+export function connectionDraft(state: AgentPanelState, stage: AgentStageName, index: number): ConnectionDraft {
+  const profile = state.configuration[stage].attempts[index];
+  if (!profile) throw new RangeError('多阶段生成尝试序号不存在。');
+  const expectedId = profile.modelSource.kind === 'custom-profile' ? profile.modelSource.profileId : '';
+  const current = state.connectionDrafts[stage][index];
+  if (!current || current.boundProfileId !== expectedId) {
+    state.connectionDrafts[stage][index] = draftForProfile(state, profile);
+  }
+  return state.connectionDrafts[stage][index];
 }
 
 /** 写入前统一施加 V2 有界约束，防止角色卡携带无界重试或空白路由。 */
@@ -110,8 +161,12 @@ export function boundedConfiguration(state: AgentPanelState): Configuration {
       const modelSource = structuredClone(profile.modelSource);
       if (modelSource.kind === 'custom-profile') {
         modelSource.profileId = modelSource.profileId.trim();
-        modelSource.model = modelSource.model?.trim() || undefined;
-        modelSource.profileNameHint = modelSource.profileNameHint?.trim() || undefined;
+        const model = modelSource.model?.trim();
+        const profileNameHint = modelSource.profileNameHint?.trim();
+        if (model) modelSource.model = model;
+        else delete modelSource.model;
+        if (profileNameHint) modelSource.profileNameHint = profileNameHint;
+        else delete modelSource.profileNameHint;
       }
       return { preset: profile.preset, modelSource };
     });

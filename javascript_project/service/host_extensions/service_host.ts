@@ -107,6 +107,7 @@ export interface EraTavernCapabilityAdapter {
     readonly delete_connection_profile: EraAsyncHostOperation;
     readonly clear_connection_profile_key: EraAsyncHostOperation;
     readonly list_connection_models: EraAsyncHostOperation;
+    readonly list_connection_models_draft: EraAsyncHostOperation;
     readonly generate: EraAsyncHostOperation;
     readonly generate_story: EraAsyncHostOperation;
     readonly inject_once: EraHostOperation;
@@ -630,6 +631,8 @@ class ServiceHostRuntime {
         this.invokeSuspend("agent", "clear_connection_profile_key", input, options),
       list_connection_models: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
         this.invokeSuspend("agent", "list_connection_models", input, options),
+      list_connection_models_draft: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
+        this.invokeSuspend("agent", "list_connection_models_draft", input, options),
       generate: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
         this.invokeSuspend("agent", "generate", input, options),
       generate_story: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
@@ -868,6 +871,11 @@ class ServiceHostRuntime {
       [adapter.agent?.read_context, "agent.read_context"],
       [adapter.agent?.write_configuration, "agent.write_configuration"],
       [adapter.agent?.capture_preset, "agent.capture_preset"],
+      [adapter.agent?.list_connection_models_draft, "agent.list_connection_models_draft"],
+      [adapter.agent?.upsert_connection_profile, "agent.upsert_connection_profile"],
+      [adapter.agent?.delete_connection_profile, "agent.delete_connection_profile"],
+      [adapter.agent?.clear_connection_profile_key, "agent.clear_connection_profile_key"],
+      [adapter.agent?.list_connection_models, "agent.list_connection_models"],
       [adapter.agent?.generate, "agent.generate"],
       [adapter.agent?.generate_story, "agent.generate_story"],
       [adapter.agent?.inject_once, "agent.inject_once"],
@@ -1515,6 +1523,36 @@ class ServiceHostRuntime {
     return result;
   }
 
+  /**
+   * 密钥只能作为入站事件的宿主引用存在。Service 可机械转交该引用，
+   * 但只有 Agent Host 边界会把它解析为页面实例闭包；引用正文不会进入工作流数据或回执。
+   */
+  private resolveSecretReferenceInput(
+    capability: keyof EraTavernCapabilityAdapter,
+    operation: string,
+    input: Readonly<Record<string, unknown>>,
+  ): Readonly<Record<string, unknown>> {
+    if (
+      capability !== "agent" ||
+      (operation !== "upsert_connection_profile" && operation !== "list_connection_models_draft")
+    ) {
+      return input;
+    }
+    const reference = input.keyReference;
+    if (!reference || typeof reference !== "object" || Array.isArray(reference)) return input;
+    const transport = reference as Readonly<Record<string, unknown>>;
+    if (transport.kind !== "host-ref" || typeof transport.token !== "string") return input;
+    const keyProvider = this.references.resolve(transport.token);
+    if (typeof keyProvider !== "function") {
+      throw new EraServiceHostError(
+        "ERA_HOST_REF_KIND",
+        "Agent 密钥宿主引用必须解析为页面实例闭包。",
+      );
+    }
+    const { keyReference: _discarded, ...publicInput } = input;
+    return Object.freeze({ ...publicInput, keyProvider });
+  }
+
   private invokeSuspend(
     capability: keyof EraTavernCapabilityAdapter,
     operation: string,
@@ -1560,7 +1598,9 @@ class ServiceHostRuntime {
       linked.signal.addEventListener("abort", onAbort, { once: true });
       let result: unknown;
       try {
-        result = callable.call(group, input, { signal: linked.signal });
+        result = callable.call(group, this.resolveSecretReferenceInput(capability, operation, input), {
+          signal: linked.signal,
+        });
       } catch (error) {
         finish(() => reject(error));
         return;

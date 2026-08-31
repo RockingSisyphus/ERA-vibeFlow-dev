@@ -13,6 +13,7 @@ import {
   assignConfiguration,
   assignSources,
   boundedConfiguration,
+  connectionDraft,
   eventValue,
   settlementValue,
   type AgentPanelState,
@@ -30,17 +31,16 @@ export class AgentStageActions {
     try {
       const result = await awaitUiSettlement(
         requestEraService(ERA_UI_EVENT.AGENT_CONFIGURATION, [{ action: 'read' }], 'ui'),
-        '读取故事编排设置',
+        '读取多阶段生成设置',
       );
       const value = settlementValue(result);
       assignConfiguration(this.state, value.configuration);
       assignSources(this.state, value.sources);
-      this.state.regexEnabled.value = value.regexEnabled === true;
       this.state.groupChat.value = value.groupChat === true;
       this.state.session.value =
         value.session && typeof value.session === 'object' ? (value.session as Record<string, unknown>) : null;
     } catch (error) {
-      toastr.error(`读取故事编排设置失败：${String(error)}`);
+      toastr.error(`读取多阶段生成设置失败：${String(error)}`);
     } finally {
       this.state.busy.value = false;
     }
@@ -56,16 +56,38 @@ export class AgentStageActions {
     if (this.state.busy.value || this.state.groupChat.value) return;
     this.state.busy.value = true;
     try {
+      const configuration = boundedConfiguration(this.state);
+      const secretProviders: Array<() => string> = [];
+      const connectionMutations: Record<string, unknown>[] = [];
+      for (const stageName of ['planning', 'settlement'] as const) {
+        configuration[stageName].attempts.forEach((profile, index) => {
+          if (profile.modelSource.kind !== 'custom-profile') return;
+          const draft = connectionDraft(this.state, stageName, index);
+          const secret = draft.key;
+          const keyArgIndex = secret.length > 0 ? secretProviders.push(() => secret) : 0;
+          connectionMutations.push({
+            stage: stageName,
+            index,
+            ...(!draft.saveAs && draft.boundProfileId ? { id: draft.boundProfileId } : {}),
+            name: draft.name,
+            apiUrl: draft.apiUrl,
+            clearKey: draft.clearKey,
+            ...(keyArgIndex > 0 ? { keyArgIndex } : {}),
+          });
+        });
+      }
       const result = await awaitUiSettlement(
         requestEraService(
           ERA_UI_EVENT.AGENT_CONFIGURATION,
-          [{ action: 'write', configuration: boundedConfiguration(this.state) }],
+          [{ action: 'write-with-connections', configuration, connectionMutations }, ...secretProviders],
           'ui',
         ),
-        '保存故事编排设置',
+        '保存多阶段生成设置',
       );
-      assignConfiguration(this.state, settlementValue(result).configuration);
-      toastr.success('故事编排设置已写入当前角色卡，导出角色卡时会一起携带。');
+      const value = settlementValue(result);
+      assignConfiguration(this.state, value.configuration);
+      assignSources(this.state, value.sources);
+      toastr.success('多阶段生成设置已写入当前角色卡，导出角色卡时会一起携带。');
     } catch (error) {
       toastr.error(`保存失败：${String(error)}`);
     } finally {
@@ -97,6 +119,7 @@ export class AgentStageActions {
         : { kind: 'tavern-current' };
   }
 
+  /** 切换已保存方案时重建无密码草稿，避免沿用上一方案的未保存秘密。 */
   selectConnectionProfile(stage: 'planning' | 'settlement', index: number, event: Event): void {
     const modelSource = this.state.configuration[stage].attempts[index].modelSource;
     if (modelSource.kind !== 'custom-profile') return;
@@ -104,6 +127,15 @@ export class AgentStageActions {
     const summary = this.state.connectionProfiles.value.find(item => item.id === id);
     modelSource.profileId = id;
     modelSource.profileNameHint = summary?.name;
+    this.state.connectionDrafts[stage][index] = {
+      boundProfileId: id,
+      name: summary?.name ?? '',
+      apiUrl: summary?.apiUrl ?? '',
+      key: '',
+      clearKey: false,
+      saveAs: false,
+      models: [],
+    };
   }
 
   addAttempt(stage: 'planning' | 'settlement'): void {
@@ -112,11 +144,14 @@ export class AgentStageActions {
       this.state.configuration[stage].attempts.at(-1) ??
       ({ preset: { source: 'builtin' as const }, modelSource: { kind: 'tavern-current' as const } } satisfies Profile);
     this.state.configuration[stage].attempts.push(structuredClone(toRaw(last)));
+    const profile = this.state.configuration[stage].attempts.at(-1);
+    if (profile) connectionDraft(this.state, stage, this.state.configuration[stage].attempts.length - 1);
   }
 
   removeAttempt(stage: 'planning' | 'settlement', index: number): void {
     if (this.state.configuration[stage].attempts.length > 1) {
       this.state.configuration[stage].attempts.splice(index, 1);
+      this.state.connectionDrafts[stage].splice(index, 1);
     }
   }
 
@@ -136,12 +171,6 @@ export class AgentStageActions {
 
   legacyModel(profile: Profile): string {
     return profile.modelSource.kind === 'tavern-current' ? (profile.modelSource.legacyModelOverride ?? '') : '';
-  }
-
-  modelsFor(profile: Profile): string[] {
-    return profile.modelSource.kind === 'custom-profile'
-      ? (this.state.modelLists[profile.modelSource.profileId] ?? [])
-      : [];
   }
 
   connectionMissing(profile: Profile): boolean {

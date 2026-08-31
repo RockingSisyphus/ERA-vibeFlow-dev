@@ -1,49 +1,89 @@
 /*
- * 模块职责：管理 ERA 本机连接方案、模型列表和密钥草稿。
- * 模块边界：只通过 Service 操作本机扩展设置，绝不把密钥写入角色卡配置。
+ * 模块职责：管理每张规划/结算尝试卡内联的连接草稿、模型枚举与显式删除。
+ * 模块边界：密码只以页面实例闭包作为宿主引用提交；任何公开 payload 都不包含密码正文。
  */
 
 import toastr from 'toastr';
-import { toRaw } from 'vue';
 
 import { requestEraService } from '../../../service/client';
 import { ERA_UI_EVENT } from '../../../service/types';
 import { awaitUiSettlement } from '../../utils/service-settlement';
 import {
   assignSources,
-  eventValue,
+  connectionDraft,
   settlementValue,
   type AgentPanelState,
-  type ConnectionSummary,
-  type Profile,
+  type AgentStageName,
+  type ConnectionDraft,
 } from './agent-panel-state';
 
-/** 所有方案操作共享 busy 锁；失败时必须保留用户原草稿以便修正后重试。 */
 export class AgentConnectionActions {
   constructor(private readonly state: AgentPanelState) {}
 
-  /** 模型枚举失败时必须保留原选择，空列表只接受成功回执。 */
-  async loadModels(profile: Profile): Promise<void> {
-    if (this.state.busy.value || profile.modelSource.kind !== 'custom-profile' || !profile.modelSource.profileId)
-      return;
+  draft(stage: AgentStageName, index: number): ConnectionDraft {
+    return connectionDraft(this.state, stage, index);
+  }
+
+  /** 为了防止秘密跨尝试扩散，复制和显式新建都建立空白、未绑定草稿。 */
+  newConnection(stage: AgentStageName, index: number): void {
+    const profile = this.state.configuration[stage].attempts[index];
+    profile.modelSource = { kind: 'custom-profile', profileId: '', model: '' };
+    this.state.connectionDrafts[stage][index] = {
+      boundProfileId: '',
+      name: '',
+      apiUrl: '',
+      key: '',
+      clearKey: false,
+      saveAs: false,
+      models: [],
+    };
+  }
+
+  /** 只有草稿未改变路由或秘密时才能按 ID 加载，否则必须以当前草稿为准。 */
+  private canUseSavedProfile(draft: ConnectionDraft): boolean {
+    return (
+      draft.boundProfileId.length > 0 &&
+      !draft.saveAs &&
+      draft.key.length === 0 &&
+      !draft.clearKey &&
+      this.state.connectionProfiles.value.some(item => item.id === draft.boundProfileId && item.apiUrl === draft.apiUrl)
+    );
+  }
+
+  /** 模型加载失败只显示诊断，避免清空既有模型列表或用户已选模型。 */
+  async loadModels(stage: AgentStageName, index: number): Promise<void> {
+    if (this.state.busy.value) return;
+    const profile = this.state.configuration[stage].attempts[index];
+    if (profile.modelSource.kind !== 'custom-profile') return;
+    const draft = this.draft(stage, index);
     this.state.busy.value = true;
     try {
+      // 未保存的地址或密码由草稿枚举能力处理，避免为了查看模型而提前写入本机方案。
+      const canUseSaved = this.canUseSavedProfile(draft);
+      const secret = draft.key;
+      const payload = canUseSaved
+        ? { action: 'list-connection-models', id: draft.boundProfileId }
+        : {
+            action: 'list-connection-models-draft',
+            apiUrl: draft.apiUrl,
+            ...(secret ? { keyArgIndex: 1 } : {}),
+          };
       const result = await awaitUiSettlement(
         requestEraService(
           ERA_UI_EVENT.AGENT_CONFIGURATION,
-          [{ action: 'list-connection-models', id: profile.modelSource.profileId }],
+          secret && !canUseSaved ? [payload, () => secret] : [payload],
           'ui',
         ),
         '加载模型列表',
       );
-      const payload = settlementValue(result).result;
+      const hostResult = settlementValue(result).result;
+      // 收窄 Host 返回值，防止异常对象被模板当作模型名称渲染。
       const models =
-        payload && typeof payload === 'object' && !Array.isArray(payload)
-          ? (payload as Record<string, unknown>).models
+        hostResult && typeof hostResult === 'object' && !Array.isArray(hostResult)
+          ? (hostResult as Record<string, unknown>).models
           : null;
-      this.state.modelLists[profile.modelSource.profileId] = Array.isArray(models)
-        ? models.filter((item): item is string => typeof item === 'string')
-        : [];
+      if (!Array.isArray(models)) throw new TypeError('Host 未返回模型列表。');
+      draft.models = models.filter((item): item is string => typeof item === 'string');
     } catch (error) {
       toastr.error(`加载模型失败：${String(error)}`);
     } finally {
@@ -51,89 +91,31 @@ export class AgentConnectionActions {
     }
   }
 
-  resetProfileDraft(): void {
-    Object.assign(this.state.profileDraft, { id: '', name: '', apiUrl: '', key: '' });
-  }
-
-  editConnectionProfile(event: Event): void {
-    const id = eventValue(event);
-    const profile = this.state.connectionProfiles.value.find(item => item.id === id);
-    if (!profile) this.resetProfileDraft();
-    else
-      Object.assign(this.state.profileDraft, { id: profile.id, name: profile.name, apiUrl: profile.apiUrl, key: '' });
-  }
-
-  /** 必须把空密钥解释为保留已有值，否则编辑名称会意外删除本机密钥。 */
-  async saveConnectionProfile(): Promise<void> {
+  /** 删除后保留角色卡引用，避免静默改用另一连接；面板必须明确呈现“需要重新绑定”。 */
+  async deleteConnectionProfile(stage: AgentStageName, index: number): Promise<void> {
     if (this.state.busy.value) return;
-    this.state.busy.value = true;
-    try {
-      const value = await this.profileAction(
-        { action: 'upsert-connection-profile', profile: { ...toRaw(this.state.profileDraft) } },
-        '保存本机连接方案',
-      );
-      const result = value.result;
-      const profile =
-        result && typeof result === 'object' && !Array.isArray(result)
-          ? (result as Record<string, unknown>).profile
-          : null;
-      if (profile && typeof profile === 'object' && !Array.isArray(profile)) {
-        const summary = profile as ConnectionSummary;
-        Object.assign(this.state.profileDraft, {
-          id: summary.id,
-          name: summary.name,
-          apiUrl: summary.apiUrl,
-          key: '',
-        });
-      }
-      toastr.success('连接方案已保存在本机；角色卡只会保存方案引用。');
-    } catch (error) {
-      toastr.error(`保存连接方案失败：${String(error)}`);
-    } finally {
-      this.state.busy.value = false;
+    const draft = this.draft(stage, index);
+    if (!draft.boundProfileId) return;
+    if (!window.confirm(`删除本机连接方案“${draft.name || draft.boundProfileId}”？角色卡引用会保留并等待重新绑定。`)) {
+      return;
     }
-  }
-
-  /** 清除密钥经独立动作完成，避免编辑表单中的空字符串产生歧义。 */
-  async clearConnectionKey(): Promise<void> {
-    if (this.state.busy.value || !this.state.profileDraft.id) return;
     this.state.busy.value = true;
     try {
-      await this.profileAction(
-        { action: 'clear-connection-profile-key', id: this.state.profileDraft.id },
-        '清除本机 API 密钥',
-      );
-      this.state.profileDraft.key = '';
-      toastr.success('本机 API 密钥已清除。');
-    } catch (error) {
-      toastr.error(`清除密钥失败：${String(error)}`);
-    } finally {
-      this.state.busy.value = false;
-    }
-  }
-
-  /** 删除后必须保留角色卡引用，否则用户无法看到需要重新绑定的明确诊断。 */
-  async deleteConnectionProfile(): Promise<void> {
-    if (this.state.busy.value || !this.state.profileDraft.id) return;
-    this.state.busy.value = true;
-    try {
-      await this.profileAction(
-        { action: 'delete-connection-profile', id: this.state.profileDraft.id },
+      // 删除只作用于本机库；角色卡引用必须继续可见，以便用户显式重新绑定。
+      const result = await awaitUiSettlement(
+        requestEraService(
+          ERA_UI_EVENT.AGENT_CONFIGURATION,
+          [{ action: 'delete-connection-profile', id: draft.boundProfileId }],
+          'ui',
+        ),
         '删除本机连接方案',
       );
-      this.resetProfileDraft();
-      toastr.success('本机连接方案已删除；引用它的角色卡会明确提示需要重新绑定。');
+      assignSources(this.state, settlementValue(result).sources);
+      toastr.success('本机连接方案已删除；当前尝试会显示需要重新绑定。');
     } catch (error) {
       toastr.error(`删除连接方案失败：${String(error)}`);
     } finally {
       this.state.busy.value = false;
     }
-  }
-
-  private async profileAction(payload: Record<string, unknown>, label: string): Promise<Record<string, unknown>> {
-    const result = await awaitUiSettlement(requestEraService(ERA_UI_EVENT.AGENT_CONFIGURATION, [payload], 'ui'), label);
-    const value = settlementValue(result);
-    assignSources(this.state, value.sources);
-    return value;
   }
 }

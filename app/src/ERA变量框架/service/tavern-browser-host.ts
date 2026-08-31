@@ -6,7 +6,13 @@
 
 export type CurrentTavernContext = Pick<
   typeof SillyTavern,
-  'characterId' | 'groupId' | 'characters' | 'writeExtensionField' | 'extensionSettings' | 'saveSettingsDebounced'
+  | 'characterId'
+  | 'groupId'
+  | 'characters'
+  | 'writeExtensionField'
+  | 'extensionSettings'
+  | 'saveSettingsDebounced'
+  | 'getRequestHeaders'
 >;
 
 type BrowserHost = {

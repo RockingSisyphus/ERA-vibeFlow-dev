@@ -1,15 +1,12 @@
 <template>
-  <section class="agent-card" role="region" aria-label="故事编排设置">
+  <section class="agent-card" role="region" aria-label="多阶段生成设置">
     <button id="era-agent-toggle" class="card-header" :aria-expanded="open" @click="toggle">
-      <span>故事编排</span><span aria-hidden="true">{{ open ? '▾' : '▸' }}</span>
+      <span>多阶段生成</span><span aria-hidden="true">{{ open ? '▾' : '▸' }}</span>
     </button>
     <div v-show="open" class="content">
       <p class="intro">规划和变量解析使用独立预设；正式故事仍使用你当前的酒馆预设。</p>
-      <div v-if="!regexEnabled" id="era-agent-regex-warning" class="warning">
-        角色卡局部正则已禁用。即使开启下方功能，ERA 也会回退默认生成，避免报告污染上下文。
-      </div>
       <div v-if="groupChat" id="era-agent-group-warning" class="warning">
-        群聊暂不支持故事编排。本聊天会保持 ERA 默认生成与历史同步行为。
+        群聊暂不支持多阶段生成。本聊天会保持 ERA 默认生成与历史同步行为。
       </div>
 
       <fieldset class="stage" :disabled="busy || groupChat">
@@ -73,12 +70,69 @@
                 </option>
               </select>
             </label>
+            <button
+              :id="`era-agent-planning-profile-new-${index}`"
+              class="mini subtle"
+              @click.prevent="newConnection('planning', index)"
+            >
+              新建本机方案
+            </button>
+            <label class="field"
+              >方案名称
+              <input
+                :id="`era-agent-planning-profile-name-${index}`"
+                v-model="connectionDraft('planning', index).name"
+                type="text"
+                placeholder="例如：本地 OpenAI"
+              />
+            </label>
+            <label class="field"
+              >API 地址
+              <input
+                :id="`era-agent-planning-profile-url-${index}`"
+                v-model="connectionDraft('planning', index).apiUrl"
+                type="url"
+                placeholder="https://example.test/v1"
+              />
+            </label>
+            <label class="field"
+              >API 密钥
+              <input
+                :id="`era-agent-planning-profile-key-${index}`"
+                v-model="connectionDraft('planning', index).key"
+                type="password"
+                autocomplete="new-password"
+                placeholder="留空则保留已保存密钥"
+              />
+            </label>
+            <label v-if="connectionDraft('planning', index).boundProfileId" class="inline-choice"
+              ><input
+                :id="`era-agent-planning-profile-save-as-${index}`"
+                v-model="connectionDraft('planning', index).saveAs"
+                type="checkbox"
+              />
+              另存为新方案</label
+            >
+            <label v-if="connectionDraft('planning', index).boundProfileId" class="inline-choice"
+              ><input
+                :id="`era-agent-planning-profile-clear-key-${index}`"
+                v-model="connectionDraft('planning', index).clearKey"
+                type="checkbox"
+              />
+              保存时清除密钥</label
+            >
             <div class="model-row">
               <select :id="`era-agent-planning-model-list-${index}`" v-model="profile.modelSource.model">
                 <option value="">手动填写或选择模型</option>
-                <option v-for="model in modelsFor(profile)" :key="model" :value="model">{{ model }}</option>
+                <option v-for="model in connectionDraft('planning', index).models" :key="model" :value="model">
+                  {{ model }}
+                </option>
               </select>
-              <button :id="`era-agent-planning-load-models-${index}`" class="mini" @click.prevent="loadModels(profile)">
+              <button
+                :id="`era-agent-planning-load-models-${index}`"
+                class="mini"
+                @click.prevent="loadModels('planning', index)"
+              >
                 加载模型
               </button>
             </div>
@@ -88,6 +142,14 @@
               type="text"
               placeholder="模型名"
             />
+            <button
+              v-if="connectionDraft('planning', index).boundProfileId"
+              :id="`era-agent-planning-profile-delete-${index}`"
+              class="mini danger"
+              @click.prevent="deleteConnectionProfile('planning', index)"
+            >
+              删除本机方案
+            </button>
           </div>
           <div class="preset-row">
             <span>{{ presetLabel(profile) }}</span>
@@ -101,6 +163,7 @@
           </div>
         </div>
         <button
+          id="era-agent-planning-add-attempt"
           class="mini"
           :disabled="configuration.planning.attempts.length >= 17"
           @click.prevent="addAttempt('planning')"
@@ -170,15 +233,68 @@
                 </option>
               </select>
             </label>
+            <button
+              :id="`era-agent-settlement-profile-new-${index}`"
+              class="mini subtle"
+              @click.prevent="newConnection('settlement', index)"
+            >
+              新建本机方案
+            </button>
+            <label class="field"
+              >方案名称
+              <input
+                :id="`era-agent-settlement-profile-name-${index}`"
+                v-model="connectionDraft('settlement', index).name"
+                type="text"
+                placeholder="例如：变量解析 API"
+              />
+            </label>
+            <label class="field"
+              >API 地址
+              <input
+                :id="`era-agent-settlement-profile-url-${index}`"
+                v-model="connectionDraft('settlement', index).apiUrl"
+                type="url"
+                placeholder="https://example.test/v1"
+              />
+            </label>
+            <label class="field"
+              >API 密钥
+              <input
+                :id="`era-agent-settlement-profile-key-${index}`"
+                v-model="connectionDraft('settlement', index).key"
+                type="password"
+                autocomplete="new-password"
+                placeholder="留空则保留已保存密钥"
+              />
+            </label>
+            <label v-if="connectionDraft('settlement', index).boundProfileId" class="inline-choice"
+              ><input
+                :id="`era-agent-settlement-profile-save-as-${index}`"
+                v-model="connectionDraft('settlement', index).saveAs"
+                type="checkbox"
+              />
+              另存为新方案</label
+            >
+            <label v-if="connectionDraft('settlement', index).boundProfileId" class="inline-choice"
+              ><input
+                :id="`era-agent-settlement-profile-clear-key-${index}`"
+                v-model="connectionDraft('settlement', index).clearKey"
+                type="checkbox"
+              />
+              保存时清除密钥</label
+            >
             <div class="model-row">
               <select :id="`era-agent-settlement-model-list-${index}`" v-model="profile.modelSource.model">
                 <option value="">手动填写或选择模型</option>
-                <option v-for="model in modelsFor(profile)" :key="model" :value="model">{{ model }}</option>
+                <option v-for="model in connectionDraft('settlement', index).models" :key="model" :value="model">
+                  {{ model }}
+                </option>
               </select>
               <button
                 :id="`era-agent-settlement-load-models-${index}`"
                 class="mini"
-                @click.prevent="loadModels(profile)"
+                @click.prevent="loadModels('settlement', index)"
               >
                 加载模型
               </button>
@@ -189,6 +305,14 @@
               type="text"
               placeholder="模型名"
             />
+            <button
+              v-if="connectionDraft('settlement', index).boundProfileId"
+              :id="`era-agent-settlement-profile-delete-${index}`"
+              class="mini danger"
+              @click.prevent="deleteConnectionProfile('settlement', index)"
+            >
+              删除本机方案
+            </button>
           </div>
           <div class="preset-row">
             <span>{{ presetLabel(profile) }}</span>
@@ -202,60 +326,13 @@
           </div>
         </div>
         <button
+          id="era-agent-settlement-add-attempt"
           class="mini"
           :disabled="configuration.settlement.attempts.length >= 17"
           @click.prevent="addAttempt('settlement')"
         >
           添加下一次尝试配置
         </button>
-      </fieldset>
-
-      <fieldset class="stage connection-manager" :disabled="busy">
-        <legend>本机自定义 API 方案</legend>
-        <p class="intro">密钥仅保存在本机酒馆扩展设置中，不随角色卡、聊天或 ERA 报告导出。</p>
-        <label class="field"
-          >已有方案
-          <select id="era-agent-profile-editor-select" :value="profileDraft.id" @change="editConnectionProfile($event)">
-            <option value="">新建方案</option>
-            <option v-for="item in connectionProfiles" :key="item.id" :value="item.id">{{ item.name }}</option>
-          </select>
-        </label>
-        <label class="field">名称 <input id="era-agent-profile-name" v-model="profileDraft.name" type="text" /></label>
-        <label class="field"
-          >API 地址 <input id="era-agent-profile-url" v-model="profileDraft.apiUrl" type="url"
-        /></label>
-        <label class="field"
-          >API 密钥
-          <input
-            id="era-agent-profile-key"
-            v-model="profileDraft.key"
-            type="password"
-            autocomplete="new-password"
-            placeholder="留空则保留已有密钥"
-          />
-        </label>
-        <div class="actions">
-          <button id="era-agent-profile-save" class="mini primary" @click.prevent="saveConnectionProfile">
-            保存方案
-          </button>
-          <button id="era-agent-profile-new" class="mini subtle" @click.prevent="resetProfileDraft">新建</button>
-          <button
-            v-if="profileDraft.id"
-            id="era-agent-profile-clear-key"
-            class="mini"
-            @click.prevent="clearConnectionKey"
-          >
-            清除密钥
-          </button>
-          <button
-            v-if="profileDraft.id"
-            id="era-agent-profile-delete"
-            class="mini danger"
-            @click.prevent="deleteConnectionProfile"
-          >
-            删除方案
-          </button>
-        </div>
       </fieldset>
 
       <div class="status">
@@ -305,7 +382,7 @@
 
 <script setup lang="ts">
 /*
- * 模块职责：呈现故事编排设置并把交互委托给页面实例级组合函数。
+ * 模块职责：呈现多阶段生成设置并把交互委托给页面实例级组合函数。
  * 模块边界：模板不直接调用 Service，也不拥有角色卡或连接密钥持久化。
  */
 import { useAgentOrchestrationPanel } from './use-agent-orchestration-panel';
@@ -313,32 +390,27 @@ import { useAgentOrchestrationPanel } from './use-agent-orchestration-panel';
 const {
   addAttempt,
   busy,
-  clearConnectionKey,
+  connectionDraft,
   configuration,
   connectionMissing,
   connectionProfiles,
   currentPresetName,
   deleteConnectionProfile,
-  editConnectionProfile,
   groupChat,
   legacyModel,
   load,
   loadModels,
-  modelsFor,
+  newConnection,
   open,
   presetLabel,
   presetNames,
   presetSelection,
-  profileDraft,
   refreshSources,
-  regexEnabled,
   removeAttempt,
-  resetProfileDraft,
   retry,
   retryPlanningEnabled,
   retrySettlementEnabled,
   save,
-  saveConnectionProfile,
   selectConnectionProfile,
   selectModelSource,
   selectPreset,

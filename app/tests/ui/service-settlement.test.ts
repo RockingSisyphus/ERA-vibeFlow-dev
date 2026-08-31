@@ -26,6 +26,25 @@ describe('ERA UI receipt settlement boundary', () => {
     ).rejects.toThrow(`${status}`);
   });
 
+  it('preserves a failed receipt domain diagnostic for the visible UI error', async () => {
+    await expect(
+      awaitUiSettlement(
+        accepted(
+          Promise.resolve({
+            eventId: 'event-1',
+            sequence: 1,
+            status: 'failed',
+            error: {
+              code: 'ERA_AGENT_CONFIGURATION_SAVE_FAILED',
+              message: '同一本机方案被多个尝试以冲突内容修改。',
+            },
+          }),
+        ),
+        '保存多阶段生成设置',
+      ),
+    ).rejects.toThrow('同一本机方案被多个尝试以冲突内容修改。');
+  });
+
   it('rejects admission before it waits for a receipt', async () => {
     await expect(
       awaitUiSettlement({ accepted: false, code: 'ERA_QUEUE_FULL', message: '队列已满' }, '测试'),

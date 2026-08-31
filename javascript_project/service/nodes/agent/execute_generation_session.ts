@@ -40,6 +40,9 @@ interface AgentCapability {
   list_connection_models(
     input: Readonly<Record<string, unknown>>,
   ): Promise<unknown>;
+  list_connection_models_draft(
+    input: Readonly<Record<string, unknown>>,
+  ): Promise<unknown>;
   generate(input: Readonly<Record<string, unknown>>): Promise<unknown>;
   generate_story(input: Readonly<Record<string, unknown>>): Promise<unknown>;
   inject_once(input: Readonly<Record<string, unknown>>): unknown;
@@ -74,6 +77,29 @@ interface AgentTransition {
   readonly value?: unknown;
 }
 
+type MutableAgentProfile = {
+  preset: unknown;
+  modelSource: {
+    kind: "tavern-current" | "custom-profile";
+    profileId?: string;
+    profileNameHint?: string;
+    model?: string;
+  };
+};
+type MutableAgentConfiguration = {
+  schemaVersion: "2";
+  planning: {
+    enabled: boolean;
+    retryCount: number;
+    attempts: MutableAgentProfile[];
+  };
+  settlement: {
+    enabled: boolean;
+    retryCount: number;
+    attempts: MutableAgentProfile[];
+  };
+};
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
@@ -84,12 +110,65 @@ function readArg(step: PlannedStepV1, index: number): unknown {
   return arg?.kind === "json" ? arg.value : undefined;
 }
 
+/** 宿主引用保持为无损 transport DTO，只允许机械转交给受限 Host capability。 */
+function readRawArg(step: PlannedStepV1, index: number): unknown {
+  return step.kind === "execute" ? step.task.primaryEvent.args[index] : undefined;
+}
+
 function eventType(step: PlannedStepV1): string {
   return step.kind === "execute" ? step.task.primaryEvent.type : "";
 }
 
 function failureMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+/**
+ * 新建本机方案时 profileId 必然要到 Host 写入后才能得到。这里先保留
+ * 空 ID 的 custom-profile 意图，再由 write-with-connections 回填真实 ID；若提前调用
+ * normalizeAgentConfiguration，空 ID 会被安全降级成 tavern-current，导致新建方案
+ * 永远无法绑定。最终写卡前仍会再走一次严格归一化。
+ */
+function configurationWithPendingConnections(
+  value: unknown,
+): MutableAgentConfiguration {
+  const configuration = structuredClone(
+    normalizeAgentConfiguration(value),
+  ) as MutableAgentConfiguration;
+  if (!isRecord(value)) return configuration;
+
+  for (const stageName of ["planning", "settlement"] as const) {
+    const rawStage = isRecord(value[stageName]) ? value[stageName] : null;
+    const rawAttempts = Array.isArray(rawStage?.attempts)
+      ? rawStage.attempts
+      : [];
+    rawAttempts
+      .slice(0, configuration[stageName].attempts.length)
+      .forEach((rawAttempt, index) => {
+        if (!isRecord(rawAttempt) || !isRecord(rawAttempt.modelSource)) return;
+        const rawSource = rawAttempt.modelSource;
+        if (rawSource.kind !== "custom-profile") return;
+        const profileId =
+          typeof rawSource.profileId === "string"
+            ? rawSource.profileId.trim().slice(0, 256)
+            : "";
+        const profileNameHint =
+          typeof rawSource.profileNameHint === "string"
+            ? rawSource.profileNameHint.trim().slice(0, 256)
+            : "";
+        const model =
+          typeof rawSource.model === "string"
+            ? rawSource.model.trim().slice(0, 512)
+            : "";
+        configuration[stageName].attempts[index]!.modelSource = {
+          kind: "custom-profile",
+          profileId,
+          ...(profileNameHint ? { profileNameHint } : {}),
+          ...(model ? { model } : {}),
+        };
+      });
+  }
+  return configuration;
 }
 
 function throwHostGenerationFailure(result: unknown): void {
@@ -716,8 +795,6 @@ export async function run(
         transition(step, "execute-only", "committed", [], {
           configuration,
           groupChat: isRecord(rawContext) && isGroupChat(rawContext),
-          regexEnabled:
-            isRecord(rawContext) && rawContext.regexEnabled === true,
           session: isRecord(rawContext) ? (rawContext.session ?? null) : null,
           sources,
         }),
@@ -826,6 +903,112 @@ export async function run(
         );
       }
     }
+    if (payload.action === "list-connection-models-draft") {
+      try {
+        const keyArgIndex = Number(payload.keyArgIndex);
+        const result = await capability.list_connection_models_draft({
+          apiUrl: payload.apiUrl,
+          ...(Number.isSafeInteger(keyArgIndex) && keyArgIndex > 0
+            ? { keyReference: readRawArg(step, keyArgIndex) }
+            : {}),
+        });
+        return output(
+          transition(step, "execute-only", "committed", [], { result }),
+        );
+      } catch (error) {
+        return output(
+          transition(step, "execute-only", "failed", [
+            {
+              code: "ERA_AGENT_MODEL_LIST_FAILED",
+              message: failureMessage(error),
+            },
+          ]),
+        );
+      }
+    }
+    if (payload.action === "write-with-connections") {
+      try {
+        const configuration = configurationWithPendingConnections(
+          payload.configuration,
+        );
+        const mutations = Array.isArray(payload.connectionMutations)
+          ? payload.connectionMutations.filter(isRecord).slice(0, 34)
+          : [];
+        const signatures = new Map<string, string>();
+        const results = new Map<string, unknown>();
+
+        for (const mutation of mutations) {
+          const stage = mutation.stage;
+          const index = Number(mutation.index);
+          if (
+            (stage !== "planning" && stage !== "settlement") ||
+            !Number.isSafeInteger(index) ||
+            index < 0
+          ) {
+            throw new TypeError("连接草稿缺少合法阶段或尝试序号。");
+          }
+          const attempt = configuration[stage].attempts[index];
+          if (!attempt || attempt.modelSource.kind !== "custom-profile") {
+            throw new TypeError("连接草稿目标不是自定义 API 尝试。");
+          }
+          const existingId = typeof mutation.id === "string" && mutation.id.length > 0 ? mutation.id : "";
+          const keyArgIndex = Number(mutation.keyArgIndex);
+          const signature = JSON.stringify({
+            name: mutation.name,
+            apiUrl: mutation.apiUrl,
+            clearKey: mutation.clearKey === true,
+            hasKey: Number.isSafeInteger(keyArgIndex) && keyArgIndex > 0,
+          });
+          if (existingId) {
+            const previous = signatures.get(existingId);
+            if (previous !== undefined && previous !== signature) {
+              throw new TypeError(
+                `同一本机方案 ${existingId} 被多个尝试以冲突内容修改；请将其中一项另存为。`,
+              );
+            }
+            signatures.set(existingId, signature);
+          }
+
+          let result = existingId ? results.get(`${existingId}:${signature}`) : undefined;
+          if (result === undefined) {
+            result = await capability.upsert_connection_profile({
+              ...(existingId ? { id: existingId } : {}),
+              name: mutation.name,
+              apiUrl: mutation.apiUrl,
+              clearKey: mutation.clearKey === true,
+              ...(Number.isSafeInteger(keyArgIndex) && keyArgIndex > 0
+                ? { keyReference: readRawArg(step, keyArgIndex) }
+                : {}),
+            });
+            if (existingId) results.set(`${existingId}:${signature}`, result);
+          }
+          const summary = isRecord(result) && isRecord(result.profile) ? result.profile : null;
+          if (!summary || typeof summary.id !== "string" || typeof summary.name !== "string") {
+            throw new TypeError("Host 未返回已保存连接方案的脱敏摘要。");
+          }
+          attempt.modelSource.profileId = summary.id;
+          attempt.modelSource.profileNameHint = summary.name;
+        }
+
+        const normalized = normalizeAgentConfiguration(configuration);
+        await capability.write_configuration({ configuration: normalized });
+        return output(
+          transition(step, "execute-only", "committed", [], {
+            configuration: normalized,
+            sources: capability.read_configuration_sources({}),
+          }),
+        );
+      } catch (error) {
+        return output(
+          transition(step, "execute-only", "failed", [
+            {
+              code: "ERA_AGENT_CONFIGURATION_SAVE_FAILED",
+              message: failureMessage(error),
+            },
+          ]),
+        );
+      }
+    }
     const configuration = normalizeAgentConfiguration(payload.configuration);
     await capability.write_configuration({ configuration });
     return output(
@@ -886,8 +1069,7 @@ export async function run(
     continuesExistingCycle && frozenConfiguration !== null
       ? frozenConfiguration
       : currentConfiguration;
-  const active =
-    isAgentEnabled(configuration) && rawContext.regexEnabled === true;
+  const active = isAgentEnabled(configuration);
   if (!active) {
     return output(transition(step, "legacy"));
   }

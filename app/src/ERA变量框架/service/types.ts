@@ -101,6 +101,10 @@ export interface EraTavernAdapter {
       context: EraCapabilityContext,
     ): Promise<unknown>;
     list_connection_models(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
+    list_connection_models_draft(
+      input: Readonly<Record<string, unknown>>,
+      context: EraCapabilityContext,
+    ): Promise<unknown>;
     generate(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
     generate_story(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
     inject_once(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;

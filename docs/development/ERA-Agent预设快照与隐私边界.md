@@ -26,8 +26,10 @@ OpenAI-compatible 连接方案保存在 ERA 的 SillyTavern extension settings �
 辅助请求前才根据方案 ID 解析 URL 与密钥；VibeFlow 领域 DTO 只携带方案引用和模型名。
 
 UI 和 Service 查询只返回方案 ID 和显示名称、API 地址、是否已有密钥及已加载的模型名，不会返回
-密钥正文。编辑时留空表示保留，清除需要显式操作。删除方案不会修改已经发布的角色卡，这些角色卡
-下次使用时会进入“需要重新绑定”。
+密钥正文。尝试卡把新密码登记为页面实例级不透明 Host 引用；Service 命令、FIFO、settlement 和
+Artifact 只接触引用 token，Host 在 upsert 或草稿模型枚举时解析并在回执结算后释放。编辑时留空
+表示保留，清除需要显式操作。删除方案不会修改已经发布的角色卡，这些角色卡下次使用时会进入
+“需要重新绑定”。
 
 ## 4. 日志、消息与测试证据
 

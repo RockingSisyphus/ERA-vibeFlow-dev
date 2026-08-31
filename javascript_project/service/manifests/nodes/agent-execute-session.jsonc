@@ -16,5 +16,5 @@
   },
   "implementations": [{"language":"typescript","targets":["browser"],"completion":"suspend","source":{"kind":"file","ref":"nodes/agent/execute_generation_session.ts","export":"run"}}],
   "base_libs": ["era.service.agent_generation_session", "era.service.types"],
-  "capabilities": [{"id":"era.tavern.agent","operations":["write_configuration","capture_preset","read_configuration_sources","upsert_connection_profile","delete_connection_profile","clear_connection_profile_key","list_connection_models","generate","generate_story","inject_once","write_session","clear_session","write_message","create_error_message","stop_native_generation"]}]
+  "capabilities": [{"id":"era.tavern.agent","operations":["write_configuration","capture_preset","read_configuration_sources","upsert_connection_profile","delete_connection_profile","clear_connection_profile_key","list_connection_models","list_connection_models_draft","generate","generate_story","inject_once","write_session","clear_session","write_message","create_error_message","stop_native_generation"]}]
 }

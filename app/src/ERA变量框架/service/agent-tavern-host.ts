@@ -6,25 +6,17 @@
  */
 
 import { readActiveSidecarRuntimeSnapshot } from './sidecar-runtime-snapshot';
-import { currentCharacterRegexEnabled, currentTavernContext, stopNativeTavernGeneration } from './tavern-browser-host';
+import { currentTavernContext, stopNativeTavernGeneration } from './tavern-browser-host';
 import type { EraCapabilityContext, EraTavernAdapter } from './types';
 import {
   capturePreset,
   clonePortable,
-  connectionProfiles,
   currentAgentConfiguration,
   currentCharacterIndex,
   isRecord,
-  MAX_CONNECTION_PROFILES,
-  newProfileId,
-  profileId,
-  profileRecord,
-  profileSummary,
   readConnectionSummaries,
-  requireApiUrl,
-  requireProfile,
-  type LocalConnectionProfile,
 } from './agent-tavern-configuration';
+import { createAgentConnectionOperations } from './agent-tavern-connections';
 import { auxiliaryApiSettings, resolveAuxiliaryRoute } from './agent-tavern-generation';
 
 type AgentOperations = EraTavernAdapter['agent'];
@@ -134,6 +126,7 @@ export class AgentTavernHost {
     | 'delete_connection_profile'
     | 'clear_connection_profile_key'
     | 'list_connection_models'
+    | 'list_connection_models_draft'
   > {
     return {
       read_context: async (_input, context) => {
@@ -145,7 +138,6 @@ export class AgentTavernHost {
         return clonePortable({
           identity,
           groupChat: typeof identity.groupId === 'string' && identity.groupId.length > 0,
-          regexEnabled: currentCharacterRegexEnabled(),
           configuration: currentAgentConfiguration(),
           session: chatKey.length > 0 ? (this.sessions.get(chatKey) ?? null) : null,
           latestMessage: getChatMessages(-1, { include_swipes: false })[0] ?? null,
@@ -164,7 +156,7 @@ export class AgentTavernHost {
         });
       },
       ...this.createConfigurationOperations(),
-      ...this.createConnectionOperations(),
+      ...createAgentConnectionOperations(),
     };
   }
 
@@ -182,7 +174,7 @@ export class AgentTavernHost {
         const configuration = clonePortable(input.configuration);
         const tavern = currentTavernContext();
         if (typeof tavern.groupId === 'string' && tavern.groupId.length > 0) {
-          throw new TypeError('群聊不支持写入 ERA 故事编排配置。');
+          throw new TypeError('群聊不支持写入 ERA 多阶段生成配置。');
         }
         const characterIndex = currentCharacterIndex();
         if (characterIndex === null) {
@@ -203,75 +195,6 @@ export class AgentTavernHost {
           currentPresetName: getLoadedPresetName(),
           connectionProfiles: readConnectionSummaries(),
         });
-      },
-    };
-  }
-
-  /** 本机方案的增删改查只返回脱敏摘要，密钥正文不得越过 Host。 */
-  private createConnectionOperations(): Pick<
-    AgentOperations,
-    | 'upsert_connection_profile'
-    | 'delete_connection_profile'
-    | 'clear_connection_profile_key'
-    | 'list_connection_models'
-  > {
-    return {
-      upsert_connection_profile: async (input, context) => {
-        throwIfAborted(context.signal);
-        const profiles = connectionProfiles();
-        const requestedId = profileId(input.id);
-        const existing = requestedId === null ? null : profileRecord(profiles[requestedId]);
-        if (existing === null && Object.keys(profiles).length >= MAX_CONNECTION_PROFILES) {
-          throw new RangeError(`本机连接方案不得超过 ${MAX_CONNECTION_PROFILES} 个。`);
-        }
-        const id = existing?.id ?? requestedId ?? newProfileId();
-        const name = typeof input.name === 'string' ? input.name.trim().slice(0, 128) : '';
-        if (name.length === 0) throw new TypeError('连接方案名称不能为空。');
-        const apiUrl = requireApiUrl(input.apiUrl);
-        const submittedKey = typeof input.key === 'string' ? input.key : '';
-        const profile: LocalConnectionProfile = {
-          id,
-          name,
-          apiUrl,
-          key: submittedKey.length > 0 ? submittedKey : (existing?.key ?? ''),
-        };
-        profiles[id] = profile;
-        await currentTavernContext().saveSettingsDebounced();
-        throwIfAborted(context.signal);
-        return { status: existing === null ? 'created' : 'updated', profile: profileSummary(profile) };
-      },
-      delete_connection_profile: async (input, context) => {
-        throwIfAborted(context.signal);
-        const id = profileId(input.id);
-        if (id === null || !Object.prototype.hasOwnProperty.call(connectionProfiles(), id)) {
-          throw new TypeError('ERA_AGENT_PROFILE_MISSING：本机连接方案不存在。');
-        }
-        delete connectionProfiles()[id];
-        await currentTavernContext().saveSettingsDebounced();
-        throwIfAborted(context.signal);
-        return { status: 'deleted', id };
-      },
-      clear_connection_profile_key: async (input, context) => {
-        throwIfAborted(context.signal);
-        const profile = requireProfile(input.id);
-        connectionProfiles()[profile.id] = { ...profile, key: '' };
-        await currentTavernContext().saveSettingsDebounced();
-        throwIfAborted(context.signal);
-        return { status: 'cleared', profile: profileSummary({ ...profile, key: '' }) };
-      },
-      list_connection_models: async (input, context) => {
-        throwIfAborted(context.signal);
-        const profile = requireProfile(input.id);
-        try {
-          const models = await getModelList({ apiurl: profile.apiUrl, ...(profile.key ? { key: profile.key } : {}) });
-          throwIfAborted(context.signal);
-          return { profile: profileSummary(profile), models: [...models].slice(0, 2048) };
-        } catch (error) {
-          if (context.signal.aborted) throw error;
-          throw new TypeError(`ERA_AGENT_MODEL_LIST_FAILED：无法从“${profile.name}”加载模型列表。`, {
-            cause: error,
-          });
-        }
       },
     };
   }

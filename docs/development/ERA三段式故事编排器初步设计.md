@@ -1,4 +1,4 @@
-# ERA 三段式故事编排器设计与现行语义
+# ERA 多阶段生成设计与现行语义
 
 > 状态：已完成统一 VibeFlow planned review、实现与真实酒馆专项验证。本文描述现行
 > `AgentGenerationSession` 语义；不再把已实现能力写成候选方案。
@@ -88,10 +88,12 @@ type AttemptProfile = {
 同名预设；`sourceName` 仅用于 UI 显示。重新捕获是显式操作，不会因本机同名预设变化而静默
 改变已发布角色卡。
 
-### 3.2 模型来源
+### 3.2 模型来源与尝试卡内联配置
 
-每个尝试可选择 `tavern-current`（沿用酒馆当前连接与当前模型）或 `custom-profile`（引用 ERA
-本机保存的 OpenAI-compatible 连接方案，并选择模型或手动填写模型名）。
+每个尝试可选择 `tavern-current`（沿用酒馆当前连接与当前模型）或 `custom-profile`。自定义 API
+直接在该次尝试卡内填写：可选择已有本机方案，也可填写方案名、API 地址和密码后加载模型，
+选择列表模型或手动填写模型名，并可更新、另存、清除密钥、删除或重新绑定。不存在独立的底部
+方案管理步骤；配置与使用发生在同一张尝试卡中。
 
 正文阶段不读取这些辅助配置，始终保持酒馆原始故事配置。若角色卡引用的本机方案不存在，
 该尝试产生精确诊断并按配置进入下一次尝试，绝不静默退回酒馆当前模型。
@@ -101,9 +103,11 @@ type AttemptProfile = {
 连接方案保存在 ERA 的 SillyTavern extension settings 中，包含方案名称、API 地址和密钥。
 角色卡只保存不透明的 `profileId`、名称提示和模型名，因此导出到另一台设备后需要用户重新绑定。
 
-Service/UI 列表只返回 ID、名称、地址和“是否已有密钥”，不会回传密钥正文。编辑时空密钥表示
-保留旧值，清除密钥必须显式操作。模型列表通过 Tavern Helper 的 OpenAI-compatible 能力加载；
-加载失败只显示错误，不覆盖当前已保存选择。
+Service/UI 列表只返回 ID、名称、地址和“是否已有密钥”，不会回传密钥正文。尝试卡密码先换成
+页面实例级不透明 Host 引用，领域 DTO、FIFO 与回执看不到密钥。总保存时先依卡片顺序完成本机
+方案的创建或更新，全部成功后才写角色卡引用；角色卡写入失败时已经创建的本机方案保留，以便
+修正后重试。编辑时空密钥表示保留旧值，清除密钥必须显式操作。模型列表可直接使用未保存草稿
+加载；加载失败只显示错误，不覆盖当前已保存选择。
 
 完整隐私边界见 [ERA-Agent预设快照与隐私边界.md](ERA-Agent预设快照与隐私边界.md)。
 
@@ -152,9 +156,14 @@ ERA 操作合同。正文里模型自行生成的普通 ERA 标签或 `<era_tx>`
 未开启的阶段不生成对应标签。Continue 在同一消息追加新的完整 cycle；Swipe 各自保存其活动
 正文与轻量 `extra.era_agent` 索引。完整报告以正文为权威，`extra` 不重复保存大段模型原文。
 
-ERA 为角色卡维护显示与提示清理正则：UI 中折叠计划、更新与错误报告；后续故事上下文剥离这些
-报告，只保留正式故事。若角色卡本地正则被全局禁用，设置页显示“已配置但未激活”，本轮回退
-默认 ERA 行为，避免报告污染后续上下文。
+ERA 自身提供两种投影，不再依赖角色卡局部正则。显示投影把 `<era_plan>`、`<era_update>` 与
+`<era_agent_error>` 折叠，并隐藏事务、变量/函数命令、`<era_data>` 和 `<variablethink>`；它只
+修改渲染 DOM。提示投影在 `GENERATE_AFTER_DATA` 最后阶段清理普通文本与多模态文本项中的全部
+ERA 技术块，只影响本次出站副本。原消息、Sidecar 与历史同步输入保持不变，畸形标签也不会被
+贪婪删除。旧角色卡已有正则可以继续存在，内建投影通过版本标记保持幂等。
+
+因此角色卡局部正则即使关闭，多阶段生成仍由两个阶段开关决定；只有两个开关全关时才严格回到
+默认 ERA 生成路径。新角色卡初始化只维护既有状态栏模板正则，不再注入 Agent 折叠或隐藏正则。
 
 ## 8. 重试与失败
 
@@ -177,7 +186,7 @@ Sidecar、角色卡导出、console、trace 或 Artifact。
 | ERA Host            | 本机方案解析、秘密封装、聊天身份、消息写入与宿主事件         |
 | VibeFlow Service    | 有界会话、配置冻结、重试路由、函数执行、结算和诊断           |
 | Expression/statFunc | 确定性纯函数、random context 与数值合同                      |
-| ERA UI              | 开关、预设捕获、连接方案、模型选择、状态和手动重试           |
+| ERA UI              | 开关、预设捕获、尝试卡内联 API/模型、状态和手动重试          |
 | ST-Response-Lab     | 通用多 provider、多模型、有序响应模拟；不含 ERA 语义         |
 | ST-Test-Harness     | 通用浏览器动作、复合请求序列、Artifact 与审计                |
 | ERA-Test-Pack       | ERA 专属设置、编排、消息格式、parity 和安全 oracle           |
@@ -196,14 +205,17 @@ Sidecar、角色卡导出、console、trace 或 Artifact。
 
 ## 11. 验证入口
 
-ERA-Test-Pack 将 Agent 测试分为：
+ERA-Test-Pack 的细则层仍将多阶段测试分为：
 
 - `era-agent-settings-ui`：角色卡 V2、预设/模型/方案 UI、迁移、导入导出与秘密边界；
 - `era-agent-orchestration`：四种开关组合、重试路由、函数、生命周期与实际 provider/model；
 - `era-agent-message-format`：报告顺序、折叠、提示清理、Continue/Swipe/重放；
 - `era-agent-parity`：与默认模式配对比较可见故事、状态、日志、Sidecar 和分支结果。
 
-默认 ERA 测试不修改期望；完整发布验收仍由 `era-regression-all` 聚合。
+默认 ERA 测试不修改期望。日常回归使用约 60 条操作级综合路径的
+`era-regression-integrated --workers 4`；综合项失败后用可重复的 `--diagnose INT-*` 只运行该
+owner 的全部细则。`era-regression-all` 只包含约 720 条 detail，留给发布、迁移或明确要求的
+完整验收，避免综合与细则重复执行。
 
 ## 12. 参考
 
