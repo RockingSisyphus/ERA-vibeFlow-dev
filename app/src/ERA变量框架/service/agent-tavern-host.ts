@@ -18,6 +18,7 @@ import {
 } from './agent-tavern-configuration';
 import { createAgentConnectionOperations } from './agent-tavern-connections';
 import { auxiliaryApiSettings, resolveAuxiliaryRoute } from './agent-tavern-generation';
+import { refreshDisplayedEraTechnicalBlocks } from './technical-block-projection';
 
 type AgentOperations = EraTavernAdapter['agent'];
 
@@ -379,6 +380,7 @@ export class AgentTavernHost {
           ],
           { refresh: 'none' },
         );
+        refreshDisplayedEraTechnicalBlocks([messageId]);
         throwIfAborted(context.signal);
         return { status: 'committed', messageId };
       },

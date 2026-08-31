@@ -83,7 +83,13 @@ export class AgentConnectionActions {
           ? (hostResult as Record<string, unknown>).models
           : null;
       if (!Array.isArray(models)) throw new TypeError('Host 未返回模型列表。');
-      draft.models = models.filter((item): item is string => typeof item === 'string');
+      const normalized = models.filter((item): item is string => typeof item === 'string');
+      if (normalized.length > 0) {
+        draft.models = normalized;
+        toastr.success(`已加载 ${normalized.length} 个模型。`);
+      } else {
+        toastr.info('连接成功，但提供器返回了空模型列表；已保留当前模型选择。');
+      }
     } catch (error) {
       toastr.error(`加载模型失败：${String(error)}`);
     } finally {

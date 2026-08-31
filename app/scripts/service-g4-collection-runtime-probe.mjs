@@ -113,6 +113,7 @@ function createTavernCapabilities() {
       delete_connection_profile: async () => ({ status: 'deleted' }),
       clear_connection_profile_key: async () => ({ status: 'cleared' }),
       list_connection_models: async () => ({ models: [] }),
+      list_connection_models_draft: async () => ({ models: [] }),
       generate: async () => ({ status: 'completed', text: '{}' }),
       generate_story: async () => ({ status: 'completed', text: '' }),
       inject_once: () => ({ status: 'injected' }),

@@ -356,6 +356,17 @@ export function planEraSettings(raw: unknown): EraSettingsPlanV1 {
     繁体转简体: readBoolean(normalized, "繁体转简体", false, issues),
     调试模式: readBoolean(normalized, "调试模式", false, issues),
   };
+  if (
+    typeof normalized["强制重载消息数"] === "number" &&
+    (!Number.isSafeInteger(normalized["强制重载消息数"]) ||
+      normalized["强制重载消息数"] <= 0)
+  ) {
+    issues.push({
+      field: "强制重载消息数",
+      expected: "number",
+      actual: "non-positive-or-non-integer-number",
+    });
+  }
   if (issues.length > 0) {
     return cloneResourcePlanValue({
       kind: "settings",
@@ -548,46 +559,10 @@ function statusBarHtml(): string {
 export function getEraRegexPayloads(): readonly EraRegexPayloadV1[] {
   return cloneResourcePlanValue([
     regexPayload(
-      "ERA 数据隐藏正则",
-      "/<((?:variable|function)(?:insert|edit|delete))>\\s*(?=[\\s\\S]*?\\S[\\s\\S]*?<\\/\\1>)((?:(?!<(?:era_data|variable(?:think|insert|edit|delete)|function(?:insert|edit|delete))>|<\\/\\1>)[\\s\\S])*?)\\s*<\\/\\1>/gi",
-      "",
-      true,
-      true,
-    ),
-    regexPayload(
       "ERA 状态栏模板",
       "/<StatusPlaceHolderImpl\\/>/gsi",
       `\`\`\`html\n${statusBarHtml()}\n\`\`\``,
       false,
-      false,
-    ),
-    regexPayload(
-      "ERA 元数据隐藏正则",
-      "/<era_data>\\s*(?=[\\s\\S]*?\\S[\\s\\S]*?<\\/era_data>)((?:(?!<(?:era_data|variable(?:think|insert|edit|delete)|function(?:insert|edit|delete))>|<\\/era_data>)[\\s\\S])*?)\\s*<\\/era_data>/gi",
-      "",
-      true,
-      true,
-    ),
-    regexPayload(
-      "ERA 思考块隐藏正则",
-      "/<variablethink>\\s*(?=[\\s\\S]*?\\S[\\s\\S]*?<\\/variablethink>)((?:(?!<variablethink>)[\\s\\S])*?)\\s*<\\/variablethink>/gi",
-      "",
-      true,
-      true,
-    ),
-    regexPayload(
-      "ERA Agent 报告折叠正则",
-      "/<era_(plan|update|agent_error)>([\\s\\S]*?)<\\/era_\\1>/gi",
-      "<details class=\"era-agent-report\"><summary>ERA 阶段报告</summary><pre>$2</pre></details>",
-      false,
-      false,
-    ),
-    regexPayload(
-      "ERA Agent 提示清理正则",
-      "/<era_(?:plan|update|agent_error)>[\\s\\S]*?<\\/era_(?:plan|update|agent_error)>/gi",
-      "",
-      false,
-      true,
       false,
     ),
   ]);
@@ -603,15 +578,6 @@ function regexName(value: unknown): string | null {
 export function planEraCharacterRegexes(
   input: EraRegexPlanInputV1,
 ): EraRegexPlanV1 {
-  if (!input.localRegexEnabled) {
-    return cloneResourcePlanValue({
-      kind: "regex",
-      status: "skipped",
-      reason: "当前角色卡未开启局部正则，请先在角色卡设置中启用。",
-      details: [],
-      actions: [],
-    });
-  }
   if (input.context.kind === "group-chat") {
     return cloneResourcePlanValue({
       kind: "regex",

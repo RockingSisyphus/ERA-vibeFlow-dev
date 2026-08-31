@@ -20,6 +20,76 @@ import {
   type Profile,
 } from './agent-panel-state';
 
+type StageName = 'planning' | 'settlement';
+
+function stageAttemptLabel(stage: StageName, index: number): string {
+  return `${stage === 'planning' ? '规划' : '变量解析'}尝试 ${index + 1}`;
+}
+
+/** 地址必须在提交 Host 副作用前完整验证，否则前序方案可能已写入而后序草稿才失败。 */
+function validatedApiUrl(raw: string, label: string): string {
+  const value = raw.trim();
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch (error) {
+    throw new TypeError(`${label}的 API 地址无效。`, { cause: error });
+  }
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+    throw new TypeError(`${label}的 API 地址必须使用 HTTP(S)。`);
+  }
+  return value;
+}
+
+/** 同一方案只能有一份待保存内容，避免尝试顺序暗中决定最终连接配置。 */
+function rememberProfileEdit(
+  edits: Map<string, string>,
+  profileId: string,
+  name: string,
+  apiUrl: string,
+  clearKey: boolean,
+  hasNewKey: boolean,
+): void {
+  const signature = JSON.stringify({ name, apiUrl: apiUrl.replace(/\/+$/u, ''), clearKey, hasNewKey });
+  const previous = edits.get(profileId);
+  if (previous !== undefined && previous !== signature) {
+    throw new TypeError(`同一本机方案“${name}”被多个尝试以不同内容修改；请将其中一项选为“另存为”。`);
+  }
+  edits.set(profileId, signature);
+}
+
+/** 先把单张尝试卡归一化为公开 mutation；密码仍只保留在页面内闭包。 */
+function connectionMutation(
+  state: AgentPanelState,
+  configuration: ReturnType<typeof boundedConfiguration>,
+  stage: StageName,
+  index: number,
+  editedProfiles: Map<string, string>,
+): { mutation: Record<string, unknown>; secret: string } | null {
+  const profile = configuration[stage].attempts[index];
+  if (!profile || profile.modelSource.kind !== 'custom-profile') return null;
+  const draft = connectionDraft(state, stage, index);
+  const label = stageAttemptLabel(stage, index);
+  const name = draft.name.trim();
+  if (!name) throw new TypeError(`${label}的方案名称不能为空。`);
+  const apiUrl = validatedApiUrl(draft.apiUrl, label);
+  if (!profile.modelSource.model?.trim()) throw new TypeError(`${label}尚未选择或填写模型。`);
+  if (draft.boundProfileId && !draft.saveAs) {
+    rememberProfileEdit(editedProfiles, draft.boundProfileId, name, apiUrl, draft.clearKey, draft.key.length > 0);
+  }
+  return {
+    secret: draft.key,
+    mutation: {
+      stage,
+      index,
+      ...(!draft.saveAs && draft.boundProfileId ? { id: draft.boundProfileId } : {}),
+      name,
+      apiUrl,
+      clearKey: draft.clearKey,
+    },
+  };
+}
+
 /** 阶段配置动作必须共享页面 busy 锁，避免保存与预设捕获并发覆盖。 */
 export class AgentStageActions {
   constructor(private readonly state: AgentPanelState) {}
@@ -59,22 +129,14 @@ export class AgentStageActions {
       const configuration = boundedConfiguration(this.state);
       const secretProviders: Array<() => string> = [];
       const connectionMutations: Record<string, unknown>[] = [];
+      const editedProfiles = new Map<string, string>();
       for (const stageName of ['planning', 'settlement'] as const) {
-        configuration[stageName].attempts.forEach((profile, index) => {
-          if (profile.modelSource.kind !== 'custom-profile') return;
-          const draft = connectionDraft(this.state, stageName, index);
-          const secret = draft.key;
-          const keyArgIndex = secret.length > 0 ? secretProviders.push(() => secret) : 0;
-          connectionMutations.push({
-            stage: stageName,
-            index,
-            ...(!draft.saveAs && draft.boundProfileId ? { id: draft.boundProfileId } : {}),
-            name: draft.name,
-            apiUrl: draft.apiUrl,
-            clearKey: draft.clearKey,
-            ...(keyArgIndex > 0 ? { keyArgIndex } : {}),
-          });
-        });
+        for (const index of configuration[stageName].attempts.keys()) {
+          const prepared = connectionMutation(this.state, configuration, stageName, index, editedProfiles);
+          if (!prepared) continue;
+          const keyArgIndex = prepared.secret.length > 0 ? secretProviders.push(() => prepared.secret) : 0;
+          connectionMutations.push({ ...prepared.mutation, ...(keyArgIndex > 0 ? { keyArgIndex } : {}) });
+        }
       }
       const result = await awaitUiSettlement(
         requestEraService(

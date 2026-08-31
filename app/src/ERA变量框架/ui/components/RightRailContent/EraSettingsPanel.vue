@@ -43,7 +43,7 @@
           <!-- 有变量时渲染列表 -->
           <div v-for="row in rows" :key="row.key" class="var-row">
             <!-- 每个变量一行 -->
-            <label class="var-key" :title="row.key">{{ row.key }}</label>
+            <label class="var-key" :for="controlId(row.key)" :title="row.key">{{ row.key }}</label>
             <!-- 变量名 -->
             <!-- 根据变量类型选择不同的编辑控件 -->
             <div class="var-editor">
@@ -52,7 +52,7 @@
               <template v-if="row.type === 'boolean'">
                 <label class="switch">
                   <!-- 自定义开关外观 -->
-                  <input v-model="edits[row.key]" type="checkbox" />
+                  <input :id="controlId(row.key)" v-model="edits[row.key]" :aria-label="row.key" type="checkbox" />
                   <!-- 勾选值 -->
                   <span class="track"></span>
                   <!-- 轨道 -->
@@ -61,21 +61,39 @@
 
               <!-- 数字：number 输入 -->
               <template v-else-if="row.type === 'number'">
-                <input v-model.number="edits[row.key]" type="number" class="ipt" :placeholder="String(row.value)" />
+                <input
+                  :id="controlId(row.key)"
+                  v-model.number="edits[row.key]"
+                  type="number"
+                  class="ipt"
+                  :aria-label="row.key"
+                  :min="row.key === '强制重载消息数' ? 1 : undefined"
+                  :step="row.key === '强制重载消息数' ? 1 : undefined"
+                  :placeholder="String(row.value)"
+                />
                 <!-- 数字输入 -->
               </template>
 
               <!-- 字符串：text 输入 -->
               <template v-else-if="row.type === 'string'">
-                <input v-model="edits[row.key]" type="text" class="ipt" :placeholder="String(row.value)" />
+                <input
+                  :id="controlId(row.key)"
+                  v-model="edits[row.key]"
+                  type="text"
+                  class="ipt"
+                  :aria-label="row.key"
+                  :placeholder="String(row.value)"
+                />
                 <!-- 文本输入 -->
               </template>
 
               <!-- 其他（对象/数组/null/未知）：JSON 文本域 -->
               <template v-else>
                 <textarea
+                  :id="controlId(row.key)"
                   v-model="jsonBuffers[row.key]"
                   class="ipt ta"
+                  :aria-label="row.key"
                   :placeholder="safeStringify(row.value)"
                   @input="markJsonTouched(row.key)"
                 ></textarea>
@@ -120,40 +138,34 @@ import { SettingsSchema } from '../../../utils/constants';
 import { settings } from '../../../utils/era_data';
 import { Logger } from '../../../utils/log'; // 记录设置读取、提交与回滚的可诊断结果。
 import { awaitUiSettlement } from '../../utils/service-settlement';
+import {
+  buildEditableSettingRows,
+  settingControlId,
+  settingTypeLabel,
+  stringifySetting,
+  type EraSettingRow,
+} from './era-settings-editor';
 
-const logger = new Logger(); // 中文注释：实例化日志
+const logger = new Logger();
 
 // === 折叠状态 ===
-const isOpen = ref(false); // 中文注释：是否展开
+const isOpen = ref(false); // 折叠状态不持久化，重新打开面板时保持收起。
 
 // === 原始数据与编辑缓存 ===
-type Row = { key: string; value: any; type: 'boolean' | 'number' | 'string' | 'json' }; // 中文注释：一行变量的结构
+type Row = EraSettingRow;
 const rows = ref<Row[]>([]); // 当前可渲染的设置行。
 const busy = ref(false); // 读取、丢弃或保存期间禁止重复提交。
-const edits = reactive<Record<string, any>>({}); // 中文注释：针对简单类型的编辑缓存（布尔/数字/字符串）
-const jsonBuffers = reactive<Record<string, string>>({}); // 中文注释：针对 JSON 类型的文本缓存
-const jsonState = reactive<Record<string, { ok?: boolean; bad?: boolean; msg?: string }>>({}); // 中文注释：JSON 校验状态
+const edits = reactive<Record<string, any>>({}); // 简单类型保留原生值，避免字符串化改变设置类型。
+const jsonBuffers = reactive<Record<string, string>>({}); // 复杂值在保存前才解析，支持安全丢弃草稿。
+const jsonState = reactive<Record<string, { ok?: boolean; bad?: boolean; msg?: string }>>({}); // 记录本地格式状态。
 
 // === 工具：类型判定与人类可读名 ===
-function detectType(v: any): Row['type'] {
-  // 中文注释：检测变量类型
-  if (typeof v === 'boolean') return 'boolean'; // 中文注释：布尔
-  if (typeof v === 'number' && Number.isFinite(v)) return 'number'; // 中文注释：有限数
-  if (typeof v === 'string') return 'string'; // 中文注释：字符串
-  return 'json'; // 中文注释：其他一律归为 json（对象/数组/null/特殊数等）
+function controlId(key: string): string {
+  return settingControlId(key);
 }
-function humanType(t: Row['type']): string {
-  // 中文注释：类型中文名
-  return t === 'boolean' ? '布尔' : t === 'number' ? '数字' : t === 'string' ? '字符串' : 'JSON'; // 中文注释：映射
-}
-function safeStringify(v: any): string {
-  // 中文注释：安全 JSON 序列化
-  try {
-    return JSON.stringify(v, null, 2);
-  } catch {
-    return String(v);
-  } // 中文注释：失败则转字符串
-}
+
+const humanType = settingTypeLabel;
+const safeStringify = stringifySetting;
 
 // === 加载变量列表 ===
 function resetEditorState(nextRows: readonly Row[]): void {
@@ -180,16 +192,7 @@ function loadVars(showSuccess = true) {
       return;
     }
 
-    // 清空旧缓存
-    const nextRows: Row[] = [];
-    // 构建可编辑行
-    Object.entries(obj)
-      .filter(([key]) => key !== '开启悬浮球')
-      .forEach(([key, value]) => {
-        const t = detectType(value);
-        nextRows.push({ key, value, type: t });
-      });
-    resetEditorState(nextRows);
+    resetEditorState(buildEditableSettingRows(obj));
     if (showSuccess) toastr.success('已从脚本变量中加载最新设置。', '读取成功');
   } catch (e) {
     logger.error('loadVars', '读取脚本变量失败:', e);
@@ -232,8 +235,6 @@ function discardEdits() {
 // === 保存修改 ===
 async function saveEdits() {
   // 保存请求只能经过 ERA Service 的逻辑提交边界，避免 UI 直接写入脚本变量。
-  const originalRows = JSON.parse(JSON.stringify(rows.value)); // 深拷贝原始数据用于回滚
-
   if (busy.value) return;
   busy.value = true;
   try {
@@ -258,18 +259,14 @@ async function saveEdits() {
       '设置提交',
     );
 
-    rows.value.forEach(row => {
-      if (Object.prototype.hasOwnProperty.call(nextSettings, row.key)) {
-        row.value = nextSettings[row.key as keyof typeof nextSettings];
-      }
-    });
+    // Service 成功回执前已重读脚本变量并发布设置事件；此处再从权威响应式快照重建草稿。
+    loadVars(false);
     logger.log('saveEdits', '脚本变量已保存');
     toastr.success('设置已成功保存到脚本变量。', '保存成功');
   } catch (e) {
     logger.error('saveEdits', '保存失败：', e);
-    toastr.error(`保存失败：${(e as any)?.message ?? e}。正在回滚界面。`, '保存失败');
-    // 2. 错误处理：回滚 UI
-    resetEditorState(originalRows);
+    // 提交失败保留当前草稿，用户可修正后重试或显式点击“丢弃修改”。
+    toastr.error(`保存失败：${(e as any)?.message ?? e}。未保存草稿已保留。`, '保存失败');
   } finally {
     busy.value = false;
   }
@@ -463,10 +460,15 @@ async function saveEdits() {
   display: inline-block;
 } /* 开关容器 */
 .switch input {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
   opacity: 0;
-  width: 0;
-  height: 0;
-} /* 隐藏原生框 */
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  cursor: pointer;
+} /* 保留原生框的完整命中与键盘焦点区域，仅隐藏默认外观。 */
 .switch .track {
   position: absolute;
   inset: 0;
@@ -492,6 +494,10 @@ async function saveEdits() {
 .switch input:checked + .track {
   background: var(--settings-bg-switch-checked);
 } /* 选中轨道色 */
+.switch input:focus-visible + .track {
+  outline: 2px solid var(--settings-bg-switch-checked);
+  outline-offset: 2px;
+}
 .switch input:checked + .track::after {
   transform: translateX(18px);
 } /* 拖头右移 */

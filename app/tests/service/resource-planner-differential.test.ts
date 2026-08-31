@@ -1,13 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { HIDE_ERA_DATA_REGEX } from '../../src/ERA变量框架/initer/manual/regex_objects/hide_era_data';
-import { HIDE_ERA_METADATA_REGEX } from '../../src/ERA变量框架/initer/manual/regex_objects/hide_era_metadata';
-import { HIDE_ERA_THINKING_REGEX } from '../../src/ERA变量框架/initer/manual/regex_objects/hide_era_thinking';
 import { REPLACE_PLACEHOLDER_REGEX } from '../../src/ERA变量框架/initer/manual/regex_objects/replace_placeholder';
-import {
-  FOLD_ERA_AGENT_REPORTS_REGEX,
-  STRIP_ERA_AGENT_REPORTS_REGEX,
-} from '../../src/ERA变量框架/initer/manual/regex_objects/agent_reports';
 import { eraVarIntentEntry } from '../../src/ERA变量框架/initer/manual/worldbook_entries/era_var_intent';
 import { eraVarOperationRuleEntry } from '../../src/ERA变量框架/initer/manual/worldbook_entries/era_var_operation_rule';
 import { SettingsSchema } from '../../src/ERA变量框架/utils/constants';
@@ -109,9 +102,23 @@ interface ResourcePlannerModule {
   }): PlaceholderPlan;
 }
 
+interface InitializationTransactionModule {
+  planInitialization(context: Readonly<Record<string, unknown>>): {
+    readonly disposition: 'ready' | 'failed';
+    readonly actions: readonly Readonly<Record<string, unknown>>[];
+  };
+}
+
 const plannerUrl = new URL('../../../javascript_project/service/base_lib/domain/resource_planner.ts', import.meta.url)
   .href;
 const planner = (await import(/* @vite-ignore */ plannerUrl)) as ResourcePlannerModule;
+const initializationTransactionUrl = new URL(
+  '../../../javascript_project/service/base_lib/initialization_transaction.ts',
+  import.meta.url,
+).href;
+const initializationTransaction = (await import(
+  /* @vite-ignore */ initializationTransactionUrl
+)) as InitializationTransactionModule;
 
 function character(primaryWorldbook: string | null = '主世界书'): CharacterContext {
   return {
@@ -127,6 +134,34 @@ function actionKinds(plan: WorldbookPlan): string[] {
 }
 
 describe('VibeFlow Service 宿主资源规划器差分', () => {
+  it('按 UI 合同解包 settings 字段，不把包装对象 strip 成默认设置', () => {
+    const candidate = SettingsSchema.parse({
+      开启黑夜模式: true,
+      强制重载功能: true,
+      强制重载消息数: 3,
+      特殊符号值: 'ERA_UI_E2E_PLACEHOLDER',
+    });
+    const plan = initializationTransaction.planInitialization({
+      schemaVersion: 1,
+      step: {
+        kind: 'execute',
+        task: {
+          kind: 'initialize',
+          operation: 'settings-update',
+          args: [{ kind: 'json', value: { settings: candidate } }],
+        },
+      },
+      identityRaw: {},
+      scriptVariablesRaw: {},
+      messagesRaw: {},
+      worldbookRaw: {},
+      regexRaw: {},
+      readFailure: null,
+    });
+    expect(plan.disposition).toBe('ready');
+    expect(plan.actions).toEqual([{ kind: 'replace-settings', settings: candidate }]);
+  });
+
   it('等价应用八项 Zod 默认值并 strip 未知字段', () => {
     const defaults = SettingsSchema.parse({});
     const defaultPlan = planner.planEraSettings(undefined);
@@ -134,7 +169,7 @@ describe('VibeFlow Service 宿主资源规划器差分', () => {
 
     const raw = {
       特殊符号值: '<自定义/>',
-      强制重载消息数: 7.5,
+      强制重载消息数: 7,
       调试模式: true,
       未知字段: { 必须被移除: true },
     };
@@ -167,6 +202,15 @@ describe('VibeFlow Service 宿主资源规划器差分', () => {
         { field: '强制重载消息数', expected: 'number', actual: 'string' },
       ],
     });
+
+    for (const value of [0, -1, 1.5]) {
+      expect(() => SettingsSchema.parse({ 强制重载消息数: value })).toThrow();
+      expect(planner.planEraSettings({ 强制重载消息数: value })).toMatchObject({
+        status: 'invalid',
+        actions: [],
+        error: { issues: [{ field: '强制重载消息数' }] },
+      });
+    }
   });
 
   it('逐字段保持两条世界书资源载荷及顺序，并为新主书声明 create+bind', () => {
@@ -243,14 +287,7 @@ describe('VibeFlow Service 宿主资源规划器差分', () => {
   });
 
   it('逐字段保持局部正则载荷和注入顺序', () => {
-    const candidateRegexes = [
-      HIDE_ERA_DATA_REGEX,
-      REPLACE_PLACEHOLDER_REGEX,
-      HIDE_ERA_METADATA_REGEX,
-      HIDE_ERA_THINKING_REGEX,
-      FOLD_ERA_AGENT_REPORTS_REGEX,
-      STRIP_ERA_AGENT_REPORTS_REGEX,
-    ];
+    const candidateRegexes = [REPLACE_PLACEHOLDER_REGEX];
     expect(planner.getEraRegexPayloads()).toEqual(candidateRegexes);
 
     const plan = planner.planEraCharacterRegexes({
@@ -263,13 +300,17 @@ describe('VibeFlow Service 宿主资源规划器差分', () => {
     expect(plan.actions.map(action => action.regex)).toEqual(candidateRegexes);
   });
 
-  it('关闭、群聊和无角色时 typed skipped；同 script_name 仅保留既有对象', () => {
+  it('关闭局部正则时仍规划状态栏并由 Host 启用；群聊和无角色 typed skipped；同名对象保留', () => {
     const disabled = planner.planEraCharacterRegexes({
       context: character(),
       localRegexEnabled: false,
       existingRegexes: [],
     });
-    expect(disabled).toMatchObject({ status: 'skipped', actions: [], details: [] });
+    expect(disabled).toMatchObject({
+      status: 'ready',
+      details: [{ regexName: 'ERA 状态栏模板', status: 'planned' }],
+    });
+    expect(disabled.actions).toHaveLength(1);
 
     for (const context of [{ kind: 'group-chat' }, { kind: 'no-character' }] as const) {
       expect(planner.planEraCharacterRegexes({ context, localRegexEnabled: true, existingRegexes: [] })).toMatchObject({
@@ -279,16 +320,15 @@ describe('VibeFlow Service 宿主资源规划器差分', () => {
       });
     }
 
-    const existing = [{ script_name: 'ERA 数据隐藏正则', replace_string: '用户自定义', id: 'keep-me' }];
+    const existing = [{ script_name: 'ERA 状态栏模板', replace_string: '用户自定义', id: 'keep-me' }];
     const before = structuredClone(existing);
     const plan = planner.planEraCharacterRegexes({
       context: character(),
       localRegexEnabled: true,
       existingRegexes: existing,
     });
-    expect(plan.details[0]).toEqual({ regexName: 'ERA 数据隐藏正则', status: 'exists' });
-    expect(plan.actions).toHaveLength(5);
-    expect(plan.actions.some(action => action.regex.script_name === 'ERA 数据隐藏正则')).toBe(false);
+    expect(plan.details[0]).toEqual({ regexName: 'ERA 状态栏模板', status: 'exists' });
+    expect(plan.actions).toHaveLength(0);
     expect(existing).toEqual(before);
   });
 

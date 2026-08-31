@@ -937,6 +937,8 @@ export async function run(
         const signatures = new Map<string, string>();
         const results = new Map<string, unknown>();
 
+        // 必须在第一次宿主写入前完整验证草稿表和共享方案冲突，
+        // 否则后续无效草稿会在总保存失败时留下本不应发生的前缀写入。
         for (const mutation of mutations) {
           const stage = mutation.stage;
           const index = Number(mutation.index);
@@ -968,6 +970,20 @@ export async function run(
             }
             signatures.set(existingId, signature);
           }
+        }
+
+        for (const mutation of mutations) {
+          const stage = mutation.stage as "planning" | "settlement";
+          const index = Number(mutation.index);
+          const attempt = configuration[stage].attempts[index]!;
+          const existingId = typeof mutation.id === "string" && mutation.id.length > 0 ? mutation.id : "";
+          const keyArgIndex = Number(mutation.keyArgIndex);
+          const signature = JSON.stringify({
+            name: mutation.name,
+            apiUrl: mutation.apiUrl,
+            clearKey: mutation.clearKey === true,
+            hasKey: Number.isSafeInteger(keyArgIndex) && keyArgIndex > 0,
+          });
 
           let result = existingId ? results.get(`${existingId}:${signature}`) : undefined;
           if (result === undefined) {
@@ -988,6 +1004,14 @@ export async function run(
           }
           attempt.modelSource.profileId = summary.id;
           attempt.modelSource.profileNameHint = summary.name;
+        }
+
+        for (const stageName of ["planning", "settlement"] as const) {
+          for (const [index, attempt] of configuration[stageName].attempts.entries()) {
+            if (attempt.modelSource.kind === "custom-profile" && !attempt.modelSource.profileId) {
+              throw new TypeError(`${stageName} 尝试 ${index + 1} 的自定义 API 方案尚未保存或绑定。`);
+            }
+          }
         }
 
         const normalized = normalizeAgentConfiguration(configuration);

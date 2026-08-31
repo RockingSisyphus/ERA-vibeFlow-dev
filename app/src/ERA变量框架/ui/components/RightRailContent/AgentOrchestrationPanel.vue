@@ -75,7 +75,7 @@
               class="mini subtle"
               @click.prevent="newConnection('planning', index)"
             >
-              新建本机方案
+              新建方案草稿
             </button>
             <label class="field"
               >方案名称
@@ -238,7 +238,7 @@
               class="mini subtle"
               @click.prevent="newConnection('settlement', index)"
             >
-              新建本机方案
+              新建方案草稿
             </button>
             <label class="field"
               >方案名称
@@ -373,9 +373,10 @@
         </button>
         <button class="mini subtle" :disabled="busy" @click="load">重新读取</button>
         <button id="era-agent-save" class="mini primary" :disabled="busy || groupChat" @click="save">
-          保存到角色卡
+          保存方案并写入角色卡
         </button>
       </div>
+      <p class="intro">新建或修改的 API 方案会在点击上方总保存按钮后持久化；仅加载模型不会提前保存草稿。</p>
     </div>
   </section>
 </template>

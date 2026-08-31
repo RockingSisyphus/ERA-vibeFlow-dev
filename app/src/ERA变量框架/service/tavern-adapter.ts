@@ -21,8 +21,14 @@ import { currentEraMessageText, updateEraMessageContent } from './message-writer
 import { readInstallationScopeFacts } from './installation-scope';
 import { projectMessage } from './message-projection';
 import { AgentTavernHost } from './agent-tavern-host';
-import { currentCharacterRegexEnabled, requireMessageId, withoutButtonInputEvents } from './tavern-browser-host';
+import {
+  currentCharacterRegexEnabled,
+  enableCurrentCharacterRegexes,
+  requireMessageId,
+  withoutButtonInputEvents,
+} from './tavern-browser-host';
 import { refreshDisplayedEraTechnicalBlocks, registerEraTechnicalBlockProjection } from './technical-block-projection';
+import { registerEraPresentationRefresh } from './presentation-refresh';
 
 const logger = new Logger();
 
@@ -192,6 +198,7 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
     this.accepting = true;
     const registrations: RegisteredListener[] = [];
     const stopTechnicalProjection = registerEraTechnicalBlockProjection();
+    const stopPresentationRefresh = registerEraPresentationRefresh();
 
     const registeredTypes = new Set<string>();
     /** 统一记录卸载句柄，并在登记失败时按原顺序完整回收。 */
@@ -249,6 +256,7 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
         throw new Error(`ERA 生产监听数量应为 ${ERA_TAVERN_LISTENER_COUNT}，实际为 ${registrations.length}。`);
       }
     } catch (error) {
+      stopPresentationRefresh();
       stopTechnicalProjection();
       for (const registration of registrations) {
         eventRemoveListener(registration.eventType, registration.handler);
@@ -264,6 +272,7 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
       stopped = true;
       this.accepting = false;
       this.agentHost.stop();
+      stopPresentationRefresh();
       stopTechnicalProjection();
       for (const registration of registrations) {
         eventRemoveListener(registration.eventType, registration.handler);
@@ -417,10 +426,12 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
     read: async (_input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown> => {
       throwIfAborted(context.signal);
       const enabled = currentCharacterRegexEnabled();
-      const regexes = enabled ? clonePortable(getTavernRegexes({ type: 'character' })) : [];
+      const regexes = clonePortable(getTavernRegexes({ type: 'character' }));
       return { enabled, regexes };
     },
-    /** 仅追加纯规划器判定缺失的正则，不在宿主边界重复比较名称。 */
+    /**
+     * 仅追加纯规划器判定缺失的正则；否则宿主层再次按名称判断会让规划结果与实际写入分叉。
+     */
     upsert: async (input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown> => {
       throwIfAborted(context.signal);
       const regex = input.regex;
@@ -428,8 +439,9 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
       const updated = await updateTavernRegexesWith(current => [...current, clonePortable(regex) as TavernRegex], {
         type: 'character',
       });
+      await enableCurrentCharacterRegexes();
       throwIfAborted(context.signal);
-      return { status: 'committed', count: updated.length };
+      return { status: 'committed', count: updated.length, enabled: true };
     },
   };
 

@@ -604,13 +604,6 @@
     },
     {
       "debt": 1,
-      "fingerprint": "073b13e30599b62ee0d9299233d4133c2c0cfd1aeda7478a93acab854ff9474f",
-      "objectId": "comment:script:const log = new Logger(); -> async function forceRenderMessage(messageId: number): Promise<void> {",
-      "ruleId": "COMMENT_DEVELOPMENT_HISTORY",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
       "fingerprint": "878b4c7bf3badf78cb30bb0a1577b5204a88006f5c34f53b39186f123612f1ec",
       "objectId": "comment:script:const msg = allMessages[i]; -> const contextMeta = _.cloneDeep(metaForRecalc);",
       "ruleId": "COMMENT_DEVELOPMENT_HISTORY",
@@ -692,13 +685,6 @@
       "objectId": "comment:script:const content = getMessageContent(msg); -> const mk = parseEraData(content)?.['era-message-key'] || '';",
       "ruleId": "COMMENT_DISABLED_CODE",
       "severity": "warning"
-    },
-    {
-      "debt": 19,
-      "fingerprint": "aec7c43dc3161d0ac1990f7aa308af86bef2564ffdb86ef5ac7c2031ca3eee6f",
-      "objectId": "comment:script:const log = new Logger(); -> async function forceRenderMessage(messageId: number): Promise<void> {",
-      "ruleId": "COMMENT_DISABLED_CODE",
-      "severity": "error"
     },
     {
       "debt": 1,
@@ -793,21 +779,7 @@
     },
     {
       "debt": 1,
-      "fingerprint": "dde0301006784413adcc794a28fba379fb8bf9b91683ba993e41667de5f06823",
-      "objectId": "comment:script: === 'boolean' ? '布尔' : t === 'number' ? '数字' : t === 'string' ? '字符串' : 'JSON'; -> }",
-      "ruleId": "COMMENT_META_WORDING",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
       "fingerprint": "6da180fa8bd25c1072337926e75c2e2d7122793a10463f9c6973496caa708555",
-      "objectId": "comment:script:} -> }",
-      "ruleId": "COMMENT_META_WORDING",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "af1fc0ab54d72c4db269e5bd80f17c065f0ab235106d0318a5fd4bbcff649b0c",
       "objectId": "comment:script:} -> }",
       "ruleId": "COMMENT_META_WORDING",
       "severity": "warning"
@@ -821,57 +793,8 @@
     },
     {
       "debt": 1,
-      "fingerprint": "90fdfa206e922d8d038ecdf2bfe6f95a4a6977830a60253973d34592f630f9f0",
-      "objectId": "comment:script:const edits = reactive<Record<string, any>>({}); -> const jsonBuffers = reactive<Record<string, string>>({});",
-      "ruleId": "COMMENT_META_WORDING",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "b817d84eabe2884d260744e77d9926141c90bc6e5740fa705a30ca19b0359f6a",
-      "objectId": "comment:script:const isOpen = ref(false); -> type Row = { key: string; value: any; type: 'boolean' | 'number' | 'string' | 'j",
-      "ruleId": "COMMENT_META_WORDING",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "942137bb3b4001a46b42f23ed7faf9506870505ff3c73ac3d0ec8f8fd3ffd713",
-      "objectId": "comment:script:const jsonBuffers = reactive<Record<string, string>>({}); -> const jsonState = reactive<Record<string, { ok?: boolean; b",
-      "ruleId": "COMMENT_META_WORDING",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "d451990483194d0d200b17a59f3d8bdbaee85556a8a1e4c5b4edbce8b1a29b5b",
-      "objectId": "comment:script:const logger = new Logger(); -> const isOpen = ref(false);",
-      "ruleId": "COMMENT_META_WORDING",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
       "fingerprint": "39fe0f7b922f94ddd23a54df1a88cdd4ce1b369b00209a912f0dbfc0834b87cb",
       "objectId": "comment:script:const txt = jsonBuffers[key] ?? ''; -> if (txt.trim() === '') {",
-      "ruleId": "COMMENT_META_WORDING",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "cdc68307ad1fa092315dd80a94526d72295c063f3e37c12108186f250030ada5",
-      "objectId": "comment:script:e = reactive<Record<string, { ok?: boolean; bad?: boolean; msg?: string }>>({}); -> function detectType(v: any): Row['ty",
-      "ruleId": "COMMENT_META_WORDING",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "82c77c6c7d94828b7b8f8808aff8e41216f17a543515df70ed5c500d4690e4d2",
-      "objectId": "comment:script:function detectType(v: any): Row['type'] { -> if (typeof v === 'boolean') return 'boolean';",
-      "ruleId": "COMMENT_META_WORDING",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "a0a98298b38c5ec9b50f47f19a4effabad91ad6892fb5e484f0e4dc6acd7701f",
-      "objectId": "comment:script:function humanType(t: Row['type']): string { -> return t === 'boolean' ? '布尔' : t === 'number' ? '数字' : t === 'string' ?",
       "ruleId": "COMMENT_META_WORDING",
       "severity": "warning"
     },
@@ -891,13 +814,6 @@
     },
     {
       "debt": 1,
-      "fingerprint": "0527c5f7f6b815b129bfacc3a20b01e5a5027468736827ca64ea2e88c32755e9",
-      "objectId": "comment:script:function safeStringify(v: any): string { -> try {",
-      "ruleId": "COMMENT_META_WORDING",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
       "fingerprint": "cb75f64056fcfb7677e3eee652a377eb5216b0a4cbeccb6c21293845eea716da",
       "objectId": "comment:script:if (isOpen.value && rows.value.length === 0) loadVars(); -> }",
       "ruleId": "COMMENT_META_WORDING",
@@ -907,27 +823,6 @@
       "debt": 1,
       "fingerprint": "8f9f6c06c4066b5887347162748b8366dda9ff7f14a3663eb4489e56f55b967d",
       "objectId": "comment:script:if (txt.trim() === '') { -> jsonState[key] = { bad: true, ok: false, msg: '不能为空（若要设为 null 请写 null）' };",
-      "ruleId": "COMMENT_META_WORDING",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "260edea8746b868970f3119aa821009d1c9c5b56b39d7c98632734c7f978aeaa",
-      "objectId": "comment:script:if (typeof v === 'boolean') return 'boolean'; -> if (typeof v === 'number' && Number.isFinite(v)) return 'number';",
-      "ruleId": "COMMENT_META_WORDING",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "e54b42c189e50bf727a6a7da0ab7a8eeeb414e9339383de35a0655eb45dda4e0",
-      "objectId": "comment:script:if (typeof v === 'number' && Number.isFinite(v)) return 'number'; -> if (typeof v === 'string') return 'string';",
-      "ruleId": "COMMENT_META_WORDING",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "4871c6ac9134ab55af80422c4cf800f1532fe1771efbf2abd21707c89139bdac",
-      "objectId": "comment:script:if (typeof v === 'string') return 'string'; -> return 'json';",
       "ruleId": "COMMENT_META_WORDING",
       "severity": "warning"
     },
@@ -954,22 +849,8 @@
     },
     {
       "debt": 1,
-      "fingerprint": "4c6c54144b14de023a00f341d99dc7eb7f7a205c0ef2310ed1c9d3b2cba5419f",
-      "objectId": "comment:script:return 'json'; -> }",
-      "ruleId": "COMMENT_META_WORDING",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
       "fingerprint": "2eaef79bad9cc0b0f5a0231e783c7476c9f0de068a8226a2c37db5b075436d6d",
       "objectId": "comment:script:return; -> }",
-      "ruleId": "COMMENT_META_WORDING",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "b0c26354f0626659b599962cd7000ab8e6a6b535c475229ddf04643d559d5ee2",
-      "objectId": "comment:script:w = { key: string; value: any; type: 'boolean' | 'number' | 'string' | 'json' }; -> const rows = ref<Row[]>([]);",
       "ruleId": "COMMENT_META_WORDING",
       "severity": "warning"
     },
@@ -1388,13 +1269,6 @@
     },
     {
       "debt": 1,
-      "fingerprint": "a9440404870030e3dad7d939ca1e1ca2d2ca884d6cbe8241f4f9041ef4f28793",
-      "objectId": "comment:script:} -> const messageCount = _.get(scriptVars, '强制重载消息数', 1);",
-      "ruleId": "COMMENT_WHAT_NARRATION",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
       "fingerprint": "b8274abbb8068e9aaa413b8a5c3c12f2a201e7115727a0d5cabb803c1777b7bc",
       "objectId": "comment:script:} -> const statAtTarget = calculateStatAt(targetMK, selectedMks, allLogs);",
       "ruleId": "COMMENT_WHAT_NARRATION",
@@ -1404,13 +1278,6 @@
       "debt": 1,
       "fingerprint": "848f0140392daa6c93422063f2b516f072ea03a24eb529838156c8e59b185e8e",
       "objectId": "comment:script:} -> const valOld = _.cloneDeep(currentNodeInVars);",
-      "ruleId": "COMMENT_WHAT_NARRATION",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "63ac85302cdd935eb28000f939d236c5860a22d289307d90377773229a950275",
-      "objectId": "comment:script:const scriptVars = getVariables({ type: 'script', script_id: getScriptId() }); -> const forceReload = _.get(scriptVars, ",
       "ruleId": "COMMENT_WHAT_NARRATION",
       "severity": "warning"
     },

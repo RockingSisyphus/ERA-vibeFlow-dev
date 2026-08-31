@@ -664,8 +664,8 @@
               "path": "configs/nodesets/agent_generation_session.jsonc"
             },
             "role": {
-              "display_name": "执行多阶段生成、方案绑定与模型枚举诊断",
-              "description": "设置保存时先验证全部尝试，再协调本机方案创建或更新、方案 ID 绑定与角色卡写入；模型枚举必须区分合法空列表与宿主请求失败，并把失败交给现有 UI 反馈链。生成时仅由角色卡开关及既有生成资格决定规划和结算；长期显示与提示投影属于现有 Service Host 生命周期，不在本节点建立第二状态机。"
+              "display_name": "执行可恢复的多阶段连接保存与模型路由",
+              "description": "在现有 AgentGenerationSession 内先验证全部尝试和共享方案冲突，再协调本机方案创建或更新、方案 ID 绑定和角色卡写入；成功后返回权威方案摘要，角色卡写入失败时保留已创建方案供恢复。草稿与已保存方案分别枚举模型，失败或空列表不覆盖当前选择。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -7651,8 +7651,8 @@
               "path": "configs/nodesets/task_initialize.jsonc"
             },
             "role": {
-              "display_name": "规划资源与相对更新规则",
-              "description": "以纯计算方式生成设置、世界书和正则动作，并把 $expr、Function 标签与双快照格式及旧运算符禁用规则写入 ERA 变量操作世界书；MK 与占位符仍由统一任务上下文准备独占处理。"
+              "display_name": "规划权威设置与内建投影初始化资源",
+              "description": "读取并验证完整设置草稿，生成一次性设置提交以及仅含状态栏模板正则和两条 ERA 世界书项的幂等资源计划；旧 ERA 正则保留，技术块显示与提示清理由内建投影承担。"
             },
             "contract_source": "node_type",
             "flow_kind": "decision",
@@ -39230,7 +39230,7 @@
         "status": "implemented",
         "display_name": "ERA 酒馆服务宿主",
         "category": "宿主接线",
-        "description": "连接 SillyTavern 与 Tavern Helper，管理单一先进先出队列、回执、高水位屏障、绝对截止时间定时器、宿主引用和出站帧幂等，并提供服务端口、Agent 独立请求、酒馆能力、Sidecar 机械接线与分阶段启动闸门；生命周期登记幂等消息显示投影与 GENERATE_AFTER_DATA 最后提示投影，二者只改变 DOM 或本次出站副本。消息读取仍按 era-active-message-v1 投影，Host 不承载 Agent 重试、函数、CRUD、同步、合并、回滚或身份判定规则。",
+        "description": "连接 SillyTavern 与 Tavern Helper，管理单一先进先出队列、回执、高水位屏障、绝对截止时间定时器、宿主引用和出站帧幂等，并提供服务端口、Agent 独立请求、酒馆能力、Sidecar 机械接线与分阶段启动闸门；生命周期登记幂等消息显示投影与 GENERATE_AFTER_DATA 最后提示投影，并在权威设置提交后刷新 UI 设置、在成功发布新运行时快照后按设置只刷新最近消息的显示。所有投影和刷新只改变 DOM 或本次出站副本，不改消息、Sidecar 或历史输入；消息读取仍按 era-active-message-v1 投影，Host 不承载 Agent 重试、函数、CRUD、同步、合并、回滚或身份判定规则。",
         "version": "0.1.0",
         "targets": [
           "browser"

@@ -63,8 +63,8 @@
       {
         "id": "plan_resources",
         "type_used": "era.initialize.plan",
-        "display_name": "规划资源与相对更新规则",
-        "description": "以纯计算方式生成设置、世界书和正则动作，并把 $expr、Function 标签与双快照格式及旧运算符禁用规则写入 ERA 变量操作世界书；MK 与占位符仍由统一任务上下文准备独占处理。"
+        "display_name": "规划权威设置与内建投影初始化资源",
+        "description": "读取并验证完整设置草稿，生成一次性设置提交以及仅含状态栏模板正则和两条 ERA 世界书项的幂等资源计划；状态栏正则即使角色先前未启用局部正则也会由 Host 为当前角色启用，旧 ERA 正则保留，技术块显示与提示清理由内建投影承担。"
       },
       {
         "id": "preserve_resources",

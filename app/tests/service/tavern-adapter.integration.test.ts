@@ -230,16 +230,21 @@ describe('ERA Tavern 生产接线', () => {
       vi.fn(async () => undefined),
     );
     vi.stubGlobal('replaceWorldbook', replaceEntries);
-    vi.stubGlobal('isCharacterTavernRegexesEnabled', () => true);
+    vi.stubGlobal('isCharacterTavernRegexesEnabled', () => false);
     vi.stubGlobal('getTavernRegexes', () => [{ script_name: 'regex', futureRegexField: { keep: true } }]);
     vi.stubGlobal('updateTavernRegexesWith', updateRegexes);
     vi.stubGlobal('getCurrentCharacterName', () => '角色');
     vi.stubGlobal('getCurrentCharacterId', () => 'stable-character-avatar.png');
     vi.stubGlobal('getScriptId', () => 'script-id');
     vi.stubGlobal('eventEmit', emitted);
+    const saveSettingsDebounced = vi.fn(async () => undefined);
     vi.stubGlobal('SillyTavern', {
       characterId: 'character-id',
       groupId: null,
+      characters: [],
+      writeExtensionField: vi.fn(async () => undefined),
+      extensionSettings: { character_allowed_regex: [] },
+      saveSettingsDebounced,
       getCurrentChatId: () => 'chat-id',
       reloadCurrentChat: vi.fn(async () => undefined),
     });
@@ -247,6 +252,14 @@ describe('ERA Tavern 生产接线', () => {
     const adapter = new TavernEraServiceAdapter();
     const controller = new AbortController();
     const context = { signal: controller.signal };
+    expect(await adapter.regex.read({}, context)).toEqual({
+      enabled: false,
+      regexes: [{ script_name: 'regex', futureRegexField: { keep: true } }],
+    });
+    await adapter.regex.upsert({ regex: { script_name: 'ERA 状态栏模板' } }, context);
+    expect(updateRegexes).toHaveBeenCalledOnce();
+    expect(SillyTavern.extensionSettings.character_allowed_regex).toEqual(['stable-character-avatar.png']);
+    expect(saveSettingsDebounced).toHaveBeenCalledOnce();
     const readVariables = await adapter.variables.read({ scope: { type: 'chat' } }, context);
     expect(readVariables).toMatchObject({
       variables: { frameworkUnknown: { nested: [1, null, { future: true }] } },

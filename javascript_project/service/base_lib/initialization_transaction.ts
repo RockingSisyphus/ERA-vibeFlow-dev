@@ -109,7 +109,11 @@ function characterContext(
 function apiDetail(step: PlannedStepV1): unknown {
   const task = initializeTask(step);
   const first = task.args[0];
-  return first?.kind === "json" ? first.value : undefined;
+  if (first?.kind !== "json") return undefined;
+  // UI 入口的已登记合同为 [{ settings: nextSettings }]。领域规划只消费
+  // 设置本体，避免包装字段被 schema strip 后误写回全部默认值。
+  const detail = first.value;
+  return isRecord(detail) && isRecord(detail.settings) ? detail.settings : detail;
 }
 
 function diagnostic(code: string, message: string) {

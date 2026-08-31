@@ -74,6 +74,24 @@ export function currentCharacterRegexEnabled(): boolean {
 }
 
 /**
+ * 快速初始化创建状态栏正则时，同时把当前角色加入 SillyTavern 的
+ * 局部正则允许列表。多阶段生成不依赖这个开关；这里只负责让用户
+ * 明确请求创建的状态栏正则实际生效；否则资源虽已写入角色卡，SillyTavern 仍会跳过执行。
+ */
+export async function enableCurrentCharacterRegexes(): Promise<void> {
+  if (currentCharacterRegexEnabled()) return;
+  const characterId = getCurrentCharacterId();
+  if (!characterId) throw new TypeError('当前聊天没有角色，无法启用角色局部正则。');
+  const tavern = currentTavernContext();
+  const settings = tavern.extensionSettings as unknown as Record<string, unknown>;
+  const current = Array.isArray(settings.character_allowed_regex)
+    ? settings.character_allowed_regex.filter((value): value is string => typeof value === 'string')
+    : [];
+  if (!current.includes(characterId)) settings.character_allowed_regex = [...current, characterId];
+  await tavern.saveSettingsDebounced();
+}
+
+/**
  * 只停止 SillyTavern 原生正文生成；必须由 Service 会话决定时机，
  * 否则辅助 generateRaw 或用户其他生成会被宿主层误停。
  */

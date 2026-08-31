@@ -19,8 +19,8 @@
       {
         "id":"execute_agent_phase_v2",
         "type_used":"era.agent.execute_session_v2",
-        "display_name":"执行多阶段生成、方案绑定与模型枚举诊断",
-        "description":"设置保存时先验证全部尝试，再协调本机方案创建或更新、方案 ID 绑定与角色卡写入；模型枚举必须区分合法空列表与宿主请求失败，并把失败交给现有 UI 反馈链。生成时仅由角色卡开关及既有生成资格决定规划和结算；长期显示与提示投影属于现有 Service Host 生命周期，不在本节点建立第二状态机。"
+        "display_name":"执行可恢复的多阶段连接保存与模型路由",
+        "description":"在现有 AgentGenerationSession 内先验证全部尝试和共享方案冲突，再协调本机方案创建或更新、方案 ID 绑定和角色卡写入；成功后返回权威方案摘要，角色卡写入失败时保留已创建方案供恢复。草稿与已保存方案分别枚举模型，失败或空列表不覆盖当前选择。"
       },
       {"id":"route_agent_transition","type_used":"era.agent.route_transition","display_name":"路由阶段结果","description":"决定直接结算还是恢复原任务。"},
       {"id":"adapt_legacy_step","type_used":"era.agent.adapt_legacy_step","display_name":"恢复原任务","description":"把 Agent 外层步骤恢复为原 sync 或 update-mk。"},
