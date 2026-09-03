@@ -22,6 +22,7 @@ import { readInstallationScopeFacts } from './installation-scope';
 import { projectMessage } from './message-projection';
 import { AgentTavernHost } from './agent-tavern-host';
 import {
+  currentTavernContext,
   currentCharacterRegexEnabled,
   enableCurrentCharacterRegexes,
   requireMessageId,
@@ -29,6 +30,7 @@ import {
 } from './tavern-browser-host';
 import { refreshDisplayedEraTechnicalBlocks, registerEraTechnicalBlockProjection } from './technical-block-projection';
 import { registerEraPresentationRefresh } from './presentation-refresh';
+import { createCharacterGreetingAdapter } from './character-greeting-adapter';
 
 const logger = new Logger();
 
@@ -81,6 +83,38 @@ function clonePortable<T>(value: T): T {
 
 function throwIfAborted(signal: AbortSignal): void {
   if (signal.aborted) throw signal.reason ?? new DOMException('ERA 宿主操作已取消。', 'AbortError');
+}
+
+function toRegexScriptData(regex: TavernRegex): Readonly<Record<string, unknown>> {
+  const source = regex.source ?? {
+    user_input: false,
+    ai_output: false,
+    slash_command: false,
+    world_info: false,
+    reasoning: false,
+  };
+  const destination = regex.destination ?? { display: false, prompt: false };
+  return {
+    id: regex.id,
+    scriptName: regex.script_name,
+    disabled: !regex.enabled,
+    runOnEdit: regex.run_on_edit,
+    findRegex: regex.find_regex,
+    trimStrings: regex.trim_strings ?? [],
+    replaceString: regex.replace_string,
+    placement: [
+      ...(source.user_input ? [1] : []),
+      ...(source.ai_output ? [2] : []),
+      ...(source.slash_command ? [3] : []),
+      ...(source.world_info ? [5] : []),
+      ...(source.reasoning ? [6] : []),
+    ],
+    substituteRegex: 0,
+    minDepth: regex.min_depth,
+    maxDepth: regex.max_depth,
+    markdownOnly: destination.display,
+    promptOnly: destination.prompt,
+  };
 }
 
 function variableScope(value: unknown): VariableScope {
@@ -394,12 +428,24 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
       throwIfAborted(context.signal);
       return { status: created ? 'created' : 'exists', name: input.name };
     },
-    /** 绑定时保留 Tavern 当前附加世界书，仅替换工作流指定的主世界书。 */
+    /** 绑定时必须保留 Tavern 当前附加世界书，否则快速初始化会覆盖作者已有资源。 */
     bind: async (input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown> => {
       throwIfAborted(context.signal);
       if (typeof input.name !== 'string' || input.name.length === 0) throw new TypeError('世界书绑定请求缺少 name。');
-      const bindings = getCharWorldbookNames('current');
-      await rebindCharWorldbooks('current', { ...bindings, primary: input.name });
+      const tavern = currentTavernContext();
+      const characterId = Number(tavern.characterId);
+      if (!Number.isSafeInteger(characterId) || characterId < 0) {
+        throw new TypeError('当前聊天没有可写入世界书绑定的角色索引。');
+      }
+      // Tavern Helper 的 rebindCharWorldbooks 最后会无条件排队
+      // saveCharacterDebounced。该延迟保存会在初始化事务写完主开场白后再次
+      // 保存并重绘角色，从而把仅有一楼、尚未污染的当前聊天替换成新开场白。
+      // 主世界书绑定本质上就是角色扩展字段 `world`；通过 SillyTavern 的
+      // 原生字段接口原子写入，可保留角色卡导出语义，同时不产生第二次角色保存。
+      await tavern.writeExtensionField(characterId, 'world', input.name);
+      const topDocument = window.top?.document;
+      const field = topDocument?.querySelector<HTMLSelectElement | HTMLInputElement>('#character_world');
+      if (field) field.value = input.name;
       throwIfAborted(context.signal);
       return { status: 'bound', name: input.name };
     },
@@ -436,14 +482,24 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
       throwIfAborted(context.signal);
       const regex = input.regex;
       if (!isRecord(regex)) throw new TypeError('正则写入请求缺少 regex。');
-      const updated = await updateTavernRegexesWith(current => [...current, clonePortable(regex) as TavernRegex], {
-        type: 'character',
-      });
+      const updated = [...getTavernRegexes({ type: 'character' }), clonePortable(regex) as TavernRegex];
+      const tavern = currentTavernContext();
+      const characterId = Number(tavern.characterId);
+      if (!Number.isSafeInteger(characterId) || characterId < 0) {
+        throw new TypeError('当前聊天没有可写入局部正则的角色索引。');
+      }
+      // Tavern Helper 的 updateTavernRegexesWith 会把 saveSettings/聊天重绘延迟
+      // 1 秒执行，随后可能用旧角色快照覆盖紧接着写入的主开场白。这里使用
+      // 酒馆同一底层字段接口，并显式等待聊天 reload，形成真实的顺序提交点。
+      await tavern.writeExtensionField(characterId, 'regex_scripts', updated.map(toRegexScriptData));
       await enableCurrentCharacterRegexes();
+      await tavern.reloadCurrentChat();
       throwIfAborted(context.signal);
       return { status: 'committed', count: updated.length, enabled: true };
     },
   };
+
+  readonly character = createCharacterGreetingAdapter(throwIfAborted);
 
   readonly identity = {
     /** 为了让工作流统一处理单角色、群聊和无角色场景，必须一次返回完整宿主身份快照。 */

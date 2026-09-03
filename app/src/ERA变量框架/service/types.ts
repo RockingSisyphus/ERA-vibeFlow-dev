@@ -133,6 +133,11 @@ export interface EraTavernAdapter {
     read(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
     upsert(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
   };
+  /** 当前单角色卡主开场白的机械 I/O；选择、冲突和幂等规则属于 Service。 */
+  readonly character: {
+    read_main_greeting(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
+    write_main_greeting(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
+  };
   readonly identity: {
     read(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
   };

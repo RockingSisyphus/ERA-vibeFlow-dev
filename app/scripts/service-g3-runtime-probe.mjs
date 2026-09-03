@@ -43,7 +43,8 @@ function createAdapter() {
     meta: {},
     stat: {},
   };
-  const messages = [{ message_id: 0, role: 'assistant', is_user: false, message: '运行时探针消息' }];
+  let mainGreeting = '运行时探针消息';
+  const messages = [{ message_id: 0, role: 'assistant', is_user: false, message: mainGreeting }];
   return {
     adapter: {
       subscribe(nextListener) {
@@ -110,6 +111,20 @@ function createAdapter() {
       regex: {
         read: async () => ({ enabled: false, regexes: [] }),
         upsert: async () => ({ status: 'committed' }),
+      },
+      character: {
+        read_main_greeting: async input => ({
+          ...input,
+          status: 'ready',
+          characterId: 'probe-card',
+          firstMessage: mainGreeting,
+        }),
+        write_main_greeting: async input => {
+          if (typeof input.next === 'string') {
+            mainGreeting = input.next;
+          }
+          return { ...input, status: 'updated' };
+        },
       },
       identity: {
         read: () => ({
@@ -330,6 +345,7 @@ async function probeWorkflowFrames(workflow) {
           'era.tavern.messages': directAdapter.messages,
           'era.tavern.worldbook': directAdapter.worldbook,
           'era.tavern.regex': directAdapter.regex,
+          'era.tavern.character': directAdapter.character,
           'era.tavern.identity': directAdapter.identity,
           'era.tavern.installation_scope': directAdapter.installation_scope,
           'era.tavern.agent': directAdapter.agent,

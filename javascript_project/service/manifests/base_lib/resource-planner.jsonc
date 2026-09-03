@@ -2,7 +2,7 @@
   "kind": "base_lib",
   "id": "era.service.resource_planner",
   "display_name": "ERA 宿主资源纯规划器",
-  "description": "纯函数规划八项设置默认值、世界书条目、角色局部正则和 AI 消息占位符规则，并向 AI 发布严格 $expr、函数标签与双快照格式；只把 JSON 宿主快照转换为声明式资源操作计划，不读取或写入宿主。",
+  "description": "纯函数规划八项设置默认值、世界书条目、角色局部正则、角色主开场白示例和 AI 消息占位符规则，并提供可比较宏、当前状态、订阅、历史与真实 commit 的状态栏；只把 JSON 宿主快照转换为声明式资源操作计划，不读取或写入宿主。",
   "category": "宿主资源规划",
   "version": "1.1.0",
   "implementations": [

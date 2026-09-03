@@ -394,6 +394,7 @@ declare const SillyTavern: {
   readonly accountStorage: any;
   readonly chat: Array<SillyTavern.ChatMessage>;
   readonly characters: SillyTavern.v1CharData[];
+  readonly getOneCharacter: (avatarUrl: string) => Promise<void>;
   readonly groups: any;
   readonly name1: string;
   readonly name2: string;

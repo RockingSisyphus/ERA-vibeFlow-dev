@@ -136,6 +136,10 @@ export interface EraTavernCapabilityAdapter {
     readonly read: EraAsyncHostOperation;
     readonly upsert: EraAsyncHostOperation;
   };
+  readonly character: {
+    readonly read_main_greeting: EraAsyncHostOperation;
+    readonly write_main_greeting: EraAsyncHostOperation;
+  };
   readonly identity: {
     readonly read: EraHostOperation;
   };
@@ -692,6 +696,16 @@ class ServiceHostRuntime {
         options: PortCallOptions = {},
       ) => this.invokeSuspend("regex", "upsert", input, options),
     },
+    "era.tavern.character": {
+      read_main_greeting: (
+        input: Readonly<Record<string, unknown>>,
+        options: PortCallOptions = {},
+      ) => this.invokeSuspend("character", "read_main_greeting", input, options),
+      write_main_greeting: (
+        input: Readonly<Record<string, unknown>>,
+        options: PortCallOptions = {},
+      ) => this.invokeSuspend("character", "write_main_greeting", input, options),
+    },
     "era.tavern.identity": {
       read: (
         input: Readonly<Record<string, unknown>>,
@@ -895,6 +909,8 @@ class ServiceHostRuntime {
       [adapter.worldbook?.replace_entries, "worldbook.replace_entries"],
       [adapter.regex?.read, "regex.read"],
       [adapter.regex?.upsert, "regex.upsert"],
+      [adapter.character?.read_main_greeting, "character.read_main_greeting"],
+      [adapter.character?.write_main_greeting, "character.write_main_greeting"],
       [adapter.identity?.read, "identity.read"],
       [adapter.installation_scope?.read, "installation_scope.read"],
       [adapter.sidecar?.read_current, "sidecar.read_current"],

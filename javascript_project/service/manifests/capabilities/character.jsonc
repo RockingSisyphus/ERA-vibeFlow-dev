@@ -1,0 +1,19 @@
+{
+  "kind": "capability",
+  "id": "era.tavern.character",
+  "targets": ["browser"],
+  "display_name": "酒馆角色主开场白",
+  "description": "只读或以真实 avatar 乐观更新当前单角色卡的 first_messages[0]；写入成功后仅刷新空聊天或恰好一条未污染主开场白，已有多楼、编辑/污染、备用开场白和群聊保持原样。",
+  "operations": {
+    "read_main_greeting": {
+      "input_type": "era.tavern.character.read_main_greeting.request",
+      "output_type": "era.tavern.character.read_main_greeting.result",
+      "completion": "suspend"
+    },
+    "write_main_greeting": {
+      "input_type": "era.tavern.character.write_main_greeting.request",
+      "output_type": "era.tavern.character.write_main_greeting.result",
+      "completion": "suspend"
+    }
+  }
+}

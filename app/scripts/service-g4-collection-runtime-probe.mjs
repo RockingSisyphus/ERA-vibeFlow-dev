@@ -54,7 +54,8 @@ function timer(sequence, dueAt, token) {
 
 function createTavernCapabilities() {
   let chatVariables = { stat_data: {}, ERAMetaData: { SelectedMks: [], EditLogs: {} } };
-  const messages = [{ message_id: 0, role: 'assistant', is_user: false, message: 'G4 窗口探针消息' }];
+  let mainGreeting = 'G4 窗口探针消息';
+  const messages = [{ message_id: 0, role: 'assistant', is_user: false, message: mainGreeting }];
   return {
     'era.tavern.variables': {
       read: () => ({ variables: structuredClone(chatVariables) }),
@@ -89,6 +90,20 @@ function createTavernCapabilities() {
     'era.tavern.regex': {
       read: async () => ({ enabled: false, regexes: [] }),
       upsert: async () => ({ status: 'committed' }),
+    },
+    'era.tavern.character': {
+      read_main_greeting: async input => ({
+        ...input,
+        status: 'ready',
+        characterId: 'g4-card',
+        firstMessage: mainGreeting,
+      }),
+      write_main_greeting: async input => {
+        if (typeof input.next === 'string') {
+          mainGreeting = input.next;
+        }
+        return { ...input, status: 'updated' };
+      },
     },
     'era.tavern.identity': {
       read: () => ({

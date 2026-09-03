@@ -9,10 +9,19 @@ export type CurrentTavernContext = Pick<
   | 'characterId'
   | 'groupId'
   | 'characters'
+  | 'chat'
+  | 'name2'
+  | 'chatMetadata'
   | 'writeExtensionField'
   | 'extensionSettings'
   | 'saveSettingsDebounced'
   | 'getRequestHeaders'
+  | 'reloadCurrentChat'
+  | 'saveChat'
+  | 'printMessages'
+  | 'clearChat'
+  | 'eventSource'
+  | 'eventTypes'
 >;
 
 type BrowserHost = {
@@ -88,7 +97,14 @@ export async function enableCurrentCharacterRegexes(): Promise<void> {
     ? settings.character_allowed_regex.filter((value): value is string => typeof value === 'string')
     : [];
   if (!current.includes(characterId)) settings.character_allowed_regex = [...current, characterId];
-  await tavern.saveSettingsDebounced();
+  const save = tavern.saveSettingsDebounced as typeof tavern.saveSettingsDebounced & {
+    flush?: () => unknown | Promise<unknown>;
+  };
+  const scheduled = save();
+  // SillyTavern 的 saveSettingsDebounced 是 lodash debounce；仅 await 调用结果
+  // 不会等待真正保存，随后可能以旧角色编辑表单覆盖刚写入的主开场白。
+  if (typeof save.flush === 'function') await save.flush();
+  else await scheduled;
 }
 
 /**

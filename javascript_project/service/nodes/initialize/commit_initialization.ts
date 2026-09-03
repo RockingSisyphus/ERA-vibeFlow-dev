@@ -13,6 +13,7 @@ interface Context {
       readonly replace_entries: (input: Readonly<Record<string, unknown>>) => Promise<unknown>;
     };
     readonly "era.tavern.regex": { readonly upsert: (input: Readonly<Record<string, unknown>>) => Promise<unknown> };
+    readonly "era.tavern.character": { readonly write_main_greeting: (input: Readonly<Record<string, unknown>>) => Promise<unknown> };
   };
 }
 function isRecord(value: unknown): value is Record<string, unknown> { return value !== null && typeof value === "object" && !Array.isArray(value); }
@@ -21,6 +22,22 @@ function confirmed(value: unknown): boolean {
   if (!isRecord(value)) return false;
   if (value.ok === true && Object.prototype.hasOwnProperty.call(value, "value")) return confirmed(value.value);
   return ["committed", "completed", "created", "exists", "bound", "updated"].includes(String(value.status)) || value.committed === true;
+}
+function unwrap(value: unknown): unknown {
+  let current = value;
+  for (let depth = 0; depth < 5; depth += 1) {
+    if (!isRecord(current) || current.ok !== true || !Object.prototype.hasOwnProperty.call(current, "value")) break;
+    current = current.value;
+  }
+  return current;
+}
+function greetingRefreshStatus(value: unknown): InitializationCommitOutcomeV1["greetingRefreshStatus"] {
+  const response = unwrap(value);
+  if (!isRecord(response) || !isRecord(response.chatRefresh)) return "not-applicable";
+  const status = response.chatRefresh.status;
+  return status === "refreshed" || status === "preserved" || status === "not-applicable"
+    ? status
+    : "not-applicable";
 }
 async function apply(action: InitializationActionV1, context: Context): Promise<unknown> {
   switch (action.kind) {
@@ -34,10 +51,25 @@ async function apply(action: InitializationActionV1, context: Context): Promise<
       return context.capabilities["era.tavern.worldbook"].replace_entries({ name: action.name, entries: action.entries, purpose: "era-initialize" });
     case "upsert-regex":
       return context.capabilities["era.tavern.regex"].upsert({ regex: action.regex, purpose: "era-initialize" });
+    case "update-main-greeting":
+      return context.capabilities["era.tavern.character"].write_main_greeting({ expected: action.expected, next: action.next, purpose: "era-initialize" });
   }
 }
-function outcome(plan: InitializationPlanV1, status: InitializationCommitOutcomeV1["status"], appliedActions: number, failure: Readonly<Record<string, unknown>> | null) {
-  const value: InitializationCommitOutcomeV1 = { schemaVersion: 1, plan, status, appliedActions, failure };
+function outcome(
+  plan: InitializationPlanV1,
+  status: InitializationCommitOutcomeV1["status"],
+  appliedActions: number,
+  failure: Readonly<Record<string, unknown>> | null,
+  refreshStatus: InitializationCommitOutcomeV1["greetingRefreshStatus"] = "not-applicable",
+) {
+  const value: InitializationCommitOutcomeV1 = {
+    schemaVersion: 1,
+    plan,
+    status,
+    appliedActions,
+    greetingRefreshStatus: refreshStatus,
+    failure,
+  };
   return { resource_commit_result: value as unknown as Readonly<Record<string, unknown>> };
 }
 export async function run(
@@ -49,16 +81,18 @@ export async function run(
   if (plan.disposition === "failed") return outcome(plan, "failed", 0, plan.failure);
   if (plan.actions.length === 0) return outcome(plan, "no-op", 0, null);
   let appliedActions = 0;
+  let refreshStatus: InitializationCommitOutcomeV1["greetingRefreshStatus"] = "not-applicable";
   for (const action of plan.actions) {
     let response: unknown;
     try { response = await apply(action, context); }
     catch (error) {
-      return outcome(plan, appliedActions === 0 ? "failed" : "fatal", appliedActions, { code: "ERA_INITIALIZE_COMMIT_FAILED", message: errorMessage(error), category: /abort|cancel|取消/i.test(errorMessage(error)) ? "cancelled" : "tavern", retryable: false });
+      return outcome(plan, appliedActions === 0 ? "failed" : "fatal", appliedActions, { code: "ERA_INITIALIZE_COMMIT_FAILED", message: errorMessage(error), category: /abort|cancel|取消/i.test(errorMessage(error)) ? "cancelled" : "tavern", retryable: false }, refreshStatus);
     }
     if (!confirmed(response)) {
-      return outcome(plan, "fatal", appliedActions, { code: "ERA_INITIALIZE_COMMIT_UNKNOWN", message: `初始化动作 ${action.kind} 返回未知确认状态。`, category: "tavern", retryable: false });
+      return outcome(plan, "fatal", appliedActions, { code: "ERA_INITIALIZE_COMMIT_UNKNOWN", message: `初始化动作 ${action.kind} 返回未知确认状态。`, category: "tavern", retryable: false }, refreshStatus);
     }
+    if (action.kind === "update-main-greeting") refreshStatus = greetingRefreshStatus(response);
     appliedActions += 1;
   }
-  return outcome(plan, "committed", appliedActions, null);
+  return outcome(plan, "committed", appliedActions, null, refreshStatus);
 }

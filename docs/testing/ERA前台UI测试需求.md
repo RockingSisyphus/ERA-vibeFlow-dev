@@ -426,6 +426,23 @@ UI 操作：
   Service 升级 fatal，UI 停止继续操作并展示服务不可用状态；
 - pending 时按钮防重复。
 
+首楼状态栏即时生效必须作为独立的 `business-e2e` 合同，而不能由“资源创建成功”或“iframe
+存在”间接代替：
+
+- 使用只有未编辑主开场白的一楼聊天，保持“强制重载功能”关闭；
+- `era.ui.initialize_resources` completed 后，在任何消息编辑、reload、Swipe 或手动刷新之前，
+  读取首次创建的 Tavern Helper 消息 iframe；
+- 分别断言 `{{ERA:era_demo.player.hp}}=12`、withmeta、`ERA.get()`、
+  `ERA.subscribe()` 的初始值和 `ERA.history.atMessage(currentMessageId)`，不得只检查一个汇总字段；
+- 同时证明角色主开场白、首楼原消息、Sidecar、SelectedMks 和 EditLog 已包含同一示例状态，并记录
+  iframe load 次数及 snapshot/render/ready 顺序；
+- 若数值只有在进入消息编辑、reload 或开启强制重载后才正确，测试必须失败并保留前后两次 DOM，
+  不能把重建后的正确显示当成初始化首帧通过。
+
+该合同与多楼历史合同分开：`ERA.get()`/subscribe 在历史楼显示活动分支最新状态是正确语义，
+宏与 `ERA.history.atMessage()` 则必须按各自所在楼层合同验证。不能用历史 API 代替最新 API，
+也不能用最新 API 的正确值掩盖宏/history 初始化失败。
+
 ### 4.13 设置读取、编辑与丢弃
 
 **用例：UI-SETTINGS-001～012（P0/P1，需扩展 + 组件级）**

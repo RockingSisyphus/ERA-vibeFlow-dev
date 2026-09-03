@@ -10,6 +10,7 @@ interface Context {
     readonly "era.tavern.variables": { readonly read: (input: Readonly<Record<string, unknown>>) => Promise<unknown> };
     readonly "era.tavern.worldbook": { readonly read: (input: Readonly<Record<string, unknown>>) => Promise<unknown> };
     readonly "era.tavern.regex": { readonly read: (input: Readonly<Record<string, unknown>>) => Promise<unknown> };
+    readonly "era.tavern.character": { readonly read_main_greeting: (input: Readonly<Record<string, unknown>>) => Promise<unknown> };
   };
 }
 function message(error: unknown): string { return error instanceof Error ? error.message : String(error); }
@@ -25,19 +26,21 @@ export async function run(
   let messagesRaw: unknown = null;
   let worldbookRaw: unknown = null;
   let regexRaw: unknown = null;
+  let characterRaw: unknown = null;
   let readFailure: Readonly<Record<string, unknown>> | null = null;
   try {
-    [identityRaw, scriptVariablesRaw, worldbookRaw, regexRaw] = await Promise.all([
+    [identityRaw, scriptVariablesRaw, worldbookRaw, regexRaw, characterRaw] = await Promise.all([
       Promise.resolve(context.capabilities["era.tavern.identity"].read({ purpose: "era-initialize" })),
       context.capabilities["era.tavern.variables"].read({ scope: { type: "script" }, purpose: "era-initialize" }),
       context.capabilities["era.tavern.worldbook"].read({ purpose: "era-initialize" }),
       context.capabilities["era.tavern.regex"].read({ purpose: "era-initialize" }),
+      context.capabilities["era.tavern.character"].read_main_greeting({ purpose: "era-initialize" }),
     ]);
     if (dispatchContext?.status !== "ready") throw new TypeError("初始化任务缺少可用的统一派发上下文。");
     messagesRaw = { schemaVersion: 2, messages: dispatchContext.messages };
   } catch (error) {
     readFailure = { code: "ERA_INITIALIZE_READ_FAILED", message: message(error), category: "tavern", retryable: false };
   }
-  const result: InitializationContextV1 = { schemaVersion: 1, step, identityRaw, scriptVariablesRaw, messagesRaw, worldbookRaw, regexRaw, readFailure };
+  const result: InitializationContextV1 = { schemaVersion: 1, step, identityRaw, scriptVariablesRaw, messagesRaw, worldbookRaw, regexRaw, characterRaw, readFailure };
   return { initialization_context: result as unknown as Readonly<Record<string, unknown>> };
 }

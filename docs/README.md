@@ -9,6 +9,10 @@
   只以最后一节作为当前状态。
 - [`testing/ERA前台UI测试需求.md`](testing/ERA前台UI测试需求.md)：当前前台组件的功能意图、
   UI 操作路径、预期结果、自动化缺口和专项验收条件。
+- [`testing/ERA当前缺陷基线.md`](testing/ERA当前缺陷基线.md)：当前仍开放的 ERA 产品缺陷、
+  用户可见表现、证据和后续修复验收条件的唯一权威入口。
+- [`testing/ERA产品问题台账.md`](testing/ERA产品问题台账.md)：已经修复、排除或被当前缺陷基线
+  取代的历史问题记录。
 - [`testing/前台测试实施变更清单.md`](testing/前台测试实施变更清单.md)：本轮专项测试、
   Harness 合并与 UI 收口的复用、修改、删除、新增清单。
 - `javascript_project/service/ARCHITECTURE.jsonc` 与

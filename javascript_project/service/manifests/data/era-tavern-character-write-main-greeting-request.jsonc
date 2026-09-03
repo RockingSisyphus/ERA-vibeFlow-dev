@@ -1,0 +1,12 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.tavern.character.write_main_greeting.request",
+  "representation": "json",
+  "display_name": "ERA·酒馆·角色·写入主开场白·请求",
+  "description": "包含期望旧值与目标新值的主开场白乐观更新请求。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": true
+  }
+}

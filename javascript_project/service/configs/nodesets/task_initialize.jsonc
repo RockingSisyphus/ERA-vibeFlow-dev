@@ -4,7 +4,7 @@
   ],
   "type_key": "era.task.initialize",
   "display_name": "ERA 初始化任务",
-  "description": "规划并提交幂等设置、世界书、正则和消息资源；启动操作随后复用共享同步事务。",
+  "description": "规划并提交幂等设置、世界书、状态栏正则和角色主开场白示例资源；启动操作随后复用共享同步事务。",
   "requires": [
     {
       "type": "era.step.request.routed",
@@ -51,8 +51,8 @@
       {
         "id": "read_host_resources",
         "type_used": "era.tavern.initialization_read",
-        "display_name": "读取 Tavern 资源",
-        "description": "消费已准备步骤内的严格消息投影，并读取身份、脚本设置、世界书和角色正则快照；不再复制宿主消息对象。"
+        "display_name": "读取状态栏初始化资源与主开场白",
+        "description": "消费已准备步骤内的严格消息投影，并读取身份、脚本设置、世界书、角色正则和当前角色主开场白；备用开场白、当前聊天和历史聊天不进入初始化写入范围。"
       },
       {
         "id": "carry_execution_state",
@@ -63,8 +63,8 @@
       {
         "id": "plan_resources",
         "type_used": "era.initialize.plan",
-        "display_name": "规划权威设置与内建投影初始化资源",
-        "description": "读取并验证完整设置草稿，生成一次性设置提交以及仅含状态栏模板正则和两条 ERA 世界书项的幂等资源计划；状态栏正则即使角色先前未启用局部正则也会由 Host 为当前角色启用，旧 ERA 正则保留，技术块显示与提示清理由内建投影承担。"
+        "display_name": "规划示例状态栏与开场白变量基线",
+        "description": "纯计算生成设置、两条世界书、状态栏正则与主开场白示例变量动作；保留作者原文，以版本标记幂等追加 era_demo，检测同命名空间冲突，并把宏、ERA.get、subscribe、history、手动 API 与默认关闭的测试加载模式放入同一示例状态栏。"
       },
       {
         "id": "preserve_resources",
@@ -87,8 +87,8 @@
       {
         "id": "commit_host_resources",
         "type_used": "era.tavern.initialization_commit",
-        "display_name": "提交 Tavern 资源",
-        "description": "顺序应用声明式设置、世界书和正则变更；不再写入消息占位符，部分或未知提交进入 fatal。"
+        "display_name": "提交状态栏资源与主开场白示例",
+        "description": "顺序应用声明式设置、世界书、状态栏正则和角色主开场白变更；以真实 avatar 更新 first_messages[0]，随后仅在当前聊天仍为空或只有一条未污染主开场白时刷新首楼并走真实消息渲染/保存链，多楼、编辑/污染、备用开场白和群聊保持原样；回执分别报告开场白与首楼刷新结果。"
       },
       {
         "id": "route_completion",

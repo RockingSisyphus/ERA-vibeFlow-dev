@@ -62,6 +62,24 @@ export type EraCharacterContextV1 =
   | { readonly kind: "group-chat"; readonly groupName?: string }
   | { readonly kind: "no-character" };
 
+export interface EraGreetingPlanInputV1 {
+  readonly context: EraCharacterContextV1;
+  readonly firstMessage: string | null;
+}
+
+export type EraGreetingPlanV1 =
+  | {
+      readonly kind: "greeting";
+      readonly status: "created";
+      readonly expected: string;
+      readonly next: string;
+    }
+  | {
+      readonly kind: "greeting";
+      readonly status: "unchanged" | "skipped" | "conflict";
+      readonly reason: string;
+    };
+
 export interface EraWorldbookEntryV1 {
   readonly name: string;
   readonly content: string;
@@ -435,6 +453,86 @@ function worldbookEntry(
   };
 }
 
+const ERA_DEMO_GREETING_BEGIN = "<!-- ERA_DEMO_GREETING_V1_BEGIN -->";
+const ERA_DEMO_GREETING_END = "<!-- ERA_DEMO_GREETING_V1_END -->";
+
+/** 快速初始化追加到角色主开场白的幂等示例；默认测试模式绝不自动写入。 */
+export function getEraDemoGreetingBlock(): string {
+  return `${ERA_DEMO_GREETING_BEGIN}
+<VariableInsert>
+{
+  "era_demo": {
+    "player": {
+      "name": "Aster",
+      "level": 1,
+      "hp": 12,
+      "max_hp": 20,
+      "alive": true,
+      "note": null,
+      "inventory": ["torch", "rope"],
+      "profile": {
+        "title": "Apprentice",
+        "$meta": { "necessary": true, "updatable": true }
+      }
+    },
+    "world": {
+      "npcs": {
+        "guide": { "name": "Mira", "mood": "calm" }
+      }
+    },
+    "temporary": {
+      "edit_target": 1,
+      "delete_target": "remove-me"
+    },
+    "function_results": { "last": 0 },
+    "scope_counts": {
+      "manual": { "message": 0, "branch": 0, "always": 0 },
+      "automatic": { "message": 0, "branch": 0, "always": 0 }
+    },
+      "test_mode": {
+        "enabled": false,
+        "run_id": "",
+        "max_loads_per_floor": 0,
+        "load_counts": {},
+        "last_receipts": {}
+      }
+  }
+}
+</VariableInsert>
+<StatusPlaceHolderImpl/>
+${ERA_DEMO_GREETING_END}`;
+}
+
+/** 保留作者正文，只在无冲突时向主开场白追加一个版本化示例块。 */
+export function planEraDemoGreeting(input: EraGreetingPlanInputV1): EraGreetingPlanV1 {
+  if (input.context.kind === "group-chat") {
+    return cloneResourcePlanValue({ kind: "greeting", status: "skipped", reason: "群聊没有可安全更新的单一角色主开场白。" });
+  }
+  if (input.context.kind === "no-character" || input.firstMessage === null) {
+    return cloneResourcePlanValue({ kind: "greeting", status: "skipped", reason: "当前聊天没有可更新的角色主开场白。" });
+  }
+  const current = input.firstMessage;
+  const block = getEraDemoGreetingBlock();
+  const begin = current.indexOf(ERA_DEMO_GREETING_BEGIN);
+  const end = current.indexOf(ERA_DEMO_GREETING_END);
+  if (begin >= 0 || end >= 0) {
+    if (begin >= 0 && end >= begin && current.slice(begin, end + ERA_DEMO_GREETING_END.length) === block) {
+      return cloneResourcePlanValue({ kind: "greeting", status: "unchanged", reason: "主开场白已包含同版本 ERA 示例。" });
+    }
+    return cloneResourcePlanValue({ kind: "greeting", status: "conflict", reason: "主开场白包含不完整或被修改的 ERA 示例版本标记，拒绝覆盖。" });
+  }
+  if (/<VariableInsert\b[^>]*>[\s\S]*?"era_demo"\s*:/iu.test(current)) {
+    return cloneResourcePlanValue({ kind: "greeting", status: "conflict", reason: "主开场白已自行初始化 era_demo 命名空间，拒绝覆盖。" });
+  }
+  const separator = current.trimEnd().length === 0 ? "" : "\n\n";
+  return cloneResourcePlanValue({
+    kind: "greeting",
+    status: "created",
+    expected: current,
+    next: current.trimEnd() + separator + block,
+  });
+}
+
 /** 返回候选基线的两条世界书条目，顺序为操作规则、意图说明。 */
 export function getEraWorldbookEntries(): readonly EraWorldbookEntryV1[] {
   return cloneResourcePlanValue([
@@ -551,8 +649,205 @@ function regexPayload(
   };
 }
 
-function statusBarHtml(): string {
-  return "<!doctype html>\n<html lang=\"zh-CN\">\n  <head>\n    <meta charset=\"UTF-8\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n    <title>ERA 状态栏模板</title>\n    <style>\n      body {\n        font-family:\n          -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif,\n          'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';\n        margin: 0;\n        padding: 0;\n        background-color: transparent;\n      }\n      .era-statusbar {\n        color: #e0e0e0;\n        background: linear-gradient(145deg, #2c3e50, #34495e);\n        border-radius: 12px;\n        padding: 16px;\n        margin-top: 20px;\n        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);\n        border: 1px solid #4a6278;\n        overflow: hidden;\n      }\n      .era-statusbar-header {\n        display: flex;\n        align-items: center;\n        border-bottom: 1px solid #4a6278;\n        padding-bottom: 10px;\n        margin-bottom: 12px;\n      }\n      .era-statusbar-header h4 {\n        margin: 0;\n        font-size: 1.1em;\n        font-weight: 700;\n        color: #1abc9c;\n        text-shadow: 0 0 5px rgba(26, 188, 156, 0.5);\n      }\n      .era-statusbar-grid {\n        display: grid;\n        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));\n        gap: 10px;\n      }\n      .era-statusbar-item {\n        background-color: rgba(255, 255, 255, 0.05);\n        padding: 8px 12px;\n        border-radius: 8px;\n      }\n      .era-statusbar-item-label {\n        font-size: 0.85em;\n        color: #bdc3c7;\n        margin-bottom: 4px;\n      }\n      .era-statusbar-item-value {\n        font-size: 1em;\n        font-weight: 700;\n        color: #ecf0f1;\n      }\n      .era-instructions {\n        margin-top: 16px;\n        padding-top: 12px;\n        border-top: 1px solid #4a6278;\n        font-size: 0.9em;\n        line-height: 1.6;\n      }\n      .era-instructions a {\n        color: #3498db;\n        text-decoration: none;\n      }\n      .era-instructions a:hover {\n        text-decoration: underline;\n      }\n      .era-instructions .ai-note {\n        font-size: 0.8em;\n        color: #7f8c8d;\n      }\n    </style>\n  </head>\n  <body>\n    <div class=\"era-statusbar\">\n      <div class=\"era-statusbar-header\">\n        <h4>角色状态</h4>\n      </div>\n      <div class=\"era-statusbar-grid\">\n        <div class=\"era-statusbar-item\">\n          <div class=\"era-statusbar-item-label\">姓名</div>\n          <div class=\"era-statusbar-item-value\" id=\"player-name\">--</div>\n        </div>\n        <div class=\"era-statusbar-item\">\n          <div class=\"era-statusbar-item-label\">等级</div>\n          <div class=\"era-statusbar-item-value\" id=\"player-level\">--</div>\n        </div>\n        <div class=\"era-statusbar-item\">\n          <div class=\"era-statusbar-item-label\">生命值</div>\n          <div class=\"era-statusbar-item-value\" id=\"player-hp\">-- / --</div>\n        </div>\n        <div class=\"era-statusbar-item\">\n          <div class=\"era-statusbar-item-label\">魔力值</div>\n          <div class=\"era-statusbar-item-value\" id=\"player-mp\">-- / --</div>\n        </div>\n      </div>\n\n      <div class=\"era-statusbar-header\" style=\"margin-top: 16px\">\n        <h4>附近NPC</h4>\n      </div>\n      <div id=\"npc-list\" class=\"era-statusbar-grid\">\n        <div class=\"era-statusbar-item-label\" style=\"padding: 8px 12px\">暂无NPC信息</div>\n      </div>\n\n      <!-- \n      AI 你好！当角色卡作者让你修改此文件时，请在修改后删除下面的 \"instructions-wrapper\"整个 div 元素。\n    -->\n      <div id=\"instructions-wrapper\">\n        <div class=\"era-statusbar-header\" style=\"margin-top: 16px\">\n          <h4>给角色卡作者的说明</h4>\n        </div>\n        <div class=\"era-instructions\">\n          <strong>你接下来需要做的：</strong><br />\n          1. 自己设计角色卡用到的变量结构，并使用 &amp;lt;VariableInsert&amp;gt 标签写入角色的开场白。<br />\n          2. 在角色主世界书的‘ERA变量意图说明’条目中，添加向 AI 说明各个变量意图的提示词。<br />\n          3. 修改本状态栏的 HTML 代码，使其与**你设计的变量系统匹配**。<br />\n          <br />\n          完成第一步和第二步请参考：<br />\n          <a\n            href=\"https://github.com/RockingSisyphus/ERA-EfficientRollbackArchitecture/blob/master/doc/%E4%BD%A0%E6%9C%80%E5%A5%BD%E8%87%AA%E5%B7%B1%E7%9C%8B%E4%B8%80%E9%81%8D%E7%9A%84era%E5%8D%A1%E5%AE%8C%E6%95%B4%E5%88%B6%E4%BD%9C%E6%96%87%E6%A1%A3%EF%BC%88%E5%8C%85%E5%90%AB%E5%8F%98%E9%87%8F%E5%88%9D%E5%A7%8B%E5%8C%96%E5%92%8C%E4%B8%96%E7%95%8C%E4%B9%A6%E6%8F%90%E7%A4%BA%E8%AF%8D%EF%BC%89/%E5%A6%82%E4%BD%95%E8%AE%BE%E8%AE%A1%E5%92%8C%E8%AF%B4%E6%98%8E%E4%BD%A0%E7%9A%84%E5%8F%98%E9%87%8F%E7%B3%BB%E7%BB%9F.md\"\n            target=\"_blank\"\n            rel=\"noopener noreferrer\"\n            >如何设计和说明你的变量系统</a\n          >\n          <br /><br />\n          推荐你进入‘ERA 状态栏模板’正则中，将‘替换为’的内容（也就是当前模板状态栏的html代码）全部复制发送给 AI (如\n          Cline, ChatGPT, Claude等)，让它帮你完成第 3 步。为了让 AI\n          更好地理解如何修改，请同时将以下链接中的文档内容一并提供给它：<br />\n          <a\n            href=\"https://github.com/RockingSisyphus/ERA-EfficientRollbackArchitecture/tree/master/doc/%E9%80%82%E5%90%88%E6%8F%90%E4%BE%9B%E7%BB%99ai%E7%9A%84%E7%8A%B6%E6%80%81%E6%A0%8Fhtml%E5%BC%80%E5%8F%91%E6%96%87%E6%A1%A3%EF%BC%88%E5%8F%AA%E5%8C%85%E5%90%ABhtml%E7%8A%B6%E6%80%81%E6%A0%8F%E4%BB%A3%E7%A0%81%E4%B9%A6%E5%86%99%E9%83%A8%E5%88%86%EF%BC%89\"\n            target=\"_blank\"\n            rel=\"noopener noreferrer\"\n            >ERA 状态栏开发文档</a\n          >\n          <br /><br />\n          <strong>关于 ERA 框架:</strong><br />\n          作者: 世界的山田<br />\n          ERA 框架交流群: 1006127516<br />\n          <a\n            href=\"https://github.com/RockingSisyphus/ERA-EfficientRollbackArchitecture/tree/master\"\n            target=\"_blank\"\n            rel=\"noopener noreferrer\"\n            >ERA 项目地址</a\n          >\n          |\n          <a\n            href=\"https://discord.com/channels/1134557553011998840/1423319849400270928\"\n            target=\"_blank\"\n            rel=\"noopener noreferrer\"\n            >Discord 发布帖</a\n          >\n        </div>\n      </div>\n    </div>\n\n    <script>\n      $(() => {\n        const playerName = document.getElementById('player-name');\n        const playerLevel = document.getElementById('player-level');\n        const playerHp = document.getElementById('player-hp');\n        const playerMp = document.getElementById('player-mp');\n        const npcListContainer = document.getElementById('npc-list');\n        let isInitialLoad = true;\n\n        function updateUI(stat) {\n          // 更新玩家信息\n          const pName = _.get(stat, 'player.name');\n          if (pName !== undefined) playerName.textContent = pName;\n          else if (isInitialLoad) playerName.textContent = '示例数据, 完成步骤1后显示';\n\n          const pLevel = _.get(stat, 'player.level');\n          if (pLevel !== undefined) playerLevel.textContent = pLevel;\n          else if (isInitialLoad) playerLevel.textContent = '示例数据, 完成步骤1后显示';\n\n          const pHp = _.get(stat, 'player.hp');\n          const pMaxHp = _.get(stat, 'player.max_hp');\n          if (pHp !== undefined && pMaxHp !== undefined) playerHp.textContent = `${pHp} / ${pMaxHp}`;\n          else if (isInitialLoad) playerHp.textContent = '示例数据, 完成步骤1后显示';\n\n          const pMp = _.get(stat, 'player.mp');\n          const pMaxMp = _.get(stat, 'player.max_mp');\n          if (pMp !== undefined && pMaxMp !== undefined) playerMp.textContent = `${pMp} / ${pMaxMp}`;\n          else if (isInitialLoad) playerMp.textContent = '示例数据, 完成步骤1后显示';\n\n          // 更新NPC列表\n          const npcs = _.get(stat, 'world_state.npcs', {});\n          npcListContainer.innerHTML = ''; // 清空旧列表\n          if (_.isEmpty(npcs)) {\n            if (isInitialLoad)\n              npcListContainer.innerHTML =\n                '<div class=\"era-statusbar-item-label\" style=\"padding: 8px 12px;\">示例数据, 完成步骤1后显示</div>';\n            else\n              npcListContainer.innerHTML =\n                '<div class=\"era-statusbar-item-label\" style=\"padding: 8px 12px;\">暂无NPC信息</div>';\n          } else {\n            for (const npcId in npcs) {\n              const npc = npcs[npcId];\n              const npcElement = document.createElement('div');\n              npcElement.className = 'era-statusbar-item';\n              npcElement.innerHTML = `\n                    <div class=\"era-statusbar-item-label\">${npc.name || '未知NPC'}</div>\n                    <div class=\"era-statusbar-item-value\">心情: ${npc.mood || '平常'}</div>\n                `;\n              npcListContainer.appendChild(npcElement);\n            }\n          }\n\n          isInitialLoad = false;\n        }\n\n        let unsubscribe = () => {};\n        void waitGlobalInitialized('ERA').then(() => {\n          updateUI(ERA.get().statWithoutMeta);\n          unsubscribe = ERA.subscribe(state => updateUI(state.statWithoutMeta));\n        });\n        $(window).on('pagehide', () => unsubscribe());\n      });\n    </script>\n\n    <!-- \n    ================================================================\n    给 AI 的参考代码 (默认注释)\n    \n    AI 你好！当角色卡作者让你修改此文件时，请参考下面的注释代码。\n    \n    ### 宏模式 (简单)\n    - **用法**: 直接在 HTML 中写入 `{{ERA:路径.到.变量}}` 宏。\n    - **优点**: 非常简单，无需编写任何 JavaScript。\n    - **缺点**: 需要在 ERA 设置中开启“强制重载状态栏”，每次变量更新都会导致整个状态栏闪烁刷新。\n    - **建议**: 需要平滑更新和交互写入时，使用下面的 ERA 公共对象 API。\n    - **示例**: `<div class=\"era-statusbar-item-value\">{{ERA:player.hp}} / {{ERA:player.max_hp}}</div>`\n\n    ---\n\n    ### API 模式 (进阶，推荐)\n    - 先 `await waitGlobalInitialized('ERA')`。\n    - `ERA.get()` 立即取得当前只读状态；`ERA.subscribe(render)` 在 Sidecar 成功提交后更新界面。\n    - `ERA.commit([{ edit: { player: { hp: { $expr: 'player.hp - 10' } } } }])` 立即写入并提交。\n    - scope 只允许 `message`（默认）、`branch`、`always`；没有 edit scope、业务 key 或旧事件 API。\n    - 每次 commit 都独立返回 receipt；调用返回前消息与 Sidecar 已经完成本次结算。\n    ================================================================\n  --></body>\n</html>\n";
+
+/**
+ * 当前示例状态栏。每一种读取语义拥有独立 DOM 标识，测试和角色卡作者都能
+ * 同屏比较“所在楼层历史”与“活动分支最新”而不互相冒充。
+ */
+function statusBarExampleHtml(): string {
+  return String.raw`<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ERA 示例状态栏</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui,sans-serif; }
+    body { margin:0; background:transparent; color:#edf4f6; }
+    .era-demo { margin:12px 0; padding:14px; border:1px solid #446675; border-radius:12px; background:linear-gradient(145deg,#243641,#304b58); box-shadow:0 6px 18px #0005; }
+    h3,h4 { margin:0 0 9px; color:#67e3c1; }
+    h4 { margin-top:14px; font-size:.95rem; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:7px; }
+    .cell { min-width:0; padding:7px 9px; border-radius:7px; background:#ffffff0d; }
+    .label { color:#b7c9d1; font-size:.76rem; }
+    .value { margin-top:3px; overflow-wrap:anywhere; white-space:pre-wrap; font-family:ui-monospace,monospace; font-size:.82rem; }
+    .actions { display:flex; flex-wrap:wrap; gap:6px; }
+    button { border:1px solid #579080; border-radius:7px; padding:6px 9px; color:#eef; background:#203d3a; cursor:pointer; }
+    button:disabled { opacity:.55; cursor:wait; }
+    .receipt { margin-top:8px; min-height:2.6em; padding:7px; border-radius:7px; background:#0003; white-space:pre-wrap; font: .78rem ui-monospace,monospace; }
+    details { margin-top:10px; }
+    summary { cursor:pointer; color:#9fc7d5; }
+  </style>
+</head>
+<body>
+  <section class="era-demo" data-era-demo-statusbar="v1">
+    <h3>ERA 示例状态栏</h3>
+    <div class="grid">
+      <div class="cell"><div class="label">宏：所在楼 HP</div><div class="value" data-era-demo-source="macro" data-era-demo-field="era_demo.player.hp">{{ERA:era_demo.player.hp}}</div></div>
+      <div class="cell"><div class="label">宏：所在楼对象（含 meta）</div><div class="value" data-era-demo-source="macro-withmeta" data-era-demo-field="era_demo.player.profile">{{ERA-withmeta:era_demo.player.profile}}</div></div>
+      <div class="cell"><div class="label">宏：数组</div><div class="value" data-era-demo-source="macro" data-era-demo-field="era_demo.player.inventory">{{ERA:era_demo.player.inventory}}</div></div>
+      <div class="cell"><div class="label">宏：不存在路径</div><div class="value" data-era-demo-source="macro" data-era-demo-field="era_demo.missing">{{ERA:era_demo.missing}}</div></div>
+    </div>
+
+    <h4>ERA.get()：活动分支最新状态</h4>
+    <div class="grid" data-era-demo-section="get">
+      <div class="cell"><div class="label">statData</div><div class="value" data-era-demo-source="get" data-era-demo-field="statData"></div></div>
+      <div class="cell"><div class="label">stat</div><div class="value" data-era-demo-source="get" data-era-demo-field="stat"></div></div>
+      <div class="cell"><div class="label">statWithoutMeta</div><div class="value" data-era-demo-source="get" data-era-demo-field="statWithoutMeta"></div></div>
+      <div class="cell"><div class="label">statFunc</div><div class="value" data-era-demo-source="get" data-era-demo-field="statFunc"></div></div>
+      <div class="cell"><div class="label">mk / message / revision</div><div class="value" data-era-demo-source="get" data-era-demo-field="identity"></div></div>
+    </div>
+
+    <h4>ERA.subscribe()：Sidecar 最新发布</h4>
+    <div class="grid">
+      <div class="cell"><div class="label">最新变量</div><div class="value" data-era-demo-source="subscribe" data-era-demo-field="statWithoutMeta"></div></div>
+      <div class="cell"><div class="label">mk / message / revision</div><div class="value" data-era-demo-source="subscribe" data-era-demo-field="identity"></div></div>
+    </div>
+
+    <h4>ERA.history.atMessage()：状态栏所在楼层</h4>
+    <div class="grid">
+      <div class="cell"><div class="label">历史变量</div><div class="value" data-era-demo-source="history" data-era-demo-field="statWithoutMeta"></div></div>
+      <div class="cell"><div class="label">历史函数</div><div class="value" data-era-demo-source="history" data-era-demo-field="statFunc"></div></div>
+      <div class="cell"><div class="label">mk / message / revision</div><div class="value" data-era-demo-source="history" data-era-demo-field="identity"></div></div>
+    </div>
+
+    <details>
+      <summary>真实 ERA.commit() 示例</summary>
+      <div class="actions">
+        <button data-era-demo-action="variable-insert">Variable Insert</button>
+        <button data-era-demo-action="variable-edit">Variable Edit</button>
+        <button data-era-demo-action="variable-delete">Variable Delete</button>
+        <button data-era-demo-action="function-insert">Function Insert</button>
+        <button data-era-demo-action="function-edit">Function Edit</button>
+        <button data-era-demo-action="function-writeback">函数计算并写回</button>
+        <button data-era-demo-action="function-delete">Function Delete</button>
+        <button data-era-demo-action="scope-message">message scope</button>
+        <button data-era-demo-action="scope-branch">branch scope</button>
+        <button data-era-demo-action="scope-always">always scope</button>
+      </div>
+      <div class="receipt" data-era-demo-source="receipt" data-era-demo-field="latest">尚未执行</div>
+    </details>
+    <div class="value" data-era-demo-source="auto" data-era-demo-field="status">自动测试模式未运行</div>
+  </section>
+  <script>
+    (() => {
+      const encode = value => {
+        if (value === undefined) return '[undefined]';
+        try { return JSON.stringify(value); } catch { return String(value); }
+      };
+      const field = (source, name) => document.querySelector('[data-era-demo-source="' + source + '"][data-era-demo-field="' + name + '"]');
+      const show = (source, name, value) => { const node = field(source, name); if (node) node.textContent = encode(value); };
+      const owner = (() => { try { return window.top || window; } catch { return window; } })();
+      const automaticStatusEvent = 'era-demo-automatic-status';
+      const identity = state => ({ mk: state.mk, message_id: state.message_id, revision: state.revision });
+      const demo = state => state && state.statWithoutMeta && state.statWithoutMeta.era_demo;
+      const renderCurrent = state => {
+        show('get', 'statData', state.statData && state.statData.era_demo);
+        show('get', 'stat', state.stat && state.stat.era_demo);
+        show('get', 'statWithoutMeta', demo(state));
+        show('get', 'statFunc', state.statFunc);
+        show('get', 'identity', identity(state));
+      };
+      const renderSubscription = state => {
+        show('subscribe', 'statWithoutMeta', demo(state));
+        show('subscribe', 'identity', identity(state));
+      };
+      const receiptView = receipt => ({ status: receipt.status, scope: receipt.scope, messageId: receipt.messageId, state: identity(receipt.state) });
+      const nestedIncrement = (branch, scope) => ({ edit: { era_demo: { scope_counts: { [branch]: { [scope]: { $expr: 'era_demo.scope_counts.' + branch + '.' + scope + ' + 1' } } } } } });
+      const action = name => {
+        if (name === 'variable-insert') return { operations: [{ insert: { era_demo: { temporary: { manual_inserted: 'created' } } } }] };
+        if (name === 'variable-edit') return { operations: [{ edit: { era_demo: { temporary: { edit_target: { $expr: 'era_demo.temporary.edit_target + 1' } } } } }] };
+        if (name === 'variable-delete') return { operations: [{ delete: { era_demo: { temporary: { delete_target: {} } } } }] };
+        if (name === 'function-insert') return { operations: [{ functionInsert: { era_demo_double: { params: ['x'], expr: 'x * 2' } } }] };
+        if (name === 'function-edit') return { operations: [{ functionEdit: { era_demo_double: { params: ['x'], expr: 'x * 3' } } }] };
+        if (name === 'function-delete') return { operations: [{ functionDelete: { era_demo_double: {} } }] };
+        if (name === 'function-writeback') return { operations: [{ edit: { era_demo: { function_results: { last: { $expr: 'era_demo_double(era_demo.player.level)' } } } } }] };
+        const scope = name.slice('scope-'.length);
+        return { scope, operations: [nestedIncrement('manual', scope)] };
+      };
+      const setBusy = busy => document.querySelectorAll('[data-era-demo-action]').forEach(button => { button.disabled = busy; });
+      const runManual = async name => {
+        setBusy(true);
+        try {
+          const request = action(name);
+          const receipt = await ERA.commit(request.operations, { scope: request.scope || 'message' });
+          show('receipt', 'latest', receiptView(receipt));
+        } catch (error) {
+          show('receipt', 'latest', { status: 'failed', error: error instanceof Error ? error.message : String(error) });
+        } finally { setBusy(false); }
+      };
+      const runAutomatic = async messageId => {
+        const current = ERA.get();
+        const test = demo(current) && demo(current).test_mode;
+        if (!test || test.enabled !== true) return;
+        const maximum = Number(test.max_loads_per_floor || 0);
+        const loads = test.load_counts && typeof test.load_counts === 'object' ? test.load_counts : {};
+        const previous = Number(loads[String(messageId)] || 0);
+        const lastReceipts = test.last_receipts && typeof test.last_receipts === 'object' ? test.last_receipts : {};
+        const completed = lastReceipts[String(messageId)];
+        if (!Number.isSafeInteger(maximum) || maximum <= 0 || previous >= maximum) {
+          show('auto', 'status', completed || { run_id: test.run_id, messageId, previous, maximum, status: 'budget-exhausted' });
+          return;
+        }
+        const locks = owner.__ERA_DEMO_AUTO_LOCKS__ || (owner.__ERA_DEMO_AUTO_LOCKS__ = {});
+        const lockKey = String(test.run_id) + ':' + String(messageId) + ':' + String(previous + 1);
+        if (locks[lockKey]) {
+          show('auto', 'status', { run_id: test.run_id, messageId, load: previous + 1, status: 'in-flight' });
+          return;
+        }
+        locks[lockKey] = true;
+        const loadPatch = { era_demo: { test_mode: { load_counts: { [String(messageId)]: previous + 1 } } } };
+        const firstLoad = !Object.prototype.hasOwnProperty.call(loads, String(messageId));
+        try {
+          const receipts = [];
+          // 第一笔事务先原子占用本楼预算。强制重载可能立即重建 iframe，
+          // 新实例会看到已占用的 load_count，从而不会重复执行三种 scope。
+          receipts.push(await ERA.commit([
+            nestedIncrement('automatic', 'always'),
+            firstLoad ? { insert: loadPatch } : { edit: loadPatch },
+          ], { scope: 'always' }));
+          receipts.push(await ERA.commit([nestedIncrement('automatic', 'message')], { scope: 'message' }));
+          receipts.push(await ERA.commit([nestedIncrement('automatic', 'branch')], { scope: 'branch' }));
+          const result = { run_id: test.run_id, messageId, load: previous + 1, receipts: receipts.map(receiptView) };
+          const receiptPatch = { era_demo: { test_mode: { last_receipts: { [String(messageId)]: result } } } };
+          const firstReceipt = !Object.prototype.hasOwnProperty.call(lastReceipts, String(messageId));
+          await ERA.commit([firstReceipt ? { insert: receiptPatch } : { edit: receiptPatch }], { scope: 'always' });
+          show('auto', 'status', result);
+          owner.dispatchEvent(new CustomEvent(automaticStatusEvent, { detail: result }));
+        } finally {
+          delete locks[lockKey];
+        }
+      };
+      let unsubscribe = () => undefined;
+      void waitGlobalInitialized('ERA').then(async () => {
+        const messageId = getCurrentMessageId();
+        const handleAutomaticStatus = event => {
+          const detail = event && event.detail;
+          if (detail && detail.messageId === messageId) show('auto', 'status', detail);
+        };
+        owner.addEventListener(automaticStatusEvent, handleAutomaticStatus);
+        window.addEventListener('unload', () => owner.removeEventListener(automaticStatusEvent, handleAutomaticStatus), { once: true });
+        const current = ERA.get();
+        renderCurrent(current);
+        renderSubscription(current);
+        unsubscribe = ERA.subscribe(state => { renderCurrent(state); renderSubscription(state); });
+        try {
+          const historical = await ERA.history.atMessage(messageId);
+          show('history', 'statWithoutMeta', demo(historical));
+          show('history', 'statFunc', historical.statFunc);
+          show('history', 'identity', identity(historical));
+        } catch (error) {
+          show('history', 'identity', { status: 'failed', error: error instanceof Error ? error.message : String(error) });
+        }
+        document.querySelectorAll('[data-era-demo-action]').forEach(button => button.addEventListener('click', () => void runManual(button.dataset.eraDemoAction)));
+        try { await runAutomatic(messageId); }
+        catch (error) { show('auto', 'status', { status: 'failed', error: error instanceof Error ? error.message : String(error) }); }
+      });
+      addEventListener('pagehide', () => unsubscribe(), { once: true });
+    })();
+  </script>
+</body>
+</html>`;
 }
 
 /** 返回 ERA 的角色局部正则，保持冻结顺序与完整载荷。 */
@@ -561,7 +856,7 @@ export function getEraRegexPayloads(): readonly EraRegexPayloadV1[] {
     regexPayload(
       "ERA 状态栏模板",
       "/<StatusPlaceHolderImpl\\/>/gsi",
-      `\`\`\`html\n${statusBarHtml()}\n\`\`\``,
+      `\`\`\`html\n${statusBarExampleHtml()}\n\`\`\``,
       false,
       false,
     ),

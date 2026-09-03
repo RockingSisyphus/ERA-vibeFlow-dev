@@ -154,6 +154,12 @@ observer: loads=1 edits=1 instances=[d31fbaa8-...]
 
 后台脚本收到 `message_edited`，但没有重建。同时消息前端 observer 本身在编辑完成后渲染两次，再次证明两种 iframe 生命周期不同。
 
+### 状态栏读取方向的关联缺陷
+
+快速初始化首帧、多楼错位和旧聊天恢复三种状态栏表现及其最新自动测试证据，统一维护在
+[`../testing/ERA当前缺陷基线.md`](../testing/ERA当前缺陷基线.md)。本文不再重复维护其当前状态；
+这里只保留与消息前端重建和 API effect 幂等设计直接相关的生命周期机制。
+
 ### 现有测试覆盖与缺口
 
 已有正式回归证明了下列基础能力：
@@ -165,6 +171,9 @@ observer: loads=1 edits=1 instances=[d31fbaa8-...]
 - `RUNTIME-COMBO-EDIT-TWICE-CONTINUE-001`：同楼连续编辑后 continue。
 
 上述路径在已完成的完整回归 `st-run-20260823T18200673-dc884ab8c21b` 中均 passed。但在本轮前，Pack 没有任何 `message_iframe_render_*`、`TH-message--`、HTML 消息前端或“`requestWriteDone → API 回写 → 同 iframe 重建`”闭环路径。因此现有 API/FIFO/编辑测试可以同时全部通过，却不会触发这个生命周期缺陷。
+
+状态栏首帧的现行覆盖、严格读取字段和修复验收见
+[`../testing/ERA当前缺陷基线.md`](../testing/ERA当前缺陷基线.md)。
 
 ## 四条生命周期
 

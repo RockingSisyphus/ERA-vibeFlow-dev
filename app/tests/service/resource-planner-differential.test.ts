@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 
-import { REPLACE_PLACEHOLDER_REGEX } from '../../src/ERA变量框架/initer/manual/regex_objects/replace_placeholder';
 import { eraVarIntentEntry } from '../../src/ERA变量框架/initer/manual/worldbook_entries/era_var_intent';
 import { eraVarOperationRuleEntry } from '../../src/ERA变量框架/initer/manual/worldbook_entries/era_var_operation_rule';
 import { SettingsSchema } from '../../src/ERA变量框架/utils/constants';
@@ -82,6 +81,11 @@ interface ResourcePlannerModule {
     readonly primaryEntries: readonly unknown[];
   }): WorldbookPlan;
   getEraRegexPayloads(): readonly Readonly<Record<string, unknown>>[];
+  getEraDemoGreetingBlock(): string;
+  planEraDemoGreeting(input: {
+    readonly context: CharacterContext;
+    readonly firstMessage: string | null;
+  }): Readonly<Record<string, unknown>>;
   planEraCharacterRegexes(input: {
     readonly context: CharacterContext;
     readonly localRegexEnabled: boolean;
@@ -156,6 +160,7 @@ describe('VibeFlow Service 宿主资源规划器差分', () => {
       messagesRaw: {},
       worldbookRaw: {},
       regexRaw: {},
+      characterRaw: {},
       readFailure: null,
     });
     expect(plan.disposition).toBe('ready');
@@ -287,8 +292,19 @@ describe('VibeFlow Service 宿主资源规划器差分', () => {
   });
 
   it('逐字段保持局部正则载荷和注入顺序', () => {
-    const candidateRegexes = [REPLACE_PLACEHOLDER_REGEX];
-    expect(planner.getEraRegexPayloads()).toEqual(candidateRegexes);
+    const candidateRegexes = planner.getEraRegexPayloads();
+    expect(candidateRegexes).toHaveLength(1);
+    expect(candidateRegexes[0]).toMatchObject({
+      script_name: 'ERA 状态栏模板',
+      find_regex: '/<StatusPlaceHolderImpl\\/>/gsi',
+      source: { user_input: false, ai_output: true },
+      destination: { display: true, prompt: false },
+    });
+    expect(String(candidateRegexes[0]?.replace_string)).toContain('data-era-demo-source="macro"');
+    expect(String(candidateRegexes[0]?.replace_string)).toContain('ERA.history.atMessage(messageId)');
+    expect(String(candidateRegexes[0]?.replace_string)).toContain(
+      "ERA.commit([nestedIncrement('automatic', 'message')]",
+    );
 
     const plan = planner.planEraCharacterRegexes({
       context: character(),
@@ -298,6 +314,29 @@ describe('VibeFlow Service 宿主资源规划器差分', () => {
     expect(plan.status).toBe('ready');
     expect(plan.details.map(detail => detail.regexName)).toEqual(candidateRegexes.map(regex => regex.script_name));
     expect(plan.actions.map(action => action.regex)).toEqual(candidateRegexes);
+  });
+
+  it('只向主开场白幂等追加版本化示例并拒绝 era_demo 冲突', () => {
+    const block = planner.getEraDemoGreetingBlock();
+    expect(block).toContain('<VariableInsert>');
+    expect(block).toContain('"era_demo"');
+    expect(block).toContain('<StatusPlaceHolderImpl/>');
+
+    const created = planner.planEraDemoGreeting({ context: character(), firstMessage: '作者原文' });
+    expect(created).toMatchObject({ status: 'created', expected: '作者原文' });
+    expect(String(created.next)).toBe('作者原文\n\n' + block);
+    expect(planner.planEraDemoGreeting({ context: character(), firstMessage: String(created.next) })).toMatchObject({
+      status: 'unchanged',
+    });
+    expect(
+      planner.planEraDemoGreeting({
+        context: character(),
+        firstMessage: '<VariableInsert>{"era_demo":{"author":true}}</VariableInsert>',
+      }),
+    ).toMatchObject({ status: 'conflict' });
+    expect(planner.planEraDemoGreeting({ context: { kind: 'group-chat' }, firstMessage: '原文' })).toMatchObject({
+      status: 'skipped',
+    });
   });
 
   it('关闭局部正则时仍规划状态栏并由 Host 启用；群聊和无角色 typed skipped；同名对象保留', () => {

@@ -1,0 +1,12 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.tavern.character.read_main_greeting.result",
+  "representation": "json",
+  "display_name": "ERA·酒馆·角色·读取主开场白·结果",
+  "description": "当前角色主开场白的可移植投影。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": true
+  }
+}

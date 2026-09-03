@@ -1,6 +1,7 @@
 import {
   cloneResourcePlanValue,
   planEraCharacterRegexes,
+  planEraDemoGreeting,
   planEraSettings,
   planEraWorldbook,
   type EraCharacterContextV1,
@@ -17,6 +18,7 @@ export interface InitializationContextV1 {
   readonly messagesRaw: unknown;
   readonly worldbookRaw: unknown;
   readonly regexRaw: unknown;
+  readonly characterRaw: unknown;
   readonly readFailure: Readonly<Record<string, unknown>> | null;
 }
 
@@ -29,13 +31,15 @@ export type InitializationActionV1 =
       readonly name: string;
       readonly entries: readonly unknown[];
     }
-  | { readonly kind: "upsert-regex"; readonly regex: Readonly<Record<string, unknown>> };
+  | { readonly kind: "upsert-regex"; readonly regex: Readonly<Record<string, unknown>> }
+  | { readonly kind: "update-main-greeting"; readonly expected: string; readonly next: string };
 
 export interface InitializationPlanV1 {
   readonly schemaVersion: 1;
   readonly step: PlannedStepV1;
   readonly operation: "startup" | "resources" | "settings-update";
   readonly disposition: "ready" | "failed";
+  readonly greetingStatus: "not-applicable" | "created" | "unchanged" | "skipped" | "conflict";
   readonly actions: readonly InitializationActionV1[];
   readonly diagnostics: readonly Readonly<Record<string, unknown>>[];
   readonly failure: Readonly<Record<string, unknown>> | null;
@@ -46,6 +50,7 @@ export interface InitializationCommitOutcomeV1 {
   readonly plan: InitializationPlanV1;
   readonly status: "committed" | "no-op" | "failed" | "fatal";
   readonly appliedActions: number;
+  readonly greetingRefreshStatus: "not-applicable" | "refreshed" | "preserved";
   readonly failure: Readonly<Record<string, unknown>> | null;
 }
 
@@ -128,6 +133,7 @@ export function planInitialization(context: InitializationContextV1): Initializa
       step: context.step,
       operation: task.operation,
       disposition: "failed",
+      greetingStatus: "not-applicable",
       actions: [],
       diagnostics: [diagnostic(String(context.readFailure.code ?? "ERA_INITIALIZE_READ_FAILED"), String(context.readFailure.message ?? "初始化读取失败。"))],
       failure: context.readFailure,
@@ -143,6 +149,7 @@ export function planInitialization(context: InitializationContextV1): Initializa
       step: context.step,
       operation: task.operation,
       disposition: "failed",
+      greetingStatus: "not-applicable",
       actions: [],
       diagnostics: [diagnostic(settingsPlan.error.code, settingsPlan.error.message)],
       failure,
@@ -153,6 +160,7 @@ export function planInitialization(context: InitializationContextV1): Initializa
     { kind: "replace-settings", settings: settingsPlan.settings },
   ];
   const diagnostics: Readonly<Record<string, unknown>>[] = [];
+  let greetingStatus: InitializationPlanV1["greetingStatus"] = "not-applicable";
   if (task.operation === "resources") {
     const identity = nestedRecord(context.identityRaw, ["value", "data"]);
     const worldbook = nestedRecord(context.worldbookRaw, ["value", "data"]);
@@ -207,23 +215,63 @@ export function planInitialization(context: InitializationContextV1): Initializa
       }
     }
 
+    const characterRaw = nestedRecord(context.characterRaw, ["value", "data"]);
+    const greetingPlan = planEraDemoGreeting({
+      context: character,
+      firstMessage:
+        characterRaw.status === "ready" && typeof characterRaw.firstMessage === "string"
+          ? characterRaw.firstMessage
+          : null,
+    });
+    greetingStatus = greetingPlan.status;
+    if (greetingPlan.status === "conflict") {
+      const failure = {
+        code: "ERA_DEMO_GREETING_CONFLICT",
+        message: greetingPlan.reason,
+        category: "domain",
+        retryable: false,
+      };
+      return {
+        schemaVersion: 1,
+        step: context.step,
+        operation: task.operation,
+        disposition: "failed",
+        greetingStatus,
+        actions: [],
+        diagnostics: [...diagnostics, diagnostic(failure.code, failure.message)],
+        failure,
+      };
+    }
+    if (greetingPlan.status === "created") {
+      actions.push({ kind: "update-main-greeting", expected: greetingPlan.expected, next: greetingPlan.next });
+    } else {
+      diagnostics.push(diagnostic("ERA_GREETING_" + greetingPlan.status.toUpperCase(), greetingPlan.reason));
+    }
+
   }
   return {
     schemaVersion: 1,
     step: context.step,
     operation: task.operation,
     disposition: "ready",
+    greetingStatus,
     actions: cloneResourcePlanValue(actions),
     diagnostics,
     failure: null,
   };
 }
 
-function settlements(step: PlannedStepV1, status: "completed" | "failed", failure: Readonly<Record<string, unknown>> | null) {
+function settlements(
+  step: PlannedStepV1,
+  status: "completed" | "failed",
+  failure: Readonly<Record<string, unknown>> | null,
+  greetingStatus: InitializationPlanV1["greetingStatus"],
+  greetingRefreshStatus: InitializationCommitOutcomeV1["greetingRefreshStatus"],
+) {
   if (step.kind !== "execute") return [];
   return step.sources.map((source) =>
     status === "completed"
-      ? { eventId: source.event.eventId, sequence: source.event.sequence, status: "completed" as const, taskId: step.task.id, relation: source.relation }
+      ? { eventId: source.event.eventId, sequence: source.event.sequence, status: "completed" as const, taskId: step.task.id, relation: source.relation, value: { greeting: greetingStatus, greetingRefresh: greetingRefreshStatus } }
       : { eventId: source.event.eventId, sequence: source.event.sequence, status: "failed" as const, error: { code: String(failure?.code ?? "ERA_INITIALIZE_FAILED"), message: String(failure?.message ?? "初始化失败。"), category: String(failure?.category ?? "tavern") as "input" | "domain" | "tavern" | "cancelled", retryable: false } },
   );
 }
@@ -232,7 +280,13 @@ export function buildInitializationDirectResult(outcome: InitializationCommitOut
   const success = outcome.status === "committed" || outcome.status === "no-op";
   return {
     status: outcome.status,
-    settlements: settlements(outcome.plan.step, success ? "completed" : "failed", outcome.failure),
+    settlements: settlements(
+      outcome.plan.step,
+      success ? "completed" : "failed",
+      outcome.failure,
+      outcome.plan.greetingStatus,
+      outcome.greetingRefreshStatus,
+    ),
     notifications: [],
     diagnostics: [
       ...outcome.plan.diagnostics,

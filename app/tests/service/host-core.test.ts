@@ -106,6 +106,15 @@ class FakeAdapter implements EraTavernHostAdapter {
     upsert: async (input: Readonly<Record<string, unknown>>) => ({ ...input }),
   };
 
+  readonly character = {
+    read_main_greeting: async (input: Readonly<Record<string, unknown>>) => ({
+      ...input,
+      status: 'ready',
+      firstMessage: '',
+    }),
+    write_main_greeting: async (input: Readonly<Record<string, unknown>>) => ({ ...input, status: 'updated' }),
+  };
+
   readonly identity = {
     read: (input: Readonly<Record<string, unknown>>) => ({ ...input }),
   };

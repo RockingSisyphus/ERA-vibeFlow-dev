@@ -24,6 +24,7 @@
     "era.tavern.messages",
     "era.tavern.worldbook",
     "era.tavern.regex",
+    "era.tavern.character",
     "era.tavern.identity",
     "era.tavern.sidecar",
     "era.tavern.installation_scope",

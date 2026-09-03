@@ -7448,7 +7448,7 @@
         "path": "configs/nodesets/task_initialize.jsonc"
       },
       "display_name": "ERA 初始化任务",
-      "description": "规划并提交幂等设置、世界书、正则和消息资源；启动操作随后复用共享同步事务。",
+      "description": "规划并提交幂等设置、世界书、状态栏正则和角色主开场白示例资源；启动操作随后复用共享同步事务。",
       "status": "implemented",
       "flow_kind": "predefined",
       "effect_scope": "none",
@@ -7561,8 +7561,8 @@
               "path": "configs/nodesets/task_initialize.jsonc"
             },
             "role": {
-              "display_name": "读取 Tavern 资源",
-              "description": "消费已准备步骤内的严格消息投影，并读取身份、脚本设置、世界书和角色正则快照；不再复制宿主消息对象。"
+              "display_name": "读取状态栏初始化资源与主开场白",
+              "description": "消费已准备步骤内的严格消息投影，并读取身份、脚本设置、世界书、角色正则和当前角色主开场白；备用开场白、当前聊天和历史聊天不进入初始化写入范围。"
             },
             "contract_source": "node_type",
             "flow_kind": "data_store",
@@ -7651,8 +7651,8 @@
               "path": "configs/nodesets/task_initialize.jsonc"
             },
             "role": {
-              "display_name": "规划权威设置与内建投影初始化资源",
-              "description": "读取并验证完整设置草稿，生成一次性设置提交以及仅含状态栏模板正则和两条 ERA 世界书项的幂等资源计划；旧 ERA 正则保留，技术块显示与提示清理由内建投影承担。"
+              "display_name": "规划示例状态栏与开场白变量基线",
+              "description": "纯计算生成设置、两条世界书、状态栏正则与主开场白示例变量动作；保留作者原文，以版本标记幂等追加 era_demo，检测同命名空间冲突，并把宏、ERA.get、subscribe、history、手动 API 与默认关闭的测试加载模式放入同一示例状态栏。"
             },
             "contract_source": "node_type",
             "flow_kind": "decision",
@@ -7836,8 +7836,8 @@
               "path": "configs/nodesets/task_initialize.jsonc"
             },
             "role": {
-              "display_name": "提交 Tavern 资源",
-              "description": "顺序应用声明式设置、世界书和正则变更；不再写入消息占位符，部分或未知提交进入 fatal。"
+              "display_name": "提交状态栏资源与主开场白示例",
+              "description": "顺序应用声明式设置、世界书、状态栏正则和角色主开场白变更；以真实 avatar 更新 first_messages[0]，随后仅在当前聊天仍为空或只有一条未污染主开场白时刷新首楼并走真实消息渲染/保存链，多楼、编辑/污染、备用开场白和群聊保持原样；回执分别报告开场白与首楼刷新结果。"
             },
             "contract_source": "node_type",
             "flow_kind": "data_store",
@@ -15133,7 +15133,7 @@
     },
     "era.tavern.initialization_commit": {
       "display_name": "提交 Tavern 初始化资源",
-      "description": "顺序提交设置、世界书与正则动作；未知或部分提交进入 fatal，消息准备由统一上下文独占。",
+      "description": "顺序提交设置、世界书、正则与角色主开场白动作；未知或部分提交进入 fatal，消息准备由统一上下文独占。",
       "category": "初始化宿主边界",
       "version": "1.0.0",
       "flow_kind": "data_store",
@@ -15183,7 +15183,7 @@
     },
     "era.tavern.initialization_read": {
       "display_name": "读取 Tavern 初始化资源",
-      "description": "消费统一严格消息投影，并读取身份、脚本设置、世界书和角色正则快照。",
+      "description": "消费统一严格消息投影，并读取身份、脚本设置、世界书、角色正则和当前角色主开场白快照。",
       "category": "初始化宿主边界",
       "version": "1.0.0",
       "flow_kind": "data_store",
@@ -37462,6 +37462,54 @@
           ]
         }
       },
+      "era.tavern.character.read_main_greeting.request": {
+        "kind": "data_schema",
+        "type_key": "era.tavern.character.read_main_greeting.request",
+        "representation": "json",
+        "display_name": "ERA·酒馆·角色·读取主开场白·请求",
+        "description": "读取当前角色主开场白的机械请求。",
+        "schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "era.tavern.character.read_main_greeting.result": {
+        "kind": "data_schema",
+        "type_key": "era.tavern.character.read_main_greeting.result",
+        "representation": "json",
+        "display_name": "ERA·酒馆·角色·读取主开场白·结果",
+        "description": "当前角色主开场白的可移植投影。",
+        "schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "era.tavern.character.write_main_greeting.request": {
+        "kind": "data_schema",
+        "type_key": "era.tavern.character.write_main_greeting.request",
+        "representation": "json",
+        "display_name": "ERA·酒馆·角色·写入主开场白·请求",
+        "description": "包含期望旧值与目标新值的主开场白乐观更新请求。",
+        "schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "era.tavern.character.write_main_greeting.result": {
+        "kind": "data_schema",
+        "type_key": "era.tavern.character.write_main_greeting.result",
+        "representation": "json",
+        "display_name": "ERA·酒馆·角色·写入主开场白·结果",
+        "description": "主开场白写入确认与回读结果。",
+        "schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
       "era.tavern.commit.request": {
         "kind": "data_schema",
         "type_key": "era.tavern.commit.request",
@@ -38690,7 +38738,7 @@
         "kind": "base_lib",
         "id": "era.service.initialization_transaction",
         "display_name": "ERA 初始化事务纯适配层",
-        "description": "规范化身份与宿主资源快照，调用设置、世界书、正则和占位符纯规划器，并形成结算结果。",
+        "description": "规范化身份与宿主资源快照，调用设置、世界书、正则、主开场白和占位符纯规划器，并形成结算结果。",
         "category": "初始化事务",
         "version": "1.0.0",
         "implementations": [
@@ -38770,7 +38818,7 @@
         "kind": "base_lib",
         "id": "era.service.resource_planner",
         "display_name": "ERA 宿主资源纯规划器",
-        "description": "纯函数规划八项设置默认值、世界书条目、角色局部正则和 AI 消息占位符规则，并向 AI 发布严格 $expr、函数标签与双快照格式；只把 JSON 宿主快照转换为声明式资源操作计划，不读取或写入宿主。",
+        "description": "纯函数规划八项设置默认值、世界书条目、角色局部正则、角色主开场白示例和 AI 消息占位符规则，并提供可比较宏、当前状态、订阅、历史与真实 commit 的状态栏；只把 JSON 宿主快照转换为声明式资源操作计划，不读取或写入宿主。",
         "category": "宿主资源规划",
         "version": "1.1.0",
         "implementations": [
@@ -39020,6 +39068,27 @@
           }
         }
       },
+      "era.tavern.character": {
+        "kind": "capability",
+        "id": "era.tavern.character",
+        "targets": [
+          "browser"
+        ],
+        "display_name": "酒馆角色主开场白",
+        "description": "只读或以真实 avatar 乐观更新当前单角色卡的 first_messages[0]；写入成功后仅刷新空聊天或恰好一条未污染主开场白，已有多楼、编辑/污染、备用开场白和群聊保持原样。",
+        "operations": {
+          "read_main_greeting": {
+            "input_type": "era.tavern.character.read_main_greeting.request",
+            "output_type": "era.tavern.character.read_main_greeting.result",
+            "completion": "suspend"
+          },
+          "write_main_greeting": {
+            "input_type": "era.tavern.character.write_main_greeting.request",
+            "output_type": "era.tavern.character.write_main_greeting.result",
+            "completion": "suspend"
+          }
+        }
+      },
       "era.tavern.identity": {
         "kind": "capability",
         "id": "era.tavern.identity",
@@ -39085,7 +39154,7 @@
           "browser"
         ],
         "display_name": "酒馆正则资源",
-        "description": "读取 ERA 正则资源，并以幂等方式创建或更新资源。",
+        "description": "读取 ERA 角色正则资源，并以幂等方式创建或更新资源；写入状态栏正则时由 Host 为当前角色启用局部正则。",
         "operations": {
           "read": {
             "input_type": "era.tavern.regex.read.request",
@@ -39230,7 +39299,7 @@
         "status": "implemented",
         "display_name": "ERA 酒馆服务宿主",
         "category": "宿主接线",
-        "description": "连接 SillyTavern 与 Tavern Helper，管理单一先进先出队列、回执、高水位屏障、绝对截止时间定时器、宿主引用和出站帧幂等，并提供服务端口、Agent 独立请求、酒馆能力、Sidecar 机械接线与分阶段启动闸门；生命周期登记幂等消息显示投影与 GENERATE_AFTER_DATA 最后提示投影，并在权威设置提交后刷新 UI 设置、在成功发布新运行时快照后按设置只刷新最近消息的显示。所有投影和刷新只改变 DOM 或本次出站副本，不改消息、Sidecar 或历史输入；消息读取仍按 era-active-message-v1 投影，Host 不承载 Agent 重试、函数、CRUD、同步、合并、回滚或身份判定规则。",
+        "description": "连接 SillyTavern 与 Tavern Helper，管理单一先进先出队列、回执、高水位屏障、绝对截止时间定时器、宿主引用和出站帧幂等，并提供服务端口、Agent 独立请求、酒馆能力、角色主开场白读写、Sidecar 机械接线与分阶段启动闸门；生命周期登记幂等消息显示投影与 GENERATE_AFTER_DATA 最后提示投影，并在权威设置提交后刷新 UI 设置、在成功发布新运行时快照后按设置只刷新最近消息的显示。一般投影和设置刷新只改变 DOM 或本次出站副本，不改消息、Sidecar 或历史输入；快速初始化的主开场白写入以真实 avatar 更新 first_messages[0]，并只在当前聊天为空或恰好一条未污染主开场白时刷新该首楼，已有多楼、编辑/污染、备用开场白和群聊保持原样。消息读取仍按 era-active-message-v1 投影，Host 不承载 Agent 重试、函数、CRUD、同步、合并、回滚或身份判定规则。",
         "version": "0.1.0",
         "targets": [
           "browser"
@@ -39242,6 +39311,7 @@
           "era.tavern.messages",
           "era.tavern.worldbook",
           "era.tavern.regex",
+          "era.tavern.character",
           "era.tavern.identity",
           "era.tavern.sidecar",
           "era.tavern.installation_scope",

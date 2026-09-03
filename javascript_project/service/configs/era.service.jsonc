@@ -10,7 +10,7 @@
       "status": "implemented",
       "enabled": true,
       "display_name": "ERA 酒馆服务宿主",
-      "description": "连接 SillyTavern 与 Tavern Helper，管理单一先进先出队列、回执、高水位屏障、绝对截止时间定时器、宿主引用和出站帧幂等，并提供服务端口、Agent 独立请求、酒馆能力、Sidecar 机械接线与分阶段启动闸门；生命周期登记幂等消息显示投影与 GENERATE_AFTER_DATA 最后提示投影，并在权威设置提交后刷新 UI 设置、在成功发布新运行时快照后按设置只刷新最近消息的显示。所有投影和刷新只改变 DOM 或本次出站副本，不改消息、Sidecar 或历史输入；消息读取仍按 era-active-message-v1 投影，Host 不承载 Agent 重试、函数、CRUD、同步、合并、回滚或身份判定规则。",
+      "description": "连接 SillyTavern 与 Tavern Helper，管理单一先进先出队列、回执、高水位屏障、绝对截止时间定时器、宿主引用和出站帧幂等，并提供服务端口、Agent 独立请求、酒馆能力、角色主开场白读写、Sidecar 机械接线与分阶段启动闸门；生命周期登记幂等消息显示投影与 GENERATE_AFTER_DATA 最后提示投影，并在权威设置提交后刷新 UI 设置、在成功发布新运行时快照后按设置只刷新最近消息的显示。一般投影和设置刷新只改变 DOM 或本次出站副本，不改消息、Sidecar 或历史输入；快速初始化的主开场白写入以真实 avatar 更新 first_messages[0]，并只在当前聊天为空或恰好一条未污染主开场白时刷新该首楼，已有多楼、编辑/污染、备用开场白和群聊保持原样。消息读取仍按 era-active-message-v1 投影，Host 不承载 Agent 重试、函数、CRUD、同步、合并、回滚或身份判定规则。",
       "category": "宿主接线",
       "version": "0.1.0",
       "targets": [
@@ -23,6 +23,7 @@
         "era.tavern.messages",
         "era.tavern.worldbook",
         "era.tavern.regex",
+        "era.tavern.character",
         "era.tavern.identity",
         "era.tavern.sidecar",
         "era.tavern.installation_scope",

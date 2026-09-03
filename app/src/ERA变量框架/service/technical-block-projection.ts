@@ -202,6 +202,18 @@ function currentRawMessage(messageId: number): string | null {
   return typeof message?.mes === 'string' ? message.mes : null;
 }
 
+function announceProjectedMessageRendered(messageId: number): void {
+  const message = SillyTavern.chat?.[messageId];
+  if (!message || typeof eventEmit !== 'function') return;
+  // Tavern Helper 只会在宿主的 rendered 生命周期中把 html code block 挂成
+  // message iframe。ERA 替换 `.mes_text` 后必须补回同一个正式生命周期事件；
+  // dataset 指纹已经在触发前写入，因此 ERA 自己的末位监听不会重复投影。
+  const emitted = message.is_user
+    ? eventEmit(tavern_events.USER_MESSAGE_RENDERED, messageId)
+    : eventEmit(tavern_events.CHARACTER_MESSAGE_RENDERED, messageId, 'era-technical-projection');
+  void emitted.catch(error => console.error(`ERA 消息 #${messageId} 投影后的宿主渲染事件失败。`, error));
+}
+
 /**
  * SillyTavern 会把消息编辑器挂在现有楼层 DOM 内。编辑期间替换 `.mes_text`
  * 会移除宿主 textarea，并留下仍然可见的确认/取消按钮。显示投影因此必须把
@@ -247,6 +259,7 @@ function projectDisplayedMessage(messageId: number): void {
   root.replaceChildren(fragment);
   root.dataset.eraProjectionVersion = DISPLAY_PROJECTION_VERSION;
   root.dataset.eraProjectionSource = fingerprint;
+  announceProjectedMessageRendered(messageId);
 }
 
 /**

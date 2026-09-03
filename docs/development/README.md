@@ -9,6 +9,7 @@ Architecture。接口事实以 `app/@types/**` 为准，运行时可用性以已
 | Service、回滚、事件组合、生成 barrier       | [era-host-contract.md](era-host-contract.md)                                                           | `javascript_project/service/ARCHITECTURE.jsonc` 与 source                       |
 | `{{ERA:...}}` 宏                            | [era-host-contract.md](era-host-contract.md)                                                           | `javascript_project/macro/ARCHITECTURE.jsonc` 与 `app/src/ERA变量框架/macro/**` |
 | ERA UI、设置、快照和视觉验收                | [era-host-contract.md](era-host-contract.md)                                                           | `app/src/ERA变量框架/ui/**`、`docs/testing/ERA前台UI测试需求.md`                |
+| 当前开放缺陷、真实表现与修复验收            | [../testing/ERA当前缺陷基线.md](../testing/ERA当前缺陷基线.md)                                         | 对应 ERA-Test-Pack 细则、综合 owner 与 Artifact                                |
 | 多阶段规划、骰点、正文与变量结算            | [ERA三段式故事编排器初步设计.md](ERA三段式故事编排器初步设计.md)                                       | `AgentGenerationSession`、内建投影、辅助预设/模型与尝试卡内联 API               |
 | Agent 角色卡配置与发布                      | [ERA-Agent角色卡作者配置指南.md](ERA-Agent角色卡作者配置指南.md)                                       | `data.extensions.era_agent` V2、导入导出与跨设备重新绑定                        |
 | Agent 预设快照、连接方案与隐私              | [ERA-Agent预设快照与隐私边界.md](ERA-Agent预设快照与隐私边界.md)                                       | 脱敏快照、extension settings、密钥与 Artifact 边界                              |
