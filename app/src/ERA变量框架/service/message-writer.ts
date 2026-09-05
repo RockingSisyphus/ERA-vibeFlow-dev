@@ -47,13 +47,32 @@ async function updateManyMessages(
   internalMessageWrites: Map<number, string>,
 ): Promise<readonly number[]> {
   const messageIds = new Set<number>();
+  const hostUpdates: Record<string, unknown>[] = [];
   for (const update of updates) {
     if (!isRecord(update)) continue;
     rememberExpectedUpdate(update, internalMessageWrites);
     const rawId = update.message_id ?? update.messageId;
-    if (Number.isSafeInteger(rawId) && Number(rawId) >= 0) messageIds.add(Number(rawId));
+    if (!Number.isSafeInteger(rawId) || Number(rawId) < 0) continue;
+    const id = Number(rawId);
+    messageIds.add(id);
+
+    // Workflow 只携带可移植的 ERA 自有 extra 补丁。宿主消息可能包含
+    // undefined 或其他只在 Tavern 内成立的字段，不能把整份宿主 extra 塞入
+    // 严格 JSON DTO；在真正写入前于 Host 边界合并，才能同时保留附件和未知字段。
+    const patch = isRecord(update.extra) ? update.extra : null;
+    if (patch === null) {
+      hostUpdates.push(update);
+      continue;
+    }
+    const current = getChatMessages(id, { include_swipes: true })[0];
+    const currentRecord: Record<string, unknown> = isRecord(current) ? current : {};
+    const currentExtra = isRecord(currentRecord.extra) ? currentRecord.extra : {};
+    hostUpdates.push({
+      ...update,
+      extra: { ...currentExtra, ...patch },
+    });
   }
-  await setChatMessages(updates as Array<{ message_id: number }>, { refresh });
+  await setChatMessages(hostUpdates as Array<{ message_id: number }>, { refresh });
   return [...messageIds];
 }
 

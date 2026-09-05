@@ -63,6 +63,7 @@ export interface EraServiceStateV1 {
 
 export interface EraScopeWindowStateV1 {
   readonly token: number | null;
+  readonly messageId: number | null;
   readonly messageAdmission: boolean | null;
   readonly branchAdmission: boolean | null;
 }
@@ -110,6 +111,51 @@ export interface EraDispatchContextV2 {
   readonly messageChanged: boolean;
   readonly variablesChanged: boolean;
   readonly failure: EraFailureV1 | null;
+}
+
+export interface GenerationCycleIdentityV1 {
+  readonly chatId: string;
+  readonly eventId: string;
+  readonly sourceKey: string;
+}
+
+export interface EraFloorIdentityV1 {
+  readonly chatId: string;
+  readonly messageId: number;
+  readonly swipeId: number;
+  readonly mk: string;
+}
+
+export interface EraStagedMessageUpdateV1 {
+  readonly messageId: number;
+  readonly content: string;
+}
+
+export interface EraAgentFloorCandidateV1 {
+  readonly messageId: number;
+  readonly swipeId: number;
+  readonly mk: string;
+  readonly content: string;
+  readonly extra: Readonly<Record<string, JsonValue>>;
+  readonly terminalStatus: "settled" | "story-complete" | "unsettled";
+  readonly requiresInitialPresentation: boolean;
+}
+
+export interface EraDispatchContextV3 {
+  readonly schemaVersion: 3;
+  readonly status: "ready" | "failed";
+  readonly dispatchClass: EraDispatchClassV1 | "ignore";
+  readonly requirement: EraTaskContextRequirementV1;
+  readonly messages: readonly EraTavernMessageV1[];
+  readonly processingMessage: EraTavernMessageV1 | null;
+  readonly processingMk: string | null;
+  readonly messageChanged: boolean;
+  readonly variablesChanged: boolean;
+  readonly failure: EraFailureV1 | null;
+  readonly generationCycleIdentity: GenerationCycleIdentityV1 | null;
+  readonly floorIdentity: EraFloorIdentityV1 | null;
+  readonly stagedMessageUpdates: readonly EraStagedMessageUpdateV1[];
+  readonly agentFloorCandidate: EraAgentFloorCandidateV1 | null;
 }
 export type EraSyncReasonV1 =
   "history-changed" | "edited" | "swipe-regeneration" | "manual" | "facade-commit";
@@ -283,7 +329,7 @@ export type EraBatchExecutionStateNextV1 = EraBatchExecutionStateV1;
 export type EraBatchExecutionStateAfterV1 = EraBatchExecutionStateV1;
 export type EraStepRequestV1 = EraPlannedStepV1;
 export type EraStepRequestRoutedV1 = EraPlannedStepV1 & {
-  readonly dispatchContext: EraDispatchContextV2;
+  readonly dispatchContext: EraDispatchContextV2 | EraDispatchContextV3;
 };
 
 export interface EraBatchFinalizationV1 {
@@ -306,6 +352,9 @@ export declare function isEraTavernMessageContextV2(
 export declare function isEraDispatchContextV2(
   value: unknown,
 ): value is EraDispatchContextV2;
+export declare function isEraDispatchContextV3(
+  value: unknown,
+): value is EraDispatchContextV3;
 
 /** 把宿主或领域值克隆为无原型的可移植 JSON。 */
 export declare function cloneEraPortableJsonV1(value: unknown): JsonValue;

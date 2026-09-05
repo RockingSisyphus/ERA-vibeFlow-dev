@@ -4,6 +4,12 @@
  * 不写聊天消息、Sidecar，也不参与历史同步和 Agent 领域状态机。
  */
 
+import { createEraMacroSnapshot } from '../macro/registration';
+import { resolveEraLazyMacroTokens, type EraMacroSnapshot } from '../macro/syntax';
+import { currentTavernIdentityMatches } from './public-state';
+import { readActiveSidecarRuntimeSnapshot } from './sidecar-runtime-snapshot';
+import { formatEraReportForDisplay } from './technical-report-display';
+
 const FOLDED_TAG_LABELS = Object.freeze({
   era_plan: 'ERA 规划报告',
   era_update: 'ERA 变量解析报告',
@@ -25,7 +31,7 @@ const HIDDEN_TAG_NAMES = Object.freeze([
 const ALL_TAG_NAMES = Object.freeze([...Object.keys(FOLDED_TAG_LABELS), ...HIDDEN_TAG_NAMES]);
 const TAG_PATTERN = ALL_TAG_NAMES.join('|');
 const TECHNICAL_TAG_TOKEN = new RegExp(`<\\s*(\\/?)\\s*(${TAG_PATTERN})\\b[^>]*>`, 'giu');
-const DISPLAY_PROJECTION_VERSION = 'era-technical-projection-v1';
+const DISPLAY_PROJECTION_VERSION = 'era-technical-projection-v2';
 
 type TechnicalBlockKind = 'folded' | 'hidden';
 type OpenTag = {
@@ -136,21 +142,42 @@ export function stripEraTechnicalBlocks(text: string): string {
  */
 export function projectEraPromptMessages(
   messages: readonly SillyTavern.SendingMessage[],
+  macroSnapshot?: EraMacroSnapshot,
 ): SillyTavern.SendingMessage[] {
+  const projectText = (text: string) => {
+    const stripped = stripEraTechnicalBlocks(text);
+    return macroSnapshot ? resolveEraLazyMacroTokens(stripped, macroSnapshot) : stripped;
+  };
   return messages.map(message => {
     const content = message.content;
-    if (typeof content === 'string') return { ...message, content: stripEraTechnicalBlocks(content) };
+    if (typeof content === 'string') return { ...message, content: projectText(content) };
     if (!Array.isArray(content)) return { ...message };
     return {
       ...message,
-      content: content.map(item =>
-        item.type === 'text' ? { ...item, text: stripEraTechnicalBlocks(item.text) } : item,
-      ),
+      content: content.map(item => (item.type === 'text' ? { ...item, text: projectText(item.text) } : item)),
     };
   });
 }
 
-function sourceFingerprint(text: string): string {
+/**
+ * 显示失效只取决于可见正文和报告，不取决于隐藏的业务日志。
+ * API 的 refresh:none 会追加 era_tx；若仍以完整原文判定失效，随后任意
+ * DOM mutation 都会意外重建消息和作者 iframe，必须避免这种隐式刷新。
+ * 纯技术块之间的空白没有显示内容。
+ */
+export function eraTechnicalDisplaySource(projection: EraTechnicalProjection): string {
+  const visible = projection.segments.filter(
+    segment => segment.kind === 'folded' || (segment.kind === 'story' && segment.text.trim() !== ''),
+  );
+  const text = JSON.stringify(
+    visible.map((segment, index) => {
+      if (segment.kind !== 'story') return [segment.kind, segment.name, segment.text];
+      // 末尾隐藏 MK/事务前追加的换行只是技术分隔符，不是正文变化。
+      // 仅规范末个可见片段的行尾；正文内部换行、空格和报告边界仍参与比较。
+      const story = index === visible.length - 1 ? segment.text.replace(/[\r\n]+$/u, '') : segment.text;
+      return ['story', story];
+    }),
+  );
   let hash = 0x811c9dc5;
   for (let index = 0; index < text.length; index += 1) {
     hash ^= text.charCodeAt(index);
@@ -192,7 +219,7 @@ function createProjectedBlock(
   const summary = hostDocument.createElement('summary');
   summary.textContent = segment.label ?? 'ERA 技术报告';
   const content = hostDocument.createElement('pre');
-  content.textContent = segment.text;
+  content.textContent = formatEraReportForDisplay(segment.text);
   details.append(summary, content);
   return details;
 }
@@ -241,7 +268,7 @@ function projectDisplayedMessage(messageId: number): void {
   const root = retrieveDisplayedMessage(messageId).get(0);
   if (!root) return;
   if (isDisplayedMessageBeingEdited(root)) return;
-  const fingerprint = sourceFingerprint(rawMessage);
+  const fingerprint = eraTechnicalDisplaySource(projection);
   if (
     root.dataset.eraProjectionVersion === DISPLAY_PROJECTION_VERSION &&
     root.dataset.eraProjectionSource === fingerprint &&
@@ -382,7 +409,12 @@ export function registerEraTechnicalBlockProjection(): () => void {
   eventMakeLast(tavern_events.CHAT_CHANGED, allMessagesHandler);
 
   const promptHandler = (generateData: { prompt: SillyTavern.SendingMessage[] }) => {
-    if (Array.isArray(generateData.prompt)) generateData.prompt = projectEraPromptMessages(generateData.prompt);
+    if (!Array.isArray(generateData.prompt)) return;
+    const snapshot = readActiveSidecarRuntimeSnapshot();
+    const macroSnapshot = createEraMacroSnapshot(
+      snapshot && currentTavernIdentityMatches(snapshot) ? snapshot.statData : {},
+    );
+    generateData.prompt = projectEraPromptMessages(generateData.prompt, macroSnapshot);
   };
   eventMakeLast(tavern_events.GENERATE_AFTER_DATA, promptHandler);
 

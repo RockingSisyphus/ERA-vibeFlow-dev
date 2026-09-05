@@ -1,0 +1,13 @@
+{
+  "name": "@era/vibeflow-floor-snapshot",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./index.js"
+    }
+  },
+  "files": ["index.js", "index.d.ts"],
+  "sideEffects": false
+}

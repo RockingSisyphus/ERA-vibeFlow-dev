@@ -3,7 +3,7 @@
   "type_key": "era.sync.build_commit",
   "display_name": "构造同步逻辑提交",
   "category": "同步事务",
-  "description": "把提交工作项转换为消息先行、变量后置的有序请求；无提交工作项原样穿过。",
+  "description": "把逻辑结果、稳定楼层身份和 Agent 候选转换为 canonical 消息与 Sidecar 的提交 V2；同一消息只写一次。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

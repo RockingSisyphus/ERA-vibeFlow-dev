@@ -4,20 +4,11 @@
 
 'use strict';
 
+import _ from 'lodash';
 import { Logger } from './log';
+import { transformEraData } from './era-data-transform';
 
 const logger = new Logger();
-
-const ESCAPE_MAP: { [key: string]: string } = {
-  '.': '__DOT__',
-  '"': '__DQUOTE__',
-  "'": '__SQUOTE__',
-};
-
-const UNESCAPE_MAP: { [key: string]: string } = _.invert(ESCAPE_MAP);
-
-const escapeRegex = new RegExp(Object.keys(ESCAPE_MAP).map(_.escapeRegExp).join('|'), 'g');
-const unescapeRegex = new RegExp(Object.values(ESCAPE_MAP).map(_.escapeRegExp).join('|'), 'g');
 
 /**
  * 递归地转义对象或数组中所有字符串值和键的特殊字符。
@@ -25,23 +16,7 @@ const unescapeRegex = new RegExp(Object.values(ESCAPE_MAP).map(_.escapeRegExp).j
  * @returns - 转义后的数据。
  */
 export function escapeEraData<T>(data: T): T {
-  if (Array.isArray(data)) {
-    return data.map(item => escapeEraData(item)) as any;
-  }
-  if (_.isPlainObject(data)) {
-    const newObj: { [key: string]: any } = {};
-    for (const key in data) {
-      if (Object.prototype.hasOwnProperty.call(data, key)) {
-        const escapedKey = key.replace(escapeRegex, match => ESCAPE_MAP[match]);
-        newObj[escapedKey] = escapeEraData((data as any)[key]);
-      }
-    }
-    return newObj as any;
-  }
-  if (typeof data === 'string') {
-    return data.replace(escapeRegex, match => ESCAPE_MAP[match]) as any;
-  }
-  return data;
+  return transformEraData(data, 'escape');
 }
 
 /**
@@ -50,23 +25,7 @@ export function escapeEraData<T>(data: T): T {
  * @returns - 反转义后的数据。
  */
 export function unescapeEraData<T>(data: T): T {
-  if (Array.isArray(data)) {
-    return data.map(item => unescapeEraData(item)) as any;
-  }
-  if (_.isPlainObject(data)) {
-    const newObj: { [key: string]: any } = {};
-    for (const key in data) {
-      if (Object.prototype.hasOwnProperty.call(data, key)) {
-        const unescapedKey = key.replace(unescapeRegex, match => UNESCAPE_MAP[match]);
-        newObj[unescapedKey] = unescapeEraData((data as any)[key]);
-      }
-    }
-    return newObj as any;
-  }
-  if (typeof data === 'string') {
-    return data.replace(unescapeRegex, match => UNESCAPE_MAP[match]) as any;
-  }
-  return data;
+  return transformEraData(data, 'unescape');
 }
 
 /**

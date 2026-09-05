@@ -702,6 +702,8 @@ function parse_configuration(entry: Entry, is_release = false): (_env: any, argv
       if (
         request === '@era/vibeflow-expression' ||
         request.startsWith('@era/vibeflow-expression/') ||
+        request === '@era/vibeflow-floor-snapshot' ||
+        request.startsWith('@era/vibeflow-floor-snapshot/') ||
         request === 'mathjs' ||
         request.startsWith('mathjs/') ||
         request === '@stdlib/math-base-special-gamma' ||

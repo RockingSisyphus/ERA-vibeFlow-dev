@@ -1,6 +1,7 @@
 import {
   cloneEraPortableJsonV1,
   isEraDispatchContextV2,
+  isEraDispatchContextV3,
   isEraTavernMessageContextV2,
   type EraApiTaskV1,
   type EraFailureV1,
@@ -34,6 +35,7 @@ function isOperationName(value: string): value is OperationName {
 
 interface ScopeWindowState {
   readonly token: number | null;
+  readonly messageId: number | null;
   readonly messageAdmission: boolean | null;
   readonly branchAdmission: boolean | null;
 }
@@ -91,6 +93,39 @@ function latestAi(messages: ReturnType<typeof messagesFrom>) {
     if (message.role !== "user") return message;
   }
   throw new Error("当前聊天没有可供 ERA.commit 写入的 AI 消息。");
+}
+
+function targetAi(
+  messages: ReturnType<typeof messagesFrom>,
+  request: ApiRequest,
+  identity: unknown,
+): { readonly message: ReturnType<typeof latestAi>; readonly sourceInvalid: boolean } {
+  if (!Object.prototype.hasOwnProperty.call(request.detail, "sourceContext")) {
+    return { message: latestAi(messages), sourceInvalid: false };
+  }
+  const verified = isRecord(identity) && isRecord(identity.statusbarSource)
+    ? identity.statusbarSource
+    : null;
+  const requested = request.detail.sourceContext;
+  if (!verified || !isRecord(requested)) {
+    return { message: latestAi(messages), sourceInvalid: true };
+  }
+  const exact = [
+    "kind",
+    "pageEpoch",
+    "instanceId",
+    "characterId",
+    "groupId",
+    "chatId",
+    "messageId",
+    "mk",
+    "swipeId",
+    "iframeName",
+  ].every((key) => verified[key] === requested[key]);
+  const message = messages.find((candidate) => candidate.messageId === verified.messageId && candidate.role !== "user");
+  return message && exact
+    ? { message, sourceInvalid: false }
+    : { message: latestAi(messages), sourceInvalid: true };
 }
 
 function hasScopeMarker(text: string, code: "m" | "b"): boolean {
@@ -178,17 +213,27 @@ export function inspectWindow(
 ) {
   const request = requireRequest(rawRequest);
   const messages = messagesFrom(rawMessages);
-  const latest = latestAi(messages);
+  const targeted = targetAi(messages, request, identity);
+  const prepared = request.dispatchContext;
+  const preparedMessage =
+    isEraDispatchContextV3(prepared) &&
+    prepared.processingMessage?.messageId === targeted.message.messageId
+      ? prepared.processingMessage
+      : null;
+  const latest = preparedMessage === null
+    ? targeted.message
+    : { ...targeted.message, activeText: preparedMessage.activeText };
   const token = readLifecycleToken(identity);
-  const previous = executionState.nextState.scopeWindow;
-  const window: ScopeWindowState = previous.token === token
+  const previous = executionState.nextState.scopeWindow as ScopeWindowState;
+  const window: ScopeWindowState = previous.token === token && previous.messageId === latest.messageId
     ? previous
     : {
         token,
+        messageId: latest.messageId,
         messageAdmission: !hasScopeMarker(latest.activeText, "m"),
         branchAdmission: !messages.some((message) => hasScopeMarker(message.activeText, "b")),
       };
-  return { request, executionState, identity, messages, latest, window };
+  return { request, executionState, identity, messages, latest, window, sourceInvalid: targeted.sourceInvalid };
 }
 
 function normalizeScope(value: unknown): FacadeScope | null {
@@ -218,6 +263,17 @@ export function validateCommit(inspected: unknown) {
   if (!isRecord(inspected)) throw new TypeError("窗口读取上下文损坏。");
   const request = requireRequest(inspected.request);
   try {
+    if (inspected.sourceInvalid === true) {
+      return {
+        route: "failed",
+        context: inspected,
+        error: failure(
+          "ERA_API_STATUSBAR_SOURCE_INVALID",
+          "状态栏来源楼层、Swipe 或页面实例已经失效。",
+          "cancelled",
+        ),
+      };
+    }
     const requestedToken = request.detail.windowToken;
     const currentToken = readLifecycleToken(inspected.identity);
     if (!Number.isSafeInteger(requestedToken) || Number(requestedToken) !== currentToken) {
@@ -277,13 +333,23 @@ export function buildAppend(transaction: unknown) {
       content,
       refresh: "none",
       purpose: "era-facade-commit",
+      projectTechnicalBlocks: false,
     },
   };
 }
 
 export function recheckWindow(append: unknown, currentIdentity: unknown) {
   if (!isRecord(append)) throw new TypeError("窗口复核缺少追加计划。");
-  return sameIdentity(append.identity, currentIdentity)
+  const request = isRecord(append.request) ? requireRequest(append.request) : null;
+  const sourceRequested = request && Object.prototype.hasOwnProperty.call(request.detail, "sourceContext");
+  const currentSource = isRecord(currentIdentity) ? currentIdentity.statusbarSource : null;
+  const sourceCurrent = !sourceRequested || (
+    isRecord(request!.detail.sourceContext) &&
+    isRecord(currentSource) &&
+    ["kind", "pageEpoch", "instanceId", "characterId", "groupId", "chatId", "messageId", "mk", "swipeId", "iframeName"]
+      .every((key) => (request!.detail.sourceContext as Record<string, unknown>)[key] === currentSource[key])
+  );
+  return sameIdentity(append.identity, currentIdentity) && sourceCurrent
     ? { route: "current", context: append }
     : {
         route: "changed",
@@ -303,14 +369,37 @@ export function verifyCommitted(appendResult: unknown, rawMessages: unknown) {
     if (matches.length !== 1 || matches[0]!.activeText !== context.committedContent) {
       return { route: "failed", context, error: failure("ERA_API_MESSAGE_READBACK_MISMATCH", "era_tx 回读文本与写入计划不一致。", "tavern") };
     }
-    if (!isEraDispatchContextV2(context.request && isRecord(context.request) ? context.request.dispatchContext : null)) {
+    const originalDispatch = context.request && isRecord(context.request)
+      ? context.request.dispatchContext
+      : null;
+    if (!isEraDispatchContextV2(originalDispatch) && !isEraDispatchContextV3(originalDispatch)) {
       return { route: "failed", context, error: failure("ERA_API_DISPATCH_CONTEXT_INVALID", "原始派发上下文损坏。", "domain") };
     }
     const dispatchContext = {
-      ...(context.request as Record<string, unknown>).dispatchContext as Record<string, unknown>,
+      ...originalDispatch,
       messages: cloneEraPortableJsonV1(messages),
+      ...(isEraDispatchContextV3(originalDispatch)
+        ? {
+            processingMessage:
+              originalDispatch.processingMessage?.messageId === context.messageId
+                ? {
+                    ...originalDispatch.processingMessage,
+                    activeText: context.committedContent,
+                  }
+                : originalDispatch.processingMessage,
+            stagedMessageUpdates: [
+              ...originalDispatch.stagedMessageUpdates.filter(
+                (update) => update.messageId !== context.messageId,
+              ),
+              {
+                messageId: Number(context.messageId),
+                content: String(context.committedContent),
+              },
+            ],
+          }
+        : {}),
     };
-    if (!isEraDispatchContextV2(dispatchContext)) {
+    if (!isEraDispatchContextV2(dispatchContext) && !isEraDispatchContextV3(dispatchContext)) {
       return { route: "failed", context, error: failure("ERA_API_DISPATCH_CONTEXT_INVALID", "提交后消息无法形成同步上下文。", "domain") };
     }
     return { route: "sync", context: { ...context, messages, dispatchContext } };

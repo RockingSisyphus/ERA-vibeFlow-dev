@@ -26,8 +26,12 @@ class FakeTavernEvents {
 
   only(type: string): EventHandler {
     const handlers = [...(this.listeners.get(type) ?? [])];
-    if (handlers.length !== 1) throw new Error(`事件 ${type} 的监听数不是 1。`);
+    if (handlers.length !== 1) throw new Error(`事件 ${type} 的监听数不是 1（实际 ${handlers.length}）。`);
     return handlers[0];
+  }
+
+  count(type: string): number {
+    return this.listeners.get(type)?.size ?? 0;
   }
 }
 
@@ -70,6 +74,8 @@ describe('重新生成的宏与生成栅栏', () => {
     vi.stubGlobal('eventRemoveListener', (type: string, handler: EventHandler) => events.remove(type, handler));
     vi.stubGlobal('getButtonEvent', (name: string) => `era-button:${name}`);
     vi.stubGlobal('getCurrentCharacterId', () => 'barrier-card');
+    vi.stubGlobal('getCurrentCharacterName', () => 'barrier-character');
+    vi.stubGlobal('getScriptId', () => 'era-regenerate-barrier-test');
     vi.stubGlobal('SillyTavern', {
       groupId: null,
       getCurrentChatId: () => 'barrier-chat',
@@ -146,6 +152,7 @@ describe('重新生成的宏与生成栅栏', () => {
   it('重新生成路径只提供 generation_started 时，仍必须在宏读取前回退到上一楼变量', async () => {
     // ST-Harness 当前 regenerate 完成合同观察 generation_started、message_received、generation_ended。
     // 这里重放缺少 message_swiped 的入口，防止 ERA 把回退错误地限定为 overswipe 组合。
+    await vi.waitFor(() => expect(events.count('generation_started')).toBe(1));
     const regenerate = events.only('generation_started');
     const barrier = regenerate('regenerate', { automatic_trigger: false }, false);
 
@@ -153,7 +160,12 @@ describe('重新生成的宏与生成栅栏', () => {
     await barrier;
 
     expect(replaceMacro).not.toBeNull();
-    expect(replaceMacro?.({}, '{{ERA:generation_value}}')).toBe('上一楼的变量');
+    const token = replaceMacro?.({}, '{{ERA:generation_value}}') ?? '';
+    const [{ resolveEraLazyMacroTokens }, { readCurrentEraMacroSnapshot }] = await Promise.all([
+      import('../../src/ERA变量框架/macro/syntax'),
+      import('../../src/ERA变量框架/macro/registration'),
+    ]);
+    expect(resolveEraLazyMacroTokens(token, readCurrentEraMacroSnapshot())).toBe('上一楼的变量');
     expect(chatVariables.stat_data).toBeUndefined();
   });
 });

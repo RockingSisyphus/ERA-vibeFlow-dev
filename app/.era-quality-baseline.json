@@ -457,13 +457,6 @@
     },
     {
       "debt": 1,
-      "fingerprint": "004a4bb2fe6ddd015f6b853b649dcf0670ed71d01ee6fd0d7165820331841917",
-      "objectId": "src/ERA变量框架/utils/data#function:escapeEraData",
-      "ruleId": "COMMENT_CRITICAL_DOC_RATIONALE",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
       "fingerprint": "d03314b2a2a2c6f25cebba984d88834587d24941815fb9a5d75e51ba1dcc060f",
       "objectId": "src/ERA变量框架/utils/data#function:parseJsonl",
       "ruleId": "COMMENT_CRITICAL_DOC_RATIONALE",
@@ -473,20 +466,6 @@
       "debt": 1,
       "fingerprint": "5859e8ab5115f1cb1518b7cac74ceb2cfd86152a6fabfb2b8c35adcc0d364d04",
       "objectId": "src/ERA变量框架/utils/data#function:sanitizeArrays",
-      "ruleId": "COMMENT_CRITICAL_DOC_RATIONALE",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "50c31a92a67d81cd4f327d54c7ffacd33fd539899b04cafddc8538ebc5172b9d",
-      "objectId": "src/ERA变量框架/utils/data#function:unescapeEraData",
-      "ruleId": "COMMENT_CRITICAL_DOC_RATIONALE",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "8b59dfbcf12189142b7e3a4e03fa237cd73120300c9045ca257df56a7d1f9275",
-      "objectId": "src/ERA变量框架/utils/era_data#function:removeMetaFields",
       "ruleId": "COMMENT_CRITICAL_DOC_RATIONALE",
       "severity": "warning"
     },
@@ -1178,13 +1157,6 @@
     },
     {
       "debt": 1,
-      "fingerprint": "3a61607c6fc837f42cae31c382a15c294cb925b51c700852baf5b88fe0a00248",
-      "objectId": "src/ERA变量框架/utils/data",
-      "ruleId": "COMMENT_MODULE_DOC",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
       "fingerprint": "083dc2bc4bcb314714198f8fda3d91814e60c9f8bca07be7fb3e73f0444635c2",
       "objectId": "src/ERA变量框架/utils/log",
       "ruleId": "COMMENT_MODULE_DOC",
@@ -1628,20 +1600,6 @@
       "debt": 1,
       "fingerprint": "2ca58be6ffede54b35ac2bc0ebd08c91eb1bb8d0b90b9b1d39012834e321ed71",
       "objectId": "src/ERA变量框架/ui/components/RightRailContent/ActionButtons#function:onLastSync",
-      "ruleId": "STRUCT_DUPLICATE_FUNCTION",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "9df603c61f810745d3c8c1cce350fc435e874a01fe4098ec2b74438c53b17df0",
-      "objectId": "src/ERA变量框架/utils/data#function:escapeEraData",
-      "ruleId": "STRUCT_DUPLICATE_FUNCTION",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "a72d7f5584a7e69f13156b7deee408a3c8679b7f0ad096e29285d03c24d16eef",
-      "objectId": "src/ERA变量框架/utils/data#function:unescapeEraData",
       "ruleId": "STRUCT_DUPLICATE_FUNCTION",
       "severity": "warning"
     },

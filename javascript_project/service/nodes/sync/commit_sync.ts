@@ -93,12 +93,17 @@ export async function run(
 
   const request = envelope.request;
   let confirmedMessageWrites = 0;
-  for (const write of request.messageWrites) {
+  if (request.messageWrites.length > 0) {
     let response: unknown;
     try {
       response = await context.capabilities["era.tavern.messages"].update_content({
-        messageId: write.messageId,
-        content: write.content,
+        updates: request.messageWrites.map((write) => ({
+          message_id: write.messageId,
+          message: write.content,
+          ...(write.extra === undefined ? {} : { extra: write.extra }),
+        })),
+        refresh: "none",
+        projectTechnicalBlocks: false,
         purpose: "era-sync",
       });
     } catch (error) {
@@ -132,7 +137,7 @@ export async function run(
         ) as unknown as Readonly<Record<string, unknown>>,
       };
     }
-    confirmedMessageWrites += 1;
+    confirmedMessageWrites = request.messageWrites.length;
   }
 
   let stateResponse: unknown;

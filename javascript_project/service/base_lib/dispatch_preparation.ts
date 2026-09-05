@@ -1,7 +1,7 @@
 import {
   isEraTavernMessageContextV2,
   type EraDispatchClassV1,
-  type EraDispatchContextV2,
+  type EraDispatchContextV3,
   type EraFailureV1,
   type EraTavernMessageV1,
 } from "@era/vibeflow-contracts";
@@ -25,6 +25,7 @@ export interface DispatchCanonicalContextV1 {
   readonly seed: DispatchSeedV1;
   readonly status: "ready" | "failed";
   readonly messages: readonly EraTavernMessageV1[];
+  readonly identity: Readonly<Record<string, unknown>>;
   readonly meta: Readonly<Record<string, unknown>>;
   readonly placeholder: { readonly enabled: boolean; readonly value: string };
   readonly failure: EraFailureV1 | null;
@@ -35,6 +36,7 @@ export interface DispatchPreparationPlanV1 {
   readonly seed: DispatchSeedV1;
   readonly status: "ready" | "failed";
   readonly messages: readonly EraTavernMessageV1[];
+  readonly identity: Readonly<Record<string, unknown>>;
   readonly processingMessage: EraTavernMessageV1 | null;
   readonly processingMk: string | null;
   readonly messageUpdate: null | {
@@ -144,6 +146,7 @@ export function buildNoHostOutcome(
     seed,
     status: "ready",
     messages: [],
+    identity: {},
     processingMessage: null,
     processingMk: null,
     messageUpdate: null,
@@ -161,6 +164,7 @@ export function canonicalDispatchContext(
   messagesRaw: unknown,
   chatVariablesRaw: unknown,
   scriptVariablesRaw: unknown,
+  identityRaw: unknown = {},
 ): DispatchCanonicalContextV1 {
   try {
     const messagesValue = unwrap(messagesRaw);
@@ -171,6 +175,7 @@ export function canonicalDispatchContext(
     }
     const chatVariables = variablesRecord(chatVariablesRaw);
     const scriptVariables = variablesRecord(scriptVariablesRaw);
+    const identity = isRecord(identityRaw) ? cloneMkValue(identityRaw) : {};
     const metaCandidate = chatVariables.ERAMetaData ?? chatVariables.meta ?? {};
     if (!isRecord(metaCandidate)) throw new TypeError("ERAMetaData 不是对象。");
     return {
@@ -178,6 +183,7 @@ export function canonicalDispatchContext(
       seed,
       status: "ready",
       messages: cloneMkValue(messagesValue.messages),
+      identity,
       meta: cloneMkValue(metaCandidate),
       placeholder: {
         enabled:
@@ -197,6 +203,7 @@ export function canonicalDispatchContext(
       seed,
       status: "failed",
       messages: [],
+      identity: {},
       meta: {},
       placeholder: { enabled: true, value: DEFAULT_PLACEHOLDER },
       failure: failure(
@@ -217,6 +224,7 @@ export function planDispatchPreparation(
       seed: context.seed,
       status: "failed",
       messages: [],
+      identity: context.identity,
       processingMessage: null,
       processingMk: null,
       messageUpdate: null,
@@ -228,11 +236,30 @@ export function planDispatchPreparation(
   }
   const latest = context.messages.at(-1) ?? null;
   if (latest === null) {
+    // 同步任务必须能把“最后一条消息已删除”结算为明确空状态。
+    // 生成、MK 更新与 API 写入仍要求真实目标消息，不能借此绕过身份边界。
+    if (context.seed.dispatchClass === "sync") {
+      return {
+        schemaVersion: 1,
+        seed: context.seed,
+        status: "ready",
+        messages: [],
+        identity: context.identity,
+        processingMessage: null,
+        processingMk: null,
+        messageUpdate: null,
+        metaUpdate: context.meta,
+        messageWriteRequired: false,
+        variableWriteRequired: false,
+        failure: null,
+      };
+    }
     return {
       schemaVersion: 1,
       seed: context.seed,
       status: "failed",
       messages: context.messages,
+      identity: context.identity,
       processingMessage: null,
       processingMk: null,
       messageUpdate: null,
@@ -252,6 +279,7 @@ export function planDispatchPreparation(
       seed: context.seed,
       status: "ready",
       messages: context.messages,
+      identity: context.identity,
       processingMessage: latest,
       processingMk: null,
       messageUpdate: null,
@@ -281,6 +309,7 @@ export function planDispatchPreparation(
       seed: context.seed,
       status: "failed",
       messages: context.messages,
+      identity: context.identity,
       processingMessage: latest,
       processingMk: null,
       messageUpdate: null,
@@ -328,6 +357,7 @@ export function planDispatchPreparation(
     seed: context.seed,
     status: "ready",
     messages,
+    identity: context.identity,
     processingMessage: preparedLatest,
     processingMk: ensured.mk,
     messageUpdate:
@@ -349,9 +379,30 @@ export function preserveDispatchPreparation(
 
 export function dispatchContextOf(
   outcome: DispatchPreparationOutcomeV1,
-): EraDispatchContextV2 {
+): EraDispatchContextV3 {
+  const primary = outcome.seed.step.kind === "execute"
+    ? outcome.seed.step.task.primaryEvent
+    : null;
+  const chatId = typeof outcome.identity.chatId === "string" && outcome.identity.chatId.length > 0
+    ? outcome.identity.chatId
+    : "unknown-chat";
+  const generationCycleIdentity = primary === null
+    ? null
+    : {
+        chatId,
+        eventId: primary.eventId,
+        sourceKey: `${chatId}:agent:${primary.sequence}`,
+      };
+  const floorIdentity = outcome.processingMessage !== null && outcome.processingMk !== null
+    ? {
+        chatId,
+        messageId: outcome.processingMessage.messageId,
+        swipeId: outcome.processingMessage.swipeIndex ?? 0,
+        mk: outcome.processingMk,
+      }
+    : null;
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     status: outcome.status,
     dispatchClass: outcome.seed.dispatchClass,
     requirement: outcome.seed.requirement,
@@ -361,5 +412,9 @@ export function dispatchContextOf(
     messageChanged: outcome.messageChanged,
     variablesChanged: outcome.variablesChanged,
     failure: outcome.failure,
+    generationCycleIdentity,
+    floorIdentity,
+    stagedMessageUpdates: outcome.messageUpdate === null ? [] : [outcome.messageUpdate],
+    agentFloorCandidate: null,
   };
 }

@@ -29,8 +29,8 @@ import {
   withoutButtonInputEvents,
 } from './tavern-browser-host';
 import { refreshDisplayedEraTechnicalBlocks, registerEraTechnicalBlockProjection } from './technical-block-projection';
-import { registerEraPresentationRefresh } from './presentation-refresh';
 import { createCharacterGreetingAdapter } from './character-greeting-adapter';
+import { verifyEraStatusbarCommitSource } from './statusbar-runtime';
 
 const logger = new Logger();
 
@@ -232,7 +232,6 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
     this.accepting = true;
     const registrations: RegisteredListener[] = [];
     const stopTechnicalProjection = registerEraTechnicalBlockProjection();
-    const stopPresentationRefresh = registerEraPresentationRefresh();
 
     const registeredTypes = new Set<string>();
     /** 统一记录卸载句柄，并在登记失败时按原顺序完整回收。 */
@@ -290,7 +289,6 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
         throw new Error(`ERA 生产监听数量应为 ${ERA_TAVERN_LISTENER_COUNT}，实际为 ${registrations.length}。`);
       }
     } catch (error) {
-      stopPresentationRefresh();
       stopTechnicalProjection();
       for (const registration of registrations) {
         eventRemoveListener(registration.eventType, registration.handler);
@@ -306,7 +304,6 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
       stopped = true;
       this.accepting = false;
       this.agentHost.stop();
-      stopPresentationRefresh();
       stopTechnicalProjection();
       for (const registration of registrations) {
         eventRemoveListener(registration.eventType, registration.handler);
@@ -396,7 +393,7 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
     ): Promise<unknown> => {
       throwIfAborted(context.signal);
       const affectedMessageIds = await updateEraMessageContent(input, this.internalMessageWrites);
-      refreshDisplayedEraTechnicalBlocks(affectedMessageIds);
+      if (input.projectTechnicalBlocks !== false) refreshDisplayedEraTechnicalBlocks(affectedMessageIds);
       throwIfAborted(context.signal);
       return { status: 'committed' };
     },
@@ -503,9 +500,9 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
 
   readonly identity = {
     /** 为了让工作流统一处理单角色、群聊和无角色场景，必须一次返回完整宿主身份快照。 */
-    read: (_input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown => {
+    read: (input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown => {
       throwIfAborted(context.signal);
-      return clonePortable({
+      const identity: Record<string, unknown> = {
         characterName: getCurrentCharacterName(),
         // characterId 必须使用 Tavern Helper 的稳定角色卡头像 ID；SillyTavern
         // 导出的当前索引会随切卡/聊天切换变化，不能作为 Sidecar 绑定主键。
@@ -515,7 +512,11 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
         chatId: SillyTavern.getCurrentChatId(),
         scriptId: getScriptId(),
         lifecycleToken: this.lifecycleToken,
-      });
+      };
+      if (Object.prototype.hasOwnProperty.call(input, 'sourceContext')) {
+        identity.statusbarSource = verifyEraStatusbarCommitSource(input.sourceContext);
+      }
+      return clonePortable(identity);
     },
   };
 

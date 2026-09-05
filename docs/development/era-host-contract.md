@@ -34,6 +34,32 @@ Sidecar V3 用户文件中。Tavern adapter/Host 只提供当前身份、聊天�
 重新生成、swipe、编辑等场景的组合与回退目标属于 Service planner。修复此类问题应先补覆盖真实
 事件序列的回归测试，再修改领域 planner；不在 macro、UI 或 adapter 增加延迟/重试型补丁。
 
+## 托管状态栏生命周期
+
+快速初始化生成的 V2 状态栏由 Host 生命周期管理。每次 iframe 挂载时，Host 必须以 Helper
+报告的 messageId、iframe 名称、父消息 DOM、当前 Swipe、消息 MK、`SelectedMks` 和
+Sidecar 身份共同求证楼层；任何一项暂时未就绪时保持 loading，不得回退到最新楼状态。
+
+托管状态栏由 Tavern Helper 原生渲染；ERA 同步安装 pending 楼层 Facade，等待 DOM、
+身份和快照后，只解析自有宏绑定并解除 `data-era-statusbar-root` 的 hidden/inert。
+作者依赖数据的脚本使用 `await ERA.ready()`，ERA 不复制模板、清空 body、移动 CSS
+或重放脚本。规划与结算报告只对显示副本缩进和展开已知 response JSON，原消息保持不变。历史快照由
+`era.snapshot.query` 按日志计算，不持久化逐楼完整状态。默认只激活最近 3 个含托管状态栏的
+AI 楼层和一个 UI 临时指定楼层；范围外使用 placeholder、empty 或 hidden 合同。
+
+iframe 内安装的局部 Facade 使 `ERA.get/ready/subscribe/commit` 自动采用所在楼语义，顶层
+Facade 保持活动分支 latest 语义。状态栏 commit 的来源 messageId/MK/Swipe 由 Host 附加并由
+Service 再核对，作者不能通过公开 options 伪造。Sidecar 更新后只向现有 iframe 推送新投影，
+不得通过刷新消息或重建 iframe 更新状态栏。
+
+挂载去重以当前 Document 为生命周期单位，而非可跨导航保留的 WindowProxy；iframe reload
+必须同步重装 pending Facade。技术投影的显示失效只比较可见正文和报告，隐藏的 API 事务
+追加不会使下一次 DOM mutation 重建消息。末个可见正文与隐藏 MK/事务之间新增的行尾换行
+只作技术分隔，不参与显示失效；正文内部换行、Markdown 空格和报告内容仍参与比较。
+报告可读性由独立纯格式器负责，不改变审计原文。
+
+作者用法见 [ERA 托管状态栏作者指南](ERA%E6%89%98%E7%AE%A1%E7%8A%B6%E6%80%81%E6%A0%8F%E4%BD%9C%E8%80%85%E6%8C%87%E5%8D%97.md)。
+
 ## 公共 ABI
 
 以下内容的变更须单独审查、更新文档并有合同测试：

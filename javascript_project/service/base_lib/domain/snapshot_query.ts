@@ -6,6 +6,11 @@
  */
 
 import { cloneEraPortableJsonV1 } from "@era/vibeflow-contracts";
+export {
+  projectFloorSnapshot,
+  projectFloorSnapshots,
+  type EraFloorSnapshot,
+} from "@era/vibeflow-floor-snapshot";
 
 export type EraSnapshotQueryType =
   | "getCurrentVars"

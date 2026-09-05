@@ -4,10 +4,13 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 let registerEraMacro: typeof import('../../src/ERA变量框架/macro/registration').registerEraMacro;
 let publishSidecarRuntimeSnapshot: typeof import('../../src/ERA变量框架/service/sidecar-runtime-snapshot').publishSidecarRuntimeSnapshot;
 let clearSidecarRuntimeSnapshot: typeof import('../../src/ERA变量框架/service/sidecar-runtime-snapshot').clearSidecarRuntimeSnapshot;
+let resolveEraLazyMacroTokens: typeof import('../../src/ERA变量框架/macro/syntax').resolveEraLazyMacroTokens;
+let createEraMacroSnapshot: typeof import('../../src/ERA变量框架/macro/registration').createEraMacroSnapshot;
 
 beforeAll(async () => {
   vi.stubGlobal('_', _);
-  ({ registerEraMacro } = await import('../../src/ERA变量框架/macro/registration'));
+  ({ registerEraMacro, createEraMacroSnapshot } = await import('../../src/ERA变量框架/macro/registration'));
+  ({ resolveEraLazyMacroTokens } = await import('../../src/ERA变量框架/macro/syntax'));
   ({ publishSidecarRuntimeSnapshot, clearSidecarRuntimeSnapshot } =
     await import('../../src/ERA变量框架/service/sidecar-runtime-snapshot'));
 });
@@ -27,7 +30,7 @@ beforeEach(() => {
 });
 
 describe('Macro AOT Tavern 同步适配器', () => {
-  it('每次回调只读取一次状态并立即返回字符串', () => {
+  it('同步回调只产生惰性 token，由绑定楼层的状态在显示前解析', () => {
     let callback: ((context: MacroLikeContext, substring: string) => string) | undefined;
     const unregister = vi.fn();
     const register = vi.fn((_regex: RegExp, replacement: typeof callback) => {
@@ -39,7 +42,8 @@ describe('Macro AOT Tavern 同步适配器', () => {
     const stop = registerEraMacro();
     const result = callback?.({ role: 'assistant' }, '{{ERA:character.hp}}');
 
-    expect(result).toBe('7');
+    expect(result).toMatch(/^__ERA_LAZY_MACRO_V2_/u);
+    expect(resolveEraLazyMacroTokens(result ?? '', createEraMacroSnapshot({ character: { hp: 3 } }))).toBe('3');
     expect(result).not.toBeInstanceOf(Promise);
     stop();
     stop();

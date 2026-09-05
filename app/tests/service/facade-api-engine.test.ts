@@ -63,6 +63,21 @@ function request(scope: unknown = 'message', operations: unknown = [{ edit: { ti
   };
 }
 
+function statusbarSource(messageId = 0) {
+  return {
+    kind: 'managed-statusbar-v2',
+    pageEpoch: 'page-1',
+    instanceId: 'instance-1',
+    characterId: 'character.png',
+    groupId: null,
+    chatId: 'chat-1',
+    messageId,
+    mk: `mk-${messageId}`,
+    swipeId: 0,
+    iframeName: `TH-message--${messageId}--0`,
+  };
+}
+
 describe('ERA 即时 Scope Facade 纯领域链', () => {
   it('每次调用只生成一个短 era_tx，保留六类操作的原始顺序', () => {
     const inspected = inspectWindow(
@@ -96,7 +111,7 @@ describe('ERA 即时 Scope Facade 纯领域链', () => {
 
     const sameWindow = inspectWindow(
       request(),
-      execution({ token: 7, messageAdmission: true, branchAdmission: true }),
+      execution({ token: 7, messageId: 1, messageAdmission: true, branchAdmission: true }),
       identity,
       messages('正文\n<era_tx s="m"><VariableEdit>{"a":2}</VariableEdit></era_tx>'),
     );
@@ -135,6 +150,29 @@ describe('ERA 即时 Scope Facade 纯领域链', () => {
     expect(recheckWindow(append, { ...identity, lifecycleToken: 8 })).toMatchObject({
       route: 'changed',
       error: { code: 'ERA_API_WINDOW_CHANGED' },
+    });
+  });
+
+  it('托管状态栏提交精确写入来源历史楼，来源失效时不回退最新楼', () => {
+    const source = statusbarSource(0);
+    const fromFloor = request() as any;
+    fromFloor.detail.sourceContext = source;
+    const inspected = inspectWindow(
+      fromFloor,
+      execution(),
+      { ...identity, statusbarSource: source },
+      messages('末楼', '历史楼'),
+    );
+    const validated = validateCommit(inspected) as any;
+    expect(validated).toMatchObject({ route: 'commit', context: { latest: { messageId: 0, activeText: '历史楼' } } });
+    expect(buildAppend(buildTransaction(validated.context))).toMatchObject({
+      messageId: 0,
+      capabilityInput: { messageId: 0, refresh: 'none', projectTechnicalBlocks: false },
+    });
+
+    expect(validateCommit(inspectWindow(fromFloor, execution(), identity, messages('末楼', '历史楼')))).toMatchObject({
+      route: 'failed',
+      error: { code: 'ERA_API_STATUSBAR_SOURCE_INVALID' },
     });
   });
 

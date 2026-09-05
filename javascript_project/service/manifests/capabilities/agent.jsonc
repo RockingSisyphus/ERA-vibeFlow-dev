@@ -3,7 +3,7 @@
   "id": "era.tavern.agent",
   "targets": ["browser"],
   "display_name": "ERA 多阶段生成宿主 I/O",
-  "description": "只执行 Service 已声明的角色卡、页面会话、独立模型请求、一次性注入和消息机械操作；不决定阶段、重试、函数或变量语义。",
+  "description": "只执行 Service 已声明的角色卡、页面会话、独立模型请求、一次性注入与规划失败消息；最终楼层消息由同步事务提交。",
   "operations": {
     "read_context": {"input_type": "era.agent.host.request", "output_type": "era.agent.host.result", "completion": "suspend"},
     "write_configuration": {"input_type": "era.agent.host.request", "output_type": "era.agent.host.result", "completion": "suspend"},
@@ -19,7 +19,6 @@
     "inject_once": {"input_type": "era.agent.host.request", "output_type": "era.agent.host.result", "completion": "immediate"},
     "write_session": {"input_type": "era.agent.host.request", "output_type": "era.agent.host.result", "completion": "immediate"},
     "clear_session": {"input_type": "era.agent.host.request", "output_type": "era.agent.host.result", "completion": "immediate"},
-    "write_message": {"input_type": "era.agent.host.request", "output_type": "era.agent.host.result", "completion": "suspend"},
     "create_error_message": {"input_type": "era.agent.host.request", "output_type": "era.agent.host.result", "completion": "suspend"},
     "stop_native_generation": {"input_type": "era.agent.host.request", "output_type": "era.agent.host.result", "completion": "immediate"}
   }

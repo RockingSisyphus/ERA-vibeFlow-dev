@@ -10,7 +10,7 @@
       "status": "implemented",
       "enabled": true,
       "display_name": "ERA 酒馆服务宿主",
-      "description": "连接 SillyTavern 与 Tavern Helper，管理单一先进先出队列、回执、高水位屏障、绝对截止时间定时器、宿主引用和出站帧幂等，并提供服务端口、Agent 独立请求、酒馆能力、角色主开场白读写、Sidecar 机械接线与分阶段启动闸门；生命周期登记幂等消息显示投影与 GENERATE_AFTER_DATA 最后提示投影，并在权威设置提交后刷新 UI 设置、在成功发布新运行时快照后按设置只刷新最近消息的显示。一般投影和设置刷新只改变 DOM 或本次出站副本，不改消息、Sidecar 或历史输入；快速初始化的主开场白写入以真实 avatar 更新 first_messages[0]，并只在当前聊天为空或恰好一条未污染主开场白时刷新该首楼，已有多楼、编辑/污染、备用开场白和群聊保持原样。消息读取仍按 era-active-message-v1 投影，Host 不承载 Agent 重试、函数、CRUD、同步、合并、回滚或身份判定规则。",
+      "description": "连接 SillyTavern 与 Tavern Helper，管理单一先进先出队列、回执、高水位屏障、绝对截止时间定时器、宿主引用和出站帧幂等，并提供服务端口、Agent 独立请求、酒馆能力、角色主开场白读写、Sidecar 机械接线与分阶段启动闸门；planned 生命周期将把尚未发布的托管 template 激活器替换为状态栏 iframe 绑定器：Tavern Helper 独占作者 HTML、CSS 与脚本的解释和渲染，ERA 只从当前页面、父消息、Swipe MK、SelectedMks 与 Sidecar 求证楼层身份，按需调用唯一 era.snapshot.query 计算有限活动楼层投影，并为既有 DOM 安装惰性宏与按楼 get/ready/subscribe/commit。状态发布只原地更新 ERA 自有绑定，不复制模板、不清空 body、不重放作者脚本。提示投影仍只改变本次出站副本；技术报告的可读格式只存在显示 DOM，原始消息保持不变。Host 不保存逐楼快照，也不承载 Agent 重试、函数、CRUD、同步、合并或回滚规则。",
       "category": "宿主接线",
       "version": "0.1.0",
       "targets": [
@@ -91,8 +91,8 @@
       {
         "id": "activate_tavern_ingress",
         "type_used": "era.installation.scope.activate_ingress",
-        "display_name": "登记 Tavern 事件入口",
-        "description": "仅 allow 时调用启动期 Host 的机械 activate 操作，登记既有 TavernEraServiceAdapter ingress；随后复用原有初始化与永久循环。"
+        "display_name": "绑定 Tavern 原生渲染的按楼状态栏",
+        "description": "仅 allow 时登记既有 Tavern ingress；App 启动期安装 iframe 绑定生命周期。Tavern Helper 原样解析作者 HTML、CSS 与脚本，ERA 只同步安装 pending 楼层 Facade、求证 messageId/Swipe/MK/Sidecar、计算有限历史投影、解析 ERA 自有宏绑定并在就绪后显示作者根节点；不得复制模板、替换 body 或重新执行作者脚本。"
       },
       {
         "id": "publish_dormant_startup",

@@ -1,8 +1,8 @@
-import { getEraData, removeMetaFields } from '../utils/era_data';
+import { getEraData } from '../utils/era_data';
 import { unescapeEraData } from '../utils/data';
+import { removeMetaFields } from '../utils/meta-fields';
 import { Logger } from '../utils/log';
-import { createEraMacroRegex, type EraMacroSnapshot } from './syntax';
-import { runEraMacroWorkflow } from './vibeflow-adapter';
+import { createEraLazyMacroToken, createEraMacroRegex, type EraMacroSnapshot } from './syntax';
 
 const logger = new Logger('MacroRegistration');
 
@@ -38,13 +38,7 @@ export function readCurrentEraMacroSnapshot(): EraMacroSnapshot {
  */
 export function registerEraMacro(): () => void {
   const macroRegex = createEraMacroRegex();
-  const { unregister } = registerMacroLike(macroRegex, (_context, substring) => {
-    const storedStat = getEraData().stat;
-    return runEraMacroWorkflow(substring, {
-      kind: 'present',
-      value: storedStat,
-    });
-  });
+  const { unregister } = registerMacroLike(macroRegex, (_context, substring) => createEraLazyMacroToken(substring));
 
   let registered = true;
   logger.log('registerEraMacro', '已通过酒馆助手注册 ERA 宏。');

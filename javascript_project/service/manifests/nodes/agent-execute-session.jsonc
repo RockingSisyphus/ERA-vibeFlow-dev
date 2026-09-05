@@ -3,7 +3,7 @@
   "type_key": "era.agent.execute_session_v2",
   "display_name": "执行 AgentGenerationSession V2 阶段",
   "category": "故事生成会话",
-  "description": "由 Service 决定配置、阶段、重试、严格解析、函数执行、故事隔离、变量试应用和消息组合；Host 仅执行声明式 I/O。",
+  "description": "由 Service 决定配置、阶段、重试、严格解析、函数执行、故事隔离、变量试应用和最终楼层候选；Agent Host 不直接写最终消息。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
@@ -15,6 +15,6 @@
     "output_semantics": {"agent_transition":["输出：阶段副作用完成后的显式委托或直接结算路由。"],"agent_execution_state":["输出：未经修改的当前批次执行状态。"]}
   },
   "implementations": [{"language":"typescript","targets":["browser"],"completion":"suspend","source":{"kind":"file","ref":"nodes/agent/execute_generation_session.ts","export":"run"}}],
-  "base_libs": ["era.service.agent_generation_session", "era.service.types"],
-  "capabilities": [{"id":"era.tavern.agent","operations":["write_configuration","capture_preset","read_configuration_sources","upsert_connection_profile","delete_connection_profile","clear_connection_profile_key","list_connection_models","list_connection_models_draft","generate","generate_story","inject_once","write_session","clear_session","write_message","create_error_message","stop_native_generation"]}]
+  "base_libs": ["era.service.agent_generation_session", "era.service.mk_engine", "era.service.types"],
+  "capabilities": [{"id":"era.tavern.agent","operations":["write_configuration","capture_preset","read_configuration_sources","upsert_connection_profile","delete_connection_profile","clear_connection_profile_key","list_connection_models","list_connection_models_draft","generate","generate_story","inject_once","write_session","clear_session","create_error_message","stop_native_generation"]}]
 }

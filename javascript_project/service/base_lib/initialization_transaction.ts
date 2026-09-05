@@ -39,7 +39,7 @@ export interface InitializationPlanV1 {
   readonly step: PlannedStepV1;
   readonly operation: "startup" | "resources" | "settings-update";
   readonly disposition: "ready" | "failed";
-  readonly greetingStatus: "not-applicable" | "created" | "unchanged" | "skipped" | "conflict";
+  readonly greetingStatus: "not-applicable" | "created" | "unchanged" | "skipped";
   readonly actions: readonly InitializationActionV1[];
   readonly diagnostics: readonly Readonly<Record<string, unknown>>[];
   readonly failure: Readonly<Record<string, unknown>> | null;
@@ -224,24 +224,6 @@ export function planInitialization(context: InitializationContextV1): Initializa
           : null,
     });
     greetingStatus = greetingPlan.status;
-    if (greetingPlan.status === "conflict") {
-      const failure = {
-        code: "ERA_DEMO_GREETING_CONFLICT",
-        message: greetingPlan.reason,
-        category: "domain",
-        retryable: false,
-      };
-      return {
-        schemaVersion: 1,
-        step: context.step,
-        operation: task.operation,
-        disposition: "failed",
-        greetingStatus,
-        actions: [],
-        diagnostics: [...diagnostics, diagnostic(failure.code, failure.message)],
-        failure,
-      };
-    }
     if (greetingPlan.status === "created") {
       actions.push({ kind: "update-main-greeting", expected: greetingPlan.expected, next: greetingPlan.next });
     } else {

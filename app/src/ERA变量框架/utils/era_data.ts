@@ -4,10 +4,10 @@
 
 'use strict';
 
-import _ from 'lodash';
 import { SettingsSchema, EraConfig } from './constants';
 import { ref, readonly, DeepReadonly, Ref } from 'vue';
 import { readSidecarRuntimeSnapshot } from '../service/sidecar-runtime-snapshot';
+import { removeMetaFields as removeMetaFieldsPure } from './meta-fields';
 
 declare function getScriptId(): string;
 
@@ -43,34 +43,7 @@ export function initEraSettings() {
  * @returns {any} 一个不包含 `$` 前缀字段的新对象或原始值。
  */
 export function removeMetaFields(obj: any): any {
-  // 对于非对象类型，直接返回原始值
-  if (!_.isObject(obj)) {
-    return obj;
-  }
-
-  // 创建深拷贝以避免修改原始对象
-  const newObj = _.cloneDeep(obj);
-
-  function recurse(current: any) {
-    if (Array.isArray(current)) {
-      // 如果是数组，则递归处理数组中的每个元素
-      current.forEach(item => recurse(item));
-    } else if (_.isPlainObject(current)) {
-      // 如果是纯粹的对象，遍历其所有键
-      for (const key in current) {
-        // 如果键以 '$' 开头，则删除该属性
-        if (key.startsWith('$')) {
-          delete current[key];
-        } else {
-          // 否则，递归处理该属性的值
-          recurse(current[key]);
-        }
-      }
-    }
-  }
-
-  recurse(newObj);
-  return newObj;
+  return removeMetaFieldsPure(obj);
 }
 
 /**

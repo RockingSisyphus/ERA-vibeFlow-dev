@@ -19,11 +19,16 @@
       {
         "id":"execute_agent_phase_v2",
         "type_used":"era.agent.execute_session_v2",
-        "display_name":"执行可恢复的多阶段连接保存与模型路由",
-        "description":"在现有 AgentGenerationSession 内先验证全部尝试和共享方案冲突，再协调本机方案创建或更新、方案 ID 绑定和角色卡写入；成功后返回权威方案摘要，角色卡写入失败时保留已创建方案供恢复。草稿与已保存方案分别枚举模型，失败或空列表不覆盖当前选择。"
+        "display_name":"生成稳定 MK 的最终楼层候选",
+        "description":"在唯一 AgentGenerationSession 内继续执行多阶段配置、规划、故事和结算；规划沿用 generation sourceKey，真实 assistant 楼层出现后绑定唯一 EraFloorIdentity。节点只构造 EraAgentFloorCandidateV1，不再通过 Agent Host 直接写消息。"
       },
       {"id":"route_agent_transition","type_used":"era.agent.route_transition","display_name":"路由阶段结果","description":"决定直接结算还是恢复原任务。"},
-      {"id":"adapt_legacy_step","type_used":"era.agent.adapt_legacy_step","display_name":"恢复原任务","description":"把 Agent 外层步骤恢复为原 sync 或 update-mk。"},
+      {
+        "id":"adapt_legacy_step",
+        "type_used":"era.agent.adapt_legacy_step",
+        "display_name":"把最终楼层候选交给唯一同步事务",
+        "description":"把默认模式或 Agent 最终楼层候选恢复为原 sync/update-mk 路由；故事完成、结算成功、结算耗尽和 UI 手动重试都携带同一个楼层 MK 进入同步，不存在第二条消息提交路径。"
+      },
       {"id":"legacy_sync","type_used":"era.task.sync","display_name":"复用原同步任务","description":"故事组合后或默认模式下执行既有 Sidecar、表达式、压缩和历史同步。"},
       {"id":"legacy_update_mk","type_used":"era.task.update_mk","display_name":"复用原 MK 任务","description":"规划注入后保持既有 message_sent MK 语义。"},
       {"id":"build_direct_result","type_used":"era.agent.build_result","display_name":"构造直接结果","description":"结算设置、生成栅栏、失败或默认 ignore。"},

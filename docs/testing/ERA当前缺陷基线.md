@@ -4,181 +4,150 @@
 >
 > 基线日期：2026-09-03
 >
-> 证据范围：ERA-Test-Pack 真实 SillyTavern 细则、综合回归、用户人工审核与隔离生命周期探针
+> 证据版本：ERA `099115b344e3f47c7997ecc8aeb73b59a00b81e7`；统一调查 run
+> `st-run-20260903T07250307-633d4b6a2209`；loader/context 可行性 run
+> `st-run-20260903T10004306-6f12a86f4e5e`
 
-## 1. 使用规则
+## 1. 文档边界
 
-本文只登记仍可复现、尚未完成产品修复验收的 ERA 缺陷。测试系统缺陷、已经修复的
-产品问题、明确不支持的功能和只有旧 Artifact 的候选，不进入“当前缺陷”计数。
+本文只保留开放缺陷、用户表现、已确认根因、验收条件和调查入口，不重复事件全文或源码
+摘录：
 
-其他文档的职责固定为：
+- [ERA 状态栏事件时序证据](../development/ERA%E7%8A%B6%E6%80%81%E6%A0%8F%E4%BA%8B%E4%BB%B6%E6%97%B6%E5%BA%8F%E8%AF%81%E6%8D%AE.md)：真实 run、逐动作时间线和实际值；
+- [SillyTavern 与 Tavern Helper 状态栏执行链](../development/SillyTavern%E4%B8%8ETavernHelper%E7%8A%B6%E6%80%81%E6%A0%8F%E6%89%A7%E8%A1%8C%E9%93%BE.md)：宿主源码与 ERA 调用链；
+- [ERA 状态栏根因与重构备选方案](../development/ERA%E7%8A%B6%E6%80%81%E6%A0%8F%E6%A0%B9%E5%9B%A0%E4%B8%8E%E9%87%8D%E6%9E%84%E5%A4%87%E9%80%89%E6%96%B9%E6%A1%88.md)：根因归并、ERA 自有接入层、固定显示窗口和按需历史方案；
+- [ERA 产品问题台账](ERA%E4%BA%A7%E5%93%81%E9%97%AE%E9%A2%98%E5%8F%B0%E8%B4%A6.md)：已修复、已排除和历史问题；
+- [ERA API 生命周期与幂等策略调查](../development/ERA-API-%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F%E4%B8%8E%E5%B9%82%E7%AD%89%E7%AD%96%E7%95%A5%E8%B0%83%E6%9F%A5.md)：早期自激探针和历史设计资料。
 
-- [`ERA产品问题台账.md`](ERA产品问题台账.md) 保存历史问题的修复与排除记录；
-- [`../development/ERA-API-生命周期与幂等策略调查.md`](../development/ERA-API-生命周期与幂等策略调查.md)
-  保存 API 自激问题的机制、实验方法和候选修复设计；
-- ERA-Test-Pack 的 `docs/test-runs/**` 保存各次运行当时的原始事实，不回写为当前状态；
-- 当前缺陷是否仍然开放、多个表现是否属于同一根因、下一次修复的验收条件，只在本文维护。
+当前共有 **3 个开放根因域、6 种用户可见表现或作者能力缺口**。
 
-截至本基线，ERA 有 **3 个开放根因域、5 种用户可见表现**。
+## 2. 总览
 
-## 2. 开放缺陷总览
+| ID | 根因域 | 用户表现/能力缺口 | 优先级 |
+| --- | --- | --- | --- |
+| `ERA-PROD-005` | 楼层身份、按需历史解析与首帧就绪分裂 | 快速初始化首帧为空；新聊天多楼错位；旧聊天 reload/重启恢复错误 | P0 |
+| `ERA-PROD-006` | 状态栏写入缺少来源楼层与 effect 身份 | 历史楼操作写到最新楼；iframe 重建后自动脚本重复写入 | P0 |
+| `ERA-PROD-007` | 空消息历史被实现为保留旧状态的 no-op | 消息删至零条后 Sidecar 仍保留已删除首楼产生的状态 | P1 |
 
-| ID | 根因域 | 优先级 | 已确认的用户可见表现 | 当前状态 |
-| --- | --- | --- | --- | --- |
-| `ERA-PROD-005` | 状态栏楼层身份、快照就绪与 iframe 生命周期 | P0 | 快速初始化首帧为空；新聊天多楼错位；旧聊天恢复失败 | confirmed |
-| `ERA-PROD-006` | 消息前端 ERA 写 API 缺少业务 effect/因果幂等身份 | P0 | iframe 回写消息后自我重建并重复执行写操作 | confirmed |
-| `ERA-PROD-007` | 删空聊天后的 Sidecar 终态未与空消息历史收敛 | P1 | 消息已经删至零条，Sidecar 仍保留 `era_demo` | confirmed |
+## 3. ERA-PROD-005：状态栏读取与恢复
 
-## 3. ERA-PROD-005：状态栏读取与恢复时序
+### 用户应当看到
 
-### 3.1 公开语义
+- `{{ERA:path}}` 与 `{{ERA-withmeta:path}}` 在状态栏第一次可见时就显示该状态栏所在
+  AI 楼的快照；
+- `ERA.get()` 在普通脚本和 ERA UI 中继续显示当前活动分支最新状态；在 ERA 状态栏中则
+  自动显示该状态栏所在楼的变量、函数、MK 和 revision，不要求作者传 messageId；
+- `ERA.subscribe()` 在普通脚本中保持当前活动分支最新状态语义，在状态栏局部 facade 中订阅
+  该楼投影，以便 API 写入后不重建 iframe 即可实时更新；
+- reload、切聊天/角色、真实重启、Swipe 和历史编辑后语义不变。
 
-状态栏中的读取方式不是同义接口：
+### 当前实际表现
 
-- `{{ERA:path}}` 和 `{{ERA-withmeta:path}}` 应显示状态栏所在消息楼层的快照；
-- `ERA.history.atMessage(currentMessageId)` 应返回所在楼层的变量、函数、MK 和消息身份；
-- `ERA.get()` 和 `ERA.subscribe()` 应显示当前活动分支的最新状态，即使调用它们的是历史楼状态栏。
+- 快速初始化首个 iframe 已 complete 时，macro/withmeta 为空，history 尚未就绪，
+  但 get/subscribe 已能读到 HP 12；
+- 三楼应为 `12/14/16` 时，首楼宏为空，最新楼宏可停在 `14`，而三楼 get/subscribe
+  都正确为最新 `16`；
+- reload 或真实 ST 重启后可以恢复全部 iframe，但宏可能仍是字面量、history
+  `ERA_STATE_NOT_READY`，最新楼 history 也可能没有快照。
 
-测试不能用 `ERA.get()` 的最新值证明历史宏正确，也不能用 history API 替代普通宏。
+### 已确认根因
 
-### 3.2 表现 A：快速初始化首帧读取为空
+- ERA 只有单个 latest active snapshot，显示层没有把现有日志回放能力包装成按楼、按需且有界的 resolver；
+- ERA 宏忽略 context，宏刷新用同一个最新 snapshot 更新所有楼；
+- Tavern Helper 当前消息宏渲染没有传 messageId；
+- 业务快照 ready、消息 DOM ready 和 iframe ready 没有共同 barrier；
+- 多个组件整体替换 `.mes_text`，导致楼层显示实例反复重建。
 
-用户操作：在只有纯净角色首楼的聊天中点击“ERA 快速初始化”，不编辑消息、不 reload、
-不开启强制重载，直接查看首次创建的示例状态栏。
+可行性探针已经证明 ERA 可用不可见 loader 将作者逻辑和首帧延后，并从 iframe 内取得楼层
+身份；它尚未成为产品实现，因而不改变本缺陷的开放状态。
 
-预期行为：第一个 `readyState=complete` 的状态栏 iframe 就应显示
-`era_demo.player.hp=12`；宏、withmeta、get、subscribe 和 history 分别满足上述公开语义。
+### 验收条件
 
-实际行为：严格自动测试观察到 iframe 已完成加载，`ERA.get()` 与 `ERA.subscribe()` 已读到
-HP `12`，但普通宏和 withmeta 宏为空，`ERA.history.atMessage()` 的 HP 为 `undefined`。
-只要编辑消息或刷新显示使 iframe 重建，后创建的实例通常就能读取正确状态。
+- 首个 iframe 不经编辑、reload 或延迟碰运气即可读到正确楼层；
+- 多楼与所有生命周期边界中，macro/history 和状态栏内 get/subscribe 按楼，状态栏外
+  get/subscribe 按最新；
+- 显示更新不重建整条消息或 iframe；
+- 默认只显示最近 3 个带状态栏的 AI 楼层；滚动不激活更老楼层，范围外默认显示 ERA 占位，
+  UI 可临时指定一个旧楼显示；
+- 不依赖强制重载，旧角色卡宏仍兼容。
 
-正式证据：
+## 4. ERA-PROD-006：状态栏写入错位与自激
 
-- detail `STATUSBAR-EXAMPLE-037`，run `st-run-20260903T05364823-155693fa3b24`；
-- integrated owner `INT-STATUSBAR-01-G77DF05AC`，run
-  `st-run-20260903T05384101-74435348014b`；
-- 两个 run 均为 1/1 完整录制、7 actions、Artifact audit `consistent/complete`，required
-  evaluator 均因同一组宏/history 严格断言失败。
+### 用户应当得到
 
-这组自动证据取代早期仅来自用户人工审核的 `ERA-CAND-004` 候选状态；该表现现已确认。
+- 状态栏中的简易写 API 默认写回状态栏所在 AI 消息；
+- 历史楼写入后从该楼开始顺序重算后续楼；
+- 写入结果实时显示，但显示更新不重新执行 load 脚本；
+- 两次明确点击同一操作仍执行两次。
 
-### 3.3 表现 B：新聊天多楼状态栏错位
+### 当前实际表现
 
-用户操作：快速初始化后连续生成多楼，让首楼、中间楼和最新楼的 HP 分别为 `12`、`14`、
-`16`，然后查看三个状态栏。
+- 历史 message 0 状态栏的 commit receipt 实际返回 `messageId=2`，即写到最新 AI 楼；
+- 已有有界探针观察到一次 load 写入使 iframe 重建，5 次 load 产生 3 次真实消息写入，
+  Sidecar 计数 `0→1→2→3`；
+- 强制重载会增加 iframe load 数，从而放大自动脚本的执行机会。
 
-预期行为：三个楼层的宏/history 分别显示 `12/14/16`，三个楼层中的 get/subscribe 都显示
-当前活动分支最新值 `16`。
+### 已确认根因
 
-实际行为：`STATUSBAR-EXAMPLE-025` 中首楼宏为空且 history 初始化为
-`ERA_STATE_NOT_READY`，最新楼宏仍停留在上一楼的 `14`；同一现场的 `ERA.get()` 能正确显示
-最新值 `16`，中间楼 history 也能正确显示 `14`。因此问题不是整个 ERA 状态丢失，而是不同
-状态栏实例在不同就绪时点取得了不一致的楼层投影。
+- `ERA.commit()` 不携带来源楼层，Service 固定选择 latest；
+- DOM 重建与业务 effect 没有分层；
+- ERA 的 internal-message-write 识别只防 Service 同步重入，不能识别跨 iframe 的同一
+  业务 effect；
+- payload 相同不能用于去重，因为两次明确用户操作可能完全相同。
 
-### 3.4 表现 C：旧聊天 reload 或重启后状态栏恢复失败
+### 验收条件
 
-用户操作：在已有多楼聊天中 reload 页面，或真正重启 SillyTavern 后重新进入同一聊天。
+- 由 ERA 在状态栏 iframe 内注入 context-bound facade，使 `ERA.get()`/`ERA.commit()` 自动使用
+  所在楼身份；状态栏外仍保持现有 latest 语义；
+- 默认最近 3 楼采用有界按需历史解析，范围外只有用户指定或声明式强制时才激活；
+- 一次用户意图在 iframe 重建后不重放，两次用户意图仍结算两次；
+- 历史楼写入目标、消息历史、Sidecar、日志和后续楼重算一致；
+- 不以强制重载或测试加载预算作为产品修复。
 
-预期行为：每个旧消息楼层都重新创建且完成状态栏投影，宏/history 保持各楼历史值，
-get/subscribe 显示最新活动状态。
+## 5. ERA-PROD-007：空聊天 Sidecar 残留
 
-实际行为：可能只恢复一个本应为三个的 iframe；已出现的 iframe 也可能尚未具备 ERA 状态。
-宏可能为空或保留 `{{ERA:...}}` 字面量，`ERA.get()` 可显示 `[undefined]`，history 可返回
-`ERA_STATE_NOT_READY`。同一次运行仍能读取原消息和最新 Sidecar，因此这不是聊天数据丢失。
+### 用户操作与实际表现
 
-对应严格细则为 `STATUSBAR-EXAMPLE-034`，完整综合回归
-`st-run-20260902T08360947-c0523cb9813a` 也保留了同一产品失败。
+真实删除链已到达 `afterMessageCount=0`，但 Sidecar 仍保留完整 `era_demo`。这里确认的是
+ERA 可到达的零消息终态，不扩大解释为所有 SillyTavern 版本都允许直接删除固定开场白。
 
-### 3.5 当前根因边界
+### 已确认根因
 
-三个表现共同指向“消息楼层身份、Sidecar/public snapshot 发布、同步宏求值和 Tavern Helper
-消息 iframe 一次性启动”之间缺少统一就绪合同。现有证据已经足以确认产品行为错误，但尚未用
-单一事件探针把所有宿主事件收窄成唯一先后序列，因此不能把某一个事件监听器提前或延后直接写成
-已确认根因。
+同步领域在 `messages.length===0` 时显式返回 no-op，并克隆旧 stat/statFunc/meta；因此
+旧状态不会被结算为空。
 
-“强制重载功能”不是修复：它在较晚时点重建 iframe，所以能部分掩盖空值或错位；但重建也会
-重新运行状态栏脚本，可能放大 `ERA-PROD-006`。用户不应为了获得正确首帧而必须编辑消息、
-reload 或开启强制重载。
+### 验收条件
 
-### 3.6 修复验收
+零消息、reload、full sync 和重新进入聊天后，Sidecar、stat、statFunc、SelectedMks、
+EditLog 和 FunctionEditLog 同时为空，并生成可审计的 committed terminal receipt。
 
-- 快速初始化的首个 iframe 在任何人为刷新前即通过 `STATUSBAR-EXAMPLE-037`；
-- 新聊天多楼、页面 reload、切回旧聊天和真实 SillyTavern 重启后，各楼宏/history 与
-  get/subscribe 均满足各自语义；
-- 修复不修改原消息、Sidecar 历史或活动分支选择；
-- 不依赖通用强制重载，也不因定向重建重复执行状态栏业务写入；
-- 细则、对应 integrated owner 和受影响状态栏专项均以独立 Artifact 通过。
+## 6. 强制重载的结论
 
-## 4. ERA-PROD-006：消息前端写 API 自激重放
+强制重载不是修复。它只是稍后重建最近 N 楼，使纯读 iframe 偶尔赶上已发布状态；同时
+它也会重跑 load 脚本，放大 `ERA-PROD-006`。后续重构必须删除该运行能力和消息数设置，
+旧配置只作兼容读取后移除或忽略，不得改名继续承担定向重绘职责。
 
-用户场景：角色作者在消息状态栏的加载脚本中调用 ERA 写 API，例如收到 `writeDone` 后把计数
-加一。作者脚本在每个 iframe 实例中只主动调用一次。
+## 7. 统一调查结果
 
-实际链路：
+独立 run `st-run-20260903T07250307-633d4b6a2209` 固定 1 worker：
 
-```text
-消息 iframe 加载
-  → 状态栏调用 ERA 写 API
-  → ERA 向末尾 AI 消息追加 Variable/Function 命令
-  → Tavern Helper 因 MESSAGE_UPDATED 重建该消息 iframe
-  → 新 iframe 再次运行加载脚本并再次写入
-```
+- 12/12 selected/recorded，171 actions，全部路径终态；
+- required evaluations 12/12 有结果；
+- 8 passed，4 个严格产品 finding；
+- Artifact audit `consistent/complete`；
+- 无测试执行或基础设施异常。
 
-隔离探针 `st-run-20260824T08090481-f1c09178614c` 使用外部上限避免失控，仍观察到同一楼
-iframe 加载 5 次、执行 3 次写入、消息中出现 3 个重复 `<VariableEdit>`，Sidecar 计数
-`0→1→2→3`。没有探针上限时，当前 ERA 没有产品级自动停止条件。
+四个失败是 `STATUSBAR-EXAMPLE-037`、`025`、`034` 和 `UI-DEL-007`，分别对应
+P005 首帧、多楼、旧聊天与 P007 空终态。P006 的错误路由由通过的 lifecycle 路径
+`STATUSBAR-EXAMPLE-023` 中的真实 receipt 直接证明；“passed”只表示该路径原合同完成，
+不表示新的作者体验合同已经满足。
 
-这不是简单的 payload 重复：相同 payload 也可能代表两次合法调用。当前缺失的是可跨 iframe
-重建保持的业务 effect key、调用策略和根因果周期身份。示例状态栏测试模式预占加载预算只保护
-该测试示例，不修复用户自定义状态栏和通用 ERA API。
+## 8. 不属于当前开放缺陷
 
-修复验收必须同时满足：
+Swipe 停止生成、非法消息 ID、320px 溢出、多阶段技术块投影计数、关闭悬浮球、点号键、
+PNG/WAV 等旧问题已修复或排除，见历史台账。综合层中曾出现但 detail diagnose 证明为
+Pack 累计 oracle、共享状态或证据重绑定错误的失败，也不能登记为 ERA 产品缺陷。
 
-- 旧 API 继续保持“每次明确调用都执行”的兼容语义；
-- 新的幂等/effect 合同能区分合法重复与同一因果周期的意外重放；
-- API 回写引起的 iframe 重建不会把一次业务 effect 变成多次；
-- message、branch、always、编辑、Swipe、reload 和 full replay 后的执行账本与消息历史一致。
-
-详细机制和候选设计见
-[`ERA-API-生命周期与幂等策略调查.md`](../development/ERA-API-生命周期与幂等策略调查.md)。
-
-## 5. ERA-PROD-007：删空聊天后 Sidecar 残留
-
-用户场景：快速初始化后，使用真实删除链把当前聊天删除至零条消息。承载初始化
-`<VariableInsert>` 的首楼也已经不在当前消息历史中。
-
-预期行为：ERA 根据空消息历史完成同步后，Sidecar 不再保留只能由已删除首楼产生的
-`era_demo` 状态。
-
-实际行为：`UI-DEL-007` 已记录 `afterMessageCount=0`，但 Sidecar 仍保留完整 `era_demo`。
-该细则在独立复测和 294-owner 完整综合回归中均保持严格失败；同组其他删除测试均通过。
-
-范围说明：不同 SillyTavern 版本或普通菜单未必允许用户直接删除固定主开场白。本缺陷确认的是
-ERA-Test-Pack 已能通过真实宿主删除链到达的“零消息聊天”终态一致性，不把它扩大解释成所有常规
-单楼删除都会残留。
-
-修复验收：删除至零消息、reload、full sync 和重新进入聊天后，消息历史、SelectedMks、
-EditLog、FunctionEditLog 与 Sidecar 同时收敛；普通删除、批量删除和保留首楼的路径不得回退。
-
-## 6. 当前没有证据支持的额外缺陷
-
-以下旧失败已修复或排除，不计入当前缺陷：
-
-- Swipe 后停止生成仍停留旧 Swipe；
-- 非法消息 ID/rollback ID 穿透 UI；
-- 320px 移动端面板横向溢出；
-- 多阶段技术块 DOM 投影计数为零；
-- 关闭悬浮球仍挂载 UI；
-- Swipe 删除不同步、Regenerate 后变量为空、点号键、PNG/WAV 生成等旧失败。
-
-这些项目的历史原因和验证入口保留在 [`ERA产品问题台账.md`](ERA产品问题台账.md)。完整综合
-回归中曾出现的 API、Insert/Edit/Delete、顺序、数组和消息来源 owner 失败，已由 detail diagnose
-证明是 Pack 累计 oracle、共享状态或证据重绑定错误，不能列为 ERA 产品缺陷。
-
-## 7. 后续维护
-
-修复任一开放问题时，必须在本文记录根因、产品提交、受影响接口、定点细则、综合 owner、run ID、
-required evaluation 和 Artifact audit。只有产品测试与真实酒馆测试都通过后，才能把条目移入
-历史台账并从本文的开放总览删除；不得通过 xfail、inconclusive、改变公开语义或拼接多个 Artifact
-获得“已修复”结论。
+修复完成后，只有独立产品测试、对应 detail、integrated owner 与 Artifact audit 全部闭环，
+才能把条目从本文移入历史台账；不得用 xfail、inconclusive、改变公开语义或拼接 Artifact
+获得“已修复”。

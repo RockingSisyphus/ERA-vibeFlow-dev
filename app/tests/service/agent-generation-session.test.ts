@@ -46,6 +46,49 @@ async function runAgentSessionNode(
   );
 }
 
+function floorDispatchContext(input: {
+  chatId: string;
+  messageId: number;
+  activeText: string;
+  eventId: string;
+  sequence: number;
+  mk?: string;
+}) {
+  const mk = input.mk ?? `era_mk_floor_${input.messageId}`;
+  const message = {
+    schemaVersion: 1,
+    messageId: input.messageId,
+    role: 'assistant',
+    activeText: input.activeText,
+    swipeIndex: 0,
+  } as const;
+  return {
+    schemaVersion: 3,
+    status: 'ready',
+    dispatchClass: 'sync',
+    requirement: 'latest-message-with-mk',
+    messages: [message],
+    processingMessage: message,
+    processingMk: mk,
+    messageChanged: false,
+    variablesChanged: false,
+    failure: null,
+    generationCycleIdentity: {
+      chatId: input.chatId,
+      eventId: input.eventId,
+      sourceKey: `${input.chatId}:agent:${input.sequence}`,
+    },
+    floorIdentity: {
+      chatId: input.chatId,
+      messageId: input.messageId,
+      swipeId: 0,
+      mk,
+    },
+    stagedMessageUpdates: [],
+    agentFloorCandidate: null,
+  } as const;
+}
+
 describe('AgentGenerationSession pure contracts', () => {
   it('keeps legacy cards disabled and bounds retry profiles', () => {
     expect(normalizeAgentConfiguration(undefined)).toMatchObject({
@@ -514,10 +557,9 @@ describe('AgentGenerationSession pure contracts', () => {
   });
 
   it('hands the planning-only composed message to legacy sync instead of its stale dispatch snapshot', async () => {
-    const writeMessage = vi.fn(async () => ({ status: 'committed' }));
     const planReport = '<era_plan>{"storyPlan":{"scene":"baseline"},"calls":[]}</era_plan>';
     const story = '<VariableInsert><era_data>{"error_007":{"value":1}}</era_data></VariableInsert>';
-    const composed = `${planReport}\n${story}`;
+    const eventId = 'event-planning-only-message-received';
     const result = await runAgentSessionNode(
       {
         'era.step.request.routed': {
@@ -527,17 +569,19 @@ describe('AgentGenerationSession pure contracts', () => {
             task: {
               kind: 'sync',
               primaryEvent: {
-                eventId: 'event-planning-only-message-received',
+                eventId,
                 sequence: 11,
                 type: 'message_received',
                 args: [],
               },
             },
-            dispatchContext: {
-              status: 'ready',
-              messages: [{ messageId: 4, activeText: story }],
-              processingMessage: { messageId: 4, activeText: story },
-            },
+            dispatchContext: floorDispatchContext({
+              chatId: 'chat-agent-planning-only',
+              messageId: 4,
+              activeText: story,
+              eventId,
+              sequence: 11,
+            }),
           },
         },
         'era.batch.execution.state': { value: { schemaVersion: 1 } },
@@ -560,23 +604,44 @@ describe('AgentGenerationSession pure contracts', () => {
                 cycleIndex: 0,
                 planReport,
               },
-              latestMessage: { message_id: 4, role: 'assistant', message: story, extra: {} },
+              latestMessage: {
+                message_id: 4,
+                role: 'assistant',
+                message: story,
+                extra: { api: 'openai', transientHostField: undefined },
+              },
             })),
-            write_message: writeMessage,
             write_session: vi.fn(() => ({ status: 'committed' })),
           } as never,
         },
       },
     );
 
-    expect(writeMessage).toHaveBeenCalledWith(expect.objectContaining({ messageId: 4, message: composed }));
+    const candidate = (
+      result.agent_transition as {
+        step: {
+          dispatchContext: {
+            agentFloorCandidate: { content: string; mk: string; extra: Record<string, unknown> };
+          };
+        };
+      }
+    ).step.dispatchContext.agentFloorCandidate;
+    expect(candidate.content).toContain(planReport);
+    expect(candidate.content).toContain('<VariableInsert></VariableInsert>');
+    expect(extractEraMessageKey(candidate.content)).toBe(candidate.mk);
+    expect(candidate.extra).toEqual({
+      era_agent: { schemaVersion: 1, status: 'story-complete', cycleIndex: 0 },
+    });
     expect(result.agent_transition).toMatchObject({
       mode: 'execute-legacy',
       status: 'committed',
       step: {
         dispatchContext: {
-          messages: [{ messageId: 4, activeText: composed }],
-          processingMessage: { messageId: 4, activeText: composed },
+          agentFloorCandidate: {
+            messageId: 4,
+            terminalStatus: 'story-complete',
+            requiresInitialPresentation: true,
+          },
         },
       },
     });
@@ -584,9 +649,9 @@ describe('AgentGenerationSession pure contracts', () => {
 
   it('finishes the active cycle with its frozen configuration after the character switches stages', async () => {
     const generate = vi.fn();
-    const writeMessage = vi.fn(async () => ({ status: 'committed' }));
     const planReport = '<era_plan>{"storyPlan":{"scene":"frozen"},"calls":[]}</era_plan>';
     const story = 'the already generated story';
+    const eventId = 'event-frozen-cycle-message-received';
     const result = await runAgentSessionNode(
       {
         'era.step.request.routed': {
@@ -596,12 +661,19 @@ describe('AgentGenerationSession pure contracts', () => {
             task: {
               kind: 'sync',
               primaryEvent: {
-                eventId: 'event-frozen-cycle-message-received',
+                eventId,
                 sequence: 12,
                 type: 'message_received',
                 args: [],
               },
             },
+            dispatchContext: floorDispatchContext({
+              chatId: 'chat-agent-frozen',
+              messageId: 6,
+              activeText: story,
+              eventId,
+              sequence: 12,
+            }),
           },
         },
         'era.batch.execution.state': { value: { schemaVersion: 1 } },
@@ -632,7 +704,6 @@ describe('AgentGenerationSession pure contracts', () => {
               latestMessage: { message_id: 6, role: 'assistant', message: story, extra: {} },
             })),
             generate,
-            write_message: writeMessage,
             write_session: vi.fn(() => ({ status: 'committed' })),
           } as never,
         },
@@ -640,14 +711,23 @@ describe('AgentGenerationSession pure contracts', () => {
     );
 
     expect(generate).not.toHaveBeenCalled();
-    expect(writeMessage).toHaveBeenCalledWith(
-      expect.objectContaining({ messageId: 6, message: `${planReport}\n${story}` }),
-    );
-    expect(result.agent_transition).toMatchObject({ mode: 'execute-legacy', status: 'committed' });
+    expect(result.agent_transition).toMatchObject({
+      mode: 'execute-legacy',
+      status: 'committed',
+      step: {
+        dispatchContext: {
+          agentFloorCandidate: {
+            messageId: 6,
+            terminalStatus: 'story-complete',
+          },
+        },
+      },
+    });
   });
 
   it('keeps settlement enabled for an active cycle even after the character turns it off', async () => {
     const generate = vi.fn(async () => ({ response: '{"operations":[]}' }));
+    const eventId = 'event-frozen-settlement-message-received';
     const result = await runAgentSessionNode(
       {
         'era.step.request.routed': {
@@ -657,12 +737,19 @@ describe('AgentGenerationSession pure contracts', () => {
             task: {
               kind: 'sync',
               primaryEvent: {
-                eventId: 'event-frozen-settlement-message-received',
+                eventId,
                 sequence: 13,
                 type: 'message_received',
                 args: [],
               },
             },
+            dispatchContext: floorDispatchContext({
+              chatId: 'chat-agent-frozen-settlement',
+              messageId: 7,
+              activeText: 'settle this story',
+              eventId,
+              sequence: 13,
+            }),
           },
         },
         'era.batch.execution.state': { value: { schemaVersion: 1 } },
@@ -689,7 +776,6 @@ describe('AgentGenerationSession pure contracts', () => {
               latestMessage: { message_id: 7, role: 'assistant', message: 'settle this story', extra: {} },
             })),
             generate,
-            write_message: vi.fn(async () => ({ status: 'committed' })),
             write_session: vi.fn(() => ({ status: 'committed' })),
           } as never,
         },
@@ -697,7 +783,18 @@ describe('AgentGenerationSession pure contracts', () => {
     );
 
     expect(generate).toHaveBeenCalledOnce();
-    expect(result.agent_transition).toMatchObject({ mode: 'execute-legacy', status: 'committed' });
+    expect(result.agent_transition).toMatchObject({
+      mode: 'execute-legacy',
+      status: 'committed',
+      step: {
+        dispatchContext: {
+          agentFloorCandidate: {
+            messageId: 7,
+            terminalStatus: 'settled',
+          },
+        },
+      },
+    });
   });
 
   it('preserves a structured missing-profile diagnostic and retries the next planning profile', async () => {

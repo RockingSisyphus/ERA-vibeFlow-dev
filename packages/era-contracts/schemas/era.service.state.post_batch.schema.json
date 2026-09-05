@@ -197,6 +197,17 @@
             }
           ]
         },
+        "messageId": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "messageAdmission": {
           "oneOf": [
             {
@@ -220,6 +231,7 @@
       },
       "required": [
         "token",
+        "messageId",
         "messageAdmission",
         "branchAdmission"
       ],

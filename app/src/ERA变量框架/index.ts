@@ -18,6 +18,7 @@ import {
 } from './service/lifecycle';
 import { TavernEraServiceAdapter } from './service/tavern-adapter';
 import { installEraPublicApi } from './service/public-api';
+import { createEraStatusbarRuntime } from './service/statusbar-runtime';
 import type {
   EraAdmissionResult,
   EraRuntimeAdapter,
@@ -61,7 +62,7 @@ function productionDependencies(): EraApplicationDependencies {
     createAdapter: options => new TavernEraServiceAdapter(options),
     createHost: () => createWorkflowHost() as EraWorkflowHost,
     startMacro: startEraMacroSubsystem,
-    startPublicApi: installEraPublicApi,
+    startPublicApi: () => installEraPublicApi(createEraStatusbarRuntime),
     startUi: startEraUi,
     refreshSettings: initEraSettings,
     dispatchSettingsUpdated,

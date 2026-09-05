@@ -17,6 +17,15 @@ import {
   type EraAgentConfigurationV2,
   type EraAgentPlanningOutputV1,
 } from "../../base_lib/agent_generation_session.ts";
+import {
+  formatMessageKeyBlock,
+  stripEraDataBlocks,
+} from "../../base_lib/domain/mk_engine.ts";
+import type {
+  EraAgentFloorCandidateV1,
+  EraDispatchContextV3,
+  EraFloorIdentityV1,
+} from "@era/vibeflow-contracts";
 import type { PlannedStepV1 } from "../../base_lib/service_types.ts";
 
 interface Envelope<T> {
@@ -48,7 +57,6 @@ interface AgentCapability {
   inject_once(input: Readonly<Record<string, unknown>>): unknown;
   write_session(input: Readonly<Record<string, unknown>>): unknown;
   clear_session(input: Readonly<Record<string, unknown>>): unknown;
-  write_message(input: Readonly<Record<string, unknown>>): Promise<unknown>;
   create_error_message(
     input: Readonly<Record<string, unknown>>,
   ): Promise<unknown>;
@@ -112,11 +120,112 @@ function readArg(step: PlannedStepV1, index: number): unknown {
 
 /** 宿主引用保持为无损 transport DTO，只允许机械转交给受限 Host capability。 */
 function readRawArg(step: PlannedStepV1, index: number): unknown {
-  return step.kind === "execute" ? step.task.primaryEvent.args[index] : undefined;
+  return step.kind === "execute"
+    ? step.task.primaryEvent.args[index]
+    : undefined;
 }
 
 function eventType(step: PlannedStepV1): string {
   return step.kind === "execute" ? step.task.primaryEvent.type : "";
+}
+
+function dispatchContextV3(step: PlannedStepV1): EraDispatchContextV3 {
+  if (
+    step.kind !== "execute" ||
+    !isRecord(step.dispatchContext) ||
+    step.dispatchContext.schemaVersion !== 3
+  ) {
+    throw new AgentSessionFailure(
+      "ERA_AGENT_DISPATCH_CONTEXT_V3_REQUIRED",
+      "Agent 楼层提交缺少稳定身份派发上下文。",
+    );
+  }
+  return step.dispatchContext as unknown as EraDispatchContextV3;
+}
+
+function floorIdentity(step: PlannedStepV1): EraFloorIdentityV1 {
+  const identity = dispatchContextV3(step).floorIdentity;
+  if (identity === null) {
+    throw new AgentSessionFailure(
+      "ERA_AGENT_FLOOR_IDENTITY_REQUIRED",
+      "Agent 楼层候选缺少真实 assistant 楼层身份。",
+    );
+  }
+  return identity;
+}
+
+function canonicalFloorContent(
+  content: string,
+  identity: EraFloorIdentityV1,
+  keepStatusPlaceholder: boolean,
+): string {
+  const story = stripEraDataBlocks(content)
+    .replace(/<StatusPlaceHolderImpl\s*\/>/giu, "")
+    .trimEnd();
+  return [
+    story,
+    formatMessageKeyBlock(identity.mk, "assistant"),
+    keepStatusPlaceholder ? "<StatusPlaceHolderImpl/>" : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+function withFloorCandidate(
+  step: PlannedStepV1,
+  rawCandidate: EraAgentFloorCandidateV1,
+): PlannedStepV1 {
+  if (step.kind !== "execute") return step;
+  const dispatchContext = dispatchContextV3(step);
+  const identity = floorIdentity(step);
+  if (
+    rawCandidate.messageId !== identity.messageId ||
+    rawCandidate.swipeId !== identity.swipeId ||
+    rawCandidate.mk !== identity.mk
+  ) {
+    throw new AgentSessionFailure(
+      "ERA_FLOOR_IDENTITY_MISMATCH",
+      "Agent 最终楼层候选与派发楼层身份不一致。",
+    );
+  }
+  const keepStatusPlaceholder =
+    dispatchContext.processingMessage?.activeText.includes(
+      "<StatusPlaceHolderImpl/>",
+    ) === true;
+  const content = canonicalFloorContent(
+    rawCandidate.content,
+    identity,
+    keepStatusPlaceholder,
+  );
+  const candidate: EraAgentFloorCandidateV1 = {
+    ...rawCandidate,
+    content,
+  };
+  const messages = dispatchContext.messages.map((message) =>
+    message.messageId === identity.messageId
+      ? { ...message, activeText: content }
+      : message,
+  );
+  const processingMessage =
+    dispatchContext.processingMessage?.messageId === identity.messageId
+      ? { ...dispatchContext.processingMessage, activeText: content }
+      : dispatchContext.processingMessage;
+  const stagedMessageUpdates = [
+    ...dispatchContext.stagedMessageUpdates.filter(
+      (update) => update.messageId !== identity.messageId,
+    ),
+    { messageId: identity.messageId, content },
+  ];
+  return {
+    ...step,
+    dispatchContext: {
+      ...dispatchContext,
+      messages,
+      processingMessage,
+      stagedMessageUpdates,
+      agentFloorCandidate: candidate,
+    },
+  };
 }
 
 function failureMessage(error: unknown): string {
@@ -333,7 +442,17 @@ async function runPlanning(
     latest && typeof latest.message === "string"
       ? extractEraMessageKey(latest.message)
       : null;
+  const generationIdentity =
+    step.kind === "execute" &&
+    isRecord(step.dispatchContext) &&
+    step.dispatchContext.schemaVersion === 3 &&
+    isRecord(step.dispatchContext.generationCycleIdentity)
+      ? step.dispatchContext.generationCycleIdentity
+      : null;
   const sourceKey =
+    (typeof generationIdentity?.sourceKey === "string"
+      ? generationIdentity.sourceKey
+      : null) ??
     messageKey ??
     `${key}:agent:${step.kind === "execute" ? step.task.primaryEvent.sequence : 0}`;
   const drawOffset =
@@ -434,7 +553,9 @@ async function runSettlement(
   configuration: EraAgentConfigurationV2,
   context: Record<string, unknown>,
   session: Record<string, unknown> | null,
-): Promise<Readonly<{ messageId: number; message: string }>> {
+  identity: EraFloorIdentityV1,
+  requiresInitialPresentation: boolean,
+): Promise<EraAgentFloorCandidateV1> {
   const latest = latestMessage(context);
   if (
     !latest ||
@@ -533,21 +654,6 @@ async function runSettlement(
         .join("\n");
       const storyPrefix = [baseMessage, planReport].filter(Boolean).join("\n");
       const storyStart = storyPrefix.length + (storyPrefix.length > 0 ? 1 : 0);
-      const previousExtra = isRecord(latest.extra) ? latest.extra : {};
-      await capability.write_message({
-        messageId: Number(latest.message_id),
-        message,
-        extra: {
-          ...previousExtra,
-          era_agent: {
-            schemaVersion: 1,
-            status: "settled",
-            cycleIndex: Number(session?.cycleIndex ?? 0),
-            storyStart,
-            storyEnd: storyStart + isolated.story.length,
-          },
-        },
-      });
       capability.write_session({
         chatKey: chatKey(context),
         session: {
@@ -561,7 +667,23 @@ async function runSettlement(
           transaction: validated.transaction,
         },
       });
-      return { messageId: Number(latest.message_id), message };
+      return {
+        messageId: identity.messageId,
+        swipeId: identity.swipeId,
+        mk: identity.mk,
+        content: message,
+        extra: {
+          era_agent: {
+            schemaVersion: 1,
+            status: "settled",
+            cycleIndex: Number(session?.cycleIndex ?? 0),
+            storyStart,
+            storyEnd: storyStart + isolated.story.length,
+          },
+        },
+        terminalStatus: "settled",
+        requiresInitialPresentation,
+      };
     } catch (error) {
       previousDiagnostic = failureMessage(error);
       attempts.push({
@@ -584,18 +706,6 @@ async function runSettlement(
   const message = [baseMessage, planReport, isolated.story, updateReport]
     .filter(Boolean)
     .join("\n");
-  await capability.write_message({
-    messageId: Number(latest.message_id),
-    message,
-    extra: {
-      ...(isRecord(latest.extra) ? latest.extra : {}),
-      era_agent: {
-        schemaVersion: 1,
-        status: "unsettled",
-        cycleIndex: Number(session?.cycleIndex ?? 0),
-      },
-    },
-  });
   capability.write_session({
     chatKey: chatKey(context),
     session: {
@@ -608,33 +718,20 @@ async function runSettlement(
       settlementAttempts: attempts,
     },
   });
-  return { messageId: Number(latest.message_id), message };
-}
-
-function withDispatchMessage(
-  step: PlannedStepV1,
-  replacement: Readonly<{ messageId: number; message: string }>,
-): PlannedStepV1 {
-  if (step.kind !== "execute" || !isRecord(step.dispatchContext)) return step;
-  const dispatchContext = step.dispatchContext;
-  const messages = Array.isArray(dispatchContext.messages)
-    ? dispatchContext.messages.map((item) =>
-        isRecord(item) && item.messageId === replacement.messageId
-          ? { ...item, activeText: replacement.message }
-          : item,
-      )
-    : dispatchContext.messages;
-  const processingMessage =
-    isRecord(dispatchContext.processingMessage) &&
-    dispatchContext.processingMessage.messageId === replacement.messageId
-      ? {
-          ...dispatchContext.processingMessage,
-          activeText: replacement.message,
-        }
-      : dispatchContext.processingMessage;
   return {
-    ...step,
-    dispatchContext: { ...dispatchContext, messages, processingMessage },
+    messageId: identity.messageId,
+    swipeId: identity.swipeId,
+    mk: identity.mk,
+    content: message,
+    extra: {
+      era_agent: {
+        schemaVersion: 1,
+        status: "unsettled",
+        cycleIndex: Number(session?.cycleIndex ?? 0),
+      },
+    },
+    terminalStatus: "unsettled",
+    requiresInitialPresentation,
   };
 }
 
@@ -658,7 +755,8 @@ async function retryStory(
   configuration: EraAgentConfigurationV2,
   context: Record<string, unknown>,
   session: Record<string, unknown>,
-): Promise<void> {
+  identity: EraFloorIdentityV1,
+): Promise<EraAgentFloorCandidateV1> {
   const latest = latestMessage(context);
   if (
     !latest ||
@@ -692,18 +790,20 @@ async function retryStory(
   const baseMessage =
     typeof session.baseMessage === "string" ? session.baseMessage : "";
   const plainMessage = [baseMessage, story].filter(Boolean).join("\n");
-  await capability.write_message({
-    messageId: Number(latest.message_id),
-    message: plainMessage,
-    extra: isRecord(latest.extra) ? latest.extra : {},
-  });
   const nextSession = { ...session, story };
   const nextContext = withStory(
     { ...context, session: nextSession },
     plainMessage,
   );
   if (configuration.settlement.enabled) {
-    await runSettlement(capability, configuration, nextContext, nextSession);
+    return runSettlement(
+      capability,
+      configuration,
+      nextContext,
+      nextSession,
+      identity,
+      false,
+    );
   } else {
     const message = [
       baseMessage,
@@ -712,14 +812,6 @@ async function retryStory(
     ]
       .filter(Boolean)
       .join("\n");
-    await capability.write_message({
-      messageId: Number(latest.message_id),
-      message,
-      extra: {
-        ...(isRecord(latest.extra) ? latest.extra : {}),
-        era_agent: { schemaVersion: 1, status: "story-complete" },
-      },
-    });
     capability.write_session({
       chatKey: chatKey(context),
       session: {
@@ -728,6 +820,17 @@ async function retryStory(
         messageId: Number(latest.message_id),
       },
     });
+    return {
+      messageId: identity.messageId,
+      swipeId: identity.swipeId,
+      mk: identity.mk,
+      content: message,
+      extra: {
+        era_agent: { schemaVersion: 1, status: "story-complete" },
+      },
+      terminalStatus: "story-complete",
+      requiresInitialPresentation: false,
+    };
   }
 }
 
@@ -848,7 +951,9 @@ export async function run(
     }
     if (payload.action === "delete-connection-profile") {
       try {
-        const result = await capability.delete_connection_profile({ id: payload.id });
+        const result = await capability.delete_connection_profile({
+          id: payload.id,
+        });
         return output(
           transition(step, "execute-only", "committed", [], {
             result,
@@ -868,7 +973,9 @@ export async function run(
     }
     if (payload.action === "clear-connection-profile-key") {
       try {
-        const result = await capability.clear_connection_profile_key({ id: payload.id });
+        const result = await capability.clear_connection_profile_key({
+          id: payload.id,
+        });
         return output(
           transition(step, "execute-only", "committed", [], {
             result,
@@ -888,7 +995,9 @@ export async function run(
     }
     if (payload.action === "list-connection-models") {
       try {
-        const result = await capability.list_connection_models({ id: payload.id });
+        const result = await capability.list_connection_models({
+          id: payload.id,
+        });
         return output(
           transition(step, "execute-only", "committed", [], { result }),
         );
@@ -953,7 +1062,10 @@ export async function run(
           if (!attempt || attempt.modelSource.kind !== "custom-profile") {
             throw new TypeError("连接草稿目标不是自定义 API 尝试。");
           }
-          const existingId = typeof mutation.id === "string" && mutation.id.length > 0 ? mutation.id : "";
+          const existingId =
+            typeof mutation.id === "string" && mutation.id.length > 0
+              ? mutation.id
+              : "";
           const keyArgIndex = Number(mutation.keyArgIndex);
           const signature = JSON.stringify({
             name: mutation.name,
@@ -976,7 +1088,10 @@ export async function run(
           const stage = mutation.stage as "planning" | "settlement";
           const index = Number(mutation.index);
           const attempt = configuration[stage].attempts[index]!;
-          const existingId = typeof mutation.id === "string" && mutation.id.length > 0 ? mutation.id : "";
+          const existingId =
+            typeof mutation.id === "string" && mutation.id.length > 0
+              ? mutation.id
+              : "";
           const keyArgIndex = Number(mutation.keyArgIndex);
           const signature = JSON.stringify({
             name: mutation.name,
@@ -985,7 +1100,9 @@ export async function run(
             hasKey: Number.isSafeInteger(keyArgIndex) && keyArgIndex > 0,
           });
 
-          let result = existingId ? results.get(`${existingId}:${signature}`) : undefined;
+          let result = existingId
+            ? results.get(`${existingId}:${signature}`)
+            : undefined;
           if (result === undefined) {
             result = await capability.upsert_connection_profile({
               ...(existingId ? { id: existingId } : {}),
@@ -998,8 +1115,15 @@ export async function run(
             });
             if (existingId) results.set(`${existingId}:${signature}`, result);
           }
-          const summary = isRecord(result) && isRecord(result.profile) ? result.profile : null;
-          if (!summary || typeof summary.id !== "string" || typeof summary.name !== "string") {
+          const summary =
+            isRecord(result) && isRecord(result.profile)
+              ? result.profile
+              : null;
+          if (
+            !summary ||
+            typeof summary.id !== "string" ||
+            typeof summary.name !== "string"
+          ) {
             throw new TypeError("Host 未返回已保存连接方案的脱敏摘要。");
           }
           attempt.modelSource.profileId = summary.id;
@@ -1007,9 +1131,16 @@ export async function run(
         }
 
         for (const stageName of ["planning", "settlement"] as const) {
-          for (const [index, attempt] of configuration[stageName].attempts.entries()) {
-            if (attempt.modelSource.kind === "custom-profile" && !attempt.modelSource.profileId) {
-              throw new TypeError(`${stageName} 尝试 ${index + 1} 的自定义 API 方案尚未保存或绑定。`);
+          for (const [index, attempt] of configuration[
+            stageName
+          ].attempts.entries()) {
+            if (
+              attempt.modelSource.kind === "custom-profile" &&
+              !attempt.modelSource.profileId
+            ) {
+              throw new TypeError(
+                `${stageName} 尝试 ${index + 1} 的自定义 API 方案尚未保存或绑定。`,
+              );
             }
           }
         }
@@ -1164,10 +1295,18 @@ export async function run(
         return output(transition(step, "legacy"));
       }
       let nextStep: PlannedStepV1 = step;
+      const identity = floorIdentity(step);
       if (configuration.settlement.enabled) {
-        nextStep = withDispatchMessage(
+        nextStep = withFloorCandidate(
           step,
-          await runSettlement(capability, configuration, rawContext, session),
+          await runSettlement(
+            capability,
+            configuration,
+            rawContext,
+            session,
+            identity,
+            true,
+          ),
         );
       } else if (configuration.planning.enabled) {
         const latest = latestMessage(rawContext);
@@ -1190,21 +1329,20 @@ export async function run(
           ]
             .filter(Boolean)
             .join("\n");
-          await capability.write_message({
-            messageId: Number(latest.message_id),
-            message,
+          nextStep = withFloorCandidate(step, {
+            messageId: identity.messageId,
+            swipeId: identity.swipeId,
+            mk: identity.mk,
+            content: message,
             extra: {
-              ...(isRecord(latest.extra) ? latest.extra : {}),
               era_agent: {
                 schemaVersion: 1,
                 status: "story-complete",
                 cycleIndex: Number(session?.cycleIndex ?? 0),
               },
             },
-          });
-          nextStep = withDispatchMessage(step, {
-            messageId: Number(latest.message_id),
-            message,
+            terminalStatus: "story-complete",
+            requiresInitialPresentation: true,
           });
           capability.write_session({
             chatKey: chatKey(rawContext),
@@ -1232,6 +1370,8 @@ export async function run(
       let session = sessionObject(rawContext);
       if (session === null)
         throw new TypeError("当前聊天没有可重试的最新 Agent 周期。");
+      const identity = floorIdentity(step);
+      let candidate: EraAgentFloorCandidateV1;
       if (retry.kind === "planning") {
         session = await runPlanning(
           capability,
@@ -1240,13 +1380,38 @@ export async function run(
           step,
         );
         capability.write_session({ chatKey: chatKey(rawContext), session });
-        await retryStory(capability, configuration, rawContext, session);
+        candidate = await retryStory(
+          capability,
+          configuration,
+          rawContext,
+          session,
+          identity,
+        );
       } else if (retry.kind === "story") {
-        await retryStory(capability, configuration, rawContext, session);
+        candidate = await retryStory(
+          capability,
+          configuration,
+          rawContext,
+          session,
+          identity,
+        );
       } else {
-        await runSettlement(capability, configuration, rawContext, session);
+        candidate = await runSettlement(
+          capability,
+          configuration,
+          rawContext,
+          session,
+          identity,
+          false,
+        );
       }
-      return output(transition(step, "execute-only", "committed"));
+      return output(
+        transition(
+          withFloorCandidate(step, candidate),
+          "execute-legacy",
+          "committed",
+        ),
+      );
     }
   } catch (error) {
     const code =

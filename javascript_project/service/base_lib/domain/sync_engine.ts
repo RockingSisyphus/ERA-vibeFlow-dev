@@ -467,25 +467,23 @@ function failedPlan(
 /** 生成一次完整的声明式同步计划和候选等价最终 JSON。 */
 export function planEraSync(input: EraSyncInputV1): EraSyncPlanV1 {
   if (input.messages.length === 0) {
+    const emptyMeta = metaWith(input.meta, [], {}, {});
     return {
       kind: "sync",
-      status: "no-op",
-      committed: false,
+      status: "recalculated",
+      committed: true,
       divergence: null,
-      stat: cloneSnapshotValue(input.stat),
-      statFunc: cloneSnapshotValue(input.statFunc ?? {}) as Record<
-        string,
-        unknown
-      >,
-      meta: cloneSnapshotValue(input.meta),
+      stat: {},
+      statFunc: {},
+      meta: emptyMeta,
       messages: [],
       messageUpdates: [],
       sealedCompactionCandidates: [],
       recalculatedMessageIndexes: [],
       rollback: { applied: false, fromMk: null, toMk: null },
-      actionsTaken: createSyncActionsTaken(input.reason, false),
+      actionsTaken: createSyncActionsTaken(input.reason, true),
       consecutiveProcessingCount: null,
-      nextConsecutiveState: cloneSnapshotValue(input.consecutiveState),
+      nextConsecutiveState: null,
       diagnostics: [],
     };
   }

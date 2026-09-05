@@ -38,8 +38,8 @@ export const SettingsSchema = z.object({
   特殊符号值: z.string().default('<StatusPlaceHolderImpl/>'),
   开启悬浮球: z.boolean().default(true),
   开启黑夜模式: z.boolean().default(false),
-  强制重载功能: z.boolean().default(false),
-  强制重载消息数: z.number().int().positive().default(2),
+  历史状态栏显示范围: z.number().int().nonnegative().default(3),
+  历史状态栏超出范围行为: z.enum(['placeholder', 'empty', 'hidden']).default('placeholder'),
   繁体转简体: z.boolean().default(false),
   调试模式: z.boolean().default(false),
 });

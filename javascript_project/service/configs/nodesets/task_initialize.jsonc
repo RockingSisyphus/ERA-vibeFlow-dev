@@ -63,8 +63,8 @@
       {
         "id": "plan_resources",
         "type_used": "era.initialize.plan",
-        "display_name": "规划示例状态栏与开场白变量基线",
-        "description": "纯计算生成设置、两条世界书、状态栏正则与主开场白示例变量动作；保留作者原文，以版本标记幂等追加 era_demo，检测同命名空间冲突，并把宏、ERA.get、subscribe、history、手动 API 与默认关闭的测试加载模式放入同一示例状态栏。"
+        "display_name": "规划 Tavern 原生状态栏片段与初始化资源",
+        "description": "幂等规划设置、世界书、状态栏正则与主开场白示例变量；新状态栏是由 Tavern Helper 直接渲染的普通可嵌入片段，包含自有样式、ERA bootstrap、隐藏的状态栏根节点与使用 await ERA.ready() 的作者脚本，不再生成完整 html/head/body 或惰性 template。已发布旧式非托管状态栏保持原样且不自动迁移。"
       },
       {
         "id": "preserve_resources",

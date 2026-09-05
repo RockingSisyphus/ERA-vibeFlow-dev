@@ -1,0 +1,326 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "status",
+    "dispatchClass",
+    "requirement",
+    "messages",
+    "processingMessage",
+    "processingMk",
+    "messageChanged",
+    "variablesChanged",
+    "failure",
+    "generationCycleIdentity",
+    "floorIdentity",
+    "stagedMessageUpdates",
+    "agentFloorCandidate"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 3
+    },
+    "status": {
+      "enum": [
+        "ready",
+        "failed"
+      ]
+    },
+    "dispatchClass": {
+      "enum": [
+        "initialize",
+        "sync",
+        "api",
+        "update-mk",
+        "ignore"
+      ]
+    },
+    "requirement": {
+      "enum": [
+        "none",
+        "latest-message",
+        "latest-message-with-mk"
+      ]
+    },
+    "messages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schemaVersion",
+          "messageId",
+          "role",
+          "activeText",
+          "swipeIndex"
+        ],
+        "properties": {
+          "schemaVersion": {
+            "const": 1
+          },
+          "messageId": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "role": {
+            "type": "string",
+            "minLength": 1
+          },
+          "activeText": {
+            "type": "string"
+          },
+          "swipeIndex": {
+            "oneOf": [
+              {
+                "type": "integer",
+                "minimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "processingMessage": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "schemaVersion",
+            "messageId",
+            "role",
+            "activeText",
+            "swipeIndex"
+          ],
+          "properties": {
+            "schemaVersion": {
+              "const": 1
+            },
+            "messageId": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "role": {
+              "type": "string",
+              "minLength": 1
+            },
+            "activeText": {
+              "type": "string"
+            },
+            "swipeIndex": {
+              "oneOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "processingMk": {
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "messageChanged": {
+      "type": "boolean"
+    },
+    "variablesChanged": {
+      "type": "boolean"
+    },
+    "failure": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "code",
+            "message",
+            "category",
+            "retryable"
+          ],
+          "properties": {
+            "code": {
+              "type": "string",
+              "minLength": 1
+            },
+            "message": {
+              "type": "string"
+            },
+            "category": {
+              "enum": [
+                "input",
+                "domain",
+                "tavern",
+                "cancelled"
+              ]
+            },
+            "retryable": {
+              "const": false
+            },
+            "details": {
+              "type": "object"
+            }
+          }
+        }
+      ]
+    },
+    "generationCycleIdentity": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "chatId",
+            "eventId",
+            "sourceKey"
+          ],
+          "properties": {
+            "chatId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "eventId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "sourceKey": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "floorIdentity": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "chatId",
+            "messageId",
+            "swipeId",
+            "mk"
+          ],
+          "properties": {
+            "chatId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "messageId": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "swipeId": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "mk": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "stagedMessageUpdates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "messageId",
+          "content"
+        ],
+        "properties": {
+          "messageId": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "content": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "agentFloorCandidate": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "messageId",
+            "swipeId",
+            "mk",
+            "content",
+            "extra",
+            "terminalStatus",
+            "requiresInitialPresentation"
+          ],
+          "properties": {
+            "messageId": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "swipeId": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "mk": {
+              "type": "string",
+              "minLength": 1
+            },
+            "content": {
+              "type": "string"
+            },
+            "extra": {
+              "type": "object"
+            },
+            "terminalStatus": {
+              "enum": [
+                "settled",
+                "story-complete",
+                "unsettled"
+              ]
+            },
+            "requiresInitialPresentation": {
+              "type": "boolean"
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  }
+}

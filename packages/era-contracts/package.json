@@ -1,6 +1,6 @@
 {
   "name": "@era/vibeflow-contracts",
-  "version": "1.7.0",
+  "version": "1.9.0",
   "description": "ERA 与 VibeFlow 之间的可移植 DTO、JSON Schema 和纯 codec。",
   "type": "module",
   "sideEffects": false,

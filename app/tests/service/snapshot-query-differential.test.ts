@@ -8,6 +8,8 @@ import {
   executeSnapshotQuery,
   findLatestNewValue,
   parseEditLog,
+  projectFloorSnapshot,
+  projectFloorSnapshots,
   removeMetaFields,
   rollbackStatToMK,
   unescapeEraData,
@@ -436,5 +438,74 @@ describe('ERA 快照查询冻结基线差分', () => {
     expect(JSON.stringify({ fixture, request })).toBe(before);
     expect(unescapeEraData(fixture.variables.stat)).toEqual(legacy.unescapeEraData(fixture.variables.stat));
     expect(removeMetaFields(fixture.variables.stat)).toEqual(legacy.removeMetaFields(fixture.variables.stat));
+  });
+
+  it('最近多个状态栏由最新状态一次逆向投影变量与函数，不生成额外楼层快照', () => {
+    const meta = {
+      SelectedMks: ['mk-0', 'mk-1', 'mk-2', 'mk-3', 'mk-4'],
+      EditLogs: {
+        'mk-0': [{ op: 'insert', path: 'hp', value_new: 10 }],
+        'mk-1': [{ op: 'update', path: 'hp', value_old: 10, value_new: 20 }],
+        'mk-2': [{ op: 'insert', path: 'flag', value_new: true }],
+        'mk-3': [{ op: 'update', path: 'hp', value_old: 20, value_new: 30 }],
+        'mk-4': [{ op: 'delete', path: 'flag', value_old: true }],
+      },
+      FunctionEditLogs: {
+        'mk-0': [{ op: 'insert', name: 'f', value_new: { params: ['x'], expr: 'x+1' } }],
+        'mk-3': [
+          {
+            op: 'update',
+            name: 'f',
+            value_old: { params: ['x'], expr: 'x+1' },
+            value_new: { params: ['x'], expr: 'x+2' },
+          },
+        ],
+      },
+    };
+    const input = {
+      stat: { hp: 30 },
+      statFunc: { f: { params: ['x'], expr: 'x+2' } },
+      meta,
+    };
+
+    const recent = projectFloorSnapshots({ ...input, messageIds: [2, 3, 4] });
+    expect(recent).toEqual([
+      { messageId: 2, mk: 'mk-2', stat: { hp: 20, flag: true }, statFunc: { f: { params: ['x'], expr: 'x+1' } } },
+      { messageId: 3, mk: 'mk-3', stat: { hp: 30, flag: true }, statFunc: { f: { params: ['x'], expr: 'x+2' } } },
+      { messageId: 4, mk: 'mk-4', stat: { hp: 30 }, statFunc: { f: { params: ['x'], expr: 'x+2' } } },
+    ]);
+    expect(recent).toHaveLength(3);
+    expect(projectFloorSnapshot({ ...input, messageId: 3 })).toEqual(recent[1]);
+  });
+
+  it('10,000 楼日志只返回请求的最近三个投影，不生成全量快照集', () => {
+    const floorCount = 10_000;
+    const selectedMks = Array.from({ length: floorCount }, (_, index) => `mk-${index}`);
+    const editLogs = Object.fromEntries(
+      selectedMks.map((mk, index) => [
+        mk,
+        [
+          index === 0
+            ? { op: 'insert', path: 'counter', value_new: 0 }
+            : { op: 'update', path: 'counter', value_old: index - 1, value_new: index },
+        ],
+      ]),
+    );
+    const input = {
+      stat: { counter: floorCount - 1 },
+      statFunc: {},
+      meta: { SelectedMks: selectedMks, EditLogs: editLogs, FunctionEditLogs: {} },
+    };
+    const before = JSON.stringify(input);
+    const result = projectFloorSnapshots({
+      ...input,
+      messageIds: [floorCount - 3, floorCount - 2, floorCount - 1],
+    });
+
+    expect(result).toHaveLength(3);
+    expect(result.map(item => item.messageId)).toEqual([9997, 9998, 9999]);
+    expect(result.map(item => (item.stat as { counter: number }).counter)).toEqual([9997, 9998, 9999]);
+    expect(JSON.stringify(input)).toBe(before);
+    expect(result).not.toHaveProperty('snapshots');
   });
 });

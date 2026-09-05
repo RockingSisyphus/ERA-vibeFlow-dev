@@ -7,7 +7,7 @@
  * - `dom-refresh.ts`：状态提交后的消息显示刷新。
  */
 
-import { removeMetaFields } from '../utils/era_data';
+import { removeMetaFields } from '../utils/meta-fields';
 import { registerEraMacroDomRefresh } from './dom-refresh';
 import { readCurrentEraMacroSnapshot, registerEraMacro } from './registration';
 import {

@@ -1,0 +1,28 @@
+{
+  "kind": "node",
+  "type_key": "era.sync.present_finalized_floor",
+  "display_name": "首次呈现已提交楼层",
+  "category": "同步事务",
+  "description": "仅在最终消息与 Sidecar 已提交后，为要求首次呈现的新楼层执行一次正常 affected render；呈现失败仅附加诊断。",
+  "version": "1.0.0",
+  "flow_kind": "data_store",
+  "contract": {
+    "requires": [
+      {"type": "era.tavern.commit.result", "cardinality": "exactly_one", "display_name": "原子楼层提交结果"}
+    ],
+    "provides": [
+      {"key": "presented_sync_commit_result", "type": "era.tavern.commit.result", "display_name": "含首次呈现诊断的提交结果"}
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {"era.tavern.commit.result": ["输入：已经明确提交或失败的业务结论。"]},
+    "output_semantics": {"presented_sync_commit_result": ["输出：业务结论不变，并可附带独立 presentation diagnostic。"]}
+  },
+  "implementations": [
+    {"language": "typescript", "targets": ["browser"], "completion": "suspend", "source": {"kind": "file", "ref": "nodes/sync/present_finalized_floor.ts", "export": "run"}}
+  ],
+  "base_libs": ["era.service.sync_transaction"],
+  "capabilities": [
+    {"id": "era.tavern.messages", "operations": ["refresh"]}
+  ]
+}

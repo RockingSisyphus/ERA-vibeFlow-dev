@@ -101,10 +101,6 @@ const serviceDescriptors = new Map([
   ],
   ["era.task.result", "javascript_project/service/manifests/data/era-task-result.jsonc"],
   [
-    "era.task.result.merged",
-    "javascript_project/service/manifests/data/era-task-result-merged.jsonc",
-  ],
-  [
     "era.batch.finalization",
     "javascript_project/service/manifests/data/era-batch-finalization.jsonc",
   ],

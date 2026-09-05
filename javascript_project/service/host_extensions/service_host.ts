@@ -113,7 +113,6 @@ export interface EraTavernCapabilityAdapter {
     readonly inject_once: EraHostOperation;
     readonly write_session: EraHostOperation;
     readonly clear_session: EraHostOperation;
-    readonly write_message: EraAsyncHostOperation;
     readonly create_error_message: EraAsyncHostOperation;
     readonly stop_native_generation: EraHostOperation;
   };
@@ -647,8 +646,6 @@ class ServiceHostRuntime {
         this.invokeImmediate("agent", "write_session", input, options),
       clear_session: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
         this.invokeImmediate("agent", "clear_session", input, options),
-      write_message: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
-        this.invokeSuspend("agent", "write_message", input, options),
       create_error_message: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
         this.invokeSuspend("agent", "create_error_message", input, options),
       stop_native_generation: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
@@ -895,7 +892,6 @@ class ServiceHostRuntime {
       [adapter.agent?.inject_once, "agent.inject_once"],
       [adapter.agent?.write_session, "agent.write_session"],
       [adapter.agent?.clear_session, "agent.clear_session"],
-      [adapter.agent?.write_message, "agent.write_message"],
       [adapter.agent?.create_error_message, "agent.create_error_message"],
       [adapter.agent?.stop_native_generation, "agent.stop_native_generation"],
       [adapter.variables?.read, "variables.read"],

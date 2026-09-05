@@ -1,6 +1,6 @@
 /*
  * 模块职责：实现 AgentGenerationSession 已声明的 Tavern 宿主能力，
- * 包括角色卡配置、独立模型请求、一次性正文注入与消息写回。
+ * 包括角色卡配置、独立模型请求、一次性正文注入与错误消息创建。
  * 本模块不判断阶段是否开启、重试次数或变量操作是否合法；
  * 这些决策只属于 AOT Service workflow。
  */
@@ -18,7 +18,6 @@ import {
 } from './agent-tavern-configuration';
 import { createAgentConnectionOperations } from './agent-tavern-connections';
 import { auxiliaryApiSettings, resolveAuxiliaryRoute } from './agent-tavern-generation';
-import { refreshDisplayedEraTechnicalBlocks } from './technical-block-projection';
 
 type AgentOperations = EraTavernAdapter['agent'];
 
@@ -350,40 +349,11 @@ export class AgentTavernHost {
   }
 
   /**
-   * 消息能力只执行工作流给出的最终文本。写入前登记预期内容是必要约束，
-   * 否则 ERA 自己的无刷新回写会开启新的生命周期窗口并重复结算。
+   * Agent Host 只保留“规划尚未产生 assistant 楼层”时的系统错误消息与停止生成能力。
+   * 正常故事和结算结果必须作为楼层候选进入同步事务，不能从这里直接写入聊天。
    */
-  private createMessageOperations(): Pick<
-    AgentOperations,
-    'write_message' | 'create_error_message' | 'stop_native_generation'
-  > {
+  private createMessageOperations(): Pick<AgentOperations, 'create_error_message' | 'stop_native_generation'> {
     return {
-      write_message: async (input, context) => {
-        throwIfAborted(context.signal);
-        if (
-          !Number.isSafeInteger(input.messageId) ||
-          Number(input.messageId) < 0 ||
-          typeof input.message !== 'string'
-        ) {
-          throw new TypeError('Agent 消息写入缺少 messageId 或 message。');
-        }
-        const messageId = Number(input.messageId);
-        const extra = isRecord(input.extra) ? clonePortable(input.extra) : undefined;
-        this.ports.internalMessageWrites.set(messageId, input.message);
-        await setChatMessages(
-          [
-            {
-              message_id: messageId,
-              message: input.message,
-              ...(extra ? { extra } : {}),
-            },
-          ],
-          { refresh: 'none' },
-        );
-        refreshDisplayedEraTechnicalBlocks([messageId]);
-        throwIfAborted(context.signal);
-        return { status: 'committed', messageId };
-      },
       create_error_message: async (input, context) => {
         throwIfAborted(context.signal);
         if (typeof input.message !== 'string') {

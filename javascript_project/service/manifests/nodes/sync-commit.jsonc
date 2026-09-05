@@ -3,7 +3,7 @@
   "type_key": "era.tavern.variables_commit",
   "display_name": "提交同步消息与 Sidecar 状态",
   "category": "同步宿主边界",
-  "description": "严格先确认全部消息文本，再提交并回读 V2 Sidecar 状态，随后发布当前身份的易失宏快照；仅消息提交未知才 fatal，文件提交失败发布显式修复入口。",
+  "description": "以 refresh:none 一次写入 canonical 消息与 extra，再提交并回读 V2 Sidecar，回读成功后发布当前身份的运行时快照。",
   "version": "1.0.0",
   "flow_kind": "data_store",
   "contract": {

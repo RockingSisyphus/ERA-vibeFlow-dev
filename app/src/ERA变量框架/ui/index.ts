@@ -1,6 +1,6 @@
 import { createPinia } from 'pinia';
 import { createApp, type App as VueApp } from 'vue';
-import { createEraFacade, type EraPublicState } from '../service/public-api';
+import { getInstalledEraPublicApi, type EraPublicState } from '../service/public-api';
 import { settings } from '../utils/era_data';
 import { Logger } from '../utils/log';
 import App from './App.vue';
@@ -42,7 +42,7 @@ export function startEraUi(): EraUiHandle {
   const uiStore = useUiStore(pinia);
   let active = true;
   const switchView = (viewName: 'FloatingBall' | 'ExpandedView') => uiStore.switchView(viewName);
-  const facade = createEraFacade();
+  const facade = getInstalledEraPublicApi();
   const stateHandler = (data: EraPublicState) => {
     if (!active) return;
     uiStore.setEventData(data.status === 'ready' ? data : null);

@@ -66,8 +66,8 @@
       {
         "id": "read_target_messages",
         "type_used": "era.api.read_target_message",
-        "display_name": "读取最新 AI 消息",
-        "description": "执行读取最新 AI 消息。"
+        "display_name": "求证 Facade 写入目标楼层",
+        "description": "顶层 Facade 选择最新 AI 消息；托管状态栏 Facade 由 Host 重新核对 pageEpoch、instanceId、messageId、Swipe 与 MK 后选择来源楼层，失效时明确失败且不回退。"
       },
       {
         "id": "build_no_refresh_append",

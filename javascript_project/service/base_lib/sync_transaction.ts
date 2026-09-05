@@ -5,7 +5,11 @@
  * TaskResult。Capability 调用全部留在显式 data_store 节点中。
  */
 
-import { type EraMkMessageV1, type EraMkSeedV1 } from "./domain/mk_engine.ts";
+import {
+  readMessageKey,
+  type EraMkMessageV1,
+  type EraMkSeedV1,
+} from "./domain/mk_engine.ts";
 import {
   planEraSync,
   type EraActionsTakenV1,
@@ -20,7 +24,11 @@ import type {
 import {
   cloneEraPortableJsonV1,
   isEraDispatchContextV2,
+  isEraDispatchContextV3,
+  type EraAgentFloorCandidateV1,
   type EraDispatchContextV2,
+  type EraDispatchContextV3,
+  type EraFloorIdentityV1,
   type JsonValue,
 } from "@era/vibeflow-contracts";
 
@@ -64,17 +72,21 @@ export interface SyncWorkV1 {
 export interface SyncMessageWriteV1 {
   readonly messageId: number;
   readonly content: string;
+  readonly extra?: Readonly<Record<string, JsonValue>>;
 }
 
 export interface SyncCommitRequestV1 {
-  readonly schemaVersion: 1;
+  readonly schemaVersion: 2;
   readonly step: PlannedStepV1;
   readonly plan: Exclude<EraSyncPlanV1, { readonly status: "failed" }>;
-  readonly payload: SyncPayloadV1;
+  /** 零消息同步没有可声称的消息身份；其状态提交显式使用 null。 */
+  readonly payload: SyncPayloadV1 | null;
   readonly messageWrites: readonly SyncMessageWriteV1[];
   readonly stat: unknown;
   readonly statFunc: Readonly<Record<string, unknown>>;
   readonly meta: Readonly<Record<string, unknown>>;
+  readonly floorIdentity: EraFloorIdentityV1 | null;
+  readonly agentFloorCandidate: EraAgentFloorCandidateV1 | null;
 }
 
 export interface SyncMessageCommitV1 extends SyncCommitRequestV1 {
@@ -89,6 +101,10 @@ export interface SyncCommitResultV1 extends SyncCommitRequestV1 {
   readonly confirmedMessageWrites: number;
   readonly variablesCommitted: boolean;
   readonly failure: SyncFailureV1 | null;
+  readonly presentationDiagnostic?: Readonly<{
+    code: string;
+    message: string;
+  }>;
 }
 
 export type SyncCommitEnvelopeV1 =
@@ -106,6 +122,16 @@ export type WriteObservation =
   | { readonly kind: "not-written"; readonly message: string }
   | { readonly kind: "unknown"; readonly message: string };
 
+class SyncContractError extends Error {
+  constructor(
+    readonly code: string,
+    message: string,
+  ) {
+    super(message);
+    this.name = "SyncContractError";
+  }
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
@@ -114,19 +140,6 @@ function isPlainRecord(value: unknown): value is Record<string, unknown> {
   if (!isRecord(value)) return false;
   const prototype = Object.getPrototypeOf(value);
   return prototype === Object.prototype || prototype === null;
-}
-
-function defineOwn(
-  target: Record<string, unknown> | unknown[],
-  key: string,
-  value: unknown,
-): void {
-  Object.defineProperty(target, key, {
-    value,
-    enumerable: true,
-    configurable: true,
-    writable: true,
-  });
 }
 
 /** 把宿主值收敛为可移植 JSON，并把数组空洞/undefined 固定为 null。 */
@@ -180,7 +193,10 @@ export function assertSyncStep(
   if (!Array.isArray(value.sources) || value.sources.length === 0) {
     throw new TypeError("同步任务没有可结算来源。");
   }
-  return value as unknown as Extract<PlannedStepV1, { readonly kind: "execute" }>;
+  return value as unknown as Extract<
+    PlannedStepV1,
+    { readonly kind: "execute" }
+  >;
 }
 
 export function assertBatchState(value: unknown): BatchExecutionStateV1 {
@@ -276,10 +292,12 @@ function normalizeMessage(value: unknown, index: number): EraMkMessageV1 {
   };
 }
 
-function dispatchContext(step: PlannedStepV1): EraDispatchContextV2 {
+type DispatchContext = EraDispatchContextV2 | EraDispatchContextV3;
+
+function dispatchContext(step: PlannedStepV1): DispatchContext {
   const value = assertSyncStep(step).dispatchContext;
-  if (!isEraDispatchContextV2(value)) {
-    throw new TypeError("同步步骤缺少有效的 EraDispatchContextV2。");
+  if (!isEraDispatchContextV2(value) && !isEraDispatchContextV3(value)) {
+    throw new TypeError("同步步骤缺少有效的 EraDispatchContextV2/V3。");
   }
   return value;
 }
@@ -307,30 +325,6 @@ function seedFor(
       `${task.primaryEvent.eventId}:${task.primaryEvent.sequence}:${message.messageId}:${index}`,
     ),
   };
-}
-
-function selectedMks(
-  meta: Readonly<Record<string, unknown>>,
-): (string | null)[] {
-  const raw = meta.SelectedMks;
-  if (!Array.isArray(raw)) return [];
-  return Array.from({ length: raw.length }, (_, index) => {
-    const value = raw[index];
-    return typeof value === "string" ? value : null;
-  });
-}
-
-function withLatestSelectedMk(
-  meta: Readonly<Record<string, unknown>>,
-  messageId: number,
-  mk: string,
-): Readonly<Record<string, unknown>> {
-  const result = cloneSyncJson(meta) as Record<string, unknown>;
-  const chain = selectedMks(result);
-  while (chain.length <= messageId) chain.push(null);
-  chain[messageId] = mk;
-  defineOwn(result, "SelectedMks", chain);
-  return result;
 }
 
 function targetIndex(
@@ -397,17 +391,11 @@ function normalizePlan(
   plan: EraSyncPlanV1,
   preUpdates: readonly EraSyncMessageUpdateV1[],
   step: PlannedStepV1,
-  processingMk: string | null,
-  processingMessageId: number | null,
 ): EraSyncPlanV1 {
   if (plan.status === "failed") return plan;
-  let meta = plan.meta;
-  if (processingMk && processingMessageId !== null) {
-    meta = withLatestSelectedMk(meta, processingMessageId, processingMk);
-  }
   return {
     ...plan,
-    meta,
+    committed: plan.committed || preUpdates.length > 0,
     actionsTaken: actionsForStep(step, plan.actionsTaken),
     messageUpdates: [...preUpdates, ...plan.messageUpdates],
   } as EraSyncPlanV1;
@@ -416,7 +404,7 @@ function normalizePlan(
 function payloadFor(
   step: PlannedStepV1,
   plan: Exclude<EraSyncPlanV1, { readonly status: "failed" }>,
-  processingMessage: EraDispatchContextV2["processingMessage"],
+  processingMessage: DispatchContext["processingMessage"],
   processingMk: string | null,
 ): SyncPayloadV1 {
   if (processingMessage === null) {
@@ -463,6 +451,7 @@ export function planSyncWork(context: SyncContextV1): SyncWorkV1 {
       );
     }
     if (
+      prepared.messages.length > 0 &&
       prepared.requirement === "latest-message-with-mk" &&
       (typeof prepared.processingMk !== "string" ||
         prepared.processingMk.length === 0)
@@ -485,22 +474,23 @@ export function planSyncWork(context: SyncContextV1): SyncWorkV1 {
     const meta = cloneSyncJson(metaCandidate);
     const messages = messageArray(context.messagesRaw).map(normalizeMessage);
     if (messages.length === 0) {
+      const plan = planEraSync({
+        messages: [],
+        stat,
+        statFunc,
+        meta,
+        reason: step.task.kind === "sync" ? step.task.reason : "manual",
+        processingMk: prepared.processingMk,
+        consecutiveState: {
+          mk: state.nextState.consecutiveMk,
+          count: state.nextState.consecutiveProcessingCount,
+        },
+      });
       return {
         schemaVersion: 1,
         step,
-        disposition: "no-op",
-        plan: planEraSync({
-          messages: [],
-          stat,
-          statFunc,
-          meta,
-          reason: step.task.kind === "sync" ? step.task.reason : "manual",
-          processingMk: prepared.processingMk,
-          consecutiveState: {
-            mk: state.nextState.consecutiveMk,
-            count: state.nextState.consecutiveProcessingCount,
-          },
-        }),
+        disposition: plan.committed ? "commit" : "no-op",
+        plan,
         payload: null,
         failure: null,
       };
@@ -509,7 +499,26 @@ export function planSyncWork(context: SyncContextV1): SyncWorkV1 {
     const task = step.task;
     if (task.kind !== "sync") throw new TypeError("同步计划收到非同步任务。");
     const preparedMessages = [...messages];
-    const preUpdates: EraSyncMessageUpdateV1[] = [];
+    const preUpdates: EraSyncMessageUpdateV1[] =
+      prepared.schemaVersion === 3
+        ? prepared.stagedMessageUpdates.map((update) => {
+            const messageIndex = preparedMessages.findIndex(
+              (message) => message.messageId === update.messageId,
+            );
+            if (messageIndex < 0 || prepared.processingMk === null) {
+              throw new TypeError(
+                "暂存消息更新缺少可验证的消息位置或 processing MK。",
+              );
+            }
+            return {
+              kind: "update-message-content" as const,
+              messageId: update.messageId,
+              messageIndex,
+              mk: prepared.processingMk,
+              content: { kind: "text" as const, text: update.content },
+            };
+          })
+        : [];
     const processingMessage = prepared.processingMessage;
     const processingMk = prepared.processingMk;
     if (processingMessage === null) {
@@ -546,8 +555,6 @@ export function planSyncWork(context: SyncContextV1): SyncWorkV1 {
         }),
         preUpdates,
         step,
-        processingMk,
-        processingMessage.messageId,
       ),
       step,
       state,
@@ -598,26 +605,49 @@ export function planSyncWork(context: SyncContextV1): SyncWorkV1 {
 
 /** 把纯计划收敛为消息先行、变量后置的逻辑提交请求。 */
 export function buildSyncCommitRequest(work: SyncWorkV1): SyncCommitRequestV1 {
+  const emptyCommit =
+    work.plan !== null &&
+    work.plan.status !== "failed" &&
+    work.plan.messages.length === 0;
   if (
     work.disposition !== "commit" ||
     work.plan === null ||
-    work.payload === null
+    (work.payload === null && !emptyCommit)
   ) {
     throw new TypeError("只有 commit 同步工作项可以构造提交请求。");
   }
   const plan = successfulPlan(work.plan);
-  const messageWrites = plan.messageUpdates.map<SyncMessageWriteV1>(
-    (update) => {
+  const writesByMessageId = new Map<number, SyncMessageWriteV1>();
+  for (const update of plan.messageUpdates) {
       if (update.content.kind !== "text") {
         throw new TypeError(
           `消息 #${update.messageId} 的多模态内容不能由当前 Tavern 文本提交边界安全写入。`,
         );
       }
-      return { messageId: update.messageId, content: update.content.text };
-    },
+      writesByMessageId.set(update.messageId, {
+        messageId: update.messageId,
+        content: update.content.text,
+      });
+  }
+  const prepared = dispatchContext(work.step);
+  const floorIdentity = prepared.schemaVersion === 3
+    ? prepared.floorIdentity
+    : null;
+  const agentFloorCandidate = prepared.schemaVersion === 3
+    ? prepared.agentFloorCandidate
+    : null;
+  if (agentFloorCandidate !== null) {
+    writesByMessageId.set(agentFloorCandidate.messageId, {
+      messageId: agentFloorCandidate.messageId,
+      content: agentFloorCandidate.content,
+      extra: cloneSyncJson(agentFloorCandidate.extra),
+    });
+  }
+  const messageWrites = [...writesByMessageId.values()].sort(
+    (left, right) => left.messageId - right.messageId,
   );
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     step: work.step,
     plan,
     payload: work.payload,
@@ -625,6 +655,8 @@ export function buildSyncCommitRequest(work: SyncWorkV1): SyncCommitRequestV1 {
     stat: cloneSyncJson(plan.stat),
     statFunc: cloneSyncJson(plan.statFunc),
     meta: cloneSyncJson(plan.meta),
+    floorIdentity,
+    agentFloorCandidate,
   };
 }
 
@@ -641,9 +673,7 @@ function assertConsecutiveCandidate(plan: EraSyncPlanV1 | null): void {
 }
 
 /** 在任何 Capability 写入前验证完整同步提交候选。 */
-export function validateSyncCommitEnvelope(
-  value: unknown,
-):
+export function validateSyncCommitEnvelope(value: unknown):
   | { readonly route: "valid"; readonly envelope: SyncCommitEnvelopeV1 }
   | {
       readonly route: "failed";
@@ -676,43 +706,52 @@ export function validateSyncCommitEnvelope(
     if (!isRecord(value.request)) throw new TypeError("提交候选缺少请求。");
     const request = value.request as unknown as SyncCommitRequestV1;
     step = assertSyncStep(request.step);
-    if (
-      request.schemaVersion !== 1 ||
-      !isRecord(request.plan)
-    ) {
+    if (request.schemaVersion !== 2 || !isRecord(request.plan)) {
       throw new TypeError("同步提交请求或同步计划无效。");
     }
-    if (!isRecord(request.payload))
-      throw new TypeError("同步提交请求缺少公开 payload。");
     const prepared = dispatchContext(step);
     const expectedMk = prepared.processingMk ?? "";
-    if (request.payload.mk !== expectedMk) {
-      throw new TypeError("公开 payload MK 与不可变 processing MK 不一致。");
-    }
-    if (
-      prepared.requirement === "latest-message-with-mk" &&
-      expectedMk.length === 0
-    ) {
-      throw new TypeError("latest-message-with-mk 提交候选不允许空 MK。");
-    }
-    if (
-      prepared.processingMessage === null ||
-      request.payload.message_id !== prepared.processingMessage.messageId ||
-      request.payload.is_user !== (prepared.processingMessage.role === "user")
-    ) {
-      throw new TypeError(
-        "公开 payload 的消息身份与 processing message 不一致。",
-      );
-    }
-    if (
-      !Number.isSafeInteger(request.payload.consecutiveProcessingCount) ||
-      request.payload.consecutiveProcessingCount < 1
-    ) {
-      throw new TypeError("公开 payload 缺少有效连续处理次数。");
+    const emptyCommit = request.plan.messages.length === 0;
+    if (emptyCommit) {
+      if (
+        request.payload !== null ||
+        prepared.processingMessage !== null ||
+        expectedMk.length > 0
+      ) {
+        throw new TypeError("零消息同步提交不得伪造消息身份。");
+      }
+    } else {
+      if (!isRecord(request.payload))
+        throw new TypeError("同步提交请求缺少公开 payload。");
+      if (request.payload.mk !== expectedMk) {
+        throw new TypeError("公开 payload MK 与不可变 processing MK 不一致。");
+      }
+      if (
+        prepared.requirement === "latest-message-with-mk" &&
+        expectedMk.length === 0
+      ) {
+        throw new TypeError("latest-message-with-mk 提交候选不允许空 MK。");
+      }
+      if (
+        prepared.processingMessage === null ||
+        request.payload.message_id !== prepared.processingMessage.messageId ||
+        request.payload.is_user !== (prepared.processingMessage.role === "user")
+      ) {
+        throw new TypeError(
+          "公开 payload 的消息身份与 processing message 不一致。",
+        );
+      }
+      if (
+        !Number.isSafeInteger(request.payload.consecutiveProcessingCount) ||
+        request.payload.consecutiveProcessingCount < 1
+      ) {
+        throw new TypeError("公开 payload 缺少有效连续处理次数。");
+      }
     }
     assertConsecutiveCandidate(request.plan);
     if (!Array.isArray(request.messageWrites))
       throw new TypeError("消息提交列表无效。");
+    const writtenIds = new Set<number>();
     for (const write of request.messageWrites) {
       if (
         !isRecord(write) ||
@@ -721,6 +760,57 @@ export function validateSyncCommitEnvelope(
         typeof write.content !== "string"
       )
         throw new TypeError("消息提交项无效。");
+      if (writtenIds.has(Number(write.messageId))) {
+        throw new TypeError("同一消息在原子提交中出现了重复写入。");
+      }
+      writtenIds.add(Number(write.messageId));
+      if (write.extra !== undefined) cloneEraPortableJsonV1(write.extra);
+    }
+    if (request.agentFloorCandidate !== null) {
+      const candidate = request.agentFloorCandidate;
+      const floor = request.floorIdentity;
+      const processing = prepared.processingMessage;
+      const messageIndex = request.plan.messages.findIndex(
+        (message) => message.messageId === candidate.messageId,
+      );
+      const selected = Array.isArray(request.meta.SelectedMks)
+        ? request.meta.SelectedMks[messageIndex]
+        : null;
+      const editLogs = isRecord(request.meta.EditLogs)
+        ? request.meta.EditLogs
+        : {};
+      const functionEditLogs = isRecord(request.meta.FunctionEditLogs)
+        ? request.meta.FunctionEditLogs
+        : {};
+      const finalWrite = request.messageWrites.find(
+        (write) => write.messageId === candidate.messageId,
+      );
+      const finalMk = finalWrite === undefined
+        ? null
+        : readMessageKey({
+            messageId: finalWrite.messageId,
+            role: "assistant",
+            content: { kind: "text", text: finalWrite.content },
+          });
+      const mismatch =
+        floor === null ||
+        processing === null ||
+        messageIndex < 0 ||
+        candidate.messageId !== floor.messageId ||
+        candidate.swipeId !== floor.swipeId ||
+        candidate.mk !== floor.mk ||
+        prepared.processingMk !== floor.mk ||
+        processing.messageId !== floor.messageId ||
+        finalMk !== floor.mk ||
+        selected !== floor.mk ||
+        !Object.prototype.hasOwnProperty.call(editLogs, floor.mk) ||
+        !Object.prototype.hasOwnProperty.call(functionEditLogs, floor.mk);
+      if (mismatch) {
+        throw new SyncContractError(
+          "ERA_FLOOR_IDENTITY_MISMATCH",
+          "最终消息、processing floor、SelectedMks、变量日志、函数日志与状态栏绑定 MK 不一致。",
+        );
+      }
     }
     cloneEraPortableJsonV1(request.stat);
     cloneEraPortableJsonV1(request.statFunc);
@@ -738,7 +828,9 @@ export function validateSyncCommitEnvelope(
         schemaVersion: 1,
         step,
         failure: syncFailure(
-          "ERA_SYNC_COMMIT_CONTRACT_INVALID",
+          error instanceof SyncContractError
+            ? error.code
+            : "ERA_SYNC_COMMIT_CONTRACT_INVALID",
           errorMessage(error),
           "domain",
         ),
@@ -981,6 +1073,18 @@ export function buildSyncCommittedResult(
           {
             code: outcome.failure.code,
             message: outcome.failure.message,
+            sequence:
+              outcome.step.kind === "execute"
+                ? outcome.step.task.primaryEvent.sequence
+                : null,
+          },
+        ]),
+    ...(outcome.presentationDiagnostic === undefined
+      ? []
+      : [
+          {
+            code: outcome.presentationDiagnostic.code,
+            message: outcome.presentationDiagnostic.message,
             sequence:
               outcome.step.kind === "execute"
                 ? outcome.step.task.primaryEvent.sequence

@@ -52,6 +52,7 @@ interface SyncPlan {
   readonly committed: boolean;
   readonly divergence: Divergence | null;
   readonly stat: unknown;
+  readonly statFunc: Readonly<Record<string, unknown>>;
   readonly meta: Readonly<Record<string, unknown>>;
   readonly messages: readonly Message[];
   readonly messageUpdates: readonly Readonly<Record<string, unknown>>[];
@@ -202,7 +203,7 @@ describe('VibeFlow MK 纯文本引擎差分', () => {
     const repaired = mkEngine.ensureMessageKey(corrupt, { timestamp: 10, token: 'abc123' });
     expect(repaired.status).toBe('created');
     expect(mkEngine.readMkMessageText(repaired.message)).toBe(
-      `正文\n<era_data>{"era-message-key"="broken"}</era_data>\n${candidateBlock('era_mk_10_abc123', 'assistant')}`,
+      `正文\n\n${candidateBlock('era_mk_10_abc123', 'assistant')}`,
     );
     expect(mkEngine.ensureMessageKey(corrupt, { timestamp: -1, token: 'INVALID!' })).toMatchObject({
       status: 'invalid',
@@ -210,6 +211,42 @@ describe('VibeFlow MK 纯文本引擎差分', () => {
       isNew: false,
       textUpdate: null,
     });
+  });
+
+  it('所有最终化路径移除模型夹带的 era_data，并只保留一个 canonical MK', () => {
+    const fakeInsideCommand = message(
+      6,
+      null,
+      '<VariableInsert><era_data>{"error_007":{"value":1}}</era_data></VariableInsert>',
+    );
+    const created = mkEngine.ensureMessageKey(fakeInsideCommand, {
+      timestamp: 11,
+      token: 'def456',
+    });
+    expect(created.status).toBe('created');
+    expect(mkEngine.readMkMessageText(created.message)).toBe(
+      `<VariableInsert></VariableInsert>\n${candidateBlock('era_mk_11_def456', 'assistant')}`,
+    );
+    expect(mkEngine.readMkMessageText(created.message).match(/<era_data\b/giu)).toHaveLength(1);
+
+    const validMkAfterFake: Message = {
+      messageId: 7,
+      role: 'assistant',
+      content: {
+        kind: 'text',
+        text: [
+          '<VariableInsert><era_data>{"ignored":true}</era_data></VariableInsert>',
+          candidateBlock('stable-mk', 'assistant'),
+        ].join('\n'),
+      },
+    };
+    expect(mkEngine.readMessageKey(validMkAfterFake)).toBe('stable-mk');
+    const normalized = mkEngine.ensureMessageKey(validMkAfterFake);
+    expect(normalized).toMatchObject({ status: 'existing', mk: 'stable-mk', isNew: false });
+    expect(normalized.textUpdate).not.toBeNull();
+    expect(mkEngine.readMkMessageText(normalized.message)).toBe(
+      `<VariableInsert></VariableInsert>\n\n${candidateBlock('stable-mk', 'assistant')}`,
+    );
   });
 
   it('同 MID 的不同内容各自解析/生成 MK，不共享任何缓存', () => {
@@ -465,5 +502,18 @@ describe('VibeFlow 历史同步纯引擎差分', () => {
       state: { mk: '', count: 1 },
       count: 1,
     });
+  });
+
+  it('删除至零消息提交明确空终态，不保留旧 Sidecar 状态或日志', () => {
+    const plan = runSync({ messages: [] });
+    expect(plan).toMatchObject({
+      status: 'recalculated',
+      committed: true,
+      stat: {},
+      statFunc: {},
+      recalculatedMessageIndexes: [],
+      nextConsecutiveState: null,
+    });
+    expect(plan.meta).toMatchObject({ SelectedMks: [], EditLogs: {}, FunctionEditLogs: {} });
   });
 });

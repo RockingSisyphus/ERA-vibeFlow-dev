@@ -123,17 +123,33 @@ export function readMkMessageText(message: EraMkMessageV1): string {
   return textParts(message.content).join("\n");
 }
 
+function eraDataBlockPattern(): RegExp {
+  return /<era_data\b[^>]*>[\s\S]*?<\/era_data>/giu;
+}
+
+/**
+ * 移除模型或旧消息夹带的全部成对 ERA 元数据块。
+ * 畸形、未闭合标签保持原样，避免误删作者正文。
+ */
+export function stripEraDataBlocks(text: string): string {
+  return text.replace(eraDataBlockPattern(), "");
+}
+
 /** 复刻候选的非标准等号对象解析；损坏或缺字段时返回 null。 */
 export function parseMessageKeyData(
   messageContent: string | null | undefined,
 ): EraMessageKeyDataV1 | null {
   if (typeof messageContent !== "string") return null;
-  const block = messageContent.match(/<era_data>({.*?})<\/era_data>/);
-  const custom = block?.[1];
-  if (!custom) return null;
-  const key = custom.match(/"era-message-key"\s*=\s*"(.*?)"/)?.[1];
-  const messageType = custom.match(/"era-message-type"\s*=\s*"(.*?)"/)?.[1];
-  return key && messageType ? { mk: key, messageType } : null;
+  for (const block of messageContent.matchAll(eraDataBlockPattern())) {
+    const custom = block[0].match(
+      /^<era_data\b[^>]*>([\s\S]*?)<\/era_data>$/iu,
+    )?.[1];
+    if (!custom) continue;
+    const key = custom.match(/"era-message-key"\s*=\s*"(.*?)"/)?.[1];
+    const messageType = custom.match(/"era-message-type"\s*=\s*"(.*?)"/)?.[1];
+    if (key && messageType) return { mk: key, messageType };
+  }
+  return null;
 }
 
 /** 只扫描当前内容中的文本片段；不会从附件或其他消息变体继承 MK。 */
@@ -180,6 +196,27 @@ function replaceMessageContent(
   return result as EraMkMessageV1;
 }
 
+function stripMessageEraDataBlocks(message: EraMkMessageV1): EraMkMessageV1 {
+  if (message.content.kind === "text") {
+    return replaceMessageContent(message, {
+      kind: "text",
+      text: stripEraDataBlocks(message.content.text),
+    });
+  }
+  const parts = cloneMkValue(message.content.parts) as Record<
+    string,
+    unknown
+  >[];
+  for (let index = 0; index < parts.length; index += 1) {
+    const part = parts[index];
+    if (part?.type !== "text" || typeof part.text !== "string") continue;
+    const next = cloneMkValue(part);
+    defineOwn(next, "text", stripEraDataBlocks(part.text));
+    parts[index] = next;
+  }
+  return replaceMessageContent(message, { kind: "multimodal", parts });
+}
+
 /** 按候选格式把 MK 块追加到最后一个文本片段；附件引用和值保持不变。 */
 export function appendMessageKeyBlock(
   message: EraMkMessageV1,
@@ -215,6 +252,13 @@ export function appendMessageKeyBlock(
     parts[target] = part;
   }
   return replaceMessageContent(message, { kind: "multimodal", parts });
+}
+
+function canonicalizeMessageKey(
+  message: EraMkMessageV1,
+  mk: string,
+): EraMkMessageV1 {
+  return appendMessageKeyBlock(stripMessageEraDataBlocks(message), mk);
 }
 
 function replaceFirstBlock(
@@ -283,6 +327,24 @@ export function ensureMessageKey(
   }
   const existing = readMessageKey(message);
   if (existing) {
+    const canonical = formatMessageKeyBlock(existing, message.role);
+    const messageText = readMkMessageText(message);
+    const blocks = messageText.match(eraDataBlockPattern()) ?? [];
+    const alreadyCanonical = blocks.length === 1 && blocks[0] === canonical;
+    if (!alreadyCanonical) {
+      const updated = canonicalizeMessageKey(message, existing);
+      return {
+        status: "existing",
+        mk: existing,
+        isNew: false,
+        message: updated,
+        textUpdate: {
+          kind: "update-message-content",
+          messageId: message.messageId,
+          content: cloneMkValue(updated.content),
+        },
+      };
+    }
     return {
       status: "existing",
       mk: existing,
@@ -314,7 +376,7 @@ export function ensureMessageKey(
       textUpdate: null,
     };
   }
-  const updated = appendMessageKeyBlock(message, mk);
+  const updated = canonicalizeMessageKey(message, mk);
   return {
     status: "created",
     mk,

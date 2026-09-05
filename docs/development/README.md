@@ -8,6 +8,7 @@ Architecture。接口事实以 `app/@types/**` 为准，运行时可用性以已
 | Tavern Helper/SillyTavern API、iframe、事件 | [tavern-runtime.md](tavern-runtime.md)                                                                 | `app/@types/function/**`、`app/@types/iframe/**`                                |
 | Service、回滚、事件组合、生成 barrier       | [era-host-contract.md](era-host-contract.md)                                                           | `javascript_project/service/ARCHITECTURE.jsonc` 与 source                       |
 | `{{ERA:...}}` 宏                            | [era-host-contract.md](era-host-contract.md)                                                           | `javascript_project/macro/ARCHITECTURE.jsonc` 与 `app/src/ERA变量框架/macro/**` |
+| 托管状态栏模板、按楼读取与写入              | [ERA托管状态栏作者指南.md](ERA托管状态栏作者指南.md)                                                   | `statusbar-runtime.ts`、`era.snapshot.query` 与快速初始化资源规划               |
 | ERA UI、设置、快照和视觉验收                | [era-host-contract.md](era-host-contract.md)                                                           | `app/src/ERA变量框架/ui/**`、`docs/testing/ERA前台UI测试需求.md`                |
 | 当前开放缺陷、真实表现与修复验收            | [../testing/ERA当前缺陷基线.md](../testing/ERA当前缺陷基线.md)                                         | 对应 ERA-Test-Pack 细则、综合 owner 与 Artifact                                |
 | 多阶段规划、骰点、正文与变量结算            | [ERA三段式故事编排器初步设计.md](ERA三段式故事编排器初步设计.md)                                       | `AgentGenerationSession`、内建投影、辅助预设/模型与尝试卡内联 API               |

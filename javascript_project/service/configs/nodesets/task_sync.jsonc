@@ -48,7 +48,7 @@
         "required": true
       }
     ],
-    "max_steps": 26,
+    "max_steps": 27,
     "nodes": [
       {
         "id": "start",
@@ -59,8 +59,8 @@
       {
         "id": "read_sync_context",
         "type_used": "era.tavern.sync_read",
-        "display_name": "读取 Tavern 同步上下文",
-        "description": "消费已准备步骤内的 EraDispatchContextV2，并仅补读变量和编辑日志；消息快照与不可变 processing message/MK 必须来自严格派发上下文。"
+        "display_name": "读取原子楼层同步上下文 V3",
+        "description": "消费 EraDispatchContextV3 中的严格消息投影、稳定楼层身份、暂存更新和可选最终楼层候选，仅补读 Sidecar 指针与迁移来源；不得用旧 processingMk 覆盖当前楼层身份。"
       },
       {
         "id": "sidecar_store_prepare",
@@ -95,8 +95,8 @@
       {
         "id": "no_sync_change",
         "type_used": "era.sync.no_change",
-        "display_name": "保留已同步状态",
-        "description": "保留精确的当前状态和通知身份，并构造无操作逻辑结果。"
+        "display_name": "结算无变化或空聊天终态",
+        "description": "非空历史的真正 no-op 保留当前状态；空历史由纯同步引擎形成可提交的空 statData/statFunc、SelectedMks 与编辑日志终态。"
       },
       {
         "id": "crud_write",
@@ -113,14 +113,14 @@
       {
         "id": "build_commit_request",
         "type_used": "era.sync.build_commit",
-        "display_name": "构造 Sidecar V3 逻辑提交",
-        "description": "构造既有消息先行、状态后置的提交请求，纳入 statData、eraMeta、statFunc、变量/函数编辑日志；无操作与既有连续状态语义保持不变。"
+        "display_name": "构造最终楼层与 Sidecar 原子提交",
+        "description": "从逻辑同步结果构造内部提交 V2：包含 canonical 最终消息、extra、稳定 MK、变量/函数日志、SelectedMks、Sidecar 状态和首次呈现意图；移除模型输出中的遗留 era_data 后只写入一个 canonical MK。"
       },
       {
         "id": "validate_commit_candidate",
         "type_used": "era.sync.validate_commit_candidate",
-        "display_name": "校验同步提交候选",
-        "description": "在任何消息或变量 Capability 写入前校验 processing MK、公开 payload、连续状态和 TaskResult 候选合同，阻止空 MK 或无效状态越过提交边界。"
+        "display_name": "校验最终楼层身份完全一致",
+        "description": "在任何 Host 写入前校验最终消息 MK、processing floor MK、SelectedMks、变量日志 key、函数日志 key 与状态栏绑定 MK 完全一致；不一致返回 ERA_FLOOR_IDENTITY_MISMATCH 且零写入。"
       },
       {
         "id": "build_sync_contract_failure",
@@ -131,14 +131,20 @@
       {
         "id": "commit_variables",
         "type_used": "era.tavern.variables_commit",
-        "display_name": "提交 Sidecar V3 状态",
-        "description": "沿用消息先确认、文件后提交与回读的事务顺序，提交 V3 用户文件并在成功后发布当前身份的易失宏快照；聊天变量仍只保留 ERAMetaData.SidecarId，文件失败不回退为聊天状态。"
+        "display_name": "提交最终消息、Sidecar 与运行时快照",
+        "description": "Host 先以 refresh:none 写入最终消息和 extra，再写入并回读 Sidecar，成功后才发布运行时快照。Sidecar 失败保留可修复状态但不发布、不呈现；消息写入未知仍按既有 fatal 语义处理。"
+      },
+      {
+        "id": "present_finalized_floor",
+        "type_used": "era.sync.present_finalized_floor",
+        "display_name": "Sidecar 成功后首次呈现最终楼层",
+        "description": "仅对已提交且 requiresInitialPresentation 的新楼层执行一次正常 affected render，使 Tavern Helper 创建托管状态栏 iframe；后续 revision 只向原 iframe 推送。呈现失败只附加 diagnostic，不回滚已提交业务状态。"
       },
       {
         "id": "build_sync_notification",
         "type_used": "era.sync.build_notification",
         "display_name": "构造同步结算结果",
-        "description": "仅在提交确认后构造来源结算、状态与诊断；运行时快照已由 Sidecar 成功提交原子发布，公共对象订阅据此更新。"
+        "description": "仅在业务提交结论明确后构造来源 receipt、状态和诊断；presentation diagnostic 与业务 committed 状态分开报告，不把显示失败伪装为状态回滚。"
       },
       {
         "id": "sidecar_binding_blocked_result",
@@ -209,7 +215,8 @@
         "to": "build_sync_contract_failure",
         "when": "commit_validation_route == 'failed'"
       },
-      ["commit_variables", "build_sync_notification"],
+      ["commit_variables", "present_finalized_floor"],
+      ["present_finalized_floor", "build_sync_notification"],
       ["build_sync_notification", "end"],
       ["build_sync_contract_failure", "end"],
       ["sidecar_binding_blocked_result", "end"],

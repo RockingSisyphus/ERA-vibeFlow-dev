@@ -44,6 +44,7 @@ export interface EraServiceStateV1 {
   readonly timerToken: string | null;
   readonly scopeWindow: {
     readonly token: number | null;
+    readonly messageId: number | null;
     readonly messageAdmission: boolean | null;
     readonly branchAdmission: boolean | null;
   };

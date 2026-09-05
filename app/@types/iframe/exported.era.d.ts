@@ -33,11 +33,18 @@ interface EraCommitReceipt {
 
 interface EraApi {
   commit(operations: readonly EraCommitOperation[], options?: { scope?: EraCommitScope }): Promise<EraCommitReceipt>;
-  get(): EraState;
+  get(options?: { force?: boolean; overflow?: 'placeholder' | 'empty' | 'hidden' }): EraState;
+  ready(options?: { force?: boolean; overflow?: 'placeholder' | 'empty' | 'hidden' }): Promise<EraState>;
   subscribe(listener: (state: EraState) => void): () => void;
   sync(options?: { mode?: 'auto' | 'latest' | 'full'; rollbackTo?: number }): Promise<EraState>;
   history: {
     atMessage(messageId: number): Promise<EraState>;
+  };
+  statusbar: {
+    mount(frameWindow: Window): Promise<void>;
+    list(): readonly { messageId: number; mk: string; active: boolean; selected: boolean; summary: string }[];
+    select(messageId: number): Promise<void>;
+    clearSelection(): void;
   };
 }
 

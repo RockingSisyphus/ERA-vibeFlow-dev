@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { runInNewContext } from 'node:vm';
 
 import { eraVarIntentEntry } from '../../src/ERA变量框架/initer/manual/worldbook_entries/era_var_intent';
 import { eraVarOperationRuleEntry } from '../../src/ERA变量框架/initer/manual/worldbook_entries/era_var_operation_rule';
@@ -141,8 +142,8 @@ describe('VibeFlow Service 宿主资源规划器差分', () => {
   it('按 UI 合同解包 settings 字段，不把包装对象 strip 成默认设置', () => {
     const candidate = SettingsSchema.parse({
       开启黑夜模式: true,
-      强制重载功能: true,
-      强制重载消息数: 3,
+      历史状态栏显示范围: 5,
+      历史状态栏超出范围行为: 'hidden',
       特殊符号值: 'ERA_UI_E2E_PLACEHOLDER',
     });
     const plan = initializationTransaction.planInitialization({
@@ -167,14 +168,16 @@ describe('VibeFlow Service 宿主资源规划器差分', () => {
     expect(plan.actions).toEqual([{ kind: 'replace-settings', settings: candidate }]);
   });
 
-  it('等价应用八项 Zod 默认值并 strip 未知字段', () => {
+  it('等价应用八项 Zod 默认值、迁移旧强制重载键并 strip 未知字段', () => {
     const defaults = SettingsSchema.parse({});
     const defaultPlan = planner.planEraSettings(undefined);
     expect(defaultPlan).toMatchObject({ status: 'ready', settings: defaults, removedUnknownKeys: [] });
 
     const raw = {
       特殊符号值: '<自定义/>',
-      强制重载消息数: 7,
+      历史状态栏显示范围: 7,
+      强制重载功能: true,
+      强制重载消息数: 99,
       调试模式: true,
       未知字段: { 必须被移除: true },
     };
@@ -183,7 +186,7 @@ describe('VibeFlow Service 宿主资源规划器差分', () => {
     expect(plan).toMatchObject({
       status: 'ready',
       settings: candidate,
-      removedUnknownKeys: ['未知字段'],
+      removedUnknownKeys: ['强制重载功能', '强制重载消息数', '未知字段'],
     });
     expect(plan.actions).toEqual([{ kind: 'replace-settings', settings: candidate }]);
     expect(plan.settings).not.toHaveProperty('未知字段');
@@ -197,25 +200,30 @@ describe('VibeFlow Service 宿主资源规划器差分', () => {
       actions: [],
     });
 
-    expect(() => SettingsSchema.parse({ 开启悬浮球: 'true', 强制重载消息数: '2' })).toThrow();
-    const invalid = planner.planEraSettings({ 开启悬浮球: 'true', 强制重载消息数: '2' });
+    expect(() => SettingsSchema.parse({ 开启悬浮球: 'true', 历史状态栏显示范围: '2' })).toThrow();
+    const invalid = planner.planEraSettings({ 开启悬浮球: 'true', 历史状态栏显示范围: '2' });
     expect(invalid.status).toBe('invalid');
     expect(invalid.actions).toEqual([]);
     expect(invalid.error).toMatchObject({
       issues: [
         { field: '开启悬浮球', expected: 'boolean', actual: 'string' },
-        { field: '强制重载消息数', expected: 'number', actual: 'string' },
+        { field: '历史状态栏显示范围', expected: 'number', actual: 'string' },
       ],
     });
 
-    for (const value of [0, -1, 1.5]) {
-      expect(() => SettingsSchema.parse({ 强制重载消息数: value })).toThrow();
-      expect(planner.planEraSettings({ 强制重载消息数: value })).toMatchObject({
+    for (const value of [-1, 1.5]) {
+      expect(() => SettingsSchema.parse({ 历史状态栏显示范围: value })).toThrow();
+      expect(planner.planEraSettings({ 历史状态栏显示范围: value })).toMatchObject({
         status: 'invalid',
         actions: [],
-        error: { issues: [{ field: '强制重载消息数' }] },
+        error: { issues: [{ field: '历史状态栏显示范围' }] },
       });
     }
+    expect(SettingsSchema.parse({ 历史状态栏显示范围: 0 }).历史状态栏显示范围).toBe(0);
+    expect(planner.planEraSettings({ 历史状态栏超出范围行为: 'invalid' })).toMatchObject({
+      status: 'invalid',
+      error: { issues: [{ field: '历史状态栏超出范围行为' }] },
+    });
   });
 
   it('逐字段保持两条世界书资源载荷及顺序，并为新主书声明 create+bind', () => {
@@ -291,6 +299,41 @@ describe('VibeFlow Service 宿主资源规划器差分', () => {
     ).toMatchObject({ status: 'skipped', actions: [], details: [] });
   });
 
+  it('首个 iframe 先于 ERA 全局启动时使用 Helper 就绪事件，不执行第二套作者渲染器', async () => {
+    const html = String(planner.getEraRegexPayloads()[0]?.replace_string);
+    const bootstrap = html.match(/<script data-era-statusbar-bootstrap>([\s\S]*?)<\/script>/)?.[1];
+    expect(bootstrap).toBeTruthy();
+    let initialized!: () => void;
+    const globalReady = new Promise<void>(resolve => {
+      initialized = resolve;
+    });
+    let mounts = 0;
+    const frame = {
+      parent: {} as Record<string, unknown>,
+      eraStatusbarMounted: undefined as Promise<void> | undefined,
+    };
+    runInNewContext(bootstrap!, {
+      window: frame,
+      document: { body: { dataset: {} } },
+      waitGlobalInitialized: (name: string) => {
+        expect(name).toBe('ERA');
+        return globalReady;
+      },
+    });
+    expect(mounts).toBe(0);
+    frame.parent.ERA = {
+      statusbar: {
+        mount: async () => {
+          mounts += 1;
+        },
+      },
+    };
+    initialized();
+    await frame.eraStatusbarMounted;
+    expect(mounts).toBe(1);
+    expect(html).toContain('window.eraStatusbarMounted.then(() => ERA.ready())');
+  });
+
   it('逐字段保持局部正则载荷和注入顺序', () => {
     const candidateRegexes = planner.getEraRegexPayloads();
     expect(candidateRegexes).toHaveLength(1);
@@ -316,11 +359,14 @@ describe('VibeFlow Service 宿主资源规划器差分', () => {
     expect(plan.actions.map(action => action.regex)).toEqual(candidateRegexes);
   });
 
-  it('只向主开场白幂等追加版本化示例并拒绝 era_demo 冲突', () => {
+  it('只用一个固定标记判断主开场白是否已经初始化', () => {
     const block = planner.getEraDemoGreetingBlock();
+    const marker = '<!-- ERA_DEMO_GREETING_V2_BEGIN -->';
     expect(block).toContain('<VariableInsert>');
     expect(block).toContain('"era_demo"');
     expect(block).toContain('<StatusPlaceHolderImpl/>');
+    expect(block.match(/ERA_DEMO_GREETING_V2_BEGIN/gu)).toHaveLength(1);
+    expect(block).not.toContain('ERA_DEMO_GREETING_V2_END');
 
     const created = planner.planEraDemoGreeting({ context: character(), firstMessage: '作者原文' });
     expect(created).toMatchObject({ status: 'created', expected: '作者原文' });
@@ -331,9 +377,18 @@ describe('VibeFlow Service 宿主资源规划器差分', () => {
     expect(
       planner.planEraDemoGreeting({
         context: character(),
+        firstMessage: `作者修改后的内容\r\n${marker}\r\n任意自定义内容`,
+      }),
+    ).toMatchObject({ status: 'unchanged' });
+    expect(planner.planEraDemoGreeting({ context: character(), firstMessage: marker })).toMatchObject({
+      status: 'unchanged',
+    });
+    expect(
+      planner.planEraDemoGreeting({
+        context: character(),
         firstMessage: '<VariableInsert>{"era_demo":{"author":true}}</VariableInsert>',
       }),
-    ).toMatchObject({ status: 'conflict' });
+    ).toMatchObject({ status: 'created' });
     expect(planner.planEraDemoGreeting({ context: { kind: 'group-chat' }, firstMessage: '原文' })).toMatchObject({
       status: 'skipped',
     });
@@ -366,7 +421,11 @@ describe('VibeFlow Service 宿主资源规划器差分', () => {
       localRegexEnabled: true,
       existingRegexes: existing,
     });
-    expect(plan.details[0]).toEqual({ regexName: 'ERA 状态栏模板', status: 'exists' });
+    expect(plan.details[0]).toEqual({
+      regexName: 'ERA 状态栏模板',
+      status: 'exists',
+      compatibility: 'legacy-unmanaged',
+    });
     expect(plan.actions).toHaveLength(0);
     expect(existing).toEqual(before);
   });

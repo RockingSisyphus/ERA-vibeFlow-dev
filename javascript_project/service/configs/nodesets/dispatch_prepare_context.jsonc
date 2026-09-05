@@ -1,7 +1,7 @@
 {
   "type_key": "era.dispatch.prepare_context",
   "display_name": "ERA 统一任务上下文准备",
-  "description": "在领域任务路由前统一分类任务上下文，读取严格酒馆消息投影，规划并提交消息文本中的 MK 与状态占位符；仅 update-mk 任务在此提交 SelectedMks，状态任务保留旧链供同步事务识别分歧，最后把 EraDispatchContextV2 和显式任务来源封装进已准备步骤。",
+  "description": "在领域任务路由前统一分类任务上下文，读取严格酒馆消息投影；状态任务把消息 MK、占位符和最终楼层候选暂存在 EraDispatchContextV3，不提前写 Tavern，只有 update-mk 任务仍在此提交 SelectedMks。",
   "requires": [
     {
       "type": "era.step.request",
@@ -74,10 +74,10 @@
         "description": "使用 projection=era-active-message-v1 读取 canonical 消息 DTO、聊天元数据和脚本占位符设置；Date、swipes_info 与宿主对象不得跨边界。"
       },
       {
-        "id": "plan_message_preparation",
+        "id": "stage_message_preparation",
         "type_used": "era.dispatch.plan_message_preparation",
-        "display_name": "规划 MK 与占位符",
-        "description": "按上下文模式确保当前消息 MK，为启用设置的非用户文本幂等追加占位符；状态任务只准备消息文本并保留旧 SelectedMks，update-mk 任务同时规划主链提交。"
+        "display_name": "暂存楼层 MK、占位符与消息更新",
+        "description": "按上下文模式确保当前逻辑 Swipe 只分配一个 MK。状态任务仅在内存中暂存消息更新并走 no-op 分支，禁止在 Agent 或同步事务前写 Tavern；update-mk 任务继续规划原有直接提交。"
       },
       {
         "id": "preserve_prepared_context",
@@ -94,8 +94,8 @@
       {
         "id": "finalize_dispatch_context",
         "type_used": "era.dispatch.finalize_context",
-        "display_name": "生成统一派发上下文",
-        "description": "合并互斥准备结果，把含不可变 processing message/MK 的 EraDispatchContextV2 与显式 dispatch class 封装进已准备步骤，并输出任务路由和原批次状态。"
+        "display_name": "生成稳定楼层派发上下文 V3",
+        "description": "合并互斥准备结果，把 GenerationCycleIdentity、可选 EraFloorIdentity、暂存消息更新与可选最终楼层候选封装进 EraDispatchContextV3；MK 是消息身份而不是跳过同步的判据。"
       },
       {
         "id": "end",
@@ -121,15 +121,15 @@
       },
       [
         "read_canonical_context",
-        "plan_message_preparation"
+        "stage_message_preparation"
       ],
       {
-        "from": "plan_message_preparation",
+        "from": "stage_message_preparation",
         "to": "preserve_prepared_context",
         "when": "precommit_route == 'no-op'"
       },
       {
-        "from": "plan_message_preparation",
+        "from": "stage_message_preparation",
         "to": "commit_preparation",
         "when": "precommit_route == 'commit'"
       },

@@ -79,6 +79,17 @@ describe('ERA contracts 1.4 canonical DTO', () => {
     expect(contracts.isEraDispatchContextV2(context)).toBe(true);
     expect(contracts.isEraDispatchContextV2({ ...context, schemaVersion: 1 })).toBe(false);
     expect(contracts.isEraDispatchContextV2({ ...context, processingMk: null })).toBe(false);
+
+    const emptySync = {
+      ...context,
+      dispatchClass: 'sync',
+      messages: [],
+      processingMessage: null,
+      processingMk: null,
+    };
+    expect(contracts.isEraDispatchContextV2(emptySync)).toBe(true);
+    expect(contracts.isEraDispatchContextV2({ ...emptySync, dispatchClass: 'api' })).toBe(false);
+    expect(contracts.isEraDispatchContextV2({ ...emptySync, processingMk: 'forged-mk' })).toBe(false);
   });
 
   it('严格接受完整 execute 任务/来源并拒绝 task、route 或 source 降格', () => {

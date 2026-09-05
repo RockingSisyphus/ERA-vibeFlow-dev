@@ -1,13 +1,67 @@
-import { describe, expect, it } from 'vitest';
+import lodash from 'lodash';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { formatEraReportForDisplay } from '../../src/ERA变量框架/service/technical-report-display';
 
-import {
-  isDisplayedMessageBeingEdited,
-  parseEraTechnicalProjection,
-  projectEraPromptMessages,
-  stripEraTechnicalBlocks,
-} from '../../src/ERA变量框架/service/technical-block-projection';
+let isDisplayedMessageBeingEdited: typeof import('../../src/ERA变量框架/service/technical-block-projection').isDisplayedMessageBeingEdited;
+let parseEraTechnicalProjection: typeof import('../../src/ERA变量框架/service/technical-block-projection').parseEraTechnicalProjection;
+let projectEraPromptMessages: typeof import('../../src/ERA变量框架/service/technical-block-projection').projectEraPromptMessages;
+let stripEraTechnicalBlocks: typeof import('../../src/ERA变量框架/service/technical-block-projection').stripEraTechnicalBlocks;
+let eraTechnicalDisplaySource: typeof import('../../src/ERA变量框架/service/technical-block-projection').eraTechnicalDisplaySource;
+let createEraLazyMacroToken: typeof import('../../src/ERA变量框架/macro/syntax').createEraLazyMacroToken;
+let createEraMacroSnapshot: typeof import('../../src/ERA变量框架/macro/registration').createEraMacroSnapshot;
+
+beforeAll(async () => {
+  vi.stubGlobal('_', lodash);
+  ({
+    isDisplayedMessageBeingEdited,
+    parseEraTechnicalProjection,
+    projectEraPromptMessages,
+    stripEraTechnicalBlocks,
+    eraTechnicalDisplaySource,
+  } = await import('../../src/ERA变量框架/service/technical-block-projection'));
+  ({ createEraLazyMacroToken } = await import('../../src/ERA变量框架/macro/syntax'));
+  ({ createEraMacroSnapshot } = await import('../../src/ERA变量框架/macro/registration'));
+});
 
 describe('ERA technical block projection', () => {
+  it('does not invalidate a displayed greeting when hidden metadata adds a separator newline', () => {
+    const greeting = 'Story\n<VariableInsert>{"hp":12}</VariableInsert>\n<StatusPlaceHolderImpl/>';
+    const display = (raw: string) => eraTechnicalDisplaySource(parseEraTechnicalProjection(raw));
+    expect(display(`${greeting}\n<era_data>mk</era_data>`)).toBe(display(greeting));
+    expect(display(`${greeting}\n\n<era_tx s="m"><VariableEdit>{"hp":8}</VariableEdit></era_tx>`)).toBe(
+      display(greeting),
+    );
+    expect(display('First\n\nSecond')).not.toBe(display('First\nSecond'));
+    expect(display('First  \nSecond')).not.toBe(display('First\nSecond'));
+  });
+  it('invalidates display for story/report changes but not hidden API transaction writes', () => {
+    const original =
+      'Story\n<VariableInsert>{"hp":12}</VariableInsert>\n<StatusPlaceHolderImpl/>\n<era_data>mk</era_data>';
+    const display = (raw: string) => eraTechnicalDisplaySource(parseEraTechnicalProjection(raw));
+    const committed = `${original}\n<era_tx s="m"><VariableEdit>{"hp":8}</VariableEdit></era_tx>`;
+    expect(display(committed)).toBe(display(original));
+    expect(display(committed.replace('"hp":8', '"hp":7'))).toBe(display(original));
+    expect(display(original.replace('Story', 'Edited story'))).not.toBe(display(original));
+    expect(display(`${original}\n<era_update>{"result":1}</era_update>`)).not.toBe(display(original));
+    expect(display('<era_update>A</era_update>')).not.toBe(display('<era_update>B</era_update>'));
+  });
+  it('expands only known response JSON in the display copy and preserves raw message bytes', () => {
+    const raw = JSON.stringify({
+      attempts: [{ response: JSON.stringify({ scene: '森林', nested: { hp: 7 } }) }, { response: '<b>plain</b>' }],
+      other: '{"keep":"string"}',
+    });
+    const message = `<era_plan>${raw}</era_plan>story`;
+    const displayed = formatEraReportForDisplay(raw);
+    expect(displayed).toContain('\n  "attempts": [\n');
+    expect(JSON.parse(displayed).attempts[0].response).toEqual({ scene: '森林', nested: { hp: 7 } });
+    expect(JSON.parse(displayed).attempts[1].response).toBe('<b>plain</b>');
+    expect(JSON.parse(displayed).other).toBe('{"keep":"string"}');
+    expect(parseEraTechnicalProjection(message).segments[0]).toMatchObject({
+      text: raw,
+      source: `<era_plan>${raw}</era_plan>`,
+    });
+    expect(formatEraReportForDisplay('invalid {')).toBe('invalid {');
+  });
   it('leaves SillyTavern message editors under host ownership', () => {
     const editor = {} as Element;
     let currentEditor: Element | null = editor;
@@ -96,5 +150,24 @@ describe('ERA technical block projection', () => {
     expect(projected[1].content?.[0]).toEqual({ type: 'text', text: '提问' });
     expect(messages[0].content).toContain('era_update');
     expect(projected).not.toBe(messages);
+  });
+
+  it('发给模型的普通与多模态文本使用最新已提交状态解析惰性宏', () => {
+    const token = createEraLazyMacroToken('{{ERA:player.hp}}');
+    const messages: SillyTavern.SendingMessage[] = [
+      { role: 'assistant', content: `HP=${token}` },
+      {
+        role: 'user',
+        content: [
+          { type: 'text', text: `再读=${token}` },
+          { type: 'image_url', image_url: { url: 'data:image/png;base64,AA==', detail: 'auto' } },
+        ],
+      },
+    ];
+    const projected = projectEraPromptMessages(messages, createEraMacroSnapshot({ player: { hp: 42 } }));
+    expect(projected[0].content).toBe('HP=42');
+    expect(projected[1].content?.[0]).toEqual({ type: 'text', text: '再读=42' });
+    expect(projected[1].content?.[1]).toEqual(messages[1].content?.[1]);
+    expect(messages[0].content).toContain('__ERA_LAZY_MACRO_V2_');
   });
 });

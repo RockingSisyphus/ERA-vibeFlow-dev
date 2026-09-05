@@ -1,7 +1,7 @@
 {
   "package": "@era/vibeflow-contracts",
   "status": "implemented",
-  "version": "1.4.0",
+  "version": "1.9.0",
   "schema_version": 1,
   "contracts": [
     {
@@ -68,6 +68,11 @@
       "id": "era.dispatch.context.v2",
       "owners": ["service"],
       "purpose": "把可更新的严格消息快照与任务开始时不可变的处理消息、MK 和显式来源分离。",
+    },
+    {
+      "id": "era.dispatch.context.v3",
+      "owners": ["service"],
+      "purpose": "携带稳定楼层身份、暂存消息更新和可选 Agent 最终楼层候选的内部派发上下文。",
     },
     {
       "id": "era.planned_source.v1",

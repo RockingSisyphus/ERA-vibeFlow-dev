@@ -14,6 +14,27 @@ export interface EraMacroSnapshot {
 type PromptContent = SillyTavern.SendingMessage['content'];
 
 const ERA_MACRO_QUICK_CHECK = /{{\s*ERA(?:-withmeta)?\s*:/i;
+const LAZY_TOKEN_PREFIX = '__ERA_LAZY_MACRO_V2_';
+const LAZY_TOKEN_PATTERN = /__ERA_LAZY_MACRO_V2_([0-9a-f]+)__/giu;
+
+function encodeLazyMacro(value: string): string {
+  let result = '';
+  for (let index = 0; index < value.length; index += 1) {
+    result += value.charCodeAt(index).toString(16).padStart(4, '0');
+  }
+  return result;
+}
+
+function decodeLazyMacro(value: string): string | null {
+  if (value.length % 4 !== 0) return null;
+  let result = '';
+  for (let index = 0; index < value.length; index += 4) {
+    const code = Number.parseInt(value.slice(index, index + 4), 16);
+    if (!Number.isFinite(code)) return null;
+    result += String.fromCharCode(code);
+  }
+  return result;
+}
 
 /**
  * 每个使用方都获取独立的正则实例，避免全局正则的 `lastIndex`
@@ -25,6 +46,15 @@ export function createEraMacroRegex(): RegExp {
 
 export function containsEraMacro(text: string): boolean {
   return ERA_MACRO_QUICK_CHECK.test(text);
+}
+
+/** Tavern Helper 的同步宏回调只登记语义，真正的楼层快照由显示上下文决定。 */
+export function createEraLazyMacroToken(source: string): string {
+  return `${LAZY_TOKEN_PREFIX}${encodeLazyMacro(source)}__`;
+}
+
+export function containsEraLazyMacroToken(value: string): boolean {
+  return value.includes(LAZY_TOKEN_PREFIX);
 }
 
 /**
@@ -57,6 +87,16 @@ export function parseEraMacroText(text: string, snapshot: EraMacroSnapshot): str
     }
 
     return String(value);
+  });
+}
+
+/** 使用调用方已经选定的最新或历史快照解析惰性宏。 */
+export function resolveEraLazyMacroTokens(value: string, snapshot: EraMacroSnapshot): string {
+  if (!containsEraLazyMacroToken(value)) return value;
+  LAZY_TOKEN_PATTERN.lastIndex = 0;
+  return value.replace(LAZY_TOKEN_PATTERN, (token, encoded: string) => {
+    const source = decodeLazyMacro(encoded);
+    return source === null ? token : parseEraMacroText(source, snapshot);
   });
 }
 

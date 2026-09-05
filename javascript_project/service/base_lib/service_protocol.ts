@@ -99,6 +99,7 @@ export function createInitialServiceState(): EraServiceStateV1 {
     timerToken: null,
     scopeWindow: {
       token: null,
+      messageId: null,
       messageAdmission: null,
       branchAdmission: null,
     },

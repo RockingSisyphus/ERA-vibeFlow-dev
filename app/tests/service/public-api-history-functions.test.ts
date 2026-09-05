@@ -40,10 +40,12 @@ describe('ERA.history.atMessage 函数历史投影', () => {
       eraMeta: {
         SelectedMks: ['mk-0', 'mk-1', 'mk-2'],
         EditLogs: {
+          'mk-0': [{ op: 'insert', path: 'hp', value_new: 10 }],
           'mk-1': [{ op: 'update', path: 'hp', value_old: 10, value_new: 20 }],
           'mk-2': [{ op: 'insert', path: 'added', value_new: true }],
         },
         FunctionEditLogs: {
+          'mk-0': [{ op: 'insert', name: 'f', value_new: { params: ['x'], expr: 'x+1' } }],
           'mk-1': [
             {
               op: 'update',
@@ -57,7 +59,13 @@ describe('ERA.history.atMessage 函数历史投影', () => {
       },
     });
 
-    const facade = createEraFacade();
+    const facade = createEraFacade(() => ({
+      mount: async () => undefined,
+      list: () => [],
+      select: async () => undefined,
+      clearSelection: () => undefined,
+      stop: () => undefined,
+    }));
     const historical = await facade.history.atMessage(0);
     expect(historical.statData).toEqual({ hp: 10 });
     expect(historical.statFunc).toEqual({ f: { params: ['x'], expr: 'x+1' } });

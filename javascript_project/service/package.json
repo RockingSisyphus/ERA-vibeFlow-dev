@@ -7,7 +7,8 @@
     "node": ">=24.18.0"
   },
   "dependencies": {
-    "@era/vibeflow-contracts": "file:../../packages/era-contracts/era-vibeflow-contracts-1.7.0.tgz",
+    "@era/vibeflow-floor-snapshot": "file:vendor/era-vibeflow-floor-snapshot-0.1.0.tgz",
+    "@era/vibeflow-contracts": "file:../../packages/era-contracts/era-vibeflow-contracts-1.9.0.tgz",
     "@era/vibeflow-command-compaction": "file:vendor/era-vibeflow-command-compaction-0.4.0.tgz",
     "@era/vibeflow-expression": "file:vendor/era-vibeflow-expression-0.2.0.tgz",
     "@stdlib/math-base-special-gamma": "^0.3.1",

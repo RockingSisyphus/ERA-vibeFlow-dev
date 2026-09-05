@@ -3,7 +3,7 @@
   "type_key": "era.sync.validate_commit_candidate",
   "display_name": "校验同步提交候选",
   "category": "同步事务",
-  "description": "在任何 Capability 写入前验证 processing MK、公开 payload、连续状态和可移植 JSON 合同。",
+  "description": "在任何 Capability 写入前验证最终消息、processing floor、SelectedMks、变量日志、函数日志和状态栏绑定 MK 完全一致。",
   "version": "1.0.0",
   "flow_kind": "decision",
   "contract": {

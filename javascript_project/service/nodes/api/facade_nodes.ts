@@ -55,6 +55,14 @@ async function readMessages(context: Context, purpose: string): Promise<unknown>
   });
 }
 
+function identityInput(purpose: string, rawRequest: unknown): Readonly<Record<string, unknown>> {
+  if (!isRecord(rawRequest)) return { purpose };
+  const detail = isRecord(rawRequest.detail) ? rawRequest.detail : {};
+  return Object.prototype.hasOwnProperty.call(detail, "sourceContext")
+    ? { purpose, sourceContext: detail.sourceContext }
+    : { purpose };
+}
+
 export function routeFacadeNode(inputs: any): any {
   const routed = routeFacadeCommand(
     envelope(inputs, "era.step.request.routed") as PlannedStepV1,
@@ -72,11 +80,12 @@ export async function readWindowNode(
   _params: any,
   context: any,
 ): Promise<any> {
-  const identity = context.capabilities["era.tavern.identity"].read({ purpose: "era-facade-window" });
+  const request = envelope(inputs, "era.api.request");
+  const identity = context.capabilities["era.tavern.identity"].read(identityInput("era-facade-window", request));
   const messages = await readMessages(context, "era-facade-window");
   return {
     facade_commit_inspected: inspectWindow(
-      envelope(inputs, "era.api.request"),
+      request,
       envelope(inputs, "era.batch.execution.state") as BatchExecutionStateV1,
       identity,
       messages,
@@ -104,7 +113,8 @@ export async function readTargetNode(
 ): Promise<any> {
   const candidate = envelope(inputs, "era.api.commit.transaction");
   const messages = await readMessages(context, "era-facade-commit-target");
-  const identity = context.capabilities["era.tavern.identity"].read({ purpose: "era-facade-commit-target" });
+  const request = isRecord(candidate) ? candidate.request : null;
+  const identity = context.capabilities["era.tavern.identity"].read(identityInput("era-facade-commit-target", request));
   if (!isRecord(candidate)) throw new TypeError("era_tx 上下文损坏。");
   const refreshed = inspectWindow(candidate.request, candidate.executionState as BatchExecutionStateV1, identity, messages);
   return { facade_commit_target: { ...candidate, messages: refreshed.messages, latest: refreshed.latest } };
@@ -119,8 +129,10 @@ export function recheckWindowNode(
   _params: any,
   context: any,
 ): any {
-  const current = context.capabilities["era.tavern.identity"].read({ purpose: "era-facade-pre-write" });
-  const result = recheckWindow(envelope(inputs, "era.api.commit.append.request"), current);
+  const append = envelope(inputs, "era.api.commit.append.request");
+  const request = isRecord(append) ? append.request : null;
+  const current = context.capabilities["era.tavern.identity"].read(identityInput("era-facade-pre-write", request));
+  const result = recheckWindow(append, current);
   return {
     window_recheck_route: result.route,
     facade_commit_rechecked: result.context,

@@ -1,4 +1,4 @@
-import type { EraFacade } from '../../service/public-api';
+import { getInstalledEraPublicApi, type EraFacade } from '../../service/public-api';
 
 /**
  * Tavern Helper 的等待函数只负责在当前 iframe realm 安装全局 getter，
@@ -6,6 +6,5 @@ import type { EraFacade } from '../../service/public-api';
  * 把 void 误当成公共对象。
  */
 export async function waitForEraFacade(): Promise<EraFacade> {
-  await waitGlobalInitialized('ERA');
-  return ERA as unknown as EraFacade;
+  return getInstalledEraPublicApi();
 }

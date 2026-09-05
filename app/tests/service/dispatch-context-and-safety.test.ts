@@ -10,6 +10,10 @@ const transactionUrl = new URL('../../../javascript_project/service/base_lib/syn
   .href;
 const commitUrl = new URL('../../../javascript_project/service/nodes/dispatch/commit_preparation.ts', import.meta.url)
   .href;
+const planMessagePreparationUrl = new URL(
+  '../../../javascript_project/service/nodes/dispatch/plan_message_preparation.ts',
+  import.meta.url,
+).href;
 const readUrl = new URL('../../../javascript_project/service/nodes/dispatch/read_canonical_context.ts', import.meta.url)
   .href;
 const finalizeUrl = new URL(
@@ -20,6 +24,7 @@ const finalizeUrl = new URL(
 const preparation = await import(/* @vite-ignore */ preparationUrl);
 const transaction = await import(/* @vite-ignore */ transactionUrl);
 const commitNode = await import(/* @vite-ignore */ commitUrl);
+const planMessagePreparationNode = await import(/* @vite-ignore */ planMessagePreparationUrl);
 const readNode = await import(/* @vite-ignore */ readUrl);
 const finalizeNode = await import(/* @vite-ignore */ finalizeUrl);
 
@@ -210,6 +215,39 @@ describe('统一执行前上下文', () => {
     expect(repeated.variableWriteRequired).toBe(false);
   });
 
+  it('零消息只允许同步任务继续准备为空终态', () => {
+    const sync = syncStep();
+    const syncSeed = preparation.classifyDispatch(sync, state(sync)).seed;
+    const syncPlan = preparation.planDispatchPreparation(
+      preparation.canonicalDispatchContext(
+        syncSeed,
+        { schemaVersion: 2, messages: [] },
+        { variables: { ERAMetaData: { SelectedMks: ['old-mk'] } } },
+        { variables: {} },
+      ),
+    );
+    expect(syncPlan).toMatchObject({
+      status: 'ready',
+      messages: [],
+      processingMessage: null,
+      processingMk: null,
+      messageWriteRequired: false,
+      variableWriteRequired: false,
+    });
+
+    const update = updateMkStep();
+    const updateSeed = preparation.classifyDispatch(update, state(update)).seed;
+    const rejected = preparation.planDispatchPreparation(
+      preparation.canonicalDispatchContext(
+        updateSeed,
+        { schemaVersion: 2, messages: [] },
+        { variables: {} },
+        { variables: {} },
+      ),
+    );
+    expect(rejected).toMatchObject({ status: 'failed', failure: { code: 'ERA_DISPATCH_EMPTY_CHAT' } });
+  });
+
   it('仅 update-mk 任务在准备阶段拥有 SelectedMks 提交权', () => {
     const step = updateMkStep();
     const seed = preparation.classifyDispatch(step, state(step)).seed;
@@ -389,7 +427,49 @@ describe('严格 DTO、安全对象与 API 状态策略', () => {
     expect(normalWork.plan?.nextConsecutiveState).toEqual({ mk: 'mk-existing', count: 5 });
   });
 
-  it('swipe 新 MK 只预提交消息文本，再由同步事务原子撤销 A 并应用 B', async () => {
+  it('零消息同步构造无消息身份的真实状态提交', () => {
+    const step = syncStep('sync', 'latest-message-with-mk', [], null);
+    const work = transaction.planSyncWork({
+      schemaVersion: 1,
+      step,
+      state: state(step),
+      status: 'ready',
+      messagesRaw: { schemaVersion: 2, messages: [] },
+      variablesRaw: {
+        stat_data: { stale: true },
+        statFunc: { stale: { params: [], expr: '1' } },
+        ERAMetaData: {
+          SelectedMks: ['old-mk'],
+          EditLogs: { 'old-mk': [] },
+          FunctionEditLogs: { 'old-mk': [] },
+        },
+      },
+      failure: null,
+    });
+    expect(work.failure).toBeNull();
+    expect(work).toMatchObject({
+      disposition: 'commit',
+      payload: null,
+      plan: {
+        status: 'recalculated',
+        committed: true,
+        stat: {},
+        statFunc: {},
+        meta: { SelectedMks: [], EditLogs: {}, FunctionEditLogs: {} },
+      },
+    });
+    const request = transaction.buildSyncCommitRequest(work);
+    expect(request).toMatchObject({
+      payload: null,
+      messageWrites: [],
+      stat: {},
+      statFunc: {},
+      meta: { SelectedMks: [], EditLogs: {}, FunctionEditLogs: {} },
+    });
+    expect(transaction.validateSyncCommitEnvelope({ mode: 'commit', request })).toMatchObject({ route: 'valid' });
+  });
+
+  it('swipe 新 MK 不预提交消息，由同步事务原子写入并撤销 A、应用 B', async () => {
     const keyBlock = (mk: string) => `<era_data>{"era-message-key"="${mk}","era-message-type"="assistant"}</era_data>`;
     const rawMessages = [
       {
@@ -419,32 +499,19 @@ describe('严格 DTO、安全对象与 API 状态策略', () => {
     };
     const step = syncStep();
     const seed = preparation.classifyDispatch(step, state(step)).seed;
-    const plan = preparation.planDispatchPreparation(
-      preparation.canonicalDispatchContext(
-        seed,
-        { schemaVersion: 2, messages: rawMessages },
-        { variables },
-        { variables: {} },
-      ),
+    const canonical = preparation.canonicalDispatchContext(
+      seed,
+      { schemaVersion: 2, messages: rawMessages },
+      { variables },
+      { variables: {} },
     );
+    const plan = preparation.planDispatchPreparation(canonical);
     expect(plan.processingMk).toMatch(/^era_mk_1001_/);
     expect(plan.metaUpdate.SelectedMks).toEqual(['mk-0', 'mk-a']);
     expect(plan.variableWriteRequired).toBe(false);
-    const updateContent = vi.fn(async () => ({ status: 'committed' }));
-    const commitVariables = vi.fn(async () => ({ status: 'committed' }));
-    const committed = await commitNode.run(
-      { 'era.dispatch.preparation.plan': { value: plan } },
-      {},
-      {
-        capabilities: {
-          'era.tavern.messages': { update_content: updateContent },
-          'era.tavern.variables': { commit: commitVariables },
-        },
-      },
-    );
-    expect(updateContent).toHaveBeenCalledOnce();
-    expect(commitVariables).not.toHaveBeenCalled();
-    const dispatchContext = preparation.dispatchContextOf(committed.committed_preparation_outcome);
+    const routed = planMessagePreparationNode.run({ 'era.dispatch.canonical_context': { value: canonical } }, {});
+    expect(routed).toMatchObject({ precommit_route: 'no-op' });
+    const dispatchContext = preparation.dispatchContextOf(preparation.preserveDispatchPreparation(plan));
     const routedStep = { ...step, dispatchContext };
     const work = transaction.planSyncWork({
       schemaVersion: 1,
@@ -466,5 +533,99 @@ describe('严格 DTO、安全对象与 API 状态策略', () => {
     expect((work.plan?.meta.EditLogs as JsonRecord)[String(plan.processingMk)]).toEqual([
       { op: 'insert', path: 'ui_swipe', value_new: { branch: 'B' } },
     ]);
+    const request = transaction.buildSyncCommitRequest(work);
+    expect(request).toMatchObject({
+      schemaVersion: 2,
+      messageWrites: [
+        {
+          messageId: 1,
+          content: expect.stringContaining(String(plan.processingMk)),
+        },
+      ],
+      meta: { SelectedMks: ['mk-0', plan.processingMk] },
+    });
+  });
+
+  it('最终楼层候选只在消息、processing、SelectedMks 与双日志使用同一 MK 时允许提交', () => {
+    const mk = 'era_mk_atomic_floor';
+    const content = [
+      '原子楼层正文',
+      '<VariableInsert>{"hero":{"hp":9}}</VariableInsert>',
+      `<era_data>{"era-message-key"="${mk}","era-message-type"="assistant"}</era_data>`,
+      '<StatusPlaceHolderImpl/>',
+    ].join('\n');
+    const message = {
+      schemaVersion: 1,
+      messageId: 0,
+      role: 'assistant',
+      activeText: content,
+      swipeIndex: 0,
+    };
+    const step: JsonRecord = syncStep('sync', 'latest-message-with-mk', [message], mk);
+    step.dispatchContext = {
+      ...step.dispatchContext,
+      schemaVersion: 3,
+      generationCycleIdentity: {
+        chatId: 'chat-atomic-floor',
+        eventId: 'event-1',
+        sourceKey: 'chat-atomic-floor:agent:1',
+      },
+      floorIdentity: {
+        chatId: 'chat-atomic-floor',
+        messageId: 0,
+        swipeId: 0,
+        mk,
+      },
+      stagedMessageUpdates: [{ messageId: 0, content }],
+      agentFloorCandidate: {
+        messageId: 0,
+        swipeId: 0,
+        mk,
+        content,
+        extra: { era_agent: { schemaVersion: 1, status: 'settled' } },
+        terminalStatus: 'settled',
+        requiresInitialPresentation: true,
+      },
+    };
+    const work = transaction.planSyncWork({
+      schemaVersion: 1,
+      step,
+      state: state(step),
+      status: 'ready',
+      messagesRaw: { schemaVersion: 2, messages: [message] },
+      variablesRaw: {
+        stat_data: {},
+        statFunc: {},
+        ERAMetaData: { SelectedMks: [], EditLogs: {}, FunctionEditLogs: {} },
+      },
+      failure: null,
+    });
+    const request = transaction.buildSyncCommitRequest(work);
+    expect(transaction.validateSyncCommitEnvelope({ mode: 'commit', request })).toMatchObject({ route: 'valid' });
+    expect(request).toMatchObject({
+      schemaVersion: 2,
+      floorIdentity: { messageId: 0, swipeId: 0, mk },
+      agentFloorCandidate: { messageId: 0, swipeId: 0, mk },
+      meta: {
+        SelectedMks: [mk],
+        EditLogs: { [mk]: expect.any(Array) },
+        FunctionEditLogs: { [mk]: expect.any(Array) },
+      },
+      messageWrites: [{ messageId: 0, content, extra: expect.any(Object) }],
+    });
+
+    const mismatched = {
+      ...request,
+      messageWrites: [
+        {
+          ...request.messageWrites[0],
+          content: request.messageWrites[0].content.replace(mk, 'era_mk_wrong_floor'),
+        },
+      ],
+    };
+    expect(transaction.validateSyncCommitEnvelope({ mode: 'commit', request: mismatched })).toMatchObject({
+      route: 'failed',
+      failure: { failure: { code: 'ERA_FLOOR_IDENTITY_MISMATCH' } },
+    });
   });
 });

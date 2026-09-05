@@ -60,21 +60,22 @@
               </template>
 
               <!-- 数字：number 输入 -->
-              <template v-else-if="row.type === 'number'">
-                <input
-                  :id="controlId(row.key)"
-                  v-model.number="edits[row.key]"
-                  type="number"
-                  class="ipt"
-                  :aria-label="row.key"
-                  :min="row.key === '强制重载消息数' ? 1 : undefined"
-                  :step="row.key === '强制重载消息数' ? 1 : undefined"
-                  :placeholder="String(row.value)"
-                />
-                <!-- 数字输入 -->
-              </template>
+              <StatusbarRangeInput
+                v-else-if="row.type === 'number'"
+                v-model="edits[row.key]"
+                :saved-value="row.value"
+                :control-id="controlId(row.key)"
+                :label="row.key"
+              />
 
               <!-- 字符串：text 输入 -->
+              <StatusbarOverflowSelect
+                v-else-if="row.key === '历史状态栏超出范围行为'"
+                v-model="edits[row.key]"
+                :control-id="controlId(row.key)"
+                :label="row.key"
+              />
+
               <template v-else-if="row.type === 'string'">
                 <input
                   :id="controlId(row.key)"
@@ -138,6 +139,8 @@ import { SettingsSchema } from '../../../utils/constants';
 import { settings } from '../../../utils/era_data';
 import { Logger } from '../../../utils/log'; // 记录设置读取、提交与回滚的可诊断结果。
 import { awaitUiSettlement } from '../../utils/service-settlement';
+import StatusbarOverflowSelect from './StatusbarOverflowSelect.vue';
+import StatusbarRangeInput from './StatusbarRangeInput.vue';
 import {
   buildEditableSettingRows,
   settingControlId,

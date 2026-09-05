@@ -19,6 +19,7 @@ function failed(seed: DispatchSeedV1, error: unknown): DispatchCanonicalContextV
     seed,
     status: "failed",
     messages: [],
+    identity: {},
     meta: {},
     placeholder: { enabled: true, value: "<StatusPlaceHolderImpl/>" },
     failure: {
@@ -42,21 +43,29 @@ export async function run(
       range: "0-{{lastMessageId}}",
       purpose: "era-dispatch-prepare",
     });
+    const identity = context.capabilities["era.tavern.identity"].read({
+      purpose: "era-dispatch-prepare",
+    });
     if (seed.requirement === "latest-message") {
-      const messages = await messagesPromise;
+      const [messages, resolvedIdentity] = await Promise.all([
+        messagesPromise,
+        Promise.resolve(identity),
+      ]);
       return {
         canonical_dispatch_context: canonicalDispatchContext(
           seed,
           messages,
           { variables: {} },
           { variables: {} },
+          resolvedIdentity,
         ),
       };
     }
-    const [messages, current, scriptVariables] = await Promise.all([
+    const [messages, current, scriptVariables, resolvedIdentity] = await Promise.all([
       messagesPromise,
       context.capabilities["era.tavern.sidecar"].read_current({}),
       context.capabilities["era.tavern.variables"].read({ scope: { type: "script" }, purpose: "era-dispatch-placeholder" }),
+      Promise.resolve(identity),
     ]);
     const meta = current !== null && typeof current === "object" ? (current as Record<string, unknown>).meta : null;
     const id = meta !== null && typeof meta === "object" ? (meta as Record<string, unknown>).SidecarId : null;
@@ -65,7 +74,15 @@ export async function run(
     const chatVariables = facts.record === null
       ? { variables: {} }
       : { variables: variablesForState(facts.record.state, facts.record.sidecarId) };
-    return { canonical_dispatch_context: canonicalDispatchContext(seed, messages, chatVariables, scriptVariables) };
+    return {
+      canonical_dispatch_context: canonicalDispatchContext(
+        seed,
+        messages,
+        chatVariables,
+        scriptVariables,
+        resolvedIdentity,
+      ),
+    };
   } catch (error) {
     return { canonical_dispatch_context: failed(seed, error) };
   }

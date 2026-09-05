@@ -16,8 +16,8 @@ export interface EraSettingsV1 {
   readonly 特殊符号值: string;
   readonly 开启悬浮球: boolean;
   readonly 开启黑夜模式: boolean;
-  readonly 强制重载功能: boolean;
-  readonly 强制重载消息数: number;
+  readonly 历史状态栏显示范围: number;
+  readonly 历史状态栏超出范围行为: "placeholder" | "empty" | "hidden";
   readonly 繁体转简体: boolean;
   readonly 调试模式: boolean;
 }
@@ -76,7 +76,7 @@ export type EraGreetingPlanV1 =
     }
   | {
       readonly kind: "greeting";
-      readonly status: "unchanged" | "skipped" | "conflict";
+      readonly status: "unchanged" | "skipped";
       readonly reason: string;
     };
 
@@ -185,6 +185,7 @@ export interface EraRegexPlanInputV1 {
 export interface EraRegexDetailV1 {
   readonly regexName: string;
   readonly status: "planned" | "exists";
+  readonly compatibility?: "managed-v2" | "legacy-unmanaged";
 }
 
 export type EraRegexPlanV1 =
@@ -310,6 +311,18 @@ function readString(
   return fallback;
 }
 
+function readOverflowBehavior(
+  source: Readonly<Record<string, unknown>>,
+  issues: EraSettingsIssueV1[],
+): "placeholder" | "empty" | "hidden" {
+  const field = "历史状态栏超出范围行为";
+  const value = source[field];
+  if (value === undefined) return "placeholder";
+  if (value === "placeholder" || value === "empty" || value === "hidden") return value;
+  issues.push({ field, expected: "string", actual: actualType(value) });
+  return "placeholder";
+}
+
 function readNumber(
   source: Readonly<Record<string, unknown>>,
   field: string,
@@ -329,8 +342,8 @@ function settingKeys(): readonly string[] {
     "特殊符号值",
     "开启悬浮球",
     "开启黑夜模式",
-    "强制重载功能",
-    "强制重载消息数",
+    "历史状态栏显示范围",
+    "历史状态栏超出范围行为",
     "繁体转简体",
     "调试模式",
   ];
@@ -369,20 +382,20 @@ export function planEraSettings(raw: unknown): EraSettingsPlanV1 {
     ),
     开启悬浮球: readBoolean(normalized, "开启悬浮球", true, issues),
     开启黑夜模式: readBoolean(normalized, "开启黑夜模式", false, issues),
-    强制重载功能: readBoolean(normalized, "强制重载功能", false, issues),
-    强制重载消息数: readNumber(normalized, "强制重载消息数", 2, issues),
+    历史状态栏显示范围: readNumber(normalized, "历史状态栏显示范围", 3, issues),
+    历史状态栏超出范围行为: readOverflowBehavior(normalized, issues),
     繁体转简体: readBoolean(normalized, "繁体转简体", false, issues),
     调试模式: readBoolean(normalized, "调试模式", false, issues),
   };
   if (
-    typeof normalized["强制重载消息数"] === "number" &&
-    (!Number.isSafeInteger(normalized["强制重载消息数"]) ||
-      normalized["强制重载消息数"] <= 0)
+    typeof normalized["历史状态栏显示范围"] === "number" &&
+    (!Number.isSafeInteger(normalized["历史状态栏显示范围"]) ||
+      normalized["历史状态栏显示范围"] < 0)
   ) {
     issues.push({
-      field: "强制重载消息数",
+      field: "历史状态栏显示范围",
       expected: "number",
-      actual: "non-positive-or-non-integer-number",
+      actual: "negative-or-non-integer-number",
     });
   }
   if (issues.length > 0) {
@@ -453,12 +466,11 @@ function worldbookEntry(
   };
 }
 
-const ERA_DEMO_GREETING_BEGIN = "<!-- ERA_DEMO_GREETING_V1_BEGIN -->";
-const ERA_DEMO_GREETING_END = "<!-- ERA_DEMO_GREETING_V1_END -->";
+const ERA_DEMO_GREETING_MARKER = "<!-- ERA_DEMO_GREETING_V2_BEGIN -->";
 
 /** 快速初始化追加到角色主开场白的幂等示例；默认测试模式绝不自动写入。 */
 export function getEraDemoGreetingBlock(): string {
-  return `${ERA_DEMO_GREETING_BEGIN}
+  return `${ERA_DEMO_GREETING_MARKER}
 <VariableInsert>
 {
   "era_demo": {
@@ -499,11 +511,10 @@ export function getEraDemoGreetingBlock(): string {
   }
 }
 </VariableInsert>
-<StatusPlaceHolderImpl/>
-${ERA_DEMO_GREETING_END}`;
+<StatusPlaceHolderImpl/>`;
 }
 
-/** 保留作者正文，只在无冲突时向主开场白追加一个版本化示例块。 */
+/** 保留作者正文；唯一标记存在即视为已初始化，否则追加示例块。 */
 export function planEraDemoGreeting(input: EraGreetingPlanInputV1): EraGreetingPlanV1 {
   if (input.context.kind === "group-chat") {
     return cloneResourcePlanValue({ kind: "greeting", status: "skipped", reason: "群聊没有可安全更新的单一角色主开场白。" });
@@ -513,16 +524,8 @@ export function planEraDemoGreeting(input: EraGreetingPlanInputV1): EraGreetingP
   }
   const current = input.firstMessage;
   const block = getEraDemoGreetingBlock();
-  const begin = current.indexOf(ERA_DEMO_GREETING_BEGIN);
-  const end = current.indexOf(ERA_DEMO_GREETING_END);
-  if (begin >= 0 || end >= 0) {
-    if (begin >= 0 && end >= begin && current.slice(begin, end + ERA_DEMO_GREETING_END.length) === block) {
-      return cloneResourcePlanValue({ kind: "greeting", status: "unchanged", reason: "主开场白已包含同版本 ERA 示例。" });
-    }
-    return cloneResourcePlanValue({ kind: "greeting", status: "conflict", reason: "主开场白包含不完整或被修改的 ERA 示例版本标记，拒绝覆盖。" });
-  }
-  if (/<VariableInsert\b[^>]*>[\s\S]*?"era_demo"\s*:/iu.test(current)) {
-    return cloneResourcePlanValue({ kind: "greeting", status: "conflict", reason: "主开场白已自行初始化 era_demo 命名空间，拒绝覆盖。" });
+  if (current.includes(ERA_DEMO_GREETING_MARKER)) {
+    return cloneResourcePlanValue({ kind: "greeting", status: "unchanged", reason: "主开场白已包含 ERA 示例标记。" });
   }
   const separator = current.trimEnd().length === 0 ? "" : "\n\n";
   return cloneResourcePlanValue({
@@ -655,16 +658,9 @@ function regexPayload(
  * 同屏比较“所在楼层历史”与“活动分支最新”而不互相冒充。
  */
 function statusBarExampleHtml(): string {
-  return String.raw`<!doctype html>
-<html lang="zh-CN">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>ERA 示例状态栏</title>
-  <style>
-    :root { color-scheme: dark; font-family: system-ui,sans-serif; }
-    body { margin:0; background:transparent; color:#edf4f6; }
-    .era-demo { margin:12px 0; padding:14px; border:1px solid #446675; border-radius:12px; background:linear-gradient(145deg,#243641,#304b58); box-shadow:0 6px 18px #0005; }
+  return String.raw`<!-- html> Tavern Helper 前端片段识别标记；文档外壳由 Helper 提供。 -->
+<style data-era-statusbar-shell-style>
+    .era-demo { color-scheme:dark; font-family:system-ui,sans-serif; color:#edf4f6; margin:12px 0; padding:14px; border:1px solid #446675; border-radius:12px; background:linear-gradient(145deg,#243641,#304b58); box-shadow:0 6px 18px #0005; }
     h3,h4 { margin:0 0 9px; color:#67e3c1; }
     h4 { margin-top:14px; font-size:.95rem; }
     .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:7px; }
@@ -678,9 +674,16 @@ function statusBarExampleHtml(): string {
     details { margin-top:10px; }
     summary { cursor:pointer; color:#9fc7d5; }
   </style>
-</head>
-<body>
-  <section class="era-demo" data-era-demo-statusbar="v1">
+  <script data-era-statusbar-bootstrap>
+    const mountEraStatusbar = () => window.parent.ERA.statusbar.mount(window);
+    window.eraStatusbarMounted = window.parent.ERA
+      ? mountEraStatusbar()
+      : waitGlobalInitialized('ERA').then(mountEraStatusbar);
+    void window.eraStatusbarMounted.catch(error => {
+      document.body.dataset.eraStatusbarBootstrapError = error instanceof Error ? error.message : String(error);
+    });
+  </script>
+  <section class="era-demo" data-era-statusbar-root="v1" data-era-overflow="placeholder" data-era-demo-statusbar="v2" hidden inert>
     <h3>ERA 示例状态栏</h3>
     <div class="grid">
       <div class="cell"><div class="label">宏：所在楼 HP</div><div class="value" data-era-demo-source="macro" data-era-demo-field="era_demo.player.hp">{{ERA:era_demo.player.hp}}</div></div>
@@ -689,7 +692,7 @@ function statusBarExampleHtml(): string {
       <div class="cell"><div class="label">宏：不存在路径</div><div class="value" data-era-demo-source="macro" data-era-demo-field="era_demo.missing">{{ERA:era_demo.missing}}</div></div>
     </div>
 
-    <h4>ERA.get()：活动分支最新状态</h4>
+    <h4>ERA.get()：本状态栏所在楼层</h4>
     <div class="grid" data-era-demo-section="get">
       <div class="cell"><div class="label">statData</div><div class="value" data-era-demo-source="get" data-era-demo-field="statData"></div></div>
       <div class="cell"><div class="label">stat</div><div class="value" data-era-demo-source="get" data-era-demo-field="stat"></div></div>
@@ -698,9 +701,9 @@ function statusBarExampleHtml(): string {
       <div class="cell"><div class="label">mk / message / revision</div><div class="value" data-era-demo-source="get" data-era-demo-field="identity"></div></div>
     </div>
 
-    <h4>ERA.subscribe()：Sidecar 最新发布</h4>
+    <h4>ERA.subscribe()：本楼投影更新</h4>
     <div class="grid">
-      <div class="cell"><div class="label">最新变量</div><div class="value" data-era-demo-source="subscribe" data-era-demo-field="statWithoutMeta"></div></div>
+      <div class="cell"><div class="label">所在楼变量</div><div class="value" data-era-demo-source="subscribe" data-era-demo-field="statWithoutMeta"></div></div>
       <div class="cell"><div class="label">mk / message / revision</div><div class="value" data-era-demo-source="subscribe" data-era-demo-field="identity"></div></div>
     </div>
 
@@ -735,6 +738,8 @@ function statusBarExampleHtml(): string {
         if (value === undefined) return '[undefined]';
         try { return JSON.stringify(value); } catch { return String(value); }
       };
+      window.__ERA_DEMO_AUTHOR_EXECUTION_COUNT__ = (window.__ERA_DEMO_AUTHOR_EXECUTION_COUNT__ || 0) + 1;
+      document.body.dataset.eraDemoAuthorExecutionCount = String(window.__ERA_DEMO_AUTHOR_EXECUTION_COUNT__);
       const field = (source, name) => document.querySelector('[data-era-demo-source="' + source + '"][data-era-demo-field="' + name + '"]');
       const show = (source, name, value) => { const node = field(source, name); if (node) node.textContent = encode(value); };
       const owner = (() => { try { return window.top || window; } catch { return window; } })();
@@ -789,19 +794,11 @@ function statusBarExampleHtml(): string {
           show('auto', 'status', completed || { run_id: test.run_id, messageId, previous, maximum, status: 'budget-exhausted' });
           return;
         }
-        const locks = owner.__ERA_DEMO_AUTO_LOCKS__ || (owner.__ERA_DEMO_AUTO_LOCKS__ = {});
-        const lockKey = String(test.run_id) + ':' + String(messageId) + ':' + String(previous + 1);
-        if (locks[lockKey]) {
-          show('auto', 'status', { run_id: test.run_id, messageId, load: previous + 1, status: 'in-flight' });
-          return;
-        }
-        locks[lockKey] = true;
         const loadPatch = { era_demo: { test_mode: { load_counts: { [String(messageId)]: previous + 1 } } } };
         const firstLoad = !Object.prototype.hasOwnProperty.call(loads, String(messageId));
-        try {
-          const receipts = [];
-          // 第一笔事务先原子占用本楼预算。强制重载可能立即重建 iframe，
-          // 新实例会看到已占用的 load_count，从而不会重复执行三种 scope。
+        const receipts = [];
+          // 第一笔事务原子记录本次真实挂载。状态发布只更新现有 iframe，
+          // 不会重建状态栏或再次执行作者脚本，因此无需页面级防重锁。
           receipts.push(await ERA.commit([
             nestedIncrement('automatic', 'always'),
             firstLoad ? { insert: loadPatch } : { edit: loadPatch },
@@ -814,20 +811,16 @@ function statusBarExampleHtml(): string {
           await ERA.commit([firstReceipt ? { insert: receiptPatch } : { edit: receiptPatch }], { scope: 'always' });
           show('auto', 'status', result);
           owner.dispatchEvent(new CustomEvent(automaticStatusEvent, { detail: result }));
-        } finally {
-          delete locks[lockKey];
-        }
       };
       let unsubscribe = () => undefined;
-      void waitGlobalInitialized('ERA').then(async () => {
-        const messageId = getCurrentMessageId();
+      void window.eraStatusbarMounted.then(() => ERA.ready()).then(async current => {
+        const messageId = current.message_id;
         const handleAutomaticStatus = event => {
           const detail = event && event.detail;
           if (detail && detail.messageId === messageId) show('auto', 'status', detail);
         };
         owner.addEventListener(automaticStatusEvent, handleAutomaticStatus);
         window.addEventListener('unload', () => owner.removeEventListener(automaticStatusEvent, handleAutomaticStatus), { once: true });
-        const current = ERA.get();
         renderCurrent(current);
         renderSubscription(current);
         unsubscribe = ERA.subscribe(state => { renderCurrent(state); renderSubscription(state); });
@@ -846,8 +839,7 @@ function statusBarExampleHtml(): string {
       addEventListener('pagehide', () => unsubscribe(), { once: true });
     })();
   </script>
-</body>
-</html>`;
+`;
 }
 
 /** 返回 ERA 的角色局部正则，保持冻结顺序与完整载荷。 */
@@ -867,6 +859,12 @@ function regexName(value: unknown): string | null {
   return isRecord(value) && typeof value.script_name === "string"
     ? value.script_name
     : null;
+}
+
+function regexIsManagedV2(value: unknown): boolean {
+  return isRecord(value) &&
+    typeof value.replace_string === "string" &&
+    value.replace_string.includes("data-era-statusbar-root");
 }
 
 /** 按 script_name 规划仅缺失正则的追加；已有对象保持原样。 */
@@ -902,7 +900,12 @@ export function planEraCharacterRegexes(
   }> = [];
   for (const regex of getEraRegexPayloads()) {
     if (existingNames.includes(regex.script_name)) {
-      details.push({ regexName: regex.script_name, status: "exists" });
+      const existing = input.existingRegexes.find(value => regexName(value) === regex.script_name);
+      details.push({
+        regexName: regex.script_name,
+        status: "exists",
+        compatibility: regexIsManagedV2(existing) ? "managed-v2" : "legacy-unmanaged",
+      });
     } else {
       details.push({ regexName: regex.script_name, status: "planned" });
       actions.push({ kind: "upsert-missing-regex", regex });

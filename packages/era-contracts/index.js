@@ -163,6 +163,15 @@ export function isEraDispatchContextV2(value) {
   if (value.requirement === "none") {
     return value.processingMessage === null && value.processingMk === null;
   }
+  // 删除最后一条消息后的同步仍需形成一个明确的空聊天提交。此时没有可声称的
+  // processing message/MK；该例外只属于 sync，其他派发类别仍必须绑定真实消息。
+  if (
+    value.status === "ready" &&
+    value.dispatchClass === "sync" &&
+    value.messages.length === 0
+  ) {
+    return value.processingMessage === null && value.processingMk === null;
+  }
   if (value.status === "ready" && value.processingMessage === null)
     return false;
   return !(
@@ -170,6 +179,115 @@ export function isEraDispatchContextV2(value) {
     value.requirement === "latest-message-with-mk" &&
     !isNonEmptyString(value.processingMk)
   );
+}
+
+function isGenerationCycleIdentityV1(value) {
+  return (
+    hasOnlyKeys(value, ["chatId", "eventId", "sourceKey"]) &&
+    isNonEmptyString(value.chatId) &&
+    isNonEmptyString(value.eventId) &&
+    isNonEmptyString(value.sourceKey)
+  );
+}
+
+function isEraFloorIdentityV1(value) {
+  return (
+    hasOnlyKeys(value, ["chatId", "messageId", "swipeId", "mk"]) &&
+    isNonEmptyString(value.chatId) &&
+    isSafeIntegerAtLeast(value.messageId, 0) &&
+    isSafeIntegerAtLeast(value.swipeId, 0) &&
+    isNonEmptyString(value.mk)
+  );
+}
+
+function isStagedMessageUpdateV1(value) {
+  return (
+    hasOnlyKeys(value, ["messageId", "content"]) &&
+    isSafeIntegerAtLeast(value.messageId, 0) &&
+    typeof value.content === "string"
+  );
+}
+
+function isAgentFloorCandidateV1(value) {
+  return (
+    hasOnlyKeys(value, [
+      "messageId",
+      "swipeId",
+      "mk",
+      "content",
+      "extra",
+      "terminalStatus",
+      "requiresInitialPresentation",
+    ]) &&
+    isSafeIntegerAtLeast(value.messageId, 0) &&
+    isSafeIntegerAtLeast(value.swipeId, 0) &&
+    isNonEmptyString(value.mk) &&
+    typeof value.content === "string" &&
+    isRecord(value.extra) &&
+    isJsonValue(value.extra) &&
+    ["settled", "story-complete", "unsettled"].includes(value.terminalStatus) &&
+    typeof value.requiresInitialPresentation === "boolean"
+  );
+}
+
+/** 判断值是否为携带暂存消息与稳定楼层身份的第三版派发上下文。 */
+export function isEraDispatchContextV3(value) {
+  if (
+    !hasOnlyKeys(value, [
+      "schemaVersion",
+      "status",
+      "dispatchClass",
+      "requirement",
+      "messages",
+      "processingMessage",
+      "processingMk",
+      "messageChanged",
+      "variablesChanged",
+      "failure",
+      "generationCycleIdentity",
+      "floorIdentity",
+      "stagedMessageUpdates",
+      "agentFloorCandidate",
+    ]) ||
+    value.schemaVersion !== 3 ||
+    !["ready", "failed"].includes(value.status) ||
+    !["initialize", "sync", "api", "update-mk", "ignore"].includes(value.dispatchClass) ||
+    !["none", "latest-message", "latest-message-with-mk"].includes(value.requirement) ||
+    !Array.isArray(value.messages) ||
+    !value.messages.every(isEraTavernMessageV1) ||
+    !(value.processingMessage === null || isEraTavernMessageV1(value.processingMessage)) ||
+    !(value.processingMk === null || isNonEmptyString(value.processingMk)) ||
+    typeof value.messageChanged !== "boolean" ||
+    typeof value.variablesChanged !== "boolean" ||
+    !(value.failure === null || isEraFailureV1(value.failure)) ||
+    !(value.generationCycleIdentity === null || isGenerationCycleIdentityV1(value.generationCycleIdentity)) ||
+    !(value.floorIdentity === null || isEraFloorIdentityV1(value.floorIdentity)) ||
+    !Array.isArray(value.stagedMessageUpdates) ||
+    !value.stagedMessageUpdates.every(isStagedMessageUpdateV1) ||
+    !(value.agentFloorCandidate === null || isAgentFloorCandidateV1(value.agentFloorCandidate))
+  ) return false;
+  if (value.status === "ready" && value.failure !== null) return false;
+  if (value.status === "failed" && value.failure === null) return false;
+  if (value.requirement === "none") {
+    return value.processingMessage === null && value.processingMk === null && value.floorIdentity === null;
+  }
+  if (value.status === "ready" && value.dispatchClass === "sync" && value.messages.length === 0) {
+    return value.processingMessage === null && value.processingMk === null && value.floorIdentity === null;
+  }
+  if (value.status === "ready" && value.processingMessage === null) return false;
+  if (value.status === "ready" && value.requirement === "latest-message-with-mk") {
+    if (!isNonEmptyString(value.processingMk) || value.floorIdentity === null) return false;
+    if (value.floorIdentity.messageId !== value.processingMessage.messageId || value.floorIdentity.mk !== value.processingMk) return false;
+  }
+  if (value.agentFloorCandidate !== null) {
+    if (value.floorIdentity === null) return false;
+    if (
+      value.agentFloorCandidate.messageId !== value.floorIdentity.messageId ||
+      value.agentFloorCandidate.swipeId !== value.floorIdentity.swipeId ||
+      value.agentFloorCandidate.mk !== value.floorIdentity.mk
+    ) return false;
+  }
+  return true;
 }
 
 function definePortableOwn(target, key, value) {
@@ -439,10 +557,18 @@ export function isEraServiceStateV1(value) {
 
 export function isEraScopeWindowStateV1(value) {
   return (
-    hasOnlyKeys(value, ["token", "messageAdmission", "branchAdmission"]) &&
+    hasOnlyKeys(value, [
+      "token",
+      "messageId",
+      "messageAdmission",
+      "branchAdmission",
+    ]) &&
     (value.token === null || isSafeIntegerAtLeast(value.token, 1)) &&
-    (value.messageAdmission === null || typeof value.messageAdmission === "boolean") &&
-    (value.branchAdmission === null || typeof value.branchAdmission === "boolean")
+    (value.messageId === null || isSafeIntegerAtLeast(value.messageId, 0)) &&
+    (value.messageAdmission === null ||
+      typeof value.messageAdmission === "boolean") &&
+    (value.branchAdmission === null ||
+      typeof value.branchAdmission === "boolean")
   );
 }
 
@@ -691,10 +817,15 @@ export function isEraDiagnosticV1(value) {
 /** 判断任务携带的易失连续处理状态更新；该值不属于持久化 Schema。 */
 export function isEraTaskStateUpdateV1(value) {
   return (
-    hasOnlyKeys(value, ["consecutiveMk", "consecutiveProcessingCount"], ["scopeWindow"]) &&
+    hasOnlyKeys(
+      value,
+      ["consecutiveMk", "consecutiveProcessingCount"],
+      ["scopeWindow"],
+    ) &&
     (value.consecutiveMk === null || isNonEmptyString(value.consecutiveMk)) &&
     isSafeIntegerAtLeast(value.consecutiveProcessingCount, 0) &&
-    (!Object.prototype.hasOwnProperty.call(value, "scopeWindow") || isEraScopeWindowStateV1(value.scopeWindow))
+    (!Object.prototype.hasOwnProperty.call(value, "scopeWindow") ||
+      isEraScopeWindowStateV1(value.scopeWindow))
   );
 }
 
