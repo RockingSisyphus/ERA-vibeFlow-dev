@@ -15,11 +15,19 @@ import {
   currentCharacterIndex,
   isRecord,
   readConnectionSummaries,
+  storyHostConfiguration,
 } from './agent-tavern-configuration';
 import { createAgentConnectionOperations } from './agent-tavern-connections';
 import { auxiliaryApiSettings, resolveAuxiliaryRoute } from './agent-tavern-generation';
+import { agentExecutionRecords, currentAgentRecordChat } from './agent-execution-records';
 
 type AgentOperations = EraTavernAdapter['agent'];
+let currentSessionReader: (() => Record<string, unknown> | null) | null = null;
+
+/** 查看器只读当前页面会话；按钮仍经 Service 再次核对来源。 */
+export function readCurrentAgentSession(): Record<string, unknown> | null {
+  return currentSessionReader?.() ?? null;
+}
 
 export interface AgentTavernHostPorts {
   readonly internalMessageWrites: Map<number, string>;
@@ -51,6 +59,7 @@ function auxiliaryFailureResult(error: unknown): Readonly<Record<string, unknown
 
 /** 持有页面实例级会话与辅助生成重入状态，不向 Sidecar 持久化。 */
 export class AgentTavernHost {
+  private readonly viewerReader = () => this.readSessionForViewer();
   private readonly sessions = new Map<string, unknown>();
   private auxiliaryGenerationDepth = 0;
   private deferredNativeGenerationStop: EventOnReturn | null = null;
@@ -59,6 +68,12 @@ export class AgentTavernHost {
 
   constructor(private readonly ports: AgentTavernHostPorts) {
     this.operations = this.createOperations();
+    currentSessionReader = this.viewerReader;
+  }
+
+  readSessionForViewer(): Record<string, unknown> | null {
+    const value = this.sessions.get(SillyTavern.getCurrentChatId() ?? '');
+    return isRecord(value) ? clonePortable(value) : null;
   }
 
   isAuxiliaryGenerationActive(): boolean {
@@ -67,10 +82,14 @@ export class AgentTavernHost {
 
   clearSessions(): void {
     this.sessions.clear();
+    agentExecutionRecords.stopNative();
+    agentExecutionRecords.sessionChanged();
   }
 
   stop(): void {
+    if (currentSessionReader === this.viewerReader) currentSessionReader = null;
     this.clearSessions();
+    agentExecutionRecords.clear();
     this.clearDeferredNativeGenerationStop();
   }
 
@@ -210,22 +229,54 @@ export class AgentTavernHost {
         if (typeof input.userInput !== 'string' || !Array.isArray(input.orderedPrompts)) {
           throw new TypeError('Agent 模型请求缺少 userInput 或 orderedPrompts。');
         }
+        const requestId = `${String(input.generationId ?? 'era-request')}-${crypto.randomUUID()}`;
+        agentExecutionRecords.begin(requestId, currentAgentRecordChat(), String(input.stage ?? 'auxiliary'), {
+          userInput: input.userInput,
+          orderedPrompts: input.orderedPrompts,
+        });
         try {
-          return await this.generateAuxiliaryJson(input, input.userInput, context);
+          const result = await this.generateAuxiliaryJson(
+            { ...input, generationId: requestId },
+            input.userInput,
+            context,
+          );
+          agentExecutionRecords.finish(
+            requestId,
+            'responded',
+            isRecord(result) && typeof result.response === 'string' ? result.response : undefined,
+          );
+          return result;
         } catch (error) {
+          agentExecutionRecords.finish(requestId, 'failed');
           if (context.signal.aborted) throw error;
-          return auxiliaryFailureResult(error);
+          return { ...auxiliaryFailureResult(error), requestId };
         }
       },
       generate_story: async (input, context) => {
         throwIfAborted(context.signal);
         return this.generateStoryRetry(input, context);
       },
+      /** 原生正文不由 generateRaw 返回，必须在实际注入时关联其单次观察目标。 */
       inject_once: (input, context) => {
         throwIfAborted(context.signal);
         if (typeof input.content !== 'string' || typeof input.id !== 'string') {
           throw new TypeError('Agent 一次性注入缺少 id 或 content。');
         }
+        const key = SillyTavern.getCurrentChatId() ?? '';
+        const session = this.sessions.get(key);
+        const requestId =
+          isRecord(session) && typeof session.storyRequestId === 'string'
+            ? session.storyRequestId
+            : `era-story-${crypto.randomUUID()}`;
+        agentExecutionRecords.begin(
+          requestId,
+          currentAgentRecordChat(),
+          'story',
+          { injection: input.content },
+          storyHostConfiguration(),
+        );
+        agentExecutionRecords.armNative(requestId);
+        if (isRecord(session)) this.sessions.set(key, { ...session, storyRequestId: requestId });
         injectPrompts(
           [
             {
@@ -258,6 +309,16 @@ export class AgentTavernHost {
           : `era-agent-${Date.now()}`;
       const settings = isRecord(input.settings) ? input.settings : {};
       const route = resolveAuxiliaryRoute(input);
+      const requestId = generationId;
+      const routeDescription =
+        route.profile === null
+          ? { kind: 'tavern-current', model: route.model ?? SillyTavern.getChatCompletionModel() }
+          : {
+              kind: 'custom-profile',
+              profileId: route.profile.id,
+              profileName: route.profile.name,
+              model: route.model,
+            };
       let response: Awaited<ReturnType<typeof generateRaw>>;
       try {
         response = await generateRaw({
@@ -283,11 +344,9 @@ export class AgentTavernHost {
       }
       return {
         generationId,
+        requestId,
         response,
-        route:
-          route.profile === null
-            ? { kind: 'tavern-current', ...(route.model ? { model: route.model } : {}) }
-            : { kind: 'custom-profile', profileId: route.profile.id, model: route.model },
+        route: routeDescription,
       };
     };
     return this.withAuxiliaryGeneration(runAuxiliaryRequest);
@@ -298,33 +357,51 @@ export class AgentTavernHost {
     input: Readonly<Record<string, unknown>>,
     context: EraCapabilityContext,
   ): Promise<unknown> {
-    return this.withAuxiliaryGeneration(async () => {
+    /** 必须复用酒馆生成链与已有注入，避免在 Host 中重新执行规划函数和骰子。 */
+    const request = async () => {
       const userInput = typeof input.userInput === 'string' ? input.userInput : '';
       const injection = typeof input.injection === 'string' ? input.injection : '';
-      const response = await generate({
-        user_input: userInput,
-        should_stream: true,
-        should_silence: false,
-        ...(injection.length > 0
-          ? {
-              injects: [
-                {
-                  role: 'system',
-                  content: injection,
-                  position: 'in_chat',
-                  depth: 0,
-                  should_scan: false,
-                },
-              ],
-            }
-          : {}),
-      });
+      const requestId = `era-story-retry-${crypto.randomUUID()}`;
+      agentExecutionRecords.begin(
+        requestId,
+        currentAgentRecordChat(),
+        'story',
+        { userInput, injection },
+        storyHostConfiguration(),
+      );
+      let response: Awaited<ReturnType<typeof generate>>;
+      try {
+        response = await generate({
+          generation_id: requestId,
+          user_input: userInput,
+          should_stream: true,
+          should_silence: false,
+          ...(injection.length > 0
+            ? {
+                injects: [
+                  {
+                    role: 'system',
+                    content: injection,
+                    position: 'in_chat',
+                    depth: 0,
+                    should_scan: false,
+                  },
+                ],
+              }
+            : {}),
+        });
+      } catch (error) {
+        agentExecutionRecords.finish(requestId, 'failed');
+        throw error;
+      }
+      agentExecutionRecords.finish(requestId, 'responded', typeof response === 'string' ? response : undefined);
       throwIfAborted(context.signal);
       if (typeof response !== 'string') {
         throw new TypeError('故事重试必须返回正文文本。');
       }
-      return { response };
-    });
+      return { response, requestId };
+    };
+    return this.withAuxiliaryGeneration(request);
   }
 
   /** 会话证据只在当前页面内按聊天身份保存，切换聊天或停止服务时必须整体清除。 */
@@ -335,7 +412,23 @@ export class AgentTavernHost {
         if (typeof input.chatKey !== 'string' || input.chatKey.length === 0) {
           throw new TypeError('Agent 会话写入缺少 chatKey。');
         }
-        this.sessions.set(input.chatKey, clonePortable(input.session ?? null));
+        const session = this.observeSession(input.chatKey, input.session);
+        if (
+          typeof input.observationEventId === 'string' &&
+          isRecord(session) &&
+          Array.isArray(session.settlementAttempts)
+        ) {
+          for (const attempt of session.settlementAttempts) {
+            if (isRecord(attempt) && typeof attempt.requestId === 'string') {
+              agentExecutionRecords.bindCommit(attempt.requestId, input.observationEventId);
+            }
+          }
+        }
+        this.sessions.set(input.chatKey, clonePortable(session));
+        if (isRecord(session) && typeof session.storyRequestId === 'string' && typeof session.story === 'string') {
+          agentExecutionRecords.finish(session.storyRequestId, 'responded', session.story);
+        }
+        agentExecutionRecords.sessionChanged();
         return { status: 'committed', chatKey: input.chatKey };
       },
       clear_session: (input, context) => {
@@ -343,9 +436,32 @@ export class AgentTavernHost {
         const chatKey = typeof input.chatKey === 'string' ? input.chatKey : null;
         if (chatKey === null) this.sessions.clear();
         else this.sessions.delete(chatKey);
+        agentExecutionRecords.stopNative();
+        agentExecutionRecords.sessionChanged();
         return { status: 'cleared', chatKey };
       },
     };
+  }
+
+  /** 原生正文也可能没有规划注入；必须以已建立会话关联，避免误借最近一次无关生成。 */
+  private observeSession(chatKey: string, value: unknown): unknown {
+    if (!isRecord(value)) return value ?? null;
+    if (value.status === 'opened') {
+      const storyRequestId = `era-story-${crypto.randomUUID()}`;
+      agentExecutionRecords.begin(
+        storyRequestId,
+        currentAgentRecordChat(),
+        'story',
+        { injection: null },
+        storyHostConfiguration(),
+      );
+      agentExecutionRecords.armNative(storyRequestId);
+      return { ...value, storyRequestId };
+    }
+    const previous = this.sessions.get(chatKey);
+    return typeof value.storyRequestId !== 'string' && isRecord(previous) && typeof previous.storyRequestId === 'string'
+      ? { ...value, storyRequestId: previous.storyRequestId }
+      : value;
   }
 
   /**

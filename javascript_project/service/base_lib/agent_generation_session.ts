@@ -548,6 +548,30 @@ export interface EraAgentExecutedCallV1 {
   readonly drawOffsetEnd: number;
 }
 
+/** 失败仍按原路径抛出；附带只读执行事实，不能将部分成功当成规划成功。 */
+export class AgentFunctionCallFailure extends TypeError {
+  constructor(message: string, readonly functionResults: readonly Record<string, unknown>[]) {
+    super(message);
+  }
+}
+
+function failedCallTable(
+  calls: readonly EraAgentFunctionCallV1[],
+  completed: readonly EraAgentExecutedCallV1[],
+  failedIndex: number,
+  diagnostic: string,
+): readonly Record<string, unknown>[] {
+  return calls.map((call, index) => {
+    const executed = completed.find(result => result.index === index);
+    if (executed) return { ...executed, ...(call.purpose !== undefined ? { purpose: call.purpose } : {}), status: "passed" };
+    return {
+      index, function: call.function, args: [...call.args], ...(call.purpose !== undefined ? { purpose: call.purpose } : {}),
+      status: index === failedIndex ? "failed" : "not-executed",
+      ...(index === failedIndex ? { diagnostic } : {}),
+    };
+  });
+}
+
 export function executeAgentFunctionCalls(
   input: Readonly<{
     calls: readonly EraAgentFunctionCallV1[];
@@ -580,9 +604,11 @@ export function executeAgentFunctionCalls(
     "sqrt",
     "tan",
   ]);
-  for (const call of input.calls) {
-    if (!knownFunctions.has(call.function))
-      throw new TypeError(`函数调用表包含未知函数：${call.function}。`);
+  for (const [index, call] of input.calls.entries()) {
+    if (!knownFunctions.has(call.function)) {
+      const diagnostic = `函数调用表包含未知函数：${call.function}。`;
+      throw new AgentFunctionCallFailure(diagnostic, failedCallTable(input.calls, [], index, diagnostic));
+    }
   }
   for (const [index, call] of input.calls.entries()) {
     const expression = `${call.function}(${call.args.map((value) => JSON.stringify(value)).join(",")})`;
@@ -598,14 +624,14 @@ export function executeAgentFunctionCalls(
     });
     if (response.diagnostics.length > 0) {
       const diagnostic = response.diagnostics[0];
-      throw new TypeError(
-        `${call.function} 调用失败：${diagnostic?.code ?? "ERA_AGENT_FUNCTION_FAILED"} ${diagnostic?.message ?? ""}`.trim(),
-      );
+      const message = `${call.function} 调用失败：${diagnostic?.code ?? "ERA_AGENT_FUNCTION_FAILED"} ${diagnostic?.message ?? ""}`.trim();
+      throw new AgentFunctionCallFailure(message, failedCallTable(input.calls, results, index, message));
     }
     const result = (response.finalState as Record<string, unknown>)
       .__eraAgentResult;
     if (typeof result !== "number" || !Number.isFinite(result)) {
-      throw new TypeError(`${call.function} 未返回有限数值。`);
+      const message = `${call.function} 未返回有限数值。`;
+      throw new AgentFunctionCallFailure(message, failedCallTable(input.calls, results, index, message));
     }
     drawOffset = response.nextDrawOffset;
     results.push({

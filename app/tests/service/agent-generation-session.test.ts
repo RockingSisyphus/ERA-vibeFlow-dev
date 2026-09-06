@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  AgentFunctionCallFailure,
   countAgentCycles,
   executeAgentFunctionCalls,
   extractEraMessageKey,
@@ -350,6 +351,28 @@ describe('AgentGenerationSession pure contracts', () => {
         sourceKey: 'message-mk-prevalidate',
       }),
     ).toThrow('未知函数');
+  });
+
+  it('preserves completed function results and marks the failed and unexecuted calls', () => {
+    try {
+      executeAgentFunctionCalls({
+        calls: [
+          { function: 'floor', args: [2.9] },
+          { function: 'sqrt', args: [-1] },
+          { function: 'random', args: [] },
+        ],
+        statData: {},
+        statFunc: {},
+        sourceKey: 'partial-function-report',
+      });
+      expect.unreachable('invalid sqrt must fail');
+    } catch (error) {
+      expect(error).toBeInstanceOf(AgentFunctionCallFailure);
+      const results = (error as AgentFunctionCallFailure).functionResults;
+      expect(results.map(result => result.status)).toEqual(['passed', 'failed', 'not-executed']);
+      expect(results[0]).toMatchObject({ result: 2, drawOffsetStart: 0, drawOffsetEnd: 0 });
+      expect(results[2]).not.toHaveProperty('result');
+    }
   });
 
   it('trial-applies settlement operations through the real command engine', () => {

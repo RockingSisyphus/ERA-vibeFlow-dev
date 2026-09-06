@@ -189,3 +189,11 @@ export function capturePreset(input: Readonly<Record<string, unknown>>): unknown
     ),
   });
 }
+/** 只记录请求发起时可公开的宿主选择，绝不复制完整连接设置或密钥。 */
+export function storyHostConfiguration(): Record<string, unknown> {
+  return {
+    model: SillyTavern.getChatCompletionModel(),
+    preset: getLoadedPresetName(),
+    provider: SillyTavern.chatCompletionSettings?.chat_completion_source ?? '未采集',
+  };
+}

@@ -234,7 +234,23 @@ class EraStatusbarRuntime implements EraStatusbarController {
     if (behavior !== 'placeholder') return;
     const placeholder = document.createElement('div');
     placeholder.dataset.eraStatusbarOverflow = 'placeholder';
-    placeholder.textContent = `ERA 已休眠消息 #${instance.identity.messageId} 的历史状态栏；可在 ERA UI 中指定显示。`;
+    placeholder.textContent = `ERA 已休眠消息 #${instance.identity.messageId} 的历史状态栏。`;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = '显示本楼状态栏';
+    /** 只在明确点击时申请额外投影，避免占位栏加载本身激活历史脚本。 */
+    const expand = async () => {
+      if (button.disabled) return;
+      button.disabled = true;
+      try {
+        await this.select(instance.identity.messageId);
+      } catch (error) {
+        button.disabled = false;
+        button.textContent = `显示失败，点击重试：${String(error)}`;
+      }
+    };
+    button.addEventListener('click', expand);
+    placeholder.append(button);
     instance.root.after(placeholder);
     instance.overflowRoot = placeholder;
   }
@@ -247,6 +263,17 @@ class EraStatusbarRuntime implements EraStatusbarController {
     instance.root.hidden = false;
     instance.root.inert = false;
     document.body.dataset.eraManagedStatusbarV2 = 'ready';
+    if (this.selectedMessageId === instance.identity.messageId) {
+      const collapse = document.createElement('button');
+      collapse.type = 'button';
+      collapse.dataset.eraStatusbarCollapse = 'true';
+      collapse.textContent = '收起本楼状态栏';
+      /** 仅恢复范围策略，不销毁作者节点或模拟新一轮加载。 */
+      const clear = () => this.clearSelection();
+      collapse.addEventListener('click', clear);
+      instance.root.after(collapse);
+      instance.overflowRoot = collapse;
+    }
   }
 
   /**
@@ -398,19 +425,15 @@ class EraStatusbarRuntime implements EraStatusbarController {
       }));
   }
 
-  /** 用户指定时必须只额外激活一楼，避免恢复对全部历史消息的重绘。 */
+  /** 原地展开只操作已挂载实例，永不为查看历史而刷新消息。 */
   async select(messageId: number): Promise<void> {
-    if (!managedStatusbarMessageIds().includes(messageId)) throw new RangeError(`消息 #${messageId} 没有托管状态栏。`);
-    this.selectedMessageId = messageId;
-    this.projectionRevision = null;
     if (
       ![...this.instances.values()].some(instance => instance.identity.messageId === messageId && !instance.disposed)
     ) {
-      // 这是用户明确要求查看单楼时的首次宿主渲染，不参与状态更新链，也不会批量刷新其他楼层。
-      await refreshOneMessage(messageId);
+      throw new RangeError(`消息 #${messageId} 没有已挂载的托管状态栏。`);
     }
-    const message = document.querySelector<HTMLElement>(`.mes[mesid="${messageId}"]`);
-    message?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    this.selectedMessageId = messageId;
+    this.projectionRevision = null;
     for (const instance of this.instances.values()) await this.refresh(instance);
   }
 

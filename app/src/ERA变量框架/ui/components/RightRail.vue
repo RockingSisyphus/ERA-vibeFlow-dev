@@ -3,7 +3,6 @@
     <div class="right-rail-content-wrapper">
       <ActionButtons />
       <EraSettingsPanel />
-      <StatusbarHistoryPanel />
       <AgentOrchestrationPanel />
       <AboutEra />
     </div>
@@ -14,7 +13,6 @@
 import AboutEra from './RightRailContent/AboutEra.vue';
 import ActionButtons from './RightRailContent/ActionButtons.vue';
 import EraSettingsPanel from './RightRailContent/EraSettingsPanel.vue';
-import StatusbarHistoryPanel from './RightRailContent/StatusbarHistoryPanel.vue';
 import AgentOrchestrationPanel from './RightRailContent/AgentOrchestrationPanel.vue';
 </script>
 

@@ -56,6 +56,7 @@
     "@types/web-bluetooth": "^0.0.21",
     "@types/webpack": "^5.28.5",
     "@typescript-eslint/parser": "^8.65.0",
+    "@vitejs/plugin-vue": "^6.0.8",
     "autoprefixer": "^10.5.4",
     "chokidar": "^5.0.0",
     "css-loader": "^7.1.4",
@@ -68,6 +69,7 @@
     "eslint-plugin-vue": "^10.10.0",
     "eslint-webpack-plugin": "^6.0.0",
     "globals": "^17.7.0",
+    "happy-dom": "^20.14.0",
     "html-inline-css-loader": "^0.2.1",
     "html-inline-css-webpack-plugin": "^1.11.2",
     "html-inline-script-webpack-plugin": "^3.2.1",
@@ -110,10 +112,10 @@
     "yaml-loader": "^0.9.0"
   },
   "dependencies": {
-    "@era/vibeflow-floor-snapshot": "file:vendor/era-vibeflow-floor-snapshot-0.1.0.tgz",
     "@era/vibeflow-expression": "file:vendor/era-vibeflow-expression-0.2.0.tgz",
-    "@stdlib/math-base-special-gamma": "^0.3.1",
+    "@era/vibeflow-floor-snapshot": "file:vendor/era-vibeflow-floor-snapshot-0.1.0.tgz",
     "@pixi/react": "8.0.5",
+    "@stdlib/math-base-special-gamma": "^0.3.1",
     "@vueuse/components": "^14.3.0",
     "@vueuse/core": "^14.3.0",
     "@vueuse/integrations": "^14.3.0",

@@ -821,17 +821,25 @@ function statusBarExampleHtml(): string {
         };
         owner.addEventListener(automaticStatusEvent, handleAutomaticStatus);
         window.addEventListener('unload', () => owner.removeEventListener(automaticStatusEvent, handleAutomaticStatus), { once: true });
-        renderCurrent(current);
-        renderSubscription(current);
-        unsubscribe = ERA.subscribe(state => { renderCurrent(state); renderSubscription(state); });
-        try {
-          const historical = await ERA.history.atMessage(messageId);
-          show('history', 'statWithoutMeta', demo(historical));
-          show('history', 'statFunc', historical.statFunc);
-          show('history', 'identity', identity(historical));
-        } catch (error) {
-          show('history', 'identity', { status: 'failed', error: error instanceof Error ? error.message : String(error) });
-        }
+        let historyRead = 0;
+        const renderHistorical = async () => {
+          const read = ++historyRead;
+          try {
+            const historical = await ERA.history.atMessage(messageId);
+            if (read !== historyRead) return;
+            show('history', 'statWithoutMeta', demo(historical));
+            show('history', 'statFunc', historical.statFunc);
+            show('history', 'identity', identity(historical));
+          } catch (error) {
+            if (read === historyRead) show('history', 'identity', { status: 'failed', error: error instanceof Error ? error.message : String(error) });
+          }
+        };
+        // 显式历史查询不是订阅；每次本楼发布后重新查询，保留各读取 API 的真实语义。
+        unsubscribe = ERA.subscribe(state => {
+          renderCurrent(state);
+          renderSubscription(state);
+          void renderHistorical();
+        });
         document.querySelectorAll('[data-era-demo-action]').forEach(button => button.addEventListener('click', () => void runManual(button.dataset.eraDemoAction)));
         try { await runAutomatic(messageId); }
         catch (error) { show('auto', 'status', { status: 'failed', error: error instanceof Error ? error.message : String(error) }); }

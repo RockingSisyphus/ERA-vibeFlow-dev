@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AgentTavernHost } from '../../src/ERA变量框架/service/agent-tavern-host';
+import { agentExecutionRecords, currentAgentRecordChat } from '../../src/ERA变量框架/service/agent-execution-records';
 
 const signal = new AbortController().signal;
 const capabilityContext = { signal };
@@ -13,8 +14,10 @@ describe('AgentTavernHost V2 local routes', () => {
 
   beforeEach(() => {
     vi.stubGlobal('SillyTavern', {
+      getChatCompletionModel: () => 'current-model',
       characterId: '0',
       groupId: '',
+      getCurrentChatId: () => 'test-chat',
       characters: [{ data: { extensions: {} } }],
       extensionSettings: {},
       saveSettingsDebounced,
@@ -67,6 +70,7 @@ describe('AgentTavernHost V2 local routes', () => {
   });
 
   afterEach(() => {
+    agentExecutionRecords.clear();
     vi.unstubAllGlobals();
     vi.clearAllMocks();
   });
@@ -77,6 +81,26 @@ describe('AgentTavernHost V2 local routes', () => {
       readIdentity: () => ({ chatId: 'chat-v2', groupId: null }),
     });
   }
+
+  it('records native story without planning and retains its request across settlement writes', () => {
+    const instance = host();
+    instance.operations.write_session({ chatKey: 'test-chat', session: { status: 'opened' } }, capabilityContext);
+    const id = String(instance.readSessionForViewer()?.storyRequestId);
+    agentExecutionRecords.capture(currentAgentRecordChat(), [{ role: 'user', content: 'native actual prompt' }], false);
+    instance.operations.write_session(
+      { chatKey: 'test-chat', session: { status: 'settled', story: 'native response' } },
+      capabilityContext,
+    );
+    expect(instance.readSessionForViewer()?.storyRequestId).toBe(id);
+    expect(agentExecutionRecords.get(currentAgentRecordChat(), id)).toMatchObject({
+      status: 'responded',
+      response: 'native response',
+      prompt: [{ role: 'user', content: 'native actual prompt' }],
+    });
+    instance.operations.write_session({ chatKey: 'test-chat', session: { status: 'opened' } }, capabilityContext);
+    expect(instance.readSessionForViewer()?.storyRequestId).not.toBe(id);
+    instance.stop();
+  });
 
   it('captures a named preset as an ordered, sanitized snapshot', () => {
     const snapshot = host().operations.capture_preset({ name: 'Preset B' }, capabilityContext);
@@ -193,6 +217,7 @@ describe('AgentTavernHost V2 local routes', () => {
       ),
     ).resolves.toEqual({
       status: 'failed',
+      requestId: expect.stringMatching(/^generation-missing-/u),
       diagnostic: {
         code: 'ERA_AGENT_PROFILE_MISSING',
         message: 'ERA_AGENT_PROFILE_MISSING：本机连接方案不存在，需要重新绑定。',

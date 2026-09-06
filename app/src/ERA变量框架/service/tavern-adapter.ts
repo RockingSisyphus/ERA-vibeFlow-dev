@@ -21,6 +21,7 @@ import { currentEraMessageText, updateEraMessageContent } from './message-writer
 import { readInstallationScopeFacts } from './installation-scope';
 import { projectMessage } from './message-projection';
 import { AgentTavernHost } from './agent-tavern-host';
+import { agentExecutionRecords } from './agent-execution-records';
 import {
   currentTavernContext,
   currentCharacterRegexEnabled,
@@ -312,6 +313,7 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
     };
   }
 
+  /** 统一送入 FIFO；为了避免显示层改变生成时序，报告观察必须旁路且不改写正式回执。 */
   enqueue(type: string, source: Exclude<EraEventSource, 'timer'>, args: readonly unknown[] = []): EraAdmissionResult {
     if (!this.accepting || !this.listener) {
       return Object.freeze({
@@ -320,7 +322,12 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
         message: 'ERA 服务未启动或正在停止。',
       });
     }
-    return this.listener({ type, source, args, occurredAt: Date.now() });
+    const admission = this.listener({ type, source, args, occurredAt: Date.now() });
+    if (admission.accepted) {
+      // 被动旁路，不 await、不改写正式回执；没有明确事件绑定的请求不会被关联。
+      agentExecutionRecords.observeSettlement(admission.done);
+    }
+    return admission;
   }
 
   stopAccepting(): void {

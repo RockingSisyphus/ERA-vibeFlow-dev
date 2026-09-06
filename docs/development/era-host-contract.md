@@ -45,7 +45,7 @@ Sidecar 身份共同求证楼层；任何一项暂时未就绪时保持 loading�
 作者依赖数据的脚本使用 `await ERA.ready()`，ERA 不复制模板、清空 body、移动 CSS
 或重放脚本。规划与结算报告只对显示副本缩进和展开已知 response JSON，原消息保持不变。历史快照由
 `era.snapshot.query` 按日志计算，不持久化逐楼完整状态。默认只激活最近 3 个含托管状态栏的
-AI 楼层和一个 UI 临时指定楼层；范围外使用 placeholder、empty 或 hidden 合同。
+AI 楼层和一个通过原地占位栏按钮临时展开的楼层；范围外使用 placeholder、empty 或 hidden 合同。
 
 iframe 内安装的局部 Facade 使 `ERA.get/ready/subscribe/commit` 自动采用所在楼语义，顶层
 Facade 保持活动分支 latest 语义。状态栏 commit 的来源 messageId/MK/Swipe 由 Host 附加并由
@@ -57,6 +57,12 @@ Service 再核对，作者不能通过公开 options 伪造。Sidecar 更新后�
 追加不会使下一次 DOM mutation 重建消息。末个可见正文与隐藏 MK/事务之间新增的行尾换行
 只作技术分隔，不参与显示失效；正文内部换行、Markdown 空格和报告内容仍参与比较。
 报告可读性由独立纯格式器负责，不改变审计原文。
+
+阶段查看器的执行记录属于页面 Host：按真实请求 ID 和聊天身份关联阶段输入与发送前消息，
+忽略 native dry-run；缺少发送前事件时明确显示未采集，不用其他请求填补。完整提示词不进入
+消息、角色卡或 Sidecar，reload 后释放；消息仍保存既有响应、诊断和函数结果。媒体显示副本
+只保留结构与文本，二进制用占位符表示，不能反向修改真实模型请求。手动重生成共享 busy 状态，
+保持禁用直到真实 receipt 结算；当前页面的旧执行记录只读，不恢复旧候选。
 
 作者用法见 [ERA 托管状态栏作者指南](ERA%E6%89%98%E7%AE%A1%E7%8A%B6%E6%80%81%E6%A0%8F%E4%BD%9C%E8%80%85%E6%8C%87%E5%8D%97.md)。
 

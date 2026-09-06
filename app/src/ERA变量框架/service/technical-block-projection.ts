@@ -8,134 +8,26 @@ import { createEraMacroSnapshot } from '../macro/registration';
 import { resolveEraLazyMacroTokens, type EraMacroSnapshot } from '../macro/syntax';
 import { currentTavernIdentityMatches } from './public-state';
 import { readActiveSidecarRuntimeSnapshot } from './sidecar-runtime-snapshot';
-import { formatEraReportForDisplay } from './technical-report-display';
+import { agentExecutionRecords, currentAgentRecordChat } from './agent-execution-records';
+import {
+  mountReportViewer,
+  releaseReportApps,
+  createStoryViewer,
+  registerAgentRequestObservation,
+  hydrateReportViewers,
+} from './agent-report-host';
 
-const FOLDED_TAG_LABELS = Object.freeze({
-  era_plan: 'ERA 规划报告',
-  era_update: 'ERA 变量解析报告',
-  era_agent_error: 'ERA 多阶段生成错误',
-});
+import {
+  parseEraTechnicalProjection,
+  stripEraTechnicalBlocks,
+  type EraTechnicalProjection,
+  type EraTechnicalSegment,
+} from './technical-block-syntax';
+export { parseEraTechnicalProjection, stripEraTechnicalBlocks } from './technical-block-syntax';
+export type { EraTechnicalProjection, EraTechnicalSegment } from './technical-block-syntax';
 
-const HIDDEN_TAG_NAMES = Object.freeze([
-  'era_tx',
-  'variableinsert',
-  'variableedit',
-  'variabledelete',
-  'functioninsert',
-  'functionedit',
-  'functiondelete',
-  'era_data',
-  'variablethink',
-]);
-
-const ALL_TAG_NAMES = Object.freeze([...Object.keys(FOLDED_TAG_LABELS), ...HIDDEN_TAG_NAMES]);
-const TAG_PATTERN = ALL_TAG_NAMES.join('|');
-const TECHNICAL_TAG_TOKEN = new RegExp(`<\\s*(\\/?)\\s*(${TAG_PATTERN})\\b[^>]*>`, 'giu');
 const DISPLAY_PROJECTION_VERSION = 'era-technical-projection-v2';
-
-type TechnicalBlockKind = 'folded' | 'hidden';
-type OpenTag = {
-  readonly name: string;
-  readonly start: number;
-  readonly contentStart: number;
-  readonly kind: TechnicalBlockKind;
-};
-
-export type EraTechnicalSegment =
-  | { readonly kind: 'story'; readonly text: string }
-  | {
-      readonly kind: TechnicalBlockKind;
-      readonly name: string;
-      readonly label?: string;
-      readonly text: string;
-      readonly source: string;
-    };
-
-/** 描述一次保守解析的有效性、技术块数量和按原文顺序排列的显示片段。 */
-export type EraTechnicalProjection = {
-  readonly valid: boolean;
-  readonly technicalBlockCount: number;
-  readonly segments: readonly EraTechnicalSegment[];
-};
-
-type ClosedBlock = OpenTag & { readonly end: number; readonly contentEnd: number };
-
-function technicalBlockKind(name: string): TechnicalBlockKind {
-  return Object.hasOwn(FOLDED_TAG_LABELS, name) ? 'folded' : 'hidden';
-}
-
-/**
- * 只收集严格闭合的顶层块，内层变量命令由外层事务统一承载。
- * 返回 null 表示边界不可信，调用方必须保留整段原文。
- */
-function collectTechnicalBlocks(text: string): ClosedBlock[] | null {
-  const stack: OpenTag[] = [];
-  const blocks: ClosedBlock[] = [];
-  TECHNICAL_TAG_TOKEN.lastIndex = 0;
-  for (let match = TECHNICAL_TAG_TOKEN.exec(text); match; match = TECHNICAL_TAG_TOKEN.exec(text)) {
-    const closing = match[1] === '/';
-    const name = match[2].toLowerCase();
-    if (!closing) {
-      stack.push({
-        name,
-        kind: technicalBlockKind(name),
-        start: match.index,
-        contentStart: match.index + match[0].length,
-      });
-      continue;
-    }
-
-    const open = stack.at(-1);
-    if (!open || open.name !== name) return null;
-    stack.pop();
-    if (stack.length === 0) {
-      blocks.push({ ...open, contentEnd: match.index, end: match.index + match[0].length });
-    }
-  }
-  return stack.length === 0 ? blocks : null;
-}
-
-/**
- * 从权威消息原文解析严格配对的顶层 ERA 技术块。任意错序、孤立结束标签或未闭合标签
- * 都会让整次解析失效；必须宁可保留原文，也不冒险吞掉故事或伪造报告边界。
- */
-export function parseEraTechnicalProjection(text: string): EraTechnicalProjection {
-  const blocks = collectTechnicalBlocks(text);
-  if (blocks === null) {
-    return { valid: false, technicalBlockCount: 0, segments: [{ kind: 'story', text }] };
-  }
-  if (blocks.length === 0) {
-    return { valid: true, technicalBlockCount: 0, segments: [{ kind: 'story', text }] };
-  }
-
-  const segments: EraTechnicalSegment[] = [];
-  let cursor = 0;
-  for (const block of blocks) {
-    if (block.start > cursor) segments.push({ kind: 'story', text: text.slice(cursor, block.start) });
-    segments.push({
-      kind: block.kind,
-      name: block.name,
-      label: FOLDED_TAG_LABELS[block.name as keyof typeof FOLDED_TAG_LABELS],
-      text: text.slice(block.contentStart, block.contentEnd),
-      source: text.slice(block.start, block.end),
-    });
-    cursor = block.end;
-  }
-  if (cursor < text.length) segments.push({ kind: 'story', text: text.slice(cursor) });
-  return { valid: true, technicalBlockCount: blocks.length, segments };
-}
-
-/**
- * 只删除严格配对的保留标签。错序或缺失结束标签会保留原文，避免把故事吞到后续偶然出现的闭合标签。
- */
-export function stripEraTechnicalBlocks(text: string): string {
-  const projection = parseEraTechnicalProjection(text);
-  if (!projection.valid || projection.technicalBlockCount === 0) return text;
-  return projection.segments
-    .filter((segment): segment is Extract<EraTechnicalSegment, { kind: 'story' }> => segment.kind === 'story')
-    .map(segment => segment.text)
-    .join('');
-}
+const projectedStories = new WeakMap<HTMLElement, string>();
 
 /**
  * 复制出站消息及多模态文本项，避免提示清理反向改写聊天历史；图片、工具调用与其他字段保持原值。
@@ -201,6 +93,7 @@ function appendFormattedStory(
 function createProjectedBlock(
   hostDocument: Document,
   segment: Exclude<EraTechnicalSegment, { kind: 'story' }>,
+  messageId: number,
 ): HTMLElement {
   if (segment.kind === 'hidden') {
     const hidden = hostDocument.createElement('span');
@@ -218,9 +111,9 @@ function createProjectedBlock(
   details.dataset.eraTechnicalBlock = segment.name;
   const summary = hostDocument.createElement('summary');
   summary.textContent = segment.label ?? 'ERA 技术报告';
-  const content = hostDocument.createElement('pre');
-  content.textContent = formatEraReportForDisplay(segment.text);
-  details.append(summary, content);
+  const stage = segment.name === 'era_update' ? 'settlement' : 'planning';
+  summary.id = `era-report-summary-${stage}-${messageId}`;
+  details.append(summary, mountReportViewer(hostDocument, segment.text, stage, messageId));
   return details;
 }
 
@@ -259,6 +152,53 @@ export function isDisplayedMessageBeingEdited(root: Element): boolean {
  * 从权威消息构造显示副本。必须先格式化普通故事、再用 textContent 创建报告，
  * 否则宿主正则会再次删除报告，或把模型报告当成任意 HTML 注入页面。
  */
+function replaceReportsInPlace(
+  root: HTMLElement,
+  projection: EraTechnicalProjection,
+  messageId: number,
+  story: string,
+): boolean {
+  const document = root.ownerDocument;
+  const folded = projection.segments.filter(
+    (segment): segment is Exclude<EraTechnicalSegment, { kind: 'story' }> => segment.kind === 'folded',
+  );
+  const reports = [...root.querySelectorAll<HTMLElement>(':scope > details[data-era-technical-block]')];
+  if (
+    reports.length !== folded.length ||
+    reports.some((report, index) => report.dataset.eraTechnicalBlock !== folded[index].name)
+  )
+    return false;
+  reports.forEach((report, index) => {
+    const replacement = createProjectedBlock(document, folded[index], messageId);
+    if (report.hasAttribute('open')) replacement.setAttribute('open', '');
+    report.replaceWith(replacement);
+  });
+  const previous = root.querySelector(':scope > [data-era-story-viewer]');
+  const viewer = createStoryViewer(document, messageId, story);
+  if (previous && viewer) previous.replaceWith(viewer);
+  else if (viewer) root.append(viewer);
+  releaseReportApps();
+  return true;
+}
+
+/** 首次呈现才格式化故事；将宿主片段装配与是否刷新判断分开。 */
+function displayedMessageFragment(
+  document: Document,
+  projection: EraTechnicalProjection,
+  messageId: number,
+  story: string,
+): DocumentFragment {
+  const fragment = document.createDocumentFragment();
+  for (const segment of projection.segments) {
+    if (segment.kind === 'story') appendFormattedStory(document, fragment, segment.text, messageId);
+    else fragment.append(createProjectedBlock(document, segment, messageId));
+  }
+  const viewer = createStoryViewer(document, messageId, story);
+  if (viewer) fragment.append(viewer);
+  return fragment;
+}
+
+/** 只有故事本身变化才重建宿主显示，否则仅更新 ERA 自有报告节点。 */
 function projectDisplayedMessage(messageId: number): void {
   const rawMessage = currentRawMessage(messageId);
   if (rawMessage === null) return;
@@ -268,6 +208,7 @@ function projectDisplayedMessage(messageId: number): void {
   const root = retrieveDisplayedMessage(messageId).get(0);
   if (!root) return;
   if (isDisplayedMessageBeingEdited(root)) return;
+  hydrateReportViewers(root);
   const fingerprint = eraTechnicalDisplaySource(projection);
   if (
     root.dataset.eraProjectionVersion === DISPLAY_PROJECTION_VERSION &&
@@ -278,14 +219,24 @@ function projectDisplayedMessage(messageId: number): void {
   }
 
   const hostDocument = root.ownerDocument;
-  const fragment = hostDocument.createDocumentFragment();
-  for (const segment of projection.segments) {
-    if (segment.kind === 'story') appendFormattedStory(hostDocument, fragment, segment.text, messageId);
-    else fragment.append(createProjectedBlock(hostDocument, segment));
+  const storySource = eraTechnicalDisplaySource({
+    ...projection,
+    segments: projection.segments.filter(segment => segment.kind === 'story'),
+  });
+  // 重新解析变量只改变 ERA 报告。保留 Tavern Helper 的故事节点与 iframe，
+  // 不把查看器更新误变成作者加载脚本的第二次执行。
+  if (
+    projectedStories.get(root) === storySource &&
+    replaceReportsInPlace(root, projection, messageId, stripEraTechnicalBlocks(rawMessage))
+  ) {
+    root.dataset.eraProjectionSource = fingerprint;
+    return;
   }
+  const fragment = displayedMessageFragment(hostDocument, projection, messageId, stripEraTechnicalBlocks(rawMessage));
   root.replaceChildren(fragment);
   root.dataset.eraProjectionVersion = DISPLAY_PROJECTION_VERSION;
   root.dataset.eraProjectionSource = fingerprint;
+  projectedStories.set(root, storySource);
   announceProjectedMessageRendered(messageId);
 }
 
@@ -385,6 +336,10 @@ export function registerEraTechnicalBlockProjection(): () => void {
     }
     .era-technical-report > summary { cursor: pointer; user-select: none; opacity: .8; }
     .era-technical-report > :not(summary) { margin: .45rem 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .era-stage-toolbar { display: flex; flex-wrap: wrap; gap: .35rem; margin: .4rem 0; }
+    .era-stage-toolbar button, .era-stage-toolbar select { color: inherit; background: transparent; border: 1px solid currentColor; border-radius: .4rem; padding: .3rem .5rem; }
+    .era-stage-toolbar button:disabled { opacity: .5; }
+    .era-stage-viewer pre { white-space: pre-wrap; max-height: 28rem; overflow: auto; }
   `;
   hostDocument.head.append(style);
 
@@ -392,6 +347,7 @@ export function registerEraTechnicalBlockProjection(): () => void {
 
   scheduler.scheduleAllMessages();
   const observer = new HostMutationObserver(records => {
+    releaseReportApps();
     for (const messageId of mutationMessageIds(records)) scheduler.scheduleMessage(messageId);
   });
   observer.observe(hostDocument.documentElement, { childList: true, subtree: true });
@@ -408,15 +364,17 @@ export function registerEraTechnicalBlockProjection(): () => void {
   eventMakeLast(tavern_events.MORE_MESSAGES_LOADED, allMessagesHandler);
   eventMakeLast(tavern_events.CHAT_CHANGED, allMessagesHandler);
 
-  const promptHandler = (generateData: { prompt: SillyTavern.SendingMessage[] }) => {
+  const promptHandler = (generateData: { prompt: SillyTavern.SendingMessage[] }, dryRun = false) => {
     if (!Array.isArray(generateData.prompt)) return;
     const snapshot = readActiveSidecarRuntimeSnapshot();
     const macroSnapshot = createEraMacroSnapshot(
       snapshot && currentTavernIdentityMatches(snapshot) ? snapshot.statData : {},
     );
     generateData.prompt = projectEraPromptMessages(generateData.prompt, macroSnapshot);
+    agentExecutionRecords.capture(currentAgentRecordChat(), generateData.prompt, dryRun);
   };
   eventMakeLast(tavern_events.GENERATE_AFTER_DATA, promptHandler);
+  const stopRequestObservation = registerAgentRequestObservation();
 
   let stopped = false;
   return () => {
@@ -427,7 +385,9 @@ export function registerEraTechnicalBlockProjection(): () => void {
     eventRemoveListener(tavern_events.MORE_MESSAGES_LOADED, allMessagesHandler);
     eventRemoveListener(tavern_events.CHAT_CHANGED, allMessagesHandler);
     eventRemoveListener(tavern_events.GENERATE_AFTER_DATA, promptHandler);
+    stopRequestObservation();
     scheduler.clear();
+    releaseReportApps(true);
     style.remove();
   };
 }

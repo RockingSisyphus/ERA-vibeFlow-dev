@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { runInNewContext } from 'node:vm';
 
 import { eraVarIntentEntry } from '../../src/ERA变量框架/initer/manual/worldbook_entries/era_var_intent';
@@ -332,6 +332,54 @@ describe('VibeFlow Service 宿主资源规划器差分', () => {
     await frame.eraStatusbarMounted;
     expect(mounts).toBe(1);
     expect(html).toContain('window.eraStatusbarMounted.then(() => ERA.ready())');
+  });
+
+  it('示例作者脚本在本楼发布后重新查询历史，不通过重新加载脚本更新历史栏', async () => {
+    const html = String(planner.getEraRegexPayloads()[0]?.replace_string);
+    const script = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].at(-1)![1];
+    const fields = new Map<string, { textContent: string }>();
+    const state = (hp: number, revision: number) => ({
+      statWithoutMeta: { era_demo: { player: { hp }, test_mode: { enabled: false } } },
+      message_id: 2,
+      mk: 'floor',
+      revision,
+    });
+    let current = state(9, 12);
+    let listener = (_value: ReturnType<typeof state>) => undefined;
+    const frame = { eraStatusbarMounted: Promise.resolve(), addEventListener: () => undefined };
+    const atMessage = vi.fn(async (id: number) => {
+      expect(id).toBe(2);
+      return current;
+    });
+    runInNewContext(script, {
+      window: frame,
+      document: {
+        body: { dataset: {} },
+        querySelector: (key: string) => {
+          if (!fields.has(key)) fields.set(key, { textContent: '' });
+          return fields.get(key);
+        },
+        querySelectorAll: () => [],
+      },
+      addEventListener: () => undefined,
+      ERA: {
+        ready: async () => current,
+        get: () => current,
+        subscribe: (callback: typeof listener) => {
+          listener = callback;
+          callback(current);
+          return () => undefined;
+        },
+        history: { atMessage },
+      },
+    });
+    const historical = '[data-era-demo-source="history"][data-era-demo-field="statWithoutMeta"]';
+    await vi.waitFor(() => expect(fields.get(historical)?.textContent).toContain('"hp":9'));
+    current = state(10, 13);
+    listener(current);
+    await vi.waitFor(() => expect(fields.get(historical)?.textContent).toContain('"hp":10'));
+    expect(atMessage).toHaveBeenCalledTimes(2);
+    expect((frame as Record<string, unknown>).__ERA_DEMO_AUTHOR_EXECUTION_COUNT__).toBe(1);
   });
 
   it('逐字段保持局部正则载荷和注入顺序', () => {

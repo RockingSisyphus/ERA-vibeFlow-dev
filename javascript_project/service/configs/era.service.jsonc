@@ -10,7 +10,7 @@
       "status": "implemented",
       "enabled": true,
       "display_name": "ERA 酒馆服务宿主",
-      "description": "连接 SillyTavern 与 Tavern Helper，管理单一先进先出队列、回执、高水位屏障、绝对截止时间定时器、宿主引用和出站帧幂等，并提供服务端口、Agent 独立请求、酒馆能力、角色主开场白读写、Sidecar 机械接线与分阶段启动闸门；planned 生命周期将把尚未发布的托管 template 激活器替换为状态栏 iframe 绑定器：Tavern Helper 独占作者 HTML、CSS 与脚本的解释和渲染，ERA 只从当前页面、父消息、Swipe MK、SelectedMks 与 Sidecar 求证楼层身份，按需调用唯一 era.snapshot.query 计算有限活动楼层投影，并为既有 DOM 安装惰性宏与按楼 get/ready/subscribe/commit。状态发布只原地更新 ERA 自有绑定，不复制模板、不清空 body、不重放作者脚本。提示投影仍只改变本次出站副本；技术报告的可读格式只存在显示 DOM，原始消息保持不变。Host 不保存逐楼快照，也不承载 Agent 重试、函数、CRUD、同步、合并或回滚规则。",
+      "description": "既有 ERA 酒馆服务宿主继续负责 FIFO、receipt、生成栅栏、Sidecar 机械接线及 Tavern Helper 原生状态栏绑定。本轮 planned 生命周期增加按聊天、周期、阶段、尝试关联的页面内存提示词观察和共用阶段报告查看器；完整提示词不进入持久化状态，Host 不决定重试或变量语义。报告按钮投递既有 Service 重生成命令；状态栏占位栏原地展开和收起，最多额外一楼，删除小球 UI 指定列表，不重绘消息或作者 iframe。四类变更与 RPG 三次真实重生成验收见 reports/era-stage-report-viewer-change-list.md。",
       "category": "宿主接线",
       "version": "0.1.0",
       "targets": [
@@ -91,8 +91,8 @@
       {
         "id": "activate_tavern_ingress",
         "type_used": "era.installation.scope.activate_ingress",
-        "display_name": "绑定 Tavern 原生渲染的按楼状态栏",
-        "description": "仅 allow 时登记既有 Tavern ingress；App 启动期安装 iframe 绑定生命周期。Tavern Helper 原样解析作者 HTML、CSS 与脚本，ERA 只同步安装 pending 楼层 Facade、求证 messageId/Swipe/MK/Sidecar、计算有限历史投影、解析 ERA 自有宏绑定并在就绪后显示作者根节点；不得复制模板、替换 body 或重新执行作者脚本。"
+        "display_name": "登记阶段查看器与状态栏原地展开生命周期",
+        "description": "复用现有 Service Host 登记与清理生命周期。Host 被动采集按聊天、周期、阶段和尝试关联的 ERA 输入及宿主发送前提示词，仅存页面内存，忽略 dry-run；报告显示共用查看器，重生成按钮仅投递既有 Service 命令。状态栏 placeholder 提供原地展开和收起，最多额外显示一楼，删除面板指定楼层列表；不重绘消息、不重建 iframe、不改作者 DOM，不新增工作流或资格门禁。"
       },
       {
         "id": "publish_dormant_startup",
