@@ -76,13 +76,25 @@
           title="为角色卡注入 ERA 规则"
           :disabled="pendingAction !== null"
           :aria-busy="pendingAction === 'initialize'"
-          @click.stop="onInjectRegex"
+          @click.stop="onInitialize('traditional')"
         >
           <span class="ico" aria-hidden="true">🥽</span>
-          <span class="label">ERA 快速初始化</span>
+          <span class="label">快速初始化-传统状态栏</span>
+        </button>
+        <button
+          class="btn"
+          :disabled="pendingAction !== null"
+          :aria-busy="pendingAction === 'initialize'"
+          @click.stop="onInitialize('external')"
+        >
+          <span class="ico" aria-hidden="true">▤</span>
+          <span class="label">快速初始化-外置状态栏</span>
         </button>
         <p class="btn-desc">
-          【角色卡作者专用】点击后，会向当前角色卡幂等添加四项基础资源：<br />
+          【角色卡作者专用】两种模式共用示例变量和世界书，仅允许初始化一次。已有标记时不会再次写入。<br />
+          传统模式向聊天楼内显示状态栏；外置模式启用输入框上方状态栏，不创建楼内正则或占位符，已有外置 HTML
+          不会被覆盖。<br />
+          传统模式创建以下资源：<br />
           1. 将示例变量和状态栏占位符追加到角色主开场白，并保留作者原文。<br />
           2. 添加“ERA 状态栏模板”正则，将占位符替换为托管状态栏。<br />
           3. 向角色主世界书中添加“ERA变量操作规则”条目。<br />
@@ -131,14 +143,17 @@ async function runUiCommand(
   }
 }
 
-async function onInjectRegex() {
-  logger.log('onInjectRegex', '点击“ERA 快速初始化”，提交资源初始化工作流。');
+async function onInitialize(mode: 'traditional' | 'external') {
+  logger.log('onInitialize', `快速初始化：${mode}`);
   try {
-    await runUiCommand('initialize', ERA_UI_EVENT.INITIALIZE_RESOURCES, [], '资源初始化');
-    toastr.success('世界书与正则资源已由 ERA Service 完成校验与写入。', '初始化完成');
+    await runUiCommand('initialize', ERA_UI_EVENT.INITIALIZE_RESOURCES, [{ mode }], '资源初始化');
+    toastr.success(
+      mode === 'external' ? '示例变量、世界书和外置状态栏已保存并启用。' : '示例变量、世界书和传统状态栏已保存。',
+      '初始化完成',
+    );
   } catch (error) {
-    logger.error('onInjectRegex', '资源初始化失败。', error);
-    toastr.error('初始化未完成，请检查 ERA 服务状态与 Console。', '初始化失败');
+    logger.error('onInitialize', '资源初始化失败。', error);
+    toastr.error(error instanceof Error ? error.message : String(error), '初始化未完成');
   }
 }
 

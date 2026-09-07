@@ -168,8 +168,13 @@ export function createCharacterGreetingAdapter(throwIfAborted: ThrowIfAborted): 
       if (SillyTavern.groupId || !characterName) return { status: 'missing', firstMessage: null };
       const character = await getCharacter(characterName);
       throwIfAborted(context.signal);
+      const tavern = currentTavernContext();
+      const current = tavern.characters[Number(tavern.characterId)];
       return {
         status: 'ready',
+        characterId: current.avatar,
+        externalStatusbar:
+          (current.data?.extensions as unknown as Record<string, unknown>)?.era_external_statusbar ?? null,
         firstMessage: typeof character.first_messages[0] === 'string' ? character.first_messages[0] : '',
       };
     },

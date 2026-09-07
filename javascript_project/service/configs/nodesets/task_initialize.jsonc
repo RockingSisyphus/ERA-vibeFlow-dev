@@ -51,8 +51,8 @@
       {
         "id": "read_host_resources",
         "type_used": "era.tavern.initialization_read",
-        "display_name": "读取状态栏初始化资源与主开场白",
-        "description": "消费已准备步骤内的严格消息投影，并读取身份、脚本设置、世界书、角色正则和当前角色主开场白；备用开场白、当前聊天和历史聊天不进入初始化写入范围。"
+        "display_name": "读取双模式初始化与现有外置配置",
+        "description": "读取现有身份、设置、世界书、正则、主开场白及角色卡外置配置；传递 traditional/external 内部选择，无参数沿用 traditional。仅采集事实，不在 Host 决定覆盖或初始化规则。"
       },
       {
         "id": "carry_execution_state",
@@ -63,8 +63,8 @@
       {
         "id": "plan_resources",
         "type_used": "era.initialize.plan",
-        "display_name": "规划 Tavern 原生状态栏片段与初始化资源",
-        "description": "幂等规划设置、世界书、状态栏正则与主开场白示例变量；新状态栏是由 Tavern Helper 直接渲染的普通可嵌入片段，包含自有样式、ERA bootstrap、隐藏的状态栏根节点与使用 await ERA.ready() 的作者脚本，不再生成完整 html/head/body 或惰性 template。已发布旧式非托管状态栏保持原样且不自动迁移。"
+        "display_name": "规划传统或外置状态栏资源",
+        "description": "同一规划器共享变量、函数、世界书及单一标记。有标记时两模式拒绝；外置已有非空 HTML 时拒绝覆盖。传统模式保留占位符和楼内正则；外置模式不创建它们，关闭本角色脚本的尾部符号，保存共享默认 HTML 并启用外置配置。必要资源完成后以主开场白标记收口，不迁移或删除作者资源。"
       },
       {
         "id": "preserve_resources",
@@ -87,8 +87,8 @@
       {
         "id": "commit_host_resources",
         "type_used": "era.tavern.initialization_commit",
-        "display_name": "提交状态栏资源与主开场白示例",
-        "description": "顺序应用声明式设置、世界书、状态栏正则和角色主开场白变更；以真实 avatar 更新 first_messages[0]，随后仅在当前聊天仍为空或只有一条未污染主开场白时刷新首楼并走真实消息渲染/保存链，多楼、编辑/污染、备用开场白和群聊保持原样；回执分别报告开场白与首楼刷新结果。"
+        "display_name": "提交双模式资源并最后写入标记",
+        "description": "按声明式顺序提交设置、世界书、按模式所需正则或外置配置，最后保存带示例变量和单一标记的主开场白。沿用空聊天或未污染首楼同步，多楼历史不批量改写。外置配置保存后更新当前宿主显示；失败报告实际已写入动作，不伪成功，不自动覆盖既有 HTML。"
       },
       {
         "id": "route_completion",

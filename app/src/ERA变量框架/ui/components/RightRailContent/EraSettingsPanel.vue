@@ -39,6 +39,12 @@
 
       <!-- 变量列表：逐项渲染 -->
       <div class="vars">
+        <div class="var-row">
+          <label for="era-external-enabled">启用外置状态栏</label>
+          <input id="era-external-enabled" v-model="externalEnabled" type="checkbox" :disabled="!externalSelection" />
+          <span v-if="!externalSelection">当前无可用的单角色卡</span>
+          <span v-else class="hint">随角色卡保存与分享</span>
+        </div>
         <template v-if="rows.length > 0">
           <!-- 有变量时渲染列表 -->
           <div v-for="row in rows" :key="row.key" class="var-row">
@@ -135,6 +141,10 @@ import { reactive, ref } from 'vue'; // 中文注释：Vue 响应式 API
 import toastr from 'toastr';
 import { requestEraService } from '../../../service/client';
 import { ERA_UI_EVENT } from '../../../service/types';
+import {
+  externalStatusbarSelection as externalSelection,
+  saveExternalStatusbar,
+} from '../../../service/external-statusbar-configuration';
 import { SettingsSchema } from '../../../utils/constants';
 import { settings } from '../../../utils/era_data';
 import { Logger } from '../../../utils/log'; // 记录设置读取、提交与回滚的可诊断结果。
@@ -143,6 +153,8 @@ import StatusbarOverflowSelect from './StatusbarOverflowSelect.vue';
 import StatusbarRangeInput from './StatusbarRangeInput.vue';
 import {
   buildEditableSettingRows,
+  collectSettingEdits,
+  validateSettingJson,
   settingControlId,
   settingTypeLabel,
   stringifySetting,
@@ -153,6 +165,8 @@ const logger = new Logger();
 
 // === 折叠状态 ===
 const isOpen = ref(false); // 折叠状态不持久化，重新打开面板时保持收起。
+const externalEnabled = ref(false);
+let externalCharacterId: string | null = null;
 
 // === 原始数据与编辑缓存 ===
 type Row = EraSettingRow;
@@ -183,6 +197,8 @@ function resetEditorState(nextRows: readonly Row[]): void {
 }
 
 function loadVars(showSuccess = true) {
+  externalEnabled.value = externalSelection.value?.config.enabled ?? false;
+  externalCharacterId = externalSelection.value?.characterId ?? null;
   try {
     logger.debug('loadVars', '尝试读取脚本设置...');
     const obj = settings.value;
@@ -212,20 +228,7 @@ function onToggle() {
 
 // === JSON 文本域编辑标记 + 校验 ===
 function markJsonTouched(key: string) {
-  // 中文注释：标记 JSON 文本改动并校验
-  const txt = jsonBuffers[key] ?? ''; // 中文注释：读取文本
-  if (txt.trim() === '') {
-    // 中文注释：空文本提示
-    jsonState[key] = { bad: true, ok: false, msg: '不能为空（若要设为 null 请写 null）' }; // 中文注释：空提示
-    return; // 中文注释：返回
-  }
-  try {
-    JSON.parse(txt);
-    jsonState[key] = { ok: true, bad: false, msg: 'JSON 格式有效' };
-  } catch (e: any) {
-    // 中文注释：校验通过
-    jsonState[key] = { bad: true, ok: false, msg: `JSON 格式错误：${e?.message ?? ''}` };
-  } // 中文注释：校验失败
+  jsonState[key] = validateSettingJson(jsonBuffers[key] ?? '');
 }
 
 // === 丢弃未保存的编辑 ===
@@ -242,25 +245,15 @@ async function saveEdits() {
   busy.value = true;
   try {
     // 1. 先构造并校验完整设置，不提前修改响应式快照。
-    const updatedSettings: Record<string, any> = {};
-    rows.value.forEach(row => {
-      if (row.type === 'json') {
-        if (jsonState[row.key]?.bad) {
-          throw new Error(`键 ${row.key} 的 JSON 格式不正确`);
-        }
-        if (jsonBuffers[row.key] != null) {
-          const newValue = JSON.parse(jsonBuffers[row.key]);
-          updatedSettings[row.key] = newValue;
-        }
-      } else if (edits[row.key] !== undefined) {
-        updatedSettings[row.key] = edits[row.key];
-      }
-    });
+    const updatedSettings = collectSettingEdits(rows.value, edits, jsonBuffers, jsonState);
     const nextSettings = SettingsSchema.parse({ ...settings.value, ...updatedSettings });
     await awaitUiSettlement(
       requestEraService(ERA_UI_EVENT.UPDATE_SETTINGS, [{ settings: nextSettings }], 'ui'),
       '设置提交',
     );
+    if (externalCharacterId && externalEnabled.value !== externalSelection.value?.config.enabled) {
+      await saveExternalStatusbar(externalCharacterId, { enabled: externalEnabled.value });
+    }
 
     // Service 成功回执前已重读脚本变量并发布设置事件；此处再从权威响应式快照重建草稿。
     loadVars(false);

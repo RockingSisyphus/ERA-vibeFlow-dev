@@ -63,6 +63,7 @@ export type EraCharacterContextV1 =
   | { readonly kind: "no-character" };
 
 export interface EraGreetingPlanInputV1 {
+  readonly mode?: "traditional" | "external";
   readonly context: EraCharacterContextV1;
   readonly firstMessage: string | null;
 }
@@ -169,7 +170,7 @@ export interface EraRegexPayloadV1 {
     readonly reasoning: false;
   };
   readonly destination: {
-    readonly display: true;
+    readonly display: boolean;
     readonly prompt: boolean;
   };
   readonly min_depth: null;
@@ -469,7 +470,7 @@ function worldbookEntry(
 const ERA_DEMO_GREETING_MARKER = "<!-- ERA_DEMO_GREETING_V2_BEGIN -->";
 
 /** 快速初始化追加到角色主开场白的幂等示例；默认测试模式绝不自动写入。 */
-export function getEraDemoGreetingBlock(): string {
+export function getEraDemoGreetingBlock(mode: "traditional" | "external" = "traditional"): string {
   return `${ERA_DEMO_GREETING_MARKER}
 <VariableInsert>
 {
@@ -511,7 +512,7 @@ export function getEraDemoGreetingBlock(): string {
   }
 }
 </VariableInsert>
-<StatusPlaceHolderImpl/>`;
+${mode === "traditional" ? "<StatusPlaceHolderImpl/>" : ""}`;
 }
 
 /** 保留作者正文；唯一标记存在即视为已初始化，否则追加示例块。 */
@@ -523,7 +524,7 @@ export function planEraDemoGreeting(input: EraGreetingPlanInputV1): EraGreetingP
     return cloneResourcePlanValue({ kind: "greeting", status: "skipped", reason: "当前聊天没有可更新的角色主开场白。" });
   }
   const current = input.firstMessage;
-  const block = getEraDemoGreetingBlock();
+  const block = getEraDemoGreetingBlock(input.mode);
   if (current.includes(ERA_DEMO_GREETING_MARKER)) {
     return cloneResourcePlanValue({ kind: "greeting", status: "unchanged", reason: "主开场白已包含 ERA 示例标记。" });
   }

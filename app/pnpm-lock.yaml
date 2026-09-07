@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@era/example-resources':
+        specifier: file:../packages/era-example-resources/era-example-resources-0.1.0.tgz
+        version: file:../packages/era-example-resources/era-example-resources-0.1.0.tgz
       '@era/vibeflow-expression':
         specifier: file:vendor/era-vibeflow-expression-0.2.0.tgz
         version: file:vendor/era-vibeflow-expression-0.2.0.tgz
@@ -393,6 +396,10 @@ packages:
 
   '@emnapi/wasi-threads@1.2.2':
     resolution: {integrity: sha512-c95qOXkHdydNKhscBTebqEC1CVAZpyqOfVfBzQ1qgzyl3gfeldUjIggDbIZgDKsHLgnsM+igH7TJ/eAasaVuMA==}
+
+  '@era/example-resources@file:../packages/era-example-resources/era-example-resources-0.1.0.tgz':
+    resolution: {integrity: sha512-Vepw8liUC1AAWKmeEiEjBsduZiQTw+DFzrpxq59EHnRtD7HoXemrwDMrtOiGb5pxB6/pVs8Xi9LaWf/yjq6b1g==, tarball: file:../packages/era-example-resources/era-example-resources-0.1.0.tgz}
+    version: 0.1.0
 
   '@era/vibeflow-expression@file:vendor/era-vibeflow-expression-0.2.0.tgz':
     resolution: {integrity: sha512-ul8noHKgyLhcxNaVxKUzemKAH5mmsj93bgQaLAm2pjek/AzkRD/pgvGPr+7ZLmIpVkEU3b8/AbFvdC5ujY+Ftw==, tarball: file:vendor/era-vibeflow-expression-0.2.0.tgz}
@@ -5585,6 +5592,8 @@ snapshots:
     dependencies:
       tslib: 2.8.1
     optional: true
+
+  '@era/example-resources@file:../packages/era-example-resources/era-example-resources-0.1.0.tgz': {}
 
   '@era/vibeflow-expression@file:vendor/era-vibeflow-expression-0.2.0.tgz':
     dependencies:

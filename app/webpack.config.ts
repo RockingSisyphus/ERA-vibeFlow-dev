@@ -667,6 +667,7 @@ function parse_configuration(entry: Entry, is_release = false): (_env: any, argv
         request.startsWith('ERA变量框架') ||
         request === '@era/vibeflow-macro' ||
         request === '@era/vibeflow-service' ||
+        request === '@era/example-resources' ||
         request.startsWith('-') ||
         request.startsWith('.') ||
         request.startsWith('/') ||

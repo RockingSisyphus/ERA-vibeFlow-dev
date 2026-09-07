@@ -9,6 +9,7 @@ import {
   type EraWorldbookEntryV1,
 } from "./domain/resource_planner.ts";
 import type { PlannedStepV1, TaskResultV1 } from "./service_types.ts";
+import { getEraExternalStatusbarHtml } from "@era/example-resources";
 
 export interface InitializationContextV1 {
   readonly schemaVersion: 1;
@@ -23,6 +24,7 @@ export interface InitializationContextV1 {
 }
 
 export type InitializationActionV1 =
+  | { readonly kind: "patch-external-statusbar"; readonly characterId: string; readonly patch: Readonly<Record<string, unknown>> }
   | { readonly kind: "replace-settings"; readonly settings: EraSettingsV1 }
   | { readonly kind: "create-worldbook"; readonly name: string }
   | { readonly kind: "bind-worldbook"; readonly name: string }
@@ -127,6 +129,22 @@ function diagnostic(code: string, message: string) {
 
 export function planInitialization(context: InitializationContextV1): InitializationPlanV1 {
   const task = initializeTask(context.step);
+  const argument = task.args[0];
+  const detail = argument?.kind === "json" && isRecord(argument.value) ? argument.value : {};
+  const external = task.operation === "settings-update" && isRecord(detail.externalStatusbar) ? detail.externalStatusbar : null;
+  if (external) {
+    const patch = isRecord(external.patch) ? external.patch : {};
+    const valid = typeof external.characterId === "string" && external.characterId.length > 0
+      && Object.keys(patch).length > 0
+      && Object.keys(patch).every(key => key === "html" ? typeof patch.html === "string" : key === "enabled" && typeof patch.enabled === "boolean");
+    const failure = valid ? null : { code: "ERA_EXTERNAL_CONFIG_INVALID", message: "外置状态栏需要角色卡 ID 和合法 enabled/html 字段。", category: "input", retryable: false };
+    return {
+      schemaVersion: 1, step: context.step, operation: task.operation,
+      disposition: valid ? "ready" : "failed", greetingStatus: "not-applicable",
+      actions: valid ? [{ kind: "patch-external-statusbar", characterId: String(external.characterId), patch }] : [],
+      diagnostics: failure ? [diagnostic(failure.code, failure.message)] : [], failure,
+    };
+  }
   if (context.readFailure !== null) {
     return {
       schemaVersion: 1,
@@ -166,6 +184,27 @@ export function planInitialization(context: InitializationContextV1): Initializa
     const worldbook = nestedRecord(context.worldbookRaw, ["value", "data"]);
     const regex = nestedRecord(context.regexRaw, ["value", "data"]);
     const character = characterContext(identity, worldbook);
+    const mode = detail.mode === undefined ? "traditional" : detail.mode;
+    const characterRaw = nestedRecord(context.characterRaw, ["value", "data"]);
+    const greetingPlan = planEraDemoGreeting({
+      context: character,
+      firstMessage: characterRaw.status === "ready" && typeof characterRaw.firstMessage === "string" ? characterRaw.firstMessage : null,
+      mode: mode === "external" ? "external" : "traditional",
+    });
+    const existingExternal = isRecord(characterRaw.externalStatusbar) ? characterRaw.externalStatusbar : {};
+    const rejection = mode !== "traditional" && mode !== "external"
+      ? "未知的快速初始化模式。"
+      : greetingPlan.status !== "created" ? greetingPlan.reason
+      : mode === "external" && typeof existingExternal.html === "string" && existingExternal.html.length > 0
+        ? "角色卡已有外置 HTML，不能覆盖；请使用编辑和启用功能。"
+        : mode === "external" && typeof characterRaw.characterId !== "string" ? "无法读取外置状态栏目标角色卡。" : null;
+    if (rejection) {
+      const failure = { code: "ERA_INITIALIZATION_REFUSED", message: rejection, category: "input", retryable: false };
+      return { schemaVersion: 1, step: context.step, operation: task.operation, disposition: "failed", greetingStatus: greetingPlan.status, actions: [], diagnostics: [diagnostic(failure.code, rejection)], failure };
+    }
+    if (mode === "external") {
+      actions[0] = { kind: "replace-settings", settings: { ...settingsPlan.settings, "在ai消息尾部生成特殊符号": false } };
+    }
     const existingNames = Array.isArray(worldbook.names)
       ? worldbook.names.filter((item): item is string => typeof item === "string")
       : [];
@@ -179,7 +218,7 @@ export function planInitialization(context: InitializationContextV1): Initializa
       diagnostics.push(diagnostic("ERA_WORLDBOOK_CONFLICT", worldbookPlan.reason));
     } else if (worldbookPlan.status === "skipped") {
       diagnostics.push(diagnostic("ERA_WORLDBOOK_SKIPPED", worldbookPlan.reason));
-    } else {
+    } else if (worldbookPlan.status === "ready") {
       const appendedEntries: EraWorldbookEntryV1[] = [];
       for (const action of worldbookPlan.actions) {
         if (action.kind === "create-worldbook") {
@@ -199,6 +238,7 @@ export function planInitialization(context: InitializationContextV1): Initializa
       }
     }
 
+    if (mode === "traditional") {
     const regexPlan = planEraCharacterRegexes({
       context: character,
       localRegexEnabled: regex.enabled === true,
@@ -215,14 +255,9 @@ export function planInitialization(context: InitializationContextV1): Initializa
       }
     }
 
-    const characterRaw = nestedRecord(context.characterRaw, ["value", "data"]);
-    const greetingPlan = planEraDemoGreeting({
-      context: character,
-      firstMessage:
-        characterRaw.status === "ready" && typeof characterRaw.firstMessage === "string"
-          ? characterRaw.firstMessage
-          : null,
-    });
+    } else {
+      actions.push({ kind: "patch-external-statusbar", characterId: String(characterRaw.characterId), patch: { enabled: true, html: getEraExternalStatusbarHtml() } });
+    }
     greetingStatus = greetingPlan.status;
     if (greetingPlan.status === "created") {
       actions.push({ kind: "update-main-greeting", expected: greetingPlan.expected, next: greetingPlan.next });

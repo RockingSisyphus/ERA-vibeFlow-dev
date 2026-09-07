@@ -134,6 +134,10 @@ export interface EraTavernAdapter {
   };
   /** 当前单角色卡主开场白的机械 I/O；选择、冲突和幂等规则属于 Service。 */
   readonly character: {
+    patch_external_statusbar?(
+      input: Readonly<Record<string, unknown>>,
+      context: EraCapabilityContext,
+    ): Promise<unknown>;
     read_main_greeting(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
     write_main_greeting(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
   };

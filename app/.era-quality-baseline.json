@@ -758,34 +758,6 @@
     },
     {
       "debt": 1,
-      "fingerprint": "6da180fa8bd25c1072337926e75c2e2d7122793a10463f9c6973496caa708555",
-      "objectId": "comment:script:} -> }",
-      "ruleId": "COMMENT_META_WORDING",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "5be3aa82b736b4828320438cf0bc1f1a16ff9d61a6f3da1e07c0ae51be64cb2a",
-      "objectId": "comment:script:} catch (e: any) { -> jsonState[key] = { bad: true, ok: false, msg: `JSON 格式错误：${e?.message ?? ''}` };",
-      "ruleId": "COMMENT_META_WORDING",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "39fe0f7b922f94ddd23a54df1a88cdd4ce1b369b00209a912f0dbfc0834b87cb",
-      "objectId": "comment:script:const txt = jsonBuffers[key] ?? ''; -> if (txt.trim() === '') {",
-      "ruleId": "COMMENT_META_WORDING",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "a70f542fb44faa0154bcd2ad03470c92f1d6313d6cd8ee770ec433e467a12525",
-      "objectId": "comment:script:function markJsonTouched(key: string) { -> const txt = jsonBuffers[key] ?? '';",
-      "ruleId": "COMMENT_META_WORDING",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
       "fingerprint": "046b1691bdb95c9565daba0615a7858ffab43deec00df03f98c22ddbe667f192",
       "objectId": "comment:script:function onToggle() { -> isOpen.value = !isOpen.value;",
       "ruleId": "COMMENT_META_WORDING",
@@ -800,13 +772,6 @@
     },
     {
       "debt": 1,
-      "fingerprint": "8f9f6c06c4066b5887347162748b8366dda9ff7f14a3663eb4489e56f55b967d",
-      "objectId": "comment:script:if (txt.trim() === '') { -> jsonState[key] = { bad: true, ok: false, msg: '不能为空（若要设为 null 请写 null）' };",
-      "ruleId": "COMMENT_META_WORDING",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
       "fingerprint": "c39de5b697371fa7f46d5286aa7d5787cd106903b26c35f90a2d0554af3dc4cf",
       "objectId": "comment:script:import { reactive, ref } from 'vue'; -> import toastr from 'toastr';",
       "ruleId": "COMMENT_META_WORDING",
@@ -816,20 +781,6 @@
       "debt": 1,
       "fingerprint": "a9766cf05f6b649e70eb08fc815d73ea9d69f4a7402c04aef77d79cd15e62585",
       "objectId": "comment:script:isOpen.value = !isOpen.value; -> if (isOpen.value && rows.value.length === 0) loadVars();",
-      "ruleId": "COMMENT_META_WORDING",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "188ed0faabae005fb2d33724ba52ddb9b25e24eef3711102e297b253efdc16e0",
-      "objectId": "comment:script:jsonState[key] = { bad: true, ok: false, msg: '不能为空（若要设为 null 请写 null）' }; -> return;",
-      "ruleId": "COMMENT_META_WORDING",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "2eaef79bad9cc0b0f5a0231e783c7476c9f0de068a8226a2c37db5b075436d6d",
-      "objectId": "comment:script:return; -> }",
       "ruleId": "COMMENT_META_WORDING",
       "severity": "warning"
     },

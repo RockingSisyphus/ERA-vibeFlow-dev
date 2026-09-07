@@ -204,18 +204,20 @@
           "path": "configs/era.service.jsonc"
         },
         "role": {
-          "display_name": "绑定统一请求查看器与真实预设宿主能力",
-          "description": "在现有 Host 生命周期内用一个只读视图模型替换执行/尝试双层选择，默认最新请求与 AI 响应，旧请求只读且新请求不抢走用户选择。区分内容页签、显示切换、复制及业务重生成四类按钮；被动记录实际输入与发送前提示词，reload 释放。真实预设捕获/装配保留所选机制；Host 不决定纠错、重试或业务提交，不改作者 iframe，不新增工作流。"
+          "display_name": "登记双模式初始化 UI 与共享外置示例",
+          "description": "保留外置宿主生命周期，快捷操作改为传统/外置两个按钮，共享 busy 并提交同一初始化资源工作流。外置模式成功后展示已保存模板；默认模板与编辑器插入示例共用同一资源，通过 ready/subscribe 展示最新状态，不加载第三方库或自动 commit。详见 reports/era-dual-initialization-change-list.md。"
         },
-        "contract_source": "node_type",
+        "contract_source": "planned_config",
         "flow_kind": "process",
         "effect_scope": "none",
         "runtime_dispatch": "unknown",
         "execution_lock": null,
         "effective_execution_lock": null,
         "contains_global_state": false,
-        "status": "implemented",
-        "planned_behavior": null,
+        "status": "planned",
+        "planned_behavior": {
+          "kind": "blocking"
+        },
         "requires": [
           {
             "type": "era.installation.scope.decision",
@@ -7561,18 +7563,20 @@
               "path": "configs/nodesets/task_initialize.jsonc"
             },
             "role": {
-              "display_name": "读取状态栏初始化资源与主开场白",
-              "description": "消费已准备步骤内的严格消息投影，并读取身份、脚本设置、世界书、角色正则和当前角色主开场白；备用开场白、当前聊天和历史聊天不进入初始化写入范围。"
+              "display_name": "读取双模式初始化与现有外置配置",
+              "description": "读取现有身份、设置、世界书、正则、主开场白及角色卡外置配置；传递 traditional/external 内部选择，无参数沿用 traditional。仅采集事实，不在 Host 决定覆盖或初始化规则。"
             },
-            "contract_source": "node_type",
+            "contract_source": "planned_config",
             "flow_kind": "data_store",
             "effect_scope": "none",
             "runtime_dispatch": "unknown",
             "execution_lock": null,
             "effective_execution_lock": null,
             "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
+            "status": "planned",
+            "planned_behavior": {
+              "kind": "blocking"
+            },
             "requires": [
               {
                 "type": "era.step.request.routed",
@@ -7651,18 +7655,20 @@
               "path": "configs/nodesets/task_initialize.jsonc"
             },
             "role": {
-              "display_name": "规划 Tavern 原生状态栏片段与初始化资源",
-              "description": "幂等规划设置、世界书、状态栏正则与主开场白示例变量；新状态栏是由 Tavern Helper 直接渲染的普通可嵌入片段，包含自有样式、ERA bootstrap、隐藏的状态栏根节点与使用 await ERA.ready() 的作者脚本，不再生成完整 html/head/body 或惰性 template。已发布旧式非托管状态栏保持原样且不自动迁移。"
+              "display_name": "规划传统或外置状态栏资源",
+              "description": "同一规划器共享变量、函数、世界书及单一标记。有标记时两模式拒绝；外置已有非空 HTML 时拒绝覆盖。传统模式保留占位符和楼内正则；外置模式不创建它们，关闭本角色脚本的尾部符号，保存共享默认 HTML 并启用外置配置。必要资源完成后以主开场白标记收口，不迁移或删除作者资源。"
             },
-            "contract_source": "node_type",
+            "contract_source": "planned_config",
             "flow_kind": "decision",
             "effect_scope": "none",
             "runtime_dispatch": "unknown",
             "execution_lock": null,
             "effective_execution_lock": null,
             "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
+            "status": "planned",
+            "planned_behavior": {
+              "kind": "blocking"
+            },
             "requires": [
               {
                 "type": "era.initialize.context",
@@ -7836,18 +7842,20 @@
               "path": "configs/nodesets/task_initialize.jsonc"
             },
             "role": {
-              "display_name": "提交状态栏资源与主开场白示例",
-              "description": "顺序应用声明式设置、世界书、状态栏正则和角色主开场白变更；以真实 avatar 更新 first_messages[0]，随后仅在当前聊天仍为空或只有一条未污染主开场白时刷新首楼并走真实消息渲染/保存链，多楼、编辑/污染、备用开场白和群聊保持原样；回执分别报告开场白与首楼刷新结果。"
+              "display_name": "提交双模式资源并最后写入标记",
+              "description": "按声明式顺序提交设置、世界书、按模式所需正则或外置配置，最后保存带示例变量和单一标记的主开场白。沿用空聊天或未污染首楼同步，多楼历史不批量改写。外置配置保存后更新当前宿主显示；失败报告实际已写入动作，不伪成功，不自动覆盖既有 HTML。"
             },
-            "contract_source": "node_type",
+            "contract_source": "planned_config",
             "flow_kind": "data_store",
             "effect_scope": "none",
             "runtime_dispatch": "unknown",
             "execution_lock": null,
             "effective_execution_lock": null,
             "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
+            "status": "planned",
+            "planned_behavior": {
+              "kind": "blocking"
+            },
             "requires": [
               {
                 "type": "era.initialize.commit.request",
@@ -39015,6 +39023,28 @@
           ]
         }
       },
+      "era.tavern.character.external_statusbar.request": {
+        "kind": "data_schema",
+        "type_key": "era.tavern.character.external_statusbar.request",
+        "representation": "json",
+        "display_name": "",
+        "description": "",
+        "schema": {
+          "type": "object",
+          "$schema": "https://json-schema.org/draft/2020-12/schema"
+        }
+      },
+      "era.tavern.character.external_statusbar.result": {
+        "kind": "data_schema",
+        "type_key": "era.tavern.character.external_statusbar.result",
+        "representation": "json",
+        "display_name": "",
+        "description": "",
+        "schema": {
+          "type": "object",
+          "$schema": "https://json-schema.org/draft/2020-12/schema"
+        }
+      },
       "era.tavern.character.read_main_greeting.request": {
         "kind": "data_schema",
         "type_key": "era.tavern.character.read_main_greeting.request",
@@ -40625,6 +40655,11 @@
         "display_name": "酒馆角色主开场白",
         "description": "只读或以真实 avatar 乐观更新当前单角色卡的 first_messages[0]；写入成功后仅刷新空聊天或恰好一条未污染主开场白，已有多楼、编辑/污染、备用开场白和群聊保持原样。",
         "operations": {
+          "patch_external_statusbar": {
+            "input_type": "era.tavern.character.external_statusbar.request",
+            "output_type": "era.tavern.character.external_statusbar.result",
+            "completion": "suspend"
+          },
           "read_main_greeting": {
             "input_type": "era.tavern.character.read_main_greeting.request",
             "output_type": "era.tavern.character.read_main_greeting.result",
@@ -40847,7 +40882,7 @@
         "status": "implemented",
         "display_name": "ERA 酒馆服务宿主",
         "category": "宿主接线",
-        "description": "复用既有 FIFO、receipt、生成栅栏、按楼状态栏与被动提示词采集；本轮拟将双层执行/尝试选择替换为统一请求列表和分层样式，按 Service 显式请求身份展示实际纠错上下文，不猜测请求来源。真实预设捕获及请求装配保留角色、相对顺序、宏、尾部 assistant 提示和适用参数，不新增通用预设解释器、不切换用户实际酒馆配置。完整提示词与旧执行历史只在页面内存；重试与变量提交决策仍属于唯一 AgentGenerationSession。四类清单和真实导入/RPG 验收见 reports/era-request-records-retry-presets-change-list.md。",
+        "description": "复用既有 FIFO、receipt、生成栅栏、按楼状态栏、请求查看器和最新状态 Facade。本轮 planned 生命周期扩展：在聊天区与输入框之间挂载外置 HTML 区域；角色卡扩展 era_external_statusbar 保存开关和原始 HTML，编辑自动保存但不自动执行，显式刷新重建一次内容实例。通过现有 Service/Host 接线保存配置；浏览器原生解析作者内容，公共 API 在作者脚本前安装，宏和订阅读取最新状态；卸载清理订阅，不伪造消息/MK、不改 Helper、不复制私有渲染器。四类清单及验证范围见 reports/era-external-statusbar-change-list.md。",
         "version": "0.1.0",
         "targets": [
           "browser"

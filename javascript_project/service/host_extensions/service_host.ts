@@ -136,6 +136,7 @@ export interface EraTavernCapabilityAdapter {
     readonly upsert: EraAsyncHostOperation;
   };
   readonly character: {
+    readonly patch_external_statusbar?: EraAsyncHostOperation;
     readonly read_main_greeting: EraAsyncHostOperation;
     readonly write_main_greeting: EraAsyncHostOperation;
   };
@@ -694,6 +695,10 @@ class ServiceHostRuntime {
       ) => this.invokeSuspend("regex", "upsert", input, options),
     },
     "era.tavern.character": {
+      patch_external_statusbar: (
+        input: Readonly<Record<string, unknown>>,
+        options: PortCallOptions = {},
+      ) => this.invokeSuspend("character", "patch_external_statusbar", input, options),
       read_main_greeting: (
         input: Readonly<Record<string, unknown>>,
         options: PortCallOptions = {},

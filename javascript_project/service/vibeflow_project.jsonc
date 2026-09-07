@@ -10,6 +10,7 @@
   "javascript": {
     "package_root": ".",
     "external_packages": [
+      "@era/example-resources",
       "@era/vibeflow-floor-snapshot",
       "mathjs",
       "@stdlib/math-base-special-gamma"

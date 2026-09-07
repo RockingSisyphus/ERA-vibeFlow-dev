@@ -31,6 +31,7 @@ import {
 } from './tavern-browser-host';
 import { refreshDisplayedEraTechnicalBlocks, registerEraTechnicalBlockProjection } from './technical-block-projection';
 import { createCharacterGreetingAdapter } from './character-greeting-adapter';
+import { patchExternalStatusbar } from './external-statusbar-configuration';
 import { verifyEraStatusbarCommitSource } from './statusbar-runtime';
 
 const logger = new Logger();
@@ -503,7 +504,10 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
     },
   };
 
-  readonly character = createCharacterGreetingAdapter(throwIfAborted);
+  readonly character = {
+    ...createCharacterGreetingAdapter(throwIfAborted),
+    patch_external_statusbar: patchExternalStatusbar,
+  };
 
   readonly identity = {
     /** 为了让工作流统一处理单角色、群聊和无角色场景，必须一次返回完整宿主身份快照。 */

@@ -13,7 +13,10 @@ interface Context {
       readonly replace_entries: (input: Readonly<Record<string, unknown>>) => Promise<unknown>;
     };
     readonly "era.tavern.regex": { readonly upsert: (input: Readonly<Record<string, unknown>>) => Promise<unknown> };
-    readonly "era.tavern.character": { readonly write_main_greeting: (input: Readonly<Record<string, unknown>>) => Promise<unknown> };
+    readonly "era.tavern.character": {
+      readonly write_main_greeting: (input: Readonly<Record<string, unknown>>) => Promise<unknown>;
+      readonly patch_external_statusbar: (input: Readonly<Record<string, unknown>>) => Promise<unknown>;
+    };
   };
 }
 function isRecord(value: unknown): value is Record<string, unknown> { return value !== null && typeof value === "object" && !Array.isArray(value); }
@@ -41,6 +44,8 @@ function greetingRefreshStatus(value: unknown): InitializationCommitOutcomeV1["g
 }
 async function apply(action: InitializationActionV1, context: Context): Promise<unknown> {
   switch (action.kind) {
+    case "patch-external-statusbar":
+      return context.capabilities["era.tavern.character"].patch_external_statusbar({ characterId: action.characterId, patch: action.patch });
     case "replace-settings":
       return context.capabilities["era.tavern.variables"].commit({ scope: { type: "script" }, variables: action.settings, purpose: "era-initialize-settings" });
     case "create-worldbook":

@@ -2,7 +2,7 @@
   "kind": "host_extension",
   "id": "era.tavern.service_host",
   "display_name": "ERA 酒馆服务宿主",
-  "description": "连接 SillyTavern 与 Tavern Helper，管理单一先进先出队列、回执、高水位屏障、绝对截止时间定时器、宿主引用、出站帧幂等、致命态锁存与写入完成通知重播，并提供服务端口、酒馆能力、Agent 独立请求/HTML 注入/Role Card 机械 I/O、可区分合法空模型列表与宿主失败的模型枚举、Sidecar 身份/files/UI 接线和分阶段启动闸门；生命周期在权威设置提交后刷新 UI 设置，在成功发布新运行时快照后按设置只刷新最近消息的展示，不改消息或 Sidecar；不承载重试、函数、CRUD、同步、合并、回滚或身份判定规则。",
+  "description": "连接 SillyTavern 与 Tavern Helper，管理单一先进先出队列、回执、高水位屏障、绝对截止时间定时器、宿主引用、出站帧幂等、致命态锁存与写入完成通知重播，并提供服务端口、酒馆能力、Agent 独立请求/HTML 注入/Role Card 机械 I/O、可区分合法空模型列表与宿主失败的模型枚举、Sidecar 身份/files/UI 接线和分阶段启动闸门；生命周期刷新权威 UI 设置并向既有状态栏实例发布数据，不通过重绘消息更新状态。外置 HTML 状态栏复用最新 Facade，角色卡扩展由独立字段补丁保存，不创建楼层；不承载重试、函数、CRUD、同步、合并、回滚或身份判定规则。",
   "version": "0.1.0",
   "targets": ["browser"],
   "implementations": [

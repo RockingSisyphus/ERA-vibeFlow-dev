@@ -27,6 +27,7 @@ import type {
   EraWorkflowHost,
 } from './service/types';
 import { startEraUi } from './ui';
+import { startExternalStatusbar } from './ui/external-statusbar';
 import { initEraSettings } from './utils/era_data';
 import { Logger } from './utils/log';
 
@@ -63,7 +64,23 @@ function productionDependencies(): EraApplicationDependencies {
     createHost: () => createWorkflowHost() as EraWorkflowHost,
     startMacro: startEraMacroSubsystem,
     startPublicApi: () => installEraPublicApi(createEraStatusbarRuntime),
-    startUi: startEraUi,
+    startUi: () => {
+      const ui = startEraUi();
+      let stopExternal: () => void;
+      try {
+        stopExternal = startExternalStatusbar();
+      } catch (error) {
+        ui.stop();
+        throw error;
+      }
+      return {
+        mounted: true,
+        stop: () => {
+          stopExternal();
+          ui.stop();
+        },
+      };
+    },
     refreshSettings: initEraSettings,
     dispatchSettingsUpdated,
     awaitStartupGate: adapter => (adapter as EraRuntimeAdapter & EraStartupGateAdapter).waitForStartupGate(),
