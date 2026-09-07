@@ -2,6 +2,10 @@ import {
   AgentFunctionCallFailure,
   attemptProfile,
   buildStoryInjection,
+  buildAgentRetryFeedback,
+  agentRequestContext,
+  type EraAgentFailedAttempt,
+  type EraAgentRequestContext,
   builtinStagePrompts,
   countAgentCycles,
   executeAgentFunctionCalls,
@@ -390,6 +394,7 @@ function openedSession(
   context: Record<string, unknown>,
   configuration: EraAgentConfigurationV2,
   kind: string,
+  eventId: string,
 ): Record<string, unknown> {
   const latest = latestMessage(context);
   const continuing =
@@ -401,6 +406,7 @@ function openedSession(
     schemaVersion: 2,
     chatKey: chatKey(context),
     status: "opened",
+    execution: { id: eventId, trigger: kind === "normal" ? "initial" : kind },
     cycleIndex: continuing ? countAgentCycles(baseMessage) : 0,
     baseMessage,
     configuration,
@@ -413,6 +419,7 @@ function stageRequest(
   stage: "planning" | "settlement",
   userInput: string,
   generationId: string,
+  requestContext: EraAgentRequestContext,
 ): Record<string, unknown> {
   const preset = profile.preset;
   const orderedPrompts =
@@ -422,12 +429,26 @@ function stageRequest(
   const settings = preset.source === "builtin" ? {} : (preset.settings ?? {});
   return {
     generationId,
+    requestContext,
     stage,
     userInput,
     orderedPrompts,
+    resolvePresetMacros: preset.source === "snapshot",
     settings,
     modelSource: profile.modelSource,
   };
+}
+
+function sessionExecution(
+  session: Record<string, unknown> | null,
+  eventId: string,
+) {
+  const execution = session?.execution;
+  return isRecord(execution) &&
+    typeof execution.id === "string" &&
+    typeof execution.trigger === "string"
+    ? { id: execution.id, trigger: execution.trigger }
+    : { id: eventId, trigger: "unrecorded" };
 }
 
 async function runPlanning(
@@ -463,14 +484,24 @@ async function runPlanning(
       ? Number(previousSession.nextDrawOffset)
       : 0;
   const attempts: Record<string, unknown>[] = [];
-  let previousDiagnostic = "";
+  let failure: EraAgentFailedAttempt | undefined;
+  let correction: EraAgentFailedAttempt | undefined;
   for (
     let attempt = 0;
     attempt <= configuration.planning.retryCount;
     attempt += 1
   ) {
     const profile = attemptProfile(configuration.planning, attempt);
-    let response = "";
+    let response: string | undefined;
+    let responseValidated = false;
+    const requestContext = agentRequestContext(
+      sessionExecution(
+        previousSession,
+        step.kind === "execute" ? step.task.primaryEvent.eventId : "unknown",
+      ),
+      attempt,
+      failure,
+    );
     let requestId: string | undefined;
     let requestRoute: Record<string, unknown> | undefined;
     const userInput = [
@@ -478,7 +509,7 @@ async function runPlanning(
       `用户输入：${lastUserText(context)}`,
       `当前变量：${JSON.stringify(state.statData)}`,
       `可用函数：${JSON.stringify(state.statFunc)}`,
-      previousDiagnostic ? `上一尝试失败原因：${previousDiagnostic}` : "",
+      buildAgentRetryFeedback(correction),
     ]
       .filter(Boolean)
       .join("\n");
@@ -489,10 +520,17 @@ async function runPlanning(
           "planning",
           userInput,
           `era-plan-${step.kind === "execute" ? step.task.primaryEvent.eventId : "unknown"}-${attempt}`,
+          requestContext,
         ),
       );
-      requestId = isRecord(generated) && typeof generated.requestId === "string" ? generated.requestId : undefined;
-      requestRoute = isRecord(generated) && isRecord(generated.route) ? generated.route : undefined;
+      requestId =
+        isRecord(generated) && typeof generated.requestId === "string"
+          ? generated.requestId
+          : undefined;
+      requestRoute =
+        isRecord(generated) && isRecord(generated.route)
+          ? generated.route
+          : undefined;
       throwHostGenerationFailure(generated);
       response =
         isRecord(generated) && typeof generated.response === "string"
@@ -506,15 +544,25 @@ async function runPlanning(
         sourceKey,
         drawOffset,
       });
+      responseValidated = true;
       attempts.push({
         attempt,
+        requestContext,
         status: "passed",
         response: boundedTrace(response),
         ...(requestId ? { requestId } : {}),
         ...(requestRoute ? { route: requestRoute } : {}),
-        functionResults: executed.results.map((result) => ({ ...result, status: "passed", ...(plan.calls[result.index]?.purpose !== undefined ? { purpose: plan.calls[result.index].purpose } : {}) })),
+        functionResults: executed.results.map((result) => ({
+          ...result,
+          status: "passed",
+          ...(plan.calls[result.index]?.purpose !== undefined
+            ? { purpose: plan.calls[result.index].purpose }
+            : {}),
+        })),
         preset: profile.preset.source,
-        ...(profile.preset.source === "snapshot" && profile.preset.sourceName ? { presetName: profile.preset.sourceName } : {}),
+        ...(profile.preset.source === "snapshot" && profile.preset.sourceName
+          ? { presetName: profile.preset.sourceName }
+          : {}),
         modelSource: profile.modelSource,
       });
       return {
@@ -537,17 +585,25 @@ async function runPlanning(
         }),
       };
     } catch (error) {
-      previousDiagnostic = failureMessage(error);
+      if (responseValidated) throw error;
+      failure = { response, diagnostic: failureMessage(error), requestId };
+      // A failed request must preserve the last rejected model candidate.
+      if (response !== undefined) correction = failure;
       attempts.push({
         attempt,
+        requestContext,
         status: "failed",
-        response: boundedTrace(response),
-        diagnostic: previousDiagnostic,
+        response: boundedTrace(response ?? ""),
+        diagnostic: failure.diagnostic,
         ...(requestId ? { requestId } : {}),
         ...(requestRoute ? { route: requestRoute } : {}),
-        ...(error instanceof AgentFunctionCallFailure ? { functionResults: error.functionResults } : {}),
+        ...(error instanceof AgentFunctionCallFailure
+          ? { functionResults: error.functionResults }
+          : {}),
         preset: profile.preset.source,
-        ...(profile.preset.source === "snapshot" && profile.preset.sourceName ? { presetName: profile.preset.sourceName } : {}),
+        ...(profile.preset.source === "snapshot" && profile.preset.sourceName
+          ? { presetName: profile.preset.sourceName }
+          : {}),
         modelSource: profile.modelSource,
       });
     }
@@ -596,14 +652,21 @@ async function runSettlement(
         : latest.message;
   const isolated = isolateStoryEraCommands(cycleSource);
   const attempts: Record<string, unknown>[] = [];
-  let previousDiagnostic = "";
+  let failure: EraAgentFailedAttempt | undefined;
+  let correction: EraAgentFailedAttempt | undefined;
   for (
     let attempt = 0;
     attempt <= configuration.settlement.retryCount;
     attempt += 1
   ) {
     const profile = attemptProfile(configuration.settlement, attempt);
-    let response = "";
+    let response: string | undefined;
+    let responseValidated = false;
+    const requestContext = agentRequestContext(
+      sessionExecution(session, observationEventId),
+      attempt,
+      failure,
+    );
     let requestId: string | undefined;
     let requestRoute: Record<string, unknown> | undefined;
     const userInput = [
@@ -616,7 +679,7 @@ async function runSettlement(
         ? `函数结果：${JSON.stringify(session.functionResults)}`
         : "",
       isolated.audit ? `故事模型标签审计：${isolated.audit}` : "",
-      previousDiagnostic ? `上一尝试失败原因：${previousDiagnostic}` : "",
+      buildAgentRetryFeedback(correction),
     ]
       .filter(Boolean)
       .join("\n");
@@ -627,15 +690,22 @@ async function runSettlement(
           "settlement",
           userInput,
           `era-settle-${String(latest.message_id)}-${attempt}`,
+          requestContext,
         ),
       );
-      requestId = isRecord(generated) && typeof generated.requestId === "string" ? generated.requestId : undefined;
+      requestId =
+        isRecord(generated) && typeof generated.requestId === "string"
+          ? generated.requestId
+          : undefined;
       throwHostGenerationFailure(generated);
       response =
         isRecord(generated) && typeof generated.response === "string"
           ? generated.response
           : "";
-      requestRoute = isRecord(generated) && isRecord(generated.route) ? generated.route : undefined;
+      requestRoute =
+        isRecord(generated) && isRecord(generated.route)
+          ? generated.route
+          : undefined;
       const parsed = parseSettlementOutput(response);
       const validated = validateSettlementOperations({
         operations: parsed.operations,
@@ -647,14 +717,18 @@ async function runSettlement(
             ? session.sourceKey
             : `${chatKey(context)}:${String(latest.message_id)}`,
       });
+      responseValidated = true;
       attempts.push({
         attempt,
+        requestContext,
         status: "passed",
         response: boundedTrace(response),
         operations: parsed.operations,
         ...(requestRoute ? { route: requestRoute } : {}),
         preset: profile.preset.source,
-        ...(profile.preset.source === "snapshot" && profile.preset.sourceName ? { presetName: profile.preset.sourceName } : {}),
+        ...(profile.preset.source === "snapshot" && profile.preset.sourceName
+          ? { presetName: profile.preset.sourceName }
+          : {}),
         modelSource: profile.modelSource,
         ...(requestId ? { requestId } : {}),
       });
@@ -708,14 +782,20 @@ async function runSettlement(
         requiresInitialPresentation,
       };
     } catch (error) {
-      previousDiagnostic = failureMessage(error);
+      // Session/persistence failures after validation are not model mistakes.
+      if (responseValidated) throw error;
+      failure = { response, diagnostic: failureMessage(error), requestId };
+      if (response !== undefined) correction = failure;
       attempts.push({
         attempt,
+        requestContext,
         status: "failed",
-        response: boundedTrace(response),
-        diagnostic: previousDiagnostic,
+        response: boundedTrace(response ?? ""),
+        diagnostic: failure.diagnostic,
         preset: profile.preset.source,
-        ...(profile.preset.source === "snapshot" && profile.preset.sourceName ? { presetName: profile.preset.sourceName } : {}),
+        ...(profile.preset.source === "snapshot" && profile.preset.sourceName
+          ? { presetName: profile.preset.sourceName }
+          : {}),
         modelSource: profile.modelSource,
         ...(requestRoute ? { route: requestRoute } : {}),
         ...(requestId ? { requestId } : {}),
@@ -809,6 +889,10 @@ async function retryStory(
   const generated = await capability.generate_story({
     userInput: lastUserText(context),
     injection,
+    requestContext: agentRequestContext(
+      sessionExecution(session, observationEventId),
+      0,
+    ),
   });
   const story =
     isRecord(generated) && typeof generated.response === "string"
@@ -818,7 +902,13 @@ async function retryStory(
   const baseMessage =
     typeof session.baseMessage === "string" ? session.baseMessage : "";
   const plainMessage = [baseMessage, story].filter(Boolean).join("\n");
-  const nextSession = { ...session, story, ...(isRecord(generated) && typeof generated.requestId === "string" ? { storyRequestId: generated.requestId } : {}) };
+  const nextSession = {
+    ...session,
+    story,
+    ...(isRecord(generated) && typeof generated.requestId === "string"
+      ? { storyRequestId: generated.requestId }
+      : {}),
+  };
   const nextContext = withStory(
     { ...context, session: nextSession },
     plainMessage,
@@ -1275,7 +1365,12 @@ export async function run(
       }
       const startsNewCycle = type === "message_sent" || kind !== "normal";
       if (startsNewCycle) {
-        session = openedSession(rawContext, configuration, kind);
+        session = openedSession(
+          rawContext,
+          configuration,
+          kind,
+          step.task.primaryEvent.eventId,
+        );
         capability.write_session({ chatKey: chatKey(rawContext), session });
       }
       if (session === null) {
@@ -1400,22 +1495,45 @@ export async function run(
       let session = sessionObject(rawContext);
       if (session === null)
         throw new TypeError("当前聊天没有可重试的最新 Agent 周期。");
-      const stageAttempts = session[retry.kind === "planning" ? "planningAttempts" : "settlementAttempts"];
-      const lastAttempt = Array.isArray(stageAttempts) ? stageAttempts.at(-1) : null;
-      const currentRequestId = retry.kind === "story" ? session.storyRequestId : isRecord(lastAttempt) ? lastAttempt.requestId : undefined;
+      const stageAttempts =
+        session[
+          retry.kind === "planning" ? "planningAttempts" : "settlementAttempts"
+        ];
+      const lastAttempt = Array.isArray(stageAttempts)
+        ? stageAttempts.at(-1)
+        : null;
+      const currentRequestId =
+        retry.kind === "story"
+          ? session.storyRequestId
+          : isRecord(lastAttempt)
+            ? lastAttempt.requestId
+            : undefined;
       if (
-        (retry.requestId !== undefined && retry.requestId !== currentRequestId) ||
-        (retry.messageId !== undefined && retry.messageId !== session.messageId) ||
-        (retry.cycleIndex !== undefined && retry.cycleIndex !== session.cycleIndex) ||
+        (retry.requestId !== undefined &&
+          retry.requestId !== currentRequestId) ||
+        (retry.messageId !== undefined &&
+          retry.messageId !== session.messageId) ||
+        (retry.cycleIndex !== undefined &&
+          retry.cycleIndex !== session.cycleIndex) ||
         (retry.sourceKey !== undefined && retry.sourceKey !== session.sourceKey)
-      ) throw new TypeError("当前报告对应的 Agent 周期已失效，请查看最新楼层。");
+      )
+        throw new TypeError(
+          "当前报告对应的 Agent 周期已失效，请查看最新楼层。",
+        );
       const identity = floorIdentity(step);
       let candidate: EraAgentFloorCandidateV1;
+      session = {
+        ...session,
+        execution: {
+          id: step.task.primaryEvent.eventId,
+          trigger: `manual-${String(retry.kind)}`,
+        },
+      };
       if (retry.kind === "planning") {
         session = await runPlanning(
           capability,
           configuration,
-          rawContext,
+          { ...rawContext, session },
           step,
         );
         capability.write_session({ chatKey: chatKey(rawContext), session });

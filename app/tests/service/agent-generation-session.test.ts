@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   AgentFunctionCallFailure,
+  buildAgentRetryFeedback,
+  agentRequestContext,
   countAgentCycles,
   executeAgentFunctionCalls,
   extractEraMessageKey,
@@ -47,6 +49,37 @@ async function runAgentSessionNode(
   );
 }
 
+describe('stage correction input', () => {
+  it('uses the actual failed reply without the display trace truncation and requests a complete correction', () => {
+    const response = `{"broken":"${'x'.repeat(140000)}`;
+    const feedback = buildAgentRetryFeedback({ response, diagnostic: 'unexpected end', requestId: 'failed-1' });
+    const data = JSON.parse(feedback.split('\n')[1]);
+    expect(data).toEqual({ failedResponse: response, diagnostic: 'unexpected end' });
+    expect(feedback).toContain('完整修正结果');
+    expect(
+      agentRequestContext({ id: 'run-1', trigger: 'manual-settlement' }, 1, {
+        response,
+        diagnostic: 'unexpected end',
+        requestId: 'failed-1',
+      }),
+    ).toMatchObject({ intent: 'correction', previousRequestId: 'failed-1', executionId: 'run-1' });
+  });
+  it('distinguishes empty replies from transport failures and starts manual executions without old feedback', () => {
+    expect(buildAgentRetryFeedback()).toBe('');
+    expect(buildAgentRetryFeedback({ diagnostic: 'request unavailable' })).toBe('');
+    expect(buildAgentRetryFeedback({ diagnostic: 'empty JSON', response: '' })).toContain('"failedResponse":""');
+    expect(agentRequestContext({ id: 'new-run', trigger: 'manual-planning' }, 0)).toEqual({
+      executionId: 'new-run',
+      trigger: 'manual-planning',
+      attemptIndex: 0,
+      intent: 'initial',
+    });
+    expect(
+      agentRequestContext({ id: 'new-run', trigger: 'manual-planning' }, 1, { diagnostic: 'offline' }).intent,
+    ).toBe('request-retry');
+  });
+});
+
 function floorDispatchContext(input: {
   chatId: string;
   messageId: number;
@@ -89,6 +122,140 @@ function floorDispatchContext(input: {
     agentFloorCandidate: null,
   } as const;
 }
+
+describe('retry failure boundaries', () => {
+  async function execute(stage: 'planning' | 'settlement', generate: ReturnType<typeof vi.fn>, writeSession = vi.fn()) {
+    const configuration = {
+      schemaVersion: '2',
+      planning: { enabled: stage === 'planning', retryCount: 5, attempts: [{ preset: { source: 'builtin' } }] },
+      settlement: { enabled: stage === 'settlement', retryCount: 5, attempts: [{ preset: { source: 'builtin' } }] },
+    };
+    return runAgentSessionNode(
+      {
+        'era.step.request.routed': {
+          value: {
+            kind: 'execute',
+            taskRoute: 'agent-generation-session',
+            task: {
+              kind: 'sync',
+              primaryEvent: {
+                eventId: 'retry-event',
+                sequence: 13,
+                type: stage === 'planning' ? 'message_sent' : 'message_received',
+                args: [],
+              },
+            },
+            dispatchContext: floorDispatchContext({
+              chatId: 'retry-chat',
+              messageId: 7,
+              activeText: 'story',
+              eventId: 'retry-event',
+              sequence: 13,
+            }),
+          },
+        },
+        'era.batch.execution.state': { value: { schemaVersion: 1 } },
+      },
+      {},
+      {
+        capabilities: {
+          'era.tavern.agent': {
+            read_context: vi.fn(async () => ({
+              identity: { chatId: 'retry-chat', groupId: null },
+              configuration,
+              session:
+                stage === 'settlement'
+                  ? {
+                      schemaVersion: 1,
+                      status: 'opened',
+                      chatKey: 'retry-chat',
+                      configuration,
+                      preState: { revision: 1, statData: {}, statFunc: {} },
+                    }
+                  : null,
+              state: { revision: 1, statData: {}, statFunc: {} },
+              latestMessage: {
+                message_id: 7,
+                role: stage === 'planning' ? 'user' : 'assistant',
+                message: 'story',
+                extra: {},
+              },
+            })),
+            generate,
+            write_session: writeSession,
+            inject_once: vi.fn(),
+            stop_native_generation: vi.fn(),
+          },
+        },
+      },
+    );
+  }
+
+  it.each(['planning', 'settlement'] as const)(
+    '%s preserves the exact correction across request failures and replaces only invalid answers',
+    async stage => {
+      const bad =
+        stage === 'planning'
+          ? '{"storyPlan":{},"calls":[{"function":"missingFunction","args":[]}]}'
+          : '{"operations":[{"op":"invalid-operation"}]}';
+      const good = stage === 'planning' ? '{"storyPlan":{},"calls":[]}' : '{"operations":[]}';
+      const generate = vi
+        .fn()
+        .mockRejectedValueOnce(new Error('NETWORK_ONE'))
+        .mockResolvedValueOnce({ response: 'broken-json-B', requestId: 'answer-B' })
+        .mockResolvedValueOnce({
+          status: 'failed',
+          diagnostic: { code: 'NETWORK_TWO', message: 'NETWORK_TWO' },
+          requestId: 'network-2',
+        })
+        .mockResolvedValueOnce({ response: bad, requestId: 'answer-C' })
+        .mockRejectedValueOnce(new Error('NETWORK_THREE'))
+        .mockResolvedValueOnce({ response: good });
+      const writeSession = vi.fn();
+      const result = await execute(stage, generate, writeSession);
+      expect(result.agent_transition).toMatchObject({ status: 'committed' });
+      expect(generate).toHaveBeenCalledTimes(6);
+      for (const error of ['NETWORK_ONE', 'NETWORK_TWO', 'NETWORK_THREE']) {
+        expect(JSON.stringify(writeSession.mock.calls)).toContain(error);
+      }
+      const requests = generate.mock.calls.map(call => call[0]);
+      expect(requests[1].userInput).toBe(requests[0].userInput);
+      expect(requests[3].userInput).toBe(requests[2].userInput);
+      expect(requests[5].userInput).toBe(requests[4].userInput);
+      expect(requests[2].userInput).toContain('broken-json-B');
+      expect(requests[4].userInput).not.toContain('broken-json-B');
+      expect(requests[4].userInput).toContain(JSON.stringify(bad));
+      expect(requests.map(r => r.requestContext.intent)).toEqual([
+        'initial',
+        'request-retry',
+        'correction',
+        'request-retry',
+        'correction',
+        'request-retry',
+      ]);
+      for (const request of requests) expect(request.userInput).not.toMatch(/NETWORK_ONE|NETWORK_TWO|NETWORK_THREE/);
+      expect(requests[3].requestContext.previousRequestId).toBe('network-2');
+      // A second, independent execution has no preceding model correction.
+      const fresh = vi.fn().mockResolvedValue({ response: good });
+      await execute(stage, fresh);
+      expect(fresh.mock.calls[0][0].userInput).toBe(requests[0].userInput);
+    },
+  );
+
+  it('does not retry a validated settlement when the subsequent Host session write fails', async () => {
+    const generate = vi.fn().mockResolvedValue({ response: '{"operations":[]}' });
+    const result = await execute(
+      'settlement',
+      generate,
+      vi.fn(() => {
+        throw new Error('HOST_SESSION_WRITE_FAILED');
+      }),
+    );
+    expect(generate).toHaveBeenCalledOnce();
+    expect(JSON.stringify(result)).toContain('HOST_SESSION_WRITE_FAILED');
+    expect(result.agent_transition).not.toMatchObject({ status: 'committed' });
+  });
+});
 
 describe('AgentGenerationSession pure contracts', () => {
   it('keeps legacy cards disabled and bounds retry profiles', () => {
@@ -902,6 +1069,12 @@ describe('AgentGenerationSession pure contracts', () => {
         ],
       }),
     });
+    expect(generate.mock.calls[1]?.[0]).toMatchObject({
+      requestContext: { intent: 'request-retry', attemptIndex: 1 },
+      userInput: generate.mock.calls[0]?.[0].userInput,
+    });
+    expect(JSON.stringify(generate.mock.calls[1]?.[0])).not.toContain('failedResponse');
+    expect(generate.mock.calls[1]?.[0].userInput).not.toContain('ERA_AGENT_PROFILE_MISSING');
     expect(result.agent_transition).toMatchObject({ mode: 'execute-legacy', status: 'committed' });
   });
 

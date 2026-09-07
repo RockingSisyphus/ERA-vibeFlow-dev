@@ -65,6 +65,7 @@ export function createStoryViewer(document: Document, messageId: number, fallbac
     response: typeof current?.story === 'string' ? current.story : fallbackStory,
     ...(typeof current?.storyRequestId === 'string' ? { requestId: current.storyRequestId } : {}),
     ...(request ? { status: request.status } : {}),
+    ...(request?.requestContext ? { requestContext: request.requestContext } : {}),
     ...(request?.hostConfiguration ? { hostConfiguration: request.hostConfiguration } : {}),
   });
   const details = document.createElement('details');

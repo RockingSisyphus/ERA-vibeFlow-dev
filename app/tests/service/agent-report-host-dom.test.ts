@@ -24,6 +24,46 @@ afterEach(() => {
 });
 
 describe('report lifetime across native message HTML replacement', () => {
+  it('keeps an explicitly selected old request when the same floor report is remounted with new requests', async () => {
+    vi.stubGlobal('SillyTavern', {
+      characterId: '0',
+      groupId: null,
+      getCurrentChatId: () => 'chat',
+      chat: [{ mes: '<era_data>{"era-message-key"="floor-one"}</era_data>' }],
+    });
+    const previous = JSON.stringify({
+      attempts: [
+        { requestId: 'one', response: 'old first' },
+        { requestId: 'two', response: 'old correction' },
+      ],
+    });
+    const oldRoot = mountReportViewer(document, previous, 'planning', 0);
+    document.body.append(oldRoot);
+    const select = oldRoot.querySelector('select')!;
+    select.value = '1';
+    select.dispatchEvent(new Event('change'));
+    await nextTick();
+    expect(oldRoot.querySelector('pre')!.textContent).toBe('old first');
+    oldRoot.remove();
+    releaseReportApps();
+    const newRoot = mountReportViewer(
+      document,
+      JSON.stringify({ attempts: [{ requestId: 'three', response: 'new execution' }] }),
+      'planning',
+      0,
+    );
+    document.body.append(newRoot);
+    expect(newRoot.querySelector('pre')!.textContent).toBe('old first');
+    expect(newRoot.querySelectorAll('select')).toHaveLength(1);
+    expect(newRoot.querySelector('[role="tablist"]')).not.toBeNull();
+    expect(newRoot.querySelector('.era-report-mode')).not.toBeNull();
+    expect(newRoot.querySelector('.era-report-copy')).not.toBeNull();
+    expect(newRoot.querySelector('.era-report-business')).not.toBeNull();
+    agentExecutionRecords.clear();
+    expect(
+      agentExecutionRecords.selectedRequest(JSON.stringify(['0', null, 'chat']), 'floor-one', 'planning'),
+    ).toBeNull();
+  });
   it.each(['planning', 'settlement'] as const)(
     'defaults %s to the first AI response tab and keeps the full report accessible',
     async stage => {
@@ -84,9 +124,13 @@ describe('report lifetime across native message HTML replacement', () => {
       await nextTick();
     };
     await click('提示词');
-    expect(root.querySelector('pre')!.textContent).toContain('ACTUAL-FIRST-PROMPT');
-    const select = root.querySelector<HTMLSelectElement>('[aria-label="查看阶段尝试"]')!;
+    expect(root.querySelector('pre')!.textContent).toContain('ACTUAL-RETRY-PROMPT');
+    const select = root.querySelector<HTMLSelectElement>('[aria-label="查看阶段请求记录"]')!;
     select.value = '1';
+    select.dispatchEvent(new Event('change'));
+    await nextTick();
+    expect(root.querySelector('pre')!.textContent).toContain('ACTUAL-FIRST-PROMPT');
+    select.value = '0';
     select.dispatchEvent(new Event('change'));
     await nextTick();
     expect(root.querySelector('pre')!.textContent).toContain('ACTUAL-RETRY-PROMPT');

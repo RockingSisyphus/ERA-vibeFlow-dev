@@ -1,4 +1,8 @@
-/** 只读报告呈现，不推断业务提交是否成功。 */
+/*
+ * 模块职责：负责将真实阶段请求映射为统一列表、内容页签和只读资格。
+ * 只读取报告与页面内存，不执行重试、恢复候选或推断业务提交成功。
+ */
+
 export type AgentReportStage = 'planning' | 'story' | 'settlement';
 export type AgentReportObject = Record<string, unknown>;
 import type { AgentRequestRecord } from './agent-execution-records';
@@ -18,6 +22,93 @@ export function readAgentReport(text: string): AgentReportObject {
 
 export function agentReportAttempts(report: AgentReportObject): AgentReportObject[] {
   return Array.isArray(report.attempts) ? report.attempts.filter(isObject) : [report];
+}
+
+/** 单条可选择请求；来源直接使用执行元数据，不能从报告正文或 ID 格式猜测。 */
+export interface AgentReportRequestItem {
+  readonly key: string;
+  readonly report: AgentReportObject;
+  readonly attempt: AgentReportObject;
+  readonly currentExecution: boolean;
+  readonly label: string;
+}
+
+export function agentRequestStatus(status: unknown): string {
+  return (
+    (
+      { passed: '成功', failed: '失败', responded: '响应完成', running: '请求中', cancelled: '已取消' } as Record<
+        string,
+        string
+      >
+    )[String(status)] ?? '状态未记录'
+  );
+}
+
+/** 为当前报告的手动执行按首次出现顺序编号，不把自动尝试误当作新的执行。 */
+function requestOriginLabeler(stage: AgentReportStage) {
+  const executions = new Map<string, number>();
+  const counts = new Map<string, number>();
+  const stageName = { planning: '规划', story: '正文', settlement: '解析' }[stage];
+  const manual: Record<string, string> = {
+    'manual-planning': '手动重新规划',
+    'manual-story': '手动重新生成正文',
+    'manual-settlement': '手动重新解析',
+  };
+  const automatic: Record<string, string> = {
+    initial: `初次${stageName}`,
+    continue: 'Continue 续写',
+    regenerate: '酒馆重新生成',
+  };
+  return (context: AgentReportObject): string => {
+    const trigger = String(context.trigger);
+    const executionId = context.executionId;
+    if (!manual[trigger] || typeof executionId !== 'string') return automatic[trigger] ?? '来源未记录';
+    if (!executions.has(executionId)) {
+      const ordinal = (counts.get(trigger) ?? 0) + 1;
+      counts.set(trigger, ordinal);
+      executions.set(executionId, ordinal);
+    }
+    const cascade = trigger === `manual-${stage}` ? '' : ` → ${stageName}`;
+    return `${manual[trigger]} ${executions.get(executionId)}${cascade}`;
+  };
+}
+
+/** 只有明确关联到上一失败请求才显示纠错或请求重试；旧记录缺字段必须如实说明。 */
+function requestIntentLabel(context: AgentReportObject, index: number): string {
+  const intent = String(context.intent);
+  const labels: Record<string, string> = { initial: '首次请求', correction: '错误修正', 'request-retry': '请求重试' };
+  if (!labels[intent]) return `尝试 ${index + 1}（类型未记录）`;
+  return intent === 'initial' ? labels[intent]! : `${labels[intent]} ${String(context.attemptIndex)}`;
+}
+
+/**
+ * 同一请求的报告可被多次投影；必须按真实 requestId 合并，避免生成重复的“执行记录”。
+ * 历史执行只读；当前阶段报告最后覆盖同 ID 的中间报告，从而保留其最终响应与错误。
+ * legacy key 仅用于没有身份的旧记录显示，不用于推断执行来源或允许业务重试。
+ */
+export function agentReportRequests(
+  current: string,
+  history: readonly string[],
+  stage: AgentReportStage,
+): AgentReportRequestItem[] {
+  const requests = new Map<string, AgentReportRequestItem>();
+  const origin = requestOriginLabeler(stage);
+  for (const text of [...history.filter(item => item !== current), current]) {
+    const report = readAgentReport(text);
+    for (const [index, attempt] of agentReportAttempts(report).entries()) {
+      const context = isObject(attempt.requestContext) ? attempt.requestContext : {};
+      const key = typeof attempt.requestId === 'string' ? attempt.requestId : `legacy:${text}:${index}`;
+      requests.set(key, {
+        key,
+        report,
+        attempt,
+        currentExecution: text === current,
+        label: `${origin(context)} · ${requestIntentLabel(context, index)}：${agentRequestStatus(attempt.status)}`,
+      });
+    }
+  }
+  // 默认最新请求在前；用户选择持有 requestId，不因后续发布增加记录而跳动。
+  return [...requests.values()].reverse();
 }
 
 /** 同楼 Continue/重新生成后的旧记录也必须只读，不能只比较 messageId。 */

@@ -107,11 +107,49 @@ describe('AgentTavernHost V2 local routes', () => {
     expect(snapshot).toEqual({
       source: 'snapshot',
       sourceName: 'Preset B',
-      orderedPrompts: ['char_description', { role: 'assistant', content: 'marker-preset-b' }, 'user_input'],
+      orderedPrompts: ['char_description', 'user_input', { role: 'assistant', content: 'marker-preset-b' }],
       settings: { maxTokens: 700, temperature: 0.2 },
     });
     expect(JSON.stringify(snapshot)).not.toContain('apiKey');
     expect(JSON.stringify(snapshot)).not.toContain('find_regex');
+  });
+
+  it('expands snapshot macros in order through Helper without rewriting the captured preset', async () => {
+    const substitute = vi.fn((text: string) => text.replace('{{user}}', 'Traveler'));
+    vi.stubGlobal('substitudeMacros', substitute);
+    const prompts = [
+      { role: 'system', content: 'Hello {{user}}' },
+      'user_input',
+      { role: 'assistant', content: 'Ready' },
+    ];
+    const requestContext = { executionId: 'manual-1', trigger: 'manual-planning', attemptIndex: 0, intent: 'initial' };
+    const result = (await host().operations.generate(
+      {
+        generationId: 'macros',
+        stage: 'planning',
+        userInput: 'task',
+        orderedPrompts: prompts,
+        resolvePresetMacros: true,
+        requestContext,
+        settings: {},
+        modelSource: { kind: 'tavern-current' },
+      },
+      capabilityContext,
+    )) as Record<string, unknown>;
+    expect(substitute.mock.calls).toEqual([['Hello {{user}}'], ['Ready']]);
+    expect(prompts[0]).toEqual({ role: 'system', content: 'Hello {{user}}' });
+    expect(generateRawMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ordered_prompts: [
+          { role: 'system', content: 'Hello Traveler' },
+          'user_input',
+          { role: 'assistant', content: 'Ready' },
+        ],
+      }),
+    );
+    expect(agentExecutionRecords.get(currentAgentRecordChat(), String(result.requestId))?.requestContext).toEqual(
+      requestContext,
+    );
   });
 
   it('stores keys locally while exposing only summaries and preserving an empty edit key', async () => {

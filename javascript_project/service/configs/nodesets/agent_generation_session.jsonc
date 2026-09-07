@@ -19,8 +19,9 @@
       {
         "id":"execute_agent_phase_v2",
         "type_used":"era.agent.execute_session_v2",
-        "display_name":"记录阶段尝试与函数结果并复用重生成链",
-        "description":"在唯一 AgentGenerationSession 中关联周期、阶段和尝试，报告保留函数成功、失败及未执行结果；规划和解析保持错误反馈自动重试，正文只复用现有手动生成。重新正文复用规划和骰子，重新规划级联正文及已开启解析，重新解析保留正文。只构造稳定 MK 最终楼层候选并委托原子同步；完整提示词只由 Host 页面内存采集，不进入消息或 Sidecar。"
+        "display_name":"分离请求失败记录与模型纠错上下文",
+        "description":"在唯一 AgentGenerationSession 原位修正规划和解析重试：只有模型输出解析、函数调用或变量操作校验失败才替换待修正原文及诊断；网络、连接或请求失败只进入报告，不进入模型输入，也不清空此前纠错上下文。相同 profile 下请求失败后的模型输入保持不变。请求记录仍保留实际上一请求及首次/纠错/请求重试来源；手动重新生成清空纠错上下文。保留重试预算、profile 切换、函数骰子、稳定 MK 和原子提交。不得将取得回复后的 Host 会话/提交异常误判为模型错误。范围与验收见 reports/era-retry-correction-context-change-list.md。",
+        "status":"implemented"
       },
       {"id":"route_agent_transition","type_used":"era.agent.route_transition","display_name":"路由阶段结果","description":"决定直接结算还是恢复原任务。"},
       {

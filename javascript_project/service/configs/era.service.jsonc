@@ -10,7 +10,7 @@
       "status": "implemented",
       "enabled": true,
       "display_name": "ERA 酒馆服务宿主",
-      "description": "既有 ERA 酒馆服务宿主继续负责 FIFO、receipt、生成栅栏、Sidecar 机械接线及 Tavern Helper 原生状态栏绑定。本轮 planned 生命周期增加按聊天、周期、阶段、尝试关联的页面内存提示词观察和共用阶段报告查看器；完整提示词不进入持久化状态，Host 不决定重试或变量语义。报告按钮投递既有 Service 重生成命令；状态栏占位栏原地展开和收起，最多额外一楼，删除小球 UI 指定列表，不重绘消息或作者 iframe。四类变更与 RPG 三次真实重生成验收见 reports/era-stage-report-viewer-change-list.md。",
+      "description": "复用既有 FIFO、receipt、生成栅栏、按楼状态栏与被动提示词采集；本轮拟将双层执行/尝试选择替换为统一请求列表和分层样式，按 Service 显式请求身份展示实际纠错上下文，不猜测请求来源。真实预设捕获及请求装配保留角色、相对顺序、宏、尾部 assistant 提示和适用参数，不新增通用预设解释器、不切换用户实际酒馆配置。完整提示词与旧执行历史只在页面内存；重试与变量提交决策仍属于唯一 AgentGenerationSession。四类清单和真实导入/RPG 验收见 reports/era-request-records-retry-presets-change-list.md。",
       "category": "宿主接线",
       "version": "0.1.0",
       "targets": [
@@ -91,8 +91,9 @@
       {
         "id": "activate_tavern_ingress",
         "type_used": "era.installation.scope.activate_ingress",
-        "display_name": "登记阶段查看器与状态栏原地展开生命周期",
-        "description": "复用现有 Service Host 登记与清理生命周期。Host 被动采集按聊天、周期、阶段和尝试关联的 ERA 输入及宿主发送前提示词，仅存页面内存，忽略 dry-run；报告显示共用查看器，重生成按钮仅投递既有 Service 命令。状态栏 placeholder 提供原地展开和收起，最多额外显示一楼，删除面板指定楼层列表；不重绘消息、不重建 iframe、不改作者 DOM，不新增工作流或资格门禁。"
+        "display_name": "绑定统一请求查看器与真实预设宿主能力",
+        "description": "在现有 Host 生命周期内用一个只读视图模型替换执行/尝试双层选择，默认最新请求与 AI 响应，旧请求只读且新请求不抢走用户选择。区分内容页签、显示切换、复制及业务重生成四类按钮；被动记录实际输入与发送前提示词，reload 释放。真实预设捕获/装配保留所选机制；Host 不决定纠错、重试或业务提交，不改作者 iframe，不新增工作流。",
+        "status": "implemented"
       },
       {
         "id": "publish_dormant_startup",

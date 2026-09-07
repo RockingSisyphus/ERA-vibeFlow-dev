@@ -5,6 +5,15 @@
 import { Logger } from '../utils/log';
 import type { EraSettlement } from './types';
 
+/** Host 只读观察 DTO；不导入 Service 的业务执行器或重试策略。 */
+export interface AgentRequestContext {
+  readonly executionId: string;
+  readonly trigger: string;
+  readonly attemptIndex: number;
+  readonly intent: 'initial' | 'correction' | 'request-retry';
+  readonly previousRequestId?: string;
+}
+
 /** 页面级观察数据；绝不作为 Service 业务状态或持久化 payload。 */
 export interface AgentRequestRecord {
   readonly id: string;
@@ -12,6 +21,7 @@ export interface AgentRequestRecord {
   readonly stage: string;
   readonly input: unknown;
   readonly hostConfiguration?: unknown;
+  readonly requestContext?: AgentRequestContext;
   prompt?: unknown;
   response?: string;
   status: 'running' | 'responded' | 'failed' | 'cancelled';
@@ -60,13 +70,21 @@ export class AgentExecutionRecords {
   }
 
   /** 必须在 Host 发起请求时复制输入，避免生成完成后从可变配置重建伪造旧提示词。 */
-  begin(id: string, chat: string, stage: string, input: unknown, hostConfiguration?: unknown): void {
+  begin(
+    id: string,
+    chat: string,
+    stage: string,
+    input: unknown,
+    hostConfiguration?: unknown,
+    requestContext?: AgentRequestContext,
+  ): void {
     this.entries.set(id, {
       id,
       chat,
       stage,
       input: promptDisplayCopy(input),
       hostConfiguration: promptDisplayCopy(hostConfiguration),
+      ...(requestContext ? { requestContext: structuredClone(requestContext) } : {}),
       status: 'running',
     });
     this.emit();
@@ -164,6 +182,19 @@ export class AgentExecutionRecords {
     return [...(this.reports.get(JSON.stringify([chat, floorKey, stage])) ?? [])];
   }
 
+  private readonly selections = new Map<string, string>();
+
+  /** 用户选择随同一楼层报告重挂载保留；只存 requestId，页面结束时释放。 */
+  selectedRequest(chat: string, floorKey: string, stage: string): string | null {
+    return this.selections.get(JSON.stringify([chat, floorKey, stage])) ?? null;
+  }
+
+  selectRequest(chat: string, floorKey: string, stage: string, requestId: string | null): void {
+    const key = JSON.stringify([chat, floorKey, stage]);
+    if (requestId === null) this.selections.delete(key);
+    else this.selections.set(key, requestId);
+  }
+
   sessionChanged(): void {
     this.emit();
   }
@@ -172,6 +203,7 @@ export class AgentExecutionRecords {
   clear(): void {
     this.entries.clear();
     this.reports.clear();
+    this.selections.clear();
     this.helperRequests.clear();
     this.retryingChats.clear();
     this.nativeRequest = null;

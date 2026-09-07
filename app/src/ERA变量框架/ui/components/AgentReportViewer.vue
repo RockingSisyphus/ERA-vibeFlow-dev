@@ -1,56 +1,51 @@
 <template>
   <section class="era-stage-viewer" :data-era-stage="stage">
     <div class="era-stage-toolbar">
-      <label
-        >执行记录
-        <select v-model.number="execution" aria-label="查看阶段执行记录" @change="selected = 0">
-          <option :value="-1">当前消息记录</option>
-          <option v-for="(record, index) in history" :key="index" :value="index">
-            本页面旧记录 {{ index + 1 }}（只读）
-          </option>
-        </select>
-      </label>
-      <label
-        >尝试
-        <select :id="`era-report-attempt-${stage}-${messageId}`" v-model.number="selected" aria-label="查看阶段尝试">
-          <option v-for="(attempt, index) in attempts" :key="index" :value="index">
-            第 {{ index + 1 }} 次：{{
-              attempt.status === 'passed'
-                ? '成功'
-                : attempt.status === 'failed'
-                  ? '失败'
-                  : attempt.status === 'responded'
-                    ? '响应完成'
-                    : attempt.status === 'running'
-                      ? '请求中'
-                      : attempt.status === 'cancelled'
-                        ? '已取消'
-                        : '旧记录未保存状态'
-            }}
+      <label class="era-request-select"
+        >请求记录
+        <select
+          :id="`era-report-request-${stage}-${messageId}`"
+          :value="requests.findIndex(item => item.key === selectedRequest?.key)"
+          aria-label="查看阶段请求记录"
+          @change="selectRequest"
+        >
+          <option v-for="(request, index) in requests" :key="request.key" :value="index">
+            {{ request.label }}
           </option>
         </select>
       </label>
       <button
         :id="retryAvailable ? `era-report-retry-${stage}` : undefined"
+        class="era-report-business"
         :disabled="busy || !retryAvailable"
         @click="retry"
       >
         {{ busy ? '正在执行…' : retryLabel }}
       </button>
     </div>
-    <p v-if="!retryAvailable">历史记录或会话已失效，仅供查看。</p>
-    <div class="era-stage-toolbar">
+    <p class="era-report-status" :data-status="current.status">
+      {{ agentRequestStatus(current.status) }}<span v-if="!retryAvailable"> · 历史记录或会话已失效，仅供查看。</span>
+    </p>
+    <div class="era-report-tabs" role="tablist" aria-label="报告内容">
       <button
         v-for="item in tabs"
         :id="`era-report-tab-${stage}-${messageId}-${tabIds[item]}`"
         :key="item"
+        role="tab"
+        :aria-selected="tab === item"
         :aria-pressed="tab === item"
         @click="tab = item"
       >
         {{ item }}
       </button>
-      <button @click="raw = !raw">{{ raw ? '格式化显示' : '原始显示' }}</button>
-      <button @click="copy">复制当前内容</button>
+    </div>
+    <div class="era-report-actions">
+      <strong>{{ tab }}</strong>
+      <div class="era-report-mode" role="group" aria-label="内容显示方式">
+        <button :aria-pressed="!raw" @click="raw = false">格式化显示</button>
+        <button :aria-pressed="raw" @click="raw = true">原始显示</button>
+      </div>
+      <button class="era-report-copy" @click="copy">复制当前内容</button>
     </div>
     <p v-if="notice" role="status">{{ notice }}</p>
     <pre data-era-report-content>{{ content }}</pre>
@@ -67,6 +62,8 @@ import { formatEraReportForDisplay } from '../../service/technical-report-displa
 import {
   readAgentReport,
   agentReportAttempts,
+  agentReportRequests,
+  agentRequestStatus,
   canRetryAgentReport,
   formatAgentViewerValue,
   agentReportTabValue,
@@ -79,7 +76,14 @@ const props = defineProps<{
   floorKey?: string | null;
 }>();
 // 用户切换的旧执行记录仅改变显示选择，不替换当前聊天或当前会话。
-const execution = ref(-1);
+const selectedKey = ref<string | null>(
+  props.floorKey ? agentExecutionRecords.selectedRequest(currentAgentRecordChat(), props.floorKey, props.stage) : null,
+);
+function rememberSelection(requestId: string | null) {
+  selectedKey.value = requestId;
+  if (props.floorKey)
+    agentExecutionRecords.selectRequest(currentAgentRecordChat(), props.floorKey, props.stage, requestId);
+}
 const history = computed(() => {
   void version.value;
   if (!props.floorKey) return [];
@@ -87,11 +91,15 @@ const history = computed(() => {
     .reportHistory(currentAgentRecordChat(), props.floorKey, props.stage)
     .filter(report => report !== props.report);
 });
-const parsed = computed(() =>
-  readAgentReport(execution.value < 0 ? props.report : (history.value[execution.value] ?? props.report)),
+const requests = computed(() => agentReportRequests(props.report, history.value, props.stage));
+const selectedRequest = computed(
+  () => requests.value.find(item => item.key === selectedKey.value) ?? requests.value[0],
 );
+const parsed = computed(() => selectedRequest.value?.report ?? readAgentReport(props.report));
 const attempts = computed(() => agentReportAttempts(parsed.value));
-const selected = ref(0);
+function selectRequest(event: Event) {
+  rememberSelection(requests.value[Number((event.target as HTMLSelectElement).value)]?.key ?? null);
+}
 const tab = ref('AI 响应');
 const tabIds: Record<string, string> = {
   完整响应: 'overview',
@@ -112,7 +120,7 @@ const version = ref(0);
 const refreshRecord = () => version.value++;
 const unsubscribe = agentExecutionRecords.subscribe(refreshRecord);
 onBeforeUnmount(unsubscribe);
-const current = computed(() => attempts.value[selected.value] ?? {});
+const current = computed(() => selectedRequest.value?.attempt ?? {});
 const tabs = computed(() => [
   'AI 响应',
   '完整响应',
@@ -129,7 +137,7 @@ const retryAvailable = computed(() => {
   void version.value;
   const session = readCurrentAgentSession();
   return (
-    execution.value < 0 &&
+    selectedRequest.value?.currentExecution === true &&
     canRetryAgentReport(parsed.value, props.stage, props.messageId, SillyTavern.chat.length - 1, session)
   );
 });
@@ -137,8 +145,10 @@ const retryAvailable = computed(() => {
 const content = computed(() => {
   void version.value;
   const attempt = current.value;
-  if (tab.value === '完整响应')
-    return raw.value ? JSON.stringify(parsed.value) : formatEraReportForDisplay(JSON.stringify(parsed.value));
+  if (tab.value === '完整响应') {
+    const display = { selectedRequest: attempt.requestId ?? '旧记录未保存', ...parsed.value };
+    return raw.value ? JSON.stringify(display) : formatEraReportForDisplay(JSON.stringify(display));
+  }
   const record =
     typeof attempt.requestId === 'string'
       ? agentExecutionRecords.get(currentAgentRecordChat(), attempt.requestId)
@@ -188,6 +198,8 @@ async function retry(): Promise<void> {
       'ui',
     );
     if (!admission.accepted) throw new Error(admission.message);
+    // 用户明确开始新执行时回到跟随最新；被动发布不能抢走旧请求选择。
+    rememberSelection(null);
     const settlement = await admission.done;
     notice.value =
       settlement.status === 'completed'
@@ -201,3 +213,138 @@ async function retry(): Promise<void> {
   }
 }
 </script>
+
+<style scoped>
+.era-stage-viewer {
+  --era-report-accent: #439da7;
+  border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+  border-radius: 12px;
+  padding: 14px;
+  background: color-mix(in srgb, var(--SmartThemeBlurTintColor, #20272b) 95%, transparent);
+  color: var(--SmartThemeBodyColor, #e1e8ec);
+  font:
+    14px/1.5 system-ui,
+    sans-serif;
+}
+.era-stage-toolbar {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.era-request-select {
+  display: grid;
+  flex: 1 1 260px;
+  gap: 6px;
+  font-size: 12px;
+}
+.era-stage-viewer select {
+  width: 100%;
+  min-width: 0;
+  color: inherit;
+  background: var(--SmartThemeBlurTintColor, #20272b);
+  border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+  border-radius: 7px;
+  padding: 8px;
+}
+.era-stage-viewer button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  padding: 7px 11px;
+  background: transparent;
+}
+.era-stage-viewer button:focus-visible,
+.era-stage-viewer select:focus-visible {
+  outline: 2px solid var(--era-report-accent);
+  outline-offset: 2px;
+}
+.era-stage-viewer button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.era-stage-viewer button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--era-report-accent) 20%, transparent);
+}
+.era-report-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  border-bottom: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+  padding-bottom: 8px;
+}
+.era-report-tabs button[aria-selected='true'] {
+  background: color-mix(in srgb, var(--era-report-accent) 28%, transparent);
+  border-color: var(--era-report-accent);
+  font-weight: 650;
+}
+.era-report-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 12px 0;
+}
+.era-report-actions strong {
+  margin-right: auto;
+}
+.era-report-mode {
+  display: flex;
+  padding: 2px;
+  border-radius: 8px;
+  background: color-mix(in srgb, currentColor 9%, transparent);
+}
+.era-report-mode button {
+  font-size: 12px;
+  padding: 4px 8px;
+}
+.era-report-mode button[aria-pressed='true'] {
+  background: color-mix(in srgb, currentColor 18%, transparent);
+}
+.era-stage-viewer .era-report-copy {
+  border-color: color-mix(in srgb, currentColor 25%, transparent);
+  font-size: 12px;
+}
+.era-stage-viewer .era-report-business {
+  border-color: var(--era-report-accent);
+  background: color-mix(in srgb, var(--era-report-accent) 35%, transparent);
+  font-weight: 650;
+}
+.era-report-status {
+  font-size: 12px;
+  margin: 10px 0;
+}
+.era-report-status[data-status='passed'] {
+  color: #80c8a1;
+}
+.era-report-status[data-status='failed'] {
+  color: #efb088;
+}
+.era-stage-viewer pre {
+  margin: 0;
+  padding: 12px;
+  border-radius: 8px;
+  max-height: 60vh;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: color-mix(in srgb, #000 20%, transparent);
+  font:
+    12px/1.7 ui-monospace,
+    monospace;
+}
+@media (max-width: 600px) {
+  .era-stage-viewer {
+    padding: 10px;
+  }
+  .era-report-tabs button {
+    flex: 1 0 auto;
+    padding: 6px 8px;
+  }
+  .era-stage-toolbar > button {
+    width: 100%;
+  }
+}
+</style>

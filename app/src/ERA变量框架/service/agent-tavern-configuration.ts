@@ -144,6 +144,18 @@ function capturePrompt(
   };
 }
 
+/** 阶段输入必须在末尾 assistant 预填充之前，否则模型接收顺序与预设意图相反。 */
+function includeStageInput(prompts: CapturedPrompt[]): void {
+  if (prompts.includes('user_input')) return;
+  let index = prompts.length;
+  while (index > 0) {
+    const prompt = prompts[index - 1];
+    if (typeof prompt === 'string' || prompt?.role !== 'assistant') break;
+    index -= 1;
+  }
+  prompts.splice(index, 0, 'user_input');
+}
+
 /**
  * 从指定 Tavern 预设生成有界脱敏快照，只保留提示顺序和通用采样参数。
  * 必须主动白名单复制；否则 API、代理、脚本、正则与第三方扩展可能随角色卡泄漏。
@@ -171,7 +183,7 @@ export function capturePreset(input: Readonly<Record<string, unknown>>): unknown
     const prompt = capturePrompt(rawPrompt, placeholders);
     if (prompt !== null) prompts.push(prompt);
   }
-  if (!prompts.includes('user_input')) prompts.push('user_input');
+  includeStageInput(prompts);
   const settings: Record<string, unknown> = isRecord(preset.settings) ? preset.settings : {};
   return clonePortable({
     source: 'snapshot',

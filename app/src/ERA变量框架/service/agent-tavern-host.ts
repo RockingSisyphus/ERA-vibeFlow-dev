@@ -18,8 +18,15 @@ import {
   storyHostConfiguration,
 } from './agent-tavern-configuration';
 import { createAgentConnectionOperations } from './agent-tavern-connections';
-import { auxiliaryApiSettings, resolveAuxiliaryRoute } from './agent-tavern-generation';
-import { agentExecutionRecords, currentAgentRecordChat } from './agent-execution-records';
+import {
+  auxiliaryApiSettings,
+  auxiliaryFailureResult,
+  auxiliaryOrderedPrompts,
+  nativeStoryRequestContext,
+  resolveAuxiliaryRoute,
+  storyRetryConfiguration,
+} from './agent-tavern-generation';
+import { agentExecutionRecords, currentAgentRecordChat, type AgentRequestContext } from './agent-execution-records';
 
 type AgentOperations = EraTavernAdapter['agent'];
 let currentSessionReader: (() => Record<string, unknown> | null) | null = null;
@@ -38,23 +45,6 @@ function throwIfAborted(signal: AbortSignal): void {
   if (signal.aborted) {
     throw signal.reason ?? new DOMException('ERA 宿主操作已取消。', 'AbortError');
   }
-}
-
-/**
- * Capability runtime 会刻意隐藏宿主异常文本，因此可重试的辅助请求失败必须作为
- * 普通 JSON 结果返回。这里只公开 ERA 自己定义的错误码和有界消息；未知异常统一
- * 收敛为通用诊断，避免把供应商响应、请求头或密钥带进消息报告。
- */
-function auxiliaryFailureResult(error: unknown): Readonly<Record<string, unknown>> {
-  const rawMessage = error instanceof Error ? error.message : '';
-  const code = rawMessage.match(/\bERA_AGENT_[A-Z0-9_]+\b/)?.[0] ?? 'ERA_AGENT_AUXILIARY_REQUEST_FAILED';
-  const message = rawMessage.includes(code)
-    ? rawMessage.slice(0, 512)
-    : 'ERA_AGENT_AUXILIARY_REQUEST_FAILED：辅助模型请求失败。';
-  return {
-    status: 'failed',
-    diagnostic: { code, message },
-  };
 }
 
 /** 持有页面实例级会话与辅助生成重入状态，不向 Sidecar 持久化。 */
@@ -230,10 +220,17 @@ export class AgentTavernHost {
           throw new TypeError('Agent 模型请求缺少 userInput 或 orderedPrompts。');
         }
         const requestId = `${String(input.generationId ?? 'era-request')}-${crypto.randomUUID()}`;
-        agentExecutionRecords.begin(requestId, currentAgentRecordChat(), String(input.stage ?? 'auxiliary'), {
-          userInput: input.userInput,
-          orderedPrompts: input.orderedPrompts,
-        });
+        agentExecutionRecords.begin(
+          requestId,
+          currentAgentRecordChat(),
+          String(input.stage ?? 'auxiliary'),
+          {
+            userInput: input.userInput,
+            orderedPrompts: input.orderedPrompts,
+          },
+          undefined,
+          input.requestContext as AgentRequestContext | undefined,
+        );
         try {
           const result = await this.generateAuxiliaryJson(
             { ...input, generationId: requestId },
@@ -274,6 +271,7 @@ export class AgentTavernHost {
           'story',
           { injection: input.content },
           storyHostConfiguration(),
+          agentExecutionRecords.get(currentAgentRecordChat(), requestId)?.requestContext,
         );
         agentExecutionRecords.armNative(requestId);
         if (isRecord(session)) this.sessions.set(key, { ...session, storyRequestId: requestId });
@@ -324,7 +322,7 @@ export class AgentTavernHost {
         response = await generateRaw({
           generation_id: generationId,
           user_input: userInput,
-          ordered_prompts: clonePortable(input.orderedPrompts) as GenerateRawConfig['ordered_prompts'],
+          ordered_prompts: auxiliaryOrderedPrompts(input),
           should_stream: false,
           should_silence: true,
           custom_api: auxiliaryApiSettings(route, settings),
@@ -368,28 +366,11 @@ export class AgentTavernHost {
         'story',
         { userInput, injection },
         storyHostConfiguration(),
+        input.requestContext as AgentRequestContext | undefined,
       );
       let response: Awaited<ReturnType<typeof generate>>;
       try {
-        response = await generate({
-          generation_id: requestId,
-          user_input: userInput,
-          should_stream: true,
-          should_silence: false,
-          ...(injection.length > 0
-            ? {
-                injects: [
-                  {
-                    role: 'system',
-                    content: injection,
-                    position: 'in_chat',
-                    depth: 0,
-                    should_scan: false,
-                  },
-                ],
-              }
-            : {}),
-        });
+        response = await generate(storyRetryConfiguration(requestId, userInput, injection));
       } catch (error) {
         agentExecutionRecords.finish(requestId, 'failed');
         throw error;
@@ -454,6 +435,7 @@ export class AgentTavernHost {
         'story',
         { injection: null },
         storyHostConfiguration(),
+        nativeStoryRequestContext(value),
       );
       agentExecutionRecords.armNative(storyRequestId);
       return { ...value, storyRequestId };
