@@ -24,6 +24,23 @@ Sidecar V3 用户文件中。Tavern adapter/Host 只提供当前身份、聊天�
 快照与 UI 通知这几项技术能力；它不能自行决定 owner、迁移或变量恢复。宏只能读取身份匹配的
 内存快照，快照缺失时必须为空，不能回退读取聊天变量。
 
+## 消息持久化完成边界
+
+消息Capability先通过Helper更新指定正文，随后请求酒馆公开saveChat，并使用原生聊天读取接口
+读回写入前固定的角色/聊天文件。比较本次原Swipe槽的正文/MK及ERA自有extra；原槽已不活动时读取该槽swipe_info.extra，而不是新候选的extra。
+保存确认不要求用户仍选着原候选。读回后另用既有sourceBasis核对来源，将自身写入后的正文纳入依据：
+原B已保存但当前已选C时保留真实确认计数，以sourceChanged结算，不向C发布B状态，也不误弹保存失败repair。
+不另建聊天保存器、不复制未知字段、不增加保存队列或导航锁。Helper内存更新及saveChat
+Promise返回都不单独表示已落盘，因为上游会吞保存错误。
+
+Host返回内存已写、目标持久化是否确认及来源是否变化的事实；Service决定失败、repair及
+Sidecar提交。未确认落盘不得发布成功快照；切聊后不向新聊天展示旧任务repair。
+真实交错与失败注入结果以独立Artifact为准，不能用离线合同声称全部导航分支正确。
+
+普通生成和Agent共用临时首次呈现意图。只有本次生成完成后的最终显示内容变化需要一次
+affected render；单独补MK、API写入、历史回放和普通revision不因此重建iframe。
+最终消息、Sidecar与来源确认后才呈现，呈现失败不回滚已经提交的业务状态。
+
 ## 生成 barrier
 
 生成开始前，Host 必须等待对应 high-water sequence 之前全部被接受事件的 receipt 进入终态；随后宏
@@ -35,6 +52,18 @@ Sidecar V3 用户文件中。Tavern adapter/Host 只提供当前身份、聊天�
 事件序列的回归测试，再修改领域 planner；不在 macro、UI 或 adapter 增加延迟/重试型补丁。
 
 ## 托管状态栏生命周期
+
+### 原生正文与辅助解析的收尾边界
+
+`message_received` 只证明正文消息已到达，不证明酒馆共享世界书注入已清理。唯一
+AgentGenerationSession在该来源的变量解析前调用内部`await_native_completion`；Host
+按当前聊天与execution.id记录原生开始、结束及取消，只返回机械事实与等待后的当前上下文。
+Service核对执行、消息及Swipe/正文仍对应本任务后，才启动原有辅助请求链。
+
+原生结束监听不等待Service receipt，也不在同步事件回调里启动辅助装配；Promise续体在
+宿主同步清理栈返回后继续。Helper独立生成的结束不能释放原生等待；生成外创建消息、
+手动重新解析和Helper手动正文沿用各自完成事实，不等待不存在的原生周期。
+停止、切聊天和卸载主动释放等待，不新增超时猜测、补偿重试或世界书副本。
 
 快速初始化生成的 V2 状态栏由 Host 生命周期管理。每次 iframe 挂载时，Host 必须以 Helper
 报告的 messageId、iframe 名称、父消息 DOM、当前 Swipe、消息 MK、`SelectedMks` 和
@@ -81,6 +110,19 @@ Host 只机械发送和采集，不截短纠错输入，也不根据显示报告
 
 作者用法见 [ERA 托管状态栏作者指南](ERA%E6%89%98%E7%AE%A1%E7%8A%B6%E6%80%81%E6%A0%8F%E4%BD%9C%E8%80%85%E6%8C%87%E5%8D%97.md)。
 
+## 单层显示窗口
+
+角色卡扩展 `era_single_floor` 的开关由 Service 设置事务保存；Host 的单层控制器只拥有
+聊天显示窗口，不修改消息数组、MK、Swipe 或 Sidecar。它在 Helper 显示审计之前选择最后
+一个 AI 消息，移除其它消息 DOM。用户消息到达时保留原 AI iframe，不重新运行作者脚本。
+Helper 公共渲染深度控件和 `MORE_MESSAGES_LOADED` 显示通知集中在薄适配层；不调用
+Helper 私有运行实例修改接口。关闭模式恢复酒馆原生窗口，不展开全部历史。
+
+隐藏楼层仍可由消息数据 API 和 ERA 历史查询访问；显示型 API 不能访问已卸载 DOM。
+显示切换本身不得提交业务任务或推进 revision。旧楼脚本停止、表单丢失和恢复后脚本重跑
+是显式合同，不建立后台保活或第二份界面快照。具体设置与证据见
+[ERA 单层模式](ERA单层模式.md)。
+
 ## 公共 ABI
 
 以下内容的变更须单独审查、更新文档并有合同测试：
@@ -96,3 +138,6 @@ Host 只机械发送和采集，不截短纠错输入，也不根据显示报告
 
 代码/工作流改动先跑相应的 VibeFlow validate、quality、build 与 app 合同测试；需要证实浏览器行为时，
 再运行 ERA-Test-Pack 或经授权的真实酒馆联调。结构检查通过不等于 ERA 产品行为通过，两者必须分开报告。
+# Overswipe 完整拓扑读取（2026-09-09，已批准实现，真实验证中）
+
+完整消息上下文通过Helper公开`0--1`读取真实消息位置，不用会排除pending Swipe的`lastMessageId`宏确定列表长度。待生成末端Swipe保留真实messageId/swipeId并明确空正文，不读取前一个候选的正文作替身。该投影与提交来源核对共用；Service继续决定生成前回退目标，只回退一次且不提前补写被排除楼层。Agent最近64条提示词历史仍采用排除未生成候选的范围；显式latestMessage读取保持`-1`。详见`reports/era-overswipe-history-range-change-list.md`及保留的expanded审核图；真实验收状态以新独立Artifact为准。

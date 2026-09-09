@@ -8,6 +8,7 @@
 
 import type { EraCapabilityContext } from './types';
 import { publishSidecarRuntimeSnapshot, type SidecarRuntimeIdentity } from './sidecar-runtime-snapshot';
+import { assertCurrentMessageBasis } from './message-write-target';
 
 export const SIDECAR_PROMPT_EVENT = 'era-sidecar-binding-prompt';
 
@@ -154,6 +155,7 @@ async function writeSidecarFile(
   const id = sidecarId(input.sidecarId);
   if (!isRecord(input.record)) throw new TypeError('ERA Sidecar 文件写入缺少 record。');
   const record = clonePortable(input.record);
+  if (input.sourceBasis !== undefined) assertCurrentMessageBasis(input.sourceBasis);
   const response = await fetch('/api/files/upload', {
     method: 'POST',
     headers: requestHeaders(),
@@ -174,6 +176,7 @@ async function commitSidecarPointer(
 ): Promise<unknown> {
   throwIfAborted(context.signal);
   const id = sidecarId(input.sidecarId);
+  if (input.sourceBasis !== undefined) assertCurrentMessageBasis(input.sourceBasis);
   updateVariablesWith(
     current => {
       delete current.stat_data;

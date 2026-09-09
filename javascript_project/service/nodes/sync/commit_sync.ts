@@ -1,4 +1,5 @@
 import {
+  basisAfterSyncWrites,
   cloneSyncJson,
   errorMessage,
   isCancellation,
@@ -23,7 +24,7 @@ type Context = any;
 
 function result(
   request: SyncCommitRequestV1,
-  status: "committed" | "failed" | "fatal",
+  status: "committed" | "no-op" | "failed" | "fatal",
   confirmedMessageWrites: number,
   variablesCommitted: boolean,
   failure: SyncFailureV1 | null,
@@ -34,6 +35,29 @@ function result(
     confirmedMessageWrites,
     variablesCommitted,
     failure,
+  };
+}
+
+function changedSource(
+  request: SyncCommitRequestV1,
+  written: number,
+  sidecarCommitted: boolean,
+  error: unknown,
+): SyncCommitResultV1 | null {
+  // AOT 的 Capability 边界保留原异常在 cause；只解开这一层已知协议包装。
+  if (error !== null && typeof error === "object" && (error as { code?: unknown }).code === "VF_CAPABILITY_FAILED") {
+    error = (error as { cause?: unknown }).cause;
+  }
+  if (error === null || typeof error !== "object" ||
+      (error as { code?: unknown }).code !== "ERA_MESSAGE_WRITE_TARGET_CHANGED") return null;
+  const task = request.step.kind === "execute" ? request.step.task : null;
+  const ordinary = task?.primaryEvent.source === "tavern" &&
+    task.kind === "sync" && task.reason !== "facade-commit" && request.agentFloorCandidate === null;
+  return {
+    ...result(request, sidecarCommitted ? "committed" : ordinary && written === 0 ? "no-op" : "failed",
+      written, sidecarCommitted,
+      syncFailure("ERA_SYNC_SOURCE_CHANGED", errorMessage(error), "tavern")),
+    sourceChanged: true,
   };
 }
 
@@ -51,7 +75,7 @@ function failureFor(error: unknown, code: string): SyncFailureV1 {
  * 历史中，可以由用户明确的修复操作安全重放。这里仅把 workflow 已知的
  * 修复状态交给宿主显示；宿主不参与任何绑定或恢复决策。
  */
-async function presentRecoverableSidecarFailure(context: Context): Promise<void> {
+async function presentRecoverableSidecarFailure(context: Context, reason = "sidecar-state-commit-failed"): Promise<void> {
   try {
     const current = await context.capabilities["era.tavern.sidecar"].read_current({});
     const meta = current !== null && typeof current === "object"
@@ -71,7 +95,7 @@ async function presentRecoverableSidecarFailure(context: Context): Promise<void>
         current: facts.current,
         owner: facts.record?.owner ?? null,
         revision: facts.record?.revision ?? null,
-        reason: "sidecar-state-commit-failed",
+        reason,
       },
     });
   } catch {
@@ -97,6 +121,7 @@ export async function run(
     let response: unknown;
     try {
       response = await context.capabilities["era.tavern.messages"].update_content({
+        sourceBasis: request.sourceBasis,
         updates: request.messageWrites.map((write) => ({
           message_id: write.messageId,
           message: write.content,
@@ -108,13 +133,25 @@ export async function run(
       });
     } catch (error) {
       return {
-        sync_commit_result: result(
+        sync_commit_result: changedSource(request, confirmedMessageWrites, false, error) ?? result(
           request,
           confirmedMessageWrites === 0 ? "failed" : "fatal",
           confirmedMessageWrites,
           false,
           failureFor(error, "ERA_SYNC_MESSAGE_COMMIT_FAILED"),
         ) as unknown as Readonly<Record<string, unknown>>,
+      };
+    }
+    if (response !== null && typeof response === "object" &&
+        (response as Record<string, unknown>).writeState === "memory-written") {
+      const observed = response as Record<string, unknown>;
+      const sourceChanged = observed.sourceChanged === true;
+      if (!sourceChanged) await presentRecoverableSidecarFailure(context, "message-persistence-unconfirmed");
+      return {
+        sync_commit_result: { ...result(request, "failed", observed.persistenceConfirmed === true ? request.messageWrites.length : 0, false,
+          syncFailure(sourceChanged ? "ERA_SYNC_SOURCE_CHANGED" : "ERA_SYNC_MESSAGE_PERSISTENCE_UNCONFIRMED",
+            String((response as Record<string, unknown>).message), "tavern",
+            { memoryWritten: true, persistenceConfirmed: observed.persistenceConfirmed === true })), sourceChanged },
       };
     }
     const observation = observeWrite(response);
@@ -141,6 +178,8 @@ export async function run(
   }
 
   let stateResponse: unknown;
+  let sidecarCommitted = false;
+  const sourceBasis = basisAfterSyncWrites(request);
   try {
     const current = await context.capabilities["era.tavern.sidecar"].read_current({});
     const meta = current !== null && typeof current === "object" ? (current as Record<string, unknown>).meta : null;
@@ -157,16 +196,19 @@ export async function run(
       statFunc: cloneSyncJson(request.statFunc) as Record<string, unknown>,
     };
     const record = recordFor(id, facts.current, state, facts.record);
-    stateResponse = await context.capabilities["era.tavern.sidecar"].write_record({ sidecarId: id, record });
+    stateResponse = await context.capabilities["era.tavern.sidecar"].write_record({ sidecarId: id, record, sourceBasis });
     const observation = observeWrite(stateResponse);
     if (observation.kind !== "confirmed") throw new TypeError(observation.message);
     const verify = await context.capabilities["era.tavern.sidecar"].read_record({ sidecarId: id });
     const checked = inspectSidecar(current, verify);
     if (checked.record === null || checked.record.revision !== record.revision) throw new TypeError("ERA Sidecar 提交回读不一致。");
+    sidecarCommitted = true;
     // 指针已经存在；重复机械提交不会写入任何 ERA 聊天状态，只在文件回读成功后
     // 刷新当前页面宏快照。
-    await context.capabilities["era.tavern.sidecar"].commit_metadata({ sidecarId: id, snapshot: record });
+    await context.capabilities["era.tavern.sidecar"].commit_metadata({ sidecarId: id, snapshot: record, sourceBasis });
   } catch (error) {
+    const changed = changedSource(request, confirmedMessageWrites, sidecarCommitted, error);
+    if (changed !== null) return { sync_commit_result: changed };
     await presentRecoverableSidecarFailure(context);
     return {
       sync_commit_result: result(

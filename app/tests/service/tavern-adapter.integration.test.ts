@@ -65,6 +65,7 @@ describe('ERA Tavern 生产接线', () => {
     vi.stubGlobal('eventRemoveListener', (type: string, handler: EventHandler) => events.remove(type, handler));
     vi.stubGlobal('tavern_events', {
       GENERATION_AFTER_COMMANDS: 'GENERATION_AFTER_COMMANDS',
+      GENERATION_ENDED: 'generation_ended',
       CHAT_CHANGED: 'CHAT_CHANGED',
     });
     vi.stubGlobal('getButtonEvent', (name: string) => `era-button:${name}`);
@@ -76,13 +77,15 @@ describe('ERA Tavern 生产接线', () => {
     vi.restoreAllMocks();
   });
 
-  it('只注册 10 个 Tavern 生命周期事件与 3 个按钮，不监听旧公共事件 API', () => {
+  it('业务事件之外只增加原生收尾观察，不把结束事件送入业务队列', () => {
     const adapter = new TavernEraServiceAdapter();
     const listener = vi.fn(() => accepted(async () => ({ throughSequence: 1, outcomes: [], hasFailures: false })));
     const stop = adapter.subscribe(listener);
 
-    expect(events.count).toBe(ERA_TAVERN_LISTENER_COUNT);
-    expect(events.listeners.size).toBe(ERA_TAVERN_LISTENER_COUNT);
+    expect(events.count).toBe(ERA_TAVERN_LISTENER_COUNT + 1);
+    expect(events.listeners.size).toBe(ERA_TAVERN_LISTENER_COUNT + 1);
+    events.only('generation_ended')(0);
+    expect(listener).not.toHaveBeenCalled();
     expect(events.listeners.has('era:updateByObject')).toBe(false);
     expect(events.listeners.has('era:requestWriteDone')).toBe(false);
     expect(events.listeners.has('era:forceSync')).toBe(false);
@@ -213,6 +216,13 @@ describe('ERA Tavern 生产接线', () => {
       futureMessageField: { keep: true },
     };
     vi.stubGlobal('getChatMessages', () => [hostMessage]);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => [{}, { ...hostMessage, mes: hostMessage.message }],
+      })),
+    );
     vi.stubGlobal('setChatMessages', setMessages);
     vi.stubGlobal(
       'refreshOneMessage',
@@ -244,7 +254,10 @@ describe('ERA Tavern 生产接线', () => {
     vi.stubGlobal('SillyTavern', {
       characterId: 1,
       groupId: null,
-      characters: [],
+      characters: [{}, { name: 'test', avatar: 'test.png', chat: 'chat' }],
+      chat: [hostMessage],
+      saveChat: vi.fn(async () => undefined),
+      getRequestHeaders: () => ({ 'Content-Type': 'application/json' }),
       writeExtensionField: vi.fn(async () => undefined),
       extensionSettings: { character_allowed_regex: [] },
       saveSettingsDebounced,
@@ -287,7 +300,7 @@ describe('ERA Tavern 生产接线', () => {
     expect(JSON.stringify(messages)).not.toContain('send_date');
     expect(JSON.stringify(messages)).not.toContain('attachments');
     expect(JSON.stringify(messages)).not.toContain('futureMessageField');
-    await adapter.messages.update_content(
+    const writeResult = await adapter.messages.update_content(
       {
         messageId: 0,
         content: 'next',
@@ -295,6 +308,7 @@ describe('ERA Tavern 生产接线', () => {
       },
       context,
     );
+    expect(writeResult).toEqual({ status: 'committed' });
     expect(setMessages).toHaveBeenCalledWith([{ message_id: 0, message: 'next' }], {
       refresh: 'affected',
     });

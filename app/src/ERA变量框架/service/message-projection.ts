@@ -36,6 +36,8 @@ function projectedActiveText(value: Readonly<Record<string, unknown>>, id: numbe
   if (Array.isArray(value.swipes) && swipeIndex !== null && typeof value.swipes[swipeIndex] === 'string') {
     return value.swipes[swipeIndex];
   }
+  // 原生 Overswipe 在回复出现前预留下一索引；遗留 mes 属于旧候选，不能借作新正文。
+  if (Array.isArray(value.swipes) && value.swipes.length > 0 && swipeIndex === value.swipes.length) return '';
   if (typeof value.mes === 'string') return value.mes;
   if (typeof value.message === 'string') return value.message;
   if (typeof value.activeText === 'string') return value.activeText;

@@ -204,20 +204,18 @@
           "path": "configs/era.service.jsonc"
         },
         "role": {
-          "display_name": "登记双模式初始化 UI 与共享外置示例",
-          "description": "保留外置宿主生命周期，快捷操作改为传统/外置两个按钮，共享 busy 并提交同一初始化资源工作流。外置模式成功后展示已保存模板；默认模板与编辑器插入示例共用同一资源，通过 ready/subscribe 展示最新状态，不加载第三方库或自动 commit。详见 reports/era-dual-initialization-change-list.md。"
+          "display_name": "登记单层显示窗口与角色卡设置",
+          "description": "复用现有 Host 启停，登记角色卡单层开关和单一显示窗口控制器。优先监听真实显示事件，在 Helper 审计前移除非目标 DOM，保留最新 AI 原 iframe；用户发言不重建保留实例。切聊天重建显示关系，关闭恢复普通历史入口与原范围，观察器仅兜底非标准 DOM 变化。角色卡保存仍走 Service，不新增业务调度器。详见 reports/era-single-floor-change-list.md。"
         },
-        "contract_source": "planned_config",
+        "contract_source": "node_type",
         "flow_kind": "process",
         "effect_scope": "none",
         "runtime_dispatch": "unknown",
         "execution_lock": null,
         "effective_execution_lock": null,
         "contains_global_state": false,
-        "status": "planned",
-        "planned_behavior": {
-          "kind": "blocking"
-        },
+        "status": "implemented",
+        "planned_behavior": null,
         "requires": [
           {
             "type": "era.installation.scope.decision",
@@ -666,8 +664,8 @@
               "path": "configs/nodesets/agent_generation_session.jsonc"
             },
             "role": {
-              "display_name": "分离请求失败记录与模型纠错上下文",
-              "description": "在唯一 AgentGenerationSession 原位修正规划和解析重试：只有模型输出解析、函数调用或变量操作校验失败才替换待修正原文及诊断；网络、连接或请求失败只进入报告，不进入模型输入，也不清空此前纠错上下文。相同 profile 下请求失败后的模型输入保持不变。请求记录仍保留实际上一请求及首次/纠错/请求重试来源；手动重新生成清空纠错上下文。保留重试预算、profile 切换、函数骰子、稳定 MK 和原子提交。不得将取得回复后的 Host 会话/提交异常误判为模型错误。范围与验收见 reports/era-retry-correction-context-change-list.md。"
+              "display_name": "ERA-PROD-011：原生收尾后启动辅助解析",
+              "description": "已实施011（真实验证待完成）：唯一 AgentGenerationSession 在原生正文后装配辅助解析之前，等待对应生成来源的机械收尾事实，并在原生同步清理栈返回后继续；不将 message_received 当作共享世界书资源已清理，也不由任意 Helper ended 释放。规划不等待未来正文；手动正文按既有 Helper 请求完成继续，仅重新解析不等待不存在的原生生成。停止、切聊天和卸载明确取消，等待后核对当前会话，不发送旧聊天解析。不增加工作流、FIFO、固定延迟或自动补偿重试。保留已实现的网络失败输入不变、模型错误才更新纠错上下文、手动执行清空旧纠错，以及 profile、骰子、稳定 MK 和原子提交。范围与验收见 reports/era-auxiliary-native-completion-change-list.md。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -3483,7 +3481,7 @@
             },
             "role": {
               "display_name": "读取严格酒馆上下文",
-              "description": "使用 projection=era-active-message-v1 读取 canonical 消息 DTO、聊天元数据和脚本占位符设置；Date、swipes_info 与宿主对象不得跨边界。"
+              "description": "读取包含待生成Swipe的真实全量消息位置，不以lastMessageId宏裁掉末楼；来源依据与实际写入核对使用一致的范围，业务回退仍由Service决定。"
             },
             "contract_source": "node_type",
             "flow_kind": "data_store",
@@ -3528,7 +3526,7 @@
             },
             "role": {
               "display_name": "暂存楼层 MK、占位符与消息更新",
-              "description": "按上下文模式确保当前逻辑 Swipe 只分配一个 MK。状态任务仅在内存中暂存消息更新并走 no-op 分支，禁止在 Agent 或同步事务前写 Tavern；update-mk 任务继续规划原有直接提交。"
+              "description": "保留待生成末端Swipe的真实楼号和索引，明确空正文不等于旧候选正文；生成前回退不提前补写待生成楼，普通状态任务继续仅暂存，空聊天与API写入边界保持。"
             },
             "contract_source": "node_type",
             "flow_kind": "decision",
@@ -7566,17 +7564,15 @@
               "display_name": "读取双模式初始化与现有外置配置",
               "description": "读取现有身份、设置、世界书、正则、主开场白及角色卡外置配置；传递 traditional/external 内部选择，无参数沿用 traditional。仅采集事实，不在 Host 决定覆盖或初始化规则。"
             },
-            "contract_source": "planned_config",
+            "contract_source": "node_type",
             "flow_kind": "data_store",
             "effect_scope": "none",
             "runtime_dispatch": "unknown",
             "execution_lock": null,
             "effective_execution_lock": null,
             "contains_global_state": false,
-            "status": "planned",
-            "planned_behavior": {
-              "kind": "blocking"
-            },
+            "status": "implemented",
+            "planned_behavior": null,
             "requires": [
               {
                 "type": "era.step.request.routed",
@@ -7655,20 +7651,18 @@
               "path": "configs/nodesets/task_initialize.jsonc"
             },
             "role": {
-              "display_name": "规划传统或外置状态栏资源",
-              "description": "同一规划器共享变量、函数、世界书及单一标记。有标记时两模式拒绝；外置已有非空 HTML 时拒绝覆盖。传统模式保留占位符和楼内正则；外置模式不创建它们，关闭本角色脚本的尾部符号，保存共享默认 HTML 并启用外置配置。必要资源完成后以主开场白标记收口，不迁移或删除作者资源。"
+              "display_name": "规划双模式资源与完整围栏边界",
+              "description": "复用双模式、单一标记及不覆盖规则。传统默认正则替换片段携带前后行边界，使紧邻正文/技术块的占位符也形成HTML块；不修改原消息或作者DOM，不覆盖已保存作者正则。外置模板仍为普通HTML，不加入围栏。其余变量/函数/世界书/开场白及外置初始化合同不变。见reports/era-statusbar-presentation-change-list.md。"
             },
-            "contract_source": "planned_config",
+            "contract_source": "node_type",
             "flow_kind": "decision",
             "effect_scope": "none",
             "runtime_dispatch": "unknown",
             "execution_lock": null,
             "effective_execution_lock": null,
             "contains_global_state": false,
-            "status": "planned",
-            "planned_behavior": {
-              "kind": "blocking"
-            },
+            "status": "implemented",
+            "planned_behavior": null,
             "requires": [
               {
                 "type": "era.initialize.context",
@@ -7845,17 +7839,15 @@
               "display_name": "提交双模式资源并最后写入标记",
               "description": "按声明式顺序提交设置、世界书、按模式所需正则或外置配置，最后保存带示例变量和单一标记的主开场白。沿用空聊天或未污染首楼同步，多楼历史不批量改写。外置配置保存后更新当前宿主显示；失败报告实际已写入动作，不伪成功，不自动覆盖既有 HTML。"
             },
-            "contract_source": "planned_config",
+            "contract_source": "node_type",
             "flow_kind": "data_store",
             "effect_scope": "none",
             "runtime_dispatch": "unknown",
             "execution_lock": null,
             "effective_execution_lock": null,
             "contains_global_state": false,
-            "status": "planned",
-            "planned_behavior": {
-              "kind": "blocking"
-            },
+            "status": "implemented",
+            "planned_behavior": null,
             "requires": [
               {
                 "type": "era.initialize.commit.request",
@@ -9053,8 +9045,8 @@
               "path": "configs/nodesets/task_sync.jsonc"
             },
             "role": {
-              "display_name": "构造最终楼层与 Sidecar 原子提交",
-              "description": "从逻辑同步结果构造内部提交 V2：包含 canonical 最终消息、extra、稳定 MK、变量/函数日志、SelectedMks、Sidecar 状态和首次呈现意图；移除模型输出中的遗留 era_data 后只写入一个 canonical MK。"
+              "display_name": "构造共享最终楼层呈现意图",
+              "description": "保留原子提交和009源依据，将首次呈现意图从Agent专有候选提升到共享提交，非Agent原生生成/Regenerate完成也能明确指向最终楼层。意图依据真实生成周期及最终展示变化，不将每次messageWrites或API更新等同重绘，不伪造Agent会话，不持久化意图。见reports/era-statusbar-presentation-change-list.md。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -9099,7 +9091,7 @@
             },
             "role": {
               "display_name": "校验最终楼层身份完全一致",
-              "description": "在任何 Host 写入前校验最终消息 MK、processing floor MK、SelectedMks、变量日志 key、函数日志 key 与状态栏绑定 MK 完全一致；不一致返回 ERA_FLOOR_IDENTITY_MISMATCH 且零写入。"
+              "description": "校验完整提交候选及原始宿主依据；最终消息、processing floor、SelectedMks 和双日志 MK 不一致时零写入失败，实际目标变化由紧贴 Host 写入的事实核对报告。"
             },
             "contract_source": "node_type",
             "flow_kind": "decision",
@@ -9198,8 +9190,8 @@
               "path": "configs/nodesets/task_sync.jsonc"
             },
             "role": {
-              "display_name": "提交最终消息、Sidecar 与运行时快照",
-              "description": "Host 先以 refresh:none 写入最终消息和 extra，再写入并回读 Sidecar，成功后才发布运行时快照。Sidecar 失败保留可修复状态但不发布、不呈现；消息写入未知仍按既有 fatal 语义处理。"
+              "display_name": "分别确认原候选保存与当前来源有效性",
+              "description": "原B候选落盘与用户当前选择C是两个事实：Host读回原候选正文、MK及ERA extra，不要求它仍是活动Swipe；写入后的来源核对复用sourceBasis，包含本任务自身写入后的正文。Service沿现有sourceChanged分支阻止旧Sidecar/快照发布，已写任务保留真实写入计数，不误报repair、不伪装API/Agent成功。真实保存失败仍报告；不加等待、重试、锁或第二套队列。详见reports/era-swipe-persistence-separation-change-list.md。"
             },
             "contract_source": "node_type",
             "flow_kind": "data_store",
@@ -9243,8 +9235,8 @@
               "path": "configs/nodesets/task_sync.jsonc"
             },
             "role": {
-              "display_name": "Sidecar 成功后首次呈现最终楼层",
-              "description": "仅对已提交且 requiresInitialPresentation 的新楼层执行一次正常 affected render，使 Tavern Helper 创建托管状态栏 iframe；后续 revision 只向原 iframe 推送。呈现失败只附加 diagnostic，不回滚已提交业务状态。"
+              "display_name": "按共享意图首次呈现最终楼层",
+              "description": "消费共享首次呈现意图，不再只认Agent候选。消息及Sidecar成功且当前来源一致后，对指定楼层执行一次原生affected render；API/历史回放/普通revision不重建iframe。失败只附显示诊断，不回滚已提交状态，不恢复强制重载。"
             },
             "contract_source": "node_type",
             "flow_kind": "data_store",
@@ -9289,7 +9281,7 @@
             },
             "role": {
               "display_name": "构造同步结算结果",
-              "description": "仅在业务提交结论明确后构造来源 receipt、状态和诊断；presentation diagnostic 与业务 committed 状态分开报告，不把显示失败伪装为状态回滚。"
+              "description": "按真实写入结论构造 receipt 和诊断；源事实已变化时不发布旧计划 stateUpdate，普通零写入过时任务与已提交但未呈现分别结算。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -34703,6 +34695,83 @@
                             }
                           }
                         },
+                        "sourceBasis": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "identity",
+                            "messages"
+                          ],
+                          "properties": {
+                            "identity": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "required": [
+                                "characterId",
+                                "chatId",
+                                "groupId"
+                              ],
+                              "properties": {
+                                "characterId": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "chatId": {
+                                  "type": "string"
+                                },
+                                "groupId": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                }
+                              }
+                            },
+                            "messages": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "schemaVersion",
+                                  "messageId",
+                                  "role",
+                                  "activeText",
+                                  "swipeIndex"
+                                ],
+                                "properties": {
+                                  "schemaVersion": {
+                                    "const": 1
+                                  },
+                                  "messageId": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  },
+                                  "role": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "activeText": {
+                                    "type": "string"
+                                  },
+                                  "swipeIndex": {
+                                    "oneOf": [
+                                      {
+                                        "type": "integer",
+                                        "minimum": 0
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        },
                         "agentFloorCandidate": {
                           "oneOf": [
                             {
@@ -35400,6 +35469,83 @@
                               },
                               "content": {
                                 "type": "string"
+                              }
+                            }
+                          }
+                        },
+                        "sourceBasis": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "identity",
+                            "messages"
+                          ],
+                          "properties": {
+                            "identity": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "required": [
+                                "characterId",
+                                "chatId",
+                                "groupId"
+                              ],
+                              "properties": {
+                                "characterId": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "chatId": {
+                                  "type": "string"
+                                },
+                                "groupId": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                }
+                              }
+                            },
+                            "messages": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "schemaVersion",
+                                  "messageId",
+                                  "role",
+                                  "activeText",
+                                  "swipeIndex"
+                                ],
+                                "properties": {
+                                  "schemaVersion": {
+                                    "const": 1
+                                  },
+                                  "messageId": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  },
+                                  "role": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "activeText": {
+                                    "type": "string"
+                                  },
+                                  "swipeIndex": {
+                                    "oneOf": [
+                                      {
+                                        "type": "integer",
+                                        "minimum": 0
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  }
+                                }
                               }
                             }
                           }
@@ -37748,6 +37894,83 @@
                                 }
                               }
                             },
+                            "sourceBasis": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "required": [
+                                "identity",
+                                "messages"
+                              ],
+                              "properties": {
+                                "identity": {
+                                  "type": "object",
+                                  "additionalProperties": false,
+                                  "required": [
+                                    "characterId",
+                                    "chatId",
+                                    "groupId"
+                                  ],
+                                  "properties": {
+                                    "characterId": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    },
+                                    "chatId": {
+                                      "type": "string"
+                                    },
+                                    "groupId": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    }
+                                  }
+                                },
+                                "messages": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "required": [
+                                      "schemaVersion",
+                                      "messageId",
+                                      "role",
+                                      "activeText",
+                                      "swipeIndex"
+                                    ],
+                                    "properties": {
+                                      "schemaVersion": {
+                                        "const": 1
+                                      },
+                                      "messageId": {
+                                        "type": "integer",
+                                        "minimum": 0
+                                      },
+                                      "role": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      },
+                                      "activeText": {
+                                        "type": "string"
+                                      },
+                                      "swipeIndex": {
+                                        "oneOf": [
+                                          {
+                                            "type": "integer",
+                                            "minimum": 0
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            },
                             "agentFloorCandidate": {
                               "oneOf": [
                                 {
@@ -38449,6 +38672,83 @@
                                 }
                               }
                             },
+                            "sourceBasis": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "required": [
+                                "identity",
+                                "messages"
+                              ],
+                              "properties": {
+                                "identity": {
+                                  "type": "object",
+                                  "additionalProperties": false,
+                                  "required": [
+                                    "characterId",
+                                    "chatId",
+                                    "groupId"
+                                  ],
+                                  "properties": {
+                                    "characterId": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    },
+                                    "chatId": {
+                                      "type": "string"
+                                    },
+                                    "groupId": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    }
+                                  }
+                                },
+                                "messages": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "required": [
+                                      "schemaVersion",
+                                      "messageId",
+                                      "role",
+                                      "activeText",
+                                      "swipeIndex"
+                                    ],
+                                    "properties": {
+                                      "schemaVersion": {
+                                        "const": 1
+                                      },
+                                      "messageId": {
+                                        "type": "integer",
+                                        "minimum": 0
+                                      },
+                                      "role": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      },
+                                      "activeText": {
+                                        "type": "string"
+                                      },
+                                      "swipeIndex": {
+                                        "oneOf": [
+                                          {
+                                            "type": "integer",
+                                            "minimum": 0
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            },
                             "agentFloorCandidate": {
                               "oneOf": [
                                 {
@@ -39069,6 +39369,40 @@
           "additionalProperties": true
         }
       },
+      "era.tavern.character.single_floor.request": {
+        "kind": "data_schema",
+        "type_key": "era.tavern.character.single_floor.request",
+        "representation": "json",
+        "display_name": "",
+        "description": "",
+        "schema": {
+          "type": "object",
+          "required": [
+            "characterId",
+            "enabled"
+          ],
+          "properties": {
+            "characterId": {
+              "type": "string"
+            },
+            "enabled": {
+              "type": "boolean"
+            }
+          },
+          "$schema": "https://json-schema.org/draft/2020-12/schema"
+        }
+      },
+      "era.tavern.character.single_floor.result": {
+        "kind": "data_schema",
+        "type_key": "era.tavern.character.single_floor.result",
+        "representation": "json",
+        "display_name": "",
+        "description": "",
+        "schema": {
+          "type": "object",
+          "$schema": "https://json-schema.org/draft/2020-12/schema"
+        }
+      },
       "era.tavern.character.write_main_greeting.request": {
         "kind": "data_schema",
         "type_key": "era.tavern.character.write_main_greeting.request",
@@ -39460,6 +39794,83 @@
             },
             "snapshot": {
               "type": "object"
+            },
+            "sourceBasis": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "identity",
+                "messages"
+              ],
+              "properties": {
+                "identity": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "characterId",
+                    "chatId",
+                    "groupId"
+                  ],
+                  "properties": {
+                    "characterId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "chatId": {
+                      "type": "string"
+                    },
+                    "groupId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  }
+                },
+                "messages": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "schemaVersion",
+                      "messageId",
+                      "role",
+                      "activeText",
+                      "swipeIndex"
+                    ],
+                    "properties": {
+                      "schemaVersion": {
+                        "const": 1
+                      },
+                      "messageId": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "role": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "activeText": {
+                        "type": "string"
+                      },
+                      "swipeIndex": {
+                        "oneOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
             }
           },
           "additionalProperties": false
@@ -39616,6 +40027,83 @@
             },
             "record": {
               "type": "object"
+            },
+            "sourceBasis": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "identity",
+                "messages"
+              ],
+              "properties": {
+                "identity": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "characterId",
+                    "chatId",
+                    "groupId"
+                  ],
+                  "properties": {
+                    "characterId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "chatId": {
+                      "type": "string"
+                    },
+                    "groupId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  }
+                },
+                "messages": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "schemaVersion",
+                      "messageId",
+                      "role",
+                      "activeText",
+                      "swipeIndex"
+                    ],
+                    "properties": {
+                      "schemaVersion": {
+                        "const": 1
+                      },
+                      "messageId": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "role": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "activeText": {
+                        "type": "string"
+                      },
+                      "swipeIndex": {
+                        "oneOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
             }
           },
           "additionalProperties": false
@@ -40342,7 +40830,9 @@
           "era.service.resource_planner",
           "era.service.types"
         ],
-        "external_packages": []
+        "external_packages": [
+          "@era/example-resources"
+        ]
       },
       "era.service.mk_engine": {
         "kind": "base_lib",
@@ -40564,6 +41054,11 @@
         "display_name": "ERA 多阶段生成宿主 I/O",
         "description": "只执行 Service 已声明的角色卡、页面会话、独立模型请求、一次性注入与规划失败消息；最终楼层消息由同步事务提交。",
         "operations": {
+          "await_native_completion": {
+            "input_type": "era.agent.host.request",
+            "output_type": "era.agent.host.result",
+            "completion": "suspend"
+          },
           "read_context": {
             "input_type": "era.agent.host.request",
             "output_type": "era.agent.host.result",
@@ -40655,6 +41150,11 @@
         "display_name": "酒馆角色主开场白",
         "description": "只读或以真实 avatar 乐观更新当前单角色卡的 first_messages[0]；写入成功后仅刷新空聊天或恰好一条未污染主开场白，已有多楼、编辑/污染、备用开场白和群聊保持原样。",
         "operations": {
+          "patch_single_floor": {
+            "input_type": "era.tavern.character.single_floor.request",
+            "output_type": "era.tavern.character.single_floor.result",
+            "completion": "suspend"
+          },
           "patch_external_statusbar": {
             "input_type": "era.tavern.character.external_statusbar.request",
             "output_type": "era.tavern.character.external_statusbar.result",
@@ -40882,7 +41382,7 @@
         "status": "implemented",
         "display_name": "ERA 酒馆服务宿主",
         "category": "宿主接线",
-        "description": "复用既有 FIFO、receipt、生成栅栏、按楼状态栏、请求查看器和最新状态 Facade。本轮 planned 生命周期扩展：在聊天区与输入框之间挂载外置 HTML 区域；角色卡扩展 era_external_statusbar 保存开关和原始 HTML，编辑自动保存但不自动执行，显式刷新重建一次内容实例。通过现有 Service/Host 接线保存配置；浏览器原生解析作者内容，公共 API 在作者脚本前安装，宏和订阅读取最新状态；卸载清理订阅，不伪造消息/MK、不改 Helper、不复制私有渲染器。四类清单及验证范围见 reports/era-external-statusbar-change-list.md。",
+        "description": "保留单一FIFO、receipt、生成barrier、009源依据、010公开保存与读回及011首次呈现。共享消息保存边界分开确认原Swipe候选已保存与当前来源仍有效；复用sourceBasis处理保存期间的Swipe/编辑/聊天变化，不能因当前已选C而误报原B落盘失败。Service决定sourceChanged、部分写入及Sidecar结算，Host不新增队列、锁、重试或私有保存器。获批范围与验证见reports/era-swipe-persistence-separation-change-list.md。",
         "version": "0.1.0",
         "targets": [
           "browser"

@@ -6,6 +6,7 @@ import {
   inspectWindow,
   recheckWindow,
   validateCommit,
+  verifyCommitted,
 } from '../../../javascript_project/service/base_lib/facade_api_engine';
 
 const identity = {
@@ -173,6 +174,24 @@ describe('ERA 即时 Scope Facade 纯领域链', () => {
     expect(validateCommit(inspectWindow(fromFloor, execution(), identity, messages('末楼', '历史楼')))).toMatchObject({
       route: 'failed',
       error: { code: 'ERA_API_STATUSBAR_SOURCE_INVALID' },
+    });
+  });
+
+  it('保存失败保留原请求上下文和真实诊断，不以消息内存回读冒充落盘', () => {
+    const validated = validateCommit(inspectWindow(request(), execution(), identity, messages())) as any;
+    const candidate = buildAppend(buildTransaction(validated.context));
+    const result = verifyCommitted(
+      {
+        status: 'failed',
+        context: candidate,
+        observed: { status: 'failed', writeState: 'memory-written', message: '原聊天保存未确认' },
+      },
+      messages(),
+    );
+    expect(result).toMatchObject({
+      route: 'failed',
+      context: candidate,
+      error: { code: 'ERA_API_MESSAGE_APPEND_FAILED', message: '原聊天保存未确认' },
     });
   });
 

@@ -88,7 +88,9 @@ describe('ERA contracts 1.4 canonical DTO', () => {
       processingMk: null,
     };
     expect(contracts.isEraDispatchContextV2(emptySync)).toBe(true);
-    expect(contracts.isEraDispatchContextV2({ ...emptySync, dispatchClass: 'api' })).toBe(false);
+    // Facade.sync retains the api class; preparation checks state-sync versus message-write.
+    expect(contracts.isEraDispatchContextV2({ ...emptySync, dispatchClass: 'api' })).toBe(true);
+    expect(contracts.isEraDispatchContextV2({ ...emptySync, dispatchClass: 'update-mk' })).toBe(false);
     expect(contracts.isEraDispatchContextV2({ ...emptySync, processingMk: 'forged-mk' })).toBe(false);
   });
 

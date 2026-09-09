@@ -63,8 +63,8 @@
       {
         "id": "plan_resources",
         "type_used": "era.initialize.plan",
-        "display_name": "规划传统或外置状态栏资源",
-        "description": "同一规划器共享变量、函数、世界书及单一标记。有标记时两模式拒绝；外置已有非空 HTML 时拒绝覆盖。传统模式保留占位符和楼内正则；外置模式不创建它们，关闭本角色脚本的尾部符号，保存共享默认 HTML 并启用外置配置。必要资源完成后以主开场白标记收口，不迁移或删除作者资源。"
+        "display_name": "规划双模式资源与完整围栏边界",
+        "description": "复用双模式、单一标记及不覆盖规则。传统默认正则替换片段携带前后行边界，使紧邻正文/技术块的占位符也形成HTML块；不修改原消息或作者DOM，不覆盖已保存作者正则。外置模板仍为普通HTML，不加入围栏。其余变量/函数/世界书/开场白及外置初始化合同不变。见reports/era-statusbar-presentation-change-list.md。"
       },
       {
         "id": "preserve_resources",

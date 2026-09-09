@@ -857,7 +857,7 @@ export function getEraRegexPayloads(): readonly EraRegexPayloadV1[] {
     regexPayload(
       "ERA 状态栏模板",
       "/<StatusPlaceHolderImpl\\/>/gsi",
-      `\`\`\`html\n${statusBarExampleHtml()}\n\`\`\``,
+      `\n\n\`\`\`html\n${statusBarExampleHtml()}\n\`\`\`\n\n`,
       false,
       false,
     ),

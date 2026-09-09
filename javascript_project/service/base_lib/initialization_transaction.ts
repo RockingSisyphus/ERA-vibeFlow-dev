@@ -24,6 +24,7 @@ export interface InitializationContextV1 {
 }
 
 export type InitializationActionV1 =
+  | { readonly kind: "patch-single-floor"; readonly characterId: string; readonly enabled: boolean }
   | { readonly kind: "patch-external-statusbar"; readonly characterId: string; readonly patch: Readonly<Record<string, unknown>> }
   | { readonly kind: "replace-settings"; readonly settings: EraSettingsV1 }
   | { readonly kind: "create-worldbook"; readonly name: string }
@@ -131,6 +132,17 @@ export function planInitialization(context: InitializationContextV1): Initializa
   const task = initializeTask(context.step);
   const argument = task.args[0];
   const detail = argument?.kind === "json" && isRecord(argument.value) ? argument.value : {};
+  if (task.operation === "settings-update" && isRecord(detail.singleFloor)) {
+    const value = detail.singleFloor;
+    const valid = typeof value.characterId === "string" && value.characterId.length > 0 && typeof value.enabled === "boolean";
+    const failure = valid ? null : { code: "ERA_SINGLE_FLOOR_CONFIG_INVALID", message: "单层模式需要角色卡 ID 和布尔开关。", category: "input", retryable: false };
+    return {
+      schemaVersion: 1, step: context.step, operation: task.operation,
+      disposition: valid ? "ready" : "failed", greetingStatus: "not-applicable",
+      actions: valid ? [{ kind: "patch-single-floor", characterId: String(value.characterId), enabled: value.enabled as boolean }] : [],
+      diagnostics: failure ? [diagnostic(failure.code, failure.message)] : [], failure,
+    };
+  }
   const external = task.operation === "settings-update" && isRecord(detail.externalStatusbar) ? detail.externalStatusbar : null;
   if (external) {
     const patch = isRecord(external.patch) ? external.patch : {};

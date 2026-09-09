@@ -39,6 +39,7 @@
 
       <!-- 变量列表：逐项渲染 -->
       <div class="vars">
+        <SingleFloorSetting ref="singleFloorSetting" :busy="busy" />
         <div class="var-row">
           <label for="era-external-enabled">启用外置状态栏</label>
           <input id="era-external-enabled" v-model="externalEnabled" type="checkbox" :disabled="!externalSelection" />
@@ -146,6 +147,7 @@ import {
   saveExternalStatusbar,
 } from '../../../service/external-statusbar-configuration';
 import { SettingsSchema } from '../../../utils/constants';
+import SingleFloorSetting from './SingleFloorSetting.vue';
 import { settings } from '../../../utils/era_data';
 import { Logger } from '../../../utils/log'; // 记录设置读取、提交与回滚的可诊断结果。
 import { awaitUiSettlement } from '../../utils/service-settlement';
@@ -166,6 +168,7 @@ const logger = new Logger();
 // === 折叠状态 ===
 const isOpen = ref(false); // 折叠状态不持久化，重新打开面板时保持收起。
 const externalEnabled = ref(false);
+const singleFloorSetting = ref<InstanceType<typeof SingleFloorSetting>>();
 let externalCharacterId: string | null = null;
 
 // === 原始数据与编辑缓存 ===
@@ -177,9 +180,7 @@ const jsonBuffers = reactive<Record<string, string>>({}); // 复杂值在保存�
 const jsonState = reactive<Record<string, { ok?: boolean; bad?: boolean; msg?: string }>>({}); // 记录本地格式状态。
 
 // === 工具：类型判定与人类可读名 ===
-function controlId(key: string): string {
-  return settingControlId(key);
-}
+const controlId = settingControlId;
 
 const humanType = settingTypeLabel;
 const safeStringify = stringifySetting;
@@ -197,6 +198,7 @@ function resetEditorState(nextRows: readonly Row[]): void {
 }
 
 function loadVars(showSuccess = true) {
+  singleFloorSetting.value?.load();
   externalEnabled.value = externalSelection.value?.config.enabled ?? false;
   externalCharacterId = externalSelection.value?.characterId ?? null;
   try {
@@ -254,6 +256,7 @@ async function saveEdits() {
     if (externalCharacterId && externalEnabled.value !== externalSelection.value?.config.enabled) {
       await saveExternalStatusbar(externalCharacterId, { enabled: externalEnabled.value });
     }
+    await singleFloorSetting.value?.save();
 
     // Service 成功回执前已重读脚本变量并发布设置事件；此处再从权威响应式快照重建草稿。
     loadVars(false);

@@ -299,6 +299,22 @@ describe('VibeFlow Service 宿主资源规划器差分', () => {
     ).toMatchObject({ status: 'skipped', actions: [], details: [] });
   });
 
+  it.each(['', '故事正文', '<VariableEdit>{"hp":16}</VariableEdit>'])(
+    '默认替换串自身提供围栏分隔，不依赖作者在 %s 后补换行',
+    prefix => {
+      const replacement = String(planner.getEraRegexPayloads()[0]?.replace_string);
+      expect(replacement.startsWith('\n\n```html\n')).toBe(true);
+      expect(replacement.endsWith('\n```\n\n')).toBe(true);
+      const renderedSource = `${prefix}<StatusPlaceHolderImpl/>后文<StatusPlaceHolderImpl/>`.replaceAll(
+        '<StatusPlaceHolderImpl/>',
+        replacement,
+      );
+      expect(renderedSource.match(/^```html$/gm)).toHaveLength(2);
+      expect(renderedSource.match(/^```$/gm)).toHaveLength(2);
+      expect(renderedSource.startsWith(prefix)).toBe(true);
+    },
+  );
+
   it('首个 iframe 先于 ERA 全局启动时使用 Helper 就绪事件，不执行第二套作者渲染器', async () => {
     const html = String(planner.getEraRegexPayloads()[0]?.replace_string);
     const bootstrap = html.match(/<script data-era-statusbar-bootstrap>([\s\S]*?)<\/script>/)?.[1];

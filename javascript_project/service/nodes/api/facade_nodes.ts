@@ -50,7 +50,7 @@ function envelope(inputs: Readonly<Record<string, Envelope<unknown>>>, key: stri
 async function readMessages(context: Context, purpose: string): Promise<unknown> {
   return context.capabilities["era.tavern.messages"].read_context({
     projection: "era-active-message-v1",
-    range: "0-{{lastMessageId}}",
+    range: "0--1",
     purpose,
   });
 }

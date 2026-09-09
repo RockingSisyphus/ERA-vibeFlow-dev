@@ -37,6 +37,7 @@ interface Envelope<T> {
   readonly value: T;
 }
 interface AgentCapability {
+  await_native_completion(input: Readonly<Record<string, unknown>>): Promise<unknown>;
   write_configuration(
     input: Readonly<Record<string, unknown>>,
   ): Promise<unknown>;
@@ -1371,7 +1372,7 @@ export async function run(
           kind,
           step.task.primaryEvent.eventId,
         );
-        capability.write_session({ chatKey: chatKey(rawContext), session });
+        capability.write_session({ chatKey: chatKey(rawContext), session, nativeGeneration: true });
       }
       if (session === null) {
         throw new TypeError("Agent 生成周期未能建立会话。");
@@ -1421,6 +1422,20 @@ export async function run(
       let nextStep: PlannedStepV1 = step;
       const identity = floorIdentity(step);
       if (configuration.settlement.enabled) {
+        const execution = sessionExecution(session, step.task.primaryEvent.eventId);
+        const completed = await capability.await_native_completion({
+          chatId: chatKey(rawContext), executionId: execution.id,
+        });
+        const current = isRecord(completed) && isRecord(completed.latestMessage) ? completed.latestMessage : null;
+        if (!isRecord(completed) || (completed.status !== "completed" && completed.status !== "not-native") || completed.executionId !== execution.id ||
+            !isRecord(completed.identity) || completed.identity.chatId !== identity.chatId ||
+            !current || current.message_id !== identity.messageId ||
+            Number(current.swipe_id ?? 0) !== identity.swipeId ||
+            current.message !== latestMessage(rawContext)?.message) {
+          return output(transition(step, "legacy-ignore", "no-op", [], {
+            status: "native-generation-no-longer-current",
+          }));
+        }
         nextStep = withFloorCandidate(
           step,
           await runSettlement(

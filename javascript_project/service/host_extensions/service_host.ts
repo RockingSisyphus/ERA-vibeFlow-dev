@@ -99,6 +99,7 @@ export type EraAsyncHostOperation = (
 
 export interface EraTavernCapabilityAdapter {
   readonly agent: {
+    readonly await_native_completion: EraAsyncHostOperation;
     readonly read_context: EraAsyncHostOperation;
     readonly write_configuration: EraAsyncHostOperation;
     readonly capture_preset: EraHostOperation;
@@ -137,6 +138,7 @@ export interface EraTavernCapabilityAdapter {
   };
   readonly character: {
     readonly patch_external_statusbar?: EraAsyncHostOperation;
+    readonly patch_single_floor?: EraAsyncHostOperation;
     readonly read_main_greeting: EraAsyncHostOperation;
     readonly write_main_greeting: EraAsyncHostOperation;
   };
@@ -619,6 +621,8 @@ class ServiceHostRuntime {
       ) => this.invokeSuspend("variables", "commit", input, options),
     },
     "era.tavern.agent": {
+      await_native_completion: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
+        this.invokeSuspend("agent", "await_native_completion", input, options),
       read_context: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
         this.invokeSuspend("agent", "read_context", input, options),
       write_configuration: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
@@ -695,6 +699,8 @@ class ServiceHostRuntime {
       ) => this.invokeSuspend("regex", "upsert", input, options),
     },
     "era.tavern.character": {
+      patch_single_floor: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
+        this.invokeSuspend("character", "patch_single_floor", input, options),
       patch_external_statusbar: (
         input: Readonly<Record<string, unknown>>,
         options: PortCallOptions = {},
@@ -885,6 +891,7 @@ class ServiceHostRuntime {
       [adapter.subscribe, "subscribe"],
       [adapter.notify, "notify"],
       [adapter.agent?.read_context, "agent.read_context"],
+      [adapter.agent?.await_native_completion, "agent.await_native_completion"],
       [adapter.agent?.write_configuration, "agent.write_configuration"],
       [adapter.agent?.capture_preset, "agent.capture_preset"],
       [adapter.agent?.list_connection_models_draft, "agent.list_connection_models_draft"],

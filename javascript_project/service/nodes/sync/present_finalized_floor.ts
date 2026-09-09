@@ -1,6 +1,7 @@
-import type {
-  SyncCommitResultV1,
-  SyncWorkV1,
+import {
+  basisAfterSyncWrites,
+  type SyncCommitResultV1,
+  type SyncWorkV1,
 } from "../../base_lib/sync_transaction.ts";
 
 interface Envelope<T> {
@@ -38,14 +39,16 @@ export async function run(
   }
   if (
     outcome.status !== "committed" ||
+    outcome.sourceChanged === true ||
     !outcome.variablesCommitted ||
-    outcome.agentFloorCandidate?.requiresInitialPresentation !== true
+    outcome.initialPresentation == null
   ) {
     return { presented_sync_commit_result: outcome };
   }
   try {
     await context.capabilities["era.tavern.messages"].refresh({
-      messageId: outcome.agentFloorCandidate.messageId,
+      sourceBasis: basisAfterSyncWrites(outcome),
+      messageId: outcome.initialPresentation.messageId,
       mode: "affected",
       purpose: "era-final-floor-initial-presentation",
     });

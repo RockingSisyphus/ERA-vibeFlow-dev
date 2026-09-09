@@ -7,6 +7,7 @@
 
 import {
   readMessageKey,
+  stripEraDataBlocks,
   type EraMkMessageV1,
   type EraMkSeedV1,
 } from "./domain/mk_engine.ts";
@@ -29,6 +30,7 @@ import {
   type EraDispatchContextV2,
   type EraDispatchContextV3,
   type EraFloorIdentityV1,
+  type EraMessageSourceBasisV1,
   type JsonValue,
 } from "@era/vibeflow-contracts";
 
@@ -87,6 +89,9 @@ export interface SyncCommitRequestV1 {
   readonly meta: Readonly<Record<string, unknown>>;
   readonly floorIdentity: EraFloorIdentityV1 | null;
   readonly agentFloorCandidate: EraAgentFloorCandidateV1 | null;
+  /** 本次生成的最终展示变化；非持久化，不用于普通状态更新。 */
+  readonly initialPresentation: EraFloorIdentityV1 | null;
+  readonly sourceBasis: EraMessageSourceBasisV1;
 }
 
 export interface SyncMessageCommitV1 extends SyncCommitRequestV1 {
@@ -96,11 +101,24 @@ export interface SyncMessageCommitV1 extends SyncCommitRequestV1 {
   readonly failure: SyncFailureV1 | null;
 }
 
+/** 已确认消息写入后的事实，供 Sidecar 写入、发布和首次呈现共同使用。 */
+export function basisAfterSyncWrites(request: SyncCommitRequestV1): EraMessageSourceBasisV1 {
+  const writes = new Map(request.messageWrites.map(write => [write.messageId, write.content]));
+  return {
+    identity: request.sourceBasis.identity,
+    messages: request.sourceBasis.messages.map(message => ({
+      ...message,
+      activeText: writes.get(message.messageId) ?? message.activeText,
+    })),
+  };
+}
+
 export interface SyncCommitResultV1 extends SyncCommitRequestV1 {
-  readonly status: "committed" | "failed" | "fatal";
+  readonly status: "committed" | "no-op" | "failed" | "fatal";
   readonly confirmedMessageWrites: number;
   readonly variablesCommitted: boolean;
   readonly failure: SyncFailureV1 | null;
+  readonly sourceChanged?: boolean;
   readonly presentationDiagnostic?: Readonly<{
     code: string;
     message: string;
@@ -630,6 +648,9 @@ export function buildSyncCommitRequest(work: SyncWorkV1): SyncCommitRequestV1 {
       });
   }
   const prepared = dispatchContext(work.step);
+  if (prepared.schemaVersion !== 3 || prepared.sourceBasis === undefined) {
+    throw new TypeError("同步提交缺少计算前的消息/聊天依据。");
+  }
   const floorIdentity = prepared.schemaVersion === 3
     ? prepared.floorIdentity
     : null;
@@ -646,6 +667,19 @@ export function buildSyncCommitRequest(work: SyncWorkV1): SyncCommitRequestV1 {
   const messageWrites = [...writesByMessageId.values()].sort(
     (left, right) => left.messageId - right.messageId,
   );
+  const task = work.step.kind === "execute" ? work.step.task : null;
+  const received = task?.kind === "sync" && task.primaryEvent.type === "message_received" &&
+    task.reason !== "facade-commit";
+  const original = prepared.sourceBasis.messages.find(
+    message => message.messageId === floorIdentity?.messageId,
+  );
+  const finalWrite = messageWrites.find(write => write.messageId === floorIdentity?.messageId);
+  // MK 本身不改变显示；只有本次收到的最终正文/占位符发生变化才补一次呈现。
+  const nativeDisplayChanged = received && original?.role === "assistant" && finalWrite !== undefined &&
+    stripEraDataBlocks(original.activeText).trimEnd() !== stripEraDataBlocks(finalWrite.content).trimEnd();
+  const initialPresentation = agentFloorCandidate?.requiresInitialPresentation === true || nativeDisplayChanged
+    ? floorIdentity
+    : null;
   return {
     schemaVersion: 2,
     step: work.step,
@@ -657,6 +691,8 @@ export function buildSyncCommitRequest(work: SyncWorkV1): SyncCommitRequestV1 {
     meta: cloneSyncJson(plan.meta),
     floorIdentity,
     agentFloorCandidate,
+    initialPresentation,
+    sourceBasis: prepared.sourceBasis,
   };
 }
 
@@ -706,6 +742,9 @@ export function validateSyncCommitEnvelope(value: unknown):
     if (!isRecord(value.request)) throw new TypeError("提交候选缺少请求。");
     const request = value.request as unknown as SyncCommitRequestV1;
     step = assertSyncStep(request.step);
+    if (!isRecord(request.sourceBasis) || !isRecord(request.sourceBasis.identity) || !Array.isArray(request.sourceBasis.messages)) {
+      throw new TypeError("同步提交缺少原始宿主依据。");
+    }
     if (request.schemaVersion !== 2 || !isRecord(request.plan)) {
       throw new TypeError("同步提交请求或同步计划无效。");
     }
@@ -765,6 +804,18 @@ export function validateSyncCommitEnvelope(value: unknown):
       }
       writtenIds.add(Number(write.messageId));
       if (write.extra !== undefined) cloneEraPortableJsonV1(write.extra);
+    }
+    if (request.initialPresentation != null) {
+      const floor = request.floorIdentity;
+      const write = request.messageWrites.find(item => item.messageId === floor?.messageId);
+      const selected = Array.isArray(request.meta.SelectedMks) && floor !== null
+        ? request.meta.SelectedMks[floor.messageId] : null;
+      if (floor === null || !deepSyncEqual(request.initialPresentation, floor) ||
+          selected !== floor.mk || write === undefined || readMessageKey({
+            messageId: write.messageId, role: "assistant", content: { kind: "text", text: write.content },
+          }) !== floor.mk) {
+        throw new SyncContractError("ERA_FLOOR_IDENTITY_MISMATCH", "首次呈现目标与最终提交楼层不一致。");
+      }
     }
     if (request.agentFloorCandidate !== null) {
       const candidate = request.agentFloorCandidate;
@@ -1097,7 +1148,7 @@ export function buildSyncCommittedResult(
     settlements: settlementsFor(outcome.step, outcome.status, outcome.failure),
     notifications: [],
     diagnostics,
-    ...(stateUpdateForPlan(outcome.plan) === undefined
+    ...(outcome.sourceChanged || stateUpdateForPlan(outcome.plan) === undefined
       ? {}
       : { stateUpdate: stateUpdateForPlan(outcome.plan) }),
   };

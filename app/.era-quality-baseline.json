@@ -667,13 +667,6 @@
     },
     {
       "debt": 1,
-      "fingerprint": "0c1b2dba74e057d9852aa49f9c162d61a961f83f6b976682c966d9110bd64715",
-      "objectId": "comment:script:onMounted(() => { -> });",
-      "ruleId": "COMMENT_DISABLED_CODE",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
       "fingerprint": "b62100af6d882559fa98c992398ed343777c2d11152f9c4f1f74d9cf1d6521fb",
       "objectId": "comment:script:onMounted(() => { -> });",
       "ruleId": "COMMENT_DISABLED_CODE",
@@ -1208,13 +1201,6 @@
       "debt": 1,
       "fingerprint": "9351880d9064593e698d38c8beea981469df5ebe758a31c7d65801a14d7dd036",
       "objectId": "comment:script:if (!mk) return; -> await updateEraMetaData(meta => {",
-      "ruleId": "COMMENT_WHAT_NARRATION",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "5918d524294c93042c6155dca908d5a6c0cd2bf3e35e4bc331c938fe14b38c92",
-      "objectId": "comment:script:import { onMounted, ref, watch } from 'vue'; -> import { Logger } from '../../utils/log';",
       "ruleId": "COMMENT_WHAT_NARRATION",
       "severity": "warning"
     },

@@ -47,13 +47,16 @@ describe('重新生成的宏与生成栅栏', () => {
   let replaceMacro: MacroReplace | null = null;
   let unregisterMacro = (): void => undefined;
   let sidecarFiles: Map<string, unknown>;
+  let pendingSwipe = false;
 
   beforeEach(async () => {
+    pendingSwipe = false;
     chatVariables = {
       stat_data: { generation_value: '待重生成楼层的变量' },
       ERAMetaData: {
-        SelectedMks: ['mk-previous', 'mk-current'],
+        SelectedMks: ['mk-initial', 'mk-previous', 'mk-current'],
         EditLogs: {
+          'mk-initial': [],
           'mk-previous': [{ op: 'insert', path: 'generation_value', value_new: '上一楼的变量' }],
           'mk-current': [
             {
@@ -73,16 +76,27 @@ describe('重新生成的宏与生成栅栏', () => {
     vi.stubGlobal('eventMakeLast', (type: string, handler: EventHandler) => events.register(type, handler));
     vi.stubGlobal('eventRemoveListener', (type: string, handler: EventHandler) => events.remove(type, handler));
     vi.stubGlobal('getButtonEvent', (name: string) => `era-button:${name}`);
+    vi.stubGlobal('tavern_events', { GENERATION_ENDED: 'generation_ended' });
     vi.stubGlobal('getCurrentCharacterId', () => 'barrier-card');
     vi.stubGlobal('getCurrentCharacterName', () => 'barrier-character');
     vi.stubGlobal('getScriptId', () => 'era-regenerate-barrier-test');
+    let savedChat: unknown[] = [];
     vi.stubGlobal('SillyTavern', {
+      characterId: '0',
+      characters: [{ avatar: 'barrier-card', name: 'barrier-character', chat: 'barrier-chat' }],
+      get chat() {
+        return chatMessages;
+      },
+      saveChat: async () => {
+        savedChat = clone(chatMessages);
+      },
       groupId: null,
       getCurrentChatId: () => 'barrier-chat',
       getRequestHeaders: () => ({ 'Content-Type': 'application/json' }),
     });
     vi.stubGlobal('fetch', async (input: string | URL, init?: RequestInit) => {
       const url = String(input);
+      if (url === '/api/chats/get') return new Response(JSON.stringify([{}, ...savedChat]), { status: 200 });
       if (url.endsWith('/api/files/upload')) {
         const body = JSON.parse(String(init?.body)) as { name: string; data: string };
         const json = decodeURIComponent(escape(atob(body.data)));
@@ -108,9 +122,15 @@ describe('重新生成的宏与生成栅栏', () => {
     vi.stubGlobal('updateVariablesWith', (updater: (current: Record<string, unknown>) => Record<string, unknown>) => {
       chatVariables = clone(updater(chatVariables));
     });
-    vi.stubGlobal('getChatMessages', () => [
+    const chatMessages = [
       {
         message_id: 0,
+        role: 'assistant',
+        is_user: false,
+        mes: '初始楼\n<era_data>{"era-message-key"="mk-initial","era-message-type"="assistant"}</era_data>',
+      },
+      {
+        message_id: 1,
         role: 'assistant',
         is_user: false,
         mes: [
@@ -120,13 +140,28 @@ describe('重新生成的宏与生成栅栏', () => {
         ].join('\n'),
       },
       {
-        message_id: 1,
+        message_id: 2,
         role: 'assistant',
         is_user: false,
         mes: '待重生成楼层\n<era_data>{"era-message-key"="mk-current","era-message-type"="assistant"}</era_data>',
       },
-    ]);
-    vi.stubGlobal('setChatMessages', async () => undefined);
+    ];
+    vi.stubGlobal('getChatMessages', (range: string | number) =>
+      chatMessages
+        .filter(message => typeof range !== 'number' || message.message_id === range)
+        .filter(message => !(pendingSwipe && range === '0-{{lastMessageId}}' && message.message_id === 2))
+        .map(message => ({
+          ...clone(message),
+          swipe_id: pendingSwipe && message.message_id === 2 ? 1 : 0,
+          swipes: [message.mes],
+        })),
+    );
+    vi.stubGlobal('setChatMessages', async (updates: Array<{ message_id: number; message?: string }>) => {
+      for (const update of updates) {
+        const message = chatMessages.find(item => item.message_id === update.message_id);
+        if (message && typeof update.message === 'string') message.mes = update.message;
+      }
+    });
     vi.stubGlobal('refreshOneMessage', async () => undefined);
     vi.stubGlobal('toastr', { error: vi.fn() });
 
@@ -149,12 +184,14 @@ describe('重新生成的宏与生成栅栏', () => {
     vi.restoreAllMocks();
   });
 
-  it('重新生成路径只提供 generation_started 时，仍必须在宏读取前回退到上一楼变量', async () => {
+  it.each(['regenerate', 'swipe'])('%s 必须在宏读取前只回退一次，保留楼1变量且不补写待生成楼', async generationType => {
+    pendingSwipe = generationType === 'swipe';
     // ST-Harness 当前 regenerate 完成合同观察 generation_started、message_received、generation_ended。
     // 这里重放缺少 message_swiped 的入口，防止 ERA 把回退错误地限定为 overswipe 组合。
     await vi.waitFor(() => expect(events.count('generation_started')).toBe(1));
+    if (pendingSwipe) events.only('message_swiped')(2);
     const regenerate = events.only('generation_started');
-    const barrier = regenerate('regenerate', { automatic_trigger: false }, false);
+    const barrier = regenerate(generationType, { automatic_trigger: false }, false);
 
     expect(barrier).toBeInstanceOf(Promise);
     await barrier;

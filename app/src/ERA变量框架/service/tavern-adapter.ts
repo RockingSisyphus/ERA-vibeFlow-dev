@@ -18,9 +18,12 @@ import type {
   EraWaitThroughResult,
 } from './types';
 import { currentEraMessageText, updateEraMessageContent } from './message-writer';
+import { assertCurrentMessageBasis } from './message-write-target';
+import { prepareMessagePersistence } from './message-persistence';
 import { readInstallationScopeFacts } from './installation-scope';
 import { projectMessage } from './message-projection';
 import { AgentTavernHost } from './agent-tavern-host';
+import { TavernListeners } from './tavern-listeners';
 import { agentExecutionRecords } from './agent-execution-records';
 import {
   currentTavernContext,
@@ -30,8 +33,7 @@ import {
   withoutButtonInputEvents,
 } from './tavern-browser-host';
 import { refreshDisplayedEraTechnicalBlocks, registerEraTechnicalBlockProjection } from './technical-block-projection';
-import { createCharacterGreetingAdapter } from './character-greeting-adapter';
-import { patchExternalStatusbar } from './external-statusbar-configuration';
+import { createCharacterAdapter } from './character-adapter';
 import { verifyEraStatusbarCommitSource } from './statusbar-runtime';
 
 const logger = new Logger();
@@ -40,11 +42,6 @@ type VariableScope =
   | { readonly type: 'chat' }
   | { readonly type: 'script'; readonly script_id?: string }
   | { readonly type: 'message'; readonly message_id?: number | 'latest' };
-
-type RegisteredListener = {
-  readonly eventType: string;
-  readonly handler: (...args: unknown[]) => void | Promise<void>;
-};
 
 const BUTTON_INPUT_EVENTS = new Set<string>([
   INPUT_EVENT.MANUAL_WRITE,
@@ -232,22 +229,14 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
     if (this.listener) throw new Error('ERA 服务适配器不允许重复注册。');
     this.listener = listener;
     this.accepting = true;
-    const registrations: RegisteredListener[] = [];
+    const registrations = new TavernListeners();
     const stopTechnicalProjection = registerEraTechnicalBlockProjection();
-
-    const registeredTypes = new Set<string>();
-    /** 统一记录卸载句柄，并在登记失败时按原顺序完整回收。 */
-    const register = (
-      eventType: string,
-      handler: RegisteredListener['handler'],
-      order: 'first' | 'normal' | 'last',
-    ) => {
-      if (registeredTypes.has(eventType)) throw new Error(`ERA 生产监听事件重复：${eventType}`);
-      registeredTypes.add(eventType);
-      registrations.push({ eventType, handler });
-      if (order === 'first') eventMakeFirst(eventType, handler);
-      else if (order === 'last') eventMakeLast(eventType, handler);
-      else eventOn(eventType, handler);
+    const stopNativeCompletion = this.agentHost.nativeGeneration.observe();
+    /** 登记失败和正常卸载必须使用相同的释放顺序，避免遗留收尾等待。 */
+    const releaseListeners = () => {
+      stopNativeCompletion();
+      stopTechnicalProjection();
+      registrations.release();
     };
 
     try {
@@ -256,7 +245,9 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
         /** 只有 generation barrier 事件返回 Promise，普通通知保持 Tavern 原时序。 */
         const handler = (...args: unknown[]): void | Promise<void> => {
           if (type === INPUT_EVENT.GENERATION_STARTED && this.agentHost.isAuxiliaryGenerationActive()) return undefined;
+          if (type === INPUT_EVENT.GENERATION_STARTED && args[2] !== true) this.agentHost.nativeGeneration.start();
           if (this.consumeInternalMessageUpdate(type, args)) return undefined;
+          if (type === INPUT_EVENT.GENERATION_STOPPED) this.agentHost.nativeGeneration.clear('stopped');
           if (type === INPUT_EVENT.CHAT_CHANGED) this.agentHost.clearSessions();
           if (WINDOW_LIFECYCLE_EVENTS.has(type)) this.rotateLifecycleWindow();
           const result = this.enqueue(type, eventSource(type), args);
@@ -275,7 +266,7 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
               logger.error('generationBarrier', '生成栅栏回执异常，按 fail-open 策略放行。', error);
             });
         };
-        register(type, handler, definition?.listenerOrder ?? 'normal');
+        registrations.register(type, handler, definition?.listenerOrder ?? 'normal');
       }
 
       for (const [buttonName, type] of BUTTON_EVENTS) {
@@ -284,17 +275,14 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
         const handleButton = () => {
           this.enqueue(type, 'ui', []);
         };
-        register(eventType, handleButton, 'normal');
+        registrations.register(eventType, handleButton, 'normal');
       }
 
-      if (registrations.length !== ERA_TAVERN_LISTENER_COUNT) {
-        throw new Error(`ERA 生产监听数量应为 ${ERA_TAVERN_LISTENER_COUNT}，实际为 ${registrations.length}。`);
+      if (registrations.count !== ERA_TAVERN_LISTENER_COUNT) {
+        throw new Error(`ERA 生产监听数量应为 ${ERA_TAVERN_LISTENER_COUNT}，实际为 ${registrations.count}。`);
       }
     } catch (error) {
-      stopTechnicalProjection();
-      for (const registration of registrations) {
-        eventRemoveListener(registration.eventType, registration.handler);
-      }
+      releaseListeners();
       this.listener = null;
       this.accepting = false;
       throw error;
@@ -306,10 +294,7 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
       stopped = true;
       this.accepting = false;
       this.agentHost.stop();
-      stopTechnicalProjection();
-      for (const registration of registrations) {
-        eventRemoveListener(registration.eventType, registration.handler);
-      }
+      releaseListeners();
       if (this.listener === listener) this.listener = null;
     };
   }
@@ -383,8 +368,7 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
       if (input.projection !== 'era-active-message-v1') {
         throw new TypeError('消息读取请求必须指定 projection=era-active-message-v1。');
       }
-      const range =
-        typeof input.range === 'string' || typeof input.range === 'number' ? input.range : '0-{{lastMessageId}}';
+      const range = typeof input.range === 'string' || typeof input.range === 'number' ? input.range : '0--1';
       const rawMessages = getChatMessages(range, { include_swipes: true });
       if (!Array.isArray(rawMessages)) throw new TypeError('ERA 消息投影失败：Tavern 返回值不是数组。');
       const messages = rawMessages.map(projectMessage);
@@ -400,13 +384,17 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
       context: EraCapabilityContext,
     ): Promise<unknown> => {
       throwIfAborted(context.signal);
+      const confirmPersistence = prepareMessagePersistence(input, context.signal);
       const affectedMessageIds = await updateEraMessageContent(input, this.internalMessageWrites);
+      const persistence = await confirmPersistence();
+      if (persistence.status !== 'committed') return persistence;
       if (input.projectTechnicalBlocks !== false) refreshDisplayedEraTechnicalBlocks(affectedMessageIds);
       throwIfAborted(context.signal);
       return { status: 'committed' };
     },
     refresh: async (input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown> => {
       throwIfAborted(context.signal);
+      if (input.sourceBasis !== undefined) assertCurrentMessageBasis(input.sourceBasis);
       if (input.mode === 'all') await SillyTavern.reloadCurrentChat();
       else await refreshOneMessage(requireMessageId(input));
       throwIfAborted(context.signal);
@@ -504,10 +492,7 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
     },
   };
 
-  readonly character = {
-    ...createCharacterGreetingAdapter(throwIfAborted),
-    patch_external_statusbar: patchExternalStatusbar,
-  };
+  readonly character = createCharacterAdapter(throwIfAborted);
 
   readonly identity = {
     /** 为了让工作流统一处理单角色、群聊和无角色场景，必须一次返回完整宿主身份快照。 */

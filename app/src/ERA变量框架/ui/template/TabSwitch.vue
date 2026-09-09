@@ -16,29 +16,24 @@
 
     <!-- 内容区：根据活动键渲染对应插槽 -->
     <div class="tab-content">
-      <div v-if="innerActive === 'pure'">
-        <slot name="pure" />
-        <!-- 纯净状态数据内容 -->
-      </div>
-      <div v-else>
-        <slot name="full" />
-        <!-- 完整状态数据内容 -->
+      <div>
+        <slot :name="innerActive" />
       </div>
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'; // 引入响应式工具
+import { ref, watch } from 'vue';
 import { Logger } from '../../utils/log';
 
-type TabItem = { key: 'pure' | 'full'; label: string }; // Tab 项类型
+type TabItem = { key: string; label: string };
 
 const logger = new Logger();
-const props = defineProps<{ tabs: TabItem[]; active?: 'pure' | 'full' }>(); // 输入 tabs 与可选 active
-const emit = defineEmits<{ 'update:active': ['pure' | 'full'] }>(); // v-model:active
+const props = defineProps<{ tabs: TabItem[]; active?: string }>();
+const emit = defineEmits<{ 'update:active': [string] }>();
 
-const innerActive = ref<'pure' | 'full'>(props.active ?? 'pure'); // 内部活动键
+const innerActive = ref(props.active ?? 'pure');
 
 watch(
   () => props.active,
@@ -49,15 +44,11 @@ watch(
     }
   },
 ); // 外部变更时同步
-function setActive(k: 'pure' | 'full') {
+function setActive(k: string) {
   logger.debug('setActive', `用户点击，切换 tab 到: ${k}`);
   innerActive.value = k;
   emit('update:active', k);
 } // 切换并抛出
-
-onMounted(() => {
-  //logger.debug('onMounted', '组件已挂载', { props });
-});
 </script>
 
 <style scoped>

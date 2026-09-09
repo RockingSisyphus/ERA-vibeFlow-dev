@@ -3,6 +3,8 @@
  * @description 只负责保留 Tavern 消息结构并执行无刷新文本更新；窗口、事务和同步规则仍由 Service workflow 决定。
  */
 
+import { assertCurrentMessageBasis } from './message-write-target';
+
 /** 为了避免 ERA 自己的写回开启新窗口，读取当前活动 swipe 文本供事件入口核对。 */
 export function currentEraMessageText(id: number): string | null {
   const message = getChatMessages(id, { include_swipes: true })[0];
@@ -102,6 +104,7 @@ export async function updateEraMessageContent(
   input: Readonly<Record<string, unknown>>,
   internalMessageWrites: Map<number, string>,
 ): Promise<readonly number[]> {
+  if (input.sourceBasis !== undefined) assertCurrentMessageBasis(input.sourceBasis);
   const updates = Array.isArray(input.updates)
     ? structuredClone(input.updates)
     : isRecord(input.update)

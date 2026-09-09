@@ -28,6 +28,7 @@ import type {
 } from './service/types';
 import { startEraUi } from './ui';
 import { startExternalStatusbar } from './ui/external-statusbar';
+import { startSingleFloor } from './service/single-floor-runtime';
 import { initEraSettings } from './utils/era_data';
 import { Logger } from './utils/log';
 
@@ -66,17 +67,21 @@ function productionDependencies(): EraApplicationDependencies {
     startPublicApi: () => installEraPublicApi(createEraStatusbarRuntime),
     startUi: () => {
       const ui = startEraUi();
-      let stopExternal: () => void;
+      let stopExternal: (() => void) | undefined;
+      let stopSingleFloor: () => void;
       try {
         stopExternal = startExternalStatusbar();
+        stopSingleFloor = startSingleFloor();
       } catch (error) {
+        stopExternal?.();
         ui.stop();
         throw error;
       }
       return {
         mounted: true,
         stop: () => {
-          stopExternal();
+          stopSingleFloor();
+          stopExternal?.();
           ui.stop();
         },
       };

@@ -4,6 +4,7 @@ import {
   type EraDispatchContextV3,
   type EraFailureV1,
   type EraTavernMessageV1,
+  type EraMessageSourceBasisV1,
 } from "@era/vibeflow-contracts";
 import {
   cloneMkValue,
@@ -47,6 +48,7 @@ export interface DispatchPreparationPlanV1 {
   readonly messageWriteRequired: boolean;
   readonly variableWriteRequired: boolean;
   readonly failure: EraFailureV1 | null;
+  readonly sourceBasis?: EraMessageSourceBasisV1;
 }
 
 export interface DispatchPreparationOutcomeV1 extends DispatchPreparationPlanV1 {
@@ -215,7 +217,7 @@ export function canonicalDispatchContext(
   }
 }
 
-export function planDispatchPreparation(
+function planPreparation(
   context: DispatchCanonicalContextV1,
 ): DispatchPreparationPlanV1 {
   if (context.status === "failed") {
@@ -237,8 +239,12 @@ export function planDispatchPreparation(
   const latest = context.messages.at(-1) ?? null;
   if (latest === null) {
     // 同步任务必须能把“最后一条消息已删除”结算为明确空状态。
-    // 生成、MK 更新与 API 写入仍要求真实目标消息，不能借此绕过身份边界。
-    if (context.seed.dispatchClass === "sync") {
+    // Facade.sync 在路由到同步器前仍是 api/state-sync；按意图区分它与消息写入。
+    const step = context.seed.step;
+    if (
+      context.seed.dispatchClass === "sync" ||
+      (step.kind === "execute" && step.task.kind === "api" && step.task.intent === "state-sync")
+    ) {
       return {
         schemaVersion: 1,
         seed: context.seed,
@@ -371,6 +377,23 @@ export function planDispatchPreparation(
   };
 }
 
+/** 保存补 MK/占位符之前的事实，不从生成后的正文逆向推断。 */
+export function planDispatchPreparation(context: DispatchCanonicalContextV1): DispatchPreparationPlanV1 {
+  const plan = planPreparation(context);
+  if (context.status !== "ready" || typeof context.identity.chatId !== "string") return plan;
+  return {
+    ...plan,
+    sourceBasis: {
+      identity: {
+        characterId: typeof context.identity.characterId === "string" ? context.identity.characterId : null,
+        chatId: context.identity.chatId,
+        groupId: typeof context.identity.groupId === "string" ? context.identity.groupId : null,
+      },
+      messages: context.messages,
+    },
+  };
+}
+
 export function preserveDispatchPreparation(
   plan: DispatchPreparationPlanV1,
 ): DispatchPreparationOutcomeV1 {
@@ -416,5 +439,6 @@ export function dispatchContextOf(
     floorIdentity,
     stagedMessageUpdates: outcome.messageUpdate === null ? [] : [outcome.messageUpdate],
     agentFloorCandidate: null,
+    ...(outcome.sourceBasis === undefined ? {} : { sourceBasis: outcome.sourceBasis }),
   };
 }

@@ -12,6 +12,11 @@
 `MESSAGE_SWIPED` 等 detached 事件只负责同步入队；需要等待 ERA 状态的生成事件由 Host
 保存 barrier receipt，并在对应来源全部进入终态后放行。dry-run 保持候选基线语义。
 
+连续 Swipe 的保存确认与当前来源分别处理：本次 B 候选可以已落盘，同时用户已选择 C。
+Host 读回 B 槽后按包含自身写入的 sourceBasis 核对当前来源；Service 沿现有 sourceChanged
+分支保留真实写入计数，不发布 B 的旧状态、不向当前聊天误报保存 repair。后续 C 仍由既有 FIFO
+调度。已写任务不是零写入 no-op；API/Agent 的未完成提交仍如实失败，不隐式重试。
+
 ## 当前分层
 
 ```text
@@ -47,6 +52,17 @@ Service Host 只负责宿主投影、队列、资源生命周期和 Capability �
 
 ## 提交与通知顺序
 
+### 原生正文收尾后的辅助阶段
+
+`MESSAGE_RECEIVED` 保持detached入队，不能为了辅助解析反过来等待Service receipt。
+原生`GENERATION_ENDED`只由独立机械监听记录，不作为新的业务FIFO输入。Service准备
+辅助解析时等待对应聊天/execution.id的原生收尾，再核对当前消息与Swipe；宿主同步
+`flushWIInjections`完成后才进入辅助世界书装配。规划阶段不等待未来正文。
+
+当前原生周期只保存一个完成Promise；Helper独立请求不释放它，明确停止、切聊或卸载
+取消它。生成外的Helper消息使用非原生来源事实。实现与独立时序证据见
+`docs/testing/ERA辅助解析世界书注入竞态.md`，无需固定延迟或额外重试。
+
 ### MK 准备与状态主链
 
 - 统一任务上下文可以先为当前激活文本补齐 MK 和状态占位符，但同步、初始化和 API
@@ -80,6 +96,15 @@ reject 都转为可见 fatal 状态。内存 scope 窗口与运行时快照同�
 scope 标记继续作为下一实例的准入事实。
 
 ## 修改规则
+
+### 单层显示事件不参与业务派发
+
+单层模式在现有 Host 显示生命周期缩减可见消息窗口，通过优先的消息呈现监听和
+`MORE_MESSAGES_LOADED` 通知 Helper 审计实际显示变化。该通知不是删除、编辑或生成
+事件；窗口开启、关闭和审计本身不进入变量重算，不推进 Sidecar revision。
+普通生成、Swipe、Continue、编辑和删除仍由原始酒馆事件决定业务任务。测试和宿主观察
+必须区分真实 `chat` 数组与当前可见 DOM，不能从“一条显示消息”推断只有一楼历史。
+
 
 新增或调整事件时，依次修改真实 Config/Nodeset、Data Schema、Node source 和合同测试，
 再运行 VibeFlow review/validate/quality/build。所有可读名称和说明使用中文；`ERA` 公共对象 ABI、

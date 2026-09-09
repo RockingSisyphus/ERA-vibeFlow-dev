@@ -67,7 +67,7 @@ function syncStep(
     },
     sources: [{ event: sourceEvent, relation: 'primary' }],
     dispatchContext: {
-      schemaVersion: 2,
+      schemaVersion: 3,
       status: 'ready',
       dispatchClass,
       requirement: context,
@@ -77,6 +77,22 @@ function syncStep(
       messageChanged: false,
       variablesChanged: false,
       failure: null,
+      generationCycleIdentity: { chatId: 'test-chat', eventId: 'event-1', sourceKey: 'test-chat:agent:1' },
+      floorIdentity:
+        processingMk === null
+          ? null
+          : {
+              chatId: 'test-chat',
+              messageId: preparedMessages.at(-1)?.messageId,
+              swipeId: preparedMessages.at(-1)?.swipeIndex ?? 0,
+              mk: processingMk,
+            },
+      stagedMessageUpdates: [],
+      agentFloorCandidate: null,
+      sourceBasis: {
+        identity: { characterId: 'test-card', chatId: 'test-chat', groupId: null },
+        messages: preparedMessages,
+      },
     },
   };
 }
@@ -177,7 +193,7 @@ describe('统一执行前上下文', () => {
     );
     expect(readContext).toHaveBeenCalledWith({
       projection: 'era-active-message-v1',
-      range: '0-{{lastMessageId}}',
+      range: '0--1',
       purpose: 'era-dispatch-prepare',
     });
     expect(readVariables).not.toHaveBeenCalled();
@@ -215,6 +231,36 @@ describe('统一执行前上下文', () => {
     expect(repeated.variableWriteRequired).toBe(false);
   });
 
+  it('生成回退保留完整三楼拓扑，不给待生成末楼补写 MK 或占位符', () => {
+    const base = syncStep('sync', 'latest-message');
+    const step = { ...base, task: { ...base.task, target: { kind: 'previous-of-latest' } } };
+    const messages = [0, 1, 2].map(messageId => ({
+      schemaVersion: 1,
+      messageId,
+      role: 'assistant',
+      activeText: messageId === 2 ? '' : `floor ${messageId}`,
+      swipeIndex: messageId === 2 ? 3 : 0,
+    }));
+    const plan = preparation.planDispatchPreparation(
+      preparation.canonicalDispatchContext(
+        preparation.classifyDispatch(step, state(step)).seed,
+        { schemaVersion: 2, messages },
+        { variables: {} },
+        { variables: {} },
+        { characterId: 'test-card', chatId: 'test-chat', groupId: null },
+      ),
+    );
+    expect(plan).toMatchObject({
+      status: 'ready',
+      messages,
+      processingMk: null,
+      messageUpdate: null,
+      messageWriteRequired: false,
+      variableWriteRequired: false,
+    });
+    expect(plan.sourceBasis.messages).toEqual(messages);
+  });
+
   it('零消息只允许同步任务继续准备为空终态', () => {
     const sync = syncStep();
     const syncSeed = preparation.classifyDispatch(sync, state(sync)).seed;
@@ -224,6 +270,7 @@ describe('统一执行前上下文', () => {
         { schemaVersion: 2, messages: [] },
         { variables: { ERAMetaData: { SelectedMks: ['old-mk'] } } },
         { variables: {} },
+        { characterId: 'test-card', chatId: 'test-chat', groupId: null },
       ),
     );
     expect(syncPlan).toMatchObject({
@@ -246,6 +293,57 @@ describe('统一执行前上下文', () => {
       ),
     );
     expect(rejected).toMatchObject({ status: 'failed', failure: { code: 'ERA_DISPATCH_EMPTY_CHAT' } });
+  });
+
+  it.each([
+    ['api', 'state-sync', 'ready'],
+    ['api', 'message-write', 'failed'],
+    ['update-mk', undefined, 'failed'],
+  ])('空历史 %s/%s 按真实任务意图准备为 %s', (kind, intent, expected) => {
+    const base = syncStep();
+    const step = { ...base, task: { ...base.task, kind, intent } };
+    const seed = preparation.classifyDispatch(step, state(step)).seed;
+    const plan = preparation.planDispatchPreparation(
+      preparation.canonicalDispatchContext(
+        seed,
+        { schemaVersion: 2, messages: [] },
+        { variables: { ERAMetaData: { SelectedMks: ['old-mk'] } } },
+        { variables: {} },
+        { characterId: 'test-card', chatId: 'test-chat', groupId: null },
+      ),
+    );
+    expect(plan.status).toBe(expected);
+    expect(plan.messageWriteRequired).toBe(false);
+    expect(plan.variableWriteRequired).toBe(false);
+    expect(plan.processingMk).toBeNull();
+    if (expected === 'failed') expect(plan.failure.code).toBe('ERA_DISPATCH_EMPTY_CHAT');
+    else {
+      expect(plan.metaUpdate.SelectedMks).toEqual(['old-mk']);
+      const dispatchContext = preparation.dispatchContextOf(preparation.preserveDispatchPreparation(plan));
+      // Facade.sync forwards this exact prepared context to the existing sync transaction.
+      const routed = { ...base, dispatchContext };
+      const work = transaction.planSyncWork({
+        schemaVersion: 1,
+        step: routed,
+        state: state(routed),
+        status: 'ready',
+        messagesRaw: { schemaVersion: 2, messages: [] },
+        variablesRaw: {
+          stat_data: { stale: true },
+          statFunc: { stale: { params: [], expr: '1' } },
+          ERAMetaData: { SelectedMks: ['old-mk'], EditLogs: { 'old-mk': [] }, FunctionEditLogs: { 'old-mk': [] } },
+        },
+        failure: null,
+      });
+      expect(work.failure).toBeNull();
+      expect(work.disposition).toBe('commit');
+      expect(transaction.buildSyncCommitRequest(work)).toMatchObject({
+        messageWrites: [],
+        stat: {},
+        statFunc: {},
+        meta: { SelectedMks: [], EditLogs: {}, FunctionEditLogs: {} },
+      });
+    }
   });
 
   it('仅 update-mk 任务在准备阶段拥有 SelectedMks 提交权', () => {
@@ -504,6 +602,7 @@ describe('严格 DTO、安全对象与 API 状态策略', () => {
       { schemaVersion: 2, messages: rawMessages },
       { variables },
       { variables: {} },
+      { characterId: 'test-card', chatId: 'test-chat', groupId: null },
     );
     const plan = preparation.planDispatchPreparation(canonical);
     expect(plan.processingMk).toMatch(/^era_mk_1001_/);

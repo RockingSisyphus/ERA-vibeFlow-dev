@@ -10,7 +10,7 @@
       "status": "implemented",
       "enabled": true,
       "display_name": "ERA 酒馆服务宿主",
-      "description": "复用既有 FIFO、receipt、生成栅栏、按楼状态栏、请求查看器和最新状态 Facade。本轮 planned 生命周期扩展：在聊天区与输入框之间挂载外置 HTML 区域；角色卡扩展 era_external_statusbar 保存开关和原始 HTML，编辑自动保存但不自动执行，显式刷新重建一次内容实例。通过现有 Service/Host 接线保存配置；浏览器原生解析作者内容，公共 API 在作者脚本前安装，宏和订阅读取最新状态；卸载清理订阅，不伪造消息/MK、不改 Helper、不复制私有渲染器。四类清单及验证范围见 reports/era-external-statusbar-change-list.md。",
+      "description": "保留单一FIFO、receipt、生成barrier、009源依据、010公开保存与读回及011首次呈现。共享消息保存边界分开确认原Swipe候选已保存与当前来源仍有效；复用sourceBasis处理保存期间的Swipe/编辑/聊天变化，不能因当前已选C而误报原B落盘失败。Service决定sourceChanged、部分写入及Sidecar结算，Host不新增队列、锁、重试或私有保存器。获批范围与验证见reports/era-swipe-persistence-separation-change-list.md。",
       "category": "宿主接线",
       "version": "0.1.0",
       "targets": [
@@ -91,8 +91,8 @@
       {
         "id": "activate_tavern_ingress",
         "type_used": "era.installation.scope.activate_ingress",
-        "display_name": "登记双模式初始化 UI 与共享外置示例",
-        "description": "保留外置宿主生命周期，快捷操作改为传统/外置两个按钮，共享 busy 并提交同一初始化资源工作流。外置模式成功后展示已保存模板；默认模板与编辑器插入示例共用同一资源，通过 ready/subscribe 展示最新状态，不加载第三方库或自动 commit。详见 reports/era-dual-initialization-change-list.md。"
+        "display_name": "登记单层显示窗口与角色卡设置",
+        "description": "复用现有 Host 启停，登记角色卡单层开关和单一显示窗口控制器。优先监听真实显示事件，在 Helper 审计前移除非目标 DOM，保留最新 AI 原 iframe；用户发言不重建保留实例。切聊天重建显示关系，关闭恢复普通历史入口与原范围，观察器仅兜底非标准 DOM 变化。角色卡保存仍走 Service，不新增业务调度器。详见 reports/era-single-floor-change-list.md。"
       },
       {
         "id": "publish_dormant_startup",

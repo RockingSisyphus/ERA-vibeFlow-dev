@@ -164,10 +164,11 @@ export function isEraDispatchContextV2(value) {
     return value.processingMessage === null && value.processingMk === null;
   }
   // 删除最后一条消息后的同步仍需形成一个明确的空聊天提交。此时没有可声称的
-  // processing message/MK；该例外只属于 sync，其他派发类别仍必须绑定真实消息。
+  // processing message/MK。Facade 同步保留 api 类别；是否为 state-sync 由准备阶段
+  // 根据任务意图决定，结构校验不把 api 一律误判为消息写入。
   if (
     value.status === "ready" &&
-    value.dispatchClass === "sync" &&
+    (value.dispatchClass === "sync" || value.dispatchClass === "api") &&
     value.messages.length === 0
   ) {
     return value.processingMessage === null && value.processingMk === null;
@@ -248,7 +249,7 @@ export function isEraDispatchContextV3(value) {
       "floorIdentity",
       "stagedMessageUpdates",
       "agentFloorCandidate",
-    ]) ||
+    ], ["sourceBasis"]) ||
     value.schemaVersion !== 3 ||
     !["ready", "failed"].includes(value.status) ||
     !["initialize", "sync", "api", "update-mk", "ignore"].includes(value.dispatchClass) ||
@@ -264,14 +265,22 @@ export function isEraDispatchContextV3(value) {
     !(value.floorIdentity === null || isEraFloorIdentityV1(value.floorIdentity)) ||
     !Array.isArray(value.stagedMessageUpdates) ||
     !value.stagedMessageUpdates.every(isStagedMessageUpdateV1) ||
-    !(value.agentFloorCandidate === null || isAgentFloorCandidateV1(value.agentFloorCandidate))
+    !(value.agentFloorCandidate === null || isAgentFloorCandidateV1(value.agentFloorCandidate)) ||
+    !(value.sourceBasis === undefined || (
+      hasOnlyKeys(value.sourceBasis, ["identity", "messages"]) &&
+      hasOnlyKeys(value.sourceBasis.identity, ["characterId", "chatId", "groupId"]) &&
+      (value.sourceBasis.identity.characterId === null || typeof value.sourceBasis.identity.characterId === "string") &&
+      typeof value.sourceBasis.identity.chatId === "string" &&
+      (value.sourceBasis.identity.groupId === null || typeof value.sourceBasis.identity.groupId === "string") &&
+      Array.isArray(value.sourceBasis.messages) && value.sourceBasis.messages.every(isEraTavernMessageV1)
+    ))
   ) return false;
   if (value.status === "ready" && value.failure !== null) return false;
   if (value.status === "failed" && value.failure === null) return false;
   if (value.requirement === "none") {
     return value.processingMessage === null && value.processingMk === null && value.floorIdentity === null;
   }
-  if (value.status === "ready" && value.dispatchClass === "sync" && value.messages.length === 0) {
+  if (value.status === "ready" && (value.dispatchClass === "sync" || value.dispatchClass === "api") && value.messages.length === 0) {
     return value.processingMessage === null && value.processingMk === null && value.floorIdentity === null;
   }
   if (value.status === "ready" && value.processingMessage === null) return false;

@@ -40,7 +40,7 @@ export async function run(
   try {
     const messagesPromise = context.capabilities["era.tavern.messages"].read_context({
       projection: "era-active-message-v1",
-      range: "0-{{lastMessageId}}",
+      range: "0--1",
       purpose: "era-dispatch-prepare",
     });
     const identity = context.capabilities["era.tavern.identity"].read({

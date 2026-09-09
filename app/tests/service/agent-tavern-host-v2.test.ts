@@ -82,6 +82,53 @@ describe('AgentTavernHost V2 local routes', () => {
     });
   }
 
+  it('releases the native waiter from the native event and cleans up its observer', async () => {
+    const handlers = new Map<string, (messageId: number) => void>();
+    vi.stubGlobal('tavern_events', { GENERATION_ENDED: 'generation_ended' });
+    vi.stubGlobal('eventOn', (name: string, handler: (messageId: number) => void) => handlers.set(name, handler));
+    vi.stubGlobal('eventRemoveListener', (name: string) => handlers.delete(name));
+    vi.stubGlobal('getChatMessages', () => [{ message_id: 3, message: 'story', swipe_id: 0 }]);
+    const instance = host();
+    const stop = instance.nativeGeneration.observe();
+    instance.nativeGeneration.start();
+    instance.operations.write_session(
+      {
+        chatKey: 'test-chat',
+        nativeGeneration: true,
+        session: { status: 'opened', execution: { id: 'cycle-1', trigger: 'initial' } },
+      },
+      capabilityContext,
+    );
+    const completed = vi.fn();
+    const waiting = instance.operations
+      .await_native_completion({ chatId: 'test-chat', executionId: 'cycle-1' }, capabilityContext)
+      .then(completed);
+    await Promise.resolve();
+    expect(completed).not.toHaveBeenCalled();
+    expect(handlers.has('js_generation_ended')).toBe(false);
+    handlers.get('generation_ended')!(3);
+    await waiting;
+    expect(completed).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'completed', executionId: 'cycle-1', messageId: 3 }),
+    );
+    stop();
+    expect(handlers.size).toBe(0);
+    instance.stop();
+  });
+
+  it('does not wait for a future native event when Helper creates messages outside generation', async () => {
+    vi.stubGlobal('getChatMessages', () => []);
+    const instance = host();
+    instance.operations.write_session(
+      { chatKey: 'test-chat', nativeGeneration: true, session: { status: 'opened', execution: { id: 'manual' } } },
+      capabilityContext,
+    );
+    await expect(
+      instance.operations.await_native_completion({ chatId: 'test-chat', executionId: 'manual' }, capabilityContext),
+    ).resolves.toMatchObject({ status: 'not-native' });
+    instance.stop();
+  });
+
   it('records native story without planning and retains its request across settlement writes', () => {
     const instance = host();
     instance.operations.write_session({ chatKey: 'test-chat', session: { status: 'opened' } }, capabilityContext);

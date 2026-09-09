@@ -272,6 +272,7 @@
         }
       }
     },
+    "sourceBasis": {"type":"object","additionalProperties":false,"required":["identity","messages"],"properties":{"identity":{"type":"object","additionalProperties":false,"required":["characterId","chatId","groupId"],"properties":{"characterId":{"type":["string","null"]},"chatId":{"type":"string"},"groupId":{"type":["string","null"]}}},"messages":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["schemaVersion","messageId","role","activeText","swipeIndex"],"properties":{"schemaVersion":{"const":1},"messageId":{"type":"integer","minimum":0},"role":{"type":"string","minLength":1},"activeText":{"type":"string"},"swipeIndex":{"oneOf":[{"type":"integer","minimum":0},{"type":"null"}]}}}}}},
     "agentFloorCandidate": {
       "oneOf": [
         {

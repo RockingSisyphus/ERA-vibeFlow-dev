@@ -27,6 +27,7 @@ import {
   storyRetryConfiguration,
 } from './agent-tavern-generation';
 import { agentExecutionRecords, currentAgentRecordChat, type AgentRequestContext } from './agent-execution-records';
+import { NativeGenerationHost } from './native-generation-host';
 
 type AgentOperations = EraTavernAdapter['agent'];
 let currentSessionReader: (() => Record<string, unknown> | null) | null = null;
@@ -53,6 +54,11 @@ export class AgentTavernHost {
   private readonly sessions = new Map<string, unknown>();
   private auxiliaryGenerationDepth = 0;
   private deferredNativeGenerationStop: EventOnReturn | null = null;
+  readonly nativeGeneration = new NativeGenerationHost({
+    isAuxiliary: () => this.isAuxiliaryGenerationActive(),
+    readSession: chatId => this.sessions.get(chatId),
+    readIdentity: context => this.ports.readIdentity({}, context),
+  });
 
   readonly operations: AgentOperations;
 
@@ -71,6 +77,7 @@ export class AgentTavernHost {
   }
 
   clearSessions(): void {
+    this.nativeGeneration.clear('chat-changed');
     this.sessions.clear();
     agentExecutionRecords.stopNative();
     agentExecutionRecords.sessionChanged();
@@ -117,6 +124,7 @@ export class AgentTavernHost {
    */
   private createOperations(): AgentOperations {
     return {
+      await_native_completion: (input, context) => this.nativeGeneration.wait(input, context),
       ...this.createContextOperations(),
       ...this.createGenerationOperations(),
       ...this.createSessionOperations(),
@@ -393,7 +401,8 @@ export class AgentTavernHost {
         if (typeof input.chatKey !== 'string' || input.chatKey.length === 0) {
           throw new TypeError('Agent 会话写入缺少 chatKey。');
         }
-        const session = this.observeSession(input.chatKey, input.session);
+        const observed = this.observeSession(input.chatKey, input.session);
+        const session = this.nativeGeneration.bind(input.chatKey, observed, input.nativeGeneration === true);
         if (
           typeof input.observationEventId === 'string' &&
           isRecord(session) &&

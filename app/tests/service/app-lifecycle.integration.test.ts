@@ -208,6 +208,7 @@ describe('ERA 生产生命周期', () => {
     vi.stubGlobal('eventMakeLast', (type: string, handler: EventHandler) => fixture.events.add(type, handler));
     vi.stubGlobal('eventRemoveListener', (type: string, handler: EventHandler) => fixture.events.remove(type, handler));
     vi.stubGlobal('getButtonEvent', (name: string) => `era-button:${name}`);
+    vi.stubGlobal('tavern_events', { GENERATION_ENDED: 'generation_ended' });
   });
 
   afterEach(async () => {
@@ -219,7 +220,8 @@ describe('ERA 生产生命周期', () => {
   it('按 Host → workflow → 初始化 → 宏 → UI 顺序启动，热重载 10 次不增长资源', async () => {
     for (let index = 0; index < 10; index += 1) {
       runtime = await startEraApplication(fixture.dependencies);
-      expect(fixture.events.count).toBe(ERA_TAVERN_LISTENER_COUNT);
+      // 独立的原生结束观察不属于业务入队事件，热重载仍不得累积监听。
+      expect(fixture.events.count).toBe(ERA_TAVERN_LISTENER_COUNT + 1);
       expect(fixture.page.count).toBe(1);
       expect(fixture.active).toEqual({ macro: 1, ui: 1, dom: 1 });
     }

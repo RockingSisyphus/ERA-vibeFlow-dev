@@ -38,6 +38,24 @@ async function runAgentSessionNode(
   runtime: { capabilities: Record<string, unknown> },
 ): Promise<Record<string, unknown>> {
   const prepared = await prepareAgentSessionNode(inputs, params, runtime as never);
+  // Existing phase tests model a completed native story. Lifecycle-specific tests
+  // override this operation with a pending or cancelled native completion.
+  const host = runtime.capabilities['era.tavern.agent'] as Record<string, unknown>;
+  const context = prepared.agent_auxiliary_execution_request.hostContext;
+  const executionRuntime = {
+    capabilities: {
+      ...runtime.capabilities,
+      'era.tavern.agent': {
+        await_native_completion: async (input: { executionId: string }) => ({
+          status: 'completed',
+          executionId: input.executionId,
+          identity: context?.identity,
+          latestMessage: context?.latestMessage,
+        }),
+        ...host,
+      },
+    },
+  };
   return executeAgentSessionNode(
     {
       'era.agent.auxiliary.execution_request': {
@@ -45,7 +63,7 @@ async function runAgentSessionNode(
       },
     },
     params,
-    runtime as never,
+    executionRuntime as never,
   );
 }
 
@@ -124,7 +142,12 @@ function floorDispatchContext(input: {
 }
 
 describe('retry failure boundaries', () => {
-  async function execute(stage: 'planning' | 'settlement', generate: ReturnType<typeof vi.fn>, writeSession = vi.fn()) {
+  async function execute(
+    stage: 'planning' | 'settlement',
+    generate: ReturnType<typeof vi.fn>,
+    writeSession = vi.fn(),
+    nativeCompletion?: () => Promise<unknown>,
+  ) {
     const configuration = {
       schemaVersion: '2',
       planning: { enabled: stage === 'planning', retryCount: 5, attempts: [{ preset: { source: 'builtin' } }] },
@@ -182,6 +205,7 @@ describe('retry failure boundaries', () => {
               },
             })),
             generate,
+            ...(nativeCompletion ? { await_native_completion: nativeCompletion } : {}),
             write_session: writeSession,
             inject_once: vi.fn(),
             stop_native_generation: vi.fn(),
@@ -190,6 +214,57 @@ describe('retry failure boundaries', () => {
       },
     );
   }
+
+  it('waits for native completion before starting settlement, but not planning', async () => {
+    let finish!: (result: unknown) => void;
+    const native = vi.fn(
+      () =>
+        new Promise(resolve => {
+          finish = resolve;
+        }),
+    );
+    const generate = vi.fn(async () => ({ response: '{"operations":[]}' }));
+    const running = execute('settlement', generate, vi.fn(), native);
+    await vi.waitFor(() => expect(native).toHaveBeenCalledOnce());
+    expect(generate).not.toHaveBeenCalled();
+    finish({
+      status: 'completed',
+      executionId: 'retry-event',
+      identity: { chatId: 'retry-chat' },
+      latestMessage: { message_id: 7, swipe_id: 0, message: 'story' },
+    });
+    await running;
+    expect(generate).toHaveBeenCalledOnce();
+    expect(native).toHaveBeenCalledWith({ chatId: 'retry-chat', executionId: 'retry-event' });
+    native.mockClear();
+    await execute(
+      'planning',
+      vi.fn(async () => ({ response: '{"storyPlan":{},"calls":[]}' })),
+      vi.fn(),
+      native,
+    );
+    expect(native).not.toHaveBeenCalled();
+  });
+
+  it.each(['cancelled', 'changed-chat', 'changed-swipe', 'changed-body', 'changed-execution'])(
+    'does not send settlement after %s while waiting',
+    async kind => {
+      const generated = vi.fn();
+      const result = {
+        status: kind === 'cancelled' ? 'cancelled' : 'completed',
+        executionId: kind === 'changed-execution' ? 'next-execution' : 'retry-event',
+        identity: { chatId: kind === 'changed-chat' ? 'another' : 'retry-chat' },
+        latestMessage: {
+          message_id: 7,
+          swipe_id: kind === 'changed-swipe' ? 1 : 0,
+          message: kind === 'changed-body' ? 'edited' : 'story',
+        },
+      };
+      const outcome = await execute('settlement', generated, vi.fn(), async () => result);
+      expect(generated).not.toHaveBeenCalled();
+      expect(outcome).toMatchObject({ agent_transition: { status: 'no-op' } });
+    },
+  );
 
   it.each(['planning', 'settlement'] as const)(
     '%s preserves the exact correction across request failures and replaces only invalid answers',
@@ -693,6 +768,7 @@ describe('AgentGenerationSession pure contracts', () => {
     expect(writeSession).toHaveBeenCalledOnce();
     expect(writeSession).toHaveBeenCalledWith({
       chatKey: 'chat-agent-next',
+      nativeGeneration: true,
       session: expect.objectContaining({ chatKey: 'chat-agent-next', status: 'opened', cycleIndex: 0 }),
     });
     expect(result.agent_transition).toMatchObject({ mode: 'execute-legacy', status: 'committed' });

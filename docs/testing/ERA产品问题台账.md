@@ -8,6 +8,16 @@
 
 ## 1. 文档目的
 
+### 2026-09-08：ERA-PROD-007 Facade空同步拒绝分支已修复
+
+原SINGLE-FLOOR-005删除所有消息后在准备阶段报ERA_SYNC_READ_FAILED。
+现按state-sync意图放行空上下文，并同步修正内部V2/V3结构校验；不增加Host/UI清缓存
+旁路，不放宽空消息写入。新独立run `st-run-20260908T06094079-12a3c8a8090d`
+六项passed（SINGLE-FLOOR-005、API-SYNC-001..005）、95actions、consistent/complete。
+空同步实际返回所有变量/函数/日志为空、SelectedMks=[]、revision11；后续用户发言
+没有恢复旧变量。App391/391、Service检查/构建及G3/G4探针通过。
+此处只关闭已复现的入口拒绝分支；零消息reload/重新进入未在本轮另外重跑。
+
 本文保存已经修复、排除或被新基线接管的问题历史。当前仍开放的缺陷、用户可见表现、
 最新测试证据与修复验收条件统一维护在 [`ERA当前缺陷基线.md`](ERA当前缺陷基线.md)。
 

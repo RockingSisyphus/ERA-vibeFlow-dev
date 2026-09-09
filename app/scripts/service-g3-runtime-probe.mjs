@@ -113,6 +113,8 @@ function createAdapter() {
         upsert: async () => ({ status: 'committed' }),
       },
       character: {
+        patch_external_statusbar: async () => { throw new Error('G3 帧探针不应执行外置配置写入'); },
+        patch_single_floor: async () => { throw new Error('G3 帧探针不应执行单层配置写入'); },
         read_main_greeting: async input => ({
           ...input,
           status: 'ready',
@@ -152,6 +154,7 @@ function createAdapter() {
         list_connection_models_draft: async () => ({ models: [] }),
         generate: async () => ({ status: 'completed', text: '{}' }),
         generate_story: async () => ({ status: 'completed', text: '' }),
+        await_native_completion: async () => ({ status: 'completed', messageId: 0 }),
         inject_once: () => ({ status: 'injected' }),
         write_session: () => ({ status: 'committed' }),
         clear_session: () => ({ status: 'cleared' }),

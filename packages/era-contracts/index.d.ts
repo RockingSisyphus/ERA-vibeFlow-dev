@@ -156,6 +156,13 @@ export interface EraDispatchContextV3 {
   readonly floorIdentity: EraFloorIdentityV1 | null;
   readonly stagedMessageUpdates: readonly EraStagedMessageUpdateV1[];
   readonly agentFloorCandidate: EraAgentFloorCandidateV1 | null;
+  /** 本次计算实际读取的宿主事实；只在事务内存中保留，不持久化。 */
+  readonly sourceBasis?: EraMessageSourceBasisV1;
+}
+
+export interface EraMessageSourceBasisV1 {
+  readonly identity: Readonly<{ characterId: string | null; chatId: string; groupId: string | null }>;
+  readonly messages: readonly EraTavernMessageV1[];
 }
 export type EraSyncReasonV1 =
   "history-changed" | "edited" | "swipe-regeneration" | "manual" | "facade-commit";

@@ -16,6 +16,7 @@ interface Context {
     readonly "era.tavern.character": {
       readonly write_main_greeting: (input: Readonly<Record<string, unknown>>) => Promise<unknown>;
       readonly patch_external_statusbar: (input: Readonly<Record<string, unknown>>) => Promise<unknown>;
+      readonly patch_single_floor: (input: Readonly<{ characterId: string; enabled: boolean }>) => Promise<unknown>;
     };
   };
 }
@@ -46,6 +47,8 @@ async function apply(action: InitializationActionV1, context: Context): Promise<
   switch (action.kind) {
     case "patch-external-statusbar":
       return context.capabilities["era.tavern.character"].patch_external_statusbar({ characterId: action.characterId, patch: action.patch });
+    case "patch-single-floor":
+      return context.capabilities["era.tavern.character"].patch_single_floor({ characterId: action.characterId, enabled: action.enabled });
     case "replace-settings":
       return context.capabilities["era.tavern.variables"].commit({ scope: { type: "script" }, variables: action.settings, purpose: "era-initialize-settings" });
     case "create-worldbook":

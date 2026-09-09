@@ -113,14 +113,14 @@
       {
         "id": "build_commit_request",
         "type_used": "era.sync.build_commit",
-        "display_name": "构造最终楼层与 Sidecar 原子提交",
-        "description": "从逻辑同步结果构造内部提交 V2：包含 canonical 最终消息、extra、稳定 MK、变量/函数日志、SelectedMks、Sidecar 状态和首次呈现意图；移除模型输出中的遗留 era_data 后只写入一个 canonical MK。"
+        "display_name": "构造共享最终楼层呈现意图",
+        "description": "保留原子提交和009源依据，将首次呈现意图从Agent专有候选提升到共享提交，非Agent原生生成/Regenerate完成也能明确指向最终楼层。意图依据真实生成周期及最终展示变化，不将每次messageWrites或API更新等同重绘，不伪造Agent会话，不持久化意图。见reports/era-statusbar-presentation-change-list.md。"
       },
       {
         "id": "validate_commit_candidate",
         "type_used": "era.sync.validate_commit_candidate",
         "display_name": "校验最终楼层身份完全一致",
-        "description": "在任何 Host 写入前校验最终消息 MK、processing floor MK、SelectedMks、变量日志 key、函数日志 key 与状态栏绑定 MK 完全一致；不一致返回 ERA_FLOOR_IDENTITY_MISMATCH 且零写入。"
+        "description": "校验完整提交候选及原始宿主依据；最终消息、processing floor、SelectedMks 和双日志 MK 不一致时零写入失败，实际目标变化由紧贴 Host 写入的事实核对报告。"
       },
       {
         "id": "build_sync_contract_failure",
@@ -131,20 +131,21 @@
       {
         "id": "commit_variables",
         "type_used": "era.tavern.variables_commit",
-        "display_name": "提交最终消息、Sidecar 与运行时快照",
-        "description": "Host 先以 refresh:none 写入最终消息和 extra，再写入并回读 Sidecar，成功后才发布运行时快照。Sidecar 失败保留可修复状态但不发布、不呈现；消息写入未知仍按既有 fatal 语义处理。"
+        "display_name": "分别确认原候选保存与当前来源有效性",
+        "status": "implemented",
+        "description": "原B候选落盘与用户当前选择C是两个事实：Host读回原候选正文、MK及ERA extra，不要求它仍是活动Swipe；写入后的来源核对复用sourceBasis，包含本任务自身写入后的正文。Service沿现有sourceChanged分支阻止旧Sidecar/快照发布，已写任务保留真实写入计数，不误报repair、不伪装API/Agent成功。真实保存失败仍报告；不加等待、重试、锁或第二套队列。详见reports/era-swipe-persistence-separation-change-list.md。"
       },
       {
         "id": "present_finalized_floor",
         "type_used": "era.sync.present_finalized_floor",
-        "display_name": "Sidecar 成功后首次呈现最终楼层",
-        "description": "仅对已提交且 requiresInitialPresentation 的新楼层执行一次正常 affected render，使 Tavern Helper 创建托管状态栏 iframe；后续 revision 只向原 iframe 推送。呈现失败只附加 diagnostic，不回滚已提交业务状态。"
+        "display_name": "按共享意图首次呈现最终楼层",
+        "description": "消费共享首次呈现意图，不再只认Agent候选。消息及Sidecar成功且当前来源一致后，对指定楼层执行一次原生affected render；API/历史回放/普通revision不重建iframe。失败只附显示诊断，不回滚已提交状态，不恢复强制重载。"
       },
       {
         "id": "build_sync_notification",
         "type_used": "era.sync.build_notification",
         "display_name": "构造同步结算结果",
-        "description": "仅在业务提交结论明确后构造来源 receipt、状态和诊断；presentation diagnostic 与业务 committed 状态分开报告，不把显示失败伪装为状态回滚。"
+        "description": "按真实写入结论构造 receipt 和诊断；源事实已变化时不发布旧计划 stateUpdate，普通零写入过时任务与已提交但未呈现分别结算。"
       },
       {
         "id": "sidecar_binding_blocked_result",
@@ -165,9 +166,15 @@
         "description": "结束一次共享同步任务。"
       }
     ],
-      "edges": [
-      ["start", "read_sync_context"],
-      ["read_sync_context", "sidecar_store_prepare"],
+    "edges": [
+      [
+        "start",
+        "read_sync_context"
+      ],
+      [
+        "read_sync_context",
+        "sidecar_store_prepare"
+      ],
       {
         "from": "sidecar_store_prepare",
         "to": "prepare_expression_command_request",
@@ -198,13 +205,34 @@
         "to": "compute_reconciliation",
         "when": "sync_route == 'reconcile'"
       },
-      ["prepare_expression_command_request", "execute_expression_commands"],
-      ["execute_expression_commands", "apply_command_compaction"],
-      ["apply_command_compaction", "assemble_expression_sync_plan"],
-      ["no_sync_change", "build_commit_request"],
-      ["crud_write", "build_commit_request"],
-      ["compute_reconciliation", "build_commit_request"],
-      ["build_commit_request", "validate_commit_candidate"],
+      [
+        "prepare_expression_command_request",
+        "execute_expression_commands"
+      ],
+      [
+        "execute_expression_commands",
+        "apply_command_compaction"
+      ],
+      [
+        "apply_command_compaction",
+        "assemble_expression_sync_plan"
+      ],
+      [
+        "no_sync_change",
+        "build_commit_request"
+      ],
+      [
+        "crud_write",
+        "build_commit_request"
+      ],
+      [
+        "compute_reconciliation",
+        "build_commit_request"
+      ],
+      [
+        "build_commit_request",
+        "validate_commit_candidate"
+      ],
       {
         "from": "validate_commit_candidate",
         "to": "commit_variables",
@@ -215,12 +243,30 @@
         "to": "build_sync_contract_failure",
         "when": "commit_validation_route == 'failed'"
       },
-      ["commit_variables", "present_finalized_floor"],
-      ["present_finalized_floor", "build_sync_notification"],
-      ["build_sync_notification", "end"],
-      ["build_sync_contract_failure", "end"],
-      ["sidecar_binding_blocked_result", "end"],
-      ["sidecar_binding_applied_result", "end"]
+      [
+        "commit_variables",
+        "present_finalized_floor"
+      ],
+      [
+        "present_finalized_floor",
+        "build_sync_notification"
+      ],
+      [
+        "build_sync_notification",
+        "end"
+      ],
+      [
+        "build_sync_contract_failure",
+        "end"
+      ],
+      [
+        "sidecar_binding_blocked_result",
+        "end"
+      ],
+      [
+        "sidecar_binding_applied_result",
+        "end"
+      ]
     ],
     "outputs": [
       {

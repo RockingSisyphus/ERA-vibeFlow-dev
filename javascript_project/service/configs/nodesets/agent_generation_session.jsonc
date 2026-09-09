@@ -19,8 +19,8 @@
       {
         "id":"execute_agent_phase_v2",
         "type_used":"era.agent.execute_session_v2",
-        "display_name":"分离请求失败记录与模型纠错上下文",
-        "description":"在唯一 AgentGenerationSession 原位修正规划和解析重试：只有模型输出解析、函数调用或变量操作校验失败才替换待修正原文及诊断；网络、连接或请求失败只进入报告，不进入模型输入，也不清空此前纠错上下文。相同 profile 下请求失败后的模型输入保持不变。请求记录仍保留实际上一请求及首次/纠错/请求重试来源；手动重新生成清空纠错上下文。保留重试预算、profile 切换、函数骰子、稳定 MK 和原子提交。不得将取得回复后的 Host 会话/提交异常误判为模型错误。范围与验收见 reports/era-retry-correction-context-change-list.md。",
+        "display_name":"ERA-PROD-011：原生收尾后启动辅助解析",
+        "description":"已实施011（真实验证待完成）：唯一 AgentGenerationSession 在原生正文后装配辅助解析之前，等待对应生成来源的机械收尾事实，并在原生同步清理栈返回后继续；不将 message_received 当作共享世界书资源已清理，也不由任意 Helper ended 释放。规划不等待未来正文；手动正文按既有 Helper 请求完成继续，仅重新解析不等待不存在的原生生成。停止、切聊天和卸载明确取消，等待后核对当前会话，不发送旧聊天解析。不增加工作流、FIFO、固定延迟或自动补偿重试。保留已实现的网络失败输入不变、模型错误才更新纠错上下文、手动执行清空旧纠错，以及 profile、骰子、稳定 MK 和原子提交。范围与验收见 reports/era-auxiliary-native-completion-change-list.md。",
         "status":"implemented"
       },
       {"id":"route_agent_transition","type_used":"era.agent.route_transition","display_name":"路由阶段结果","description":"决定直接结算还是恢复原任务。"},

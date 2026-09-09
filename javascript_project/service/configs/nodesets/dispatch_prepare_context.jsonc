@@ -71,13 +71,13 @@
         "id": "read_canonical_context",
         "type_used": "era.dispatch.read_canonical_context",
         "display_name": "读取严格酒馆上下文",
-        "description": "使用 projection=era-active-message-v1 读取 canonical 消息 DTO、聊天元数据和脚本占位符设置；Date、swipes_info 与宿主对象不得跨边界。"
+        "description": "读取包含待生成Swipe的真实全量消息位置，不以lastMessageId宏裁掉末楼；来源依据与实际写入核对使用一致的范围，业务回退仍由Service决定。"
       },
       {
         "id": "stage_message_preparation",
         "type_used": "era.dispatch.plan_message_preparation",
         "display_name": "暂存楼层 MK、占位符与消息更新",
-        "description": "按上下文模式确保当前逻辑 Swipe 只分配一个 MK。状态任务仅在内存中暂存消息更新并走 no-op 分支，禁止在 Agent 或同步事务前写 Tavern；update-mk 任务继续规划原有直接提交。"
+        "description": "保留待生成末端Swipe的真实楼号和索引，明确空正文不等于旧候选正文；生成前回退不提前补写待生成楼，普通状态任务继续仅暂存，空聊天与API写入边界保持。"
       },
       {
         "id": "preserve_prepared_context",

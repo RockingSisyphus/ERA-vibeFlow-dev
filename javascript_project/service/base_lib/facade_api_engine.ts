@@ -233,7 +233,14 @@ export function inspectWindow(
         messageAdmission: !hasScopeMarker(latest.activeText, "m"),
         branchAdmission: !messages.some((message) => hasScopeMarker(message.activeText, "b")),
       };
-  return { request, executionState, identity, messages, latest, window, sourceInvalid: targeted.sourceInvalid };
+  const sourceBasis = isEraDispatchContextV3(prepared) && prepared.sourceBasis !== undefined
+    ? prepared.sourceBasis
+    : { identity: {
+        characterId: isRecord(identity) ? identity.characterId ?? null : null,
+        chatId: isRecord(identity) ? identity.chatId : null,
+        groupId: isRecord(identity) ? identity.groupId ?? null : null,
+      }, messages };
+  return { request, executionState, identity, messages, latest, window, sourceBasis, sourceInvalid: targeted.sourceInvalid };
 }
 
 function normalizeScope(value: unknown): FacadeScope | null {
@@ -329,6 +336,7 @@ export function buildAppend(transaction: unknown) {
     originalContent: latest.activeText,
     committedContent: content,
     capabilityInput: {
+      sourceBasis: transaction.sourceBasis,
       messageId: Number(id),
       content,
       refresh: "none",
@@ -360,7 +368,11 @@ export function recheckWindow(append: unknown, currentIdentity: unknown) {
 
 export function verifyCommitted(appendResult: unknown, rawMessages: unknown) {
   if (!isRecord(appendResult) || appendResult.status !== "committed" || !isRecord(appendResult.context)) {
-    return { route: "failed", context: appendResult, error: failure("ERA_API_MESSAGE_APPEND_FAILED", "Tavern 未确认 era_tx 写入。", "tavern") };
+    const append = isRecord(appendResult) ? appendResult : {};
+    const observed = isRecord(append.observed) ? append.observed : {};
+    return { route: "failed", context: append.context ?? appendResult,
+      error: failure("ERA_API_MESSAGE_APPEND_FAILED",
+        typeof observed.message === "string" ? observed.message : "Tavern 未确认 era_tx 写入。", "tavern") };
   }
   const context = appendResult.context;
   try {
@@ -375,11 +387,18 @@ export function verifyCommitted(appendResult: unknown, rawMessages: unknown) {
     if (!isEraDispatchContextV2(originalDispatch) && !isEraDispatchContextV3(originalDispatch)) {
       return { route: "failed", context, error: failure("ERA_API_DISPATCH_CONTEXT_INVALID", "原始派发上下文损坏。", "domain") };
     }
+    if (!isRecord(context.sourceBasis) || !isRecord(context.sourceBasis.identity)) {
+      throw new TypeError("API 写入缺少原始聊天依据。");
+    }
     const dispatchContext = {
       ...originalDispatch,
       messages: cloneEraPortableJsonV1(messages),
       ...(isEraDispatchContextV3(originalDispatch)
         ? {
+            sourceBasis: {
+              identity: context.sourceBasis.identity,
+              messages: cloneEraPortableJsonV1(messages),
+            },
             processingMessage:
               originalDispatch.processingMessage?.messageId === context.messageId
                 ? {
