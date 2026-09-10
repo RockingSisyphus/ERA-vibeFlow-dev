@@ -29,6 +29,24 @@ import { run as executeAgentSessionNode } from '../../../javascript_project/serv
 // @ts-ignore app tsconfig 不声明 Service Node 的跨 root 类型。
 import { run as prepareAgentSessionNode } from '../../../javascript_project/service/nodes/agent/prepare_auxiliary_execution_request';
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment -- 节点测试读取真实 Service 编排边界。
+// @ts-ignore app rootDir 外的 Node source。
+import { run as classifyGenerationNode } from '../../../javascript_project/service/nodes/agent/classify_generation_event';
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment -- 节点测试读取真实 Service 编排边界。
+// @ts-ignore app rootDir 外的 Node source。
+import { run as prepareGenerationNode } from '../../../javascript_project/service/nodes/agent/prepare_generation_phase';
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment -- 节点测试读取真实 Service 编排边界。
+// @ts-ignore app rootDir 外的 Node source。
+import { run as formTransitionNode } from '../../../javascript_project/service/nodes/agent/form_session_transition';
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment -- 节点测试读取真实 Service 编排边界。
+// @ts-ignore app rootDir 外的 Node source。
+import { run as prepareSettingsNode } from '../../../javascript_project/service/nodes/agent/prepare_settings_request';
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment -- 节点测试读取真实 Service 编排边界。
+// @ts-ignore app rootDir 外的 Node source。
+import { run as executeSettingsNode } from '../../../javascript_project/service/nodes/agent/execute_settings_command';
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment -- 节点测试读取真实 Service 编排边界。
+// @ts-ignore app rootDir 外的 Node source。
+import { run as buildSettingsNode } from '../../../javascript_project/service/nodes/agent/build_settings_result';
 async function runAgentSessionNode(
   inputs: {
     'era.step.request.routed': { value: unknown };
@@ -37,11 +55,22 @@ async function runAgentSessionNode(
   params: Record<string, unknown>,
   runtime: { capabilities: Record<string, unknown> },
 ): Promise<Record<string, unknown>> {
+  const step = inputs['era.step.request.routed'].value as { task?: { primaryEvent?: { type?: string } } };
+  if (step.task?.primaryEvent?.type === 'era.ui.agent_configuration') {
+    const prepared = await prepareSettingsNode(inputs, params, runtime as never);
+    const executed = await executeSettingsNode(
+      { 'era.agent.settings.request': { value: prepared.settings_request } },
+      params,
+      runtime as never,
+    );
+    const result = buildSettingsNode({ ...inputs, 'era.agent.settings.outcome': { value: executed.settings_outcome } });
+    return { ...result, agent_transition: { schemaVersion: 1, step, ...executed.settings_outcome } };
+  }
   const prepared = await prepareAgentSessionNode(inputs, params, runtime as never);
-  // Existing phase tests model a completed native story. Lifecycle-specific tests
-  // override this operation with a pending or cancelled native completion.
+  const facts = prepared.generation_facts;
+  const decision = classifyGenerationNode({ 'era.agent.generation.facts': { value: facts } });
+  const request = prepareGenerationNode({ 'era.agent.generation.decision': { value: decision.generation_decision } });
   const host = runtime.capabilities['era.tavern.agent'] as Record<string, unknown>;
-  const context = prepared.agent_auxiliary_execution_request.hostContext;
   const executionRuntime = {
     capabilities: {
       ...runtime.capabilities,
@@ -49,22 +78,19 @@ async function runAgentSessionNode(
         await_native_completion: async (input: { executionId: string }) => ({
           status: 'completed',
           executionId: input.executionId,
-          identity: context?.identity,
-          latestMessage: context?.latestMessage,
+          identity: facts.context?.identity,
+          latestMessage: facts.context?.latestMessage,
         }),
         ...host,
       },
     },
   };
-  return executeAgentSessionNode(
-    {
-      'era.agent.auxiliary.execution_request': {
-        value: prepared.agent_auxiliary_execution_request,
-      },
-    },
+  const executed = await executeAgentSessionNode(
+    { 'era.agent.generation.request': { value: request.generation_request } },
     params,
     executionRuntime as never,
   );
+  return formTransitionNode({ ...inputs, 'era.agent.generation.outcome': { value: executed.generation_outcome } });
 }
 
 describe('stage correction input', () => {
@@ -374,6 +400,16 @@ describe('AgentGenerationSession pure contracts', () => {
           value: {
             kind: 'execute',
             taskRoute: 'agent-generation-session',
+            sources: [
+              {
+                event: {
+                  eventId: 'event-agent-save-with-new-profile',
+                  sequence: 6,
+                  type: 'era.ui.agent_configuration',
+                },
+                relation: 'primary',
+              },
+            ],
             task: {
               primaryEvent: {
                 eventId: 'event-agent-save-with-new-profile',

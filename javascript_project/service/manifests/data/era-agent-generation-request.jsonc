@@ -1,0 +1,10 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.agent.generation.request",
+  "display_name": "生成阶段所需输入",
+  "representation": "json",
+  "schema": {
+    "type": "object",
+    "additionalProperties": true
+  }
+}

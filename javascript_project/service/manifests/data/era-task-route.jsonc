@@ -13,7 +13,8 @@
       "api",
       "update-mk",
       "agent-generation-session",
-      "ignore"
+      "ignore",
+      "agent-settings"
     ]
   }
 }

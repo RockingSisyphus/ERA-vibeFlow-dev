@@ -1,0 +1,66 @@
+{
+  "kind": "node",
+  "type_key": "era.agent.build_settings_result",
+  "category": "Agent 工作流",
+  "version": "1.0.0",
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/agent/build_settings_result.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "capabilities": [],
+  "display_name": "结算设置命令",
+  "description": "把设置结果与来源对应为原 TaskResult；不修改批次状态，不进入生成会话转换。",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.step.request.routed",
+        "cardinality": "exactly_one",
+        "display_name": "已准备步骤"
+      },
+      {
+        "type": "era.agent.settings.outcome",
+        "cardinality": "exactly_one",
+        "display_name": "设置结果"
+      }
+    ],
+    "provides": [
+      {
+        "key": "settings_result",
+        "type": "era.task.result",
+        "display_name": "设置任务结果"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.step.request.routed": [
+        "输入：已准备步骤"
+      ],
+      "era.agent.settings.outcome": [
+        "输入：设置结果"
+      ]
+    },
+    "output_semantics": {
+      "settings_result": [
+        "输出：设置任务结果"
+      ]
+    }
+  },
+  "base_libs": [
+    "era.service.agent_flow_types",
+    "era.service.agent_task_result",
+    "era.service.types"
+  ]
+}

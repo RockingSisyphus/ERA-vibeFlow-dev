@@ -1,7 +1,7 @@
 {
   "type_key": "era.agent.generation_session",
   "display_name": "ERA 三阶段故事生成会话",
-  "description": "以一个 Service 会话包装 generation lifecycle；关闭功能时恢复并调用原 task.kind，开启时先归一化不含密钥的辅助阶段配置，再执行规划、纯函数、故事衔接和变量结算并复用既有同步。",
+  "description": "只处理生成生命周期、规划、正文衔接、结算与重试。先判定阶段，再准备必要请求、执行阶段、形成会话转换，复用原唯一同步边界。",
   "requires": [
     {
       "type": "era.step.request.routed",
@@ -37,7 +37,7 @@
         "required": true
       }
     ],
-    "max_steps": 16,
+    "max_steps": 20,
     "nodes": [
       {
         "id": "start",
@@ -48,14 +48,32 @@
       {
         "id": "prepare_auxiliary_execution_request",
         "type_used": "era.agent.prepare_auxiliary_execution_request",
-        "display_name": "准备多阶段生成与内联连接草稿",
-        "description": "在单一 AgentGenerationSession 内冻结角色卡 V1/V2 开关、尝试预设与模型来源；设置命令同时整理每张尝试卡内联编辑的本机连接草稿，生成阶段不再读取角色卡局部正则开关，且任何领域请求均不包含密钥正文。"
+        "display_name": "读取生成事实",
+        "description": "沿原宿主读取位置取得生成事实与配置，不把批次状态放入领域算法请求。"
+      },
+      {
+        "id": "classify_generation_event",
+        "type_used": "era.agent.classify_generation_event",
+        "display_name": "判定事件与阶段",
+        "description": "依据事件、功能开关和现有会话判定规划、正文完成、重试、取消或原任务委托；不执行宿主操作。"
+      },
+      {
+        "id": "prepare_generation_phase",
+        "type_used": "era.agent.prepare_generation_phase",
+        "display_name": "准备阶段请求",
+        "description": "按阶段提取配置快照、会话身份、正文和变量事实；领域算法只收到本阶段所需数据。"
       },
       {
         "id": "execute_agent_phase_v2",
         "type_used": "era.agent.execute_session_v2",
-        "display_name": "执行 Agent 阶段与会话关联计划",
-        "description": "保留原阶段和连接计划；在全部原 write_session 调用位置读取即时宿主关联事实，由登记纯库决定 nativeGeneration 与 storyRequestId 的继承及观察/等待启动意图。Host只执行请求记录、原生等待与会话存储，不再选择会话字段继承规则。"
+        "display_name": "执行生成阶段",
+        "description": "仅执行选定生成阶段及其已有尝试/重试序列。Capability 调用留在有副作用的 Node；会话绑定事实读取、纯决策与 write_session 连续完成。设置命令从此节点移除。"
+      },
+      {
+        "id": "form_session_transition",
+        "type_used": "era.agent.form_session_transition",
+        "display_name": "形成会话转换",
+        "description": "把阶段结果、原步骤和批次边界组合为原 AgentTransition；将最终楼层候选交给已有唯一同步链。"
       },
       {
         "id": "route_agent_transition",
@@ -101,10 +119,28 @@
       ],
       [
         "prepare_auxiliary_execution_request",
+        "classify_generation_event"
+      ],
+      [
+        "classify_generation_event",
+        "prepare_generation_phase"
+      ],
+      [
+        "prepare_generation_phase",
         "execute_agent_phase_v2"
       ],
       [
         "execute_agent_phase_v2",
+        "form_session_transition"
+      ],
+      {
+        "from": "start",
+        "to": "form_session_transition",
+        "transfer": false,
+        "schedule": true
+      },
+      [
+        "form_session_transition",
         "route_agent_transition"
       ],
       {

@@ -95,7 +95,7 @@
         "id": "finalize_dispatch_context",
         "type_used": "era.dispatch.finalize_context",
         "display_name": "生成稳定楼层派发上下文 V3",
-        "description": "合并互斥准备结果，把 GenerationCycleIdentity、可选 EraFloorIdentity、暂存消息更新与可选最终楼层候选封装进 EraDispatchContextV3；MK 是消息身份而不是跳过同步的判据。"
+        "description": "保留原上下文准备；仅将 era.ui.agent_configuration 分派到 agent-settings，生成事件仍进入 agent-generation-session。PlannedStep 的公开 taskRoute 不变。"
       },
       {
         "id": "end",

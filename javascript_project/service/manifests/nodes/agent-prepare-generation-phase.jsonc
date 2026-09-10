@@ -1,0 +1,57 @@
+{
+  "kind": "node",
+  "type_key": "era.agent.prepare_generation_phase",
+  "category": "Agent 工作流",
+  "version": "1.0.0",
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/agent/prepare_generation_phase.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "capabilities": [],
+  "display_name": "准备阶段请求",
+  "description": "按阶段提取配置快照、会话身份、正文和变量事实；领域算法只收到本阶段所需数据。",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.agent.generation.decision",
+        "cardinality": "exactly_one",
+        "display_name": "阶段决策"
+      }
+    ],
+    "provides": [
+      {
+        "key": "generation_request",
+        "type": "era.agent.generation.request",
+        "display_name": "阶段请求"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.agent.generation.decision": [
+        "输入：阶段决策"
+      ]
+    },
+    "output_semantics": {
+      "generation_request": [
+        "输出：阶段请求"
+      ]
+    }
+  },
+  "base_libs": [
+    "era.service.agent_flow_policy",
+    "era.service.agent_flow_types"
+  ]
+}

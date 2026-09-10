@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import _ from 'lodash';
 import { TavernEraServiceAdapter } from '../../src/ERA变量框架/service/tavern-adapter';
-import type { EraWorkflowHost } from '../../src/ERA变量框架/service/types';
 import { createWorkflowHost } from '@era/vibeflow-service';
 
 type EventHandler = (...args: unknown[]) => unknown;
@@ -41,7 +40,9 @@ function clone<T>(value: T): T {
 
 describe('重新生成的宏与生成栅栏', () => {
   const events = new FakeTavernEvents();
-  let host: EraWorkflowHost | null = null;
+  let host: ReturnType<typeof createWorkflowHost> | null = null;
+  let adapter: TavernEraServiceAdapter;
+  let executedNodes: string[];
   let execution: Promise<unknown> | null = null;
   let chatVariables: Record<string, unknown>;
   let replaceMacro: MacroReplace | null = null;
@@ -51,6 +52,7 @@ describe('重新生成的宏与生成栅栏', () => {
 
   beforeEach(async () => {
     pendingSwipe = false;
+    executedNodes = [];
     chatVariables = {
       stat_data: { generation_value: '待重生成楼层的变量' },
       ERAMetaData: {
@@ -77,11 +79,14 @@ describe('重新生成的宏与生成栅栏', () => {
     vi.stubGlobal('eventRemoveListener', (type: string, handler: EventHandler) => events.remove(type, handler));
     vi.stubGlobal('getButtonEvent', (name: string) => `era-button:${name}`);
     vi.stubGlobal('tavern_events', { GENERATION_ENDED: 'generation_ended' });
+    vi.stubGlobal('getPresetNames', () => []);
+    vi.stubGlobal('getLoadedPresetName', () => '');
     vi.stubGlobal('getCurrentCharacterId', () => 'barrier-card');
     vi.stubGlobal('getCurrentCharacterName', () => 'barrier-character');
     vi.stubGlobal('getScriptId', () => 'era-regenerate-barrier-test');
     let savedChat: unknown[] = [];
     vi.stubGlobal('SillyTavern', {
+      extensionSettings: {},
       characterId: '0',
       characters: [{ avatar: 'barrier-card', name: 'barrier-character', chat: 'barrier-chat' }],
       get chat() {
@@ -165,11 +170,19 @@ describe('重新生成的宏与生成栅栏', () => {
     vi.stubGlobal('refreshOneMessage', async () => undefined);
     vi.stubGlobal('toastr', { error: vi.fn() });
 
-    const adapter = new TavernEraServiceAdapter();
+    adapter = new TavernEraServiceAdapter();
     vi.stubGlobal('__ERA_VIBEFLOW_SERVICE_ADAPTER__', adapter);
-    host = createWorkflowHost() as EraWorkflowHost;
+    host = createWorkflowHost();
     await host.start();
-    execution = host.runWorkflowAsync({});
+    execution = host.runWorkflowAsync(
+      {},
+      {
+        trace: 'full',
+        onTrace: event => {
+          if (typeof event.nodeId === 'string') executedNodes.push(event.nodeId);
+        },
+      },
+    );
     const { registerEraMacro } = await import('../../src/ERA变量框架/macro/registration');
     unregisterMacro = registerEraMacro();
   });
@@ -182,6 +195,32 @@ describe('重新生成的宏与生成栅栏', () => {
     execution = null;
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
+  });
+
+  it('设置命令经过独立 Nodeset，在原 FIFO 中结算后仍能处理生成事件', async () => {
+    await vi.waitFor(() => expect(events.count('generation_started')).toBe(1));
+    await events.only('generation_started')('regenerate', { automatic_trigger: false }, false);
+    executedNodes = [];
+    const settings = adapter.enqueue('era.ui.agent_configuration', 'ui', [{ action: 'read' }]);
+    expect(settings.accepted).toBe(true);
+    if (!settings.accepted) throw new Error(settings.message);
+    const through = settings.waitThrough();
+    const result = await settings.done;
+    expect(result).toMatchObject({ eventId: settings.eventId, sequence: settings.sequence, status: 'completed' });
+    expect(result.value).toHaveProperty('configuration');
+    expect(executedNodes).toContain('execute_settings_command');
+    expect(executedNodes).toContain('build_settings_result');
+    expect(executedNodes).not.toContain('execute_agent_phase_v2');
+    const settled = await through;
+    expect(settled.outcomes.filter(item => item.eventId === settings.eventId)).toHaveLength(1);
+
+    executedNodes = [];
+    await events.only('generation_started')('regenerate', { automatic_trigger: false }, false);
+    expect(executedNodes).toContain('classify_generation_event');
+    expect(executedNodes).toContain('prepare_generation_phase');
+    expect(executedNodes).toContain('execute_agent_phase_v2');
+    expect(executedNodes).toContain('form_session_transition');
+    expect(executedNodes).not.toContain('execute_settings_command');
   });
 
   it.each(['regenerate', 'swipe'])('%s 必须在宏读取前只回退一次，保留楼1变量且不补写待生成楼', async generationType => {

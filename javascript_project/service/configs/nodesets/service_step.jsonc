@@ -17,6 +17,9 @@
     },
     {
       "path": "agent_generation_session.jsonc"
+    },
+    {
+      "path": "agent_settings.jsonc"
     }
   ],
   "type_key": "era.service.step",
@@ -99,7 +102,13 @@
         "id": "task_agent_generation_session",
         "type_used": "era.agent.generation_session",
         "display_name": "执行三阶段故事生成会话",
-        "description": "统一包装生成生命周期与多阶段生成设置；功能关闭或不适用时委托既有 ERA 行为，开启时在同一 FIFO、生成栅栏和取消域内执行规划、函数、故事衔接与变量结算。"
+        "description": "在原 FIFO、生成栅栏和取消域内处理生成生命周期与重试；设置命令已分到相邻 Nodeset。"
+      },
+      {
+        "id": "task_agent_settings",
+        "type_used": "era.agent.settings",
+        "display_name": "执行 Agent 设置命令",
+        "description": "配置、预设、连接与模型列表在同一 Service FIFO 内独立处理，不进入生成阶段。"
       },
       {
         "id": "task_ignore",
@@ -191,6 +200,15 @@
       [
         "merge_task_result",
         "end"
+      ],
+      {
+        "from": "prepare_dispatch_context",
+        "to": "task_agent_settings",
+        "when": "prepared_task_route == 'agent-settings'"
+      },
+      [
+        "task_agent_settings",
+        "merge_task_result"
       ]
     ],
     "outputs": [

@@ -1,5 +1,72 @@
 {
-  "kind":"node","type_key":"era.dispatch.finalize_context","display_name":"生成统一派发上下文","category":"任务派发","description":"把统一准备结果和显式任务来源封装进已准备步骤，并保留原批次状态。","version":"1.0.0","flow_kind":"process",
-  "contract":{"requires":[{"type":"era.dispatch.preparation.outcome","cardinality":"exactly_one","display_name":"派发准备结果"}],"provides":[{"key":"prepared_routed_step","type":"era.step.request.routed","display_name":"已准备路由步骤"},{"key":"prepared_task_route","type":"era.task.route","display_name":"已准备任务路由"},{"key":"prepared_execution_state","type":"era.batch.execution.state","display_name":"已准备批次状态"}],"params_schema":{},"params_defaults":{},"input_semantics":{"era.dispatch.preparation.outcome":["输入：互斥分支合并后的统一准备结果。"]},"output_semantics":{"prepared_routed_step":["输出：携带稳定身份、暂存消息与候选的 EraDispatchContextV3 步骤。"],"prepared_task_route":["输出：显式任务来源路由。"],"prepared_execution_state":["输出：未被准备阶段篡改的批次状态。"]}},
-  "implementations":[{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/dispatch/finalize_dispatch_context.ts","export":"run"}}],"base_libs":["era.service.dispatch_preparation"],"capabilities":[]
+  "kind": "node",
+  "type_key": "era.dispatch.finalize_context",
+  "display_name": "生成稳定楼层派发上下文 V3",
+  "category": "任务派发",
+  "description": "保留原上下文准备；仅将 era.ui.agent_configuration 分派到 agent-settings，生成事件仍进入 agent-generation-session。PlannedStep 的公开 taskRoute 不变。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.dispatch.preparation.outcome",
+        "cardinality": "exactly_one",
+        "display_name": "派发准备结果"
+      }
+    ],
+    "provides": [
+      {
+        "key": "prepared_routed_step",
+        "type": "era.step.request.routed",
+        "display_name": "已准备路由步骤"
+      },
+      {
+        "key": "prepared_task_route",
+        "type": "era.task.route",
+        "display_name": "已准备任务路由"
+      },
+      {
+        "key": "prepared_execution_state",
+        "type": "era.batch.execution.state",
+        "display_name": "已准备批次状态"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.dispatch.preparation.outcome": [
+        "输入：派发准备结果"
+      ]
+    },
+    "output_semantics": {
+      "prepared_routed_step": [
+        "输出：已准备路由步骤"
+      ],
+      "prepared_task_route": [
+        "输出：已准备任务路由"
+      ],
+      "prepared_execution_state": [
+        "输出：已准备批次状态"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/dispatch/finalize_dispatch_context.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.dispatch_preparation"
+  ],
+  "capabilities": []
 }

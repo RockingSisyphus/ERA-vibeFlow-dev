@@ -1,0 +1,82 @@
+{
+  "kind": "node",
+  "type_key": "era.agent.form_session_transition",
+  "category": "Agent 工作流",
+  "version": "1.0.0",
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/agent/form_session_transition.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "capabilities": [],
+  "display_name": "形成会话转换",
+  "description": "把阶段结果、原步骤和批次边界组合为原 AgentTransition；将最终楼层候选交给已有唯一同步链。",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.step.request.routed",
+        "cardinality": "exactly_one",
+        "display_name": "已准备步骤"
+      },
+      {
+        "type": "era.batch.execution.state",
+        "cardinality": "exactly_one",
+        "display_name": "批次状态"
+      },
+      {
+        "type": "era.agent.generation.outcome",
+        "cardinality": "exactly_one",
+        "display_name": "阶段结果"
+      }
+    ],
+    "provides": [
+      {
+        "key": "agent_transition",
+        "type": "era.agent.session.transition",
+        "display_name": "会话转换"
+      },
+      {
+        "key": "agent_execution_state",
+        "type": "era.batch.execution.state",
+        "display_name": "批次状态"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.step.request.routed": [
+        "输入：已准备步骤"
+      ],
+      "era.batch.execution.state": [
+        "输入：批次状态"
+      ],
+      "era.agent.generation.outcome": [
+        "输入：阶段结果"
+      ]
+    },
+    "output_semantics": {
+      "agent_transition": [
+        "输出：会话转换"
+      ],
+      "agent_execution_state": [
+        "输出：批次状态"
+      ]
+    }
+  },
+  "base_libs": [
+    "era.service.agent_flow_policy",
+    "era.service.agent_flow_types",
+    "era.service.types"
+  ]
+}

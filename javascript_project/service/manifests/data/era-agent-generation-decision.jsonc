@@ -1,0 +1,10 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.agent.generation.decision",
+  "display_name": "生成阶段决策",
+  "representation": "json",
+  "schema": {
+    "type": "object",
+    "additionalProperties": true
+  }
+}

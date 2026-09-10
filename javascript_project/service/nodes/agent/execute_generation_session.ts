@@ -1,12 +1,8 @@
-import { planSessionBinding, type SessionBindingFacts } from "../../base_lib/agent_session_binding.ts";
 import {
-  connectionId,
-  planConnectionSave,
-  planConnectionDelete,
-  planConnectionClear,
-  type ConnectionState,
-} from "../../base_lib/agent_connection_policy.ts";
-import { agentPresetName, captureAgentPresetSnapshot, buildAgentRequestPolicy } from "../../base_lib/agent_request_policy.ts";
+  planSessionBinding,
+  type SessionBindingFacts,
+} from "../../base_lib/agent_session_binding.ts";
+import { buildAgentRequestPolicy } from "../../base_lib/agent_request_policy.ts";
 import {
   AgentFunctionCallFailure,
   attemptProfile,
@@ -21,51 +17,26 @@ import {
   extractEraMessageKey,
   formatAgentPlanReport,
   formatAgentUpdateReport,
-  isAgentEnabled,
   isAgentPlanningFailureMessage,
   isolateStoryEraCommands,
-  normalizeAgentConfiguration,
   parsePlanningOutput,
   parseSettlementOutput,
   validateSettlementOperations,
   type EraAgentConfigurationV2,
   type EraAgentPlanningOutputV1,
 } from "../../base_lib/agent_generation_session.ts";
-import {
-  formatMessageKeyBlock,
-  stripEraDataBlocks,
-} from "../../base_lib/domain/mk_engine.ts";
 import type {
   EraAgentFloorCandidateV1,
-  EraDispatchContextV3,
   EraFloorIdentityV1,
 } from "@era/vibeflow-contracts";
-import type { PlannedStepV1 } from "../../base_lib/service_types.ts";
 
-interface Envelope<T> {
-  readonly value: T;
-}
+import type {
+  GenerationTrigger,
+  GenerationRequest,
+  AgentOutcome,
+} from "../../base_lib/agent_flow_types.ts";
 interface AgentCapability {
-  read_connection_state(input: Readonly<Record<string, unknown>>): ConnectionState;
-  await_native_completion(input: Readonly<Record<string, unknown>>): Promise<unknown>;
-  write_configuration(
-    input: Readonly<Record<string, unknown>>,
-  ): Promise<unknown>;
-  capture_preset(input: Readonly<Record<string, unknown>>): unknown;
-  read_configuration_sources(input: Readonly<Record<string, unknown>>): unknown;
-  upsert_connection_profile(
-    input: Readonly<Record<string, unknown>>,
-  ): Promise<unknown>;
-  delete_connection_profile(
-    input: Readonly<Record<string, unknown>>,
-  ): Promise<unknown>;
-  clear_connection_profile_key(
-    input: Readonly<Record<string, unknown>>,
-  ): Promise<unknown>;
-  list_connection_models(
-    input: Readonly<Record<string, unknown>>,
-  ): Promise<unknown>;
-  list_connection_models_draft(
+  await_native_completion(
     input: Readonly<Record<string, unknown>>,
   ): Promise<unknown>;
   generate(input: Readonly<Record<string, unknown>>): Promise<unknown>;
@@ -79,27 +50,22 @@ interface AgentCapability {
   ): Promise<unknown>;
   stop_native_generation(input: Readonly<Record<string, unknown>>): unknown;
 }
-/** 保留原写入时机，事实读取、纯决议和宿主提交之间不让出执行权。 */
-export function writeSession(capability: Pick<AgentCapability, "read_session_binding" | "write_session">, input: Readonly<Record<string, unknown>>): unknown {
-  const facts = capability.read_session_binding({ chatKey: input.chatKey }) as SessionBindingFacts;
-  const binding = planSessionBinding(input.session, input.nativeGeneration === true, facts);
+
+export function writeSession(
+  capability: Pick<AgentCapability, "read_session_binding" | "write_session">,
+  input: Readonly<Record<string, unknown>>,
+): unknown {
+  const facts = capability.read_session_binding({
+    chatKey: input.chatKey,
+  }) as SessionBindingFacts;
+  const binding = planSessionBinding(
+    input.session,
+    input.nativeGeneration === true,
+    facts,
+  );
   return capability.write_session({ ...input, ...binding });
 }
-/** 两个真实保存入口共用同一规则，每次写入前读取当时的本机事实。 */
-function saveConnection(
-  capability: AgentCapability,
-  input: Readonly<Record<string, unknown>>,
-): Promise<unknown> {
-  const state = capability.read_connection_state({ id: connectionId(input.id) });
-  const plan = planConnectionSave(input, state);
-  return capability.upsert_connection_profile({ ...plan, keyReference: input.keyReference });
-}
 
-interface Context {
-  readonly capabilities: { readonly "era.tavern.agent": AgentCapability };
-}
-
-type Mode = "legacy" | "legacy-ignore" | "execute-legacy" | "execute-only";
 class AgentSessionFailure extends Error {
   constructor(
     readonly code: string,
@@ -109,208 +75,13 @@ class AgentSessionFailure extends Error {
     this.name = "AgentSessionFailure";
   }
 }
-interface AgentTransition {
-  readonly schemaVersion: 1;
-  readonly step: PlannedStepV1;
-  readonly mode: Mode;
-  readonly status: "committed" | "no-op" | "failed";
-  readonly diagnostics: readonly Readonly<{ code: string; message: string }>[];
-  readonly value?: unknown;
-}
-
-type MutableAgentProfile = {
-  preset: unknown;
-  modelSource: {
-    kind: "tavern-current" | "custom-profile";
-    profileId?: string;
-    profileNameHint?: string;
-    model?: string;
-  };
-};
-type MutableAgentConfiguration = {
-  schemaVersion: "2";
-  planning: {
-    enabled: boolean;
-    retryCount: number;
-    attempts: MutableAgentProfile[];
-  };
-  settlement: {
-    enabled: boolean;
-    retryCount: number;
-    attempts: MutableAgentProfile[];
-  };
-};
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
-function readArg(step: PlannedStepV1, index: number): unknown {
-  if (step.kind !== "execute") return undefined;
-  const arg = step.task.primaryEvent.args[index];
-  return arg?.kind === "json" ? arg.value : undefined;
-}
-
-/** 宿主引用保持为无损 transport DTO，只允许机械转交给受限 Host capability。 */
-function readRawArg(step: PlannedStepV1, index: number): unknown {
-  return step.kind === "execute"
-    ? step.task.primaryEvent.args[index]
-    : undefined;
-}
-
-function eventType(step: PlannedStepV1): string {
-  return step.kind === "execute" ? step.task.primaryEvent.type : "";
-}
-
-function dispatchContextV3(step: PlannedStepV1): EraDispatchContextV3 {
-  if (
-    step.kind !== "execute" ||
-    !isRecord(step.dispatchContext) ||
-    step.dispatchContext.schemaVersion !== 3
-  ) {
-    throw new AgentSessionFailure(
-      "ERA_AGENT_DISPATCH_CONTEXT_V3_REQUIRED",
-      "Agent 楼层提交缺少稳定身份派发上下文。",
-    );
-  }
-  return step.dispatchContext as unknown as EraDispatchContextV3;
-}
-
-function floorIdentity(step: PlannedStepV1): EraFloorIdentityV1 {
-  const identity = dispatchContextV3(step).floorIdentity;
-  if (identity === null) {
-    throw new AgentSessionFailure(
-      "ERA_AGENT_FLOOR_IDENTITY_REQUIRED",
-      "Agent 楼层候选缺少真实 assistant 楼层身份。",
-    );
-  }
-  return identity;
-}
-
-function canonicalFloorContent(
-  content: string,
-  identity: EraFloorIdentityV1,
-  keepStatusPlaceholder: boolean,
-): string {
-  const story = stripEraDataBlocks(content)
-    .replace(/<StatusPlaceHolderImpl\s*\/>/giu, "")
-    .trimEnd();
-  return [
-    story,
-    formatMessageKeyBlock(identity.mk, "assistant"),
-    keepStatusPlaceholder ? "<StatusPlaceHolderImpl/>" : "",
-  ]
-    .filter(Boolean)
-    .join("\n");
-}
-
-function withFloorCandidate(
-  step: PlannedStepV1,
-  rawCandidate: EraAgentFloorCandidateV1,
-): PlannedStepV1 {
-  if (step.kind !== "execute") return step;
-  const dispatchContext = dispatchContextV3(step);
-  const identity = floorIdentity(step);
-  if (
-    rawCandidate.messageId !== identity.messageId ||
-    rawCandidate.swipeId !== identity.swipeId ||
-    rawCandidate.mk !== identity.mk
-  ) {
-    throw new AgentSessionFailure(
-      "ERA_FLOOR_IDENTITY_MISMATCH",
-      "Agent 最终楼层候选与派发楼层身份不一致。",
-    );
-  }
-  const keepStatusPlaceholder =
-    dispatchContext.processingMessage?.activeText.includes(
-      "<StatusPlaceHolderImpl/>",
-    ) === true;
-  const content = canonicalFloorContent(
-    rawCandidate.content,
-    identity,
-    keepStatusPlaceholder,
-  );
-  const candidate: EraAgentFloorCandidateV1 = {
-    ...rawCandidate,
-    content,
-  };
-  const messages = dispatchContext.messages.map((message) =>
-    message.messageId === identity.messageId
-      ? { ...message, activeText: content }
-      : message,
-  );
-  const processingMessage =
-    dispatchContext.processingMessage?.messageId === identity.messageId
-      ? { ...dispatchContext.processingMessage, activeText: content }
-      : dispatchContext.processingMessage;
-  const stagedMessageUpdates = [
-    ...dispatchContext.stagedMessageUpdates.filter(
-      (update) => update.messageId !== identity.messageId,
-    ),
-    { messageId: identity.messageId, content },
-  ];
-  return {
-    ...step,
-    dispatchContext: {
-      ...dispatchContext,
-      messages,
-      processingMessage,
-      stagedMessageUpdates,
-      agentFloorCandidate: candidate,
-    },
-  };
-}
-
 function failureMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
-}
-
-/**
- * 新建本机方案时 profileId 必然要到 Host 写入后才能得到。这里先保留
- * 空 ID 的 custom-profile 意图，再由 write-with-connections 回填真实 ID；若提前调用
- * normalizeAgentConfiguration，空 ID 会被安全降级成 tavern-current，导致新建方案
- * 永远无法绑定。最终写卡前仍会再走一次严格归一化。
- */
-function configurationWithPendingConnections(
-  value: unknown,
-): MutableAgentConfiguration {
-  const configuration = structuredClone(
-    normalizeAgentConfiguration(value),
-  ) as MutableAgentConfiguration;
-  if (!isRecord(value)) return configuration;
-
-  for (const stageName of ["planning", "settlement"] as const) {
-    const rawStage = isRecord(value[stageName]) ? value[stageName] : null;
-    const rawAttempts = Array.isArray(rawStage?.attempts)
-      ? rawStage.attempts
-      : [];
-    rawAttempts
-      .slice(0, configuration[stageName].attempts.length)
-      .forEach((rawAttempt, index) => {
-        if (!isRecord(rawAttempt) || !isRecord(rawAttempt.modelSource)) return;
-        const rawSource = rawAttempt.modelSource;
-        if (rawSource.kind !== "custom-profile") return;
-        const profileId =
-          typeof rawSource.profileId === "string"
-            ? rawSource.profileId.trim().slice(0, 256)
-            : "";
-        const profileNameHint =
-          typeof rawSource.profileNameHint === "string"
-            ? rawSource.profileNameHint.trim().slice(0, 256)
-            : "";
-        const model =
-          typeof rawSource.model === "string"
-            ? rawSource.model.trim().slice(0, 512)
-            : "";
-        configuration[stageName].attempts[index]!.modelSource = {
-          kind: "custom-profile",
-          profileId,
-          ...(profileNameHint ? { profileNameHint } : {}),
-          ...(model ? { model } : {}),
-        };
-      });
-  }
-  return configuration;
 }
 
 function throwHostGenerationFailure(result: unknown): void {
@@ -332,11 +103,6 @@ function chatKey(context: Record<string, unknown>): string {
   return typeof identity.chatId === "string" && identity.chatId.length > 0
     ? identity.chatId
     : "unknown-chat";
-}
-
-function isGroupChat(context: Record<string, unknown>): boolean {
-  const identity = isRecord(context.identity) ? context.identity : {};
-  return typeof identity.groupId === "string" && identity.groupId.length > 0;
 }
 
 function stateContext(context: Record<string, unknown>): Readonly<{
@@ -374,28 +140,10 @@ function lastUserText(context: Record<string, unknown>): string {
   return "";
 }
 
-function eligibleGeneration(step: PlannedStepV1): boolean {
-  const type = readArg(step, 0);
-  const dryRun = readArg(step, 2) === true;
-  return !dryRun && type !== "quiet" && type !== "impersonate";
-}
-
 function sessionObject(
   context: Record<string, unknown>,
 ): Record<string, unknown> | null {
   return isRecord(context.session) ? structuredClone(context.session) : null;
-}
-
-/**
- * 一轮生成的配置由会话拥有。角色卡设置只负责创建下一轮会话，
- * 不能在 planning 与 message_received 之间改变当前轮的阶段语义。
- */
-function sessionConfiguration(
-  session: Record<string, unknown> | null,
-): EraAgentConfigurationV2 | null {
-  return session !== null && isRecord(session.configuration)
-    ? normalizeAgentConfiguration(session.configuration)
-    : null;
 }
 
 function isAwaitingStorySession(
@@ -411,11 +159,6 @@ function isAwaitingStorySession(
 
 function boundedTrace(value: string): string {
   return value.slice(0, 131072);
-}
-
-function generationKind(step: PlannedStepV1): string {
-  const value = readArg(step, 0);
-  return typeof value === "string" ? value : "normal";
 }
 
 function openedSession(
@@ -482,7 +225,7 @@ async function runPlanning(
   capability: AgentCapability,
   configuration: EraAgentConfigurationV2,
   context: Record<string, unknown>,
-  step: PlannedStepV1,
+  trigger: GenerationTrigger,
 ): Promise<Record<string, unknown>> {
   const state = stateContext(context);
   const key = chatKey(context);
@@ -492,19 +235,15 @@ async function runPlanning(
     latest && typeof latest.message === "string"
       ? extractEraMessageKey(latest.message)
       : null;
-  const generationIdentity =
-    step.kind === "execute" &&
-    isRecord(step.dispatchContext) &&
-    step.dispatchContext.schemaVersion === 3 &&
-    isRecord(step.dispatchContext.generationCycleIdentity)
-      ? step.dispatchContext.generationCycleIdentity
-      : null;
+  const generationIdentity = isRecord(trigger.cycleIdentity)
+    ? trigger.cycleIdentity
+    : null;
   const sourceKey =
     (typeof generationIdentity?.sourceKey === "string"
       ? generationIdentity.sourceKey
       : null) ??
     messageKey ??
-    `${key}:agent:${step.kind === "execute" ? step.task.primaryEvent.sequence : 0}`;
+    `${key}:agent:${trigger.sequence}`;
   const drawOffset =
     previousSession?.sourceKey === sourceKey &&
     Number.isSafeInteger(previousSession.nextDrawOffset)
@@ -522,10 +261,7 @@ async function runPlanning(
     let response: string | undefined;
     let responseValidated = false;
     const requestContext = agentRequestContext(
-      sessionExecution(
-        previousSession,
-        step.kind === "execute" ? step.task.primaryEvent.eventId : "unknown",
-      ),
+      sessionExecution(previousSession, trigger.eventId),
       attempt,
       failure,
     );
@@ -546,7 +282,7 @@ async function runPlanning(
           profile,
           "planning",
           userInput,
-          `era-plan-${step.kind === "execute" ? step.task.primaryEvent.eventId : "unknown"}-${attempt}`,
+          `era-plan-${trigger.eventId}-${attempt}`,
           requestContext,
         ),
       );
@@ -979,415 +715,67 @@ async function retryStory(
     };
   }
 }
-
-function transition(
-  step: PlannedStepV1,
-  mode: Mode,
-  status: AgentTransition["status"] = "no-op",
-  diagnostics: AgentTransition["diagnostics"] = [],
+function outcome(
+  mode: AgentOutcome["mode"],
+  status: AgentOutcome["status"] = "no-op",
+  diagnostics: AgentOutcome["diagnostics"] = [],
   value?: unknown,
-): AgentTransition {
+  candidate?: EraAgentFloorCandidateV1,
+): AgentOutcome {
   return {
-    schemaVersion: 1,
-    step,
     mode,
     status,
     diagnostics,
     ...(value === undefined ? {} : { value }),
+    ...(candidate ? { candidate } : {}),
   };
 }
-
+function requestIdentity(request: GenerationRequest): EraFloorIdentityV1 {
+  if (request.identityError)
+    throw new AgentSessionFailure(
+      request.identityError.code,
+      request.identityError.message,
+    );
+  if (!request.identity)
+    throw new AgentSessionFailure(
+      "ERA_AGENT_FLOOR_IDENTITY_REQUIRED",
+      "Agent 楼层候选缺少真实 assistant 楼层身份。",
+    );
+  return request.identity;
+}
 export async function run(
-  inputs: Readonly<{
-    "era.agent.auxiliary.execution_request": Envelope<unknown>;
-  }>,
+  inputs: Readonly<Record<string, unknown>>,
   _params: Readonly<Record<string, unknown>>,
-  runtime: Context,
+  runtime: { capabilities: { "era.tavern.agent": AgentCapability } },
 ): Promise<any> {
-  const request = inputs["era.agent.auxiliary.execution_request"].value;
-  if (!isRecord(request) || request.schemaVersion !== 2) {
-    throw new TypeError("AgentGenerationSession 缺少 V2 辅助阶段执行请求。");
-  }
-  const step = request.routedStep as PlannedStepV1;
-  const executionState = request.executionState;
-  const preparedContext = request.hostContext;
-  const output = (
-    agent_transition: AgentTransition,
-  ): Record<string, unknown> => ({
-    agent_transition,
-    agent_execution_state: executionState,
-  });
-  if (
-    step.kind !== "execute" ||
-    step.taskRoute !== "agent-generation-session"
-  ) {
-    throw new TypeError("AgentGenerationSession 只接受已包装的 execute 步骤。");
-  }
+  const request = (
+    inputs["era.agent.generation.request"] as { value: GenerationRequest }
+  ).value;
+  const output = (generation_outcome: AgentOutcome) => ({ generation_outcome });
   const capability = runtime.capabilities["era.tavern.agent"];
-  const type = eventType(step);
-
-  if (type === "era.ui.agent_configuration") {
-    const payload = readArg(step, 0);
-    if (!isRecord(payload))
-      return output(
-        transition(step, "execute-only", "failed", [
-          { code: "ERA_AGENT_CONFIG_INVALID", message: "配置请求缺少对象。" },
-        ]),
-      );
-    if (payload.action === "read") {
-      const rawContext = preparedContext;
-      const configuration = normalizeAgentConfiguration(
-        isRecord(rawContext) ? rawContext.configuration : null,
-      );
-      const sources = capability.read_configuration_sources({});
-      return output(
-        transition(step, "execute-only", "committed", [], {
-          configuration,
-          groupChat: isRecord(rawContext) && isGroupChat(rawContext),
-          session: isRecord(rawContext) ? (rawContext.session ?? null) : null,
-          sources,
-        }),
-      );
-    }
-    if (payload.action === "read-sources") {
-      return output(
-        transition(step, "execute-only", "committed", [], {
-          sources: capability.read_configuration_sources({}),
-        }),
-      );
-    }
-    if (payload.action === "capture-preset") {
-      try {
-        const preset = captureAgentPresetSnapshot(capability.capture_preset({ name: agentPresetName(payload.name) }));
-        return output(
-          transition(step, "execute-only", "committed", [], { preset }),
-        );
-      } catch (error) {
-        return output(
-          transition(step, "execute-only", "failed", [
-            {
-              code: "ERA_AGENT_PRESET_CAPTURE_FAILED",
-              message: failureMessage(error),
-            },
-          ]),
-        );
-      }
-    }
-    if (payload.action === "upsert-connection-profile") {
-      try {
-        const result = await saveConnection(
-          capability,
-          isRecord(payload.profile) ? payload.profile : {},
-        );
-        return output(
-          transition(step, "execute-only", "committed", [], {
-            result,
-            sources: capability.read_configuration_sources({}),
-          }),
-        );
-      } catch (error) {
-        return output(
-          transition(step, "execute-only", "failed", [
-            {
-              code: "ERA_AGENT_PROFILE_WRITE_FAILED",
-              message: failureMessage(error),
-            },
-          ]),
-        );
-      }
-    }
-    if (payload.action === "delete-connection-profile") {
-      try {
-        const state = capability.read_connection_state({ id: connectionId(payload.id) });
-        const result = await capability.delete_connection_profile(planConnectionDelete(payload.id, state));
-        return output(
-          transition(step, "execute-only", "committed", [], {
-            result,
-            sources: capability.read_configuration_sources({}),
-          }),
-        );
-      } catch (error) {
-        return output(
-          transition(step, "execute-only", "failed", [
-            {
-              code: "ERA_AGENT_PROFILE_DELETE_FAILED",
-              message: failureMessage(error),
-            },
-          ]),
-        );
-      }
-    }
-    if (payload.action === "clear-connection-profile-key") {
-      try {
-        const state = capability.read_connection_state({ id: connectionId(payload.id) });
-        const result = await capability.clear_connection_profile_key(planConnectionClear(state));
-        return output(
-          transition(step, "execute-only", "committed", [], {
-            result,
-            sources: capability.read_configuration_sources({}),
-          }),
-        );
-      } catch (error) {
-        return output(
-          transition(step, "execute-only", "failed", [
-            {
-              code: "ERA_AGENT_PROFILE_KEY_CLEAR_FAILED",
-              message: failureMessage(error),
-            },
-          ]),
-        );
-      }
-    }
-    if (payload.action === "list-connection-models") {
-      try {
-        const result = await capability.list_connection_models({
-          id: payload.id,
-        });
-        return output(
-          transition(step, "execute-only", "committed", [], { result }),
-        );
-      } catch (error) {
-        return output(
-          transition(step, "execute-only", "failed", [
-            {
-              code: "ERA_AGENT_MODEL_LIST_FAILED",
-              message: failureMessage(error),
-            },
-          ]),
-        );
-      }
-    }
-    if (payload.action === "list-connection-models-draft") {
-      try {
-        const keyArgIndex = Number(payload.keyArgIndex);
-        const result = await capability.list_connection_models_draft({
-          apiUrl: payload.apiUrl,
-          ...(Number.isSafeInteger(keyArgIndex) && keyArgIndex > 0
-            ? { keyReference: readRawArg(step, keyArgIndex) }
-            : {}),
-        });
-        return output(
-          transition(step, "execute-only", "committed", [], { result }),
-        );
-      } catch (error) {
-        return output(
-          transition(step, "execute-only", "failed", [
-            {
-              code: "ERA_AGENT_MODEL_LIST_FAILED",
-              message: failureMessage(error),
-            },
-          ]),
-        );
-      }
-    }
-    if (payload.action === "write-with-connections") {
-      try {
-        const configuration = configurationWithPendingConnections(
-          payload.configuration,
-        );
-        const mutations = Array.isArray(payload.connectionMutations)
-          ? payload.connectionMutations.filter(isRecord).slice(0, 34)
-          : [];
-        const signatures = new Map<string, string>();
-        const results = new Map<string, unknown>();
-
-        // 必须在第一次宿主写入前完整验证草稿表和共享方案冲突，
-        // 否则后续无效草稿会在总保存失败时留下本不应发生的前缀写入。
-        for (const mutation of mutations) {
-          const stage = mutation.stage;
-          const index = Number(mutation.index);
-          if (
-            (stage !== "planning" && stage !== "settlement") ||
-            !Number.isSafeInteger(index) ||
-            index < 0
-          ) {
-            throw new TypeError("连接草稿缺少合法阶段或尝试序号。");
-          }
-          const attempt = configuration[stage].attempts[index];
-          if (!attempt || attempt.modelSource.kind !== "custom-profile") {
-            throw new TypeError("连接草稿目标不是自定义 API 尝试。");
-          }
-          const existingId =
-            typeof mutation.id === "string" && mutation.id.length > 0
-              ? mutation.id
-              : "";
-          const keyArgIndex = Number(mutation.keyArgIndex);
-          const signature = JSON.stringify({
-            name: mutation.name,
-            apiUrl: mutation.apiUrl,
-            clearKey: mutation.clearKey === true,
-            hasKey: Number.isSafeInteger(keyArgIndex) && keyArgIndex > 0,
-          });
-          if (existingId) {
-            const previous = signatures.get(existingId);
-            if (previous !== undefined && previous !== signature) {
-              throw new TypeError(
-                `同一本机方案 ${existingId} 被多个尝试以冲突内容修改；请将其中一项另存为。`,
-              );
-            }
-            signatures.set(existingId, signature);
-          }
-        }
-
-        for (const mutation of mutations) {
-          const stage = mutation.stage as "planning" | "settlement";
-          const index = Number(mutation.index);
-          const attempt = configuration[stage].attempts[index]!;
-          const existingId =
-            typeof mutation.id === "string" && mutation.id.length > 0
-              ? mutation.id
-              : "";
-          const keyArgIndex = Number(mutation.keyArgIndex);
-          const signature = JSON.stringify({
-            name: mutation.name,
-            apiUrl: mutation.apiUrl,
-            clearKey: mutation.clearKey === true,
-            hasKey: Number.isSafeInteger(keyArgIndex) && keyArgIndex > 0,
-          });
-
-          let result = existingId
-            ? results.get(`${existingId}:${signature}`)
-            : undefined;
-          if (result === undefined) {
-            result = await saveConnection(capability, {
-              ...(existingId ? { id: existingId } : {}),
-              name: mutation.name,
-              apiUrl: mutation.apiUrl,
-              clearKey: mutation.clearKey === true,
-              ...(Number.isSafeInteger(keyArgIndex) && keyArgIndex > 0
-                ? { keyReference: readRawArg(step, keyArgIndex) }
-                : {}),
-            });
-            if (existingId) results.set(`${existingId}:${signature}`, result);
-          }
-          const summary =
-            isRecord(result) && isRecord(result.profile)
-              ? result.profile
-              : null;
-          if (
-            !summary ||
-            typeof summary.id !== "string" ||
-            typeof summary.name !== "string"
-          ) {
-            throw new TypeError("Host 未返回已保存连接方案的脱敏摘要。");
-          }
-          attempt.modelSource.profileId = summary.id;
-          attempt.modelSource.profileNameHint = summary.name;
-        }
-
-        for (const stageName of ["planning", "settlement"] as const) {
-          for (const [index, attempt] of configuration[
-            stageName
-          ].attempts.entries()) {
-            if (
-              attempt.modelSource.kind === "custom-profile" &&
-              !attempt.modelSource.profileId
-            ) {
-              throw new TypeError(
-                `${stageName} 尝试 ${index + 1} 的自定义 API 方案尚未保存或绑定。`,
-              );
-            }
-          }
-        }
-
-        const normalized = normalizeAgentConfiguration(configuration);
-        await capability.write_configuration({ configuration: normalized });
-        return output(
-          transition(step, "execute-only", "committed", [], {
-            configuration: normalized,
-            sources: capability.read_configuration_sources({}),
-          }),
-        );
-      } catch (error) {
-        return output(
-          transition(step, "execute-only", "failed", [
-            {
-              code: "ERA_AGENT_CONFIGURATION_SAVE_FAILED",
-              message: failureMessage(error),
-            },
-          ]),
-        );
-      }
-    }
-    const configuration = normalizeAgentConfiguration(payload.configuration);
-    await capability.write_configuration({ configuration });
-    return output(
-      transition(step, "execute-only", "committed", [], { configuration }),
-    );
-  }
-
-  const rawContext = preparedContext;
-  if (rawContext === null && Array.isArray(request.diagnostics)) {
-    const diagnostic = request.diagnostics.find(isRecord);
-    return output(
-      transition(step, "legacy", "no-op", [
-        {
-          code: "ERA_AGENT_CONTEXT_UNAVAILABLE",
-          message:
-            diagnostic && typeof diagnostic.message === "string"
-              ? diagnostic.message
-              : "宿主上下文不可用。",
-        },
-      ]),
-    );
-  }
-  if (!isRecord(rawContext)) {
-    return output(
-      transition(step, "legacy", "failed", [
-        {
-          code: "ERA_AGENT_CONTEXT_INVALID",
-          message: "宿主未返回 Agent 上下文。",
-        },
-      ]),
-    );
-  }
-  const currentConfiguration = normalizeAgentConfiguration(
-    request.configuration,
-  );
-  if (type === "generation_stopped") {
+  if (request.phase === "finish") return output(request.disposition!);
+  const rawContext = request.context!;
+  if (request.phase === "cancel") {
     capability.clear_session({ chatKey: chatKey(rawContext) });
     return output(
-      transition(step, "legacy-ignore", "committed", [], {
+      outcome("legacy-ignore", "committed", [], {
         status: "generation-cancelled",
       }),
     );
   }
-  if (isGroupChat(rawContext)) {
-    return output(
-      transition(step, "legacy", "no-op", [], {
-        status: "group-chat-unsupported",
-      }),
-    );
-  }
-  const existingSession = sessionObject(rawContext);
-  const frozenConfiguration = sessionConfiguration(existingSession);
-  const continuesExistingCycle =
-    type === "message_received" ||
-    type === "era.ui.agent_retry" ||
-    (type === "generation_started" && generationKind(step) === "normal");
-  const configuration =
-    continuesExistingCycle && frozenConfiguration !== null
-      ? frozenConfiguration
-      : currentConfiguration;
-  const active = isAgentEnabled(configuration);
-  if (!active) {
-    return output(transition(step, "legacy"));
-  }
-  if (type === "generation_started" && !eligibleGeneration(step)) {
-    return output(transition(step, "legacy"));
-  }
-
+  const configuration = request.configuration,
+    trigger = request.trigger,
+    type = trigger.type;
   try {
     if (type === "message_sent" || type === "generation_started") {
-      const kind =
-        type === "generation_started" ? generationKind(step) : "normal";
+      const kind = type === "generation_started" ? trigger.kind : "normal";
       let session = sessionObject(rawContext);
       if (
         type === "generation_started" &&
         kind === "normal" &&
         !isAwaitingStorySession(rawContext, session)
       ) {
-        return output(transition(step, "legacy"));
+        return output(outcome("legacy"));
       }
       const startsNewCycle = type === "message_sent" || kind !== "normal";
       if (startsNewCycle) {
@@ -1395,9 +783,13 @@ export async function run(
           rawContext,
           configuration,
           kind,
-          step.task.primaryEvent.eventId,
+          trigger.eventId,
         );
-        writeSession(capability, { chatKey: chatKey(rawContext), session, nativeGeneration: true });
+        writeSession(capability, {
+          chatKey: chatKey(rawContext),
+          session,
+          nativeGeneration: true,
+        });
       }
       if (session === null) {
         throw new TypeError("Agent 生成周期未能建立会话。");
@@ -1415,11 +807,11 @@ export async function run(
           capability,
           configuration,
           planningContext,
-          step,
+          trigger,
         );
         writeSession(capability, { chatKey: chatKey(rawContext), session });
         capability.inject_once({
-          id: `era-agent-story-${step.task.primaryEvent.eventId}`,
+          id: `era-agent-story-${trigger.eventId}`,
           content: buildStoryInjection({
             plan: session.plan as unknown as EraAgentPlanningOutputV1,
             results: Array.isArray(session.functionResults)
@@ -1428,50 +820,60 @@ export async function run(
           }),
         });
       }
-      return output(transition(step, "execute-legacy", "committed"));
+      return output(outcome("execute-legacy", "committed"));
     }
 
     if (type === "message_received") {
       if (isAgentPlanningFailureMessage(latestMessage(rawContext))) {
         capability.clear_session({ chatKey: chatKey(rawContext) });
         return output(
-          transition(step, "legacy-ignore", "committed", [], {
+          outcome("legacy-ignore", "committed", [], {
             status: "planning-failed-message-preserved",
           }),
         );
       }
       const session = sessionObject(rawContext);
       if (!isAwaitingStorySession(rawContext, session)) {
-        return output(transition(step, "legacy"));
+        return output(outcome("legacy"));
       }
-      let nextStep: PlannedStepV1 = step;
-      const identity = floorIdentity(step);
+      let candidate: EraAgentFloorCandidateV1 | undefined;
+      const identity = requestIdentity(request);
       if (configuration.settlement.enabled) {
-        const execution = sessionExecution(session, step.task.primaryEvent.eventId);
+        const execution = sessionExecution(session, trigger.eventId);
         const completed = await capability.await_native_completion({
-          chatId: chatKey(rawContext), executionId: execution.id,
+          chatId: chatKey(rawContext),
+          executionId: execution.id,
         });
-        const current = isRecord(completed) && isRecord(completed.latestMessage) ? completed.latestMessage : null;
-        if (!isRecord(completed) || (completed.status !== "completed" && completed.status !== "not-native") || completed.executionId !== execution.id ||
-            !isRecord(completed.identity) || completed.identity.chatId !== identity.chatId ||
-            !current || current.message_id !== identity.messageId ||
-            Number(current.swipe_id ?? 0) !== identity.swipeId ||
-            current.message !== latestMessage(rawContext)?.message) {
-          return output(transition(step, "legacy-ignore", "no-op", [], {
-            status: "native-generation-no-longer-current",
-          }));
+        const current =
+          isRecord(completed) && isRecord(completed.latestMessage)
+            ? completed.latestMessage
+            : null;
+        if (
+          !isRecord(completed) ||
+          (completed.status !== "completed" &&
+            completed.status !== "not-native") ||
+          completed.executionId !== execution.id ||
+          !isRecord(completed.identity) ||
+          completed.identity.chatId !== identity.chatId ||
+          !current ||
+          current.message_id !== identity.messageId ||
+          Number(current.swipe_id ?? 0) !== identity.swipeId ||
+          current.message !== latestMessage(rawContext)?.message
+        ) {
+          return output(
+            outcome("legacy-ignore", "no-op", [], {
+              status: "native-generation-no-longer-current",
+            }),
+          );
         }
-        nextStep = withFloorCandidate(
-          step,
-          await runSettlement(
-            capability,
-            configuration,
-            rawContext,
-            session,
-            identity,
-            true,
-            step.task.primaryEvent.eventId,
-          ),
+        candidate = await runSettlement(
+          capability,
+          configuration,
+          rawContext,
+          session,
+          identity,
+          true,
+          trigger.eventId,
         );
       } else if (configuration.planning.enabled) {
         const latest = latestMessage(rawContext);
@@ -1494,7 +896,7 @@ export async function run(
           ]
             .filter(Boolean)
             .join("\n");
-          nextStep = withFloorCandidate(step, {
+          candidate = {
             messageId: identity.messageId,
             swipeId: identity.swipeId,
             mk: identity.mk,
@@ -1508,7 +910,7 @@ export async function run(
             },
             terminalStatus: "story-complete",
             requiresInitialPresentation: true,
-          });
+          };
           writeSession(capability, {
             chatKey: chatKey(rawContext),
             session: {
@@ -1521,11 +923,13 @@ export async function run(
           });
         }
       }
-      return output(transition(nextStep, "execute-legacy", "committed"));
+      return output(
+        outcome("execute-legacy", "committed", [], undefined, candidate),
+      );
     }
 
     if (type === "era.ui.agent_retry") {
-      const retry = readArg(step, 0);
+      const retry = trigger.retry;
       if (
         !isRecord(retry) ||
         !["planning", "story", "settlement"].includes(String(retry.kind))
@@ -1560,12 +964,12 @@ export async function run(
         throw new TypeError(
           "当前报告对应的 Agent 周期已失效，请查看最新楼层。",
         );
-      const identity = floorIdentity(step);
+      const identity = requestIdentity(request);
       let candidate: EraAgentFloorCandidateV1;
       session = {
         ...session,
         execution: {
-          id: step.task.primaryEvent.eventId,
+          id: trigger.eventId,
           trigger: `manual-${String(retry.kind)}`,
         },
       };
@@ -1574,7 +978,7 @@ export async function run(
           capability,
           configuration,
           { ...rawContext, session },
-          step,
+          trigger,
         );
         writeSession(capability, { chatKey: chatKey(rawContext), session });
         candidate = await retryStory(
@@ -1583,7 +987,7 @@ export async function run(
           rawContext,
           session,
           identity,
-          step.task.primaryEvent.eventId,
+          trigger.eventId,
         );
       } else if (retry.kind === "story") {
         candidate = await retryStory(
@@ -1592,7 +996,7 @@ export async function run(
           rawContext,
           session,
           identity,
-          step.task.primaryEvent.eventId,
+          trigger.eventId,
         );
       } else {
         candidate = await runSettlement(
@@ -1602,15 +1006,11 @@ export async function run(
           session,
           identity,
           false,
-          step.task.primaryEvent.eventId,
+          trigger.eventId,
         );
       }
       return output(
-        transition(
-          withFloorCandidate(step, candidate),
-          "execute-legacy",
-          "committed",
-        ),
+        outcome("execute-legacy", "committed", [], undefined, candidate),
       );
     }
   } catch (error) {
@@ -1619,10 +1019,10 @@ export async function run(
         ? error.code
         : "ERA_AGENT_SESSION_FAILED";
     return output(
-      transition(step, "execute-only", "failed", [
+      outcome("execute-only", "failed", [
         { code, message: failureMessage(error) },
       ]),
     );
   }
-  return output(transition(step, "legacy"));
+  return output(outcome("legacy"));
 }

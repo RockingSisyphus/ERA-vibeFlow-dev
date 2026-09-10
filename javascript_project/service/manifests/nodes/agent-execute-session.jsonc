@@ -1,44 +1,36 @@
 {
   "kind": "node",
   "type_key": "era.agent.execute_session_v2",
-  "display_name": "执行 AgentGenerationSession V2 阶段",
+  "display_name": "执行生成阶段",
   "category": "故事生成会话",
-  "description": "由 Service 决定配置、阶段、重试、严格解析、函数执行、故事隔离、变量试应用和最终楼层候选；Agent Host 不直接写最终消息。",
+  "description": "仅执行选定生成阶段及其已有尝试/重试序列。Capability 调用留在有副作用的 Node；会话绑定事实读取、纯决策与 write_session 连续完成。设置命令从此节点移除。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
     "requires": [
       {
-        "type": "era.agent.auxiliary.execution_request",
+        "type": "era.agent.generation.request",
         "cardinality": "exactly_one",
-        "display_name": "不含密钥的辅助阶段执行请求"
+        "display_name": "阶段请求"
       }
     ],
     "provides": [
       {
-        "key": "agent_transition",
-        "type": "era.agent.session.transition",
-        "display_name": "Agent 阶段转换"
-      },
-      {
-        "key": "agent_execution_state",
-        "type": "era.batch.execution.state",
-        "display_name": "Agent 批次执行状态"
+        "key": "generation_outcome",
+        "type": "era.agent.generation.outcome",
+        "display_name": "阶段执行结果"
       }
     ],
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
-      "era.agent.auxiliary.execution_request": [
-        "输入：已冻结的 V2 阶段配置、宿主事实与本机方案引用。"
+      "era.agent.generation.request": [
+        "输入：阶段请求"
       ]
     },
     "output_semantics": {
-      "agent_transition": [
-        "输出：阶段副作用完成后的显式委托或直接结算路由。"
-      ],
-      "agent_execution_state": [
-        "输出：未经修改的当前批次执行状态。"
+      "generation_outcome": [
+        "输出：阶段执行结果"
       ]
     }
   },
@@ -57,11 +49,9 @@
     }
   ],
   "base_libs": [
+    "era.service.agent_flow_types",
     "era.service.agent_generation_session",
     "era.service.agent_request_policy",
-    "era.service.agent_connection_policy",
-    "era.service.mk_engine",
-    "era.service.types",
     "era.service.agent_session_binding"
   ],
   "capabilities": [
@@ -69,23 +59,14 @@
       "id": "era.tavern.agent",
       "operations": [
         "await_native_completion",
-        "write_configuration",
-        "capture_preset",
-        "read_configuration_sources",
-        "read_connection_state",
-        "upsert_connection_profile",
-        "delete_connection_profile",
-        "clear_connection_profile_key",
-        "list_connection_models",
-        "list_connection_models_draft",
         "generate",
         "generate_story",
         "inject_once",
+        "read_session_binding",
         "write_session",
         "clear_session",
         "create_error_message",
-        "stop_native_generation",
-        "read_session_binding"
+        "stop_native_generation"
       ]
     }
   ]

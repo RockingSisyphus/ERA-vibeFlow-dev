@@ -1,0 +1,64 @@
+{
+  "kind": "node",
+  "type_key": "era.agent.prepare_settings_request",
+  "category": "Agent 工作流",
+  "version": "1.0.0",
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "suspend",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/agent/prepare_settings_request.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "capabilities": [
+    {
+      "id": "era.tavern.agent",
+      "operations": [
+        "read_context"
+      ]
+    }
+  ],
+  "display_name": "准备设置命令",
+  "description": "读取当前配置所需事实，整理命令、预设或连接草稿；不把生成阶段的大上下文传给设置算法。",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.step.request.routed",
+        "cardinality": "exactly_one",
+        "display_name": "已准备步骤"
+      }
+    ],
+    "provides": [
+      {
+        "key": "settings_request",
+        "type": "era.agent.settings.request",
+        "display_name": "设置请求"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.step.request.routed": [
+        "输入：已准备步骤"
+      ]
+    },
+    "output_semantics": {
+      "settings_request": [
+        "输出：设置请求"
+      ]
+    }
+  },
+  "base_libs": [
+    "era.service.agent_flow_types",
+    "era.service.types"
+  ]
+}

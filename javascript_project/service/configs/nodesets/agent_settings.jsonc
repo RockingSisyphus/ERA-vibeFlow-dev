@@ -1,0 +1,95 @@
+{
+  "type_key": "era.agent.settings",
+  "display_name": "管理 Agent 设置与连接",
+  "description": "在原 Service FIFO 中处理配置、预设、连接与模型列表；不进入生成会话状态机。",
+  "requires": [
+    {
+      "type": "era.step.request.routed",
+      "cardinality": "exactly_one",
+      "display_name": "已准备步骤"
+    }
+  ],
+  "provides": [
+    {
+      "key": "settings_task_result",
+      "type": "era.task.result",
+      "display_name": "设置任务结果"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "routed_step",
+        "type": "era.step.request.routed",
+        "required": true,
+        "display_name": "已准备步骤"
+      }
+    ],
+    "max_steps": 8,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.service.terminal",
+        "display_name": "设置命令开始",
+        "description": "进入同一 Service FIFO 中的设置命令步骤。"
+      },
+      {
+        "id": "prepare_settings_request",
+        "type_used": "era.agent.prepare_settings_request",
+        "display_name": "准备设置命令",
+        "description": "读取当前配置所需事实，整理命令、预设或连接草稿；不把生成阶段的大上下文传给设置算法。"
+      },
+      {
+        "id": "execute_settings_command",
+        "type_used": "era.agent.execute_settings_command",
+        "display_name": "执行设置命令",
+        "description": "仅执行配置/预设/连接/模型列表；复用连接与请求策略。即时连接事实读取、决策与发起写入保留在本节点连续执行。"
+      },
+      {
+        "id": "build_settings_result",
+        "type_used": "era.agent.build_settings_result",
+        "display_name": "结算设置命令",
+        "description": "把设置结果与来源对应为原 TaskResult；不修改批次状态，不进入生成会话转换。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.service.terminal",
+        "display_name": "设置命令结束",
+        "description": "输出唯一设置任务结果，交还原批次汇合。"
+      }
+    ],
+    "edges": [
+      [
+        "start",
+        "prepare_settings_request"
+      ],
+      [
+        "prepare_settings_request",
+        "execute_settings_command"
+      ],
+      [
+        "execute_settings_command",
+        "build_settings_result"
+      ],
+      {
+        "from": "start",
+        "to": "build_settings_result",
+        "transfer": false,
+        "schedule": true
+      },
+      [
+        "build_settings_result",
+        "end"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.task.result",
+        "cardinality": "exactly_one",
+        "display_name": "设置任务结果",
+        "as": "settingsTaskResult"
+      }
+    ]
+  }
+}
