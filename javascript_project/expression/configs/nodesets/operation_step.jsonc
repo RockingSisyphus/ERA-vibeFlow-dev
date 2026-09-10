@@ -1,5 +1,4 @@
 {
-  "nodeset_imports": [{ "path": "ast_frame_step.jsonc" }],
   "type_key": "era.expression.operation_step",
   "flow_kind": "process",
   "display_name": "执行一条表达式操作",
@@ -59,39 +58,10 @@
         "description": "为当前表达式建立显式后序求值栈；不使用 JavaScript 递归，因此函数体可嵌套调用其他函数。"
       },
       {
-        "id": "ast_frame_loop",
-        "type_used": "vibeflow.loop.while",
-        "display_name": "求值 AST 调用帧",
-        "description": "重复执行栈顶帧；自定义函数调用会绑定实参、压入函数体，返回值完成后回传父表达式。",
-        "requires": [
-          {
-            "type": "era.expression.ast_frame.state",
-            "cardinality": "exactly_one",
-            "display_name": "AST 调用帧状态"
-          }
-        ],
-        "provides": [
-          {
-            "key": "evaluated_expression",
-            "type": "era.expression.value",
-            "display_name": "已求值表达式"
-          }
-        ],
-        "loop": {
-          "body": "era.expression.ast_frame_step",
-          "max_iterations": null,
-          "stop_when": { "from": "astFrameDone", "equals": true },
-          "carry": [
-            {
-              "from": "era.expression.ast_frame.state",
-              "as": "ast_frame_state",
-              "update": "astFrameStateNext"
-            }
-          ],
-          "outputs": [
-            { "from": "evaluatedExpression", "as": "evaluated_expression" }
-          ]
-        }
+        "id": "evaluate_ast",
+        "type_used": "era.expression.evaluate_ast",
+        "display_name": "求值当前表达式",
+        "description": "消费初始化的 AST 帧状态，在登记的表达式执行库内推进显式帧栈直到完成；输出数值与诊断。只求值当前操作，不接管操作顺序、函数编译、状态提交或符号压缩。"
       },
       {
         "id": "commit_operation_result",
@@ -107,16 +77,31 @@
       }
     ],
     "edges": [
-      ["start", "select_next_operation"],
-      ["select_next_operation", "initialize_ast_frames"],
-      ["initialize_ast_frames", "ast_frame_loop"],
+      [
+        "start",
+        "select_next_operation"
+      ],
+      [
+        "select_next_operation",
+        "initialize_ast_frames"
+      ],
+      [
+        "initialize_ast_frames",
+        "evaluate_ast"
+      ],
       {
         "from": "select_next_operation",
         "to": "commit_operation_result",
         "schedule": false
       },
-      ["ast_frame_loop", "commit_operation_result"],
-      ["commit_operation_result", "end"]
+      [
+        "evaluate_ast",
+        "commit_operation_result"
+      ],
+      [
+        "commit_operation_result",
+        "end"
+      ]
     ],
     "outputs": [
       {

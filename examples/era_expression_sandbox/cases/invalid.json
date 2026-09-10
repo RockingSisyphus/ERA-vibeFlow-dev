@@ -102,17 +102,17 @@
   {
     "id": "invalid-initial-state",
     "request": { "functionLibrary": {}, "initialState": [], "operations": [] },
-    "expect": { "status": "invalid", "finalState": {}, "diagnostics": ["ERA_EXPR_INITIAL_STATE_INVALID"], "compressed": {}, "workflowError": "VF_INPUT_SCHEMA" }
+    "expect": { "status": "invalid", "finalState": {}, "diagnostics": ["ERA_EXPR_INITIAL_STATE_INVALID"], "compressed": {} }
   },
   {
     "id": "invalid-function-library",
     "request": { "functionLibrary": [], "initialState": { "a": 1 }, "operations": [] },
-    "expect": { "status": "invalid", "finalState": { "a": 1 }, "diagnostics": ["ERA_EXPR_LIBRARY_INVALID"], "compressed": {}, "workflowError": "VF_INPUT_SCHEMA" }
+    "expect": { "status": "invalid", "finalState": { "a": 1 }, "diagnostics": ["ERA_EXPR_LIBRARY_INVALID"], "compressed": {} }
   },
   {
     "id": "invalid-operations-array",
     "request": { "functionLibrary": {}, "initialState": { "a": 1 }, "operations": {} },
-    "expect": { "status": "invalid", "finalState": { "a": 1 }, "diagnostics": ["ERA_EXPR_OPERATIONS_INVALID"], "compressed": {}, "workflowError": "VF_INPUT_SCHEMA" }
+    "expect": { "status": "invalid", "finalState": { "a": 1 }, "diagnostics": ["ERA_EXPR_OPERATIONS_INVALID"], "compressed": {} }
   },
   {
     "id": "invalid-operation-shape",

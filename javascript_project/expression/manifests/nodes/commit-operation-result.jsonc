@@ -39,19 +39,32 @@
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
-      "era.expression.operation.current": ["输入：当前操作。"],
-      "era.expression.value": ["输入：帧求值结果。"]
+      "era.expression.operation.current": [
+        "输入：当前操作。"
+      ],
+      "era.expression.value": [
+        "输入：帧求值结果。"
+      ]
     },
     "output_semantics": {
-      "sequence_state_next": ["输出：推进后的顺序状态。"],
-      "sequence_done": ["输出：操作结束标记。"],
-      "operation_execution_result": ["输出：累计结果。"]
+      "sequence_state_next": [
+        "输出：推进后的顺序状态。"
+      ],
+      "sequence_done": [
+        "输出：操作结束标记。"
+      ],
+      "operation_execution_result": [
+        "输出：累计结果。"
+      ]
     }
   },
   "implementations": [
     {
       "language": "typescript",
-      "targets": ["browser", "node"],
+      "targets": [
+        "browser",
+        "node"
+      ],
       "completion": "immediate",
       "source": {
         "kind": "file",
@@ -60,6 +73,9 @@
       }
     }
   ],
-  "base_libs": ["era.expression.engine"],
+  "base_libs": [
+    "era.expression.execution",
+    "era.expression.types"
+  ],
   "capabilities": []
 }

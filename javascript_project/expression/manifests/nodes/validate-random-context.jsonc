@@ -7,12 +7,51 @@
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
-    "requires": [{ "type": "era.expression.request.normalized", "cardinality": "exactly_one", "display_name": "规范表达式请求" }],
-    "provides": [{ "key": "validated_random_request", "type": "era.expression.request.normalized", "display_name": "带随机上下文的规范请求" }],
-    "params_schema": {}, "params_defaults": {},
-    "input_semantics": { "era.expression.request.normalized": ["输入：已规范并验证随机上下文的请求。"] },
-    "output_semantics": { "validated_random_request": ["输出：同一不可变规范请求。"] }
+    "requires": [
+      {
+        "type": "era.expression.request.normalized",
+        "cardinality": "exactly_one",
+        "display_name": "规范表达式请求"
+      }
+    ],
+    "provides": [
+      {
+        "key": "validated_random_request",
+        "type": "era.expression.request.normalized",
+        "display_name": "带随机上下文的规范请求"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.expression.request.normalized": [
+        "输入：已规范并验证随机上下文的请求。"
+      ]
+    },
+    "output_semantics": {
+      "validated_random_request": [
+        "输出：同一不可变规范请求。"
+      ]
+    }
   },
-  "implementations": [{ "language": "typescript", "targets": ["browser", "node"], "completion": "immediate", "source": { "kind": "file", "ref": "nodes/validate_random_context.ts", "export": "run" } }],
-  "base_libs": ["era.expression.engine"], "capabilities": []
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/validate_random_context.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.expression.execution",
+    "era.expression.types"
+  ],
+  "capabilities": []
 }

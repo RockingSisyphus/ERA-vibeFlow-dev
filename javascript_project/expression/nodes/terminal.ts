@@ -1,1 +1,5 @@
-export { terminalNode as run } from "../base_lib/expression_engine.ts";
+export function terminalNode(): Record<string, never> {
+  return {};
+}
+
+export { terminalNode as run };

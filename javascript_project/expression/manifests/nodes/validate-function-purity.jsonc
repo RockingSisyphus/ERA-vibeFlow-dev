@@ -29,17 +29,26 @@
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
-      "era.expression.function_library.parsed": ["输入：函数 AST。"],
-      "era.expression.function_library.dependencies": ["输入：函数调用依赖。"]
+      "era.expression.function_library.parsed": [
+        "输入：函数 AST。"
+      ],
+      "era.expression.function_library.dependencies": [
+        "输入：函数调用依赖。"
+      ]
     },
     "output_semantics": {
-      "function_purity_report": ["输出：纯度和参数诊断。"]
+      "function_purity_report": [
+        "输出：纯度和参数诊断。"
+      ]
     }
   },
   "implementations": [
     {
       "language": "typescript",
-      "targets": ["browser", "node"],
+      "targets": [
+        "browser",
+        "node"
+      ],
       "completion": "immediate",
       "source": {
         "kind": "file",
@@ -48,6 +57,10 @@
       }
     }
   ],
-  "base_libs": ["era.expression.engine"],
+  "base_libs": [
+    "era.expression.execution",
+    "era.expression.functions",
+    "era.expression.types"
+  ],
   "capabilities": []
 }

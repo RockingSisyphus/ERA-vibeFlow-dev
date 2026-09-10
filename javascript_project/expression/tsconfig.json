@@ -8,5 +8,10 @@
     "skipLibCheck": true,
     "allowImportingTsExtensions": true
   },
-  "include": ["base_lib/**/*.ts", "nodes/**/*.ts", "tests/**/*.ts"]
+  "include": [
+    "base_lib/**/*.ts",
+    "nodes/**/*.ts",
+    "tests/**/*.ts",
+    "api/**/*.ts"
+  ]
 }

@@ -12,8 +12,8 @@ importers:
         specifier: file:../packages/era-example-resources/era-example-resources-0.1.1.tgz
         version: file:../packages/era-example-resources/era-example-resources-0.1.1.tgz
       '@era/vibeflow-expression':
-        specifier: file:vendor/era-vibeflow-expression-0.2.0.tgz
-        version: file:vendor/era-vibeflow-expression-0.2.0.tgz
+        specifier: file:vendor/era-vibeflow-expression-0.3.0.tgz
+        version: file:vendor/era-vibeflow-expression-0.3.0.tgz
       '@era/vibeflow-floor-snapshot':
         specifier: file:../packages/era-floor-snapshot/era-vibeflow-floor-snapshot-0.1.3.tgz
         version: file:../packages/era-floor-snapshot/era-vibeflow-floor-snapshot-0.1.3.tgz
@@ -407,9 +407,9 @@ packages:
     resolution: {integrity: sha512-5M/LxBuMaS8mNm9R9FvdzI5tMwP6wm2yxa218Dxam6HwRlZyD2Uxw/U356rwgrQliyRHmu1riSXdgeIulXqL8Q==, tarball: file:../packages/era-example-resources/era-example-resources-0.1.1.tgz}
     version: 0.1.1
 
-  '@era/vibeflow-expression@file:vendor/era-vibeflow-expression-0.2.0.tgz':
-    resolution: {integrity: sha512-ul8noHKgyLhcxNaVxKUzemKAH5mmsj93bgQaLAm2pjek/AzkRD/pgvGPr+7ZLmIpVkEU3b8/AbFvdC5ujY+Ftw==, tarball: file:vendor/era-vibeflow-expression-0.2.0.tgz}
-    version: 0.2.0
+  '@era/vibeflow-expression@file:vendor/era-vibeflow-expression-0.3.0.tgz':
+    resolution: {integrity: sha512-KqXeVwsYDDmjAv0sgaG4+p8NQRLTq4YMjtwV1VdpFWo6SQhek78Qu5DHxItGaFRe4e5O9hDGigX3/qaCNje3Qw==, tarball: file:vendor/era-vibeflow-expression-0.3.0.tgz}
+    version: 0.3.0
     engines: {node: '>=24.18.0'}
 
   '@era/vibeflow-floor-snapshot@file:../packages/era-floor-snapshot/era-vibeflow-floor-snapshot-0.1.3.tgz':
@@ -5609,7 +5609,7 @@ snapshots:
 
   '@era/example-resources@file:../packages/era-example-resources/era-example-resources-0.1.1.tgz': {}
 
-  '@era/vibeflow-expression@file:vendor/era-vibeflow-expression-0.2.0.tgz':
+  '@era/vibeflow-expression@file:vendor/era-vibeflow-expression-0.3.0.tgz':
     dependencies:
       '@stdlib/math-base-special-gamma': 0.3.1
       mathjs: 15.2.0

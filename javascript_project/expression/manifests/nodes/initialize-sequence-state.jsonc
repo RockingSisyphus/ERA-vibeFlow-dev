@@ -34,16 +34,29 @@
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
-      "era.expression.request.normalized": ["输入：已验证请求。"],
-      "era.expression.function_library.compiled": ["输入：可调用函数库。"],
-      "era.expression.operations.parsed": ["输入：操作 AST。"]
+      "era.expression.request.normalized": [
+        "输入：已验证请求。"
+      ],
+      "era.expression.function_library.compiled": [
+        "输入：可调用函数库。"
+      ],
+      "era.expression.operations.parsed": [
+        "输入：操作 AST。"
+      ]
     },
-    "output_semantics": { "sequence_state": ["输出：顺序 carry 状态。"] }
+    "output_semantics": {
+      "sequence_state": [
+        "输出：顺序 carry 状态。"
+      ]
+    }
   },
   "implementations": [
     {
       "language": "typescript",
-      "targets": ["browser", "node"],
+      "targets": [
+        "browser",
+        "node"
+      ],
       "completion": "immediate",
       "source": {
         "kind": "file",
@@ -52,6 +65,10 @@
       }
     }
   ],
-  "base_libs": ["era.expression.engine"],
+  "base_libs": [
+    "era.expression.execution",
+    "era.expression.functions",
+    "era.expression.types"
+  ],
   "capabilities": []
 }

@@ -24,14 +24,23 @@
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
-      "era.expression.sequence.state": ["输入：顺序 carry 状态。"]
+      "era.expression.sequence.state": [
+        "输入：顺序 carry 状态。"
+      ]
     },
-    "output_semantics": { "current_operation": ["输出：当前操作和其状态。"] }
+    "output_semantics": {
+      "current_operation": [
+        "输出：当前操作和其状态。"
+      ]
+    }
   },
   "implementations": [
     {
       "language": "typescript",
-      "targets": ["browser", "node"],
+      "targets": [
+        "browser",
+        "node"
+      ],
       "completion": "immediate",
       "source": {
         "kind": "file",
@@ -40,6 +49,9 @@
       }
     }
   ],
-  "base_libs": ["era.expression.engine"],
+  "base_libs": [
+    "era.expression.execution",
+    "era.expression.types"
+  ],
   "capabilities": []
 }

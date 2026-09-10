@@ -24,16 +24,23 @@
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
-      "era.expression.function_library.call_graph": ["输入：函数调用图。"]
+      "era.expression.function_library.call_graph": [
+        "输入：函数调用图。"
+      ]
     },
     "output_semantics": {
-      "acyclic_function_graph": ["输出：附环诊断的调用图。"]
+      "acyclic_function_graph": [
+        "输出：附环诊断的调用图。"
+      ]
     }
   },
   "implementations": [
     {
       "language": "typescript",
-      "targets": ["browser", "node"],
+      "targets": [
+        "browser",
+        "node"
+      ],
       "completion": "immediate",
       "source": {
         "kind": "file",
@@ -42,6 +49,10 @@
       }
     }
   ],
-  "base_libs": ["era.expression.engine"],
+  "base_libs": [
+    "era.expression.execution",
+    "era.expression.functions",
+    "era.expression.types"
+  ],
   "capabilities": []
 }

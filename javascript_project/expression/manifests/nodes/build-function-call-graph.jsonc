@@ -29,15 +29,26 @@
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
-      "era.expression.function_library.dependencies": ["输入：调用依赖。"],
-      "era.expression.function_library.purity": ["输入：纯度报告。"]
+      "era.expression.function_library.dependencies": [
+        "输入：调用依赖。"
+      ],
+      "era.expression.function_library.purity": [
+        "输入：纯度报告。"
+      ]
     },
-    "output_semantics": { "function_call_graph": ["输出：调用图。"] }
+    "output_semantics": {
+      "function_call_graph": [
+        "输出：调用图。"
+      ]
+    }
   },
   "implementations": [
     {
       "language": "typescript",
-      "targets": ["browser", "node"],
+      "targets": [
+        "browser",
+        "node"
+      ],
       "completion": "immediate",
       "source": {
         "kind": "file",
@@ -46,6 +57,9 @@
       }
     }
   ],
-  "base_libs": ["era.expression.engine"],
+  "base_libs": [
+    "era.expression.execution",
+    "era.expression.types"
+  ],
   "capabilities": []
 }

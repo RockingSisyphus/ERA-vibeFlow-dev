@@ -24,14 +24,23 @@
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
-      "era.expression.operation.current": ["输入：当前表达式操作。"]
+      "era.expression.operation.current": [
+        "输入：当前表达式操作。"
+      ]
     },
-    "output_semantics": { "ast_frame_state": ["输出：调用帧栈。"] }
+    "output_semantics": {
+      "ast_frame_state": [
+        "输出：调用帧栈。"
+      ]
+    }
   },
   "implementations": [
     {
       "language": "typescript",
-      "targets": ["browser", "node"],
+      "targets": [
+        "browser",
+        "node"
+      ],
       "completion": "immediate",
       "source": {
         "kind": "file",
@@ -40,6 +49,9 @@
       }
     }
   ],
-  "base_libs": ["era.expression.engine"],
+  "base_libs": [
+    "era.expression.execution",
+    "era.expression.types"
+  ],
   "capabilities": []
 }

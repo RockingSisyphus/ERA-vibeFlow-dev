@@ -17,7 +17,10 @@
   "implementations": [
     {
       "language": "typescript",
-      "targets": ["browser", "node"],
+      "targets": [
+        "browser",
+        "node"
+      ],
       "completion": "immediate",
       "source": {
         "kind": "file",
@@ -26,6 +29,6 @@
       }
     }
   ],
-  "base_libs": ["era.expression.engine"],
+  "base_libs": [],
   "capabilities": []
 }

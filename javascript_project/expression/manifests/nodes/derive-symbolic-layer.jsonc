@@ -29,15 +29,26 @@
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
-      "era.expression.sequence.state": ["输入：层起始状态。"],
-      "era.expression.execution.result": ["输入：数值执行结果。"]
+      "era.expression.sequence.state": [
+        "输入：层起始状态。"
+      ],
+      "era.expression.execution.result": [
+        "输入：数值执行结果。"
+      ]
     },
-    "output_semantics": { "symbolic_layer": ["输出：每路径符号 AST。"] }
+    "output_semantics": {
+      "symbolic_layer": [
+        "输出：每路径符号 AST。"
+      ]
+    }
   },
   "implementations": [
     {
       "language": "typescript",
-      "targets": ["browser", "node"],
+      "targets": [
+        "browser",
+        "node"
+      ],
       "completion": "immediate",
       "source": {
         "kind": "file",
@@ -46,6 +57,10 @@
       }
     }
   ],
-  "base_libs": ["era.expression.engine"],
+  "base_libs": [
+    "era.expression.execution",
+    "era.expression.symbolic",
+    "era.expression.types"
+  ],
   "capabilities": []
 }

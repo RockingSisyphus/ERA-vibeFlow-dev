@@ -1,5 +1,9 @@
 {
-  "nodeset_imports": [{ "path": "operation_step.jsonc" }],
+  "nodeset_imports": [
+    {
+      "path": "operation_step.jsonc"
+    }
+  ],
   "type_key": "era.expression.execute_layer",
   "flow_kind": "process",
   "display_name": "ERA 函数表达式层执行",
@@ -91,17 +95,11 @@
         "description": "解析路径与用户表达式，禁止用户输入 @path，并完整保留操作出现顺序。"
       },
       {
-        "id": "classify_random_calls",
-        "type_used": "era.expression.classify_random_calls",
-        "display_name": "标记随机调用与预留规模",
-        "description": "沿无环函数调用图展开 random 调用，区分自动序号和完全显式 draw，按操作、参数与函数体顺序计算槽位，并拒绝直接或间接包含 random 的导数/积分目标。",
-        "join_policy": "all"
-      },
-      {
         "id": "initialize_sequence_state",
         "type_used": "era.expression.initialize_random_sequence_state",
         "display_name": "初始化顺序状态与随机游标",
-        "description": "冻结本消息层起始状态，以 drawOffset 为起点预留自动随机槽位，并创建变量操作游标、随机游标、已编译函数库和待执行 AST。"
+        "description": "冻结本消息层起始状态，以 drawOffset 为起点预留自动随机槽位，并创建变量操作游标、随机游标、已编译函数库和待执行 AST。",
+        "join_policy": "all"
       },
       {
         "id": "operation_loop",
@@ -125,7 +123,10 @@
         "loop": {
           "body": "era.expression.operation_step",
           "max_iterations": null,
-          "stop_when": { "from": "sequenceDone", "equals": true },
+          "stop_when": {
+            "from": "sequenceDone",
+            "equals": true
+          },
           "carry": [
             {
               "from": "era.expression.sequence.state",
@@ -134,7 +135,10 @@
             }
           ],
           "outputs": [
-            { "from": "operationExecutionResult", "as": "numeric_execution" }
+            {
+              "from": "operationExecutionResult",
+              "as": "numeric_execution"
+            }
           ]
         }
       },
@@ -164,34 +168,99 @@
       }
     ],
     "edges": [
-      ["start", "validate_request"],
-      ["validate_request", "validate_random_context"],
-      ["validate_random_context", "parse_function_definitions"],
-      ["parse_function_definitions", "extract_function_dependencies"],
-      ["parse_function_definitions", "validate_function_purity"],
-      ["extract_function_dependencies", "validate_function_purity"],
-      ["extract_function_dependencies", "build_function_call_graph"],
-      ["validate_function_purity", "build_function_call_graph"],
-      ["build_function_call_graph", "reject_recursive_functions"],
-      ["parse_function_definitions", "compile_callable_functions"],
-      ["reject_recursive_functions", "compile_callable_functions"],
-      ["validate_random_context", "parse_operations"],
-      ["compile_callable_functions", "classify_random_calls"],
-      ["parse_operations", "classify_random_calls"],
-      ["validate_random_context", "initialize_sequence_state"],
-      ["classify_random_calls", "initialize_sequence_state"],
-      ["initialize_sequence_state", "operation_loop"],
-      ["initialize_sequence_state", "derive_symbolic_layer"],
+      [
+        "start",
+        "validate_request"
+      ],
+      [
+        "validate_request",
+        "validate_random_context"
+      ],
+      [
+        "validate_random_context",
+        "parse_function_definitions"
+      ],
+      [
+        "parse_function_definitions",
+        "extract_function_dependencies"
+      ],
+      [
+        "parse_function_definitions",
+        "validate_function_purity"
+      ],
+      [
+        "extract_function_dependencies",
+        "validate_function_purity"
+      ],
+      [
+        "extract_function_dependencies",
+        "build_function_call_graph"
+      ],
+      [
+        "validate_function_purity",
+        "build_function_call_graph"
+      ],
+      [
+        "build_function_call_graph",
+        "reject_recursive_functions"
+      ],
+      [
+        "parse_function_definitions",
+        "compile_callable_functions"
+      ],
+      [
+        "reject_recursive_functions",
+        "compile_callable_functions"
+      ],
+      [
+        "validate_random_context",
+        "parse_operations"
+      ],
+      [
+        "validate_random_context",
+        "initialize_sequence_state"
+      ],
+      [
+        "initialize_sequence_state",
+        "operation_loop"
+      ],
+      [
+        "initialize_sequence_state",
+        "derive_symbolic_layer"
+      ],
       {
         "from": "initialize_sequence_state",
         "to": "normalize_compaction",
         "schedule": false
       },
-      ["operation_loop", "derive_symbolic_layer"],
-      ["derive_symbolic_layer", "guard_random_compaction"],
-      ["guard_random_compaction", "normalize_compaction"],
-      ["operation_loop", "normalize_compaction"],
-      ["normalize_compaction", "end"]
+      [
+        "operation_loop",
+        "derive_symbolic_layer"
+      ],
+      [
+        "derive_symbolic_layer",
+        "guard_random_compaction"
+      ],
+      [
+        "guard_random_compaction",
+        "normalize_compaction"
+      ],
+      [
+        "operation_loop",
+        "normalize_compaction"
+      ],
+      [
+        "normalize_compaction",
+        "end"
+      ],
+      [
+        "compile_callable_functions",
+        "initialize_sequence_state"
+      ],
+      [
+        "parse_operations",
+        "initialize_sequence_state"
+      ]
     ],
     "outputs": [
       {

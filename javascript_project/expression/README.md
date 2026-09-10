@@ -1,6 +1,6 @@
 # ERA 函数表达式 Root
 
-`era-expression` 是一个独立的 JavaScript VibeFlow root：它只实现有限数值表达式、可组合的自定义函数、顺序状态执行和消息层压缩原型。它不读取或修改 Tavern、ERA Service、Sidecar、宏、聊天消息或 ERA API；接入 ERA 是后续单独审核的工作。
+`era-expression` 是一个独立的 JavaScript VibeFlow root：它负责有限数值表达式、可组合的自定义函数、顺序状态执行和消息层压缩。Service 与 Compaction 通过版本包的 `./engine` 使用它；公开 `executeExpressionLayer` 同步执行本 root 的 AOT 工作流，不直接读写 Tavern 或 Sidecar。
 
 ## 输入与结果
 
@@ -76,9 +76,11 @@ random(seed, draw)  # 显式 seed 与非负安全整数 draw
 
 根 Nodeset `era.expression.execute_layer` 明确展示：请求验证 → 函数定义解析 → 依赖/纯度/调用图 → DFS 递归拒绝 → 编译 → 顺序操作循环 → 符号推导 → 规范化压缩。
 
-内部 `ast_frame_step` 使用显式后序调用帧栈。其自定义函数分支先求实参、绑定形参、压入函数体 AST，并在子调用结束后回传父帧；因此嵌套调用不是隐藏在 JavaScript 动态编译或递归字符串替换中的行为。
+操作循环依次选择操作、初始化 AST 帧、求值当前表达式、提交结果。单条 AST 的显式后序帧栈由登记库 `expression_execution.ts` 执行：先求实参、绑定形参、压入函数体，再回传父帧。帧推进不是独立工作流循环，避免为微小运算重复创建调度状态；操作顺序和提交仍由工作流控制。
 
-正式实现审核图：`../../reports/era-expression-prototype-implemented.expanded.svg`。
+正式实现审核图：`../../reports/workflow-architecture-analysis-20260910/step2/expression-implemented.svg`。
+
+登记模块分为共享类型、语法与输入、数学与随机原语、函数库编译、表达式执行和符号压缩；算法不依赖 Node 端口。Node 源码负责 envelope 适配。`api/engine.ts` 保留公共 API，其中完整求值调用 AOT，独立解析/编译等 API 直接复用登记库。`pnpm build` 从真实 Config 生成 Node/Browser 模块、ESM 公共入口及声明，`pnpm pack` 自动构建。
 
 ## 验证
 
@@ -92,6 +94,7 @@ python ../../run.py validate --config configs/era.expression.jsonc
 python ../../run.py quality --path .
 python ../../run.py build --config configs/era.expression.jsonc --target node --profile esm-module --out-dir generated/node-release
 python ../../run.py build --config configs/era.expression.jsonc --target browser --profile esm-module --out-dir generated/browser-release
+npm run build
 npm run test:workflow
 ```
 

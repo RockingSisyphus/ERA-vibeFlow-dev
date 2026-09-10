@@ -4665,8 +4665,8 @@
               "path": "configs/nodesets/expression_engine_bridge.jsonc"
             },
             "role": {
-              "display_name": "调用 expression root",
-              "description": "以受限 DTO 按原文顺序调用已验证的表达式引擎；跨 VariableEdit 叶子、普通标签、函数调用与 era_tx 连续传递自动抽取序号。"
+              "display_name": "计算历史同步计划",
+              "description": "保留 planSyncWork → planEraSync → CRUD 的真实调用链；完整表达式求值经版本化包同步委托 Expression AOT 工作流，解析与函数编译工具仍是登记纯算法。该节点不执行 Tavern 写入。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",

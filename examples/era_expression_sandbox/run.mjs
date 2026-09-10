@@ -146,9 +146,10 @@ async function buildEntrypoints(tempDirectory) {
     "dir"
   );
   const esbuild = path.join(expressionRoot, "node_modules/.bin/esbuild");
+  command("pnpm", ["build"], { cwd: expressionRoot });
   const directEngine = path.join(tempDirectory, "expression_engine.mjs");
   command(esbuild, [
-    "base_lib/expression_engine.ts",
+    "api/engine.ts",
     "--bundle",
     "--platform=node",
     "--format=esm",
@@ -182,13 +183,8 @@ try {
     const direct = engine.executeExpressionLayer(testCase.request);
     const node = invokeWorkflow(nodeWorkflow, testCase.request);
     const browser = invokeWorkflow(browserWorkflow, testCase.request);
-    if (testCase.expect.workflowError) {
-      assert.equal(node.errorCode, testCase.expect.workflowError, `${testCase.id}: Node AOT schema error`);
-      assert.equal(browser.errorCode, testCase.expect.workflowError, `${testCase.id}: Browser AOT schema error`);
-    } else {
-      assert.deepEqual(comparable(node.response), comparable(direct), `${testCase.id}: Node AOT parity`);
-      assert.deepEqual(comparable(browser.response), comparable(direct), `${testCase.id}: Browser AOT parity`);
-    }
+    assert.deepEqual(comparable(node.response), comparable(direct), `${testCase.id}: Node AOT parity`);
+    assert.deepEqual(comparable(browser.response), comparable(direct), `${testCase.id}: Browser AOT parity`);
     assertExpected(testCase, direct, engine);
     console.log(`PASS ${testCase.id}`);
   }

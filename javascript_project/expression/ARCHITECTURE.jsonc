@@ -29,7 +29,7 @@
     "contains_global_state": false,
     "summary": {
       "nodes": 3,
-      "nodesets": 3,
+      "nodesets": 2,
       "explicit_edges": 2,
       "data_edges": 0,
       "reported_edges": 2,
@@ -183,746 +183,6 @@
     ]
   },
   "nodesets": {
-    "era.expression.ast_frame_step": {
-      "type_key": "era.expression.ast_frame_step",
-      "source": {
-        "root_id": "era-expression",
-        "path": "configs/nodesets/ast_frame_step.jsonc"
-      },
-      "display_name": "执行一个 AST 调用帧",
-      "description": "显式处理字面量、路径、运算符、确定性数学函数、可重放随机函数和自定义函数帧；自定义函数绑定实参后压入函数体，任意嵌套返回后回传父帧。",
-      "status": "implemented",
-      "flow_kind": "process",
-      "effect_scope": "none",
-      "reachable_from_workflow": true,
-      "requires": [
-        {
-          "type": "era.expression.ast_frame.state",
-          "cardinality": "exactly_one",
-          "display_name": "AST 调用帧状态"
-        }
-      ],
-      "provides": [
-        {
-          "key": "ast_frame_state_next",
-          "type": "era.expression.ast_frame.state",
-          "display_name": "下一 AST 调用帧状态"
-        },
-        {
-          "key": "ast_frame_done",
-          "type": "era.expression.ast_frame.done",
-          "display_name": "AST 调用帧结束标记"
-        },
-        {
-          "key": "evaluated_expression",
-          "type": "era.expression.value",
-          "display_name": "已求值表达式"
-        }
-      ],
-      "global_config": {},
-      "body": {
-        "source": {
-          "root_id": "era-expression",
-          "path": "configs/nodesets/ast_frame_step.jsonc"
-        },
-        "inputs": [
-          {
-            "key": "ast_frame_state",
-            "type": "era.expression.ast_frame.state",
-            "display_name": "AST 调用帧状态",
-            "required": true
-          }
-        ],
-        "outputs": [
-          {
-            "type": "era.expression.ast_frame.state",
-            "cardinality": "exactly_one",
-            "display_name": "下一 AST 调用帧状态",
-            "as": "astFrameStateNext"
-          },
-          {
-            "type": "era.expression.ast_frame.done",
-            "cardinality": "exactly_one",
-            "display_name": "AST 调用帧结束标记",
-            "as": "astFrameDone"
-          },
-          {
-            "type": "era.expression.value",
-            "cardinality": "exactly_one",
-            "display_name": "已求值表达式",
-            "as": "evaluatedExpression"
-          }
-        ],
-        "max_steps": 11,
-        "entry_mode": "sync",
-        "execution_lock": null,
-        "contains_global_state": false,
-        "summary": {
-          "nodes": 11,
-          "nodesets": 3,
-          "explicit_edges": 15,
-          "data_edges": 0,
-          "reported_edges": 15,
-          "contains_global_state": false
-        },
-        "entry_nodes": [
-          "start"
-        ],
-        "terminal_nodes": [
-          "end"
-        ],
-        "god_nodes": [
-          {
-            "node": "publish_frame_transition",
-            "degree": 7
-          },
-          {
-            "node": "route_frame",
-            "degree": 7
-          }
-        ],
-        "nodes": [
-          {
-            "id": "start",
-            "type_used": "era.expression.terminal",
-            "source": {
-              "root_id": "era-expression",
-              "path": "configs/nodesets/ast_frame_step.jsonc"
-            },
-            "role": {
-              "display_name": "调用帧启动",
-              "description": "开始处理栈顶 AST 帧。"
-            },
-            "contract_source": "node_type",
-            "flow_kind": "terminal",
-            "effect_scope": "none",
-            "runtime_dispatch": "unknown",
-            "execution_lock": null,
-            "effective_execution_lock": null,
-            "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
-            "requires": [],
-            "provides": [],
-            "join_policy": "safe_any",
-            "async": null,
-            "loop": null,
-            "io": null,
-            "invokes": null,
-            "config": {
-              "call": {},
-              "node_configs": {},
-              "allow_config_override": false
-            }
-          },
-          {
-            "id": "inspect_frame",
-            "type_used": "era.expression.inspect_ast_frame",
-            "source": {
-              "root_id": "era-expression",
-              "path": "configs/nodesets/ast_frame_step.jsonc"
-            },
-            "role": {
-              "display_name": "读取栈顶 AST 帧",
-              "description": "读取节点种类、已完成子值、当前变量环境和父调用接收位置。"
-            },
-            "contract_source": "node_type",
-            "flow_kind": "process",
-            "effect_scope": "none",
-            "runtime_dispatch": "unknown",
-            "execution_lock": null,
-            "effective_execution_lock": null,
-            "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
-            "requires": [
-              {
-                "type": "era.expression.ast_frame.state",
-                "cardinality": "exactly_one",
-                "display_name": "AST 调用帧状态"
-              }
-            ],
-            "provides": [
-              {
-                "key": "ast_frame_current",
-                "type": "era.expression.ast_frame.current",
-                "display_name": "当前 AST 调用帧"
-              }
-            ],
-            "join_policy": "safe_any",
-            "async": null,
-            "loop": null,
-            "io": null,
-            "invokes": null,
-            "config": {
-              "call": {},
-              "node_configs": {},
-              "allow_config_override": false
-            }
-          },
-          {
-            "id": "route_frame",
-            "type_used": "era.expression.route_ast_frame",
-            "source": {
-              "root_id": "era-expression",
-              "path": "configs/nodesets/ast_frame_step.jsonc"
-            },
-            "role": {
-              "display_name": "路由 AST 帧种类",
-              "description": "区分字面量、变量路径、运算符、内建函数、自定义函数调用和子调用返回。"
-            },
-            "contract_source": "node_type",
-            "flow_kind": "decision",
-            "effect_scope": "none",
-            "runtime_dispatch": "unknown",
-            "execution_lock": null,
-            "effective_execution_lock": null,
-            "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
-            "requires": [
-              {
-                "type": "era.expression.ast_frame.current",
-                "cardinality": "exactly_one",
-                "display_name": "当前 AST 调用帧"
-              }
-            ],
-            "provides": [
-              {
-                "key": "routed_ast_frame_current",
-                "type": "era.expression.ast_frame.current",
-                "display_name": "已路由的当前调用帧"
-              },
-              {
-                "key": "ast_frame_route",
-                "type": "era.expression.ast_frame.route",
-                "display_name": "AST 调用帧路由"
-              }
-            ],
-            "join_policy": "safe_any",
-            "async": null,
-            "loop": null,
-            "io": null,
-            "invokes": null,
-            "config": {
-              "call": {},
-              "node_configs": {},
-              "allow_config_override": false
-            }
-          },
-          {
-            "id": "resolve_value_frame",
-            "type_used": "era.expression.resolve_value_frame",
-            "source": {
-              "root_id": "era-expression",
-              "path": "configs/nodesets/ast_frame_step.jsonc"
-            },
-            "role": {
-              "display_name": "解析字面量与状态路径",
-              "description": "读取当前顺序变量状态；函数体不允许通过此路径读取外部状态。"
-            },
-            "contract_source": "node_type",
-            "flow_kind": "process",
-            "effect_scope": "none",
-            "runtime_dispatch": "unknown",
-            "execution_lock": null,
-            "effective_execution_lock": null,
-            "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
-            "requires": [
-              {
-                "type": "era.expression.ast_frame.current",
-                "cardinality": "exactly_one",
-                "display_name": "当前 AST 调用帧"
-              }
-            ],
-            "provides": [
-              {
-                "key": "frame_transition_value",
-                "type": "era.expression.ast_frame.transition",
-                "display_name": "调用帧迁移"
-              }
-            ],
-            "join_policy": "safe_any",
-            "async": null,
-            "loop": null,
-            "io": null,
-            "invokes": null,
-            "config": {
-              "call": {},
-              "node_configs": {},
-              "allow_config_override": false
-            }
-          },
-          {
-            "id": "evaluate_operator_frame",
-            "type_used": "era.expression.evaluate_operator_frame",
-            "source": {
-              "root_id": "era-expression",
-              "path": "configs/nodesets/ast_frame_step.jsonc"
-            },
-            "role": {
-              "display_name": "计算运算符帧",
-              "description": "对子帧完成的有限数值应用受限四则、幂和一元运算，或压入尚未完成的子 AST 帧。"
-            },
-            "contract_source": "node_type",
-            "flow_kind": "process",
-            "effect_scope": "none",
-            "runtime_dispatch": "unknown",
-            "execution_lock": null,
-            "effective_execution_lock": null,
-            "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
-            "requires": [
-              {
-                "type": "era.expression.ast_frame.current",
-                "cardinality": "exactly_one",
-                "display_name": "当前 AST 调用帧"
-              }
-            ],
-            "provides": [
-              {
-                "key": "frame_transition_operator",
-                "type": "era.expression.ast_frame.transition",
-                "display_name": "调用帧迁移"
-              }
-            ],
-            "join_policy": "safe_any",
-            "async": null,
-            "loop": null,
-            "io": null,
-            "invokes": null,
-            "config": {
-              "call": {},
-              "node_configs": {},
-              "allow_config_override": false
-            }
-          },
-          {
-            "id": "evaluate_builtin_frame",
-            "type_used": "era.expression.evaluate_builtin_frame",
-            "source": {
-              "root_id": "era-expression",
-              "path": "configs/nodesets/ast_frame_step.jsonc"
-            },
-            "role": {
-              "display_name": "计算内建函数帧",
-              "description": "普通函数调用 Math/@stdlib；导数将已验证的一元纯函数 AST 交给受控 Math.js；积分以同一纯 AST 回调 Simpson。"
-            },
-            "contract_source": "node_type",
-            "flow_kind": "process",
-            "effect_scope": "none",
-            "runtime_dispatch": "unknown",
-            "execution_lock": null,
-            "effective_execution_lock": null,
-            "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
-            "requires": [
-              {
-                "type": "era.expression.ast_frame.current",
-                "cardinality": "exactly_one",
-                "display_name": "当前 AST 调用帧"
-              }
-            ],
-            "provides": [
-              {
-                "key": "frame_transition_builtin",
-                "type": "era.expression.ast_frame.transition",
-                "display_name": "调用帧迁移"
-              }
-            ],
-            "join_policy": "safe_any",
-            "async": null,
-            "loop": null,
-            "io": null,
-            "invokes": null,
-            "config": {
-              "call": {},
-              "node_configs": {},
-              "allow_config_override": false
-            }
-          },
-          {
-            "id": "evaluate_counter_random",
-            "type_used": "era.expression.evaluate_counter_random",
-            "source": {
-              "root_id": "era-expression",
-              "path": "configs/nodesets/ast_frame_step.jsonc"
-            },
-            "role": {
-              "display_name": "计算可重放随机数",
-              "description": "以 MK/sourceKey 或显式有限数值种子、预分配 draw 和固定 FNV-1a 64 + SplitMix64 算法生成 [0,1)；完全显式 draw 不消耗自动游标。"
-            },
-            "contract_source": "node_type",
-            "flow_kind": "process",
-            "effect_scope": "none",
-            "runtime_dispatch": "unknown",
-            "execution_lock": null,
-            "effective_execution_lock": null,
-            "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
-            "requires": [
-              {
-                "type": "era.expression.ast_frame.current",
-                "cardinality": "exactly_one",
-                "display_name": "当前随机调用帧"
-              }
-            ],
-            "provides": [
-              {
-                "key": "ast_frame_transition",
-                "type": "era.expression.ast_frame.transition",
-                "display_name": "随机调用帧迁移"
-              }
-            ],
-            "join_policy": "safe_any",
-            "async": null,
-            "loop": null,
-            "io": null,
-            "invokes": null,
-            "config": {
-              "call": {},
-              "node_configs": {},
-              "allow_config_override": false
-            }
-          },
-          {
-            "id": "bind_custom_function_frame",
-            "type_used": "era.expression.bind_custom_function_frame",
-            "source": {
-              "root_id": "era-expression",
-              "path": "configs/nodesets/ast_frame_step.jsonc"
-            },
-            "role": {
-              "display_name": "绑定自定义函数调用",
-              "description": "验证实参数目，将已完成实参绑定到形参环境，压入被调函数体 AST；这支持 f(g(x), h(y)) 和函数体内多层调用。"
-            },
-            "contract_source": "node_type",
-            "flow_kind": "process",
-            "effect_scope": "none",
-            "runtime_dispatch": "unknown",
-            "execution_lock": null,
-            "effective_execution_lock": null,
-            "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
-            "requires": [
-              {
-                "type": "era.expression.ast_frame.current",
-                "cardinality": "exactly_one",
-                "display_name": "当前 AST 调用帧"
-              }
-            ],
-            "provides": [
-              {
-                "key": "frame_transition_custom",
-                "type": "era.expression.ast_frame.transition",
-                "display_name": "调用帧迁移"
-              }
-            ],
-            "join_policy": "safe_any",
-            "async": null,
-            "loop": null,
-            "io": null,
-            "invokes": null,
-            "config": {
-              "call": {},
-              "node_configs": {},
-              "allow_config_override": false
-            }
-          },
-          {
-            "id": "return_child_value",
-            "type_used": "era.expression.return_child_value",
-            "source": {
-              "root_id": "era-expression",
-              "path": "configs/nodesets/ast_frame_step.jsonc"
-            },
-            "role": {
-              "display_name": "回传子调用结果",
-              "description": "将子表达式或子函数返回的有限数值回填父帧，继续其未完成的运算或函数调用。"
-            },
-            "contract_source": "node_type",
-            "flow_kind": "process",
-            "effect_scope": "none",
-            "runtime_dispatch": "unknown",
-            "execution_lock": null,
-            "effective_execution_lock": null,
-            "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
-            "requires": [
-              {
-                "type": "era.expression.ast_frame.current",
-                "cardinality": "exactly_one",
-                "display_name": "当前 AST 调用帧"
-              }
-            ],
-            "provides": [
-              {
-                "key": "frame_transition_return",
-                "type": "era.expression.ast_frame.transition",
-                "display_name": "调用帧迁移"
-              }
-            ],
-            "join_policy": "safe_any",
-            "async": null,
-            "loop": null,
-            "io": null,
-            "invokes": null,
-            "config": {
-              "call": {},
-              "node_configs": {},
-              "allow_config_override": false
-            }
-          },
-          {
-            "id": "publish_frame_transition",
-            "type_used": "era.expression.publish_frame_transition",
-            "source": {
-              "root_id": "era-expression",
-              "path": "configs/nodesets/ast_frame_step.jsonc"
-            },
-            "role": {
-              "display_name": "发布下一调用帧状态",
-              "description": "应用选定迁移，输出下一帧栈、完成标记及根表达式最终值。"
-            },
-            "contract_source": "node_type",
-            "flow_kind": "process",
-            "effect_scope": "none",
-            "runtime_dispatch": "unknown",
-            "execution_lock": null,
-            "effective_execution_lock": null,
-            "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
-            "requires": [
-              {
-                "type": "era.expression.ast_frame.transition",
-                "cardinality": "exactly_one",
-                "display_name": "调用帧迁移"
-              }
-            ],
-            "provides": [
-              {
-                "key": "ast_frame_state_next",
-                "type": "era.expression.ast_frame.state",
-                "display_name": "下一 AST 调用帧状态"
-              },
-              {
-                "key": "ast_frame_done",
-                "type": "era.expression.ast_frame.done",
-                "display_name": "AST 调用帧结束标记"
-              },
-              {
-                "key": "evaluated_expression",
-                "type": "era.expression.value",
-                "display_name": "已求值表达式"
-              }
-            ],
-            "join_policy": "safe_any",
-            "async": null,
-            "loop": null,
-            "io": null,
-            "invokes": null,
-            "config": {
-              "call": {},
-              "node_configs": {},
-              "allow_config_override": false
-            }
-          },
-          {
-            "id": "end",
-            "type_used": "era.expression.terminal",
-            "source": {
-              "root_id": "era-expression",
-              "path": "configs/nodesets/ast_frame_step.jsonc"
-            },
-            "role": {
-              "display_name": "调用帧结束",
-              "description": "输出帧机下一状态和根表达式值。"
-            },
-            "contract_source": "node_type",
-            "flow_kind": "terminal",
-            "effect_scope": "none",
-            "runtime_dispatch": "unknown",
-            "execution_lock": null,
-            "effective_execution_lock": null,
-            "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
-            "requires": [],
-            "provides": [],
-            "join_policy": "safe_any",
-            "async": null,
-            "loop": null,
-            "io": null,
-            "invokes": null,
-            "config": {
-              "call": {},
-              "node_configs": {},
-              "allow_config_override": false
-            }
-          }
-        ],
-        "edges": [
-          {
-            "from": "start",
-            "to": "inspect_frame",
-            "when": "",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "inspect_frame",
-            "to": "route_frame",
-            "when": "",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "route_frame",
-            "to": "resolve_value_frame",
-            "when": "ast_frame_route == 'value'",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "route_frame",
-            "to": "evaluate_operator_frame",
-            "when": "ast_frame_route == 'operator'",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "route_frame",
-            "to": "evaluate_builtin_frame",
-            "when": "ast_frame_route == 'builtin'",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "route_frame",
-            "to": "evaluate_counter_random",
-            "when": "ast_frame_route == 'random'",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "route_frame",
-            "to": "bind_custom_function_frame",
-            "when": "ast_frame_route == 'custom'",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "route_frame",
-            "to": "return_child_value",
-            "when": "ast_frame_route == 'return'",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "resolve_value_frame",
-            "to": "publish_frame_transition",
-            "when": "",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "evaluate_operator_frame",
-            "to": "publish_frame_transition",
-            "when": "",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "evaluate_builtin_frame",
-            "to": "publish_frame_transition",
-            "when": "",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "evaluate_counter_random",
-            "to": "publish_frame_transition",
-            "when": "",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "bind_custom_function_frame",
-            "to": "publish_frame_transition",
-            "when": "",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "return_child_value",
-            "to": "publish_frame_transition",
-            "when": "",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "publish_frame_transition",
-            "to": "end",
-            "when": "",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          }
-        ]
-      }
-    },
     "era.expression.execute_layer": {
       "type_key": "era.expression.execute_layer",
       "source": {
@@ -976,11 +236,11 @@
         "execution_lock": null,
         "contains_global_state": false,
         "summary": {
-          "nodes": 17,
-          "nodesets": 3,
-          "explicit_edges": 24,
+          "nodes": 16,
+          "nodesets": 2,
+          "explicit_edges": 23,
           "data_edges": 7,
-          "reported_edges": 24,
+          "reported_edges": 23,
           "contains_global_state": false
         },
         "entry_nodes": [
@@ -1445,61 +705,6 @@
             }
           },
           {
-            "id": "classify_random_calls",
-            "type_used": "era.expression.classify_random_calls",
-            "source": {
-              "root_id": "era-expression",
-              "path": "configs/nodesets/execute_layer.jsonc"
-            },
-            "role": {
-              "display_name": "标记随机调用与预留规模",
-              "description": "沿无环函数调用图展开 random 调用，区分自动序号和完全显式 draw，按操作、参数与函数体顺序计算槽位，并拒绝直接或间接包含 random 的导数/积分目标。"
-            },
-            "contract_source": "node_type",
-            "flow_kind": "process",
-            "effect_scope": "none",
-            "runtime_dispatch": "unknown",
-            "execution_lock": null,
-            "effective_execution_lock": null,
-            "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
-            "requires": [
-              {
-                "type": "era.expression.function_library.compiled",
-                "cardinality": "exactly_one",
-                "display_name": "已编译函数库"
-              },
-              {
-                "type": "era.expression.operations.parsed",
-                "cardinality": "exactly_one",
-                "display_name": "已解析操作"
-              }
-            ],
-            "provides": [
-              {
-                "key": "random_compiled_function_library",
-                "type": "era.expression.function_library.compiled",
-                "display_name": "已标记随机闭包的函数库"
-              },
-              {
-                "key": "random_parsed_operations",
-                "type": "era.expression.operations.parsed",
-                "display_name": "可预留随机槽位的操作"
-              }
-            ],
-            "join_policy": "all",
-            "async": null,
-            "loop": null,
-            "io": null,
-            "invokes": null,
-            "config": {
-              "call": {},
-              "node_configs": {},
-              "allow_config_override": false
-            }
-          },
-          {
             "id": "initialize_sequence_state",
             "type_used": "era.expression.initialize_random_sequence_state",
             "source": {
@@ -1543,7 +748,7 @@
                 "display_name": "含随机游标的顺序状态"
               }
             ],
-            "join_policy": "safe_any",
+            "join_policy": "all",
             "async": null,
             "loop": null,
             "io": null,
@@ -1926,41 +1131,11 @@
             ]
           },
           {
-            "from": "compile_callable_functions",
-            "to": "classify_random_calls",
-            "when": "",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "parse_operations",
-            "to": "classify_random_calls",
-            "when": "",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
             "from": "validate_random_context",
             "to": "initialize_sequence_state",
             "when": "",
             "roles": [
               "data_bypass",
-              "transfer"
-            ]
-          },
-          {
-            "from": "classify_random_calls",
-            "to": "initialize_sequence_state",
-            "when": "",
-            "roles": [
-              "mainline",
-              "schedule",
               "transfer"
             ]
           },
@@ -2034,6 +1209,26 @@
           {
             "from": "normalize_compaction",
             "to": "end",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "compile_callable_functions",
+            "to": "initialize_sequence_state",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "parse_operations",
+            "to": "initialize_sequence_state",
             "when": "",
             "roles": [
               "mainline",
@@ -2120,7 +1315,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 6,
-          "nodesets": 3,
+          "nodesets": 2,
           "explicit_edges": 6,
           "data_edges": 1,
           "reported_edges": 6,
@@ -2258,18 +1453,18 @@
             }
           },
           {
-            "id": "ast_frame_loop",
-            "type_used": "vibeflow.loop.while",
+            "id": "evaluate_ast",
+            "type_used": "era.expression.evaluate_ast",
             "source": {
               "root_id": "era-expression",
               "path": "configs/nodesets/operation_step.jsonc"
             },
             "role": {
-              "display_name": "求值 AST 调用帧",
-              "description": "重复执行栈顶帧；自定义函数调用会绑定实参、压入函数体，返回值完成后回传父表达式。"
+              "display_name": "求值当前表达式",
+              "description": "消费初始化的 AST 帧状态，在登记的表达式执行库内推进显式帧栈直到完成；输出数值与诊断。只求值当前操作，不接管操作顺序、函数编译、状态提交或符号压缩。"
             },
-            "contract_source": "system_config",
-            "flow_kind": "predefined",
+            "contract_source": "node_type",
+            "flow_kind": "process",
             "effect_scope": "none",
             "runtime_dispatch": "unknown",
             "execution_lock": null,
@@ -2293,33 +1488,9 @@
             ],
             "join_policy": "safe_any",
             "async": null,
-            "loop": {
-              "body": "era.expression.ast_frame_step",
-              "max_iterations": null,
-              "stop_when": {
-                "from": "astFrameDone",
-                "equals": true
-              },
-              "carry": [
-                {
-                  "from": "era.expression.ast_frame.state",
-                  "as": "ast_frame_state",
-                  "update": "astFrameStateNext"
-                }
-              ],
-              "outputs": [
-                {
-                  "from": "evaluatedExpression",
-                  "as": "evaluated_expression"
-                }
-              ]
-            },
+            "loop": null,
             "io": null,
-            "invokes": {
-              "kind": "loop_body",
-              "target": "era.expression.ast_frame_step",
-              "target_status": "implemented"
-            },
+            "invokes": null,
             "config": {
               "call": {},
               "node_configs": {},
@@ -2443,7 +1614,7 @@
           },
           {
             "from": "initialize_ast_frames",
-            "to": "ast_frame_loop",
+            "to": "evaluate_ast",
             "when": "",
             "roles": [
               "mainline",
@@ -2461,7 +1632,7 @@
             ]
           },
           {
-            "from": "ast_frame_loop",
+            "from": "evaluate_ast",
             "to": "commit_operation_result",
             "when": "",
             "roles": [
@@ -2485,57 +1656,6 @@
     }
   },
   "node_types": {
-    "era.expression.bind_custom_function_frame": {
-      "display_name": "绑定自定义函数调用",
-      "description": "绑定已完成实参、压入函数体 AST，支持任意有限嵌套。",
-      "category": "表达式调用帧",
-      "version": "1.0.0",
-      "flow_kind": "process",
-      "contract": {
-        "requires": [
-          {
-            "type": "era.expression.ast_frame.current",
-            "cardinality": "exactly_one",
-            "display_name": "当前 AST 调用帧"
-          }
-        ],
-        "provides": [
-          {
-            "key": "frame_transition_custom",
-            "type": "era.expression.ast_frame.transition",
-            "display_name": "调用帧迁移"
-          }
-        ],
-        "input_semantics": {
-          "era.expression.ast_frame.current": [
-            "输入：栈顶自定义函数帧。"
-          ]
-        },
-        "output_semantics": {
-          "frame_transition_custom": [
-            "输出：下一帧栈迁移。"
-          ]
-        },
-        "params_schema": {},
-        "params_defaults": {},
-        "examples": []
-      },
-      "implementations": [
-        {
-          "language": "typescript",
-          "targets": [
-            "browser",
-            "node"
-          ],
-          "source": {
-            "kind": "file",
-            "ref": "nodes/bind_custom_function_frame.ts",
-            "export": "run"
-          },
-          "completion": "immediate"
-        }
-      ]
-    },
     "era.expression.build_function_call_graph": {
       "display_name": "建立函数调用图",
       "description": "建立支持前向声明和嵌套调用的有向图。",
@@ -2589,73 +1709,6 @@
           "source": {
             "kind": "file",
             "ref": "nodes/build_function_call_graph.ts",
-            "export": "run"
-          },
-          "completion": "immediate"
-        }
-      ]
-    },
-    "era.expression.classify_random_calls": {
-      "display_name": "标记随机调用与预留规模",
-      "description": "保留已编译函数闭包和操作 AST；纯引擎按调用展开顺序静态计算自动随机槽位。",
-      "category": "表达式工作流",
-      "version": "1.0.0",
-      "flow_kind": "process",
-      "contract": {
-        "requires": [
-          {
-            "type": "era.expression.function_library.compiled",
-            "cardinality": "exactly_one",
-            "display_name": "已编译函数库"
-          },
-          {
-            "type": "era.expression.operations.parsed",
-            "cardinality": "exactly_one",
-            "display_name": "已解析操作"
-          }
-        ],
-        "provides": [
-          {
-            "key": "random_compiled_function_library",
-            "type": "era.expression.function_library.compiled",
-            "display_name": "已标记随机闭包的函数库"
-          },
-          {
-            "key": "random_parsed_operations",
-            "type": "era.expression.operations.parsed",
-            "display_name": "可预留随机槽位的操作"
-          }
-        ],
-        "input_semantics": {
-          "era.expression.function_library.compiled": [
-            "输入：含随机闭包标记的函数库。"
-          ],
-          "era.expression.operations.parsed": [
-            "输入：按原文顺序的操作 AST。"
-          ]
-        },
-        "output_semantics": {
-          "random_compiled_function_library": [
-            "输出：不可变函数库。"
-          ],
-          "random_parsed_operations": [
-            "输出：不可变操作 AST。"
-          ]
-        },
-        "params_schema": {},
-        "params_defaults": {},
-        "examples": []
-      },
-      "implementations": [
-        {
-          "language": "typescript",
-          "targets": [
-            "browser",
-            "node"
-          ],
-          "source": {
-            "kind": "file",
-            "ref": "nodes/classify_random_calls.ts",
             "export": "run"
           },
           "completion": "immediate"
@@ -2855,35 +1908,35 @@
         }
       ]
     },
-    "era.expression.evaluate_builtin_frame": {
-      "display_name": "计算内建函数帧",
-      "description": "调用原生 Math、Gamma、受控导数或自适应 Simpson 积分。",
-      "category": "表达式调用帧",
+    "era.expression.evaluate_ast": {
+      "display_name": "求值当前表达式",
+      "description": "消费初始化的 AST 帧状态，在登记的表达式执行库内推进显式帧栈直到完成；输出数值与诊断。只求值当前操作，不接管操作顺序、函数编译、状态提交或符号压缩。",
+      "category": "表达式执行",
       "version": "1.0.0",
       "flow_kind": "process",
       "contract": {
         "requires": [
           {
-            "type": "era.expression.ast_frame.current",
+            "type": "era.expression.ast_frame.state",
             "cardinality": "exactly_one",
-            "display_name": "当前 AST 调用帧"
+            "display_name": "AST 调用帧状态"
           }
         ],
         "provides": [
           {
-            "key": "frame_transition_builtin",
-            "type": "era.expression.ast_frame.transition",
-            "display_name": "调用帧迁移"
+            "key": "evaluated_expression",
+            "type": "era.expression.value",
+            "display_name": "已求值表达式"
           }
         ],
         "input_semantics": {
-          "era.expression.ast_frame.current": [
-            "输入：栈顶内建函数帧。"
+          "era.expression.ast_frame.state": [
+            "输入：当前操作已初始化的显式帧栈。"
           ]
         },
         "output_semantics": {
-          "frame_transition_builtin": [
-            "输出：下一帧栈迁移。"
+          "evaluated_expression": [
+            "输出：有限数值或失败诊断，不提交业务状态。"
           ]
         },
         "params_schema": {},
@@ -2899,109 +1952,7 @@
           ],
           "source": {
             "kind": "file",
-            "ref": "nodes/evaluate_builtin_frame.ts",
-            "export": "run"
-          },
-          "completion": "immediate"
-        }
-      ]
-    },
-    "era.expression.evaluate_counter_random": {
-      "display_name": "计算可重放随机数",
-      "description": "用 FNV-1a 64 位种子哈希、SplitMix64 和预分配 draw 生成确定性 [0,1) 数值。",
-      "category": "表达式调用帧",
-      "version": "1.0.0",
-      "flow_kind": "process",
-      "contract": {
-        "requires": [
-          {
-            "type": "era.expression.ast_frame.current",
-            "cardinality": "exactly_one",
-            "display_name": "当前随机调用帧"
-          }
-        ],
-        "provides": [
-          {
-            "key": "ast_frame_transition",
-            "type": "era.expression.ast_frame.transition",
-            "display_name": "随机调用帧迁移"
-          }
-        ],
-        "input_semantics": {
-          "era.expression.ast_frame.current": [
-            "输入：random 调用及已完成实参。"
-          ]
-        },
-        "output_semantics": {
-          "ast_frame_transition": [
-            "输出：随机结果与更新后的自动 draw 游标。"
-          ]
-        },
-        "params_schema": {},
-        "params_defaults": {},
-        "examples": []
-      },
-      "implementations": [
-        {
-          "language": "typescript",
-          "targets": [
-            "browser",
-            "node"
-          ],
-          "source": {
-            "kind": "file",
-            "ref": "nodes/evaluate_counter_random.ts",
-            "export": "run"
-          },
-          "completion": "immediate"
-        }
-      ]
-    },
-    "era.expression.evaluate_operator_frame": {
-      "display_name": "计算运算符帧",
-      "description": "推进一元或二元 AST 帧。",
-      "category": "表达式调用帧",
-      "version": "1.0.0",
-      "flow_kind": "process",
-      "contract": {
-        "requires": [
-          {
-            "type": "era.expression.ast_frame.current",
-            "cardinality": "exactly_one",
-            "display_name": "当前 AST 调用帧"
-          }
-        ],
-        "provides": [
-          {
-            "key": "frame_transition_operator",
-            "type": "era.expression.ast_frame.transition",
-            "display_name": "调用帧迁移"
-          }
-        ],
-        "input_semantics": {
-          "era.expression.ast_frame.current": [
-            "输入：栈顶运算符帧。"
-          ]
-        },
-        "output_semantics": {
-          "frame_transition_operator": [
-            "输出：下一帧栈迁移。"
-          ]
-        },
-        "params_schema": {},
-        "params_defaults": {},
-        "examples": []
-      },
-      "implementations": [
-        {
-          "language": "typescript",
-          "targets": [
-            "browser",
-            "node"
-          ],
-          "source": {
-            "kind": "file",
-            "ref": "nodes/evaluate_operator_frame.ts",
+            "ref": "nodes/evaluate_ast.ts",
             "export": "run"
           },
           "completion": "immediate"
@@ -3295,57 +2246,6 @@
         }
       ]
     },
-    "era.expression.inspect_ast_frame": {
-      "display_name": "读取栈顶 AST 帧",
-      "description": "公开栈顶节点及其局部环境，供显式分支路由。",
-      "category": "表达式调用帧",
-      "version": "1.0.0",
-      "flow_kind": "process",
-      "contract": {
-        "requires": [
-          {
-            "type": "era.expression.ast_frame.state",
-            "cardinality": "exactly_one",
-            "display_name": "AST 调用帧状态"
-          }
-        ],
-        "provides": [
-          {
-            "key": "ast_frame_current",
-            "type": "era.expression.ast_frame.current",
-            "display_name": "当前 AST 调用帧"
-          }
-        ],
-        "input_semantics": {
-          "era.expression.ast_frame.state": [
-            "输入：调用帧栈。"
-          ]
-        },
-        "output_semantics": {
-          "ast_frame_current": [
-            "输出：栈顶帧。"
-          ]
-        },
-        "params_schema": {},
-        "params_defaults": {},
-        "examples": []
-      },
-      "implementations": [
-        {
-          "language": "typescript",
-          "targets": [
-            "browser",
-            "node"
-          ],
-          "source": {
-            "kind": "file",
-            "ref": "nodes/inspect_ast_frame.ts",
-            "export": "run"
-          },
-          "completion": "immediate"
-        }
-      ]
-    },
     "era.expression.normalize_compaction": {
       "display_name": "规范化压缩表达式",
       "description": "局部常数折叠并打印每路径至多一个可重放 $expr。",
@@ -3515,73 +2415,6 @@
         }
       ]
     },
-    "era.expression.publish_frame_transition": {
-      "display_name": "发布调用帧迁移",
-      "description": "输出下一栈、完成标记和根表达式值。",
-      "category": "表达式调用帧",
-      "version": "1.0.0",
-      "flow_kind": "process",
-      "contract": {
-        "requires": [
-          {
-            "type": "era.expression.ast_frame.transition",
-            "cardinality": "exactly_one",
-            "display_name": "调用帧迁移"
-          }
-        ],
-        "provides": [
-          {
-            "key": "ast_frame_state_next",
-            "type": "era.expression.ast_frame.state",
-            "display_name": "下一 AST 调用帧状态"
-          },
-          {
-            "key": "ast_frame_done",
-            "type": "era.expression.ast_frame.done",
-            "display_name": "AST 调用帧结束标记"
-          },
-          {
-            "key": "evaluated_expression",
-            "type": "era.expression.value",
-            "display_name": "已求值表达式"
-          }
-        ],
-        "input_semantics": {
-          "era.expression.ast_frame.transition": [
-            "输入：调用帧迁移。"
-          ]
-        },
-        "output_semantics": {
-          "ast_frame_state_next": [
-            "输出：下一栈。"
-          ],
-          "ast_frame_done": [
-            "输出：帧完成标记。"
-          ],
-          "evaluated_expression": [
-            "输出：根表达式值。"
-          ]
-        },
-        "params_schema": {},
-        "params_defaults": {},
-        "examples": []
-      },
-      "implementations": [
-        {
-          "language": "typescript",
-          "targets": [
-            "browser",
-            "node"
-          ],
-          "source": {
-            "kind": "file",
-            "ref": "nodes/publish_frame_transition.ts",
-            "export": "run"
-          },
-          "completion": "immediate"
-        }
-      ]
-    },
     "era.expression.reject_recursive_functions": {
       "display_name": "拒绝递归函数环",
       "description": "以 DFS 检测直接与间接函数递归。",
@@ -3627,167 +2460,6 @@
           "source": {
             "kind": "file",
             "ref": "nodes/reject_recursive_functions.ts",
-            "export": "run"
-          },
-          "completion": "immediate"
-        }
-      ]
-    },
-    "era.expression.resolve_value_frame": {
-      "display_name": "解析值帧",
-      "description": "读取有限字面量、形参或当前顺序状态。",
-      "category": "表达式调用帧",
-      "version": "1.0.0",
-      "flow_kind": "process",
-      "contract": {
-        "requires": [
-          {
-            "type": "era.expression.ast_frame.current",
-            "cardinality": "exactly_one",
-            "display_name": "当前 AST 调用帧"
-          }
-        ],
-        "provides": [
-          {
-            "key": "frame_transition_value",
-            "type": "era.expression.ast_frame.transition",
-            "display_name": "调用帧迁移"
-          }
-        ],
-        "input_semantics": {
-          "era.expression.ast_frame.current": [
-            "输入：栈顶值帧。"
-          ]
-        },
-        "output_semantics": {
-          "frame_transition_value": [
-            "输出：下一帧栈迁移。"
-          ]
-        },
-        "params_schema": {},
-        "params_defaults": {},
-        "examples": []
-      },
-      "implementations": [
-        {
-          "language": "typescript",
-          "targets": [
-            "browser",
-            "node"
-          ],
-          "source": {
-            "kind": "file",
-            "ref": "nodes/resolve_value_frame.ts",
-            "export": "run"
-          },
-          "completion": "immediate"
-        }
-      ]
-    },
-    "era.expression.return_child_value": {
-      "display_name": "回传子调用结果",
-      "description": "使已完成子表达式值进入父调用帧。",
-      "category": "表达式调用帧",
-      "version": "1.0.0",
-      "flow_kind": "process",
-      "contract": {
-        "requires": [
-          {
-            "type": "era.expression.ast_frame.current",
-            "cardinality": "exactly_one",
-            "display_name": "当前 AST 调用帧"
-          }
-        ],
-        "provides": [
-          {
-            "key": "frame_transition_return",
-            "type": "era.expression.ast_frame.transition",
-            "display_name": "调用帧迁移"
-          }
-        ],
-        "input_semantics": {
-          "era.expression.ast_frame.current": [
-            "输入：栈顶返回帧。"
-          ]
-        },
-        "output_semantics": {
-          "frame_transition_return": [
-            "输出：下一帧栈迁移。"
-          ]
-        },
-        "params_schema": {},
-        "params_defaults": {},
-        "examples": []
-      },
-      "implementations": [
-        {
-          "language": "typescript",
-          "targets": [
-            "browser",
-            "node"
-          ],
-          "source": {
-            "kind": "file",
-            "ref": "nodes/return_child_value.ts",
-            "export": "run"
-          },
-          "completion": "immediate"
-        }
-      ]
-    },
-    "era.expression.route_ast_frame": {
-      "display_name": "路由 AST 调用帧",
-      "description": "区分值、运算符、内建、自定义调用和返回帧。",
-      "category": "表达式调用帧",
-      "version": "1.0.0",
-      "flow_kind": "decision",
-      "contract": {
-        "requires": [
-          {
-            "type": "era.expression.ast_frame.current",
-            "cardinality": "exactly_one",
-            "display_name": "当前 AST 调用帧"
-          }
-        ],
-        "provides": [
-          {
-            "key": "routed_ast_frame_current",
-            "type": "era.expression.ast_frame.current",
-            "display_name": "已路由的当前调用帧"
-          },
-          {
-            "key": "ast_frame_route",
-            "type": "era.expression.ast_frame.route",
-            "display_name": "AST 调用帧路由"
-          }
-        ],
-        "input_semantics": {
-          "era.expression.ast_frame.current": [
-            "输入：栈顶帧。"
-          ]
-        },
-        "output_semantics": {
-          "routed_ast_frame_current": [
-            "输出：将当前帧随路由结果传递给对应处理分支。"
-          ],
-          "ast_frame_route": [
-            "输出：帧类型路由。"
-          ]
-        },
-        "params_schema": {},
-        "params_defaults": {},
-        "examples": []
-      },
-      "implementations": [
-        {
-          "language": "typescript",
-          "targets": [
-            "browser",
-            "node"
-          ],
-          "source": {
-            "kind": "file",
-            "ref": "nodes/route_ast_frame.ts",
             "export": "run"
           },
           "completion": "immediate"
@@ -4223,54 +2895,9 @@
         "type_key": "era.expression.request",
         "representation": "json",
         "display_name": "函数表达式请求",
-        "description": "显式携带函数库、有限数值初始状态、有序表达式操作及可选随机上下文的独立 root 输入。",
+        "description": "公共求值入口接受原始输入；由 validate_request 领域节点产生输入诊断，保持 executeExpressionLayer 的 unknown 输入与返回语义。",
         "schema": {
-          "$schema": "https://json-schema.org/draft/2020-12/schema",
-          "type": "object",
-          "required": [
-            "functionLibrary",
-            "initialState",
-            "operations"
-          ],
-          "properties": {
-            "functionLibrary": {
-              "type": "object"
-            },
-            "snapshotFunctionLibrary": {
-              "type": "object"
-            },
-            "initialState": {
-              "type": "object"
-            },
-            "snapshotState": {
-              "type": "object"
-            },
-            "allowSnapshots": {
-              "type": "boolean"
-            },
-            "randomContext": {
-              "type": "object",
-              "required": [
-                "sourceKey",
-                "drawOffset"
-              ],
-              "properties": {
-                "sourceKey": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "drawOffset": {
-                  "type": "integer",
-                  "minimum": 0
-                }
-              },
-              "additionalProperties": false
-            },
-            "operations": {
-              "type": "array"
-            }
-          },
-          "additionalProperties": false
+          "$schema": "https://json-schema.org/draft/2020-12/schema"
         }
       },
       "era.expression.request.normalized": {
@@ -4376,11 +3003,11 @@
       }
     },
     "base_lib": {
-      "era.expression.engine": {
+      "era.expression.execution": {
         "kind": "base_lib",
-        "id": "era.expression.engine",
-        "display_name": "ERA 函数表达式纯引擎",
-        "description": "提供受限 token/AST 解析、函数调用图与环检测、显式调用帧求值、数学后端适配和符号压缩；不访问宿主或全局状态。",
+        "id": "era.expression.execution",
+        "display_name": "表达式执行",
+        "description": "表达式执行的独立算法与类型，不依赖工作流端口或公共完整求值入口。",
         "category": "表达式领域",
         "version": "1.0.0",
         "implementations": [
@@ -4392,16 +3019,155 @@
             ],
             "source": {
               "kind": "file",
-              "ref": "base_lib/expression_engine.ts"
+              "ref": "base_lib/expression_execution.ts"
+            },
+            "completion": "immediate"
+          }
+        ],
+        "dependencies": [
+          "era.expression.types",
+          "era.expression.primitives",
+          "era.expression.functions"
+        ],
+        "external_packages": [
+          "mathjs"
+        ]
+      },
+      "era.expression.functions": {
+        "kind": "base_lib",
+        "id": "era.expression.functions",
+        "display_name": "函数库编译",
+        "description": "函数库编译的独立算法与类型，不依赖工作流端口或公共完整求值入口。",
+        "category": "表达式领域",
+        "version": "1.0.0",
+        "implementations": [
+          {
+            "language": "typescript",
+            "targets": [
+              "browser",
+              "node"
+            ],
+            "source": {
+              "kind": "file",
+              "ref": "base_lib/expression_functions.ts"
+            },
+            "completion": "immediate"
+          }
+        ],
+        "dependencies": [
+          "era.expression.types",
+          "era.expression.primitives",
+          "era.expression.syntax"
+        ],
+        "external_packages": []
+      },
+      "era.expression.primitives": {
+        "kind": "base_lib",
+        "id": "era.expression.primitives",
+        "display_name": "数学与随机原语",
+        "description": "数学与随机原语的独立算法与类型，不依赖工作流端口或公共完整求值入口。",
+        "category": "表达式领域",
+        "version": "1.0.0",
+        "implementations": [
+          {
+            "language": "typescript",
+            "targets": [
+              "browser",
+              "node"
+            ],
+            "source": {
+              "kind": "file",
+              "ref": "base_lib/expression_primitives.ts"
+            },
+            "completion": "immediate"
+          }
+        ],
+        "dependencies": [
+          "era.expression.types"
+        ],
+        "external_packages": [
+          "@stdlib/math-base-special-gamma"
+        ]
+      },
+      "era.expression.symbolic": {
+        "kind": "base_lib",
+        "id": "era.expression.symbolic",
+        "display_name": "符号压缩",
+        "description": "符号压缩的独立算法与类型，不依赖工作流端口或公共完整求值入口。",
+        "category": "表达式领域",
+        "version": "1.0.0",
+        "implementations": [
+          {
+            "language": "typescript",
+            "targets": [
+              "browser",
+              "node"
+            ],
+            "source": {
+              "kind": "file",
+              "ref": "base_lib/expression_symbolic.ts"
+            },
+            "completion": "immediate"
+          }
+        ],
+        "dependencies": [
+          "era.expression.types",
+          "era.expression.syntax",
+          "era.expression.functions",
+          "era.expression.primitives"
+        ],
+        "external_packages": []
+      },
+      "era.expression.syntax": {
+        "kind": "base_lib",
+        "id": "era.expression.syntax",
+        "display_name": "语法与输入解析",
+        "description": "语法与输入解析的独立算法与类型，不依赖工作流端口或公共完整求值入口。",
+        "category": "表达式领域",
+        "version": "1.0.0",
+        "implementations": [
+          {
+            "language": "typescript",
+            "targets": [
+              "browser",
+              "node"
+            ],
+            "source": {
+              "kind": "file",
+              "ref": "base_lib/expression_syntax.ts"
+            },
+            "completion": "immediate"
+          }
+        ],
+        "dependencies": [
+          "era.expression.primitives",
+          "era.expression.types"
+        ],
+        "external_packages": []
+      },
+      "era.expression.types": {
+        "kind": "base_lib",
+        "id": "era.expression.types",
+        "display_name": "共享类型",
+        "description": "共享类型的独立算法与类型，不依赖工作流端口或公共完整求值入口。",
+        "category": "表达式领域",
+        "version": "1.0.0",
+        "implementations": [
+          {
+            "language": "typescript",
+            "targets": [
+              "browser",
+              "node"
+            ],
+            "source": {
+              "kind": "file",
+              "ref": "base_lib/expression_types.ts"
             },
             "completion": "immediate"
           }
         ],
         "dependencies": [],
-        "external_packages": [
-          "mathjs",
-          "@stdlib/math-base-special-gamma"
-        ]
+        "external_packages": []
       }
     },
     "capabilities": {},

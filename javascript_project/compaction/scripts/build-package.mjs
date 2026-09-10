@@ -73,6 +73,7 @@ try {
       "--platform=neutral",
       "--format=esm",
       "--external:mathjs",
+      "--external:@era/vibeflow-expression",
       "--external:@stdlib/math-base-special-gamma",
       `--outfile=${output}/engine.js`,
     ],

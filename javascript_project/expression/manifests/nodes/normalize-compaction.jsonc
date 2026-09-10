@@ -34,18 +34,29 @@
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
-      "era.expression.sequence.state": ["输入：层起始状态。"],
-      "era.expression.execution.result": ["输入：数值执行结果。"],
-      "era.expression.symbolic.layer": ["输入：符号层变化。"]
+      "era.expression.sequence.state": [
+        "输入：层起始状态。"
+      ],
+      "era.expression.execution.result": [
+        "输入：数值执行结果。"
+      ],
+      "era.expression.symbolic.layer": [
+        "输入：符号层变化。"
+      ]
     },
     "output_semantics": {
-      "expression_response": ["输出：最终状态与压缩候选。"]
+      "expression_response": [
+        "输出：最终状态与压缩候选。"
+      ]
     }
   },
   "implementations": [
     {
       "language": "typescript",
-      "targets": ["browser", "node"],
+      "targets": [
+        "browser",
+        "node"
+      ],
       "completion": "immediate",
       "source": {
         "kind": "file",
@@ -54,6 +65,10 @@
       }
     }
   ],
-  "base_libs": ["era.expression.engine"],
+  "base_libs": [
+    "era.expression.execution",
+    "era.expression.symbolic",
+    "era.expression.types"
+  ],
   "capabilities": []
 }

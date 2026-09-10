@@ -24,16 +24,23 @@
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
-      "era.expression.function_library.parsed": ["输入：函数 AST。"]
+      "era.expression.function_library.parsed": [
+        "输入：函数 AST。"
+      ]
     },
     "output_semantics": {
-      "function_dependencies": ["输出：自定义函数调用边。"]
+      "function_dependencies": [
+        "输出：自定义函数调用边。"
+      ]
     }
   },
   "implementations": [
     {
       "language": "typescript",
-      "targets": ["browser", "node"],
+      "targets": [
+        "browser",
+        "node"
+      ],
       "completion": "immediate",
       "source": {
         "kind": "file",
@@ -42,6 +49,10 @@
       }
     }
   ],
-  "base_libs": ["era.expression.engine"],
+  "base_libs": [
+    "era.expression.execution",
+    "era.expression.functions",
+    "era.expression.types"
+  ],
   "capabilities": []
 }

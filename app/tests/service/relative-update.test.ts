@@ -22,7 +22,7 @@ import {
   deterministicRandomUnit,
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- 产品测试验证跨 root 的固定随机 ABI。
   // @ts-ignore TypeScript 会对 app rootDir 外的 VibeFlow 源码报告 TS6059。
-} from '../../../javascript_project/expression/base_lib/expression_engine';
+} from '../../../javascript_project/expression/base_lib/expression_primitives';
 
 function tag(name: string, value: unknown): string {
   return `<${name}>${JSON.stringify(value)}</${name}>`;

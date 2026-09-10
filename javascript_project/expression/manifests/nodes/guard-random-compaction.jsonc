@@ -7,12 +7,51 @@
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
-    "requires": [{ "type": "era.expression.symbolic.layer", "cardinality": "exactly_one", "display_name": "表达式符号变化" }],
-    "provides": [{ "key": "random_guarded_symbolic_layer", "type": "era.expression.symbolic.layer", "display_name": "带随机屏障的符号变化" }],
-    "params_schema": {}, "params_defaults": {},
-    "input_semantics": { "era.expression.symbolic.layer": ["输入：局部安全符号变化。"] },
-    "output_semantics": { "random_guarded_symbolic_layer": ["输出：不跨自动随机边界的符号变化。"] }
+    "requires": [
+      {
+        "type": "era.expression.symbolic.layer",
+        "cardinality": "exactly_one",
+        "display_name": "表达式符号变化"
+      }
+    ],
+    "provides": [
+      {
+        "key": "random_guarded_symbolic_layer",
+        "type": "era.expression.symbolic.layer",
+        "display_name": "带随机屏障的符号变化"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.expression.symbolic.layer": [
+        "输入：局部安全符号变化。"
+      ]
+    },
+    "output_semantics": {
+      "random_guarded_symbolic_layer": [
+        "输出：不跨自动随机边界的符号变化。"
+      ]
+    }
   },
-  "implementations": [{ "language": "typescript", "targets": ["browser", "node"], "completion": "immediate", "source": { "kind": "file", "ref": "nodes/guard_random_compaction.ts", "export": "run" } }],
-  "base_libs": ["era.expression.engine"], "capabilities": []
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/guard_random_compaction.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.expression.execution",
+    "era.expression.types"
+  ],
+  "capabilities": []
 }

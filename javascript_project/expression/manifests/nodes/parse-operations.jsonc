@@ -24,14 +24,23 @@
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
-      "era.expression.request.normalized": ["输入：已验证请求。"]
+      "era.expression.request.normalized": [
+        "输入：已验证请求。"
+      ]
     },
-    "output_semantics": { "parsed_operations": ["输出：按顺序的操作 AST。"] }
+    "output_semantics": {
+      "parsed_operations": [
+        "输出：按顺序的操作 AST。"
+      ]
+    }
   },
   "implementations": [
     {
       "language": "typescript",
-      "targets": ["browser", "node"],
+      "targets": [
+        "browser",
+        "node"
+      ],
       "completion": "immediate",
       "source": {
         "kind": "file",
@@ -40,6 +49,10 @@
       }
     }
   ],
-  "base_libs": ["era.expression.engine"],
+  "base_libs": [
+    "era.expression.execution",
+    "era.expression.syntax",
+    "era.expression.types"
+  ],
   "capabilities": []
 }
