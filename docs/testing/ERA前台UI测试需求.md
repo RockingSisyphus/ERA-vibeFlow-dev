@@ -779,3 +779,6 @@ recording 与 evaluation 分开，并列出每个失败功能、稳定错误码�
 - Harness audit 对 path manifests、summary 和 evidence refs 报告零结构问题。
 
 两小时空闲长稳不属于本文验收条件，除非用户另行直接、明确要求。
+
+
+2026-09-10 历史资料归档：原 `reports/ui-special-20260820` 的原始运行资料已迁至 `/home/example/projects/ERA-vibeFlow-archive/2026-09-10/reports/ui-special-20260820`，原目录保留恢复索引。历史结果不因归档而改变。
