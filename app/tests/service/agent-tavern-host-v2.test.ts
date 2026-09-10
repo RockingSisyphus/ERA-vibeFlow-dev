@@ -1,4 +1,9 @@
 import {
+  connectionId,
+  planConnectionSave,
+  type ConnectionState,
+} from '../../../javascript_project/service/base_lib/agent_connection_policy';
+import {
   buildAgentRequestPolicy,
   captureAgentPresetSnapshot,
 } from '../../../javascript_project/service/base_lib/agent_request_policy';
@@ -9,6 +14,18 @@ import { agentExecutionRecords, currentAgentRecordChat } from '../../src/ERAÂèòÈ
 
 const signal = new AbortController().signal;
 const capabilityContext = { signal };
+
+function save(
+  operations: AgentTavernHost['operations'],
+  input: Readonly<Record<string, unknown>>,
+  context: { signal: AbortSignal },
+) {
+  const state = operations.read_connection_state({ id: connectionId(input.id) }, context) as ConnectionState;
+  return operations.upsert_connection_profile(
+    { ...planConnectionSave(input, state), keyProvider: input.keyProvider },
+    context,
+  );
+}
 
 describe('AgentTavernHost V2 local routes', () => {
   const saveSettingsDebounced = vi.fn(async () => undefined);
@@ -206,7 +223,8 @@ describe('AgentTavernHost V2 local routes', () => {
 
   it('stores keys locally while exposing only summaries and preserving an empty edit key', async () => {
     const operations = host().operations;
-    const created = (await operations.upsert_connection_profile(
+    const created = (await save(
+      operations,
       { id: 'lab-a', name: 'Lab A', apiUrl: 'http://127.0.0.1:4010/v1', keyProvider: () => 'top-secret-key' },
       capabilityContext,
     )) as Record<string, unknown>;
@@ -215,7 +233,8 @@ describe('AgentTavernHost V2 local routes', () => {
       'top-secret-key',
     );
 
-    await operations.upsert_connection_profile(
+    await save(
+      operations,
       { id: 'lab-a', name: 'Lab A renamed', apiUrl: 'http://127.0.0.1:4010/v1' },
       capabilityContext,
     );
@@ -226,7 +245,8 @@ describe('AgentTavernHost V2 local routes', () => {
 
   it('loads and generates through the selected local profile without returning the key', async () => {
     const operations = host().operations;
-    await operations.upsert_connection_profile(
+    await save(
+      operations,
       { id: 'lab-b', name: 'Lab B', apiUrl: 'http://127.0.0.1:4020/v1', keyProvider: () => 'another-secret' },
       capabilityContext,
     );

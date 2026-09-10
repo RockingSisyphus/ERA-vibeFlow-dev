@@ -6,7 +6,6 @@
 import { currentTavernContext } from './tavern-browser-host';
 
 const AGENT_LOCAL_SETTINGS_KEY = 'era_agent';
-export const MAX_CONNECTION_PROFILES = 64;
 
 /** 本机私密连接方案；key 只能停留在宿主设置层，任何跨层结果必须使用脱敏摘要。 */
 export type LocalConnectionProfile = {

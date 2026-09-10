@@ -89,6 +89,7 @@ export interface EraTavernAdapter {
     write_configuration(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
     capture_preset(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
     read_configuration_sources(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
+    read_connection_state(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
     upsert_connection_profile(
       input: Readonly<Record<string, unknown>>,
       context: EraCapabilityContext,

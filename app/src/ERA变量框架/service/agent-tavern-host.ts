@@ -139,6 +139,7 @@ export class AgentTavernHost {
     | 'write_configuration'
     | 'capture_preset'
     | 'read_configuration_sources'
+    | 'read_connection_state'
     | 'upsert_connection_profile'
     | 'delete_connection_profile'
     | 'clear_connection_profile_key'

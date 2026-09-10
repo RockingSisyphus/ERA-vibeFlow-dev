@@ -5,9 +5,7 @@
 
 import {
   connectionProfiles,
-  MAX_CONNECTION_PROFILES,
   newProfileId,
-  profileId,
   profileRecord,
   profileSummary,
   requireApiUrl,
@@ -20,6 +18,7 @@ import type { EraTavernAdapter } from './types';
 type AgentOperations = EraTavernAdapter['agent'];
 type ConnectionOperations = Pick<
   AgentOperations,
+  | 'read_connection_state'
   | 'upsert_connection_profile'
   | 'delete_connection_profile'
   | 'clear_connection_profile_key'
@@ -36,28 +35,15 @@ function submittedKey(input: Readonly<Record<string, unknown>>): string | null {
   return typeof input.keyProvider === 'function' ? String(input.keyProvider()) : null;
 }
 
-/** 统一构造受限方案，保证新建、更新、保留和显式清密钥使用同一优先级。 */
-function buildProfile(input: Readonly<Record<string, unknown>>): {
-  readonly existing: LocalConnectionProfile | null;
-  readonly profile: LocalConnectionProfile;
-} {
-  const profiles = connectionProfiles();
-  const requestedId = profileId(input.id);
-  const existing = requestedId === null ? null : profileRecord(profiles[requestedId]);
-  if (existing === null && Object.keys(profiles).length >= MAX_CONNECTION_PROFILES) {
-    throw new RangeError(`本机连接方案不得超过 ${MAX_CONNECTION_PROFILES} 个。`);
-  }
-  const name = typeof input.name === 'string' ? input.name.trim().slice(0, 128) : '';
-  if (name.length === 0) throw new TypeError('连接方案名称不能为空。');
+/** 按 Service 计划合入本机秘密；保持提供器、随机 ID、地址转换的执行顺序。 */
+function materializeProfile(input: Readonly<Record<string, unknown>>): LocalConnectionProfile {
+  const existing = typeof input.sourceId === 'string' ? profileRecord(connectionProfiles()[input.sourceId]) : null;
   const secret = submittedKey(input);
   return {
-    existing,
-    profile: {
-      id: existing?.id ?? requestedId ?? newProfileId(),
-      name,
-      apiUrl: requireApiUrl(input.apiUrl),
-      key: input.clearKey === true ? '' : secret && secret.length > 0 ? secret : (existing?.key ?? ''),
-    },
+    id: (input.id as string | null) ?? newProfileId(),
+    name: input.name as string,
+    apiUrl: requireApiUrl(input.apiUrl),
+    key: input.keyMode === 'clear' ? '' : secret && secret.length > 0 ? secret : (existing?.key ?? ''),
   };
 }
 
@@ -106,22 +92,30 @@ async function modelsFor(apiUrl: string, key: string, signal: AbortSignal): Prom
  */
 export function createAgentConnectionOperations(): ConnectionOperations {
   return {
+    read_connection_state: (input, context) => {
+      throwIfAborted(context.signal);
+      const profiles = connectionProfiles();
+      const id = typeof input.id === 'string' ? input.id : null;
+      const profile = id === null ? null : profileRecord(profiles[id]);
+      return {
+        entryCount: Object.keys(profiles).length,
+        entryExists: id !== null && Object.prototype.hasOwnProperty.call(profiles, id),
+        profile: profile === null ? null : profileSummary(profile),
+      };
+    },
     upsert_connection_profile: async (input, context) => {
       // 保存设置终态后才返回摘要，避免 UI 把尚未持久化的方案当成成功。
       throwIfAborted(context.signal);
-      const { existing, profile } = buildProfile(input);
+      const profile = materializeProfile(input);
       connectionProfiles()[profile.id] = profile;
       await currentTavernContext().saveSettingsDebounced();
       throwIfAborted(context.signal);
-      return { status: existing === null ? 'created' : 'updated', profile: profileSummary(profile) };
+      return { status: input.status, profile: profileSummary(profile) };
     },
     delete_connection_profile: async (input, context) => {
       // 方案删除不触碰角色卡引用；缺失引用由下一次执行给出可重绑诊断。
       throwIfAborted(context.signal);
-      const id = profileId(input.id);
-      if (id === null || !Object.prototype.hasOwnProperty.call(connectionProfiles(), id)) {
-        throw new TypeError('ERA_AGENT_PROFILE_MISSING：本机连接方案不存在。');
-      }
+      const id = input.id as string;
       delete connectionProfiles()[id];
       await currentTavernContext().saveSettingsDebounced();
       throwIfAborted(context.signal);
@@ -130,9 +124,8 @@ export function createAgentConnectionOperations(): ConnectionOperations {
     clear_connection_profile_key: async (input, context) => {
       // 清密钥是独立显式动作，空密码提交不能走到这里。
       throwIfAborted(context.signal);
-      const profile = requireProfile(input.id);
-      const cleared = { ...profile, key: '' };
-      connectionProfiles()[profile.id] = cleared;
+      const cleared = { id: input.id as string, name: input.name as string, apiUrl: input.apiUrl as string, key: '' };
+      connectionProfiles()[cleared.id] = cleared;
       await currentTavernContext().saveSettingsDebounced();
       throwIfAborted(context.signal);
       return { status: 'cleared', profile: profileSummary(cleared) };

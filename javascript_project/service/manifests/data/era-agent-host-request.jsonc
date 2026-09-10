@@ -116,6 +116,24 @@
             "additionalProperties": false
           }
         }
+      },
+      "sourceId": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "keyMode": {
+        "enum": [
+          "clear",
+          "replace-if-nonempty-otherwise-preserve"
+        ]
+      },
+      "status": {
+        "enum": [
+          "created",
+          "updated"
+        ]
       }
     }
   }

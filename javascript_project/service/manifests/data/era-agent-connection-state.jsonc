@@ -1,0 +1,52 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.agent.connection.state",
+  "representation": "json",
+  "display_name": "本机连接公开事实",
+  "description": "当前记录数、查找键存在性与有效记录摘要，不包含秘密值。",
+  "schema": {
+    "type": "object",
+    "required": [
+      "entryCount",
+      "entryExists",
+      "profile"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "entryCount": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "entryExists": {
+        "type": "boolean"
+      },
+      "profile": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "apiUrl": {
+            "type": "string"
+          },
+          "hasKey": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "apiUrl",
+          "hasKey"
+        ],
+        "additionalProperties": false
+      }
+    }
+  }
+}

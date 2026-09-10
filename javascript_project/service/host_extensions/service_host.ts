@@ -104,6 +104,7 @@ export interface EraTavernCapabilityAdapter {
     readonly write_configuration: EraAsyncHostOperation;
     readonly capture_preset: EraHostOperation;
     readonly read_configuration_sources: EraHostOperation;
+    readonly read_connection_state: EraHostOperation;
     readonly upsert_connection_profile: EraAsyncHostOperation;
     readonly delete_connection_profile: EraAsyncHostOperation;
     readonly clear_connection_profile_key: EraAsyncHostOperation;
@@ -631,6 +632,8 @@ class ServiceHostRuntime {
         this.invokeImmediate("agent", "capture_preset", input, options),
       read_configuration_sources: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
         this.invokeImmediate("agent", "read_configuration_sources", input, options),
+      read_connection_state: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
+        this.invokeImmediate("agent", "read_connection_state", input, options),
       upsert_connection_profile: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
         this.invokeSuspend("agent", "upsert_connection_profile", input, options),
       delete_connection_profile: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
@@ -895,6 +898,7 @@ class ServiceHostRuntime {
       [adapter.agent?.write_configuration, "agent.write_configuration"],
       [adapter.agent?.capture_preset, "agent.capture_preset"],
       [adapter.agent?.list_connection_models_draft, "agent.list_connection_models_draft"],
+      [adapter.agent?.read_connection_state, "agent.read_connection_state"],
       [adapter.agent?.upsert_connection_profile, "agent.upsert_connection_profile"],
       [adapter.agent?.delete_connection_profile, "agent.delete_connection_profile"],
       [adapter.agent?.clear_connection_profile_key, "agent.clear_connection_profile_key"],

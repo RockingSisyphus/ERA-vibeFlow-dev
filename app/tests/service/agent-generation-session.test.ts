@@ -430,6 +430,7 @@ describe('AgentGenerationSession pure contracts', () => {
             read_context: vi.fn(async () => ({ configuration: null })),
             upsert_connection_profile: upsertConnectionProfile,
             write_configuration: writeConfiguration,
+            read_connection_state: () => ({ entryCount: 0, entryExists: false, profile: null }),
             read_configuration_sources: vi.fn(() => ({ connectionProfiles: [] })),
           } as never,
         },
@@ -439,7 +440,11 @@ describe('AgentGenerationSession pure contracts', () => {
     expect(upsertConnectionProfile).toHaveBeenCalledWith({
       name: 'Fixture API',
       apiUrl: 'http://127.0.0.1:19002',
-      clearKey: false,
+      sourceId: null,
+      id: null,
+      status: 'created',
+      keyMode: 'replace-if-nonempty-otherwise-preserve',
+      keyReference: undefined,
     });
     expect(writeConfiguration).toHaveBeenCalledWith({
       configuration: expect.objectContaining({

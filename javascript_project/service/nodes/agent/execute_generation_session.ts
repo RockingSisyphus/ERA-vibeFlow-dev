@@ -1,3 +1,10 @@
+import {
+  connectionId,
+  planConnectionSave,
+  planConnectionDelete,
+  planConnectionClear,
+  type ConnectionState,
+} from "../../base_lib/agent_connection_policy.ts";
 import { agentPresetName, captureAgentPresetSnapshot, buildAgentRequestPolicy } from "../../base_lib/agent_request_policy.ts";
 import {
   AgentFunctionCallFailure,
@@ -38,6 +45,7 @@ interface Envelope<T> {
   readonly value: T;
 }
 interface AgentCapability {
+  read_connection_state(input: Readonly<Record<string, unknown>>): ConnectionState;
   await_native_completion(input: Readonly<Record<string, unknown>>): Promise<unknown>;
   write_configuration(
     input: Readonly<Record<string, unknown>>,
@@ -69,6 +77,16 @@ interface AgentCapability {
   ): Promise<unknown>;
   stop_native_generation(input: Readonly<Record<string, unknown>>): unknown;
 }
+/** 两个真实保存入口共用同一规则，每次写入前读取当时的本机事实。 */
+function saveConnection(
+  capability: AgentCapability,
+  input: Readonly<Record<string, unknown>>,
+): Promise<unknown> {
+  const state = capability.read_connection_state({ id: connectionId(input.id) });
+  const plan = planConnectionSave(input, state);
+  return capability.upsert_connection_profile({ ...plan, keyReference: input.keyReference });
+}
+
 interface Context {
   readonly capabilities: { readonly "era.tavern.agent": AgentCapability };
 }
@@ -1049,7 +1067,8 @@ export async function run(
     }
     if (payload.action === "upsert-connection-profile") {
       try {
-        const result = await capability.upsert_connection_profile(
+        const result = await saveConnection(
+          capability,
           isRecord(payload.profile) ? payload.profile : {},
         );
         return output(
@@ -1071,9 +1090,8 @@ export async function run(
     }
     if (payload.action === "delete-connection-profile") {
       try {
-        const result = await capability.delete_connection_profile({
-          id: payload.id,
-        });
+        const state = capability.read_connection_state({ id: connectionId(payload.id) });
+        const result = await capability.delete_connection_profile(planConnectionDelete(payload.id, state));
         return output(
           transition(step, "execute-only", "committed", [], {
             result,
@@ -1093,9 +1111,8 @@ export async function run(
     }
     if (payload.action === "clear-connection-profile-key") {
       try {
-        const result = await capability.clear_connection_profile_key({
-          id: payload.id,
-        });
+        const state = capability.read_connection_state({ id: connectionId(payload.id) });
+        const result = await capability.clear_connection_profile_key(planConnectionClear(state));
         return output(
           transition(step, "execute-only", "committed", [], {
             result,
@@ -1224,7 +1241,7 @@ export async function run(
             ? results.get(`${existingId}:${signature}`)
             : undefined;
           if (result === undefined) {
-            result = await capability.upsert_connection_profile({
+            result = await saveConnection(capability, {
               ...(existingId ? { id: existingId } : {}),
               name: mutation.name,
               apiUrl: mutation.apiUrl,

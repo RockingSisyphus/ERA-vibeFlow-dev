@@ -125,6 +125,7 @@ function createTavernCapabilities() {
       read_context: async () => ({ status: 'ready', context: null }),
       write_configuration: async () => ({ status: 'committed' }),
       capture_preset: () => ({ status: 'captured', preset: null }),
+      read_connection_state: () => ({ entryCount: 0, entryExists: false, profile: null }),
       read_configuration_sources: () => ({ presetNames: [], currentPresetName: null, connectionProfiles: [] }),
       upsert_connection_profile: async () => ({ status: 'created' }),
       delete_connection_profile: async () => ({ status: 'deleted' }),

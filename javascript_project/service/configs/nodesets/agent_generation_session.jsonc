@@ -20,28 +20,7 @@
         "id": "execute_agent_phase_v2",
         "type_used": "era.agent.execute_session_v2",
         "display_name": "执行生成阶段及连接方案保存计划",
-        "description": "在现有独立连接保存和 write-with-connections 两个真实入口，读取本机连接的公开记录事实，由 Service 决定新建/更新、数量上限、名称、ID 和密钥更新意图，再调用原 Host 写入；删除/清密钥命令复用同一事实与计划边界。保留前端、地址/模型接口转换、秘密值、本机存储及生成阶段原有行为。",
-        "status": "planned",
-        "flow_kind": "process",
-        "requires": [
-          {
-            "type": "era.agent.auxiliary.execution_request",
-            "cardinality": "exactly_one",
-            "display_name": "不含密钥的辅助阶段执行请求"
-          }
-        ],
-        "provides": [
-          {
-            "key": "agent_transition",
-            "type": "era.agent.session.transition",
-            "display_name": "Agent 阶段转换"
-          },
-          {
-            "key": "agent_execution_state",
-            "type": "era.batch.execution.state",
-            "display_name": "Agent 批次执行状态"
-          }
-        ]
+        "description": "在现有独立连接保存和 write-with-connections 两个真实入口，读取本机连接的公开记录事实，由 Service 决定新建/更新、数量上限、名称、ID 和密钥更新意图，再调用原 Host 写入；删除/清密钥命令复用同一事实与计划边界。保留前端、地址/模型接口转换、秘密值、本机存储及生成阶段原有行为。"
       },
       {"id":"route_agent_transition","type_used":"era.agent.route_transition","display_name":"路由阶段结果","description":"决定直接结算还是恢复原任务。"},
       {

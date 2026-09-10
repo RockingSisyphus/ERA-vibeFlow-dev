@@ -15,6 +15,6 @@
     "output_semantics": {"agent_transition":["输出：阶段副作用完成后的显式委托或直接结算路由。"],"agent_execution_state":["输出：未经修改的当前批次执行状态。"]}
   },
   "implementations": [{"language":"typescript","targets":["browser"],"completion":"suspend","source":{"kind":"file","ref":"nodes/agent/execute_generation_session.ts","export":"run"}}],
-  "base_libs": ["era.service.agent_generation_session", "era.service.agent_request_policy", "era.service.mk_engine", "era.service.types"],
-  "capabilities": [{"id":"era.tavern.agent","operations":["await_native_completion","write_configuration","capture_preset","read_configuration_sources","upsert_connection_profile","delete_connection_profile","clear_connection_profile_key","list_connection_models","list_connection_models_draft","generate","generate_story","inject_once","write_session","clear_session","create_error_message","stop_native_generation"]}]
+  "base_libs": ["era.service.agent_generation_session", "era.service.agent_request_policy", "era.service.agent_connection_policy", "era.service.mk_engine", "era.service.types"],
+  "capabilities": [{"id":"era.tavern.agent","operations":["await_native_completion","write_configuration","capture_preset","read_configuration_sources","read_connection_state","upsert_connection_profile","delete_connection_profile","clear_connection_profile_key","list_connection_models","list_connection_models_draft","generate","generate_story","inject_once","write_session","clear_session","create_error_message","stop_native_generation"]}]
 }

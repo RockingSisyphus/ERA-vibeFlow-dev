@@ -67,6 +67,7 @@ class FakeAdapter implements EraTavernHostAdapter {
     read_context: async (input: Readonly<Record<string, unknown>>) => ({ ...input }),
     write_configuration: async (input: Readonly<Record<string, unknown>>) => ({ ...input }),
     capture_preset: (input: Readonly<Record<string, unknown>>) => ({ ...input }),
+    read_connection_state: () => ({ entryCount: 0, entryExists: false, profile: null }),
     read_configuration_sources: (input: Readonly<Record<string, unknown>>) => ({ ...input }),
     upsert_connection_profile: async (input: Readonly<Record<string, unknown>>) => ({ ...input }),
     delete_connection_profile: async (input: Readonly<Record<string, unknown>>) => ({ ...input }),

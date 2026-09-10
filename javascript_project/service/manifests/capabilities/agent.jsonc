@@ -10,6 +10,7 @@
     "write_configuration": {"input_type": "era.agent.host.request", "output_type": "era.agent.host.result", "completion": "suspend"},
     "capture_preset": {"input_type": "era.agent.host.request", "output_type": "era.agent.host.result", "completion": "immediate"},
     "read_configuration_sources": {"input_type": "era.agent.host.request", "output_type": "era.agent.host.result", "completion": "immediate"},
+    "read_connection_state": {"input_type": "era.agent.host.request", "output_type": "era.agent.connection.state", "completion": "immediate"},
     "upsert_connection_profile": {"input_type": "era.agent.host.request", "output_type": "era.agent.host.result", "completion": "suspend"},
     "delete_connection_profile": {"input_type": "era.agent.host.request", "output_type": "era.agent.host.result", "completion": "suspend"},
     "clear_connection_profile_key": {"input_type": "era.agent.host.request", "output_type": "era.agent.host.result", "completion": "suspend"},
