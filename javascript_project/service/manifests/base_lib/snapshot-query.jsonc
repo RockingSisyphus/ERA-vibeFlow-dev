@@ -8,13 +8,18 @@
   "implementations": [
     {
       "language": "typescript",
-      "targets": ["browser", "node"],
+      "targets": [
+        "browser",
+        "node"
+      ],
       "source": {
         "kind": "file",
         "ref": "base_lib/domain/snapshot_query.ts"
       }
     }
   ],
-  "dependencies": [],
+  "dependencies": [
+    "era.snapshot.floor_projection"
+  ],
   "external_packages": []
 }

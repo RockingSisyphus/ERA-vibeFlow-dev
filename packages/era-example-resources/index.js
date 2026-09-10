@@ -28,9 +28,9 @@ const show=state=>{
  const bar=document.querySelector('progress'),max=Number(player.max_hp),hp=Number(player.hp);
  bar.max=Number.isFinite(max)&&max>0?max:1;bar.value=Number.isFinite(hp)?Math.max(0,Math.min(hp,bar.max)):0;
 };
-let unsubscribe=()=>{};
-void ERA.ready().then(state=>{show(state);unsubscribe=ERA.subscribe(show)}).catch(error=>put('status',String(error)));
-addEventListener('pagehide',()=>unsubscribe(),{once:true});
+let closed=false,unsubscribe=()=>{};
+void ERA.ready().then(state=>{if(closed)return;show(state);unsubscribe=ERA.subscribe(show)}).catch(error=>{if(!closed)put('status',String(error))});
+addEventListener('pagehide',()=>{closed=true;unsubscribe()},{once:true});
 })();
 </script>`;
 }

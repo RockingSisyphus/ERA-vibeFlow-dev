@@ -10,7 +10,7 @@ export {
   projectFloorSnapshot,
   projectFloorSnapshots,
   type EraFloorSnapshot,
-} from "@era/vibeflow-floor-snapshot";
+} from "./floor_snapshot.ts";
 
 export type EraSnapshotQueryType =
   | "getCurrentVars"

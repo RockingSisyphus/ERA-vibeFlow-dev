@@ -41019,6 +41019,30 @@
           "@era/vibeflow-contracts"
         ]
       },
+      "era.snapshot.floor_projection": {
+        "kind": "base_lib",
+        "id": "era.snapshot.floor_projection",
+        "display_name": "ERA 按楼快照纯投影",
+        "description": "从已提交状态和变量/函数日志计算有限楼层的快照；与App同步分发包使用同一源码，不访问宿主或持久化逐楼状态。",
+        "category": "快照查询",
+        "version": "0.1.1",
+        "implementations": [
+          {
+            "language": "typescript",
+            "targets": [
+              "browser",
+              "node"
+            ],
+            "source": {
+              "kind": "file",
+              "ref": "base_lib/domain/floor_snapshot.ts"
+            },
+            "completion": "immediate"
+          }
+        ],
+        "dependencies": [],
+        "external_packages": []
+      },
       "era.snapshot.query": {
         "kind": "base_lib",
         "id": "era.snapshot.query",
@@ -41040,7 +41064,9 @@
             "completion": "immediate"
           }
         ],
-        "dependencies": [],
+        "dependencies": [
+          "era.snapshot.floor_projection"
+        ],
         "external_packages": []
       }
     },

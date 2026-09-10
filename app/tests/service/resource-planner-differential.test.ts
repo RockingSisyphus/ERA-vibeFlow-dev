@@ -329,6 +329,7 @@ describe('VibeFlow Service 宿主资源规划器差分', () => {
       eraStatusbarMounted: undefined as Promise<void> | undefined,
     };
     runInNewContext(bootstrap!, {
+      addEventListener: vi.fn(),
       window: frame,
       document: { body: { dataset: {} } },
       waitGlobalInitialized: (name: string) => {
@@ -347,7 +348,7 @@ describe('VibeFlow Service 宿主资源规划器差分', () => {
     initialized();
     await frame.eraStatusbarMounted;
     expect(mounts).toBe(1);
-    expect(html).toContain('window.eraStatusbarMounted.then(() => ERA.ready())');
+    expect(html).toContain('ERA.ready()');
   });
 
   it('示例作者脚本在本楼发布后重新查询历史，不通过重新加载脚本更新历史栏', async () => {

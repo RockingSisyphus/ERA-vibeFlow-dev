@@ -676,13 +676,17 @@ function statusBarExampleHtml(): string {
     summary { cursor:pointer; color:#9fc7d5; }
   </style>
   <script data-era-statusbar-bootstrap>
-    const mountEraStatusbar = () => window.parent.ERA.statusbar.mount(window);
-    window.eraStatusbarMounted = window.parent.ERA
-      ? mountEraStatusbar()
-      : waitGlobalInitialized('ERA').then(mountEraStatusbar);
-    void window.eraStatusbarMounted.catch(error => {
-      document.body.dataset.eraStatusbarBootstrapError = error instanceof Error ? error.message : String(error);
-    });
+    (() => {
+      let closed = false;
+      addEventListener('pagehide', () => { closed = true; }, { once: true });
+      const mountEraStatusbar = () => closed ? false : window.parent.ERA.statusbar.mount(window);
+      window.eraStatusbarMounted = window.parent.ERA
+        ? Promise.resolve(mountEraStatusbar())
+        : waitGlobalInitialized('ERA').then(mountEraStatusbar);
+      void window.eraStatusbarMounted.catch(error => {
+        if (!closed) document.body.dataset.eraStatusbarBootstrapError = error instanceof Error ? error.message : String(error);
+      });
+    })();
   </script>
   <section class="era-demo" data-era-statusbar-root="v1" data-era-overflow="placeholder" data-era-demo-statusbar="v2" hidden inert>
     <h3>ERA 示例状态栏</h3>
@@ -813,26 +817,29 @@ function statusBarExampleHtml(): string {
           show('auto', 'status', result);
           owner.dispatchEvent(new CustomEvent(automaticStatusEvent, { detail: result }));
       };
+      let closed = false;
+      let removeAutomaticStatus = () => undefined;
       let unsubscribe = () => undefined;
-      void window.eraStatusbarMounted.then(() => ERA.ready()).then(async current => {
+      void window.eraStatusbarMounted.then(mounted => closed || mounted === false ? null : ERA.ready()).then(async current => {
+        if (closed || current === null) return;
         const messageId = current.message_id;
         const handleAutomaticStatus = event => {
           const detail = event && event.detail;
           if (detail && detail.messageId === messageId) show('auto', 'status', detail);
         };
         owner.addEventListener(automaticStatusEvent, handleAutomaticStatus);
-        window.addEventListener('unload', () => owner.removeEventListener(automaticStatusEvent, handleAutomaticStatus), { once: true });
+        removeAutomaticStatus = () => owner.removeEventListener(automaticStatusEvent, handleAutomaticStatus);
         let historyRead = 0;
         const renderHistorical = async () => {
           const read = ++historyRead;
           try {
             const historical = await ERA.history.atMessage(messageId);
-            if (read !== historyRead) return;
+            if (closed || read !== historyRead) return;
             show('history', 'statWithoutMeta', demo(historical));
             show('history', 'statFunc', historical.statFunc);
             show('history', 'identity', identity(historical));
           } catch (error) {
-            if (read === historyRead) show('history', 'identity', { status: 'failed', error: error instanceof Error ? error.message : String(error) });
+            if (!closed && read === historyRead) show('history', 'identity', { status: 'failed', error: error instanceof Error ? error.message : String(error) });
           }
         };
         // 显式历史查询不是订阅；每次本楼发布后重新查询，保留各读取 API 的真实语义。
@@ -844,8 +851,10 @@ function statusBarExampleHtml(): string {
         document.querySelectorAll('[data-era-demo-action]').forEach(button => button.addEventListener('click', () => void runManual(button.dataset.eraDemoAction)));
         try { await runAutomatic(messageId); }
         catch (error) { show('auto', 'status', { status: 'failed', error: error instanceof Error ? error.message : String(error) }); }
+      }).catch(error => {
+        if (!closed) show('receipt', 'latest', { status: 'failed', error: error instanceof Error ? error.message : String(error) });
       });
-      addEventListener('pagehide', () => unsubscribe(), { once: true });
+      addEventListener('pagehide', () => { closed = true; unsubscribe(); removeAutomaticStatus(); }, { once: true });
     })();
   </script>
 `;
