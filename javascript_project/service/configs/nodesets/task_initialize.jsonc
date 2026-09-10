@@ -1,6 +1,8 @@
 {
   "nodeset_imports": [
-    {"path": "startup_sync.jsonc"}
+    {
+      "path": "startup_sync.jsonc"
+    }
   ],
   "type_key": "era.task.initialize",
   "display_name": "ERA 初始化任务",
@@ -87,8 +89,24 @@
       {
         "id": "commit_host_resources",
         "type_used": "era.tavern.initialization_commit",
-        "display_name": "提交双模式资源并最后写入标记",
-        "description": "按声明式顺序提交设置、世界书、按模式所需正则或外置配置，最后保存带示例变量和单一标记的主开场白。沿用空聊天或未污染首楼同步，多楼历史不批量改写。外置配置保存后更新当前宿主显示；失败报告实际已写入动作，不伪成功，不自动覆盖既有 HTML。"
+        "display_name": "提交初始化资源并决议首楼刷新",
+        "description": "在原 update-main-greeting 动作处保持先保存角色卡，再即时读取当前首楼事实，由 Service 规划保留/新建/更新，Host 执行既有重绘和保存；其余资源顺序、提交计数和错误语义不变。",
+        "status": "planned",
+        "flow_kind": "data_store",
+        "requires": [
+          {
+            "type": "era.initialize.commit.request",
+            "cardinality": "exactly_one",
+            "display_name": "资源提交请求"
+          }
+        ],
+        "provides": [
+          {
+            "key": "resource_commit_result",
+            "type": "era.initialize.commit.result",
+            "display_name": "资源提交结果"
+          }
+        ]
       },
       {
         "id": "route_completion",

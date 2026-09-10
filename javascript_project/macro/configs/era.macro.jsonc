@@ -48,8 +48,34 @@
       {
         "id": "build_snapshot",
         "type_used": "era.macro.build_snapshot",
-        "display_name": "构建宏快照",
-        "description": "仅反转义一次已存状态，生成含元数据和不含元数据两种视图，并显式保留状态缺失标记。"
+        "display_name": "按同源规则构建宏快照",
+        "description": "复用登记的数据反转义及元字段投影出口；保留本宏入口已存状态标签、JSON 合同与缺失状态语义，不把已解码快照再次反转义。",
+        "status": "planned",
+        "flow_kind": "process",
+        "requires": [
+          {
+            "type": "era.macro.substring.checked",
+            "cardinality": "exactly_one",
+            "display_name": "已检查的宏文本片段"
+          },
+          {
+            "type": "era.macro.stored_stat.checked",
+            "cardinality": "exactly_one",
+            "display_name": "已检查的 ERA 状态"
+          }
+        ],
+        "provides": [
+          {
+            "key": "macro.substring_for_replace",
+            "type": "era.macro.substring.for_replace",
+            "display_name": "待替换文本片段"
+          },
+          {
+            "key": "macro.snapshot",
+            "type": "era.macro.snapshot",
+            "display_name": "宏快照"
+          }
+        ]
       },
       {
         "id": "replace_all",

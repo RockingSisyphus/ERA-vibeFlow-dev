@@ -1,0 +1,86 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.public_state.request",
+  "representation": "json",
+  "display_name": "公开状态同步查询请求",
+  "description": "公开状态同步查询请求的同步生产调用合同。",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "snapshot": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "properties": {
+          "identity": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "sidecarId": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "number"
+          },
+          "statData": {},
+          "statFunc": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "eraMeta": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "identity",
+          "sidecarId",
+          "revision",
+          "statData",
+          "statFunc",
+          "eraMeta"
+        ],
+        "additionalProperties": true
+      },
+      "mode": {
+        "enum": [
+          "latest",
+          "message",
+          "provided-floor"
+        ]
+      },
+      "messageId": {
+        "type": "integer"
+      },
+      "floor": {
+        "type": "object",
+        "properties": {
+          "messageId": {
+            "type": "integer"
+          },
+          "mk": {
+            "type": "string"
+          },
+          "stat": {},
+          "statFunc": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "messageId",
+          "mk",
+          "stat",
+          "statFunc"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "required": [
+      "snapshot",
+      "mode"
+    ],
+    "additionalProperties": false
+  }
+}

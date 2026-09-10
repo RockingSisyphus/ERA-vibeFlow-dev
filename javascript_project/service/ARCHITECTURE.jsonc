@@ -8607,18 +8607,20 @@
               "path": "configs/nodesets/task_initialize.jsonc"
             },
             "role": {
-              "display_name": "提交双模式资源并最后写入标记",
-              "description": "按声明式顺序提交设置、世界书、按模式所需正则或外置配置，最后保存带示例变量和单一标记的主开场白。沿用空聊天或未污染首楼同步，多楼历史不批量改写。外置配置保存后更新当前宿主显示；失败报告实际已写入动作，不伪成功，不自动覆盖既有 HTML。"
+              "display_name": "提交初始化资源并决议首楼刷新",
+              "description": "在原 update-main-greeting 动作处保持先保存角色卡，再即时读取当前首楼事实，由 Service 规划保留/新建/更新，Host 执行既有重绘和保存；其余资源顺序、提交计数和错误语义不变。"
             },
-            "contract_source": "node_type",
+            "contract_source": "planned_config",
             "flow_kind": "data_store",
             "effect_scope": "none",
             "runtime_dispatch": "unknown",
             "execution_lock": null,
             "effective_execution_lock": null,
             "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
+            "status": "planned",
+            "planned_behavior": {
+              "kind": "blocking"
+            },
             "requires": [
               {
                 "type": "era.initialize.commit.request",
@@ -30719,6 +30721,275 @@
             "no-op",
             "commit"
           ]
+        }
+      },
+      "era.public_state.context": {
+        "kind": "data_schema",
+        "type_key": "era.public_state.context",
+        "representation": "json",
+        "display_name": "已选择楼层的公开状态上下文",
+        "description": "已选择楼层的公开状态上下文的同步生产调用合同。",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "snapshot": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "properties": {
+                "identity": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "sidecarId": {
+                  "type": "string"
+                },
+                "revision": {
+                  "type": "number"
+                },
+                "statData": {},
+                "statFunc": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "eraMeta": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              },
+              "required": [
+                "identity",
+                "sidecarId",
+                "revision",
+                "statData",
+                "statFunc",
+                "eraMeta"
+              ],
+              "additionalProperties": true
+            },
+            "floor": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "messageId": {
+                      "type": "integer"
+                    },
+                    "mk": {
+                      "type": "string"
+                    },
+                    "stat": {},
+                    "statFunc": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  },
+                  "required": [
+                    "messageId",
+                    "mk",
+                    "stat",
+                    "statFunc"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "snapshot",
+            "floor"
+          ],
+          "additionalProperties": false,
+          "$schema": "https://json-schema.org/draft/2020-12/schema"
+        }
+      },
+      "era.public_state.request": {
+        "kind": "data_schema",
+        "type_key": "era.public_state.request",
+        "representation": "json",
+        "display_name": "公开状态同步查询请求",
+        "description": "公开状态同步查询请求的同步生产调用合同。",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "snapshot": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "properties": {
+                "identity": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "sidecarId": {
+                  "type": "string"
+                },
+                "revision": {
+                  "type": "number"
+                },
+                "statData": {},
+                "statFunc": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "eraMeta": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              },
+              "required": [
+                "identity",
+                "sidecarId",
+                "revision",
+                "statData",
+                "statFunc",
+                "eraMeta"
+              ],
+              "additionalProperties": true
+            },
+            "mode": {
+              "enum": [
+                "latest",
+                "message",
+                "provided-floor"
+              ]
+            },
+            "messageId": {
+              "type": "integer"
+            },
+            "floor": {
+              "type": "object",
+              "properties": {
+                "messageId": {
+                  "type": "integer"
+                },
+                "mk": {
+                  "type": "string"
+                },
+                "stat": {},
+                "statFunc": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              },
+              "required": [
+                "messageId",
+                "mk",
+                "stat",
+                "statFunc"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "snapshot",
+            "mode"
+          ],
+          "additionalProperties": false,
+          "$schema": "https://json-schema.org/draft/2020-12/schema"
+        }
+      },
+      "era.public_state.result": {
+        "kind": "data_schema",
+        "type_key": "era.public_state.result",
+        "representation": "json",
+        "display_name": "作者公开状态",
+        "description": "作者公开状态的同步生产调用合同。",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "enum": [
+                "loading",
+                "ready"
+              ]
+            },
+            "identity": {
+              "type": [
+                "object",
+                "null"
+              ]
+            },
+            "sidecarId": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "revision": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "statData": {},
+            "statFunc": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "eraMeta": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "stat": {},
+            "statWithoutMeta": {},
+            "selectedMks": {
+              "type": "array",
+              "items": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "editLogs": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "functionEditLogs": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "mk": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "message_id": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "is_user": {
+              "const": false
+            }
+          },
+          "required": [
+            "status",
+            "identity",
+            "sidecarId",
+            "revision",
+            "statData",
+            "statFunc",
+            "eraMeta",
+            "stat",
+            "statWithoutMeta",
+            "selectedMks",
+            "editLogs",
+            "functionEditLogs",
+            "mk",
+            "message_id",
+            "is_user"
+          ],
+          "additionalProperties": false,
+          "$schema": "https://json-schema.org/draft/2020-12/schema"
         }
       },
       "era.service.state": {

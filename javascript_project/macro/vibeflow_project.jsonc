@@ -1,9 +1,15 @@
 {
   "project_target": "javascript",
   "descriptors": {
-    "nodes": ["manifests/nodes"],
-    "base_lib": ["manifests/base_lib"],
-    "data_schemas": ["manifests/data"]
+    "nodes": [
+      "manifests/nodes"
+    ],
+    "base_lib": [
+      "manifests/base_lib"
+    ],
+    "data_schemas": [
+      "manifests/data"
+    ]
   },
   "javascript": {
     "package_root": ".",
@@ -15,6 +21,10 @@
       {
         "workflow": "configs/era.macro.jsonc",
         "document": "ARCHITECTURE.jsonc"
+      },
+      {
+        "workflow": "configs/era.prompt.jsonc",
+        "document": "PROMPT_ARCHITECTURE.jsonc"
       }
     ]
   }

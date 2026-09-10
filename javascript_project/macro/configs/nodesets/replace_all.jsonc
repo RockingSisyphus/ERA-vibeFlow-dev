@@ -46,8 +46,29 @@
       {
         "id": "scan_occurrences",
         "type_used": "era.macro.scan_occurrences",
-        "display_name": "扫描宏匹配项",
-        "description": "每次创建新的全局正则，保留匹配顺序，并记录各匹配项的路径和元数据视图选择。"
+        "display_name": "按同源宏语法扫描匹配项",
+        "description": "将原宏正则与文本解析入口收拢为登记库，既有扫描继续调用同源语法；延迟宏和直接文本解析复用此扫描、路径解析与格式化链。",
+        "status": "planned",
+        "flow_kind": "process",
+        "requires": [
+          {
+            "type": "era.macro.substring.for_replace",
+            "cardinality": "exactly_one",
+            "display_name": "待替换文本片段"
+          },
+          {
+            "type": "era.macro.snapshot",
+            "cardinality": "exactly_one",
+            "display_name": "宏快照"
+          }
+        ],
+        "provides": [
+          {
+            "key": "macro.occurrence_plan",
+            "type": "era.macro.occurrence_plan",
+            "display_name": "宏匹配计划"
+          }
+        ]
       },
       {
         "id": "resolve_occurrences",

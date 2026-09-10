@@ -31,6 +31,10 @@
       {
         "workflow": "configs/era.service.jsonc",
         "document": "ARCHITECTURE.jsonc"
+      },
+      {
+        "workflow": "configs/era.public-state.jsonc",
+        "document": "PUBLIC_STATE_ARCHITECTURE.jsonc"
       }
     ]
   }
