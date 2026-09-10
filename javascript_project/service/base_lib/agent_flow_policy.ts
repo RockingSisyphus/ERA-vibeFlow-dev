@@ -255,6 +255,7 @@ export function classifyGeneration(facts: GenerationFacts): GenerationDecision {
   const continuing =
     facts.trigger.type === "message_received" ||
     facts.trigger.type === "era.ui.agent_retry" ||
+    facts.trigger.type === "era.agent.stage_continue" ||
     (facts.trigger.type === "generation_started" &&
       facts.trigger.kind === "normal");
   const configuration = continuing && frozen ? frozen : facts.configuration;
@@ -266,14 +267,16 @@ export function classifyGeneration(facts: GenerationFacts): GenerationDecision {
   )
     return finish("legacy");
   const phase =
-    facts.trigger.type === "message_sent" ||
-    facts.trigger.type === "generation_started"
-      ? "planning"
-      : facts.trigger.type === "message_received"
-        ? "story"
-        : facts.trigger.type === "era.ui.agent_retry"
-          ? "retry"
-          : "finish";
+    facts.trigger.type === "era.agent.stage_continue"
+      ? "resume"
+      : facts.trigger.type === "message_sent" ||
+          facts.trigger.type === "generation_started"
+        ? "planning"
+        : facts.trigger.type === "message_received"
+          ? "story"
+          : facts.trigger.type === "era.ui.agent_retry"
+            ? "retry"
+            : "finish";
   return phase === "finish"
     ? finish("legacy")
     : { ...facts, configuration, phase };

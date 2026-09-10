@@ -1,5 +1,10 @@
 import {
+  AgentStageBoundary,
+  stageHandoff,
+} from "../../base_lib/agent_stage_handoff.ts";
+import {
   planSessionBinding,
+  compactSessionStorage,
   type SessionBindingFacts,
 } from "../../base_lib/agent_session_binding.ts";
 import { buildAgentRequestPolicy } from "../../base_lib/agent_request_policy.ts";
@@ -16,7 +21,6 @@ import {
   executeAgentFunctionCalls,
   extractEraMessageKey,
   formatAgentPlanReport,
-  formatAgentUpdateReport,
   isAgentPlanningFailureMessage,
   isolateStoryEraCommands,
   parsePlanningOutput,
@@ -63,7 +67,12 @@ export function writeSession(
     input.nativeGeneration === true,
     facts,
   );
-  return capability.write_session({ ...input, ...binding });
+  const storageSession = compactSessionStorage(binding.session);
+  return capability.write_session({
+    ...input,
+    ...binding,
+    ...(storageSession === binding.session ? {} : { storageSession }),
+  });
 }
 
 class AgentSessionFailure extends Error {
@@ -155,6 +164,63 @@ function isAwaitingStorySession(
     session.chatKey === chatKey(context) &&
     (session.status === "opened" || session.status === "planned")
   );
+}
+
+/** 重进仅从最后一个持久化规划及实际正文恢复必要成果，不恢复历史请求。 */
+function restoreMessageSession(
+  context: Record<string, unknown>,
+  configuration: EraAgentConfigurationV2,
+): Record<string, unknown> | null {
+  const latest = latestMessage(context);
+  if (
+    !latest ||
+    latest.role !== "assistant" ||
+    typeof latest.message !== "string"
+  )
+    return null;
+  const extra =
+    isRecord(latest.extra) && isRecord(latest.extra.era_agent)
+      ? latest.extra.era_agent
+      : null;
+  if (!extra) return null;
+  const text = latest.message;
+  const block = [...text.matchAll(/<era_plan>([\s\S]*?)<\/era_plan>/giu)].at(
+    -1,
+  );
+  let finalPlan: Record<string, unknown> = {};
+  if (block) {
+    const parsed: unknown = JSON.parse(block[1]);
+    if (isRecord(parsed)) finalPlan = parsed;
+  }
+  const baseMessage = block ? text.slice(0, block.index) : "";
+  const storyStart =
+    typeof extra.storyStart === "number"
+      ? extra.storyStart
+      : block
+        ? block.index! + block[0].length
+        : 0;
+  const storyEnd =
+    typeof extra.storyEnd === "number" ? extra.storyEnd : text.length;
+  const story = isolateStoryEraCommands(text.slice(storyStart, storyEnd)).story;
+  return {
+    schemaVersion: 1,
+    chatKey: chatKey(context),
+    messageId: latest.message_id,
+    configuration,
+    status: extra.status ?? "story-complete",
+    cycleIndex: extra.cycleIndex ?? 0,
+    baseMessage,
+    story,
+    plan: finalPlan.plan ?? null,
+    functionResults: finalPlan.functionResults ?? [],
+    planReport: block
+      ? formatAgentPlanReport({
+          plan: finalPlan.plan,
+          functionResults: finalPlan.functionResults,
+        })
+      : "",
+    sourceKey: extractEraMessageKey(text) ?? "",
+  };
 }
 
 function boundedTrace(value: string): string {
@@ -342,7 +408,6 @@ async function runPlanning(
         nextDrawOffset: executed.nextDrawOffset,
         planningAttempts: attempts,
         planReport: formatAgentPlanReport({
-          attempts,
           plan,
           functionResults: executed.results,
         }),
@@ -372,7 +437,8 @@ async function runPlanning(
     }
   }
   capability.stop_native_generation({ reason: "planning-exhausted" });
-  const report = `<era_agent_error>${JSON.stringify({ stage: "planning", attempts }).replaceAll("<", "\\u003c")}</era_agent_error>`;
+  const report =
+    '<era_agent_error>{"stage":"planning","status":"failed"}</era_agent_error>';
   await capability.create_error_message({ message: report });
   capability.clear_session({ chatKey: key });
   throw new AgentSessionFailure(
@@ -398,9 +464,7 @@ async function runSettlement(
   ) {
     throw new TypeError("变量结算阶段找不到当前 assistant 故事消息。");
   }
-  const state = isRecord(session?.preState)
-    ? session.preState
-    : stateContext(context);
+  const state = stateContext(context);
   const statData = Object.prototype.hasOwnProperty.call(state, "statData")
     ? state.statData
     : {};
@@ -497,16 +561,10 @@ async function runSettlement(
       });
       const planReport =
         typeof session?.planReport === "string" ? session.planReport : "";
-      const updateReport = formatAgentUpdateReport({
-        attempts,
-        status: "settled",
-        audit: isolated.audit,
-      });
       const message = [
         baseMessage,
         planReport,
         isolated.story,
-        updateReport,
         validated.transaction,
       ]
         .filter(Boolean)
@@ -527,7 +585,7 @@ async function runSettlement(
           transaction: validated.transaction,
         },
       });
-      return {
+      const candidate: EraAgentFloorCandidateV1 = {
         messageId: identity.messageId,
         swipeId: identity.swipeId,
         mk: identity.mk,
@@ -544,6 +602,21 @@ async function runSettlement(
         terminalStatus: "settled",
         requiresInitialPresentation,
       };
+      throw new AgentStageBoundary(
+        {
+          ...(session ?? {}),
+          status: "settled",
+          messageId: identity.messageId,
+          baseMessage,
+          story: isolated.story,
+          settlementAttempts: attempts,
+          transaction: validated.transaction,
+        },
+        "settlement",
+        { operations: parsed.operations },
+        "commit",
+        candidate,
+      );
     } catch (error) {
       // Session/persistence failures after validation are not model mistakes.
       if (responseValidated) throw error;
@@ -567,12 +640,7 @@ async function runSettlement(
   }
   const planReport =
     typeof session?.planReport === "string" ? session.planReport : "";
-  const updateReport = formatAgentUpdateReport({
-    attempts,
-    status: "unsettled",
-    audit: isolated.audit,
-  });
-  const message = [baseMessage, planReport, isolated.story, updateReport]
+  const message = [baseMessage, planReport, isolated.story]
     .filter(Boolean)
     .join("\n");
   writeSession(capability, {
@@ -605,24 +673,9 @@ async function runSettlement(
   };
 }
 
-function withStory(
-  context: Record<string, unknown>,
-  story: string,
-): Record<string, unknown> {
-  const latest = latestMessage(context);
-  if (!latest) throw new TypeError("故事重试找不到最新 assistant 消息。");
-  const messages = Array.isArray(context.messages) ? [...context.messages] : [];
-  const replacement = { ...latest, message: story };
-  const index = messages.findIndex(
-    (item) => isRecord(item) && item.message_id === latest.message_id,
-  );
-  if (index >= 0) messages[index] = replacement;
-  return { ...context, latestMessage: replacement, messages };
-}
-
 async function retryStory(
   capability: AgentCapability,
-  configuration: EraAgentConfigurationV2,
+  _configuration: EraAgentConfigurationV2,
   context: Record<string, unknown>,
   session: Record<string, unknown>,
   identity: EraFloorIdentityV1,
@@ -662,9 +715,6 @@ async function retryStory(
       ? generated.response.trim()
       : "";
   if (story.length === 0) throw new TypeError("故事重试返回了空正文。");
-  const baseMessage =
-    typeof session.baseMessage === "string" ? session.baseMessage : "";
-  const plainMessage = [baseMessage, story].filter(Boolean).join("\n");
   const nextSession = {
     ...session,
     story,
@@ -672,48 +722,12 @@ async function retryStory(
       ? { storyRequestId: generated.requestId }
       : {}),
   };
-  const nextContext = withStory(
-    { ...context, session: nextSession },
-    plainMessage,
+  throw new AgentStageBoundary(
+    { ...nextSession, messageId: identity.messageId, status: "story-complete" },
+    "story",
+    { story },
+    "settlement",
   );
-  if (configuration.settlement.enabled) {
-    return runSettlement(
-      capability,
-      configuration,
-      nextContext,
-      nextSession,
-      identity,
-      false,
-      observationEventId,
-    );
-  } else {
-    const message = [
-      baseMessage,
-      typeof session.planReport === "string" ? session.planReport : "",
-      story,
-    ]
-      .filter(Boolean)
-      .join("\n");
-    writeSession(capability, {
-      chatKey: chatKey(context),
-      session: {
-        ...nextSession,
-        status: "story-complete",
-        messageId: Number(latest.message_id),
-      },
-    });
-    return {
-      messageId: identity.messageId,
-      swipeId: identity.swipeId,
-      mk: identity.mk,
-      content: message,
-      extra: {
-        era_agent: { schemaVersion: 1, status: "story-complete" },
-      },
-      terminalStatus: "story-complete",
-      requiresInitialPresentation: false,
-    };
-  }
 }
 function outcome(
   mode: AgentOutcome["mode"],
@@ -767,6 +781,182 @@ export async function run(
     trigger = request.trigger,
     type = trigger.type;
   try {
+    if (type === "era.agent.stage_continue") {
+      const session = sessionObject(rawContext);
+      const pending =
+        session && isRecord(session.pendingStage) ? session.pendingStage : null;
+      if (
+        !session ||
+        !pending ||
+        !isRecord(trigger.retry) ||
+        pending.completionId !== trigger.retry.completionId
+      )
+        return output(outcome("execute-only", "no-op"));
+      if (trigger.retry.cancelled === true) {
+        if (pending.next === "native-story")
+          capability.stop_native_generation({});
+        capability.clear_session({ chatKey: chatKey(rawContext) });
+        return output(
+          outcome("execute-only", "no-op", [], {
+            status: "generation-cancelled",
+          }),
+        );
+      }
+      const expected = isRecord(pending.identity) ? pending.identity : null;
+      if (
+        expected &&
+        (!request.identity ||
+          (typeof expected.mk === "string" &&
+            expected.mk !== request.identity.mk) ||
+          expected.messageId !== request.identity.messageId ||
+          expected.swipeId !== request.identity.swipeId)
+      )
+        return output(outcome("execute-only", "no-op"));
+      const resumed: Record<string, unknown> = {
+        ...session,
+        pendingStage: null,
+        preState: stateContext(rawContext),
+      };
+      if (pending.next !== "commit" && expected) {
+        const oldTx = [
+          ...String(pending.originalMessage ?? "").matchAll(
+            /<era_tx\b[^>]*>[\s\S]*?<\/era_tx>/giu,
+          ),
+        ].map((match) => match[0]);
+        const added = [
+          ...String(latestMessage(rawContext)?.message ?? "").matchAll(
+            /<era_tx\b[^>]*>[\s\S]*?<\/era_tx>/giu,
+          ),
+        ]
+          .map((match) => match[0])
+          .filter((tx) => {
+            const index = oldTx.indexOf(tx);
+            if (index < 0) return true;
+            oldTx.splice(index, 1);
+            return false;
+          });
+        if (added.length)
+          resumed.baseMessage = [resumed.baseMessage, ...added]
+            .filter(Boolean)
+            .join("\n");
+      }
+      writeSession(capability, {
+        chatKey: chatKey(rawContext),
+        session: resumed,
+      });
+      if (pending.next === "native-story") {
+        capability.inject_once({
+          id: `era-agent-story-${trigger.eventId}`,
+          content: buildStoryInjection({
+            plan: resumed.plan as unknown as EraAgentPlanningOutputV1,
+            results: Array.isArray(resumed.functionResults)
+              ? (resumed.functionResults as Record<string, never>[])
+              : [],
+          }),
+        });
+        return output(outcome("execute-legacy", "committed"));
+      }
+      const identity = requestIdentity(request);
+      if (pending.next === "manual-story")
+        return output(
+          outcome(
+            "execute-legacy",
+            "committed",
+            [],
+            undefined,
+            await retryStory(
+              capability,
+              configuration,
+              rawContext,
+              resumed,
+              identity,
+              trigger.eventId,
+            ),
+          ),
+        );
+      if (pending.next === "settlement" && configuration.settlement.enabled)
+        return output(
+          outcome(
+            "execute-legacy",
+            "committed",
+            [],
+            undefined,
+            await runSettlement(
+              capability,
+              configuration,
+              rawContext,
+              resumed,
+              identity,
+              resumed.initialPresentation === true,
+              trigger.eventId,
+            ),
+          ),
+        );
+      const story = typeof resumed.story === "string" ? resumed.story : "";
+      const candidate = isRecord(pending.candidate)
+        ? ({
+            ...pending.candidate,
+            ...(expected && typeof expected.mk !== "string"
+              ? { mk: identity.mk }
+              : {}),
+          } as unknown as EraAgentFloorCandidateV1)
+        : {
+            messageId: identity.messageId,
+            swipeId: identity.swipeId,
+            mk: identity.mk,
+            content: [resumed.baseMessage, resumed.planReport, story]
+              .filter(Boolean)
+              .join("\n"),
+            extra: {
+              era_agent: { schemaVersion: 1, status: "story-complete" },
+            },
+            terminalStatus: "story-complete" as const,
+            requiresInitialPresentation: resumed.initialPresentation === true,
+          };
+      const current = String(latestMessage(rawContext)?.message ?? "");
+      const previousTransactions = [
+        ...String(pending.originalMessage ?? "").matchAll(
+          /<era_tx\b[^>]*>[\s\S]*?<\/era_tx>/giu,
+        ),
+      ].map((match) => match[0]);
+      const remaining = [...previousTransactions];
+      const appended = [
+        ...current.matchAll(/<era_tx\b[^>]*>[\s\S]*?<\/era_tx>/giu),
+      ]
+        .map((match) => match[0])
+        .filter((tx) => {
+          const index = remaining.indexOf(tx);
+          if (index < 0) return true;
+          remaining.splice(index, 1);
+          return false;
+        })
+        .join("\n");
+      const transaction =
+        typeof resumed.transaction === "string" ? resumed.transaction : "";
+      const content = appended
+        ? transaction && candidate.content.endsWith(transaction)
+          ? candidate.content.slice(0, -transaction.length) +
+            appended +
+            "\n" +
+            transaction
+          : candidate.content + "\n" + appended
+        : candidate.content;
+      writeSession(capability, {
+        chatKey: chatKey(rawContext),
+        observationEventId: trigger.eventId,
+        session: {
+          ...resumed,
+          pendingStage: null,
+          status: candidate.terminalStatus,
+        },
+      });
+      return output(
+        outcome("execute-legacy", "committed", [], undefined, {
+          ...candidate,
+          content,
+        }),
+      );
+    }
     if (type === "message_sent" || type === "generation_started") {
       const kind = type === "generation_started" ? trigger.kind : "normal";
       let session = sessionObject(rawContext);
@@ -809,16 +999,12 @@ export async function run(
           planningContext,
           trigger,
         );
-        writeSession(capability, { chatKey: chatKey(rawContext), session });
-        capability.inject_once({
-          id: `era-agent-story-${trigger.eventId}`,
-          content: buildStoryInjection({
-            plan: session.plan as unknown as EraAgentPlanningOutputV1,
-            results: Array.isArray(session.functionResults)
-              ? (session.functionResults as Record<string, never>[])
-              : [],
-          }),
-        });
+        throw new AgentStageBoundary(
+          session,
+          "planning",
+          { plan: session.plan, functionResults: session.functionResults },
+          "native-story",
+        );
       }
       return output(outcome("execute-legacy", "committed"));
     }
@@ -838,7 +1024,7 @@ export async function run(
       }
       let candidate: EraAgentFloorCandidateV1 | undefined;
       const identity = requestIdentity(request);
-      if (configuration.settlement.enabled) {
+      if (configuration.settlement.enabled || configuration.planning.enabled) {
         const execution = sessionExecution(session, trigger.eventId);
         const completed = await capability.await_native_completion({
           chatId: chatKey(rawContext),
@@ -866,14 +1052,26 @@ export async function run(
             }),
           );
         }
-        candidate = await runSettlement(
-          capability,
-          configuration,
-          rawContext,
-          session,
-          identity,
-          true,
-          trigger.eventId,
+      }
+      if (configuration.settlement.enabled) {
+        const latest = latestMessage(rawContext)!;
+        const baseMessage =
+          typeof session?.baseMessage === "string" ? session.baseMessage : "";
+        const content = String(latest.message ?? "");
+        const story =
+          baseMessage && content.startsWith(baseMessage)
+            ? content.slice(baseMessage.length)
+            : content;
+        throw new AgentStageBoundary(
+          {
+            ...(session ?? {}),
+            story,
+            messageId: identity.messageId,
+            initialPresentation: true,
+          },
+          "story",
+          { story: isolateStoryEraCommands(story).story },
+          "settlement",
         );
       } else if (configuration.planning.enabled) {
         const latest = latestMessage(rawContext);
@@ -921,6 +1119,18 @@ export async function run(
               story,
             },
           });
+          throw new AgentStageBoundary(
+            {
+              ...(session ?? {}),
+              story,
+              messageId: identity.messageId,
+              initialPresentation: true,
+            },
+            "story",
+            { story },
+            "commit",
+            candidate,
+          );
         }
       }
       return output(
@@ -936,7 +1146,9 @@ export async function run(
       ) {
         throw new TypeError("重试 kind 只允许 planning、story 或 settlement。");
       }
-      let session = sessionObject(rawContext);
+      let session =
+        sessionObject(rawContext) ??
+        restoreMessageSession(rawContext, configuration);
       if (session === null)
         throw new TypeError("当前聊天没有可重试的最新 Agent 周期。");
       const stageAttempts =
@@ -980,14 +1192,11 @@ export async function run(
           { ...rawContext, session },
           trigger,
         );
-        writeSession(capability, { chatKey: chatKey(rawContext), session });
-        candidate = await retryStory(
-          capability,
-          configuration,
-          rawContext,
+        throw new AgentStageBoundary(
           session,
-          identity,
-          trigger.eventId,
+          "planning",
+          { plan: session.plan, functionResults: session.functionResults },
+          "manual-story",
         );
       } else if (retry.kind === "story") {
         candidate = await retryStory(
@@ -1014,6 +1223,64 @@ export async function run(
       );
     }
   } catch (error) {
+    if (error instanceof AgentStageBoundary) {
+      const boundary = {
+        stage: error.stage,
+        session: { execution: error.session.execution },
+        result: error.result,
+        chatKey: chatKey(rawContext),
+        eventId: trigger.eventId,
+        identity:
+          error.stage === "planning" && type !== "era.ui.agent_retry"
+            ? null
+            : request.identity
+              ? {
+                  messageId: request.identity.messageId,
+                  swipeId: request.identity.swipeId,
+                  ...(extractEraMessageKey(
+                    String(latestMessage(rawContext)?.message ?? ""),
+                  )
+                    ? {
+                        mk: extractEraMessageKey(
+                          String(latestMessage(rawContext)?.message ?? ""),
+                        )!,
+                      }
+                    : {}),
+                }
+              : null,
+      };
+      const handoff = stageHandoff(boundary);
+      try {
+        writeSession(capability, {
+          chatKey: chatKey(rawContext),
+          session: {
+            ...error.session,
+            pendingStage: {
+              completionId: handoff.completionId,
+              next: error.next,
+              identity: boundary.identity,
+              originalMessage: latestMessage(rawContext)?.message ?? "",
+              candidate: error.candidate ?? null,
+            },
+          },
+        });
+        return output({
+          mode: "execute-only",
+          status: "committed",
+          diagnostics: [],
+          stageBoundary: boundary,
+        });
+      } catch (failure) {
+        return output(
+          outcome("execute-only", "failed", [
+            {
+              code: "ERA_AGENT_SESSION_FAILED",
+              message: failureMessage(failure),
+            },
+          ]),
+        );
+      }
+    }
     const code =
       error instanceof AgentSessionFailure
         ? error.code

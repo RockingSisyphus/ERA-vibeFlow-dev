@@ -4,6 +4,8 @@
  * 本模块不判断阶段是否开启、重试次数或变量操作是否合法；
  * 这些决策只属于 AOT Service workflow。
  */
+import { observeAgentSession } from './agent-session-observation';
+import { generationHandoffs } from './generation-handoff-host';
 
 import { readActiveSidecarRuntimeSnapshot } from './sidecar-runtime-snapshot';
 import { currentTavernContext, stopNativeTavernGeneration } from './tavern-browser-host';
@@ -77,6 +79,7 @@ export class AgentTavernHost {
   }
 
   clearSessions(): void {
+    generationHandoffs.cancel();
     this.nativeGeneration.clear('chat-changed');
     this.sessions.clear();
     agentExecutionRecords.stopNative();
@@ -412,18 +415,11 @@ export class AgentTavernHost {
             ? this.beginStoryObservation(input.session as Record<string, unknown>)
             : input.session;
         this.nativeGeneration.begin(input.chatKey, input.nativeExecutionId);
-        if (
-          typeof input.observationEventId === 'string' &&
-          isRecord(session) &&
-          Array.isArray(session.settlementAttempts)
-        ) {
-          for (const attempt of session.settlementAttempts) {
-            if (isRecord(attempt) && typeof attempt.requestId === 'string') {
-              agentExecutionRecords.bindCommit(attempt.requestId, input.observationEventId);
-            }
-          }
-        }
-        this.sessions.set(input.chatKey, clonePortable(session));
+        observeAgentSession(session, input.observationEventId);
+        this.sessions.set(
+          input.chatKey,
+          clonePortable(input.startStoryObservation === true ? session : (input.storageSession ?? session)),
+        );
         if (isRecord(session) && typeof session.storyRequestId === 'string' && typeof session.story === 'string') {
           agentExecutionRecords.finish(session.storyRequestId, 'responded', session.story);
         }

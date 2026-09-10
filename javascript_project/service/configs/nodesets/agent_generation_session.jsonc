@@ -49,31 +49,37 @@
         "id": "prepare_auxiliary_execution_request",
         "type_used": "era.agent.prepare_auxiliary_execution_request",
         "display_name": "读取生成事实",
-        "description": "沿原宿主读取位置取得生成事实与配置，不把批次状态放入领域算法请求。"
+        "description": "读取生成事实及恢复时最新已提交状态；恢复事件沿原派发入口读取会话，不复用等待前的变量快照。"
       },
       {
         "id": "classify_generation_event",
         "type_used": "era.agent.classify_generation_event",
         "display_name": "判定事件与阶段",
-        "description": "依据事件、功能开关和现有会话判定规划、正文完成、重试、取消或原任务委托；不执行宿主操作。"
+        "description": "判定正常生成、手动重试及内部阶段恢复；核对 executionId、completionId 和当前聊天/Swipe 来源，过期恢复终止。"
       },
       {
         "id": "prepare_generation_phase",
         "type_used": "era.agent.prepare_generation_phase",
         "display_name": "准备阶段请求",
-        "description": "按阶段提取配置快照、会话身份、正文和变量事实；领域算法只收到本阶段所需数据。"
+        "description": "准备单阶段请求；恢复后按阶段读取最新变量、消息和必要最终成果，不从过程报告重建业务请求。"
       },
       {
         "id": "execute_agent_phase_v2",
         "type_used": "era.agent.execute_session_v2",
         "display_name": "执行生成阶段",
-        "description": "仅执行选定生成阶段及其已有尝试/重试序列。Capability 调用留在有副作用的 Node；会话绑定事实读取、纯决策与 write_session 连续完成。设置命令从此节点移除。"
+        "description": "每次只执行至一个成功阶段边界：规划及函数完成、正文完成、变量操作有效但未执行；返回最终成果和待恢复会话。消息仅组合最终规划、正文及有效事务，不写历次报告。"
+      },
+      {
+        "id": "prepare_stage_handoff",
+        "type_used": "era.agent.prepare_stage_handoff",
+        "display_name": "形成阶段交接与恢复凭据",
+        "description": "纯业务策略为成功阶段构造唯一 completionId、最终结果及恢复意图；不在 FIFO 中等待回调。无交接时保留原阶段结果。页面等待结束后必须经原 Service 派发链核对并恢复。"
       },
       {
         "id": "form_session_transition",
         "type_used": "era.agent.form_session_transition",
         "display_name": "形成会话转换",
-        "description": "把阶段结果、原步骤和批次边界组合为原 AgentTransition；将最终楼层候选交给已有唯一同步链。"
+        "description": "将阶段交接结果转为原任务结果或最终候选；待回调阶段不提交 AI 变量候选，恢复提交仍交给 legacy_sync。"
       },
       {
         "id": "route_agent_transition",
@@ -103,7 +109,7 @@
         "id": "build_direct_result",
         "type_used": "era.agent.build_result",
         "display_name": "构造直接结果",
-        "description": "结算生成栅栏、失败或默认 ignore 的直接结果。"
+        "description": "输出阶段交接标识和后置通知，使当前 FIFO 片段完成；通知后页面按序等待订阅回调，再提交内部恢复事件。片段 receipt 不代表整次生成已完成。"
       },
       {
         "id": "end",
@@ -131,6 +137,10 @@
       ],
       [
         "execute_agent_phase_v2",
+        "prepare_stage_handoff"
+      ],
+      [
+        "prepare_stage_handoff",
         "form_session_transition"
       ],
       {

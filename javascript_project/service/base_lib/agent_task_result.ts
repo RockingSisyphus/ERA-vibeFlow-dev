@@ -46,7 +46,14 @@ export function buildAgentTaskResult(
   const result: TaskResultV1 = {
     status: transition.status,
     settlements,
-    notifications: [],
+    notifications: transition.handoff
+      ? [
+          {
+            type: "era.agent.stage_completed",
+            args: [{ kind: "json", value: transition.handoff as never }],
+          },
+        ]
+      : [],
     diagnostics: transition.diagnostics.map((diagnostic) => ({
       code: diagnostic.code,
       message: diagnostic.message,

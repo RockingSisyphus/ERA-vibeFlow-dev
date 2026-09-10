@@ -46,7 +46,7 @@
         "id": "plan_batch",
         "type_used": "era.service.plan_batch",
         "display_name": "规划生命周期与公共对象任务",
-        "description": "保留 Tavern 生命周期事件的既有组合规划；将每个 ERA.commit 和 ERA.sync 直接规划为独立步骤并保持 FIFO 来源一一对应。"
+        "description": "复用原事件组合和单 FIFO 规划；内部 Agent 阶段恢复作为真实新事件路由回原生成会话，覆盖来源 receipt，不等待用户回调、不新增业务队列。"
       },
       {
         "id": "validate_coverage",

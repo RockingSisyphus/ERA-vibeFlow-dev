@@ -2,7 +2,7 @@
  * 页面级阶段观察仓库：关联实际请求、报告历史与提交回执。
  * 只服务查看器，不承担业务结算、持久化或重试决策；依赖 Host 提供精确事件身份。
  */
-import { Logger } from '../utils/log';
+import { AgentRecordBudget, AGENT_RECORD_BUDGET_BYTES } from './agent-record-budget';
 import type { EraSettlement } from './types';
 
 /** Host 只读观察 DTO；不导入 Service 的业务执行器或重试策略。 */
@@ -47,6 +47,26 @@ function promptDisplayCopy(value: unknown): unknown {
 }
 
 export class AgentExecutionRecords {
+  private readonly budget: AgentRecordBudget;
+  constructor(limitBytes = AGENT_RECORD_BUDGET_BYTES) {
+    this.budget = new AgentRecordBudget(limitBytes);
+  }
+  get statistics() {
+    return this.budget.stats;
+  }
+  /** 所有修改走同一计量入口，否则响应到达后的增长会绕过预算。 */
+  private saveEntry(entry: AgentRequestRecord): void {
+    const key = `request:${entry.id}`;
+    if (
+      this.budget.reserve(key, entry, entry.status === 'running', () => {
+        this.entries.delete(entry.id);
+        for (const [selection, id] of this.selections)
+          if (id === entry.id) this.budget.remove(`selection:${selection}`);
+      })
+    )
+      this.entries.set(entry.id, entry);
+  }
+
   private readonly entries = new Map<string, AgentRequestRecord>();
   private readonly listeners = new Set<() => void>();
   private readonly helperRequests = new Set<string>();
@@ -78,7 +98,7 @@ export class AgentExecutionRecords {
     hostConfiguration?: unknown,
     requestContext?: AgentRequestContext,
   ): void {
-    this.entries.set(id, {
+    this.saveEntry({
       id,
       chat,
       stage,
@@ -103,6 +123,7 @@ export class AgentExecutionRecords {
     const entry = this.nativeRequest ? this.entries.get(this.nativeRequest) : undefined;
     if (cancelled && entry?.status === 'running') {
       entry.status = 'cancelled';
+      this.saveEntry(entry);
       this.emit();
     }
     this.nativeRequest = null;
@@ -118,15 +139,19 @@ export class AgentExecutionRecords {
     // 一个实际请求只采集一次；后续无关事件不能覆盖已记录的发送前内容。
     if (entry.prompt !== undefined) return;
     entry.prompt = promptDisplayCopy(prompt);
+    this.saveEntry(entry);
     this.emit();
   }
 
-  /** 响应成功不等于业务校验成功；这里只记录请求层终态。 */
+  /** 必须先释放活动请求身份，避免超预算未保存的请求仍干扰后续提示词采集。 */
   finish(id: string, status: 'responded' | 'failed', response?: string): void {
+    this.helperRequests.delete(id);
+    if (this.nativeRequest === id) this.nativeRequest = null;
     const entry = this.entries.get(id);
     if (!entry) return;
     entry.status = status;
     entry.response = response;
+    this.saveEntry(entry);
     this.helperRequests.delete(id);
     if (this.nativeRequest === id) this.nativeRequest = null;
     this.emit();
@@ -135,15 +160,19 @@ export class AgentExecutionRecords {
   /** 绑定工作流明确提供的入站事件，不以当前会话或最近一次回执猜测提交归属。 */
   bindCommit(id: string, eventId: string): void {
     const entry = this.entries.get(id);
-    if (entry) entry.commitEventId = eventId;
+    if (entry) {
+      entry.commitEventId = eventId;
+      this.saveEntry(entry);
+    }
   }
 
   /** 只观察真实 receipt；不影响 FIFO 结算，也不保留无关事件。 */
   recordSettlement(outcome: { eventId: string; status: string; error?: unknown }): void {
     let changed = false;
-    for (const entry of this.entries.values()) {
+    for (const entry of [...this.entries.values()]) {
       if (entry.commitEventId !== outcome.eventId) continue;
       entry.commit = structuredClone({ eventId: outcome.eventId, status: outcome.status, error: outcome.error });
+      this.saveEntry(entry);
       changed = true;
     }
     if (changed) this.emit();
@@ -153,7 +182,7 @@ export class AgentExecutionRecords {
   observeSettlement(done: Promise<EraSettlement>): void {
     void done
       .then(outcome => this.recordSettlement(outcome))
-      .catch(error => new Logger().error('agentReportObservation', '提交回执观察未完成。', error));
+      .catch(error => console.error('ERA 提交回执观察未完成。', error));
   }
 
   /** 返回副本以防显示格式化改写观察证据，聊天身份不匹配则没有记录。 */
@@ -173,13 +202,22 @@ export class AgentExecutionRecords {
     const key = JSON.stringify([chat, floorKey, stage]);
     const reports = this.reports.get(key) ?? [];
     if (reports.at(-1) === report) return;
-    reports.push(report);
-    this.reports.set(key, reports);
+    const next = [...reports, report];
+    if (this.budget.reserve(`report:${key}`, next, false, () => this.reports.delete(key))) this.reports.set(key, next);
     this.emit();
   }
 
   reportHistory(chat: string, floorKey: string | number, stage: string): readonly string[] {
     return [...(this.reports.get(JSON.stringify([chat, floorKey, stage])) ?? [])];
+  }
+
+  /** 初次规划没有 AI 楼层；真实 MK 出现后转移已有记录，避免会话另存无预算副本。 */
+  bindReportFloor(chat: string, pendingKey: string, floorKey: string, stage: string): void {
+    const key = JSON.stringify([chat, pendingKey, stage]);
+    const reports = this.reports.get(key);
+    if (!reports) return;
+    this.budget.remove(`report:${key}`);
+    for (const report of reports) this.rememberReport(chat, floorKey, stage, report);
   }
 
   private readonly selections = new Map<string, string>();
@@ -191,8 +229,10 @@ export class AgentExecutionRecords {
 
   selectRequest(chat: string, floorKey: string, stage: string, requestId: string | null): void {
     const key = JSON.stringify([chat, floorKey, stage]);
-    if (requestId === null) this.selections.delete(key);
-    else this.selections.set(key, requestId);
+    if (requestId === null) this.budget.remove(`selection:${key}`);
+    else if (this.budget.reserve(`selection:${key}`, requestId, false, () => this.selections.delete(key)))
+      this.selections.set(key, requestId);
+    this.emit();
   }
 
   sessionChanged(): void {
@@ -201,6 +241,7 @@ export class AgentExecutionRecords {
 
   /** 随页面 Service 停止一起释放；此仓库没有存储或恢复路径。 */
   clear(): void {
+    this.budget.clear();
     this.entries.clear();
     this.reports.clear();
     this.selections.clear();

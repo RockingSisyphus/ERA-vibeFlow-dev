@@ -1,0 +1,57 @@
+{
+  "kind": "node",
+  "type_key": "era.agent.prepare_stage_handoff",
+  "display_name": "形成阶段交接与恢复凭据",
+  "description": "纯业务策略为成功阶段构造唯一 completionId、最终结果及恢复意图；不在 FIFO 中等待回调。无交接时保留原阶段结果。页面等待结束后必须经原 Service 派发链核对并恢复。",
+  "category": "故事生成会话",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.agent.generation.outcome",
+        "cardinality": "exactly_one",
+        "display_name": "阶段执行结果"
+      }
+    ],
+    "provides": [
+      {
+        "key": "handoff_outcome",
+        "type": "era.agent.generation.outcome",
+        "display_name": "含交接意图的阶段结果"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.agent.generation.outcome": [
+        "成功阶段结果或直接结果。"
+      ]
+    },
+    "output_semantics": {
+      "handoff_outcome": [
+        "附带交接通知与恢复标识的阶段结果。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/agent/prepare_stage_handoff.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.agent_stage_handoff",
+    "era.service.agent_flow_types"
+  ],
+  "capabilities": []
+}

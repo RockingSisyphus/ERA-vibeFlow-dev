@@ -52,7 +52,8 @@
     "era.service.agent_flow_types",
     "era.service.agent_generation_session",
     "era.service.agent_request_policy",
-    "era.service.agent_session_binding"
+    "era.service.agent_session_binding",
+    "era.service.agent_stage_handoff"
   ],
   "capabilities": [
     {

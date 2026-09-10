@@ -85,11 +85,40 @@ async function runAgentSessionNode(
       },
     },
   };
-  const executed = await executeAgentSessionNode(
+  let storedSession: unknown;
+  const executionHost = executionRuntime.capabilities['era.tavern.agent'] as Record<string, unknown>;
+  const originalWrite = executionHost.write_session as (value: Record<string, unknown>) => unknown;
+  executionHost.write_session = (value: Record<string, unknown>) => {
+    const result = originalWrite(value);
+    storedSession = value.session;
+    return result;
+  };
+  let executed = await executeAgentSessionNode(
     { 'era.agent.generation.request': { value: request.generation_request } },
     params,
     executionRuntime as never,
   );
+  // 模拟生产后置通知完成后重新入队；旧算法测试仍验证完整周期结果。
+  for (let stage = 0; executed.generation_outcome.stageBoundary && stage < 4; stage++) {
+    const session = storedSession as Record<string, unknown>;
+    const pending = session.pendingStage as { completionId: string };
+    const next = {
+      ...request.generation_request,
+      phase: 'resume',
+      context: { ...request.generation_request.context, session },
+      trigger: {
+        ...request.generation_request.trigger,
+        type: 'era.agent.stage_continue',
+        eventId: `resume-${stage}`,
+        retry: { completionId: pending.completionId },
+      },
+    };
+    executed = await executeAgentSessionNode(
+      { 'era.agent.generation.request': { value: next } },
+      params,
+      executionRuntime as never,
+    );
+  }
   return formTransitionNode({ ...inputs, 'era.agent.generation.outcome': { value: executed.generation_outcome } });
 }
 
@@ -349,8 +378,8 @@ describe('retry failure boundaries', () => {
     const result = await execute(
       'settlement',
       generate,
-      vi.fn(() => {
-        throw new Error('HOST_SESSION_WRITE_FAILED');
+      vi.fn((input: { session?: { status?: string } }) => {
+        if (input.session?.status === 'settled') throw new Error('HOST_SESSION_WRITE_FAILED');
       }),
     );
     expect(generate).toHaveBeenCalledOnce();
@@ -1186,6 +1215,9 @@ describe('AgentGenerationSession pure contracts', () => {
       chatKey: 'chat-profile-retry',
       startStoryObservation: false,
       nativeExecutionId: null,
+      storageSession: expect.objectContaining({
+        planningAttempts: [{ status: 'failed' }, { status: 'passed' }],
+      }),
       session: expect.objectContaining({
         status: 'planned',
         planningAttempts: [

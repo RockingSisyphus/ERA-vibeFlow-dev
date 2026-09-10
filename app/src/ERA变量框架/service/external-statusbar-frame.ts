@@ -66,6 +66,26 @@ export function bindExternalMacros(document: Document, read: () => EraPublicStat
   };
 }
 
+/** 阶段等待属于外置页面实例，普通注销和实例销毁具有不同的续体语义。 */
+function externalGeneration(era: EraFacade, subscriptions: Set<() => void>, assertActive: () => void) {
+  return Object.freeze({
+    /** 作者注销仅退出回调；页面销毁必须取消阶段等待，避免旧页面任务恢复后启动后续生成。 */
+    subscribe: (...args: Parameters<EraFacade['generation']['subscribe']>) => {
+      assertActive();
+      const stop = era.generation.subscribe(...args) as import('./generation-subscriptions').GenerationSubscriptionStop;
+      const dispose = () => {
+        (stop.cancelPending ?? stop)();
+        subscriptions.delete(dispose);
+      };
+      subscriptions.add(dispose);
+      return () => {
+        stop();
+        subscriptions.delete(dispose);
+      };
+    },
+  });
+}
+
 /**
  * about:blank 的原生 document.write 保持 HTML parser 脚本顺序；接口在首个作者
  * 字节写入前安装，否则首个脚本可能读到错误的顶层对象。
@@ -79,6 +99,7 @@ function createExternalFacade(host: ExternalFrameHost) {
     if (!active) throw new Error('ERA_EXTERNAL_INSTANCE_DISPOSED');
   };
   const facade = Object.freeze({
+    generation: externalGeneration(host.era, subscriptions, assertActive),
     get: () => {
       assertActive();
       return host.era.get();
@@ -179,6 +200,9 @@ export function mountExternalFrame(
     ),
     SillyTavern: Object.freeze({ getContext: host.getContext }),
   });
+  /** 原生 iframe 导航和销毁同样释放阶段等待，不依赖刷新按钮。 */
+  const closed = () => session.stop();
+  target.addEventListener('pagehide', closed, { once: true });
   target.addEventListener('error', onError);
   const rejection = (event: PromiseRejectionEvent) => onError(event.reason);
   target.addEventListener('unhandledrejection', rejection);

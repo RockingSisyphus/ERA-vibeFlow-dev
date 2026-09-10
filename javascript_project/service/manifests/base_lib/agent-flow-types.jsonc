@@ -20,7 +20,8 @@
   ],
   "dependencies": [
     "era.service.agent_generation_session",
-    "era.service.types"
+    "era.service.types",
+    "era.service.agent_stage_handoff"
   ],
   "external_packages": [
     "@era/vibeflow-contracts"

@@ -32,3 +32,5 @@ UI 与完整回归。ST-Test-Harness 会为每条 path 创建独立 sandbox、ST
 `javascript_project/**`，必须同时遵守二者的局部规则；不能以其中一层的便利性绕过另一层的边界。
 
 - [ERA 生产工作流与职责](era-workflow-architecture.md)：四个 root 的实际调用、Agent 与同步模块边界。
+
+- [三阶段订阅与观察记录](agent-generation-subscriptions.md)：公开阶段 API、提交顺序、取消及消息/内存归属。

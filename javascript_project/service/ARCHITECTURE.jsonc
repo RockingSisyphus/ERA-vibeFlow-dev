@@ -558,11 +558,11 @@
         "execution_lock": null,
         "contains_global_state": false,
         "summary": {
-          "nodes": 12,
+          "nodes": 13,
           "nodesets": 18,
-          "explicit_edges": 14,
+          "explicit_edges": 15,
           "data_edges": 0,
-          "reported_edges": 14,
+          "reported_edges": 15,
           "contains_global_state": false
         },
         "entry_nodes": [
@@ -615,7 +615,7 @@
             },
             "role": {
               "display_name": "读取生成事实",
-              "description": "沿原宿主读取位置取得生成事实与配置，不把批次状态放入领域算法请求。"
+              "description": "读取生成事实及恢复时最新已提交状态；恢复事件沿原派发入口读取会话，不复用等待前的变量快照。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -660,7 +660,7 @@
             },
             "role": {
               "display_name": "判定事件与阶段",
-              "description": "依据事件、功能开关和现有会话判定规划、正文完成、重试、取消或原任务委托；不执行宿主操作。"
+              "description": "判定正常生成、手动重试及内部阶段恢复；核对 executionId、completionId 和当前聊天/Swipe 来源，过期恢复终止。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -705,7 +705,7 @@
             },
             "role": {
               "display_name": "准备阶段请求",
-              "description": "按阶段提取配置快照、会话身份、正文和变量事实；领域算法只收到本阶段所需数据。"
+              "description": "准备单阶段请求；恢复后按阶段读取最新变量、消息和必要最终成果，不从过程报告重建业务请求。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -750,7 +750,7 @@
             },
             "role": {
               "display_name": "执行生成阶段",
-              "description": "仅执行选定生成阶段及其已有尝试/重试序列。Capability 调用留在有副作用的 Node；会话绑定事实读取、纯决策与 write_session 连续完成。设置命令从此节点移除。"
+              "description": "每次只执行至一个成功阶段边界：规划及函数完成、正文完成、变量操作有效但未执行；返回最终成果和待恢复会话。消息仅组合最终规划、正文及有效事务，不写历次报告。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -787,6 +787,51 @@
             }
           },
           {
+            "id": "prepare_stage_handoff",
+            "type_used": "era.agent.prepare_stage_handoff",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/agent_generation_session.jsonc"
+            },
+            "role": {
+              "display_name": "形成阶段交接与恢复凭据",
+              "description": "纯业务策略为成功阶段构造唯一 completionId、最终结果及恢复意图；不在 FIFO 中等待回调。无交接时保留原阶段结果。页面等待结束后必须经原 Service 派发链核对并恢复。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "process",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.agent.generation.outcome",
+                "cardinality": "exactly_one",
+                "display_name": "阶段执行结果"
+              }
+            ],
+            "provides": [
+              {
+                "key": "handoff_outcome",
+                "type": "era.agent.generation.outcome",
+                "display_name": "含交接意图的阶段结果"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
             "id": "form_session_transition",
             "type_used": "era.agent.form_session_transition",
             "source": {
@@ -795,7 +840,7 @@
             },
             "role": {
               "display_name": "形成会话转换",
-              "description": "把阶段结果、原步骤和批次边界组合为原 AgentTransition；将最终楼层候选交给已有唯一同步链。"
+              "description": "将阶段交接结果转为原任务结果或最终候选；待回调阶段不提交 AI 变量候选，恢复提交仍交给 legacy_sync。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -1078,7 +1123,7 @@
             },
             "role": {
               "display_name": "构造直接结果",
-              "description": "结算生成栅栏、失败或默认 ignore 的直接结果。"
+              "description": "输出阶段交接标识和后置通知，使当前 FIFO 片段完成；通知后页面按序等待订阅回调，再提交内部恢复事件。片段 receipt 不代表整次生成已完成。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -1191,6 +1236,16 @@
           },
           {
             "from": "execute_agent_phase_v2",
+            "to": "prepare_stage_handoff",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "prepare_stage_handoff",
             "to": "form_session_transition",
             "when": "",
             "roles": [
@@ -5332,7 +5387,7 @@
             },
             "role": {
               "display_name": "规划生命周期与公共对象任务",
-              "description": "保留 Tavern 生命周期事件的既有组合规划；将每个 ERA.commit 和 ERA.sync 直接规划为独立步骤并保持 FIFO 来源一一对应。"
+              "description": "复用原事件组合和单 FIFO 规划；内部 Agent 阶段恢复作为真实新事件路由回原生成会话，覆盖来源 receipt，不等待用户回调、不新增业务队列。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -11624,6 +11679,57 @@
             "export": "run"
           },
           "completion": "suspend"
+        }
+      ]
+    },
+    "era.agent.prepare_stage_handoff": {
+      "display_name": "形成阶段交接与恢复凭据",
+      "description": "纯业务策略为成功阶段构造唯一 completionId、最终结果及恢复意图；不在 FIFO 中等待回调。无交接时保留原阶段结果。页面等待结束后必须经原 Service 派发链核对并恢复。",
+      "category": "故事生成会话",
+      "version": "1.0.0",
+      "flow_kind": "process",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.agent.generation.outcome",
+            "cardinality": "exactly_one",
+            "display_name": "阶段执行结果"
+          }
+        ],
+        "provides": [
+          {
+            "key": "handoff_outcome",
+            "type": "era.agent.generation.outcome",
+            "display_name": "含交接意图的阶段结果"
+          }
+        ],
+        "input_semantics": {
+          "era.agent.generation.outcome": [
+            "成功阶段结果或直接结果。"
+          ]
+        },
+        "output_semantics": {
+          "handoff_outcome": [
+            "附带交接通知与恢复标识的阶段结果。"
+          ]
+        },
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser",
+            "node"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/agent/prepare_stage_handoff.ts",
+            "export": "run"
+          },
+          "completion": "immediate"
         }
       ]
     },
@@ -18196,6 +18302,54 @@
                     "type": "string",
                     "maxLength": 4096
                   }
+                }
+              }
+            },
+            "handoff": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "executionId",
+                "completionId",
+                "trigger",
+                "chatKey",
+                "stage",
+                "result"
+              ],
+              "properties": {
+                "executionId": {
+                  "type": "string"
+                },
+                "completionId": {
+                  "type": "string"
+                },
+                "trigger": {
+                  "type": "string"
+                },
+                "chatKey": {
+                  "type": "string"
+                },
+                "stage": {
+                  "enum": [
+                    "planning",
+                    "story",
+                    "settlement"
+                  ]
+                },
+                "result": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "messageId": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "mk": {
+                  "type": "string"
+                },
+                "swipeId": {
+                  "type": "integer",
+                  "minimum": 0
                 }
               }
             }
@@ -43186,7 +43340,8 @@
         ],
         "dependencies": [
           "era.service.agent_generation_session",
-          "era.service.types"
+          "era.service.types",
+          "era.service.agent_stage_handoff"
         ],
         "external_packages": [
           "@era/vibeflow-contracts"
@@ -43293,6 +43448,30 @@
         "dependencies": [
           "era.service.agent_generation_session"
         ],
+        "external_packages": []
+      },
+      "era.service.agent_stage_handoff": {
+        "kind": "base_lib",
+        "id": "era.service.agent_stage_handoff",
+        "display_name": "Agent 阶段交接策略",
+        "description": "构造成功阶段完成身份与业务恢复意图，不等待页面回调。",
+        "category": "Agent 工作流",
+        "version": "1.0.0",
+        "implementations": [
+          {
+            "language": "typescript",
+            "targets": [
+              "browser",
+              "node"
+            ],
+            "source": {
+              "kind": "file",
+              "ref": "base_lib/agent_stage_handoff.ts"
+            },
+            "completion": "immediate"
+          }
+        ],
+        "dependencies": [],
         "external_packages": []
       },
       "era.service.agent_task_result": {

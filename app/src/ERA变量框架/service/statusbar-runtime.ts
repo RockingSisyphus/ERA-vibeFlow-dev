@@ -165,6 +165,7 @@ class EraStatusbarRuntime implements EraStatusbarController {
       return () => instance.listeners.delete(listener);
     };
     const localFacade: EraFacade = Object.freeze({
+      generation: globalFacade.generation,
       commit: (operations: readonly EraCommitOperation[], options?: Readonly<{ scope?: EraCommitScope }>) => {
         if (!instance.state || !this.verifyCurrentIdentity(instance))
           return Promise.reject(new Error('ERA_STATUSBAR_NOT_READY'));

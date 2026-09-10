@@ -95,15 +95,19 @@ export function agentReportRequests(
   const origin = requestOriginLabeler(stage);
   for (const text of [...history.filter(item => item !== current), current]) {
     const report = readAgentReport(text);
+    const final = report.final === true || (!Array.isArray(report.attempts) && !report.requestId && 'plan' in report);
     for (const [index, attempt] of agentReportAttempts(report).entries()) {
       const context = isObject(attempt.requestContext) ? attempt.requestContext : {};
-      const key = typeof attempt.requestId === 'string' ? attempt.requestId : `legacy:${text}:${index}`;
+      const key =
+        typeof attempt.requestId === 'string' ? attempt.requestId : `legacy:${stage}:${requests.size}:${index}`;
       requests.set(key, {
         key,
         report,
         attempt,
         currentExecution: text === current,
-        label: `${origin(context)} · ${requestIntentLabel(context, index)}：${agentRequestStatus(attempt.status)}`,
+        label: final
+          ? '最终成果（过程记录已释放）'
+          : `${origin(context)} · ${requestIntentLabel(context, index)}：${agentRequestStatus(attempt.status)}`,
       });
     }
   }
@@ -158,11 +162,15 @@ export function agentReportTabValue(
     提示词: () =>
       record
         ? { 'ERA 阶段输入': record.input, 宿主发送前提示词: record.prompt ?? '未采集' }
-        : '此记录未保存提示词，或页面已重载。',
-    'AI 响应': () => record?.response ?? attempt.response ?? '旧记录未保存',
+        : '记录已释放，或此请求未采集提示词。',
+    'AI 响应': () =>
+      record?.response ??
+      attempt.response ??
+      report.plan ??
+      (report.final === true ? { operations: report.operations, notice: '原始生成记录已释放' } : '记录已释放'),
     函数结果: () => attempt.functionResults ?? report.functionResults ?? '旧记录未保存',
     变量操作: () => ({
-      operations: attempt.operations ?? '旧记录未保存',
+      operations: attempt.operations ?? report.operations ?? '记录已释放',
       validation: attempt.status ?? '旧记录未保存',
       commit: record?.commit ?? '未采集提交回执；解析校验成功不代表最终提交成功。',
     }),

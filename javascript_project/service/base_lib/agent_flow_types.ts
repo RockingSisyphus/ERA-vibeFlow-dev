@@ -1,3 +1,4 @@
+import type { StageHandoff, stageHandoff } from "./agent_stage_handoff.ts";
 import type { PlannedStepV1 } from "./service_types.ts";
 import type { EraAgentConfigurationV2 } from "./agent_generation_session.ts";
 import type {
@@ -9,6 +10,8 @@ export interface AgentDiagnostic {
   readonly message: string;
 }
 export interface AgentOutcome {
+  readonly handoff?: StageHandoff;
+  readonly stageBoundary?: Parameters<typeof stageHandoff>[0];
   readonly mode: "legacy" | "legacy-ignore" | "execute-legacy" | "execute-only";
   readonly status: "committed" | "no-op" | "failed";
   readonly diagnostics: readonly AgentDiagnostic[];
@@ -50,7 +53,8 @@ export interface GenerationFacts {
   readonly identityError: AgentDiagnostic | null;
 }
 export interface GenerationDecision extends GenerationFacts {
-  readonly phase: "planning" | "story" | "retry" | "cancel" | "finish";
+  readonly phase:
+    "planning" | "story" | "retry" | "resume" | "cancel" | "finish";
   readonly disposition?: AgentOutcome;
 }
 export interface GenerationRequest {

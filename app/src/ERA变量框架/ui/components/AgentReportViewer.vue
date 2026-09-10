@@ -1,5 +1,5 @@
 <template>
-  <section class="era-stage-viewer" :data-era-stage="stage">
+  <section :id="`era-report-viewer-${stage}-${messageId}`" class="era-stage-viewer" :data-era-stage="stage">
     <div class="era-stage-toolbar">
       <label class="era-request-select"
         >请求记录
@@ -53,7 +53,12 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * 模块职责：负责按楼层身份展示最终成果及有界过程记录。
+ * 模块边界：依赖消息读取与观察仓库，仅向 Service 发送重试意图，不执行生成或变量计算。
+ */
 import { computed, onBeforeUnmount, ref } from 'vue';
+import { readMessageStageReport } from '../../service/agent-message-report';
 import { agentExecutionRecords, currentAgentRecordChat } from '../../service/agent-execution-records';
 import { readCurrentAgentSession } from '../../service/agent-tavern-host';
 import { requestEraService } from '../../service/client';
@@ -70,11 +75,15 @@ import {
 } from '../../service/agent-report-view-model';
 
 const props = defineProps<{
-  report: string;
+  report?: string;
   stage: 'planning' | 'settlement' | 'story';
   messageId: number;
   floorKey?: string | null;
 }>();
+const finalReport = computed(() => {
+  void version.value;
+  return props.report ?? readMessageStageReport(props.messageId, props.floorKey, props.stage);
+});
 // 用户切换的旧执行记录仅改变显示选择，不替换当前聊天或当前会话。
 const selectedKey = ref<string | null>(
   props.floorKey ? agentExecutionRecords.selectedRequest(currentAgentRecordChat(), props.floorKey, props.stage) : null,
@@ -89,13 +98,19 @@ const history = computed(() => {
   if (!props.floorKey) return [];
   return agentExecutionRecords
     .reportHistory(currentAgentRecordChat(), props.floorKey, props.stage)
-    .filter(report => report !== props.report);
+    .filter(report => report !== finalReport.value);
 });
-const requests = computed(() => agentReportRequests(props.report, history.value, props.stage));
+const requests = computed(() =>
+  agentReportRequests(
+    history.value.at(-1) ?? finalReport.value,
+    history.value.length ? [finalReport.value, ...history.value] : [],
+    props.stage,
+  ),
+);
 const selectedRequest = computed(
   () => requests.value.find(item => item.key === selectedKey.value) ?? requests.value[0],
 );
-const parsed = computed(() => selectedRequest.value?.report ?? readAgentReport(props.report));
+const parsed = computed(() => selectedRequest.value?.report ?? readAgentReport(finalReport.value));
 const attempts = computed(() => agentReportAttempts(parsed.value));
 function selectRequest(event: Event) {
   rememberSelection(requests.value[Number((event.target as HTMLSelectElement).value)]?.key ?? null);
@@ -136,6 +151,12 @@ const retryAvailable = computed(() => {
   // requestId 区分同一楼层上的新旧尝试；仅比较 messageId 会误操作新的周期。
   void version.value;
   const session = readCurrentAgentSession();
+  if (
+    !session &&
+    props.messageId === SillyTavern.chat.length - 1 &&
+    SillyTavern.chat[props.messageId]?.extra?.era_agent
+  )
+    return true;
   return (
     selectedRequest.value?.currentExecution === true &&
     canRetryAgentReport(parsed.value, props.stage, props.messageId, SillyTavern.chat.length - 1, session)
@@ -176,7 +197,7 @@ async function copy(event: MouseEvent): Promise<void> {
 async function retry(): Promise<void> {
   if (busy.value || !retryAvailable.value) return;
   const session = readCurrentAgentSession();
-  if (!session || session.messageId !== props.messageId) {
+  if (session && session.messageId !== props.messageId) {
     notice.value = '会话已失效';
     return;
   }
@@ -187,13 +208,15 @@ async function retry(): Promise<void> {
     const admission = requestEraService(
       ERA_UI_EVENT.AGENT_RETRY,
       [
-        {
-          kind: props.stage,
-          messageId: props.messageId,
-          cycleIndex: session.cycleIndex,
-          sourceKey: session.sourceKey,
-          requestId: attempts.value.at(-1)?.requestId,
-        },
+        Object.fromEntries(
+          Object.entries({
+            kind: props.stage,
+            messageId: props.messageId,
+            cycleIndex: session?.cycleIndex,
+            sourceKey: session?.sourceKey,
+            requestId: session ? attempts.value.at(-1)?.requestId : undefined,
+          }).filter(([, value]) => value !== undefined),
+        ),
       ],
       'ui',
     );

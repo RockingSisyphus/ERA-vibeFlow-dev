@@ -2,6 +2,11 @@
  * @file ERA 唯一公共对象
  * @description 本模块只负责向角色卡作者提供即时 commit、只读状态、订阅、同步和历史读取；不得承载业务事务，后者由 Service workflow 独占。
  */
+import {
+  generationSubscriptions,
+  type EraGenerationListener,
+  type EraGenerationStage,
+} from './generation-subscriptions';
 
 import { captureEraLifecycleToken, requestEraService } from './client';
 import {
@@ -94,6 +99,9 @@ export interface EraFacade {
   ready(options?: EraGetOptions): Promise<EraPublicState>;
   subscribe(listener: (state: EraPublicState) => void): () => void;
   sync(options?: Readonly<{ mode?: 'auto' | 'latest' | 'full'; rollbackTo?: number }>): Promise<EraPublicState>;
+  readonly generation: {
+    subscribe(listener: EraGenerationListener, options?: { stages?: readonly EraGenerationStage[] }): () => void;
+  };
   readonly history: {
     atMessage(messageId: number): Promise<EraPublicState>;
   };
@@ -179,6 +187,7 @@ export function createEraFacade(createStatusbar: EraStatusbarFactory): EraFacade
   };
   const facade = {
     commit,
+    generation: Object.freeze({ subscribe: generationSubscriptions.subscribe.bind(generationSubscriptions) }),
     get: currentState,
     async ready() {
       const immediate = currentState();
@@ -222,6 +231,11 @@ export function installEraPublicApi(createStatusbar: EraStatusbarFactory): () =>
   let active = true;
   const facade = createEraFacade(createStatusbar);
   const guarded: EraFacade = Object.freeze({
+    generation: Object.freeze({
+      /** 停止后不再接受订阅，避免旧 Facade 把回调挂到新实例。 */
+      subscribe: (listener: EraGenerationListener, options?: { stages?: readonly EraGenerationStage[] }) =>
+        active ? facade.generation.subscribe(listener, options) : () => undefined,
+    }),
     commit: (operations: readonly EraCommitOperation[], options?: Readonly<{ scope?: EraCommitScope }>) =>
       active ? facade.commit(operations, options) : Promise.reject(new Error('ERA_APP_SERVICE_UNAVAILABLE')),
     get: (options?: EraGetOptions) => (active ? facade.get(options) : projectPublicState(null)),
@@ -241,6 +255,7 @@ export function installEraPublicApi(createStatusbar: EraStatusbarFactory): () =>
   initializeGlobal('ERA', guarded);
   return () => {
     active = false;
+    generationSubscriptions.clear();
     if (installedFacade === guarded) installedFacade = null;
     (facade.statusbar as EraStatusbarController).stop();
   };

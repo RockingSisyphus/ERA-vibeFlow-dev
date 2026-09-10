@@ -3,6 +3,12 @@
  * 只登记一套事件监听、转交回执和执行声明式 Capability。模块边界：
  * 不得实现领域路由、合并、CRUD、同步、回滚或资源选择，这些规则依赖 AOT workflow。
  */
+import {
+  generationHandoffs,
+  dispatchGenerationHandoff,
+  generationAdmission,
+  cancelGenerationWaitForEvent,
+} from './generation-handoff-host';
 
 import { INPUT_EVENT, LISTENED_EVENT_TYPES, getEventDefinition, shouldCloseCollectionWindow } from '../events/catalog';
 import { Logger } from '../utils/log';
@@ -24,7 +30,7 @@ import { readInstallationScopeFacts } from './installation-scope';
 import { projectMessage } from './message-projection';
 import { AgentTavernHost } from './agent-tavern-host';
 import { TavernListeners } from './tavern-listeners';
-import { agentExecutionRecords } from './agent-execution-records';
+import { observeAgentReceipt } from './agent-session-observation';
 import {
   currentTavernContext,
   currentCharacterRegexEnabled,
@@ -247,6 +253,7 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
         /** 只有 generation barrier 事件返回 Promise，普通通知保持 Tavern 原时序。 */
         const handler = (...args: unknown[]): void | Promise<void> => {
           if (type === INPUT_EVENT.GENERATION_STARTED && this.agentHost.isAuxiliaryGenerationActive()) return undefined;
+          cancelGenerationWaitForEvent(type, args);
           if (type === INPUT_EVENT.GENERATION_STARTED && args[2] !== true) this.agentHost.nativeGeneration.start();
           if (this.consumeInternalMessageUpdate(type, args)) return undefined;
           if (type === INPUT_EVENT.GENERATION_STOPPED) this.agentHost.nativeGeneration.clear('stopped');
@@ -261,8 +268,9 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
             return undefined;
           return result
             .waitThrough()
-            .then(barrier => {
+            .then(async barrier => {
               (this.options.onBarrierFailure ?? reportBarrierFailure)(barrier);
+              await generationHandoffs.waitCurrent();
             })
             .catch(error => {
               logger.error('generationBarrier', '生成栅栏回执异常，按 fail-open 策略放行。', error);
@@ -313,9 +321,9 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
     const admission = this.listener({ type, source, args, occurredAt: Date.now() });
     if (admission.accepted) {
       // 被动旁路，不 await、不改写正式回执；没有明确事件绑定的请求不会被关联。
-      agentExecutionRecords.observeSettlement(admission.done);
+      observeAgentReceipt(admission.done, this.agentHost.readSessionForViewer.bind(this.agentHost));
     }
-    return admission;
+    return generationAdmission(type, admission);
   }
 
   stopAccepting(): void {
@@ -324,8 +332,11 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
     this.agentHost.stop();
   }
 
+  /** 后置通知在 FIFO 片段结束后执行，因此订阅回调可以提交新的正常任务。 */
   async notify(notification: EraPreparedNotification, context: EraCapabilityContext): Promise<void> {
     throwIfAborted(context.signal);
+    if (notification.type === 'era.agent.stage_completed')
+      return dispatchGenerationHandoff(notification, context.signal, this.enqueue.bind(this));
     await eventEmit(notification.type, ...notification.args);
     throwIfAborted(context.signal);
   }

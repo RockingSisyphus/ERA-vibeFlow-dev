@@ -3,13 +3,17 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { nextTick } from 'vue';
 import {
   mountReportViewer,
+  createStoryViewer,
   hydrateReportViewers,
   releaseReportApps,
 } from '../../src/ERA变量框架/service/agent-report-host';
 import { agentExecutionRecords } from '../../src/ERA变量框架/service/agent-execution-records';
 
 const mocks = vi.hoisted(() => ({
-  session: { messageId: 0, status: 'settled', planningAttempts: [{ requestId: 'plan' }] },
+  session: { messageId: 0, status: 'settled', planningAttempts: [{ requestId: 'plan' }] } as Record<
+    string,
+    unknown
+  > | null,
   request: vi.fn(() => ({ accepted: false, message: 'fixture refusal' })),
 }));
 vi.mock('../../src/ERA变量框架/service/agent-tavern-host', () => ({ readCurrentAgentSession: () => mocks.session }));
@@ -21,9 +25,59 @@ afterEach(() => {
   document.body.replaceChildren();
   vi.unstubAllGlobals();
   vi.clearAllMocks();
+  mocks.session = { messageId: 0, status: 'settled', planningAttempts: [{ requestId: 'plan' }] };
 });
 
 describe('report lifetime across native message HTML replacement', () => {
+  it('sends portable retry arguments after page memory has been lost', async () => {
+    mocks.session = null;
+    vi.stubGlobal('SillyTavern', {
+      characterId: '0',
+      groupId: null,
+      getCurrentChatId: () => 'reopened',
+      chat: [
+        {
+          mes: '<era_data>{"era-message-key"="floor-one"}</era_data><era_plan>{"plan":{"storyPlan":{}},"functionResults":[]}</era_plan>',
+          extra: { era_agent: { status: 'settled' } },
+        },
+      ],
+    });
+    const root = mountReportViewer(document, '', 'planning', 0);
+    document.body.append(root);
+    root.querySelector<HTMLButtonElement>('#era-report-retry-planning')!.click();
+    await nextTick();
+    expect(mocks.request).toHaveBeenCalledWith('era.ui.agent_retry', [{ kind: 'planning', messageId: 0 }], 'ui');
+  });
+  it('reopened messages show their own latest final cycle without inventing process records', async () => {
+    const chat = [1, 2, 3].map(floor => ({
+      mes: `<era_data>{"era-message-key"="floor-${floor}"}</era_data><era_plan>{"plan":{"scene":"old-${floor}"}}</era_plan><era_plan>{"plan":{"scene":"final-${floor}"},"functionResults":[]}</era_plan>story-${floor}<VariableEdit>{"hp":${floor}}</VariableEdit>`,
+      extra: { era_agent: { cycleIndex: 1 } },
+    }));
+    vi.stubGlobal('SillyTavern', { characterId: '0', groupId: null, getCurrentChatId: () => 'reopened', chat });
+    for (const [messageId, message] of chat.entries()) {
+      for (const stage of ['planning', 'settlement'] as const) {
+        const root = mountReportViewer(document, '', stage, messageId);
+        document.body.append(root);
+        expect(root.querySelector('pre')!.textContent).toContain(
+          stage === 'planning' ? `final-${messageId + 1}` : String(messageId + 1),
+        );
+        expect(root.querySelectorAll('option')).toHaveLength(1);
+        root.querySelector<HTMLButtonElement>(`#era-report-tab-${stage}-${messageId}-prompt`)!.click();
+        await nextTick();
+        expect(root.querySelector('pre')!.textContent).toContain('记录已释放');
+      }
+      const story = createStoryViewer(document, messageId, message.mes)!;
+      document.body.append(story);
+      expect(story.querySelector('pre')!.textContent).toContain(`story-${messageId + 1}`);
+      expect(story.querySelector('pre')!.textContent).not.toContain('VariableEdit');
+      expect(story.querySelectorAll('option')).toHaveLength(1);
+    }
+    expect(agentExecutionRecords.reportHistory(JSON.stringify(['0', null, 'reopened']), 'floor-3', 'story')).toEqual(
+      [],
+    );
+    expect(mocks.request).not.toHaveBeenCalled();
+  });
+
   it('keeps an explicitly selected old request when the same floor report is remounted with new requests', async () => {
     vi.stubGlobal('SillyTavern', {
       characterId: '0',
@@ -67,7 +121,12 @@ describe('report lifetime across native message HTML replacement', () => {
   it.each(['planning', 'settlement'] as const)(
     'defaults %s to the first AI response tab and keeps the full report accessible',
     async stage => {
-      vi.stubGlobal('SillyTavern', { characterId: '0', groupId: null, getCurrentChatId: () => 'chat', chat: [{}] });
+      vi.stubGlobal('SillyTavern', {
+        characterId: '0',
+        groupId: null,
+        getCurrentChatId: () => 'chat',
+        chat: [{ mes: '<era_data>{"era-message-key"="floor-one"}</era_data>' }],
+      });
       const response = { answer: 'readable response' };
       const report = JSON.stringify({ attempts: [{ status: 'passed', response: JSON.stringify(response) }] });
       const root = mountReportViewer(document, report, stage, 0);
@@ -80,11 +139,16 @@ describe('report lifetime across native message HTML replacement', () => {
       await nextTick();
       expect(root.querySelector('pre')!.textContent).toContain('\n  "attempts": [');
       expect(root.querySelector('pre')!.textContent).toContain('"response": {');
-      expect(JSON.parse(decodeURIComponent(root.dataset.eraReportView!)).report).toBe(report);
+      expect(JSON.parse(decodeURIComponent(root.dataset.eraReportView!)).report).toBeUndefined();
     },
   );
   it('copies through the button document rather than the hidden script realm', async () => {
-    vi.stubGlobal('SillyTavern', { characterId: '0', groupId: null, getCurrentChatId: () => 'chat', chat: [{}] });
+    vi.stubGlobal('SillyTavern', {
+      characterId: '0',
+      groupId: null,
+      getCurrentChatId: () => 'chat',
+      chat: [{ mes: '<era_data>{"era-message-key"="floor-one"}</era_data>' }],
+    });
     const frame = document.createElement('iframe');
     document.body.append(frame);
     const targetDocument = frame.contentDocument!;
@@ -101,7 +165,12 @@ describe('report lifetime across native message HTML replacement', () => {
     expect(root.textContent).toContain('已复制');
   });
   it('shows actual attempt prompts and function outcomes without embedding prompts in remount props', async () => {
-    vi.stubGlobal('SillyTavern', { characterId: '0', groupId: null, getCurrentChatId: () => 'chat', chat: [{}] });
+    vi.stubGlobal('SillyTavern', {
+      characterId: '0',
+      groupId: null,
+      getCurrentChatId: () => 'chat',
+      chat: [{ mes: '<era_data>{"era-message-key"="floor-one"}</era_data>' }],
+    });
     const chat = JSON.stringify(['0', null, 'chat']);
     agentExecutionRecords.begin('failed-plan', chat, 'planning', { userInput: 'first input' });
     agentExecutionRecords.helperStarted('failed-plan');
@@ -153,12 +222,17 @@ describe('report lifetime across native message HTML replacement', () => {
     expect(root.querySelector('pre')!.textContent).toContain('\n');
     agentExecutionRecords.clear();
     await click('提示词');
-    expect(root.querySelector('pre')!.textContent).toContain('未保存提示词');
-    expect(JSON.parse(decodeURIComponent(root.dataset.eraReportView!)).report).toBe(report);
+    expect(root.querySelector('pre')!.textContent).toContain('记录已释放');
+    expect(JSON.parse(decodeURIComponent(root.dataset.eraReportView!)).report).toBeUndefined();
     expect(mocks.request).not.toHaveBeenCalled();
   });
   it('rehydrates only its own cloned container and restores one real click handler', async () => {
-    vi.stubGlobal('SillyTavern', { characterId: '0', groupId: null, getCurrentChatId: () => 'chat', chat: [{}] });
+    vi.stubGlobal('SillyTavern', {
+      characterId: '0',
+      groupId: null,
+      getCurrentChatId: () => 'chat',
+      chat: [{ mes: '<era_data>{"era-message-key"="floor-one"}</era_data>' }],
+    });
     const message = document.createElement('div');
     document.body.append(message);
     const author = document.createElement('iframe');

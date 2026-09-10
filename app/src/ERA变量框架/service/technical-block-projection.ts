@@ -15,6 +15,7 @@ import {
   mountReportViewer,
   releaseReportApps,
   createStoryViewer,
+  createSettlementViewer,
   registerAgentRequestObservation,
   hydrateReportViewers,
 } from './agent-report-host';
@@ -181,6 +182,11 @@ function replaceReportsInPlace(
   const viewer = createStoryViewer(document, messageId, story);
   if (previous && viewer) previous.replaceWith(viewer);
   else if (viewer) root.append(viewer);
+  const oldSettlement = root.querySelector(':scope > [data-era-settlement-viewer]');
+  const settlement = createSettlementViewer(document, messageId);
+  if (oldSettlement && settlement) oldSettlement.replaceWith(settlement);
+  else if (settlement) root.append(settlement);
+  else oldSettlement?.remove();
   releaseReportApps();
   return true;
 }
@@ -199,6 +205,8 @@ function displayedMessageFragment(
   }
   const viewer = createStoryViewer(document, messageId, story);
   if (viewer) fragment.append(viewer);
+  const settlement = createSettlementViewer(document, messageId);
+  if (settlement) fragment.append(settlement);
   return fragment;
 }
 

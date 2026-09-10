@@ -1,7 +1,35 @@
 import { describe, expect, it } from 'vitest';
 import { AgentExecutionRecords } from '../../src/ERA变量框架/service/agent-execution-records';
+import { compactSessionStorage } from '../../../javascript_project/service/base_lib/agent_session_binding';
 
 describe('page-only Agent prompt records', () => {
+  it('moves a bounded planning record to its first real floor without retaining the pending index', () => {
+    const records = new AgentExecutionRecords(2000);
+    records.rememberReport('chat', 'pending-generation:e', 'planning', '{"attempts":[{"response":"actual"}]}');
+    records.bindReportFloor('chat', 'pending-generation:e', 'mk', 'planning');
+    expect(records.reportHistory('chat', 'pending-generation:e', 'planning')).toEqual([]);
+    expect(records.reportHistory('chat', 'mk', 'planning')).toEqual(['{"attempts":[{"response":"actual"}]}']);
+    expect(records.statistics.count).toBe(1);
+    records.bindReportFloor('chat', 'pending-generation:e', 'mk', 'planning');
+    expect(records.statistics.count).toBe(1);
+    records.clear();
+    expect(records.statistics.usedBytes).toBe(0);
+  });
+  it('waiting sessions retain their continuation, but do not hold a second unbudgeted attempt history', () => {
+    const session = {
+      status: 'planned',
+      pendingStage: { completionId: 'p', candidate: { operations: [] } },
+      preState: { statData: { hp: 1 } },
+      planningAttempts: [
+        { requestId: 'r', status: 'passed', response: 'large response', requestContext: { prompt: 'large prompt' } },
+      ],
+    };
+    const stored = compactSessionStorage(session) as typeof session;
+    expect(stored.pendingStage).toEqual(session.pendingStage);
+    expect(stored.preState).toEqual(session.preState);
+    expect(stored.planningAttempts).toEqual([{ requestId: 'r', status: 'passed' }]);
+    expect(session.planningAttempts[0].response).toBe('large response');
+  });
   it('marks explicit cancellation but does not mistake native generation end for settlement completion', () => {
     const records = new AgentExecutionRecords();
     records.begin('cancel', 'chat', 'story', {});
@@ -96,5 +124,46 @@ describe('page-only Agent prompt records', () => {
     expect(records.get('chat-b', 'plan-1')).toBeUndefined();
     records.clear();
     expect(records.get('chat-a', 'plan-1')).toBeUndefined();
+  });
+});
+
+describe('bounded Agent observations', () => {
+  it('evicts completed requests across chats and clears their selection', () => {
+    const records = new AgentExecutionRecords(2200);
+    records.begin('old', 'chat-a', 'planning', 'a'.repeat(200));
+    records.finish('old', 'responded', 'done');
+    records.selectRequest('chat-a', 'mk', 'planning', 'old');
+    records.begin('new', 'chat-b', 'story', 'b'.repeat(400));
+    expect(records.get('chat-b', 'new')).toBeDefined();
+    expect(records.get('chat-a', 'old')).toBeUndefined();
+    expect(records.selectedRequest('chat-a', 'mk', 'planning')).toBeNull();
+    expect(records.statistics.usedBytes).toBeLessThanOrEqual(2200);
+  });
+  it('does not retain oversized responses or accumulate tiny history indexes', () => {
+    const records = new AgentExecutionRecords(1500);
+    records.begin('large', 'chat', 'planning', {});
+    records.finish('large', 'responded', 'x'.repeat(2000));
+    expect(records.get('chat', 'large')).toBeUndefined();
+    for (let i = 0; i < 3000; i++) {
+      records.rememberReport(`chat-${i}`, `mk-${i}`, 'planning', '{}');
+      records.selectRequest(`chat-${i}`, `mk-${i}`, 'planning', `id-${i}`);
+      expect(records.statistics.usedBytes).toBeLessThanOrEqual(1500);
+    }
+    expect(records.statistics.count).toBeLessThan(20);
+    records.clear();
+    expect(records.statistics.usedBytes).toBe(0);
+    expect(records.statistics.count).toBe(0);
+  });
+  it('drops an observation when active records fill the budget without modifying input', () => {
+    const records = new AgentExecutionRecords(1200);
+    const input = { text: 'a'.repeat(150) };
+    records.begin('active', 'chat', 'planning', input);
+    records.begin('other', 'chat', 'planning', input);
+    expect(records.get('chat', 'active')).toBeDefined();
+    expect(records.get('chat', 'other')).toBeUndefined();
+    expect(input.text).toHaveLength(150);
+    records.finish('active', 'responded', 'ok');
+    records.begin('next', 'chat', 'planning', input);
+    expect(records.get('chat', 'next')).toBeDefined();
   });
 });

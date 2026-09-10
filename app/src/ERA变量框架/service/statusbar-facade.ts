@@ -1,9 +1,11 @@
 /** 在 DOM 和楼层身份就绪前同步安装局部 Facade，避免作者脚本误读顶层状态。 */
+import type { GenerationSubscriptionStop } from './generation-subscriptions';
 import type { EraFacade, EraGetOptions, EraPublicState } from './public-api';
 import { projectPublicState } from './public-state';
 
 /** 只暂存读取意图与订阅；绑定后沿用同一公开对象，不能把早期写入送到最新楼。 */
 export function createPendingStatusbarFacade(globalFacade: EraFacade) {
+  const generationStops = new Set<GenerationSubscriptionStop>();
   let bound: EraFacade | null = null;
   let failure: Error | null = null;
   let options: EraGetOptions = {};
@@ -14,6 +16,18 @@ export function createPendingStatusbarFacade(globalFacade: EraFacade) {
   };
   const facade: EraFacade = Object.freeze({
     ...globalFacade,
+    generation: Object.freeze({
+      /** 跟随 iframe 释放回调等待，避免作者页面卸载后仍阻断生成。 */
+      subscribe: (...args: Parameters<EraFacade['generation']['subscribe']>) => {
+        if (failure) return () => undefined;
+        const stop = globalFacade.generation.subscribe(...args);
+        generationStops.add(stop);
+        return () => {
+          stop();
+          generationStops.delete(stop);
+        };
+      },
+    }),
     get: (next: EraGetOptions = {}) => {
       request(next);
       return failure ? projectPublicState(null) : (bound?.get(options) ?? projectPublicState(null));
@@ -51,6 +65,8 @@ export function createPendingStatusbarFacade(globalFacade: EraFacade) {
     },
     dispose(error = new Error('ERA_STATUSBAR_FRAME_CLOSED')): void {
       failure = error;
+      for (const stop of generationStops) (stop.cancelPending ?? stop)();
+      generationStops.clear();
       bound = null;
       for (const unsubscribe of subscriptions.values()) unsubscribe?.();
       subscriptions.clear();

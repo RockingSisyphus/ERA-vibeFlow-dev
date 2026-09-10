@@ -187,6 +187,7 @@ export function getListenedEventTypes(): readonly string[] {
     EVENT_UI_SIDECAR_BINDING_CHOICE,
     EVENT_UI_AGENT_CONFIGURATION,
     EVENT_UI_AGENT_RETRY,
+    "era.agent.stage_continue",
     EVENT_MANUAL_WRITE,
     EVENT_MESSAGE_RECEIVED,
     EVENT_MESSAGE_DELETED,
@@ -314,6 +315,7 @@ export function getEventDefinition(
         awaitMode: "detached",
         collectionWindowMs: 1500,
       };
+    case "era.agent.stage_continue":
     case EVENT_MESSAGE_EDITED:
       return {
         type: eventType,
@@ -561,7 +563,8 @@ function usesAgentGenerationSession(unit: WorkUnitV1): boolean {
     unit.primaryEvent.type === EVENT_MESSAGE_SENT ||
     unit.primaryEvent.type === EVENT_MESSAGE_RECEIVED ||
     unit.primaryEvent.type === EVENT_UI_AGENT_CONFIGURATION ||
-    unit.primaryEvent.type === EVENT_UI_AGENT_RETRY
+    unit.primaryEvent.type === EVENT_UI_AGENT_RETRY ||
+    unit.primaryEvent.type === "era.agent.stage_continue"
   );
 }
 

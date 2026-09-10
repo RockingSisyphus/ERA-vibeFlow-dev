@@ -29,10 +29,11 @@ export function mountReportViewer(
   // 楼号会因删楼改变，Swipe 也会复用楼号；页面归档以消息的稳定 MK 分组。
   const message = SillyTavern.chat[messageId];
   const floorKey = messageMk(activeMessageText(message) ?? '');
-  if (floorKey) agentExecutionRecords.rememberReport(currentAgentRecordChat(), floorKey, stage, report);
+  if (floorKey && report && /"(?:attempts|requestId)"\s*:/u.test(report))
+    agentExecutionRecords.rememberReport(currentAgentRecordChat(), floorKey, stage, report);
   const root = document.createElement('div');
-  const props = { report, stage, messageId, floorKey };
-  // Helper 会重新格式化消息 HTML；只给 ERA 自有容器保留重新挂载所需的只读报告。
+  const props = { stage, messageId, floorKey };
+  // Helper 会复制 HTML；DOM 只保存重新挂载的身份，不复制报告。
   // 完整提示词不在 props 中，仍仅通过请求 ID 从页面记录仓库读取。
   root.dataset.eraReportView = encodeURIComponent(JSON.stringify(props));
   const app = createApp(AgentReportViewer, props);
@@ -76,6 +77,20 @@ export function createStoryViewer(document: Document, messageId: number, fallbac
   summary.textContent = 'ERA 正文生成记录';
   summary.id = `era-report-summary-story-${messageId}`;
   details.append(summary, mountReportViewer(document, report, 'story', messageId));
+  return details;
+}
+
+/** 精简消息没有 era_update，因此从实际指令提供查看入口，避免重进后变量页消失。 */
+export function createSettlementViewer(document: Document, messageId: number): HTMLElement | null {
+  const message = SillyTavern.chat[messageId];
+  if (!message?.extra?.era_agent || /<era_update>/iu.test(activeMessageText(message) ?? '')) return null;
+  const details = document.createElement('details');
+  details.className = 'era-technical-report';
+  details.dataset.eraSettlementViewer = 'true';
+  const summary = document.createElement('summary');
+  summary.textContent = 'ERA 变量解析报告';
+  summary.id = `era-report-summary-settlement-${messageId}`;
+  details.append(summary, mountReportViewer(document, '', 'settlement', messageId));
   return details;
 }
 
