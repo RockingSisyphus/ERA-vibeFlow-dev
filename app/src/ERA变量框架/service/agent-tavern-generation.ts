@@ -58,24 +58,12 @@ export type AuxiliaryRoute = {
   readonly model: string | undefined;
 };
 
-/** 仅允许有限数覆盖当前预设，其他值必须显式回退宿主配置。 */
-function numericSetting(settings: Record<string, unknown>, key: string): number | 'same_as_preset' {
-  const value = settings[key];
-  return typeof value === 'number' && Number.isFinite(value) ? value : 'same_as_preset';
-}
-
-/** 将 V1 模型覆盖与 V2 本机方案统一成一次请求路由，缺失方案必须在请求前失败。 */
+/** 必须在请求时读取实际本机方案以保留连接执行语义；只绑定 Service 已选择的模型意图。 */
 export function resolveAuxiliaryRoute(input: Readonly<Record<string, unknown>>): AuxiliaryRoute {
-  const modelSource = isRecord(input.modelSource) ? input.modelSource : { kind: 'tavern-current' };
-  const legacyModel =
-    modelSource.kind === 'tavern-current' && typeof modelSource.legacyModelOverride === 'string'
-      ? modelSource.legacyModelOverride
-      : undefined;
-  const profile = modelSource.kind === 'custom-profile' ? requireProfile(modelSource.profileId) : null;
-  const model =
-    modelSource.kind === 'custom-profile' && typeof modelSource.model === 'string' && modelSource.model.length > 0
-      ? modelSource.model
-      : legacyModel;
+  const policy = input.requestPolicy as { binding: { kind: string; profileId: unknown; model: string | null } };
+  const binding = policy.binding;
+  const profile = binding.kind === 'custom-profile' ? requireProfile(binding.profileId) : null;
+  const model = binding.model ?? undefined;
   if (profile !== null && !model) {
     throw new TypeError('ERA_AGENT_MODEL_REQUIRED：自定义连接方案必须选择或填写模型。');
   }
@@ -85,7 +73,7 @@ export function resolveAuxiliaryRoute(input: Readonly<Record<string, unknown>>):
 /** 必须只在 Host 最内层展开 URL 与密钥，否则私密值会越过 Service DTO 边界。 */
 export function auxiliaryApiSettings(
   route: AuxiliaryRoute,
-  settings: Record<string, unknown>,
+  settings: Readonly<Record<string, number | 'same_as_preset'>>,
 ): GenerateRawConfig['custom_api'] {
   return {
     ...(route.profile
@@ -98,11 +86,11 @@ export function auxiliaryApiSettings(
       : route.model
         ? { model: route.model }
         : {}),
-    max_tokens: numericSetting(settings, 'maxTokens'),
-    temperature: numericSetting(settings, 'temperature'),
-    frequency_penalty: numericSetting(settings, 'frequencyPenalty'),
-    presence_penalty: numericSetting(settings, 'presencePenalty'),
-    top_p: numericSetting(settings, 'topP'),
-    top_k: numericSetting(settings, 'topK'),
+    max_tokens: settings.maxTokens,
+    temperature: settings.temperature,
+    frequency_penalty: settings.frequencyPenalty,
+    presence_penalty: settings.presencePenalty,
+    top_p: settings.topP,
+    top_k: settings.topK,
   };
 }

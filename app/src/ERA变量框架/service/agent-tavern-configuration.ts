@@ -126,78 +126,29 @@ export function newProfileId(): string {
   return `profile-${crypto.randomUUID()}`;
 }
 
-type CapturedPrompt = NonNullable<GenerateRawConfig['ordered_prompts']>[number];
-
-/** 将单条宿主预设提示收窄到 ERA 允许携带的占位符或角色文本。 */
-function capturePrompt(
-  prompt: Record<string, unknown>,
-  placeholders: Readonly<Record<string, PlaceholderPrompt>>,
-): CapturedPrompt | null {
-  if (prompt.enabled === false) return null;
-  const id = typeof prompt.id === 'string' ? prompt.id : '';
-  const placeholder = placeholders[id];
-  if (placeholder) return placeholder;
-  if (typeof prompt.content !== 'string') return null;
-  return {
-    role: prompt.role === 'assistant' || prompt.role === 'user' ? prompt.role : 'system',
-    content: prompt.content,
-  };
-}
-
-/** 阶段输入必须在末尾 assistant 预填充之前，否则模型接收顺序与预设意图相反。 */
-function includeStageInput(prompts: CapturedPrompt[]): void {
-  if (prompts.includes('user_input')) return;
-  let index = prompts.length;
-  while (index > 0) {
-    const prompt = prompts[index - 1];
-    if (typeof prompt === 'string' || prompt?.role !== 'assistant') break;
-    index -= 1;
-  }
-  prompts.splice(index, 0, 'user_input');
-}
-
-/**
- * 从指定 Tavern 预设生成有界脱敏快照，只保留提示顺序和通用采样参数。
- * 必须主动白名单复制；否则 API、代理、脚本、正则与第三方扩展可能随角色卡泄漏。
- */
+/** 只返回 Service 所需的预设字段，避免传递完整宿主对象；ERA 提示顺序与采样规则由 Service 解释。 */
 export function capturePreset(input: Readonly<Record<string, unknown>>): unknown {
   const context = currentTavernContext();
   if (typeof context.groupId === 'string' && context.groupId.length > 0) {
     throw new TypeError('群聊不支持 ERA 多阶段生成预设。');
   }
-  const name = typeof input.name === 'string' && input.name.trim().length > 0 ? input.name.trim() : 'in_use';
+  const name = input.name as string;
   const preset = getPreset(name);
-  const placeholders: Readonly<Record<string, PlaceholderPrompt>> = {
-    worldInfoBefore: 'world_info_before',
-    personaDescription: 'persona_description',
-    charDescription: 'char_description',
-    charPersonality: 'char_personality',
-    scenario: 'scenario',
-    worldInfoAfter: 'world_info_after',
-    dialogueExamples: 'dialogue_examples',
-    chatHistory: 'chat_history',
-  };
-  const prompts: GenerateRawConfig['ordered_prompts'] = [];
-  for (const rawPrompt of Array.isArray(preset.prompts) ? preset.prompts.slice(0, 256) : []) {
-    if (!isRecord(rawPrompt)) continue;
-    const prompt = capturePrompt(rawPrompt, placeholders);
-    if (prompt !== null) prompts.push(prompt);
-  }
-  includeStageInput(prompts);
   const settings: Record<string, unknown> = isRecord(preset.settings) ? preset.settings : {};
   return clonePortable({
-    source: 'snapshot',
-    sourceName: name === 'in_use' ? `当前正在使用（${getLoadedPresetName()}）` : name,
-    orderedPrompts: prompts,
+    requestedName: name,
+    loadedName: name === 'in_use' ? getLoadedPresetName() : null,
+    prompts: (Array.isArray(preset.prompts) ? preset.prompts.slice(0, 256) : []).filter(isRecord).map(prompt => ({
+      id: typeof prompt.id === 'string' ? prompt.id : null,
+      enabled: prompt.enabled !== false,
+      role: typeof prompt.role === 'string' ? prompt.role : null,
+      content: typeof prompt.content === 'string' ? prompt.content : null,
+    })),
     settings: Object.fromEntries(
-      Object.entries({
-        maxTokens: settings.max_completion_tokens,
-        temperature: settings.temperature,
-        frequencyPenalty: settings.frequency_penalty,
-        presencePenalty: settings.presence_penalty,
-        topP: settings.top_p,
-        topK: settings.top_k,
-      }).filter(([, value]) => typeof value === 'number' && Number.isFinite(value)),
+      ['max_completion_tokens', 'temperature', 'frequency_penalty', 'presence_penalty', 'top_p', 'top_k'].map(key => [
+        key,
+        typeof settings[key] === 'number' && Number.isFinite(settings[key]) ? settings[key] : null,
+      ]),
     ),
   });
 }

@@ -7,6 +7,54 @@
   "schema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
-    "additionalProperties": true
+    "additionalProperties": true,
+    "properties": {
+      "requestedName": {
+        "type": "string"
+      },
+      "loadedName": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "prompts": {
+        "type": "array",
+        "maxItems": 256,
+        "items": {
+          "type": "object",
+          "required": [
+            "id",
+            "enabled",
+            "role",
+            "content"
+          ],
+          "properties": {
+            "id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "role": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "content": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    }
   }
 }

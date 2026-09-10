@@ -667,17 +667,15 @@
               "display_name": "执行生成阶段与迁入的预设/请求规则",
               "description": "在现有 capture-preset 分支及 planning/settlement 的 stageRequest 调用处承接宿主层的预设快照组装、阶段输入顺序、模型选择与采样默认值；Host 只读取所需预设字段、绑定本机连接并执行请求。保持生成会话、重试、原生等待、最终楼层候选及既有输入输出和边不变。"
             },
-            "contract_source": "planned_config",
+            "contract_source": "node_type",
             "flow_kind": "process",
             "effect_scope": "none",
             "runtime_dispatch": "unknown",
             "execution_lock": null,
             "effective_execution_lock": null,
             "contains_global_state": false,
-            "status": "planned",
-            "planned_behavior": {
-              "kind": "blocking"
-            },
+            "status": "implemented",
+            "planned_behavior": null,
             "requires": [
               {
                 "type": "era.agent.auxiliary.execution_request",
@@ -17127,7 +17125,117 @@
         "schema": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
           "type": "object",
-          "additionalProperties": true
+          "additionalProperties": true,
+          "properties": {
+            "requestPolicy": {
+              "type": "object",
+              "required": [
+                "binding",
+                "sampling"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "binding": {
+                  "type": "object",
+                  "required": [
+                    "kind",
+                    "profileId",
+                    "model"
+                  ],
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "custom-profile",
+                        "tavern-current"
+                      ]
+                    },
+                    "profileId": {},
+                    "model": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "sampling": {
+                  "type": "object",
+                  "required": [
+                    "maxTokens",
+                    "temperature",
+                    "frequencyPenalty",
+                    "presencePenalty",
+                    "topP",
+                    "topK"
+                  ],
+                  "properties": {
+                    "maxTokens": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "const": "same_as_preset"
+                        }
+                      ]
+                    },
+                    "temperature": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "const": "same_as_preset"
+                        }
+                      ]
+                    },
+                    "frequencyPenalty": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "const": "same_as_preset"
+                        }
+                      ]
+                    },
+                    "presencePenalty": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "const": "same_as_preset"
+                        }
+                      ]
+                    },
+                    "topP": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "const": "same_as_preset"
+                        }
+                      ]
+                    },
+                    "topK": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "const": "same_as_preset"
+                        }
+                      ]
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
         }
       },
       "era.agent.host.result": {
@@ -17139,7 +17247,55 @@
         "schema": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
           "type": "object",
-          "additionalProperties": true
+          "additionalProperties": true,
+          "properties": {
+            "requestedName": {
+              "type": "string"
+            },
+            "loadedName": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "prompts": {
+              "type": "array",
+              "maxItems": 256,
+              "items": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "enabled",
+                  "role",
+                  "content"
+                ],
+                "properties": {
+                  "id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "enabled": {
+                    "type": "boolean"
+                  },
+                  "role": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "content": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
         }
       },
       "era.agent.planning.attempt_result": {
@@ -42235,6 +42391,30 @@
           "@era/vibeflow-contracts",
           "@era/vibeflow-expression"
         ]
+      },
+      "era.service.agent_request_policy": {
+        "kind": "base_lib",
+        "id": "era.service.agent_request_policy",
+        "display_name": "Agent 预设与请求规则",
+        "description": "组装预设快照、输入顺序和辅助模型请求计划，不读取宿主。",
+        "category": "故事生成会话",
+        "version": "1.0.0",
+        "implementations": [
+          {
+            "language": "typescript",
+            "targets": [
+              "browser",
+              "node"
+            ],
+            "source": {
+              "kind": "file",
+              "ref": "base_lib/agent_request_policy.ts"
+            },
+            "completion": "immediate"
+          }
+        ],
+        "dependencies": [],
+        "external_packages": []
       },
       "era.service.command_compaction": {
         "kind": "base_lib",

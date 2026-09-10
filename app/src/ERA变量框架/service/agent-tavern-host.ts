@@ -313,7 +313,7 @@ export class AgentTavernHost {
         typeof input.generationId === 'string' && input.generationId.length > 0
           ? input.generationId
           : `era-agent-${Date.now()}`;
-      const settings = isRecord(input.settings) ? input.settings : {};
+      const settings = (input.requestPolicy as { sampling: Record<string, number | 'same_as_preset'> }).sampling;
       const route = resolveAuxiliaryRoute(input);
       const requestId = generationId;
       const routeDescription =

@@ -1,3 +1,4 @@
+import { agentPresetName, captureAgentPresetSnapshot, buildAgentRequestPolicy } from "../../base_lib/agent_request_policy.ts";
 import {
   AgentFunctionCallFailure,
   attemptProfile,
@@ -435,8 +436,7 @@ function stageRequest(
     userInput,
     orderedPrompts,
     resolvePresetMacros: preset.source === "snapshot",
-    settings,
-    modelSource: profile.modelSource,
+    requestPolicy: buildAgentRequestPolicy(profile.modelSource, settings),
   };
 }
 
@@ -1032,7 +1032,7 @@ export async function run(
     }
     if (payload.action === "capture-preset") {
       try {
-        const preset = capability.capture_preset({ name: payload.name });
+        const preset = captureAgentPresetSnapshot(capability.capture_preset({ name: agentPresetName(payload.name) }));
         return output(
           transition(step, "execute-only", "committed", [], { preset }),
         );

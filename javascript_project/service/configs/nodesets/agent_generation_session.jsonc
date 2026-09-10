@@ -20,28 +20,7 @@
         "id": "execute_agent_phase_v2",
         "type_used": "era.agent.execute_session_v2",
         "display_name": "执行生成阶段与迁入的预设/请求规则",
-        "description": "在现有 capture-preset 分支及 planning/settlement 的 stageRequest 调用处承接宿主层的预设快照组装、阶段输入顺序、模型选择与采样默认值；Host 只读取所需预设字段、绑定本机连接并执行请求。保持生成会话、重试、原生等待、最终楼层候选及既有输入输出和边不变。",
-        "status": "planned",
-        "flow_kind": "process",
-        "requires": [
-          {
-            "type": "era.agent.auxiliary.execution_request",
-            "cardinality": "exactly_one",
-            "display_name": "不含密钥的辅助阶段执行请求"
-          }
-        ],
-        "provides": [
-          {
-            "key": "agent_transition",
-            "type": "era.agent.session.transition",
-            "display_name": "Agent 阶段转换"
-          },
-          {
-            "key": "agent_execution_state",
-            "type": "era.batch.execution.state",
-            "display_name": "Agent 批次执行状态"
-          }
-        ]
+        "description": "在现有 capture-preset 分支及 planning/settlement 的 stageRequest 调用处承接宿主层的预设快照组装、阶段输入顺序、模型选择与采样默认值；Host 只读取所需预设字段、绑定本机连接并执行请求。保持生成会话、重试、原生等待、最终楼层候选及既有输入输出和边不变。"
       },
       {"id":"route_agent_transition","type_used":"era.agent.route_transition","display_name":"路由阶段结果","description":"决定直接结算还是恢复原任务。"},
       {

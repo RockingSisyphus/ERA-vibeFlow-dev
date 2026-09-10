@@ -7,6 +7,116 @@
   "schema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
-    "additionalProperties": true
+    "additionalProperties": true,
+    "properties": {
+      "requestPolicy": {
+        "type": "object",
+        "required": [
+          "binding",
+          "sampling"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "binding": {
+            "type": "object",
+            "required": [
+              "kind",
+              "profileId",
+              "model"
+            ],
+            "properties": {
+              "kind": {
+                "enum": [
+                  "custom-profile",
+                  "tavern-current"
+                ]
+              },
+              "profileId": {},
+              "model": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          "sampling": {
+            "type": "object",
+            "required": [
+              "maxTokens",
+              "temperature",
+              "frequencyPenalty",
+              "presencePenalty",
+              "topP",
+              "topK"
+            ],
+            "properties": {
+              "maxTokens": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "const": "same_as_preset"
+                  }
+                ]
+              },
+              "temperature": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "const": "same_as_preset"
+                  }
+                ]
+              },
+              "frequencyPenalty": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "const": "same_as_preset"
+                  }
+                ]
+              },
+              "presencePenalty": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "const": "same_as_preset"
+                  }
+                ]
+              },
+              "topP": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "const": "same_as_preset"
+                  }
+                ]
+              },
+              "topK": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "const": "same_as_preset"
+                  }
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      }
+    }
   }
 }

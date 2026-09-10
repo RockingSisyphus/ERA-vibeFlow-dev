@@ -1,3 +1,7 @@
+import {
+  buildAgentRequestPolicy,
+  captureAgentPresetSnapshot,
+} from '../../../javascript_project/service/base_lib/agent_request_policy';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AgentTavernHost } from '../../src/ERA变量框架/service/agent-tavern-host';
@@ -150,7 +154,8 @@ describe('AgentTavernHost V2 local routes', () => {
   });
 
   it('captures a named preset as an ordered, sanitized snapshot', () => {
-    const snapshot = host().operations.capture_preset({ name: 'Preset B' }, capabilityContext);
+    const facts = host().operations.capture_preset({ name: 'Preset B' }, capabilityContext);
+    const snapshot = captureAgentPresetSnapshot(facts);
     expect(snapshot).toEqual({
       source: 'snapshot',
       sourceName: 'Preset B',
@@ -179,7 +184,7 @@ describe('AgentTavernHost V2 local routes', () => {
         resolvePresetMacros: true,
         requestContext,
         settings: {},
-        modelSource: { kind: 'tavern-current' },
+        requestPolicy: buildAgentRequestPolicy({ kind: 'tavern-current' }, {}),
       },
       capabilityContext,
     )) as Record<string, unknown>;
@@ -245,7 +250,7 @@ describe('AgentTavernHost V2 local routes', () => {
         userInput: 'plan',
         orderedPrompts: [{ role: 'system', content: 'marker' }, 'user_input'],
         settings: {},
-        modelSource: { kind: 'custom-profile', profileId: 'lab-b', model: 'model-b' },
+        requestPolicy: buildAgentRequestPolicy({ kind: 'custom-profile', profileId: 'lab-b', model: 'model-b' }, {}),
       },
       capabilityContext,
     );
@@ -296,7 +301,10 @@ describe('AgentTavernHost V2 local routes', () => {
           userInput: 'plan',
           orderedPrompts: ['user_input'],
           settings: {},
-          modelSource: { kind: 'custom-profile', profileId: 'missing', model: 'model-x' },
+          requestPolicy: buildAgentRequestPolicy(
+            { kind: 'custom-profile', profileId: 'missing', model: 'model-x' },
+            {},
+          ),
         },
         capabilityContext,
       ),
