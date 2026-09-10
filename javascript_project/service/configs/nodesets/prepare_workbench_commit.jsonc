@@ -1,0 +1,167 @@
+{
+  "type_key": "era.api.prepare_workbench_commit",
+  "display_name": "工作台草稿提交准备",
+  "description": "现有era.api.commit内的工作台专用准备分支；读取当前权威基准并将用户编辑意图转成原Commit操作，不拥有消息/Sidecar写事务。",
+  "requires": [
+    {
+      "type": "era.api.commit.inspected",
+      "cardinality": "exactly_one",
+      "display_name": "era.api.commit.inspected"
+    }
+  ],
+  "provides": [
+    {
+      "key": "prepared_commit_inspected",
+      "type": "era.api.commit.inspected",
+      "display_name": "era.api.commit.inspected"
+    },
+    {
+      "key": "preparation_route",
+      "type": "era.workbench.preparation_route",
+      "display_name": "era.workbench.preparation_route"
+    },
+    {
+      "key": "preparation_failure",
+      "type": "era.api.commit.failure_context",
+      "display_name": "era.api.commit.failure_context"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "inspected",
+        "type": "era.api.commit.inspected",
+        "required": true,
+        "display_name": "Commit窗口事实"
+      }
+    ],
+    "max_steps": 12,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.service.terminal",
+        "display_name": "开始工作台准备",
+        "description": "复用 Service 既有显式起点，调度已收到窗口事实的基准读取节点。"
+      },
+      {
+        "id": "read_baseline",
+        "type_used": "era.workbench.read_baseline",
+        "display_name": "读取当前Sidecar基准",
+        "description": "仅使用已有era.tavern.sidecar.read_current/read_record读取身份、绑定指针及Sidecar V3记录；调用已有纯检查核对owner/就绪状态，不迁移、不创建绑定、不写文件。读取失败形成失败事实。"
+      },
+      {
+        "id": "validate_draft_basis",
+        "type_used": "era.workbench.validate_draft_basis",
+        "display_name": "校验编辑基准并区分变量和函数",
+        "description": "检查内部工作台请求、窗口/Sidecar身份、目标原值与原保护事实；切聊或目标/保护改变明确失败。区分变量草稿、函数库草稿、显式有序操作。结构化上下文保留当前基准与用户选择。"
+      },
+      {
+        "id": "plan_variables",
+        "type_used": "era.workbench.plan_variables",
+        "display_name": "计算变量草稿真实增删改",
+        "description": "实际调用base_lib中的变量差异、Insert/Delete/Expression规划；对象类型替换及$template生成真实有序Delete/Insert，返回路径数组和每项变更kind。无宿主操作。"
+      },
+      {
+        "id": "plan_functions",
+        "type_used": "era.workbench.plan_functions",
+        "display_name": "计算函数库真实增删改",
+        "description": "实际调用函数库差异规划；保留Insert/Edit/Delete顺序、函数名和原定义。引用校验复用表达式层。无宿主操作。"
+      },
+      {
+        "id": "normalize_ordered",
+        "type_used": "era.workbench.normalize_ordered",
+        "display_name": "校验显式有序操作",
+        "description": "保留工作台已有高级有序操作模式，只接受原允许的变量Insert/Edit/Delete，不自动替用户解除保护；不重排用户给出的操作。"
+      },
+      {
+        "id": "apply_protection_choice",
+        "type_used": "era.workbench.apply_protection_choice",
+        "display_name": "按实际变更处理保护并生成提交参数",
+        "description": "从实际changes计算祖先/目标保护，核对预览事实及明确选择；统一普通/批量语义。只为仍存在且允许恢复的保护生成解锁/操作/恢复序列；禁止necessary临时恢复。输出已准备inspected或明确失败，不调用Host。"
+      },
+      {
+        "id": "reject_draft",
+        "type_used": "era.workbench.reject_draft",
+        "display_name": "返回基准或输入失败",
+        "description": "保留校验阶段的真实错误，构造failed准备结果；不产生操作，不向消息和Sidecar写入。"
+      },
+      {
+        "id": "publish_preparation",
+        "type_used": "era.workbench.publish_preparation",
+        "display_name": "接回现有Commit准入或失败分支",
+        "description": "拆出ready/failed路由、带有有序operations的原inspected上下文及原era.api.commit.failure_context，使后续继续使用现有Scope/窗口校验或Commit失败构造。"
+      }
+    ],
+    "edges": [
+      [
+        "start",
+        "read_baseline"
+      ],
+      [
+        "read_baseline",
+        "validate_draft_basis"
+      ],
+      {
+        "from": "validate_draft_basis",
+        "to": "plan_variables",
+        "when": "draft_kind == 'variable'"
+      },
+      {
+        "from": "validate_draft_basis",
+        "to": "plan_functions",
+        "when": "draft_kind == 'function'"
+      },
+      {
+        "from": "validate_draft_basis",
+        "to": "normalize_ordered",
+        "when": "draft_kind == 'ordered'"
+      },
+      {
+        "from": "validate_draft_basis",
+        "to": "reject_draft",
+        "when": "draft_kind == 'failed'"
+      },
+      [
+        "plan_variables",
+        "apply_protection_choice"
+      ],
+      [
+        "plan_functions",
+        "apply_protection_choice"
+      ],
+      [
+        "normalize_ordered",
+        "apply_protection_choice"
+      ],
+      [
+        "apply_protection_choice",
+        "publish_preparation"
+      ],
+      [
+        "reject_draft",
+        "publish_preparation"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.api.commit.inspected",
+        "cardinality": "exactly_one",
+        "display_name": "era.api.commit.inspected",
+        "as": "prepared_commit_inspected"
+      },
+      {
+        "type": "era.workbench.preparation_route",
+        "cardinality": "exactly_one",
+        "display_name": "era.workbench.preparation_route",
+        "as": "preparation_route"
+      },
+      {
+        "type": "era.api.commit.failure_context",
+        "cardinality": "exactly_one",
+        "display_name": "era.api.commit.failure_context",
+        "as": "preparation_failure"
+      }
+    ]
+  }
+}

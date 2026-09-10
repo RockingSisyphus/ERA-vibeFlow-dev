@@ -1,0 +1,72 @@
+{
+  "kind": "node",
+  "type_key": "era.workbench.read_baseline",
+  "display_name": "读取当前Sidecar基准",
+  "category": "工作台提交",
+  "description": "仅使用已有era.tavern.sidecar.read_current/read_record读取身份、绑定指针及Sidecar V3记录；调用已有纯检查核对owner/就绪状态，不迁移、不创建绑定、不写文件。读取失败形成失败事实。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.api.commit.inspected",
+        "cardinality": "exactly_one",
+        "display_name": "era.api.commit.inspected"
+      }
+    ],
+    "provides": [
+      {
+        "key": "baseline",
+        "type": "era.workbench.baseline",
+        "display_name": "era.workbench.baseline"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.api.commit.inspected": [
+        "era.api.commit.inspected"
+      ]
+    },
+    "output_semantics": {
+      "baseline": [
+        "era.workbench.baseline"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser"
+      ],
+      "completion": "suspend",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/api/workbench_read_baseline.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.workbench.context",
+    "era.workbench.operations",
+    "era.service.sidecar_binding",
+    "era.snapshot.query"
+  ],
+  "capabilities": [
+    {
+      "id": "era.tavern.sidecar",
+      "operations": [
+        "read_current",
+        "read_record"
+      ]
+    },
+    {
+      "id": "era.tavern.identity",
+      "operations": [
+        "read"
+      ]
+    }
+  ]
+}

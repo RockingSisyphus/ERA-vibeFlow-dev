@@ -15,7 +15,7 @@
     "contains_global_state": false,
     "summary": {
       "nodes": 9,
-      "nodesets": 16,
+      "nodesets": 17,
       "explicit_edges": 9,
       "data_edges": 0,
       "reported_edges": 9,
@@ -559,7 +559,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 9,
-          "nodesets": 16,
+          "nodesets": 17,
           "explicit_edges": 10,
           "data_edges": 0,
           "reported_edges": 10,
@@ -1171,16 +1171,16 @@
             "as": "commitResult"
           }
         ],
-        "max_steps": 20,
+        "max_steps": 24,
         "entry_mode": "async",
         "execution_lock": null,
         "contains_global_state": false,
         "summary": {
-          "nodes": 16,
-          "nodesets": 16,
-          "explicit_edges": 20,
+          "nodes": 18,
+          "nodesets": 17,
+          "explicit_edges": 24,
           "data_edges": 1,
-          "reported_edges": 20,
+          "reported_edges": 24,
           "contains_global_state": false
         },
         "entry_nodes": [
@@ -1268,6 +1268,115 @@
             "loop": null,
             "io": null,
             "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "route_request_kind",
+            "type_used": "era.workbench.route_request_kind",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/api_commit.jsonc"
+            },
+            "role": {
+              "display_name": "区分普通Commit与工作台编辑意图",
+              "description": "公共ERA.commit保持原operations请求；仅内部工作台command=workbench-commit进入草稿准备。沿现有era.facade.commit事件/FIFO传递，事件目录与公共API不新增命令。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "decision",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.api.commit.inspected",
+                "cardinality": "exactly_one",
+                "display_name": "era.api.commit.inspected"
+              }
+            ],
+            "provides": [
+              {
+                "key": "commit_inspected",
+                "type": "era.api.commit.inspected",
+                "display_name": "era.api.commit.inspected"
+              },
+              {
+                "key": "workbench_request_kind",
+                "type": "era.workbench.request_kind",
+                "display_name": "era.workbench.request_kind"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "prepare_workbench_commit",
+            "type_used": "era.api.prepare_workbench_commit",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/api_commit.jsonc"
+            },
+            "role": {
+              "display_name": "准备工作台草稿Commit",
+              "description": "在真实Commit准入之前读取基准、计算变量/函数变更并处理保护，ready接回原Scope校验，failed接回原失败链。"
+            },
+            "contract_source": "nodeset",
+            "flow_kind": "predefined",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.api.commit.inspected",
+                "cardinality": "exactly_one",
+                "display_name": "era.api.commit.inspected"
+              }
+            ],
+            "provides": [
+              {
+                "key": "prepared_commit_inspected",
+                "type": "era.api.commit.inspected",
+                "display_name": "era.api.commit.inspected"
+              },
+              {
+                "key": "preparation_route",
+                "type": "era.workbench.preparation_route",
+                "display_name": "era.workbench.preparation_route"
+              },
+              {
+                "key": "preparation_failure",
+                "type": "era.api.commit.failure_context",
+                "display_name": "era.api.commit.failure_context"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": {
+              "kind": "nodeset",
+              "target": "era.api.prepare_workbench_commit",
+              "target_status": "implemented"
+            },
             "config": {
               "call": {},
               "node_configs": {},
@@ -1959,16 +2068,6 @@
             ]
           },
           {
-            "from": "read_window_admission",
-            "to": "validate_scope_and_operations",
-            "when": "",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
             "from": "validate_scope_and_operations",
             "to": "build_single_era_tx",
             "when": "commit_admission_route == 'commit'",
@@ -2146,6 +2245,678 @@
               "schedule",
               "transfer"
             ]
+          },
+          {
+            "from": "read_window_admission",
+            "to": "route_request_kind",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "route_request_kind",
+            "to": "validate_scope_and_operations",
+            "when": "workbench_request_kind == 'operations'",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "route_request_kind",
+            "to": "prepare_workbench_commit",
+            "when": "workbench_request_kind == 'draft'",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "prepare_workbench_commit",
+            "to": "validate_scope_and_operations",
+            "when": "preparation_route == 'ready'",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "prepare_workbench_commit",
+            "to": "build_commit_failure",
+            "when": "preparation_route == 'failed'",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          }
+        ]
+      }
+    },
+    "era.api.prepare_workbench_commit": {
+      "type_key": "era.api.prepare_workbench_commit",
+      "source": {
+        "root_id": "era-service",
+        "path": "configs/nodesets/prepare_workbench_commit.jsonc"
+      },
+      "display_name": "工作台草稿提交准备",
+      "description": "现有era.api.commit内的工作台专用准备分支；读取当前权威基准并将用户编辑意图转成原Commit操作，不拥有消息/Sidecar写事务。",
+      "status": "implemented",
+      "flow_kind": "predefined",
+      "effect_scope": "none",
+      "reachable_from_workflow": true,
+      "requires": [
+        {
+          "type": "era.api.commit.inspected",
+          "cardinality": "exactly_one",
+          "display_name": "era.api.commit.inspected"
+        }
+      ],
+      "provides": [
+        {
+          "key": "prepared_commit_inspected",
+          "type": "era.api.commit.inspected",
+          "display_name": "era.api.commit.inspected"
+        },
+        {
+          "key": "preparation_route",
+          "type": "era.workbench.preparation_route",
+          "display_name": "era.workbench.preparation_route"
+        },
+        {
+          "key": "preparation_failure",
+          "type": "era.api.commit.failure_context",
+          "display_name": "era.api.commit.failure_context"
+        }
+      ],
+      "global_config": {},
+      "body": {
+        "source": {
+          "root_id": "era-service",
+          "path": "configs/nodesets/prepare_workbench_commit.jsonc"
+        },
+        "inputs": [
+          {
+            "key": "inspected",
+            "type": "era.api.commit.inspected",
+            "display_name": "Commit窗口事实",
+            "required": true
+          }
+        ],
+        "outputs": [
+          {
+            "type": "era.api.commit.inspected",
+            "cardinality": "exactly_one",
+            "display_name": "era.api.commit.inspected",
+            "as": "prepared_commit_inspected"
+          },
+          {
+            "type": "era.workbench.preparation_route",
+            "cardinality": "exactly_one",
+            "display_name": "era.workbench.preparation_route",
+            "as": "preparation_route"
+          },
+          {
+            "type": "era.api.commit.failure_context",
+            "cardinality": "exactly_one",
+            "display_name": "era.api.commit.failure_context",
+            "as": "preparation_failure"
+          }
+        ],
+        "max_steps": 12,
+        "entry_mode": "async",
+        "execution_lock": null,
+        "contains_global_state": false,
+        "summary": {
+          "nodes": 9,
+          "nodesets": 17,
+          "explicit_edges": 11,
+          "data_edges": 0,
+          "reported_edges": 11,
+          "contains_global_state": false
+        },
+        "entry_nodes": [
+          "start"
+        ],
+        "terminal_nodes": [
+          "publish_preparation"
+        ],
+        "god_nodes": [
+          {
+            "node": "validate_draft_basis",
+            "degree": 5
+          },
+          {
+            "node": "apply_protection_choice",
+            "degree": 4
+          }
+        ],
+        "nodes": [
+          {
+            "id": "start",
+            "type_used": "era.service.terminal",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/prepare_workbench_commit.jsonc"
+            },
+            "role": {
+              "display_name": "开始工作台准备",
+              "description": "复用 Service 既有显式起点，调度已收到窗口事实的基准读取节点。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "terminal",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [],
+            "provides": [],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "read_baseline",
+            "type_used": "era.workbench.read_baseline",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/prepare_workbench_commit.jsonc"
+            },
+            "role": {
+              "display_name": "读取当前Sidecar基准",
+              "description": "仅使用已有era.tavern.sidecar.read_current/read_record读取身份、绑定指针及Sidecar V3记录；调用已有纯检查核对owner/就绪状态，不迁移、不创建绑定、不写文件。读取失败形成失败事实。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "process",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.api.commit.inspected",
+                "cardinality": "exactly_one",
+                "display_name": "era.api.commit.inspected"
+              }
+            ],
+            "provides": [
+              {
+                "key": "baseline",
+                "type": "era.workbench.baseline",
+                "display_name": "era.workbench.baseline"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "validate_draft_basis",
+            "type_used": "era.workbench.validate_draft_basis",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/prepare_workbench_commit.jsonc"
+            },
+            "role": {
+              "display_name": "校验编辑基准并区分变量和函数",
+              "description": "检查内部工作台请求、窗口/Sidecar身份、目标原值与原保护事实；切聊或目标/保护改变明确失败。区分变量草稿、函数库草稿、显式有序操作。结构化上下文保留当前基准与用户选择。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "decision",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.workbench.baseline",
+                "cardinality": "exactly_one",
+                "display_name": "era.workbench.baseline"
+              }
+            ],
+            "provides": [
+              {
+                "key": "draft",
+                "type": "era.workbench.draft",
+                "display_name": "era.workbench.draft"
+              },
+              {
+                "key": "draft_kind",
+                "type": "era.workbench.kind",
+                "display_name": "era.workbench.kind"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "plan_variables",
+            "type_used": "era.workbench.plan_variables",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/prepare_workbench_commit.jsonc"
+            },
+            "role": {
+              "display_name": "计算变量草稿真实增删改",
+              "description": "实际调用base_lib中的变量差异、Insert/Delete/Expression规划；对象类型替换及$template生成真实有序Delete/Insert，返回路径数组和每项变更kind。无宿主操作。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "process",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.workbench.draft",
+                "cardinality": "exactly_one",
+                "display_name": "era.workbench.draft"
+              }
+            ],
+            "provides": [
+              {
+                "key": "variable_operation_plan",
+                "type": "era.workbench.operation_plan",
+                "display_name": "era.workbench.operation_plan"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "plan_functions",
+            "type_used": "era.workbench.plan_functions",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/prepare_workbench_commit.jsonc"
+            },
+            "role": {
+              "display_name": "计算函数库真实增删改",
+              "description": "实际调用函数库差异规划；保留Insert/Edit/Delete顺序、函数名和原定义。引用校验复用表达式层。无宿主操作。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "process",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.workbench.draft",
+                "cardinality": "exactly_one",
+                "display_name": "era.workbench.draft"
+              }
+            ],
+            "provides": [
+              {
+                "key": "function_operation_plan",
+                "type": "era.workbench.operation_plan",
+                "display_name": "era.workbench.operation_plan"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "normalize_ordered",
+            "type_used": "era.workbench.normalize_ordered",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/prepare_workbench_commit.jsonc"
+            },
+            "role": {
+              "display_name": "校验显式有序操作",
+              "description": "保留工作台已有高级有序操作模式，只接受原允许的变量Insert/Edit/Delete，不自动替用户解除保护；不重排用户给出的操作。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "process",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.workbench.draft",
+                "cardinality": "exactly_one",
+                "display_name": "era.workbench.draft"
+              }
+            ],
+            "provides": [
+              {
+                "key": "ordered_operation_plan",
+                "type": "era.workbench.operation_plan",
+                "display_name": "era.workbench.operation_plan"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "apply_protection_choice",
+            "type_used": "era.workbench.apply_protection_choice",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/prepare_workbench_commit.jsonc"
+            },
+            "role": {
+              "display_name": "按实际变更处理保护并生成提交参数",
+              "description": "从实际changes计算祖先/目标保护，核对预览事实及明确选择；统一普通/批量语义。只为仍存在且允许恢复的保护生成解锁/操作/恢复序列；禁止necessary临时恢复。输出已准备inspected或明确失败，不调用Host。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "process",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.workbench.operation_plan",
+                "cardinality": "exactly_one",
+                "display_name": "era.workbench.operation_plan"
+              }
+            ],
+            "provides": [
+              {
+                "key": "protected_preparation_result",
+                "type": "era.workbench.preparation_result",
+                "display_name": "era.workbench.preparation_result"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "reject_draft",
+            "type_used": "era.workbench.reject_draft",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/prepare_workbench_commit.jsonc"
+            },
+            "role": {
+              "display_name": "返回基准或输入失败",
+              "description": "保留校验阶段的真实错误，构造failed准备结果；不产生操作，不向消息和Sidecar写入。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "process",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.workbench.draft",
+                "cardinality": "exactly_one",
+                "display_name": "era.workbench.draft"
+              }
+            ],
+            "provides": [
+              {
+                "key": "rejected_preparation_result",
+                "type": "era.workbench.preparation_result",
+                "display_name": "era.workbench.preparation_result"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "publish_preparation",
+            "type_used": "era.workbench.publish_preparation",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/prepare_workbench_commit.jsonc"
+            },
+            "role": {
+              "display_name": "接回现有Commit准入或失败分支",
+              "description": "拆出ready/failed路由、带有有序operations的原inspected上下文及原era.api.commit.failure_context，使后续继续使用现有Scope/窗口校验或Commit失败构造。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "process",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.workbench.preparation_result",
+                "cardinality": "exactly_one",
+                "display_name": "era.workbench.preparation_result"
+              }
+            ],
+            "provides": [
+              {
+                "key": "prepared_commit_inspected",
+                "type": "era.api.commit.inspected",
+                "display_name": "era.api.commit.inspected"
+              },
+              {
+                "key": "preparation_route",
+                "type": "era.workbench.preparation_route",
+                "display_name": "era.workbench.preparation_route"
+              },
+              {
+                "key": "preparation_failure",
+                "type": "era.api.commit.failure_context",
+                "display_name": "era.api.commit.failure_context"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": "start",
+            "to": "read_baseline",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "read_baseline",
+            "to": "validate_draft_basis",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "validate_draft_basis",
+            "to": "plan_variables",
+            "when": "draft_kind == 'variable'",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "validate_draft_basis",
+            "to": "plan_functions",
+            "when": "draft_kind == 'function'",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "validate_draft_basis",
+            "to": "normalize_ordered",
+            "when": "draft_kind == 'ordered'",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "validate_draft_basis",
+            "to": "reject_draft",
+            "when": "draft_kind == 'failed'",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "plan_variables",
+            "to": "apply_protection_choice",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "plan_functions",
+            "to": "apply_protection_choice",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "normalize_ordered",
+            "to": "apply_protection_choice",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "apply_protection_choice",
+            "to": "publish_preparation",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "reject_draft",
+            "to": "publish_preparation",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
           }
         ]
       }
@@ -2215,7 +2986,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 7,
-          "nodesets": 16,
+          "nodesets": 17,
           "explicit_edges": 8,
           "data_edges": 0,
           "reported_edges": 8,
@@ -2698,7 +3469,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 10,
-          "nodesets": 16,
+          "nodesets": 17,
           "explicit_edges": 9,
           "data_edges": 0,
           "reported_edges": 9,
@@ -3320,7 +4091,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 9,
-          "nodesets": 16,
+          "nodesets": 17,
           "explicit_edges": 10,
           "data_edges": 0,
           "reported_edges": 10,
@@ -3904,7 +4675,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 5,
-          "nodesets": 16,
+          "nodesets": 17,
           "explicit_edges": 4,
           "data_edges": 0,
           "reported_edges": 4,
@@ -4218,7 +4989,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 8,
-          "nodesets": 16,
+          "nodesets": 17,
           "explicit_edges": 8,
           "data_edges": 0,
           "reported_edges": 8,
@@ -4740,7 +5511,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 7,
-          "nodesets": 16,
+          "nodesets": 17,
           "explicit_edges": 10,
           "data_edges": 3,
           "reported_edges": 10,
@@ -5214,7 +5985,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 10,
-          "nodesets": 16,
+          "nodesets": 17,
           "explicit_edges": 14,
           "data_edges": 4,
           "reported_edges": 14,
@@ -5869,7 +6640,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 11,
-          "nodesets": 16,
+          "nodesets": 17,
           "explicit_edges": 16,
           "data_edges": 1,
           "reported_edges": 16,
@@ -6666,7 +7437,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 6,
-          "nodesets": 16,
+          "nodesets": 17,
           "explicit_edges": 7,
           "data_edges": 2,
           "reported_edges": 7,
@@ -7083,7 +7854,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 6,
-          "nodesets": 16,
+          "nodesets": 17,
           "explicit_edges": 6,
           "data_edges": 0,
           "reported_edges": 6,
@@ -7506,7 +8277,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 12,
-          "nodesets": 16,
+          "nodesets": 17,
           "explicit_edges": 14,
           "data_edges": 1,
           "reported_edges": 14,
@@ -8269,7 +9040,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 4,
-          "nodesets": 16,
+          "nodesets": 17,
           "explicit_edges": 3,
           "data_edges": 0,
           "reported_edges": 3,
@@ -8558,7 +9329,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 19,
-          "nodesets": 16,
+          "nodesets": 17,
           "explicit_edges": 23,
           "data_edges": 0,
           "reported_edges": 23,
@@ -9729,7 +10500,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 4,
-          "nodesets": 16,
+          "nodesets": 17,
           "explicit_edges": 3,
           "data_edges": 0,
           "reported_edges": 3,
@@ -15541,6 +16312,488 @@
             "export": "run"
           },
           "completion": "suspend"
+        }
+      ]
+    },
+    "era.workbench.apply_protection_choice": {
+      "display_name": "按实际变更处理保护并生成提交参数",
+      "description": "从实际changes计算祖先/目标保护，核对预览事实及明确选择；统一普通/批量语义。只为仍存在且允许恢复的保护生成解锁/操作/恢复序列；禁止necessary临时恢复。输出已准备inspected或明确失败，不调用Host。",
+      "category": "工作台提交",
+      "version": "1.0.0",
+      "flow_kind": "process",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.workbench.operation_plan",
+            "cardinality": "exactly_one",
+            "display_name": "era.workbench.operation_plan"
+          }
+        ],
+        "provides": [
+          {
+            "key": "protected_preparation_result",
+            "type": "era.workbench.preparation_result",
+            "display_name": "era.workbench.preparation_result"
+          }
+        ],
+        "input_semantics": {
+          "era.workbench.operation_plan": [
+            "era.workbench.operation_plan"
+          ]
+        },
+        "output_semantics": {
+          "protected_preparation_result": [
+            "era.workbench.preparation_result"
+          ]
+        },
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/api/workbench_apply_protection.ts",
+            "export": "run"
+          },
+          "completion": "immediate"
+        }
+      ]
+    },
+    "era.workbench.normalize_ordered": {
+      "display_name": "校验显式有序操作",
+      "description": "保留工作台已有高级有序操作模式，只接受原允许的变量Insert/Edit/Delete，不自动替用户解除保护；不重排用户给出的操作。",
+      "category": "工作台提交",
+      "version": "1.0.0",
+      "flow_kind": "process",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.workbench.draft",
+            "cardinality": "exactly_one",
+            "display_name": "era.workbench.draft"
+          }
+        ],
+        "provides": [
+          {
+            "key": "ordered_operation_plan",
+            "type": "era.workbench.operation_plan",
+            "display_name": "era.workbench.operation_plan"
+          }
+        ],
+        "input_semantics": {
+          "era.workbench.draft": [
+            "era.workbench.draft"
+          ]
+        },
+        "output_semantics": {
+          "ordered_operation_plan": [
+            "era.workbench.operation_plan"
+          ]
+        },
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/api/workbench_normalize_ordered.ts",
+            "export": "run"
+          },
+          "completion": "immediate"
+        }
+      ]
+    },
+    "era.workbench.plan_functions": {
+      "display_name": "计算函数库真实增删改",
+      "description": "实际调用函数库差异规划；保留Insert/Edit/Delete顺序、函数名和原定义。引用校验复用表达式层。无宿主操作。",
+      "category": "工作台提交",
+      "version": "1.0.0",
+      "flow_kind": "process",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.workbench.draft",
+            "cardinality": "exactly_one",
+            "display_name": "era.workbench.draft"
+          }
+        ],
+        "provides": [
+          {
+            "key": "function_operation_plan",
+            "type": "era.workbench.operation_plan",
+            "display_name": "era.workbench.operation_plan"
+          }
+        ],
+        "input_semantics": {
+          "era.workbench.draft": [
+            "era.workbench.draft"
+          ]
+        },
+        "output_semantics": {
+          "function_operation_plan": [
+            "era.workbench.operation_plan"
+          ]
+        },
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/api/workbench_plan_functions.ts",
+            "export": "run"
+          },
+          "completion": "immediate"
+        }
+      ]
+    },
+    "era.workbench.plan_variables": {
+      "display_name": "计算变量草稿真实增删改",
+      "description": "实际调用base_lib中的变量差异、Insert/Delete/Expression规划；对象类型替换及$template生成真实有序Delete/Insert，返回路径数组和每项变更kind。无宿主操作。",
+      "category": "工作台提交",
+      "version": "1.0.0",
+      "flow_kind": "process",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.workbench.draft",
+            "cardinality": "exactly_one",
+            "display_name": "era.workbench.draft"
+          }
+        ],
+        "provides": [
+          {
+            "key": "variable_operation_plan",
+            "type": "era.workbench.operation_plan",
+            "display_name": "era.workbench.operation_plan"
+          }
+        ],
+        "input_semantics": {
+          "era.workbench.draft": [
+            "era.workbench.draft"
+          ]
+        },
+        "output_semantics": {
+          "variable_operation_plan": [
+            "era.workbench.operation_plan"
+          ]
+        },
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/api/workbench_plan_variables.ts",
+            "export": "run"
+          },
+          "completion": "immediate"
+        }
+      ]
+    },
+    "era.workbench.publish_preparation": {
+      "display_name": "接回现有Commit准入或失败分支",
+      "description": "拆出ready/failed路由、带有有序operations的原inspected上下文及原era.api.commit.failure_context，使后续继续使用现有Scope/窗口校验或Commit失败构造。",
+      "category": "工作台提交",
+      "version": "1.0.0",
+      "flow_kind": "process",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.workbench.preparation_result",
+            "cardinality": "exactly_one",
+            "display_name": "era.workbench.preparation_result"
+          }
+        ],
+        "provides": [
+          {
+            "key": "prepared_commit_inspected",
+            "type": "era.api.commit.inspected",
+            "display_name": "era.api.commit.inspected"
+          },
+          {
+            "key": "preparation_route",
+            "type": "era.workbench.preparation_route",
+            "display_name": "era.workbench.preparation_route"
+          },
+          {
+            "key": "preparation_failure",
+            "type": "era.api.commit.failure_context",
+            "display_name": "era.api.commit.failure_context"
+          }
+        ],
+        "input_semantics": {
+          "era.workbench.preparation_result": [
+            "era.workbench.preparation_result"
+          ]
+        },
+        "output_semantics": {
+          "prepared_commit_inspected": [
+            "era.api.commit.inspected"
+          ],
+          "preparation_route": [
+            "era.workbench.preparation_route"
+          ],
+          "preparation_failure": [
+            "era.api.commit.failure_context"
+          ]
+        },
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/api/workbench_publish_preparation.ts",
+            "export": "run"
+          },
+          "completion": "immediate"
+        }
+      ]
+    },
+    "era.workbench.read_baseline": {
+      "display_name": "读取当前Sidecar基准",
+      "description": "仅使用已有era.tavern.sidecar.read_current/read_record读取身份、绑定指针及Sidecar V3记录；调用已有纯检查核对owner/就绪状态，不迁移、不创建绑定、不写文件。读取失败形成失败事实。",
+      "category": "工作台提交",
+      "version": "1.0.0",
+      "flow_kind": "process",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.api.commit.inspected",
+            "cardinality": "exactly_one",
+            "display_name": "era.api.commit.inspected"
+          }
+        ],
+        "provides": [
+          {
+            "key": "baseline",
+            "type": "era.workbench.baseline",
+            "display_name": "era.workbench.baseline"
+          }
+        ],
+        "input_semantics": {
+          "era.api.commit.inspected": [
+            "era.api.commit.inspected"
+          ]
+        },
+        "output_semantics": {
+          "baseline": [
+            "era.workbench.baseline"
+          ]
+        },
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/api/workbench_read_baseline.ts",
+            "export": "run"
+          },
+          "completion": "suspend"
+        }
+      ]
+    },
+    "era.workbench.reject_draft": {
+      "display_name": "返回基准或输入失败",
+      "description": "保留校验阶段的真实错误，构造failed准备结果；不产生操作，不向消息和Sidecar写入。",
+      "category": "工作台提交",
+      "version": "1.0.0",
+      "flow_kind": "process",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.workbench.draft",
+            "cardinality": "exactly_one",
+            "display_name": "era.workbench.draft"
+          }
+        ],
+        "provides": [
+          {
+            "key": "rejected_preparation_result",
+            "type": "era.workbench.preparation_result",
+            "display_name": "era.workbench.preparation_result"
+          }
+        ],
+        "input_semantics": {
+          "era.workbench.draft": [
+            "era.workbench.draft"
+          ]
+        },
+        "output_semantics": {
+          "rejected_preparation_result": [
+            "era.workbench.preparation_result"
+          ]
+        },
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/api/workbench_reject_draft.ts",
+            "export": "run"
+          },
+          "completion": "immediate"
+        }
+      ]
+    },
+    "era.workbench.route_request_kind": {
+      "display_name": "区分普通Commit与工作台编辑意图",
+      "description": "公共ERA.commit保持原operations请求；仅内部工作台command=workbench-commit进入草稿准备。沿现有era.facade.commit事件/FIFO传递，事件目录与公共API不新增命令。",
+      "category": "工作台提交",
+      "version": "1.0.0",
+      "flow_kind": "decision",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.api.commit.inspected",
+            "cardinality": "exactly_one",
+            "display_name": "era.api.commit.inspected"
+          }
+        ],
+        "provides": [
+          {
+            "key": "commit_inspected",
+            "type": "era.api.commit.inspected",
+            "display_name": "era.api.commit.inspected"
+          },
+          {
+            "key": "workbench_request_kind",
+            "type": "era.workbench.request_kind",
+            "display_name": "era.workbench.request_kind"
+          }
+        ],
+        "input_semantics": {
+          "era.api.commit.inspected": [
+            "era.api.commit.inspected"
+          ]
+        },
+        "output_semantics": {
+          "commit_inspected": [
+            "era.api.commit.inspected"
+          ],
+          "workbench_request_kind": [
+            "era.workbench.request_kind"
+          ]
+        },
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/api/workbench_route_request_kind.ts",
+            "export": "run"
+          },
+          "completion": "immediate"
+        }
+      ]
+    },
+    "era.workbench.validate_draft_basis": {
+      "display_name": "校验编辑基准并区分变量和函数",
+      "description": "检查内部工作台请求、窗口/Sidecar身份、目标原值与原保护事实；切聊或目标/保护改变明确失败。区分变量草稿、函数库草稿、显式有序操作。结构化上下文保留当前基准与用户选择。",
+      "category": "工作台提交",
+      "version": "1.0.0",
+      "flow_kind": "decision",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.workbench.baseline",
+            "cardinality": "exactly_one",
+            "display_name": "era.workbench.baseline"
+          }
+        ],
+        "provides": [
+          {
+            "key": "draft",
+            "type": "era.workbench.draft",
+            "display_name": "era.workbench.draft"
+          },
+          {
+            "key": "draft_kind",
+            "type": "era.workbench.kind",
+            "display_name": "era.workbench.kind"
+          }
+        ],
+        "input_semantics": {
+          "era.workbench.baseline": [
+            "era.workbench.baseline"
+          ]
+        },
+        "output_semantics": {
+          "draft": [
+            "era.workbench.draft"
+          ],
+          "draft_kind": [
+            "era.workbench.kind"
+          ]
+        },
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/api/workbench_validate_draft.ts",
+            "export": "run"
+          },
+          "completion": "immediate"
         }
       ]
     }
@@ -40578,6 +41831,243 @@
           ],
           "additionalProperties": false
         }
+      },
+      "era.workbench.baseline": {
+        "kind": "data_schema",
+        "type_key": "era.workbench.baseline",
+        "representation": "json",
+        "display_name": "",
+        "description": "现有Commit中工作台准备的内部DTO；字段合同见本批变更清单。",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "inspected": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "current": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": true
+            },
+            "record": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": true
+            },
+            "error": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": true
+            }
+          },
+          "required": [
+            "inspected",
+            "current",
+            "record",
+            "error"
+          ],
+          "additionalProperties": false,
+          "$schema": "https://json-schema.org/draft/2020-12/schema"
+        }
+      },
+      "era.workbench.draft": {
+        "kind": "data_schema",
+        "type_key": "era.workbench.draft",
+        "representation": "json",
+        "display_name": "",
+        "description": "现有Commit中工作台准备的内部DTO；字段合同见本批变更清单。",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "inspected": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "baseline": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "request": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "error": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": true
+            }
+          },
+          "required": [
+            "inspected",
+            "baseline",
+            "request",
+            "error"
+          ],
+          "additionalProperties": false,
+          "$schema": "https://json-schema.org/draft/2020-12/schema"
+        }
+      },
+      "era.workbench.kind": {
+        "kind": "data_schema",
+        "type_key": "era.workbench.kind",
+        "representation": "json",
+        "display_name": "",
+        "description": "现有Commit中工作台准备的内部DTO；字段合同见本批变更清单。",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "variable",
+            "function",
+            "ordered",
+            "failed"
+          ],
+          "$schema": "https://json-schema.org/draft/2020-12/schema"
+        }
+      },
+      "era.workbench.operation_plan": {
+        "kind": "data_schema",
+        "type_key": "era.workbench.operation_plan",
+        "representation": "json",
+        "display_name": "",
+        "description": "现有Commit中工作台准备的内部DTO；字段合同见本批变更清单。",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "draft": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "operations": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            },
+            "changes": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "domain": {
+                    "enum": [
+                      "variable",
+                      "function"
+                    ]
+                  },
+                  "kind": {
+                    "enum": [
+                      "insert",
+                      "edit",
+                      "delete"
+                    ]
+                  },
+                  "path": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "name": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "domain",
+                  "kind"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "error": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": true
+            }
+          },
+          "required": [
+            "draft",
+            "operations",
+            "changes",
+            "error"
+          ],
+          "additionalProperties": false,
+          "$schema": "https://json-schema.org/draft/2020-12/schema"
+        }
+      },
+      "era.workbench.preparation_result": {
+        "kind": "data_schema",
+        "type_key": "era.workbench.preparation_result",
+        "representation": "json",
+        "display_name": "",
+        "description": "现有Commit中工作台准备的内部DTO；字段合同见本批变更清单。",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "route": {
+              "enum": [
+                "ready",
+                "failed"
+              ]
+            },
+            "inspected": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "failure": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "required": [
+            "route",
+            "inspected",
+            "failure"
+          ],
+          "additionalProperties": false,
+          "$schema": "https://json-schema.org/draft/2020-12/schema"
+        }
+      },
+      "era.workbench.preparation_route": {
+        "kind": "data_schema",
+        "type_key": "era.workbench.preparation_route",
+        "representation": "json",
+        "display_name": "",
+        "description": "现有Commit中工作台准备的内部DTO；字段合同见本批变更清单。",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "ready",
+            "failed"
+          ],
+          "$schema": "https://json-schema.org/draft/2020-12/schema"
+        }
+      },
+      "era.workbench.request_kind": {
+        "kind": "data_schema",
+        "type_key": "era.workbench.request_kind",
+        "representation": "json",
+        "display_name": "",
+        "description": "现有Commit中工作台准备的内部DTO；字段合同见本批变更清单。",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "operations",
+            "draft"
+          ],
+          "$schema": "https://json-schema.org/draft/2020-12/schema"
+        }
       }
     },
     "base_lib": {
@@ -41066,6 +42556,106 @@
         ],
         "dependencies": [
           "era.snapshot.floor_projection"
+        ],
+        "external_packages": []
+      },
+      "era.workbench.context": {
+        "kind": "base_lib",
+        "id": "era.workbench.context",
+        "display_name": "工作台 context 纯规则",
+        "description": "工作台节点间准备数据与统一错误上下文。",
+        "category": "",
+        "version": "1.0.0",
+        "implementations": [
+          {
+            "language": "typescript",
+            "targets": [
+              "browser"
+            ],
+            "source": {
+              "kind": "file",
+              "ref": "base_lib/domain/workbench_context.ts"
+            },
+            "completion": "immediate"
+          }
+        ],
+        "dependencies": [
+          "era.workbench.operations",
+          "era.service.sidecar_binding"
+        ],
+        "external_packages": []
+      },
+      "era.workbench.draft": {
+        "kind": "base_lib",
+        "id": "era.workbench.draft",
+        "display_name": "工作台 draft 纯规则",
+        "description": "变量与函数草稿差异，保留实际增删改及次序。",
+        "category": "",
+        "version": "1.0.0",
+        "implementations": [
+          {
+            "language": "typescript",
+            "targets": [
+              "browser"
+            ],
+            "source": {
+              "kind": "file",
+              "ref": "base_lib/domain/workbench_draft.ts"
+            },
+            "completion": "immediate"
+          }
+        ],
+        "dependencies": [
+          "era.workbench.operations"
+        ],
+        "external_packages": []
+      },
+      "era.workbench.operations": {
+        "kind": "base_lib",
+        "id": "era.workbench.operations",
+        "display_name": "工作台 operations 纯规则",
+        "description": "操作 DTO、JSON 路径与显式有序操作校验。",
+        "category": "",
+        "version": "1.0.0",
+        "implementations": [
+          {
+            "language": "typescript",
+            "targets": [
+              "browser"
+            ],
+            "source": {
+              "kind": "file",
+              "ref": "base_lib/domain/workbench_operations.ts"
+            },
+            "completion": "immediate"
+          }
+        ],
+        "dependencies": [],
+        "external_packages": []
+      },
+      "era.workbench.protection": {
+        "kind": "base_lib",
+        "id": "era.workbench.protection",
+        "display_name": "工作台 protection 纯规则",
+        "description": "按真实变更计算保护，组合解锁与恢复。",
+        "category": "",
+        "version": "1.0.0",
+        "implementations": [
+          {
+            "language": "typescript",
+            "targets": [
+              "browser"
+            ],
+            "source": {
+              "kind": "file",
+              "ref": "base_lib/domain/workbench_protection.ts"
+            },
+            "completion": "immediate"
+          }
+        ],
+        "dependencies": [
+          "era.workbench.operations",
+          "era.workbench.draft"
         ],
         "external_packages": []
       }

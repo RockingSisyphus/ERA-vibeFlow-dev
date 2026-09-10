@@ -1,0 +1,57 @@
+{
+  "kind": "node",
+  "type_key": "era.workbench.apply_protection_choice",
+  "display_name": "按实际变更处理保护并生成提交参数",
+  "category": "工作台提交",
+  "description": "从实际changes计算祖先/目标保护，核对预览事实及明确选择；统一普通/批量语义。只为仍存在且允许恢复的保护生成解锁/操作/恢复序列；禁止necessary临时恢复。输出已准备inspected或明确失败，不调用Host。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.workbench.operation_plan",
+        "cardinality": "exactly_one",
+        "display_name": "era.workbench.operation_plan"
+      }
+    ],
+    "provides": [
+      {
+        "key": "protected_preparation_result",
+        "type": "era.workbench.preparation_result",
+        "display_name": "era.workbench.preparation_result"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.workbench.operation_plan": [
+        "era.workbench.operation_plan"
+      ]
+    },
+    "output_semantics": {
+      "protected_preparation_result": [
+        "era.workbench.preparation_result"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/api/workbench_apply_protection.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.workbench.context",
+    "era.workbench.operations",
+    "era.workbench.protection"
+  ],
+  "capabilities": []
+}

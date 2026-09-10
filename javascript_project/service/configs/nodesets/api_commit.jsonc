@@ -37,7 +37,7 @@
         "display_name": "execution_state"
       }
     ],
-    "max_steps": 20,
+    "max_steps": 24,
     "nodes": [
       {
         "id": "start",
@@ -50,6 +50,18 @@
         "type_used": "era.api.read_window_admission",
         "display_name": "读取窗口准入与当前目标",
         "description": "执行读取窗口准入与当前目标。"
+      },
+      {
+        "id": "route_request_kind",
+        "type_used": "era.workbench.route_request_kind",
+        "display_name": "区分普通Commit与工作台编辑意图",
+        "description": "公共ERA.commit保持原operations请求；仅内部工作台command=workbench-commit进入草稿准备。沿现有era.facade.commit事件/FIFO传递，事件目录与公共API不新增命令。"
+      },
+      {
+        "id": "prepare_workbench_commit",
+        "type_used": "era.api.prepare_workbench_commit",
+        "display_name": "准备工作台草稿Commit",
+        "description": "在真实Commit准入之前读取基准、计算变量/函数变更并处理保护，ready接回原Scope校验，failed接回原失败链。"
       },
       {
         "id": "validate_scope_and_operations",
@@ -141,10 +153,6 @@
         "start",
         "read_window_admission"
       ],
-      [
-        "read_window_admission",
-        "validate_scope_and_operations"
-      ],
       {
         "from": "validate_scope_and_operations",
         "to": "build_single_era_tx",
@@ -223,7 +231,31 @@
       [
         "merge_commit_result",
         "end"
-      ]
+      ],
+      [
+        "read_window_admission",
+        "route_request_kind"
+      ],
+      {
+        "from": "route_request_kind",
+        "to": "validate_scope_and_operations",
+        "when": "workbench_request_kind == 'operations'"
+      },
+      {
+        "from": "route_request_kind",
+        "to": "prepare_workbench_commit",
+        "when": "workbench_request_kind == 'draft'"
+      },
+      {
+        "from": "prepare_workbench_commit",
+        "to": "validate_scope_and_operations",
+        "when": "preparation_route == 'ready'"
+      },
+      {
+        "from": "prepare_workbench_commit",
+        "to": "build_commit_failure",
+        "when": "preparation_route == 'failed'"
+      }
     ],
     "outputs": [
       {
@@ -233,5 +265,10 @@
         "display_name": "commitResult"
       }
     ]
-  }
+  },
+  "nodeset_imports": [
+    {
+      "path": "prepare_workbench_commit.jsonc"
+    }
+  ]
 }

@@ -20,12 +20,14 @@
       :stat-func="data.statFunc"
       :revision="data.revision"
       :identity-key="identityKey"
+      :sidecar-id="data.sidecarId"
     />
     <FunctionWorkspace
       v-else-if="active === 'functions'"
       :library="data.statFunc"
       :revision="data.revision"
       :identity-key="identityKey"
+      :sidecar-id="data.sidecarId"
     />
     <SnapshotManager v-else :latest-data="data" />
   </div>

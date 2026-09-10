@@ -1,0 +1,71 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.workbench.operation_plan",
+  "representation": "json",
+  "description": "现有Commit中工作台准备的内部DTO；字段合同见本批变更清单。",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "draft": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "operations": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "changes": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "domain": {
+              "enum": [
+                "variable",
+                "function"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "insert",
+                "edit",
+                "delete"
+              ]
+            },
+            "path": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "name": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "domain",
+            "kind"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "error": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "additionalProperties": true
+      }
+    },
+    "required": [
+      "draft",
+      "operations",
+      "changes",
+      "error"
+    ],
+    "additionalProperties": false
+  }
+}

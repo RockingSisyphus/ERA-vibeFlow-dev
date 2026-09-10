@@ -5,8 +5,8 @@ import VariableWorkspace from '../../src/ERA变量框架/ui/components/workbench
 import FunctionWorkspace from '../../src/ERA变量框架/ui/components/workbench/FunctionWorkspace.vue';
 
 const mocks = vi.hoisted(() => ({ commit: vi.fn() }));
-vi.mock('../../src/ERA变量框架/service/public-api', () => ({
-  getInstalledEraPublicApi: async () => ({ commit: mocks.commit }),
+vi.mock('../../src/ERA变量框架/service/workbench-client', () => ({
+  commitWorkbenchIntent: (...args: unknown[]) => mocks.commit(...args),
 }));
 let app: App | undefined;
 afterEach(() => {

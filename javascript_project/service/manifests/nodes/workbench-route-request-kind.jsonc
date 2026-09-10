@@ -1,0 +1,63 @@
+{
+  "kind": "node",
+  "type_key": "era.workbench.route_request_kind",
+  "display_name": "区分普通Commit与工作台编辑意图",
+  "category": "工作台提交",
+  "description": "公共ERA.commit保持原operations请求；仅内部工作台command=workbench-commit进入草稿准备。沿现有era.facade.commit事件/FIFO传递，事件目录与公共API不新增命令。",
+  "version": "1.0.0",
+  "flow_kind": "decision",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.api.commit.inspected",
+        "cardinality": "exactly_one",
+        "display_name": "era.api.commit.inspected"
+      }
+    ],
+    "provides": [
+      {
+        "key": "commit_inspected",
+        "type": "era.api.commit.inspected",
+        "display_name": "era.api.commit.inspected"
+      },
+      {
+        "key": "workbench_request_kind",
+        "type": "era.workbench.request_kind",
+        "display_name": "era.workbench.request_kind"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.api.commit.inspected": [
+        "era.api.commit.inspected"
+      ]
+    },
+    "output_semantics": {
+      "commit_inspected": [
+        "era.api.commit.inspected"
+      ],
+      "workbench_request_kind": [
+        "era.workbench.request_kind"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/api/workbench_route_request_kind.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.workbench.context"
+  ],
+  "capabilities": []
+}

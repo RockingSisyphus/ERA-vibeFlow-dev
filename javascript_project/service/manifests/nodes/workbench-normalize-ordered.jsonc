@@ -1,0 +1,56 @@
+{
+  "kind": "node",
+  "type_key": "era.workbench.normalize_ordered",
+  "display_name": "校验显式有序操作",
+  "category": "工作台提交",
+  "description": "保留工作台已有高级有序操作模式，只接受原允许的变量Insert/Edit/Delete，不自动替用户解除保护；不重排用户给出的操作。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.workbench.draft",
+        "cardinality": "exactly_one",
+        "display_name": "era.workbench.draft"
+      }
+    ],
+    "provides": [
+      {
+        "key": "ordered_operation_plan",
+        "type": "era.workbench.operation_plan",
+        "display_name": "era.workbench.operation_plan"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.workbench.draft": [
+        "era.workbench.draft"
+      ]
+    },
+    "output_semantics": {
+      "ordered_operation_plan": [
+        "era.workbench.operation_plan"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/api/workbench_normalize_ordered.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.workbench.context",
+    "era.workbench.operations"
+  ],
+  "capabilities": []
+}

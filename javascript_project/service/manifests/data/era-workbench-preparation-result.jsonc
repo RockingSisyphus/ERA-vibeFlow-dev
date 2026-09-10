@@ -1,0 +1,31 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.workbench.preparation_result",
+  "representation": "json",
+  "description": "现有Commit中工作台准备的内部DTO；字段合同见本批变更清单。",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "route": {
+        "enum": [
+          "ready",
+          "failed"
+        ]
+      },
+      "inspected": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "failure": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    "required": [
+      "route",
+      "inspected",
+      "failure"
+    ],
+    "additionalProperties": false
+  }
+}

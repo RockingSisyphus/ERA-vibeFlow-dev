@@ -17,6 +17,9 @@ importers:
       '@era/vibeflow-floor-snapshot':
         specifier: file:../packages/era-floor-snapshot/era-vibeflow-floor-snapshot-0.1.1.tgz
         version: file:../packages/era-floor-snapshot/era-vibeflow-floor-snapshot-0.1.1.tgz
+      '@era/vibeflow-workbench':
+        specifier: file:../packages/era-workbench/era-vibeflow-workbench-0.1.1.tgz
+        version: file:../packages/era-workbench/era-vibeflow-workbench-0.1.1.tgz
       '@pixi/react':
         specifier: 8.0.5
         version: 8.0.5(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.8)
@@ -408,6 +411,10 @@ packages:
 
   '@era/vibeflow-floor-snapshot@file:../packages/era-floor-snapshot/era-vibeflow-floor-snapshot-0.1.1.tgz':
     resolution: {integrity: sha512-W1qnDXxM1lSfCnTL1CJ+LZ6lCifswVBsnTQYcQBs7ulPk06Ujo+PF6fScBAST8KsAJ/BWLV3He5uy+wUDBLa4A==, tarball: file:../packages/era-floor-snapshot/era-vibeflow-floor-snapshot-0.1.1.tgz}
+    version: 0.1.1
+
+  '@era/vibeflow-workbench@file:../packages/era-workbench/era-vibeflow-workbench-0.1.1.tgz':
+    resolution: {integrity: sha512-9C0p9mhNI2ZSGDF/g/+9UMo5VTSF98JW6I00tpHybNTMUUJFupr/HEidgI4j+OJxh2ytgHAXwttCRdgKvet7qQ==, tarball: file:../packages/era-workbench/era-vibeflow-workbench-0.1.1.tgz}
     version: 0.1.1
 
   '@eslint-community/eslint-utils@4.10.1':
@@ -5603,6 +5610,8 @@ snapshots:
       - supports-color
 
   '@era/vibeflow-floor-snapshot@file:../packages/era-floor-snapshot/era-vibeflow-floor-snapshot-0.1.1.tgz': {}
+
+  '@era/vibeflow-workbench@file:../packages/era-workbench/era-vibeflow-workbench-0.1.1.tgz': {}
 
   '@eslint-community/eslint-utils@4.10.1(eslint@10.8.0(jiti@2.7.0))':
     dependencies:

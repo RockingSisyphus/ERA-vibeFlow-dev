@@ -1,0 +1,43 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.workbench.baseline",
+  "representation": "json",
+  "description": "现有Commit中工作台准备的内部DTO；字段合同见本批变更清单。",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "inspected": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "current": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "additionalProperties": true
+      },
+      "record": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "additionalProperties": true
+      },
+      "error": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "additionalProperties": true
+      }
+    },
+    "required": [
+      "inspected",
+      "current",
+      "record",
+      "error"
+    ],
+    "additionalProperties": false
+  }
+}

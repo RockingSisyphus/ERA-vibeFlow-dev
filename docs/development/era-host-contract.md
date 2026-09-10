@@ -127,6 +127,19 @@ Helper 私有运行实例修改接口。关闭模式恢复酒馆原生窗口，�
 是显式合同，不建立后台保活或第二份界面快照。具体设置与证据见
 [ERA 单层模式](ERA单层模式.md)。
 
+## 工作台编辑意图
+
+变量/函数工作台内部通过同一 `era.facade.commit` FIFO 事件提交 `command=workbench-commit`、
+编辑目标、原值、草稿、身份/Sidecar/revision、预览保护事实和处理选择。Service 的真实
+`api_commit/prepare_workbench_commit` Nodeset 只读当前绑定和 V3 文件，核对窗口及基准后
+重算操作，再接回原 Commit 事务；不在准备阶段迁移或创建 Sidecar。失败沿原 receipt
+收口。公共 `ERA.commit(operations, options)` 不经过草稿准备，API 和持久化格式保持原状。
+
+UI 同步预览使用 `packages/era-workbench` 从 Service base_lib 唯一源码生成的包，webpack
+必须将此本地包内嵌；不能改成 CDN 引用。UI 只拥有表单及保存会话，保护集合变化后重新
+确认；新编辑器不会被旧保存回执或关闭计时器修改。全量编辑比较完整基准，单项修改只比较
+目标及相关保护，允许无关兄弟项继续更新。内部请求仍遵守现有 FIFO 的 JSON 和大小限制。
+
 ## 公共 ABI
 
 以下内容的变更须单独审查、更新文档并有合同测试：

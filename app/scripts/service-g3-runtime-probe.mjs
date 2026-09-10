@@ -198,9 +198,25 @@ function createAdapter() {
         warnings: warnings.length,
         message: messages.at(-1)?.message ?? '',
         sidecarRecords: sidecarRecords.size,
+        workbenchRecord: structuredClone(sidecarRecords.get('era_chat_probe-12345678') ?? null),
       };
     },
   };
+}
+
+/** 在同一真实永久 Service 内覆盖工作台三个规划出口、失败出口和失败后的公共提交。 */
+function workbenchProbePayload(sequence, fake) {
+  if (sequence === 9) return { scope: 'always', operations: [{ edit: { __workbenchProbe: 3 } }], windowToken: 1 };
+  const record = fake.snapshot().workbenchRecord;
+  const intent = {
+    domain: 'variable', mode: 'add', path: ['__workbenchProbe'], initial: '', value: 1,
+    identityKey: JSON.stringify(record.owner), sidecarId: record.sidecarId, revision: record.revision,
+    protections: [], choice: '',
+  };
+  if (sequence === 6) Object.assign(intent, { domain: 'function', name: 'workbenchProbe', value: { params: ['x'], expr: 'x+1' } });
+  if (sequence === 7) Object.assign(intent, { domain: 'ordered', mode: 'batch', path: [], initial: record.state.statData, operations: [{ edit: { __workbenchProbe: 2 } }] });
+  if (sequence === 8) Object.assign(intent, { mode: 'edit', initial: -1, value: 999 });
+  return { command: 'workbench-commit', windowToken: 1, intent };
 }
 
 async function probeGeneratedHost(workflow) {
@@ -233,13 +249,15 @@ async function probeGeneratedHost(workflow) {
   }
 
   const outcomes = [];
-  for (let sequence = 1; sequence <= 4; sequence += 1) {
-    const type = sequence === 1 ? 'message_received' : sequence === 3 ? 'era.facade.commit' : 'era.facade.sync';
+  for (let sequence = 1; sequence <= 9; sequence += 1) {
+    const type = sequence === 1 ? 'message_received' : sequence === 3 || sequence >= 5 ? 'era.facade.commit' : 'era.facade.sync';
     const admission = fake.emit({
       type,
       source: sequence === 1 ? 'tavern' : 'era-api',
       args:
-        sequence === 3
+        sequence >= 5
+          ? [workbenchProbePayload(sequence, fake)]
+          : sequence === 3
           ? [{ scope: 'always', operations: [{ insert: { __eraRuntimeProbe: { value: sequence } } }], windowToken: 1 }]
           : sequence === 1
             ? []
@@ -277,10 +295,14 @@ async function probeGeneratedHost(workflow) {
   assert(afterActivation.registrations === 1, 'workflow allow 分支必须只注册一套监听器。');
   assert(afterStop.removals === 1, 'host.stop() 必须只注销一次监听器。');
   assert(
-    outcomes.every(outcome => outcome.status === 'completed'),
+    outcomes.every((outcome, index) => outcome.status === (index === 7 ? 'failed' : 'completed')),
     '真实同步与 Facade 事件必须完整结算。',
   );
   assert(afterStop.message.includes('<era_tx s="a">'), 'ERA.commit 必须写入独立 always 事务。');
+  assert(!afterStop.message.includes('999'), '陈旧草稿失败后不能把拟写入值追加到消息。');
+  assert(afterStop.workbenchRecord.state.statData.__workbenchProbe === 3, '工作台三个出口与失败后公共提交必须产生真实最终状态。');
+  assert(afterStop.workbenchRecord.state.statFunc.workbenchProbe.expr === 'x+1', '函数草稿必须进入最终 Sidecar。');
+  for (const node of ['plan_variables', 'plan_functions', 'normalize_ordered', 'reject_draft', 'publish_preparation']) assert(traceEvents.some(event => JSON.stringify(event).includes(node)), `真实 AOT 未执行工作台节点 ${node}`);
   assert(afterStop.sidecarRecords >= 1, '即时 commit 必须提交 Sidecar。');
   assert(executionCode === 'VF_ABORTED', `永久 workflow 停止码异常：${String(executionCode)}`);
   assert(stopMs <= 1_000, `Host 停止耗时 ${stopMs}ms，超过 1 秒。`);

@@ -1,11 +1,21 @@
 {
   "project_target": "javascript",
   "descriptors": {
-    "nodes": ["manifests/nodes"],
-    "base_lib": ["manifests/base_lib"],
-    "data_schemas": ["manifests/data"],
-    "capabilities": ["manifests/capabilities"],
-    "host_extensions": ["manifests/host_extensions"]
+    "nodes": [
+      "manifests/nodes"
+    ],
+    "base_lib": [
+      "manifests/base_lib"
+    ],
+    "data_schemas": [
+      "manifests/data"
+    ],
+    "capabilities": [
+      "manifests/capabilities"
+    ],
+    "host_extensions": [
+      "manifests/host_extensions"
+    ]
   },
   "javascript": {
     "package_root": ".",
@@ -19,16 +29,8 @@
   "architecture": {
     "documents": [
       {
-        "workflow": "configs/era.workbench.jsonc",
-        "document": "ARCHITECTURE.workbench.jsonc"
-      },
-      {
         "workflow": "configs/era.service.jsonc",
         "document": "ARCHITECTURE.jsonc"
-      },
-      {
-        "workflow": "configs/era.audit-proposal.jsonc",
-        "document": "ARCHITECTURE.audit-proposal.jsonc"
       }
     ]
   }

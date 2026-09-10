@@ -1,0 +1,20 @@
+{
+  "name": "@era/vibeflow-workbench",
+  "version": "0.1.1",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./index.js"
+    }
+  },
+  "files": [
+    "*.js",
+    "*.d.ts"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "node build.mjs",
+    "prepack": "node build.mjs"
+  }
+}

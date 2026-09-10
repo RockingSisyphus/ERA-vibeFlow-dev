@@ -1,5 +1,6 @@
 import { onBeforeUnmount, ref, watch, type Ref } from 'vue';
-import { getInstalledEraPublicApi, type EraCommitOperation } from '../../service/public-api';
+import type { WorkbenchIntent } from '@era/vibeflow-workbench';
+import { commitWorkbenchIntent } from '../../service/workbench-client';
 
 /** 管理一次工作台保存的界面归属，避免旧聊天回执或关闭计时器修改新草稿；业务写入仍由 Service 执行。 */
 export function useWorkbenchCommit<Editor extends { readonly identityKey: string }>(
@@ -30,7 +31,7 @@ export function useWorkbenchCommit<Editor extends { readonly identityKey: string
   });
 
   /** 准备与发送之间再次核对草稿，等待 facade 时发生的切聊不能向新聊天提交旧操作。 */
-  async function submit(prepare: () => readonly EraCommitOperation[], assertFresh: () => void): Promise<void> {
+  async function submit(prepare: () => WorkbenchIntent, assertFresh: () => void): Promise<void> {
     if (!editor.value || busy.value) return;
     const owner = editor.value;
     const isCurrent = () => editor.value === owner && identityKey() === owner.identityKey;
@@ -39,11 +40,8 @@ export function useWorkbenchCommit<Editor extends { readonly identityKey: string
     busy.value = true;
     try {
       assertFresh();
-      const operations = prepare();
-      const api = await getInstalledEraPublicApi();
-      if (!isCurrent()) return;
-      assertFresh();
-      const receipt = await api.commit(operations, { scope: 'always' });
+      const intent = prepare();
+      const receipt = await commitWorkbenchIntent(intent);
       if (!isCurrent()) return;
       if (receipt.status !== 'committed') throw new Error('ERA 跳过了本次 UI 提交。');
       success.value = `已保存到消息 #${receipt.messageId}。`;

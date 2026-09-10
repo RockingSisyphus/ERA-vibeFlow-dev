@@ -1,0 +1,71 @@
+{
+  "kind": "node",
+  "type_key": "era.workbench.publish_preparation",
+  "display_name": "接回现有Commit准入或失败分支",
+  "category": "工作台提交",
+  "description": "拆出ready/failed路由、带有有序operations的原inspected上下文及原era.api.commit.failure_context，使后续继续使用现有Scope/窗口校验或Commit失败构造。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.workbench.preparation_result",
+        "cardinality": "exactly_one",
+        "display_name": "era.workbench.preparation_result"
+      }
+    ],
+    "provides": [
+      {
+        "key": "prepared_commit_inspected",
+        "type": "era.api.commit.inspected",
+        "display_name": "era.api.commit.inspected"
+      },
+      {
+        "key": "preparation_route",
+        "type": "era.workbench.preparation_route",
+        "display_name": "era.workbench.preparation_route"
+      },
+      {
+        "key": "preparation_failure",
+        "type": "era.api.commit.failure_context",
+        "display_name": "era.api.commit.failure_context"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.workbench.preparation_result": [
+        "era.workbench.preparation_result"
+      ]
+    },
+    "output_semantics": {
+      "prepared_commit_inspected": [
+        "era.api.commit.inspected"
+      ],
+      "preparation_route": [
+        "era.workbench.preparation_route"
+      ],
+      "preparation_failure": [
+        "era.api.commit.failure_context"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/api/workbench_publish_preparation.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.workbench.context"
+  ],
+  "capabilities": []
+}

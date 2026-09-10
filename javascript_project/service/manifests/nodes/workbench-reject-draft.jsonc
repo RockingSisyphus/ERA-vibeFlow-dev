@@ -1,0 +1,55 @@
+{
+  "kind": "node",
+  "type_key": "era.workbench.reject_draft",
+  "display_name": "返回基准或输入失败",
+  "category": "工作台提交",
+  "description": "保留校验阶段的真实错误，构造failed准备结果；不产生操作，不向消息和Sidecar写入。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.workbench.draft",
+        "cardinality": "exactly_one",
+        "display_name": "era.workbench.draft"
+      }
+    ],
+    "provides": [
+      {
+        "key": "rejected_preparation_result",
+        "type": "era.workbench.preparation_result",
+        "display_name": "era.workbench.preparation_result"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.workbench.draft": [
+        "era.workbench.draft"
+      ]
+    },
+    "output_semantics": {
+      "rejected_preparation_result": [
+        "era.workbench.preparation_result"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/api/workbench_reject_draft.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.workbench.context"
+  ],
+  "capabilities": []
+}

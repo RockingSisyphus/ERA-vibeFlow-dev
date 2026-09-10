@@ -91,7 +91,12 @@
             <span>处理方式</span>
             <select v-model="protectionChoice" aria-label="函数保护处理方式">
               <option value="">请选择</option>
-              <option v-if="editor.mode !== 'delete'" value="temporary">仅本次修改，完成后恢复保护</option>
+              <option
+                v-if="editor.mode !== 'delete' && protections.every(item => item.field !== 'necessary')"
+                value="temporary"
+              >
+                仅本次修改，完成后恢复保护
+              </option>
               <option value="unlock">解除保护并继续</option>
             </select>
           </label>
@@ -124,12 +129,10 @@ import { computed, ref, watch } from 'vue';
 import type { EraCommitOperation } from '../../../service/public-api';
 import { useWorkbenchCommit } from '../../utils/workbench-commit';
 import {
-  functionProtection,
   functionPlanProtections,
   jsonEqual,
   planFunctionLibraryDiff,
   wrapFunctionPlanProtections,
-  wrapFunctionProtection,
   type ProtectionChoice,
 } from '../../utils/data-workbench';
 import { runFunctionTrial, validateFunctionLibrary } from '../../utils/expression-trial';
@@ -147,12 +150,14 @@ interface EditorState {
   readonly initial: unknown;
   readonly revision: number | null;
   readonly identityKey: string;
+  readonly sidecarId: string | null;
 }
 
 const props = defineProps<{
   library: Readonly<Record<string, unknown>>;
   revision: number | null;
   identityKey: string;
+  sidecarId?: string | null;
 }>();
 
 const filter = ref('');
@@ -246,6 +251,7 @@ function open(mode: EditorState['mode'], name = ''): void {
     initial: structuredClone(initial),
     revision: props.revision,
     identityKey: props.identityKey,
+    sidecarId: props.sidecarId ?? null,
   };
   const definition = asDefinition(initial);
   nameInput.value = mode === 'save-as' ? `${name}_copy` : name;
@@ -312,27 +318,28 @@ function baseOperations(): readonly EraCommitOperation[] {
 /** 函数保护必须基于原定义计算，不能读已解锁的草稿。 */
 const protections = computed(() => {
   if (!editor.value) return [];
-  if (editor.value.mode === 'batch') {
-    try {
-      const plan = planFunctionLibraryDiff(props.library, draftLibrary());
-      return functionPlanProtections(props.library, plan);
-    } catch {
-      return [];
-    }
+  try {
+    return functionPlanProtections(props.library, planFunctionLibraryDiff(props.library, draftLibrary()));
+  } catch {
+    return [];
   }
-  if (!editor.value.name || !['edit', 'delete'].includes(editor.value.mode)) return [];
-  return functionProtection(props.library[editor.value.name], editor.value.mode as 'edit' | 'delete');
 });
+
+/** 函数库的保护集合更新时清空选择，防止旧确认用于新增的受保护定义。 */
+watch(
+  protections,
+  (current, previous) => {
+    if (!jsonEqual(current, previous)) protectionChoice.value = '';
+  },
+  { flush: 'sync' },
+);
 
 /** 预览保留解锁、业务操作和恢复的真实顺序，保存时不再排序。 */
 const preview = computed<readonly EraCommitOperation[]>(() => {
   try {
     let operations = baseOperations();
     if (protections.value.length && protectionChoice.value && editor.value) {
-      operations =
-        editor.value.mode === 'batch'
-          ? wrapFunctionPlanProtections(operations, protections.value, protectionChoice.value)
-          : wrapFunctionProtection(editor.value.name, operations, protections.value, protectionChoice.value);
+      operations = wrapFunctionPlanProtections(operations, protections.value, protectionChoice.value);
     }
     return operations;
   } catch {
@@ -344,6 +351,10 @@ const preview = computed<readonly EraCommitOperation[]>(() => {
 function assertFresh(): void {
   if (!editor.value) throw new Error('编辑器已经关闭。');
   if (editor.value.identityKey !== props.identityKey) throw new Error('聊天已经切换，请重新打开编辑器。');
+  if (editor.value.mode === 'add' || editor.value.mode === 'save-as') {
+    draftLibrary();
+    return;
+  }
   if (editor.value.revision === props.revision) return;
   const current = editor.value.mode === 'batch' ? props.library : props.library[editor.value.name];
   if (!jsonEqual(current, editor.value.initial)) throw new Error('该函数在编辑期间已经变化，请重新载入后再保存。');
@@ -353,19 +364,24 @@ function assertFresh(): void {
 async function save(): Promise<void> {
   await submit(() => {
     if (!editor.value) throw new Error('编辑器已经关闭。');
-    let operations = baseOperations();
+    if (editor.value.mode === 'trial') throw new Error('试算不提交修改。');
+    const operations = baseOperations();
     if (!operations.length) throw new Error('没有检测到需要保存的变化。');
-    if (protections.value.length) {
-      if (!protectionChoice.value) throw new Error('请选择如何处理函数保护。');
-      if (editor.value.mode === 'delete' && protectionChoice.value === 'temporary') {
-        throw new Error('删除函数后无法恢复保护。');
-      }
-      operations =
-        editor.value.mode === 'batch'
-          ? wrapFunctionPlanProtections(operations, protections.value, protectionChoice.value)
-          : wrapFunctionProtection(editor.value.name, operations, protections.value, protectionChoice.value);
-    }
-    return operations;
+    if (protections.value.length && !protectionChoice.value) throw new Error('请选择如何处理函数保护。');
+    return {
+      domain: 'function',
+      mode: editor.value.mode,
+      identityKey: editor.value.identityKey,
+      sidecarId: editor.value.sidecarId,
+      revision: editor.value.revision,
+      initial: editor.value.initial,
+      name: ['add', 'save-as'].includes(editor.value.mode) ? nameInput.value.trim() : editor.value.name,
+      ...(editor.value.mode === 'delete'
+        ? {}
+        : { value: editor.value.mode === 'batch' ? draftLibrary() : parseDefinition() }),
+      protections: protections.value,
+      choice: protectionChoice.value,
+    };
   }, assertFresh);
 }
 

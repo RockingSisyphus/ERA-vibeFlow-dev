@@ -177,16 +177,15 @@ import type { EraCommitOperation } from '../../../service/public-api';
 import { useWorkbenchCommit } from '../../utils/workbench-commit';
 import {
   jsonEqual,
+  normalizeOrderedOperations,
   planVariableDelete,
   planVariableDiff,
   planVariableExpression,
   planVariableInsert,
   valueAtPath,
   variablePlanProtections,
-  variableProtections,
   wrapVariableProtection,
   type ProtectionChoice,
-  type VariableMutationKind,
   type VariableProtection,
 } from '../../utils/data-workbench';
 import { validateVariableExpression } from '../../utils/expression-trial';
@@ -199,6 +198,7 @@ interface EditorState {
   initial: unknown;
   revision: number | null;
   identityKey: string;
+  sidecarId: string | null;
 }
 
 const props = defineProps<{
@@ -206,6 +206,7 @@ const props = defineProps<{
   statFunc: Readonly<Record<string, unknown>>;
   revision: number | null;
   identityKey: string;
+  sidecarId?: string | null;
 }>();
 
 const root = computed<Record<string, unknown>>(() =>
@@ -276,6 +277,7 @@ function openEditor(mode: EditorState['mode'], path: readonly string[], initial:
     initial: structuredClone(initial),
     revision: props.revision,
     identityKey: props.identityKey,
+    sidecarId: props.sidecarId ?? null,
   };
   valueType.value = initialType(initial);
   valueText.value = textForValue(initial, valueType.value);
@@ -342,22 +344,7 @@ function targetPath(): readonly string[] {
 function basePlan(): readonly EraCommitOperation[] {
   if (!editor.value) return [];
   if (editor.value.mode === 'batch' && batchMode.value === 'operations') {
-    const parsed = JSON.parse(jsonText.value) as unknown;
-    if (!Array.isArray(parsed) || parsed.length === 0) throw new TypeError('有序操作必须是非空 JSON 数组。');
-    return parsed.map((item, index) => {
-      if (item === null || typeof item !== 'object' || Array.isArray(item)) {
-        throw new TypeError(`第 ${index + 1} 个操作必须是对象。`);
-      }
-      const keys = Object.keys(item);
-      if (keys.length !== 1 || !['insert', 'edit', 'delete'].includes(keys[0]!)) {
-        throw new TypeError(`第 ${index + 1} 个操作只能包含 insert、edit 或 delete 之一。`);
-      }
-      const payload = (item as Record<string, unknown>)[keys[0]!];
-      if (payload === null || typeof payload !== 'object' || Array.isArray(payload)) {
-        throw new TypeError(`第 ${index + 1} 个操作的载荷必须是对象。`);
-      }
-      return structuredClone(item) as EraCommitOperation;
-    });
+    return normalizeOrderedOperations(JSON.parse(jsonText.value));
   }
   const path = targetPath();
   if (editor.value.mode === 'delete') return planVariableDelete(path).operations;
@@ -371,26 +358,33 @@ function basePlan(): readonly EraCommitOperation[] {
   return planVariableDiff(editor.value.initial, draft, path).operations;
 }
 
-const mutationKind = computed<VariableMutationKind>(() => {
-  if (editor.value?.mode === 'add') return 'insert';
-  if (editor.value?.mode === 'delete') return 'delete';
-  return 'edit';
-});
-
-/** 保护集合来自目标和祖先，不能只根据当前节点的元数据。 */
+/** 普通编辑也按实际增删改检查保护，类型替换不能只检查编辑锁。 */
 const protections = computed<readonly VariableProtection[]>(() => {
-  if (!editor.value) return [];
+  if (!editor.value || (editor.value.mode === 'batch' && batchMode.value === 'operations')) return [];
   try {
-    if (editor.value.mode === 'batch') {
-      if (batchMode.value === 'operations') return [];
-      const draft = parseDraft();
-      return variablePlanProtections(root.value, planVariableDiff(editor.value.initial, draft));
-    }
-    return variableProtections(root.value, targetPath(), mutationKind.value);
+    const path = targetPath();
+    const plan =
+      editor.value.mode === 'delete'
+        ? planVariableDelete(path)
+        : inputMode.value === 'expression'
+          ? planVariableExpression(path, expression.value)
+          : editor.value.mode === 'add'
+            ? planVariableInsert(path, parseDraft())
+            : planVariableDiff(editor.value.initial, parseDraft(), path);
+    return variablePlanProtections(root.value, plan);
   } catch {
     return [];
   }
 });
+
+/** 保护事实变化后必须重新选择，避免沿用此前对另一组锁的确认。 */
+watch(
+  protections,
+  (current, previous) => {
+    if (!jsonEqual(current, previous)) protectionChoice.value = '';
+  },
+  { flush: 'sync' },
+);
 
 /** 预览与最终提交共用同一操作计划，避免确认前后出现顺序漂移。 */
 const preview = computed<readonly EraCommitOperation[]>(() => {
@@ -407,6 +401,10 @@ const preview = computed<readonly EraCommitOperation[]>(() => {
 function assertFresh(): void {
   if (!editor.value) throw new Error('编辑器已经关闭。');
   if (editor.value.identityKey !== props.identityKey) throw new Error('聊天已经切换，请重新打开编辑器。');
+  if (editor.value.mode === 'add') {
+    targetPath();
+    return;
+  }
   if (editor.value.revision === props.revision) return;
   const current = valueAtPath(root.value, editor.value.path);
   if (!jsonEqual(current, editor.value.initial)) throw new Error('该变量在编辑期间已经变化，请重新载入后再保存。');
@@ -416,16 +414,28 @@ function assertFresh(): void {
 async function save(): Promise<void> {
   await submit(() => {
     if (!editor.value) throw new Error('编辑器已经关闭。');
-    let operations = basePlan();
-    if (operations.length === 0) throw new Error('没有检测到需要保存的变化。');
-    if (protections.value.length > 0) {
-      if (!protectionChoice.value) throw new Error('请选择如何处理 ERA 保护。');
-      if (editor.value.mode === 'delete' && protectionChoice.value === 'temporary') {
-        throw new Error('删除后无法恢复实体保护，只能解除保护后删除。');
-      }
-      operations = wrapVariableProtection(operations, protections.value, protectionChoice.value);
-    }
-    return operations;
+    const operations = basePlan();
+    if (!operations.length) throw new Error('没有检测到需要保存的变化。');
+    if (protections.value.length && !protectionChoice.value) throw new Error('请选择如何处理 ERA 保护。');
+    const ordered = editor.value.mode === 'batch' && batchMode.value === 'operations';
+    return {
+      domain: ordered ? 'ordered' : 'variable',
+      mode: editor.value.mode,
+      identityKey: editor.value.identityKey,
+      sidecarId: editor.value.sidecarId,
+      revision: editor.value.revision,
+      initial: editor.value.initial,
+      path: targetPath(),
+      ...(ordered
+        ? { operations }
+        : editor.value.mode === 'delete'
+          ? {}
+          : inputMode.value === 'expression'
+            ? { expression: expression.value }
+            : { value: parseDraft() }),
+      protections: protections.value,
+      choice: protectionChoice.value,
+    };
   }, assertFresh);
 }
 </script>

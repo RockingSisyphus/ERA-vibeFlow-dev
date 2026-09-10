@@ -1,0 +1,64 @@
+{
+  "kind": "node",
+  "type_key": "era.workbench.validate_draft_basis",
+  "display_name": "校验编辑基准并区分变量和函数",
+  "category": "工作台提交",
+  "description": "检查内部工作台请求、窗口/Sidecar身份、目标原值与原保护事实；切聊或目标/保护改变明确失败。区分变量草稿、函数库草稿、显式有序操作。结构化上下文保留当前基准与用户选择。",
+  "version": "1.0.0",
+  "flow_kind": "decision",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.workbench.baseline",
+        "cardinality": "exactly_one",
+        "display_name": "era.workbench.baseline"
+      }
+    ],
+    "provides": [
+      {
+        "key": "draft",
+        "type": "era.workbench.draft",
+        "display_name": "era.workbench.draft"
+      },
+      {
+        "key": "draft_kind",
+        "type": "era.workbench.kind",
+        "display_name": "era.workbench.kind"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.workbench.baseline": [
+        "era.workbench.baseline"
+      ]
+    },
+    "output_semantics": {
+      "draft": [
+        "era.workbench.draft"
+      ],
+      "draft_kind": [
+        "era.workbench.kind"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/api/workbench_validate_draft.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.workbench.context",
+    "era.workbench.operations"
+  ],
+  "capabilities": []
+}
