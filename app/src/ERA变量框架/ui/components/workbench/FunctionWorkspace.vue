@@ -122,7 +122,7 @@
  */
 import { computed, ref, watch } from 'vue';
 import type { EraCommitOperation } from '../../../service/public-api';
-import { waitForEraFacade } from '../../utils/facade';
+import { useWorkbenchCommit } from '../../utils/workbench-commit';
 import {
   functionProtection,
   functionPlanProtections,
@@ -167,9 +167,7 @@ const trialArgsInput = ref('');
 const trialOutput = ref('');
 const advanced = ref(false);
 const protectionChoice = ref<'' | ProtectionChoice>('');
-const busy = ref(false);
-const error = ref('');
-const success = ref('');
+const { busy, error, success, submit } = useWorkbenchCommit(editor, () => props.identityKey);
 
 watch(
   () => props.identityKey,
@@ -353,11 +351,8 @@ function assertFresh(): void {
 
 /** 保存前先在内存中校验整个函数库，失败时不发出任何 commit。 */
 async function save(): Promise<void> {
-  if (!editor.value || busy.value) return;
-  error.value = '';
-  success.value = '';
-  try {
-    assertFresh();
+  await submit(() => {
+    if (!editor.value) throw new Error('编辑器已经关闭。');
     let operations = baseOperations();
     if (!operations.length) throw new Error('没有检测到需要保存的变化。');
     if (protections.value.length) {
@@ -370,18 +365,8 @@ async function save(): Promise<void> {
           ? wrapFunctionPlanProtections(operations, protections.value, protectionChoice.value)
           : wrapFunctionProtection(editor.value.name, operations, protections.value, protectionChoice.value);
     }
-    busy.value = true;
-    const receipt = await (await waitForEraFacade()).commit(operations, { scope: 'always' });
-    if (receipt.status !== 'committed') throw new Error('ERA 跳过了本次 UI 提交。');
-    success.value = `已保存到消息 #${receipt.messageId}。`;
-    window.setTimeout(() => {
-      if (!busy.value) editor.value = null;
-    }, 700);
-  } catch (reason) {
-    error.value = reason instanceof Error ? reason.message : String(reason);
-  } finally {
-    busy.value = false;
-  }
+    return operations;
+  }, assertFresh);
 }
 
 /** 试算只更新抽屉中的结果和诊断，不会产生函数修改日志。 */

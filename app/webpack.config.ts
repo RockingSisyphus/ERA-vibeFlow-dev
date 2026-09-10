@@ -493,6 +493,17 @@ function parse_configuration(entry: Entry, is_release = false): (_env: any, argv
                     exclude: /node_modules/,
                   },
                   {
+                    // 外置 Vue <style src> 仍属于组件样式，必须带搬运标记才能进入酒馆宿主。
+                    test: /\.css$/,
+                    resourceQuery: /[?&]type=style(?:&|$)/,
+                    use: [
+                      { loader: 'vue-style-loader', options: { ssrId: true } },
+                      { loader: 'css-loader', options: { url: false } },
+                      'postcss-loader',
+                    ],
+                    exclude: /node_modules/,
+                  },
+                  {
                     test: /\.s(a|c)ss$/,
                     use: [
                       'style-loader',

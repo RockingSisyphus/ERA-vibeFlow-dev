@@ -174,7 +174,7 @@
  */
 import { computed, ref, watch } from 'vue';
 import type { EraCommitOperation } from '../../../service/public-api';
-import { waitForEraFacade } from '../../utils/facade';
+import { useWorkbenchCommit } from '../../utils/workbench-commit';
 import {
   jsonEqual,
   planVariableDelete,
@@ -224,9 +224,7 @@ const jsonText = ref('');
 const expression = ref('');
 const keyInput = ref('');
 const protectionChoice = ref<'' | ProtectionChoice>('');
-const busy = ref(false);
-const error = ref('');
-const success = ref('');
+const { busy, error, success, submit } = useWorkbenchCommit(editor, () => props.identityKey);
 
 watch(
   () => props.identityKey,
@@ -414,13 +412,10 @@ function assertFresh(): void {
   if (!jsonEqual(current, editor.value.initial)) throw new Error('该变量在编辑期间已经变化，请重新载入后再保存。');
 }
 
-/** 根据编辑模式生成差异，并在发出事件前统一处理祖先保护。 */
+/** 必须先确认保护选择，再把有序计划交给当前编辑器的提交会话，避免旧回执污染新草稿。 */
 async function save(): Promise<void> {
-  if (!editor.value || busy.value) return;
-  error.value = '';
-  success.value = '';
-  try {
-    assertFresh();
+  await submit(() => {
+    if (!editor.value) throw new Error('编辑器已经关闭。');
     let operations = basePlan();
     if (operations.length === 0) throw new Error('没有检测到需要保存的变化。');
     if (protections.value.length > 0) {
@@ -430,19 +425,8 @@ async function save(): Promise<void> {
       }
       operations = wrapVariableProtection(operations, protections.value, protectionChoice.value);
     }
-    busy.value = true;
-    const api = await waitForEraFacade();
-    const receipt = await api.commit(operations, { scope: 'always' });
-    if (receipt.status !== 'committed') throw new Error('ERA 跳过了本次 UI 提交。');
-    success.value = `已保存到消息 #${receipt.messageId}。`;
-    window.setTimeout(() => {
-      if (!busy.value) editor.value = null;
-    }, 700);
-  } catch (reason) {
-    error.value = reason instanceof Error ? reason.message : String(reason);
-  } finally {
-    busy.value = false;
-  }
+    return operations;
+  }, assertFresh);
 }
 </script>
 
