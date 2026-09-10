@@ -9,9 +9,13 @@ export class TavernListeners {
   }
 
   /** 先登记所有权再调用宿主，确保宿主登记抛错时也能由统一路径释放。 */
-  register(eventType: string, handler: Handler, order: 'first' | 'normal' | 'last'): void {
+  register<Args extends unknown[]>(
+    eventType: string,
+    handler: (...args: Args) => void | Promise<void>,
+    order: 'first' | 'normal' | 'last',
+  ): void {
     if (this.registrations.has(eventType)) throw new Error(`ERA 生产监听事件重复：${eventType}`);
-    this.registrations.set(eventType, handler);
+    this.registrations.set(eventType, handler as Handler);
     if (order === 'first') eventMakeFirst(eventType, handler);
     else if (order === 'last') eventMakeLast(eventType, handler);
     else eventOn(eventType, handler);

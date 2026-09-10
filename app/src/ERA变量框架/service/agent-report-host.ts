@@ -1,4 +1,5 @@
 /** 报告组件与被动记录的页面生命周期；不拥有故事 DOM 或业务状态。 */
+import { TavernListeners } from './tavern-listeners';
 import { createApp, type App } from 'vue';
 import AgentReportViewer from '../ui/components/AgentReportViewer.vue';
 import { agentExecutionRecords, currentAgentRecordChat } from './agent-execution-records';
@@ -85,15 +86,19 @@ export function registerAgentRequestObservation(): () => void {
   const stopNative = () => agentExecutionRecords.stopNative();
   const cancelNative = () => agentExecutionRecords.stopNative(true);
   const cancelledEvents = [tavern_events.GENERATION_STOPPED, tavern_events.CHAT_CHANGED];
-  eventOn(iframe_events.GENERATION_STARTED, started);
-  eventOn(iframe_events.GENERATION_ENDED, ended);
-  eventOn(tavern_events.GENERATION_ENDED, stopNative);
-  for (const event of cancelledEvents) eventOn(event, cancelNative);
-  return () => {
-    eventRemoveListener(iframe_events.GENERATION_STARTED, started);
-    eventRemoveListener(iframe_events.GENERATION_ENDED, ended);
-    eventRemoveListener(tavern_events.GENERATION_ENDED, stopNative);
-    for (const event of cancelledEvents) eventRemoveListener(event, cancelNative);
+  const listeners = new TavernListeners();
+  const stop = () => {
+    listeners.release();
     agentExecutionRecords.stopNative();
   };
+  try {
+    listeners.register(iframe_events.GENERATION_STARTED, started, 'normal');
+    listeners.register(iframe_events.GENERATION_ENDED, ended, 'normal');
+    listeners.register(tavern_events.GENERATION_ENDED, stopNative, 'normal');
+    for (const event of cancelledEvents) listeners.register(event, cancelNative, 'normal');
+    return stop;
+  } catch (error) {
+    stop();
+    throw error;
+  }
 }

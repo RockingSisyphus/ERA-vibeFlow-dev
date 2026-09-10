@@ -1,3 +1,4 @@
+import { TavernListeners } from './tavern-listeners';
 import { isRecord, clonePortable } from './agent-tavern-configuration';
 import { NativeGenerationCompletion } from './native-generation-completion';
 import type { EraCapabilityContext } from './types';
@@ -36,11 +37,18 @@ export class NativeGenerationHost {
         this.completion.complete(identity, messageId);
       }
     };
-    eventOn(tavern_events.GENERATION_ENDED, ended);
-    return () => {
-      eventRemoveListener(tavern_events.GENERATION_ENDED, ended);
+    const listeners = new TavernListeners();
+    const stop = () => {
+      listeners.release();
       this.clear('unsubscribed');
     };
+    try {
+      listeners.register(tavern_events.GENERATION_ENDED, ended, 'normal');
+      return stop;
+    } catch (error) {
+      stop();
+      throw error;
+    }
   }
 
   /** 必须只给同一执行保留来源事实，避免 Helper 创建消息等待不存在的原生结束。 */

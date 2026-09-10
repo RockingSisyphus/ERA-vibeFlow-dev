@@ -4,6 +4,7 @@
  * 不写聊天消息、Sidecar，也不参与历史同步和 Agent 领域状态机。
  */
 
+import { TavernListeners } from './tavern-listeners';
 import { createEraMacroSnapshot } from '../macro/registration';
 import { resolveEraLazyMacroTokens, type EraMacroSnapshot } from '../macro/syntax';
 import { currentTavernIdentityMatches } from './public-state';
@@ -341,16 +342,13 @@ export function registerEraTechnicalBlockProjection(): () => void {
     .era-stage-toolbar button:disabled { opacity: .5; }
     .era-stage-viewer pre { white-space: pre-wrap; max-height: 28rem; overflow: auto; }
   `;
-  hostDocument.head.append(style);
 
   const scheduler = createProjectionScheduler();
 
-  scheduler.scheduleAllMessages();
   const observer = new HostMutationObserver(records => {
     releaseReportApps();
     for (const messageId of mutationMessageIds(records)) scheduler.scheduleMessage(messageId);
   });
-  observer.observe(hostDocument.documentElement, { childList: true, subtree: true });
 
   const messageHandler = (messageId: number) => scheduler.scheduleMessage(messageId);
   const allMessagesHandler = () => scheduler.scheduleAllMessages();
@@ -360,10 +358,6 @@ export function registerEraTechnicalBlockProjection(): () => void {
     tavern_events.MESSAGE_UPDATED,
     tavern_events.MESSAGE_SWIPED,
   ];
-  for (const eventType of displayEvents) eventMakeLast(eventType, messageHandler);
-  eventMakeLast(tavern_events.MORE_MESSAGES_LOADED, allMessagesHandler);
-  eventMakeLast(tavern_events.CHAT_CHANGED, allMessagesHandler);
-
   const promptHandler = (generateData: { prompt: SillyTavern.SendingMessage[] }, dryRun = false) => {
     if (!Array.isArray(generateData.prompt)) return;
     const snapshot = readActiveSidecarRuntimeSnapshot();
@@ -373,21 +367,31 @@ export function registerEraTechnicalBlockProjection(): () => void {
     generateData.prompt = projectEraPromptMessages(generateData.prompt, macroSnapshot);
     agentExecutionRecords.capture(currentAgentRecordChat(), generateData.prompt, dryRun);
   };
-  eventMakeLast(tavern_events.GENERATE_AFTER_DATA, promptHandler);
-  const stopRequestObservation = registerAgentRequestObservation();
-
+  const listeners = new TavernListeners();
+  let stopRequestObservation: (() => void) | undefined;
   let stopped = false;
-  return () => {
+  const stop = () => {
     if (stopped) return;
     stopped = true;
     observer.disconnect();
-    for (const eventType of displayEvents) eventRemoveListener(eventType, messageHandler);
-    eventRemoveListener(tavern_events.MORE_MESSAGES_LOADED, allMessagesHandler);
-    eventRemoveListener(tavern_events.CHAT_CHANGED, allMessagesHandler);
-    eventRemoveListener(tavern_events.GENERATE_AFTER_DATA, promptHandler);
-    stopRequestObservation();
+    listeners.release();
+    stopRequestObservation?.();
     scheduler.clear();
     releaseReportApps(true);
     style.remove();
   };
+  try {
+    hostDocument.head.append(style);
+    observer.observe(hostDocument.documentElement, { childList: true, subtree: true });
+    for (const eventType of displayEvents) listeners.register(eventType, messageHandler, 'last');
+    listeners.register(tavern_events.MORE_MESSAGES_LOADED, allMessagesHandler, 'last');
+    listeners.register(tavern_events.CHAT_CHANGED, allMessagesHandler, 'last');
+    listeners.register(tavern_events.GENERATE_AFTER_DATA, promptHandler, 'last');
+    stopRequestObservation = registerAgentRequestObservation();
+    scheduler.scheduleAllMessages();
+    return stop;
+  } catch (error) {
+    stop();
+    throw error;
+  }
 }

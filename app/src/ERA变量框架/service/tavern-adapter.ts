@@ -230,16 +230,18 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
     this.listener = listener;
     this.accepting = true;
     const registrations = new TavernListeners();
-    const stopTechnicalProjection = registerEraTechnicalBlockProjection();
-    const stopNativeCompletion = this.agentHost.nativeGeneration.observe();
+    let stopTechnicalProjection: (() => void) | undefined;
+    let stopNativeCompletion: (() => void) | undefined;
     /** 登记失败和正常卸载必须使用相同的释放顺序，避免遗留收尾等待。 */
     const releaseListeners = () => {
-      stopNativeCompletion();
-      stopTechnicalProjection();
+      stopNativeCompletion?.();
+      stopTechnicalProjection?.();
       registrations.release();
     };
 
     try {
+      stopTechnicalProjection = registerEraTechnicalBlockProjection();
+      stopNativeCompletion = this.agentHost.nativeGeneration.observe();
       for (const type of withoutButtonInputEvents(LISTENED_EVENT_TYPES, BUTTON_INPUT_EVENTS)) {
         const definition = getEventDefinition(type);
         /** 只有 generation barrier 事件返回 Promise，普通通知保持 Tavern 原时序。 */
