@@ -29,6 +29,50 @@ afterEach(() => {
 });
 
 describe('report lifetime across native message HTML replacement', () => {
+  it('allows selecting the newly generated request after viewing a released final result', async () => {
+    mocks.session = null;
+    vi.stubGlobal('SillyTavern', {
+      characterId: '0',
+      groupId: null,
+      getCurrentChatId: () => 'reopened',
+      chat: [
+        {
+          mes: '<era_data>{"era-message-key"="floor-one"}</era_data><VariableEdit>{"hp":16}</VariableEdit>',
+          extra: { era_agent: { status: 'settled' } },
+        },
+      ],
+    });
+    const root = mountReportViewer(document, '', 'settlement', 0);
+    document.body.append(root);
+    const select = root.querySelector<HTMLSelectElement>('select')!;
+    select.value = '0';
+    select.dispatchEvent(new Event('change'));
+    await nextTick();
+    mocks.session = { messageId: 0, status: 'settled', settlementAttempts: [{ requestId: 'new-settlement' }] };
+    agentExecutionRecords.rememberReport(
+      JSON.stringify(['0', null, 'reopened']),
+      'floor-one',
+      'settlement',
+      JSON.stringify({
+        attempts: [{ requestId: 'new-settlement', status: 'passed', operations: [{ edit: { hp: 16 } }] }],
+      }),
+    );
+    await nextTick();
+    const retry = root.querySelector<HTMLButtonElement>('.era-report-business')!;
+    expect(select.options).toHaveLength(2);
+    expect(retry.disabled).toBe(true);
+    select.value = '0';
+    select.dispatchEvent(new Event('change'));
+    await nextTick();
+    expect(retry.disabled).toBe(false);
+    retry.click();
+    await nextTick();
+    expect(mocks.request).toHaveBeenCalledWith(
+      'era.ui.agent_retry',
+      [{ kind: 'settlement', messageId: 0, requestId: 'new-settlement' }],
+      'ui',
+    );
+  });
   it('sends portable retry arguments after page memory has been lost', async () => {
     mocks.session = null;
     vi.stubGlobal('SillyTavern', {
