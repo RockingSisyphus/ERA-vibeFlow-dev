@@ -17,11 +17,31 @@
         "description":"在单一 AgentGenerationSession 内冻结角色卡 V1/V2 开关、尝试预设与模型来源；设置命令同时整理每张尝试卡内联编辑的本机连接草稿，生成阶段不再读取角色卡局部正则开关，且任何领域请求均不包含密钥正文。"
       },
       {
-        "id":"execute_agent_phase_v2",
-        "type_used":"era.agent.execute_session_v2",
-        "display_name":"ERA-PROD-011：原生收尾后启动辅助解析",
-        "description":"已实施011（真实验证待完成）：唯一 AgentGenerationSession 在原生正文后装配辅助解析之前，等待对应生成来源的机械收尾事实，并在原生同步清理栈返回后继续；不将 message_received 当作共享世界书资源已清理，也不由任意 Helper ended 释放。规划不等待未来正文；手动正文按既有 Helper 请求完成继续，仅重新解析不等待不存在的原生生成。停止、切聊天和卸载明确取消，等待后核对当前会话，不发送旧聊天解析。不增加工作流、FIFO、固定延迟或自动补偿重试。保留已实现的网络失败输入不变、模型错误才更新纠错上下文、手动执行清空旧纠错，以及 profile、骰子、稳定 MK 和原子提交。范围与验收见 reports/era-auxiliary-native-completion-change-list.md。",
-        "status":"implemented"
+        "id": "execute_agent_phase_v2",
+        "type_used": "era.agent.execute_session_v2",
+        "display_name": "执行生成阶段与迁入的预设/请求规则",
+        "description": "在现有 capture-preset 分支及 planning/settlement 的 stageRequest 调用处承接宿主层的预设快照组装、阶段输入顺序、模型选择与采样默认值；Host 只读取所需预设字段、绑定本机连接并执行请求。保持生成会话、重试、原生等待、最终楼层候选及既有输入输出和边不变。",
+        "status": "planned",
+        "flow_kind": "process",
+        "requires": [
+          {
+            "type": "era.agent.auxiliary.execution_request",
+            "cardinality": "exactly_one",
+            "display_name": "不含密钥的辅助阶段执行请求"
+          }
+        ],
+        "provides": [
+          {
+            "key": "agent_transition",
+            "type": "era.agent.session.transition",
+            "display_name": "Agent 阶段转换"
+          },
+          {
+            "key": "agent_execution_state",
+            "type": "era.batch.execution.state",
+            "display_name": "Agent 批次执行状态"
+          }
+        ]
       },
       {"id":"route_agent_transition","type_used":"era.agent.route_transition","display_name":"路由阶段结果","description":"决定直接结算还是恢复原任务。"},
       {
