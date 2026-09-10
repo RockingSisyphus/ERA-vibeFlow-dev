@@ -1,8 +1,8 @@
 {
   "kind": "base_lib",
   "id": "era.snapshot.floor_projection",
-  "display_name": "ERA 按楼快照（计划扩展作者状态投影）",
-  "description": "现有按楼快照源码及App同源包不变。本批计划将公开状态组装接入此登记库的同源出口，并声明data_view/public_state实际源码依赖，复用原按楼计算；公开get仍同步调用该包，不虚构异步Service节点或独立查询Config。",
+  "display_name": "ERA 按楼快照与作者状态投影",
+  "description": "现有按楼重建及作者状态同步出口；共享data_view/public_state真实源码，由同源包供App消费。",
   "category": "快照查询",
   "version": "0.1.1",
   "implementations": [
@@ -18,6 +18,9 @@
       }
     }
   ],
-  "dependencies": [],
+  "dependencies": [
+    "era.snapshot.data_view",
+    "era.snapshot.public_state"
+  ],
   "external_packages": []
 }

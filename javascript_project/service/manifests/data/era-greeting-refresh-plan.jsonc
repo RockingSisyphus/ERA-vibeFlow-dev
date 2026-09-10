@@ -1,0 +1,29 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.tavern.character.greeting_refresh.plan",
+  "representation": "json",
+  "display_name": "开场白刷新plan",
+  "description": "原初始化提交中的刷新事实、计划及结果。",
+  "schema": {
+    "type": "object",
+    "required": [
+      "kind",
+      "next"
+    ],
+    "properties": {
+      "kind": {
+        "enum": [
+          "empty",
+          "message"
+        ]
+      },
+      "next": {
+        "type": "string"
+      },
+      "updated": {
+        "type": "string"
+      }
+    },
+    "additionalProperties": false
+  }
+}

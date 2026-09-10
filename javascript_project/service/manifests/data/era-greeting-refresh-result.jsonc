@@ -1,0 +1,27 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.tavern.character.greeting_refresh.result",
+  "representation": "json",
+  "display_name": "开场白刷新result",
+  "description": "原初始化提交中的刷新事实、计划及结果。",
+  "schema": {
+    "type": "object",
+    "required": [
+      "status",
+      "reason"
+    ],
+    "properties": {
+      "status": {
+        "enum": [
+          "refreshed",
+          "preserved",
+          "not-applicable"
+        ]
+      },
+      "reason": {
+        "type": "string"
+      }
+    },
+    "additionalProperties": false
+  }
+}

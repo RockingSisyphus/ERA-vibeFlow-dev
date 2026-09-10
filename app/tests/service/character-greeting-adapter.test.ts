@@ -1,3 +1,7 @@
+import {
+  planGreetingRefresh,
+  type GreetingRefreshFacts,
+} from '../../../javascript_project/service/base_lib/greeting_refresh_policy';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createCharacterGreetingAdapter } from '../../src/ERA变量框架/service/character-greeting-adapter';
 
@@ -68,10 +72,22 @@ async function writeGreeting() {
   const adapter = createCharacterGreetingAdapter(signal => {
     if (signal.aborted) throw signal.reason;
   });
-  return adapter.write_main_greeting(
-    { expected: '作者原文', next: '作者原文\n<VariableInsert>demo</VariableInsert>\n<StatusPlaceHolderImpl/>' },
-    { signal: new AbortController().signal },
+  const input = {
+    expected: '作者原文',
+    next: '作者原文\n<VariableInsert>demo</VariableInsert>\n<StatusPlaceHolderImpl/>',
+  };
+  const context = { signal: new AbortController().signal };
+  const written = (await adapter.write_main_greeting(input, context)) as Record<string, unknown>;
+  const target = planGreetingRefresh(
+    input.expected,
+    input.next,
+    adapter.read_greeting_refresh_context({}, context) as GreetingRefreshFacts,
   );
+  const chatRefresh =
+    target.kind === 'result'
+      ? target.result
+      : await adapter.apply_greeting_refresh({ ...target, next: input.next }, context);
+  return { ...written, chatRefresh };
 }
 
 describe('角色主开场白初始化适配器', () => {

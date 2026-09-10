@@ -436,13 +436,6 @@
     },
     {
       "debt": 1,
-      "fingerprint": "cc51ae6049a5c12ae9e174171a624ecdc1773049011d65984bdd7895b8453c57",
-      "objectId": "src/ERA变量框架/macro/syntax#function:parseEraMacroText",
-      "ruleId": "COMMENT_CRITICAL_DOC_RATIONALE",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
       "fingerprint": "2076fffe26c64ea09ef377bd5df8de3cbe156df11e3a7e49f2718f4be0ab0db3",
       "objectId": "src/ERA变量框架/ui/processing/panel-data#function:createPanelBodyHtml",
       "ruleId": "COMMENT_CRITICAL_DOC_RATIONALE",

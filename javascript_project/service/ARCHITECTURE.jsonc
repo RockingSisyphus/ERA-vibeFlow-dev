@@ -8610,17 +8610,15 @@
               "display_name": "提交初始化资源并决议首楼刷新",
               "description": "在原 update-main-greeting 动作处保持先保存角色卡，再即时读取当前首楼事实，由 Service 规划保留/新建/更新，Host 执行既有重绘和保存；其余资源顺序、提交计数和错误语义不变。"
             },
-            "contract_source": "planned_config",
+            "contract_source": "node_type",
             "flow_kind": "data_store",
             "effect_scope": "none",
             "runtime_dispatch": "unknown",
             "execution_lock": null,
             "effective_execution_lock": null,
             "contains_global_state": false,
-            "status": "planned",
-            "planned_behavior": {
-              "kind": "blocking"
-            },
+            "status": "implemented",
+            "planned_behavior": null,
             "requires": [
               {
                 "type": "era.initialize.commit.request",
@@ -40829,6 +40827,100 @@
           "$schema": "https://json-schema.org/draft/2020-12/schema"
         }
       },
+      "era.tavern.character.greeting_refresh.facts": {
+        "kind": "data_schema",
+        "type_key": "era.tavern.character.greeting_refresh.facts",
+        "representation": "json",
+        "display_name": "开场白刷新facts",
+        "description": "原初始化提交中的刷新事实、计划及结果。",
+        "schema": {
+          "type": "object",
+          "required": [
+            "group",
+            "tainted",
+            "length",
+            "first"
+          ],
+          "properties": {
+            "group": {
+              "type": "boolean"
+            },
+            "tainted": {
+              "type": "boolean"
+            },
+            "length": {
+              "type": "integer"
+            },
+            "first": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": true
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "https://json-schema.org/draft/2020-12/schema"
+        }
+      },
+      "era.tavern.character.greeting_refresh.plan": {
+        "kind": "data_schema",
+        "type_key": "era.tavern.character.greeting_refresh.plan",
+        "representation": "json",
+        "display_name": "开场白刷新plan",
+        "description": "原初始化提交中的刷新事实、计划及结果。",
+        "schema": {
+          "type": "object",
+          "required": [
+            "kind",
+            "next"
+          ],
+          "properties": {
+            "kind": {
+              "enum": [
+                "empty",
+                "message"
+              ]
+            },
+            "next": {
+              "type": "string"
+            },
+            "updated": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "https://json-schema.org/draft/2020-12/schema"
+        }
+      },
+      "era.tavern.character.greeting_refresh.result": {
+        "kind": "data_schema",
+        "type_key": "era.tavern.character.greeting_refresh.result",
+        "representation": "json",
+        "display_name": "开场白刷新result",
+        "description": "原初始化提交中的刷新事实、计划及结果。",
+        "schema": {
+          "type": "object",
+          "required": [
+            "status",
+            "reason"
+          ],
+          "properties": {
+            "status": {
+              "enum": [
+                "refreshed",
+                "preserved",
+                "not-applicable"
+              ]
+            },
+            "reason": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "https://json-schema.org/draft/2020-12/schema"
+        }
+      },
       "era.tavern.character.read_main_greeting.request": {
         "kind": "data_schema",
         "type_key": "era.tavern.character.read_main_greeting.request",
@@ -42679,6 +42771,30 @@
         ],
         "external_packages": []
       },
+      "era.service.greeting_refresh_policy": {
+        "kind": "base_lib",
+        "id": "era.service.greeting_refresh_policy",
+        "display_name": "主开场白刷新决策",
+        "description": "根据写卡后的当前聊天事实决定保留或刷新，不读取宿主。",
+        "category": "故事生成会话",
+        "version": "1.0.0",
+        "implementations": [
+          {
+            "language": "typescript",
+            "targets": [
+              "browser",
+              "node"
+            ],
+            "source": {
+              "kind": "file",
+              "ref": "base_lib/greeting_refresh_policy.ts"
+            },
+            "completion": "immediate"
+          }
+        ],
+        "dependencies": [],
+        "external_packages": []
+      },
       "era.service.initialization_transaction": {
         "kind": "base_lib",
         "id": "era.service.initialization_transaction",
@@ -42893,11 +43009,37 @@
           "@era/vibeflow-contracts"
         ]
       },
+      "era.snapshot.data_view": {
+        "kind": "base_lib",
+        "id": "era.snapshot.data_view",
+        "display_name": "ERA 数据视图转换",
+        "description": "ERA 数据视图转换的纯计算，仅接收已提交快照值。",
+        "category": "快照查询",
+        "version": "0.1.1",
+        "implementations": [
+          {
+            "language": "typescript",
+            "targets": [
+              "browser",
+              "node"
+            ],
+            "source": {
+              "kind": "file",
+              "ref": "base_lib/domain/data_view.ts"
+            },
+            "completion": "immediate"
+          }
+        ],
+        "dependencies": [],
+        "external_packages": [
+          "lodash"
+        ]
+      },
       "era.snapshot.floor_projection": {
         "kind": "base_lib",
         "id": "era.snapshot.floor_projection",
-        "display_name": "ERA 按楼快照（计划扩展作者状态投影）",
-        "description": "现有按楼快照源码及App同源包不变。本批计划将公开状态组装接入此登记库的同源出口，并声明data_view/public_state实际源码依赖，复用原按楼计算；公开get仍同步调用该包，不虚构异步Service节点或独立查询Config。",
+        "display_name": "ERA 按楼快照与作者状态投影",
+        "description": "现有按楼重建及作者状态同步出口；共享data_view/public_state真实源码，由同源包供App消费。",
         "category": "快照查询",
         "version": "0.1.1",
         "implementations": [
@@ -42914,7 +43056,36 @@
             "completion": "immediate"
           }
         ],
-        "dependencies": [],
+        "dependencies": [
+          "era.snapshot.data_view",
+          "era.snapshot.public_state"
+        ],
+        "external_packages": []
+      },
+      "era.snapshot.public_state": {
+        "kind": "base_lib",
+        "id": "era.snapshot.public_state",
+        "display_name": "ERA 作者公开状态",
+        "description": "ERA 作者公开状态的纯计算，仅接收已提交快照值。",
+        "category": "快照查询",
+        "version": "0.1.1",
+        "implementations": [
+          {
+            "language": "typescript",
+            "targets": [
+              "browser",
+              "node"
+            ],
+            "source": {
+              "kind": "file",
+              "ref": "base_lib/domain/public_state.ts"
+            },
+            "completion": "immediate"
+          }
+        ],
+        "dependencies": [
+          "era.snapshot.data_view"
+        ],
         "external_packages": []
       },
       "era.snapshot.query": {
@@ -43173,6 +43344,16 @@
           "write_main_greeting": {
             "input_type": "era.tavern.character.write_main_greeting.request",
             "output_type": "era.tavern.character.write_main_greeting.result",
+            "completion": "suspend"
+          },
+          "read_greeting_refresh_context": {
+            "input_type": "era.tavern.character.read_main_greeting.request",
+            "output_type": "era.tavern.character.greeting_refresh.facts",
+            "completion": "immediate"
+          },
+          "apply_greeting_refresh": {
+            "input_type": "era.tavern.character.greeting_refresh.plan",
+            "output_type": "era.tavern.character.greeting_refresh.result",
             "completion": "suspend"
           }
         }

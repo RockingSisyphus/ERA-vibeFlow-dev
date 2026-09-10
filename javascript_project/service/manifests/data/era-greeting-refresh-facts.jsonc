@@ -1,0 +1,35 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.tavern.character.greeting_refresh.facts",
+  "representation": "json",
+  "display_name": "开场白刷新facts",
+  "description": "原初始化提交中的刷新事实、计划及结果。",
+  "schema": {
+    "type": "object",
+    "required": [
+      "group",
+      "tainted",
+      "length",
+      "first"
+    ],
+    "properties": {
+      "group": {
+        "type": "boolean"
+      },
+      "tainted": {
+        "type": "boolean"
+      },
+      "length": {
+        "type": "integer"
+      },
+      "first": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "additionalProperties": true
+      }
+    },
+    "additionalProperties": false
+  }
+}

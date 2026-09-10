@@ -20,9 +20,19 @@
                 "const": "present"
               },
               "statWithMeta": {},
-              "statWithoutMeta": {}
+              "statWithoutMeta": {},
+              "mode": {
+                "enum": [
+                  "raw",
+                  "lazy"
+                ]
+              }
             },
-            "required": ["kind", "statWithMeta", "statWithoutMeta"],
+            "required": [
+              "kind",
+              "statWithMeta",
+              "statWithoutMeta"
+            ],
             "additionalProperties": false
           },
           {
@@ -30,9 +40,17 @@
             "properties": {
               "kind": {
                 "const": "missing"
+              },
+              "mode": {
+                "enum": [
+                  "raw",
+                  "lazy"
+                ]
               }
             },
-            "required": ["kind"],
+            "required": [
+              "kind"
+            ],
             "additionalProperties": false
           }
         ]
@@ -60,14 +78,30 @@
               "type": "integer",
               "minimum": 0,
               "maximum": 9007199254740991
+            },
+            "decoded": {
+              "type": [
+                "string",
+                "null"
+              ]
             }
           },
-          "required": ["substring", "path", "withMeta", "start", "end"],
+          "required": [
+            "substring",
+            "path",
+            "withMeta",
+            "start",
+            "end"
+          ],
           "additionalProperties": false
         }
       }
     },
-    "required": ["original", "snapshot", "occurrences"],
+    "required": [
+      "original",
+      "snapshot",
+      "occurrences"
+    ],
     "additionalProperties": false
   }
 }

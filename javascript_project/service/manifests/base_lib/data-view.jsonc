@@ -1,0 +1,25 @@
+{
+  "kind": "base_lib",
+  "id": "era.snapshot.data_view",
+  "display_name": "ERA 数据视图转换",
+  "description": "ERA 数据视图转换的纯计算，仅接收已提交快照值。",
+  "category": "快照查询",
+  "version": "0.1.1",
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "source": {
+        "kind": "file",
+        "ref": "base_lib/domain/data_view.ts"
+      }
+    }
+  ],
+  "dependencies": [],
+  "external_packages": [
+    "lodash"
+  ]
+}

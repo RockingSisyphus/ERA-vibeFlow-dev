@@ -1,3 +1,4 @@
+import { planGreetingRefresh, type GreetingRefreshFacts } from "../../base_lib/greeting_refresh_policy.ts";
 import type {
   InitializationActionV1,
   InitializationCommitOutcomeV1,
@@ -14,6 +15,8 @@ interface Context {
     };
     readonly "era.tavern.regex": { readonly upsert: (input: Readonly<Record<string, unknown>>) => Promise<unknown> };
     readonly "era.tavern.character": {
+      readonly read_greeting_refresh_context: (input: Readonly<Record<string, unknown>>) => unknown;
+      readonly apply_greeting_refresh: (input: Readonly<{ kind: "empty" | "message"; next: string; updated?: string }>) => Promise<unknown>;
       readonly write_main_greeting: (input: Readonly<Record<string, unknown>>) => Promise<unknown>;
       readonly patch_external_statusbar: (input: Readonly<Record<string, unknown>>) => Promise<unknown>;
       readonly patch_single_floor: (input: Readonly<{ characterId: string; enabled: boolean }>) => Promise<unknown>;
@@ -59,8 +62,15 @@ async function apply(action: InitializationActionV1, context: Context): Promise<
       return context.capabilities["era.tavern.worldbook"].replace_entries({ name: action.name, entries: action.entries, purpose: "era-initialize" });
     case "upsert-regex":
       return context.capabilities["era.tavern.regex"].upsert({ regex: action.regex, purpose: "era-initialize" });
-    case "update-main-greeting":
-      return context.capabilities["era.tavern.character"].write_main_greeting({ expected: action.expected, next: action.next, purpose: "era-initialize" });
+    case "update-main-greeting": {
+      const character = context.capabilities["era.tavern.character"];
+      const response = await character.write_main_greeting({ expected: action.expected, next: action.next, purpose: "era-initialize" });
+      if (!confirmed(response)) return response;
+      const facts = character.read_greeting_refresh_context({}) as GreetingRefreshFacts;
+      const target = planGreetingRefresh(action.expected, action.next, facts);
+      const chatRefresh = target.kind === "result" ? target.result : await character.apply_greeting_refresh({ ...target, next: action.next });
+      return { ...(unwrap(response) as Record<string, unknown>), chatRefresh };
+    }
   }
 }
 function outcome(

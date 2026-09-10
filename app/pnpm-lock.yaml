@@ -15,8 +15,11 @@ importers:
         specifier: file:vendor/era-vibeflow-expression-0.2.0.tgz
         version: file:vendor/era-vibeflow-expression-0.2.0.tgz
       '@era/vibeflow-floor-snapshot':
-        specifier: file:../packages/era-floor-snapshot/era-vibeflow-floor-snapshot-0.1.1.tgz
-        version: file:../packages/era-floor-snapshot/era-vibeflow-floor-snapshot-0.1.1.tgz
+        specifier: file:../packages/era-floor-snapshot/era-vibeflow-floor-snapshot-0.1.2.tgz
+        version: file:../packages/era-floor-snapshot/era-vibeflow-floor-snapshot-0.1.2.tgz
+      '@era/vibeflow-macro-syntax':
+        specifier: file:../packages/era-macro-syntax/era-vibeflow-macro-syntax-0.1.0.tgz
+        version: file:../packages/era-macro-syntax/era-vibeflow-macro-syntax-0.1.0.tgz
       '@era/vibeflow-workbench':
         specifier: file:../packages/era-workbench/era-vibeflow-workbench-0.1.1.tgz
         version: file:../packages/era-workbench/era-vibeflow-workbench-0.1.1.tgz
@@ -409,9 +412,13 @@ packages:
     version: 0.2.0
     engines: {node: '>=24.18.0'}
 
-  '@era/vibeflow-floor-snapshot@file:../packages/era-floor-snapshot/era-vibeflow-floor-snapshot-0.1.1.tgz':
-    resolution: {integrity: sha512-W1qnDXxM1lSfCnTL1CJ+LZ6lCifswVBsnTQYcQBs7ulPk06Ujo+PF6fScBAST8KsAJ/BWLV3He5uy+wUDBLa4A==, tarball: file:../packages/era-floor-snapshot/era-vibeflow-floor-snapshot-0.1.1.tgz}
-    version: 0.1.1
+  '@era/vibeflow-floor-snapshot@file:../packages/era-floor-snapshot/era-vibeflow-floor-snapshot-0.1.2.tgz':
+    resolution: {integrity: sha512-xcdphVQF0o8GCx6oK2En1cDZRpkXDr/5POkNjQvf0xMXg+TRiDiVmEQItohwKLRUA/0mjymc7mejBnOOEk2nUA==, tarball: file:../packages/era-floor-snapshot/era-vibeflow-floor-snapshot-0.1.2.tgz}
+    version: 0.1.2
+
+  '@era/vibeflow-macro-syntax@file:../packages/era-macro-syntax/era-vibeflow-macro-syntax-0.1.0.tgz':
+    resolution: {integrity: sha512-YmSdxOelr9vGbO7m4Xzh3WqMbTjBCOUhxQ5Nh94ZBR7aaADOxItVt061PTje73OsG55MB3g64gJWK+3Lv0pU0w==, tarball: file:../packages/era-macro-syntax/era-vibeflow-macro-syntax-0.1.0.tgz}
+    version: 0.1.0
 
   '@era/vibeflow-workbench@file:../packages/era-workbench/era-vibeflow-workbench-0.1.1.tgz':
     resolution: {integrity: sha512-9C0p9mhNI2ZSGDF/g/+9UMo5VTSF98JW6I00tpHybNTMUUJFupr/HEidgI4j+OJxh2ytgHAXwttCRdgKvet7qQ==, tarball: file:../packages/era-workbench/era-vibeflow-workbench-0.1.1.tgz}
@@ -5609,7 +5616,11 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@era/vibeflow-floor-snapshot@file:../packages/era-floor-snapshot/era-vibeflow-floor-snapshot-0.1.1.tgz': {}
+  '@era/vibeflow-floor-snapshot@file:../packages/era-floor-snapshot/era-vibeflow-floor-snapshot-0.1.2.tgz':
+    dependencies:
+      lodash: 4.18.1
+
+  '@era/vibeflow-macro-syntax@file:../packages/era-macro-syntax/era-vibeflow-macro-syntax-0.1.0.tgz': {}
 
   '@era/vibeflow-workbench@file:../packages/era-workbench/era-vibeflow-workbench-0.1.1.tgz': {}
 

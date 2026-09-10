@@ -2,7 +2,7 @@
   "kind": "base_lib",
   "id": "era.macro.runtime",
   "display_name": "ERA 宏纯函数库",
-  "description": "当前宏扫描、路径解析与格式化的真实源码。本批计划扩展同源宏语法/编码与技术块解析依赖，由原quick_check及replace_all节点实际调用；宿主注册和DOM仅消费同源纯出口。",
+  "description": "原宏节点共用的文本准备、快照选择、普通/延迟宏扫描、路径解析与结果格式化。",
   "category": "宏处理",
   "version": "1.0.0",
   "implementations": [
@@ -19,7 +19,9 @@
     }
   ],
   "dependencies": [
-    "era.macro.lodash_get"
+    "era.macro.lodash_get",
+    "era.macro.macro_syntax",
+    "era.macro.technical_blocks"
   ],
   "external_packages": [
     "@era/vibeflow-contracts"

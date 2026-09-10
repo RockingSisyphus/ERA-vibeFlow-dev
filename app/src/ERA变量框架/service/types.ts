@@ -141,6 +141,8 @@ export interface EraTavernAdapter {
       input: Readonly<Record<string, unknown>>,
       context: EraCapabilityContext,
     ): Promise<unknown>;
+    read_greeting_refresh_context(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
+    apply_greeting_refresh(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
     read_main_greeting(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
     write_main_greeting(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
   };

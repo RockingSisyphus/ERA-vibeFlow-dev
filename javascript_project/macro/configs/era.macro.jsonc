@@ -37,38 +37,7 @@
         "id": "quick_check",
         "type_used": "era.macro.quick_check",
         "display_name": "按调用场景准备文本并检测宏",
-        "description": "在现有入口区分原始宏、延迟宏和出站提示：提示先清除严格配对技术块，再只检测延迟标记；无快照的提示仅去技术块。原present/missing输入继续按原裸宏规则处理。",
-        "status": "planned",
-        "flow_kind": "decision",
-        "requires": [
-          {
-            "type": "era.macro.substring",
-            "cardinality": "exactly_one",
-            "display_name": "宏文本片段"
-          },
-          {
-            "type": "era.macro.stored_stat",
-            "cardinality": "exactly_one",
-            "display_name": "已存 ERA 状态"
-          }
-        ],
-        "provides": [
-          {
-            "key": "macro.checked_substring",
-            "type": "era.macro.substring.checked",
-            "display_name": "已检查的宏文本片段"
-          },
-          {
-            "key": "macro.checked_stored_stat",
-            "type": "era.macro.stored_stat.checked",
-            "display_name": "已检查的 ERA 状态"
-          },
-          {
-            "key": "macro.contains",
-            "type": "era.macro.contains",
-            "display_name": "是否包含 ERA 宏"
-          }
-        ]
+        "description": "在现有入口区分原始宏、延迟宏和出站提示：提示先清除严格配对技术块，再只检测延迟标记；无快照的提示仅去技术块。原present/missing输入继续按原裸宏规则处理。"
       },
       {
         "id": "identity",
@@ -80,33 +49,7 @@
         "id": "build_snapshot",
         "type_used": "era.macro.build_snapshot",
         "display_name": "接收已选视图或构建原宏快照",
-        "description": "原present/missing保持原反转义和缺失行为；新增调用方视图直接携带显式statWithMeta/statWithoutMeta，不二次反转义，不丢失自定义无元字段视图。",
-        "status": "planned",
-        "flow_kind": "process",
-        "requires": [
-          {
-            "type": "era.macro.substring.checked",
-            "cardinality": "exactly_one",
-            "display_name": "已检查的宏文本片段"
-          },
-          {
-            "type": "era.macro.stored_stat.checked",
-            "cardinality": "exactly_one",
-            "display_name": "已检查的 ERA 状态"
-          }
-        ],
-        "provides": [
-          {
-            "key": "macro.substring_for_replace",
-            "type": "era.macro.substring.for_replace",
-            "display_name": "待替换文本片段"
-          },
-          {
-            "key": "macro.snapshot",
-            "type": "era.macro.snapshot",
-            "display_name": "宏快照"
-          }
-        ]
+        "description": "原present/missing保持原反转义和缺失行为；新增调用方视图直接携带显式statWithMeta/statWithoutMeta，不二次反转义，不丢失自定义无元字段视图。"
       },
       {
         "id": "replace_all",

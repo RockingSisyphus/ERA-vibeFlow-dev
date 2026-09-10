@@ -6,7 +6,8 @@
 
 import { TavernListeners } from './tavern-listeners';
 import { createEraMacroSnapshot } from '../macro/registration';
-import { resolveEraLazyMacroTokens, type EraMacroSnapshot } from '../macro/syntax';
+import type { EraMacroSnapshot } from '../macro/syntax';
+import { runEraMacroWorkflow } from '../macro/vibeflow-adapter';
 import { currentTavernIdentityMatches } from './public-state';
 import { readActiveSidecarRuntimeSnapshot } from './sidecar-runtime-snapshot';
 import { agentExecutionRecords, currentAgentRecordChat } from './agent-execution-records';
@@ -38,8 +39,10 @@ export function projectEraPromptMessages(
   macroSnapshot?: EraMacroSnapshot,
 ): SillyTavern.SendingMessage[] {
   const projectText = (text: string) => {
-    const stripped = stripEraTechnicalBlocks(text);
-    return macroSnapshot ? resolveEraLazyMacroTokens(stripped, macroSnapshot) : stripped;
+    return runEraMacroWorkflow(
+      text,
+      macroSnapshot ? { kind: 'view', mode: 'prompt', ...macroSnapshot } : { kind: 'projection-only' },
+    );
   };
   return messages.map(message => {
     const content = message.content;

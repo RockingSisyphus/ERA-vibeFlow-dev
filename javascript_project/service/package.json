@@ -12,10 +12,12 @@
     "@era/vibeflow-contracts": "file:../../packages/era-contracts/era-vibeflow-contracts-1.9.2.tgz",
     "@era/vibeflow-expression": "file:vendor/era-vibeflow-expression-0.2.0.tgz",
     "@stdlib/math-base-special-gamma": "^0.3.1",
+    "lodash": "^4.18.1",
     "mathjs": "^15.2.0",
     "opencc-js": "1.4.1"
   },
   "devDependencies": {
+    "@types/lodash": "^4.17.24",
     "esbuild": "0.28.1",
     "typescript": "7.0.2"
   }

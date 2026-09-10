@@ -1,5 +1,5 @@
 import {
-  containsEraMacro,
+  prepareMacroText,
   type MacroStoredStat,
 } from "../base_lib/macro_runtime.ts";
 
@@ -18,9 +18,10 @@ export function run(inputs: QuickCheckInputs): {
   readonly "macro.contains": boolean;
 } {
   const substring = inputs["era.macro.substring"].value;
+  const prepared = prepareMacroText(substring, inputs["era.macro.stored_stat"].value);
   return {
-    "macro.checked_substring": substring,
+    "macro.checked_substring": prepared.text,
     "macro.checked_stored_stat": inputs["era.macro.stored_stat"].value,
-    "macro.contains": containsEraMacro(substring),
+    "macro.contains": prepared.contains,
   };
 }

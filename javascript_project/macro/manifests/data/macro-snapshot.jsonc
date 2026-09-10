@@ -14,9 +14,19 @@
             "const": "present"
           },
           "statWithMeta": {},
-          "statWithoutMeta": {}
+          "statWithoutMeta": {},
+          "mode": {
+            "enum": [
+              "raw",
+              "lazy"
+            ]
+          }
         },
-        "required": ["kind", "statWithMeta", "statWithoutMeta"],
+        "required": [
+          "kind",
+          "statWithMeta",
+          "statWithoutMeta"
+        ],
         "additionalProperties": false
       },
       {
@@ -24,9 +34,17 @@
         "properties": {
           "kind": {
             "const": "missing"
+          },
+          "mode": {
+            "enum": [
+              "raw",
+              "lazy"
+            ]
           }
         },
-        "required": ["kind"],
+        "required": [
+          "kind"
+        ],
         "additionalProperties": false
       }
     ]

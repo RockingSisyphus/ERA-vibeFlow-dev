@@ -114,7 +114,8 @@
   "dependencies": {
     "@era/example-resources": "file:../packages/era-example-resources/era-example-resources-0.1.1.tgz",
     "@era/vibeflow-expression": "file:vendor/era-vibeflow-expression-0.2.0.tgz",
-    "@era/vibeflow-floor-snapshot": "file:../packages/era-floor-snapshot/era-vibeflow-floor-snapshot-0.1.1.tgz",
+    "@era/vibeflow-floor-snapshot": "file:../packages/era-floor-snapshot/era-vibeflow-floor-snapshot-0.1.2.tgz",
+    "@era/vibeflow-macro-syntax": "file:../packages/era-macro-syntax/era-vibeflow-macro-syntax-0.1.0.tgz",
     "@era/vibeflow-workbench": "file:../packages/era-workbench/era-vibeflow-workbench-0.1.1.tgz",
     "@pixi/react": "8.0.5",
     "@stdlib/math-base-special-gamma": "^0.3.1",

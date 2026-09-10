@@ -93,17 +93,15 @@
           "display_name": "按调用场景准备文本并检测宏",
           "description": "在现有入口区分原始宏、延迟宏和出站提示：提示先清除严格配对技术块，再只检测延迟标记；无快照的提示仅去技术块。原present/missing输入继续按原裸宏规则处理。"
         },
-        "contract_source": "planned_config",
+        "contract_source": "node_type",
         "flow_kind": "decision",
         "effect_scope": "none",
         "runtime_dispatch": "unknown",
         "execution_lock": null,
         "effective_execution_lock": null,
         "contains_global_state": false,
-        "status": "planned",
-        "planned_behavior": {
-          "kind": "blocking"
-        },
+        "status": "implemented",
+        "planned_behavior": null,
         "requires": [
           {
             "type": "era.macro.substring",
@@ -200,17 +198,15 @@
           "display_name": "接收已选视图或构建原宏快照",
           "description": "原present/missing保持原反转义和缺失行为；新增调用方视图直接携带显式statWithMeta/statWithoutMeta，不二次反转义，不丢失自定义无元字段视图。"
         },
-        "contract_source": "planned_config",
+        "contract_source": "node_type",
         "flow_kind": "process",
         "effect_scope": "none",
         "runtime_dispatch": "unknown",
         "execution_lock": null,
         "effective_execution_lock": null,
         "contains_global_state": false,
-        "status": "planned",
-        "planned_behavior": {
-          "kind": "blocking"
-        },
+        "status": "implemented",
+        "planned_behavior": null,
         "requires": [
           {
             "type": "era.macro.substring.checked",
@@ -575,17 +571,15 @@
               "display_name": "扫描普通宏或延迟标记内的宏",
               "description": "原位置扫描普通宏；延迟模式记录编码标记原始跨度及解码文本的内部宏匹配，出站提示中的普通裸宏保持原样。复用同一正则与路径语法，不新增工作流。"
             },
-            "contract_source": "planned_config",
+            "contract_source": "node_type",
             "flow_kind": "process",
             "effect_scope": "none",
             "runtime_dispatch": "unknown",
             "execution_lock": null,
             "effective_execution_lock": null,
             "contains_global_state": false,
-            "status": "planned",
-            "planned_behavior": {
-              "kind": "blocking"
-            },
+            "status": "implemented",
+            "planned_behavior": null,
             "requires": [
               {
                 "type": "era.macro.substring.for_replace",
@@ -627,17 +621,15 @@
               "display_name": "按同一快照解析实际匹配",
               "description": "保留原路径、ALLDATA、withmeta、空视图和缺失路径语义；延迟标记内的匹配使用调用方同一份已提交视图，不重新读取宿主状态。"
             },
-            "contract_source": "planned_config",
+            "contract_source": "node_type",
             "flow_kind": "process",
             "effect_scope": "none",
             "runtime_dispatch": "unknown",
             "execution_lock": null,
             "effective_execution_lock": null,
             "contains_global_state": false,
-            "status": "planned",
-            "planned_behavior": {
-              "kind": "blocking"
-            },
+            "status": "implemented",
+            "planned_behavior": null,
             "requires": [
               {
                 "type": "era.macro.occurrence_plan",
@@ -674,17 +666,15 @@
               "display_name": "重建原文本及延迟标记结果",
               "description": "沿用对象和标量原格式化；延迟模式只替换实际编码标记跨度，原样保留外部裸宏、无效编码及未匹配文本。"
             },
-            "contract_source": "planned_config",
+            "contract_source": "node_type",
             "flow_kind": "process",
             "effect_scope": "none",
             "runtime_dispatch": "unknown",
             "execution_lock": null,
             "effective_execution_lock": null,
             "contains_global_state": false,
-            "status": "planned",
-            "planned_behavior": {
-              "kind": "blocking"
-            },
+            "status": "implemented",
+            "planned_behavior": null,
             "requires": [
               {
                 "type": "era.macro.resolved_occurrences",
@@ -1368,7 +1358,13 @@
                       "const": "present"
                     },
                     "statWithMeta": {},
-                    "statWithoutMeta": {}
+                    "statWithoutMeta": {},
+                    "mode": {
+                      "enum": [
+                        "raw",
+                        "lazy"
+                      ]
+                    }
                   },
                   "required": [
                     "kind",
@@ -1382,6 +1378,12 @@
                   "properties": {
                     "kind": {
                       "const": "missing"
+                    },
+                    "mode": {
+                      "enum": [
+                        "raw",
+                        "lazy"
+                      ]
                     }
                   },
                   "required": [
@@ -1414,6 +1416,12 @@
                     "type": "integer",
                     "minimum": 0,
                     "maximum": 9007199254740991
+                  },
+                  "decoded": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
                   }
                 },
                 "required": [
@@ -1590,7 +1598,13 @@
                   "const": "present"
                 },
                 "statWithMeta": {},
-                "statWithoutMeta": {}
+                "statWithoutMeta": {},
+                "mode": {
+                  "enum": [
+                    "raw",
+                    "lazy"
+                  ]
+                }
               },
               "required": [
                 "kind",
@@ -1604,6 +1618,12 @@
               "properties": {
                 "kind": {
                   "const": "missing"
+                },
+                "mode": {
+                  "enum": [
+                    "raw",
+                    "lazy"
+                  ]
                 }
               },
               "required": [
@@ -1796,7 +1816,110 @@
         }
       }
     },
-    "base_lib": {},
+    "base_lib": {
+      "era.macro.lodash_get": {
+        "kind": "base_lib",
+        "id": "era.macro.lodash_get",
+        "display_name": "Lodash 路径兼容读取",
+        "description": "以无状态纯函数实现 Lodash get 的 JSON 字符串路径词法和读取语义。",
+        "category": "宏处理",
+        "version": "1.0.0",
+        "implementations": [
+          {
+            "language": "typescript",
+            "targets": [
+              "browser",
+              "node"
+            ],
+            "source": {
+              "kind": "file",
+              "ref": "base_lib/lodash_get_compatible.ts"
+            },
+            "completion": "immediate"
+          }
+        ],
+        "dependencies": [],
+        "external_packages": []
+      },
+      "era.macro.macro_syntax": {
+        "kind": "base_lib",
+        "id": "era.macro.macro_syntax",
+        "display_name": "宏语法与延迟标记",
+        "description": "宏语法与延迟标记的真实共享源码，供原宏节点及App同源出口消费。",
+        "category": "宏处理",
+        "version": "1.0.0",
+        "implementations": [
+          {
+            "language": "typescript",
+            "targets": [
+              "browser",
+              "node"
+            ],
+            "source": {
+              "kind": "file",
+              "ref": "base_lib/macro_syntax.ts"
+            },
+            "completion": "immediate"
+          }
+        ],
+        "dependencies": [],
+        "external_packages": []
+      },
+      "era.macro.runtime": {
+        "kind": "base_lib",
+        "id": "era.macro.runtime",
+        "display_name": "ERA 宏纯函数库",
+        "description": "原宏节点共用的文本准备、快照选择、普通/延迟宏扫描、路径解析与结果格式化。",
+        "category": "宏处理",
+        "version": "1.0.0",
+        "implementations": [
+          {
+            "language": "typescript",
+            "targets": [
+              "browser",
+              "node"
+            ],
+            "source": {
+              "kind": "file",
+              "ref": "base_lib/macro_runtime.ts"
+            },
+            "completion": "immediate"
+          }
+        ],
+        "dependencies": [
+          "era.macro.lodash_get",
+          "era.macro.macro_syntax",
+          "era.macro.technical_blocks"
+        ],
+        "external_packages": [
+          "@era/vibeflow-contracts"
+        ]
+      },
+      "era.macro.technical_blocks": {
+        "kind": "base_lib",
+        "id": "era.macro.technical_blocks",
+        "display_name": "技术块纯文本结构",
+        "description": "技术块纯文本结构的真实共享源码，供原宏节点及App同源出口消费。",
+        "category": "宏处理",
+        "version": "1.0.0",
+        "implementations": [
+          {
+            "language": "typescript",
+            "targets": [
+              "browser",
+              "node"
+            ],
+            "source": {
+              "kind": "file",
+              "ref": "base_lib/technical_blocks.ts"
+            },
+            "completion": "immediate"
+          }
+        ],
+        "dependencies": [],
+        "external_packages": []
+      }
+    },
     "capabilities": {},
     "host_extensions": [],
     "plugins": []

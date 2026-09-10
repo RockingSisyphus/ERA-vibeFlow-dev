@@ -22,7 +22,8 @@
     "external_packages": [
       "@era/example-resources",
       "mathjs",
-      "@stdlib/math-base-special-gamma"
+      "@stdlib/math-base-special-gamma",
+      "lodash"
     ]
   },
   "quality_enabled": true,

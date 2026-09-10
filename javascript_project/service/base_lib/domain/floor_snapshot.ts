@@ -1,3 +1,7 @@
+export type { EraDataTransformDirection } from './data_view.js';
+import { selectedMks } from './data_view.js';
+export { selectedMks, transformEraData, removeMetaFields } from './data_view.js';
+export { projectPublicState } from './public_state.js';
 export interface EraFloorSnapshot {
   readonly messageId: number;
   readonly mk: string;
@@ -22,11 +26,6 @@ const clone = <T>(value: T): T => structuredClone(value);
 
 const isRecord = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === 'object' && !Array.isArray(value);
 
-function selectedMks(meta: Readonly<Record<string, unknown>>): (string | null)[] {
-  return Array.isArray(meta.SelectedMks)
-    ? meta.SelectedMks.map(value => (typeof value === 'string' ? value : null))
-    : [];
-}
 
 function logs(meta: Readonly<Record<string, unknown>>, key: string): Record<string, unknown> {
   return isRecord(meta[key]) ? clone(meta[key]) : {};

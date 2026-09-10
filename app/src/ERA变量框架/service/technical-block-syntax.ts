@@ -1,126 +1,25 @@
-/** ERA 技术标签的共享纯解析器；显示与提示清理使用同一个严格配对合同。 */
-const FOLDED_TAG_LABELS = Object.freeze({
-  era_plan: 'ERA 规划报告',
-  era_update: 'ERA 变量解析报告',
-  era_agent_error: 'ERA 多阶段生成错误',
-});
-
-const HIDDEN_TAG_NAMES = Object.freeze([
-  'era_tx',
-  'variableinsert',
-  'variableedit',
-  'variabledelete',
-  'functioninsert',
-  'functionedit',
-  'functiondelete',
-  'era_data',
-  'variablethink',
-]);
-
-const ALL_TAG_NAMES = Object.freeze([...Object.keys(FOLDED_TAG_LABELS), ...HIDDEN_TAG_NAMES]);
-const TAG_PATTERN = ALL_TAG_NAMES.join('|');
-const TECHNICAL_TAG_TOKEN = new RegExp(`<\\s*(\\/?)\\s*(${TAG_PATTERN})\\b[^>]*>`, 'giu');
-
-type TechnicalBlockKind = 'folded' | 'hidden';
-type OpenTag = {
-  readonly name: string;
-  readonly start: number;
-  readonly contentStart: number;
-  readonly kind: TechnicalBlockKind;
-};
-
-export type EraTechnicalSegment =
-  | { readonly kind: 'story'; readonly text: string }
-  | {
-      readonly kind: TechnicalBlockKind;
-      readonly name: string;
-      readonly label?: string;
-      readonly text: string;
-      readonly source: string;
-    };
-
-/** 描述一次保守解析的有效性、技术块数量和按原文顺序排列的显示片段。 */
-export type EraTechnicalProjection = {
-  readonly valid: boolean;
-  readonly technicalBlockCount: number;
+/** 标签文案属于显示；配对和文本边界来自Macro登记库的同源产物。 */
+import {
+  parseEraTechnicalProjection as parseStructure,
+  type EraTechnicalProjection as Structure,
+} from '@era/vibeflow-macro-syntax';
+export { stripEraTechnicalBlocks } from '@era/vibeflow-macro-syntax';
+export type EraTechnicalSegment = Structure['segments'][number] & { readonly label?: string };
+export type EraTechnicalProjection = Omit<Structure, 'segments'> & {
   readonly segments: readonly EraTechnicalSegment[];
 };
-
-type ClosedBlock = OpenTag & { readonly end: number; readonly contentEnd: number };
-
-function technicalBlockKind(name: string): TechnicalBlockKind {
-  return Object.hasOwn(FOLDED_TAG_LABELS, name) ? 'folded' : 'hidden';
-}
-
-/**
- * 只收集严格闭合的顶层块，内层变量命令由外层事务统一承载。
- * 返回 null 表示边界不可信，调用方必须保留整段原文。
- */
-function collectTechnicalBlocks(text: string): ClosedBlock[] | null {
-  const stack: OpenTag[] = [];
-  const blocks: ClosedBlock[] = [];
-  TECHNICAL_TAG_TOKEN.lastIndex = 0;
-  for (let match = TECHNICAL_TAG_TOKEN.exec(text); match; match = TECHNICAL_TAG_TOKEN.exec(text)) {
-    const closing = match[1] === '/';
-    const name = match[2].toLowerCase();
-    if (!closing) {
-      stack.push({
-        name,
-        kind: technicalBlockKind(name),
-        start: match.index,
-        contentStart: match.index + match[0].length,
-      });
-      continue;
-    }
-
-    const open = stack.at(-1);
-    if (!open || open.name !== name) return null;
-    stack.pop();
-    if (stack.length === 0) {
-      blocks.push({ ...open, contentEnd: match.index, end: match.index + match[0].length });
-    }
-  }
-  return stack.length === 0 ? blocks : null;
-}
-
-/**
- * 从权威消息原文解析严格配对的顶层 ERA 技术块。任意错序、孤立结束标签或未闭合标签
- * 都会让整次解析失效；必须宁可保留原文，也不冒险吞掉故事或伪造报告边界。
- */
+/** 仅补充界面标签；结构边界沿用登记库结果，避免显示与出站清理各维护一套解析规则。 */
 export function parseEraTechnicalProjection(text: string): EraTechnicalProjection {
-  const blocks = collectTechnicalBlocks(text);
-  if (blocks === null) {
-    return { valid: false, technicalBlockCount: 0, segments: [{ kind: 'story', text }] };
-  }
-  if (blocks.length === 0) {
-    return { valid: true, technicalBlockCount: 0, segments: [{ kind: 'story', text }] };
-  }
-
-  const segments: EraTechnicalSegment[] = [];
-  let cursor = 0;
-  for (const block of blocks) {
-    if (block.start > cursor) segments.push({ kind: 'story', text: text.slice(cursor, block.start) });
-    segments.push({
-      kind: block.kind,
-      name: block.name,
-      label: FOLDED_TAG_LABELS[block.name as keyof typeof FOLDED_TAG_LABELS],
-      text: text.slice(block.contentStart, block.contentEnd),
-      source: text.slice(block.start, block.end),
-    });
-    cursor = block.end;
-  }
-  if (cursor < text.length) segments.push({ kind: 'story', text: text.slice(cursor) });
-  return { valid: true, technicalBlockCount: blocks.length, segments };
-}
-
-/**
- * 只删除严格配对的保留标签。错序或缺失结束标签会保留原文，避免把故事吞到后续偶然出现的闭合标签。
- */
-export function stripEraTechnicalBlocks(text: string): string {
-  const projection = parseEraTechnicalProjection(text);
-  if (!projection.valid || projection.technicalBlockCount === 0) return text;
-  return projection.segments
-    .filter((segment): segment is Extract<EraTechnicalSegment, { kind: 'story' }> => segment.kind === 'story')
-    .map(segment => segment.text)
-    .join('');
+  const labels: Readonly<Record<string, string>> = {
+    era_plan: 'ERA 规划报告',
+    era_update: 'ERA 变量解析报告',
+    era_agent_error: 'ERA 多阶段生成错误',
+  };
+  const projection = parseStructure(text);
+  return {
+    ...projection,
+    segments: projection.segments.map(segment =>
+      segment.kind === 'story' ? segment : { ...segment, label: labels[segment.name] },
+    ),
+  };
 }

@@ -12,11 +12,6 @@ type GreetingRefreshResult = Readonly<{
   reason: string;
 }>;
 
-type GreetingRefreshTarget =
-  | Readonly<{ kind: 'result'; result: GreetingRefreshResult }>
-  | Readonly<{ kind: 'empty' }>
-  | Readonly<{ kind: 'message'; message: SillyTavern.ChatMessage; updated: string }>;
-
 function syncCharacterEditorDraft(firstMessage: string): void {
   // SillyTavern 会把角色编辑器输入以 debounce 延后约一秒保存。ERA 的后端写入
   // 若不同时更新这份草稿，先前由其他角色资源更新排队的保存会重新提交旧开场白，
@@ -68,68 +63,15 @@ async function persistCurrentMainGreeting(next: string): Promise<void> {
   syncCharacterEditorDraft(next);
 }
 
-function preserved(reason: string): GreetingRefreshResult {
-  return { status: 'preserved', reason };
-}
-
-function stripEraManagedGreetingSuffix(value: string): string {
-  const suffixes = [
-    /\s*<StatusPlaceHolderImpl\s*\/>\s*$/i,
-    /\s*<era_data(?:\s[^>]*)?>[\s\S]*?<\/era_data>\s*$/i,
-  ] as const;
-  let stripped = value;
-  let changed = true;
-  while (changed) {
-    changed = false;
-    for (const suffix of suffixes) {
-      const next = stripped.replace(suffix, '');
-      if (next !== stripped) {
-        stripped = next;
-        changed = true;
-      }
-    }
-  }
-  return stripped;
-}
-
-function selectGreetingRefreshTarget(expected: string, next: string): GreetingRefreshTarget {
-  const tavern = currentTavernContext();
-  if (tavern.groupId) {
-    return { kind: 'result', result: { status: 'not-applicable', reason: '群聊不支持单角色主开场白刷新。' } };
-  }
-  if (!next.startsWith(expected)) {
-    return { kind: 'result', result: preserved('更新后的主开场白不是原文追加，当前聊天未修改。') };
-  }
-  if (tavern.chatMetadata.tainted === true) {
-    return { kind: 'result', result: preserved('当前聊天已被宿主标记为修改过。') };
-  }
-  if (tavern.chat.length > 1) return { kind: 'result', result: preserved('当前聊天已有多楼历史。') };
-  if (tavern.chat.length === 0) return { kind: 'empty' };
-
-  const message = tavern.chat[0];
-  if (message.is_user || message.is_system) {
-    return { kind: 'result', result: preserved('首楼不是角色主开场白。') };
-  }
-  if ((message.swipe_id ?? 0) !== 0) {
-    return { kind: 'result', result: preserved('首楼当前显示的是备用开场白。') };
-  }
-  const primary = Array.isArray(message.swipes) ? message.swipes[0] : message.mes;
-  if (stripEraManagedGreetingSuffix(primary) !== expected || stripEraManagedGreetingSuffix(message.mes) !== expected) {
-    return { kind: 'result', result: preserved('首楼内容已不等于角色卡原主开场白。') };
-  }
-  return { kind: 'message', message, updated: next };
-}
-
 /**
  * 角色卡主开场白持久化和当前聊天是两份不同事实。只有当前聊天仍可证明是
  * 原主开场白时，才把本次初始化追加块带到首楼；已有历史、编辑内容和备用
  * 开场白都不能被角色卡更新反向覆盖。
  */
-async function refreshPristineMainGreeting(expected: string, next: string): Promise<GreetingRefreshResult> {
+async function applyGreetingRefresh(input: Readonly<Record<string, unknown>>): Promise<GreetingRefreshResult> {
   const tavern = currentTavernContext();
-  const target = selectGreetingRefreshTarget(expected, next);
-  if (target.kind === 'result') return target.result;
-  if (target.kind === 'empty') {
+  const next = input.next as string;
+  if (input.kind === 'empty') {
     const message = {
       name: tavern.name2,
       is_user: false,
@@ -139,8 +81,9 @@ async function refreshPristineMainGreeting(expected: string, next: string): Prom
     } satisfies SillyTavern.ChatMessage;
     tavern.chat.push(message);
   } else {
-    target.message.mes = target.updated;
-    if (Array.isArray(target.message.swipes)) target.message.swipes[0] = target.updated;
+    const message = tavern.chat[0];
+    message.mes = input.updated as string;
+    if (Array.isArray(message.swipes)) message.swipes[0] = input.updated as string;
   }
 
   const messageId = 0;
@@ -158,6 +101,31 @@ async function refreshPristineMainGreeting(expected: string, next: string): Prom
  */
 export function createCharacterGreetingAdapter(throwIfAborted: ThrowIfAborted): EraTavernAdapter['character'] {
   return {
+    read_greeting_refresh_context: (_input, context) => {
+      throwIfAborted(context.signal);
+      const tavern = currentTavernContext();
+      const message = tavern.chat[0];
+      return {
+        group: Boolean(tavern.groupId),
+        tainted: tavern.chatMetadata.tainted === true,
+        length: tavern.chat.length,
+        first: message
+          ? {
+              is_user: Boolean(message.is_user),
+              is_system: Boolean(message.is_system),
+              swipe_id: message.swipe_id ?? 0,
+              mes: message.mes,
+              primary: Array.isArray(message.swipes) ? message.swipes[0] : message.mes,
+            }
+          : null,
+      };
+    },
+    apply_greeting_refresh: async (input, context) => {
+      throwIfAborted(context.signal);
+      const result = await applyGreetingRefresh(input);
+      throwIfAborted(context.signal);
+      return result;
+    },
     /** 只投影主开场白，避免备用开场白和角色卡其他字段意外进入工作流。 */
     read_main_greeting: async (
       _input: Readonly<Record<string, unknown>>,
@@ -198,12 +166,9 @@ export function createCharacterGreetingAdapter(throwIfAborted: ThrowIfAborted): 
       if (observed !== expected) throw new Error('ERA_CHARACTER_GREETING_STALE: 主开场白已在初始化期间改变。');
       await persistCurrentMainGreeting(next);
       throwIfAborted(context.signal);
-      const chatRefresh = await refreshPristineMainGreeting(expected, next);
-      throwIfAborted(context.signal);
       return {
         status: 'updated',
         firstMessage: next,
-        chatRefresh,
       };
     },
   };

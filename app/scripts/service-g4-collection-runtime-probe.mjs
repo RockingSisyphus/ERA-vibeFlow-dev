@@ -94,6 +94,8 @@ function createTavernCapabilities() {
     'era.tavern.character': {
       patch_external_statusbar: async () => { throw new Error('G4 窗口探针不应执行外置配置写入'); },
       patch_single_floor: async () => { throw new Error('G4 窗口探针不应执行单层配置写入'); },
+      read_greeting_refresh_context: () => ({ group: false, tainted: false, length: 2, first: null }),
+      apply_greeting_refresh: async () => ({ status: "refreshed", reason: "fixture" }),
       read_main_greeting: async input => ({
         ...input,
         status: 'ready',

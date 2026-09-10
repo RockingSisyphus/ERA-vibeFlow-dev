@@ -108,6 +108,8 @@ class FakeAdapter implements EraTavernHostAdapter {
   };
 
   readonly character = {
+    read_greeting_refresh_context: () => ({ group: false, tainted: false, length: 2, first: null }),
+    apply_greeting_refresh: async () => ({ status: 'refreshed', reason: 'fixture' }),
     read_main_greeting: async (input: Readonly<Record<string, unknown>>) => ({
       ...input,
       status: 'ready',

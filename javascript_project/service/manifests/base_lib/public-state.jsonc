@@ -1,0 +1,25 @@
+{
+  "kind": "base_lib",
+  "id": "era.snapshot.public_state",
+  "display_name": "ERA 作者公开状态",
+  "description": "ERA 作者公开状态的纯计算，仅接收已提交快照值。",
+  "category": "快照查询",
+  "version": "0.1.1",
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "source": {
+        "kind": "file",
+        "ref": "base_lib/domain/public_state.ts"
+      }
+    }
+  ],
+  "dependencies": [
+    "era.snapshot.data_view"
+  ],
+  "external_packages": []
+}

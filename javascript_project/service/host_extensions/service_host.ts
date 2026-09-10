@@ -140,6 +140,8 @@ export interface EraTavernCapabilityAdapter {
   readonly character: {
     readonly patch_external_statusbar?: EraAsyncHostOperation;
     readonly patch_single_floor?: EraAsyncHostOperation;
+    readonly read_greeting_refresh_context: EraHostOperation;
+    readonly apply_greeting_refresh: EraAsyncHostOperation;
     readonly read_main_greeting: EraAsyncHostOperation;
     readonly write_main_greeting: EraAsyncHostOperation;
   };
@@ -708,6 +710,8 @@ class ServiceHostRuntime {
         input: Readonly<Record<string, unknown>>,
         options: PortCallOptions = {},
       ) => this.invokeSuspend("character", "patch_external_statusbar", input, options),
+      read_greeting_refresh_context: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) => this.invokeImmediate("character", "read_greeting_refresh_context", input, options),
+      apply_greeting_refresh: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) => this.invokeSuspend("character", "apply_greeting_refresh", input, options),
       read_main_greeting: (
         input: Readonly<Record<string, unknown>>,
         options: PortCallOptions = {},
@@ -921,6 +925,8 @@ class ServiceHostRuntime {
       [adapter.worldbook?.replace_entries, "worldbook.replace_entries"],
       [adapter.regex?.read, "regex.read"],
       [adapter.regex?.upsert, "regex.upsert"],
+      [adapter.character?.read_greeting_refresh_context, "character.read_greeting_refresh_context"],
+      [adapter.character?.apply_greeting_refresh, "character.apply_greeting_refresh"],
       [adapter.character?.read_main_greeting, "character.read_main_greeting"],
       [adapter.character?.write_main_greeting, "character.write_main_greeting"],
       [adapter.identity?.read, "identity.read"],

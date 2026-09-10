@@ -8,10 +8,12 @@ import { describe, expect, it } from 'vitest';
 import { runEraMacroWorkflow, type MacroStoredStatInput } from '../../src/ERA变量框架/macro/vibeflow-adapter';
 import { parseEraMacroText, type EraMacroSnapshot } from '../../src/ERA变量框架/macro/syntax';
 
+type LegacyStoredStat = Extract<MacroStoredStatInput, { kind: 'present' | 'missing' }>;
+
 type OracleCase = {
   name: string;
   substring: string;
-  storedStat: MacroStoredStatInput;
+  storedStat: LegacyStoredStat;
   expected: string;
 };
 
@@ -52,7 +54,7 @@ function removeMetaFields(value: unknown): unknown {
   return value;
 }
 
-function baselineSnapshot(storedStat: MacroStoredStatInput): EraMacroSnapshot {
+function baselineSnapshot(storedStat: LegacyStoredStat): EraMacroSnapshot {
   if (storedStat.kind === 'missing') {
     return { statWithMeta: null, statWithoutMeta: undefined };
   }

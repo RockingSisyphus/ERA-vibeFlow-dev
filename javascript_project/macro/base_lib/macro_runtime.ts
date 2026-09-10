@@ -1,3 +1,5 @@
+import { createEraMacroRegex, containsEraMacro, containsEraLazyMacroToken, createLazyTokenRegex, decodeLazyMacro } from "./macro_syntax.ts";
+import { stripEraTechnicalBlocks } from "./technical_blocks.ts";
 import {
   isPresentMacroStoredStat,
   type JsonValue,
@@ -6,17 +8,20 @@ import { lodashCompatibleGet } from "./lodash_get_compatible.ts";
 
 export type MacroStoredStat =
   | { readonly kind: "present"; readonly value: unknown }
-  | { readonly kind: "missing" };
+  | { readonly kind: "missing" }
+  | { readonly kind: "projection-only" }
+  | { readonly kind: "view"; readonly mode: "raw" | "lazy" | "prompt"; readonly statWithMeta: unknown; readonly statWithoutMeta: unknown };
 
-export type MacroSnapshot =
+export type MacroSnapshot = (
   | {
       readonly kind: "present";
       readonly statWithMeta: unknown;
       readonly statWithoutMeta: unknown;
     }
-  | { readonly kind: "missing" };
+  | { readonly kind: "missing" }) & { readonly mode?: "raw" | "lazy" };
 
 export interface MacroOccurrence {
+  readonly decoded?: string | null;
   readonly substring: string;
   readonly path: string;
   readonly withMeta: boolean;
@@ -106,12 +111,20 @@ function removeMetaFields(value: JsonValue): JsonValue {
   return value;
 }
 
-export function containsEraMacro(text: string): boolean {
-  return /{{\s*ERA(?:-withmeta)?\s*:/i.test(text);
+/** 在原检测节点准备实际文本，提示只展开延迟标记。 */
+export function prepareMacroText(text: string, state: MacroStoredStat): { text: string; contains: boolean } {
+  const prompt = state.kind === "projection-only" || (state.kind === "view" && state.mode === "prompt");
+  const prepared = prompt ? stripEraTechnicalBlocks(text) : text;
+  const contains = state.kind === "projection-only" ? false
+    : state.kind === "view" && state.mode !== "raw" ? containsEraLazyMacroToken(prepared) : containsEraMacro(prepared);
+  return { text: prepared, contains };
 }
 
 export function buildMacroSnapshot(storedStat: MacroStoredStat): MacroSnapshot {
-  if (storedStat.kind === "missing") {
+  if (storedStat.kind === "view") {
+    return { kind: "present", statWithMeta: storedStat.statWithMeta, statWithoutMeta: storedStat.statWithoutMeta, mode: storedStat.mode === "raw" ? "raw" : "lazy" };
+  }
+  if (storedStat.kind === "missing" || storedStat.kind === "projection-only") {
     return { kind: "missing" };
   }
   if (!isPresentMacroStoredStat(storedStat)) {
@@ -131,11 +144,13 @@ export function scanMacroOccurrences(
   snapshot: MacroSnapshot,
 ): MacroOccurrencePlan {
   const occurrences: MacroOccurrence[] = [];
-  const expression = /{{\s*ERA(-withmeta)?\s*:\s*([^}]+?)\s*}}/gi;
+  const lazy = snapshot.mode === "lazy";
+  const expression = lazy ? createLazyTokenRegex() : createEraMacroRegex();
 
   for (let match = expression.exec(original); match !== null; match = expression.exec(original)) {
     const substring = match[0];
     occurrences.push({
+      ...(lazy ? { decoded: decodeLazyMacro(match[1]) } : {}),
       substring,
       path: (match[2] ?? "").trim(),
       withMeta: match[1] !== undefined,
@@ -151,6 +166,13 @@ export function resolveMacroOccurrences(
   plan: MacroOccurrencePlan,
 ): ResolvedMacroOccurrences {
   const resolutions = plan.occurrences.map<MacroResolution>(occurrence => {
+    if (occurrence.decoded !== undefined) {
+      if (occurrence.decoded === null) return { kind: "preserve", start: occurrence.start, end: occurrence.end, substring: occurrence.substring };
+      const rawSnapshot: MacroSnapshot = { ...plan.snapshot, mode: "raw" };
+      const decoded = formatResolvedMacros(resolveMacroOccurrences(scanMacroOccurrences(occurrence.decoded, rawSnapshot)));
+      return { kind: "value", start: occurrence.start, end: occurrence.end, value: decoded };
+    }
+
     if (plan.snapshot.kind === "missing") {
       return {
         kind: "preserve",

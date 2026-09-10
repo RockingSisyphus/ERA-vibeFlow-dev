@@ -90,23 +90,7 @@
         "id": "commit_host_resources",
         "type_used": "era.tavern.initialization_commit",
         "display_name": "提交初始化资源并决议首楼刷新",
-        "description": "在原 update-main-greeting 动作处保持先保存角色卡，再即时读取当前首楼事实，由 Service 规划保留/新建/更新，Host 执行既有重绘和保存；其余资源顺序、提交计数和错误语义不变。",
-        "status": "planned",
-        "flow_kind": "data_store",
-        "requires": [
-          {
-            "type": "era.initialize.commit.request",
-            "cardinality": "exactly_one",
-            "display_name": "资源提交请求"
-          }
-        ],
-        "provides": [
-          {
-            "key": "resource_commit_result",
-            "type": "era.initialize.commit.result",
-            "display_name": "资源提交结果"
-          }
-        ]
+        "description": "在原 update-main-greeting 动作处保持先保存角色卡，再即时读取当前首楼事实，由 Service 规划保留/新建/更新，Host 执行既有重绘和保存；其余资源顺序、提交计数和错误语义不变。"
       },
       {
         "id": "route_completion",

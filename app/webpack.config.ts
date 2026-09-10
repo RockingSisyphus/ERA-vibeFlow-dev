@@ -714,6 +714,8 @@ function parse_configuration(entry: Entry, is_release = false): (_env: any, argv
       if (
         request === '@era/vibeflow-expression' ||
         request.startsWith('@era/vibeflow-expression/') ||
+        request === '@era/vibeflow-macro-syntax' ||
+        request.startsWith('@era/vibeflow-macro-syntax/') ||
         request === '@era/vibeflow-workbench' ||
         request.startsWith('@era/vibeflow-workbench/') ||
         request === '@era/vibeflow-floor-snapshot' ||
