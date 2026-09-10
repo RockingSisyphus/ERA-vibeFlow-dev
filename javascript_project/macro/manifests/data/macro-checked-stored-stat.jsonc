@@ -3,7 +3,7 @@
   "type_key": "era.macro.stored_stat.checked",
   "representation": "json",
   "display_name": "已检查的 ERA 状态",
-  "description": "经过快速检测边界后无损转发的带标签已存状态输入。",
+  "description": "经过快速检测边界后无损转发的带标签已存状态输入。 本批计划扩展view（调用方已选两种视图，raw/lazy/prompt）及projection-only（无快照提示只去技术块）；原present/missing形状保持不变。",
   "schema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "oneOf": [
@@ -15,7 +15,10 @@
           },
           "value": {}
         },
-        "required": ["kind", "value"],
+        "required": [
+          "kind",
+          "value"
+        ],
         "additionalProperties": false
       },
       {
@@ -25,7 +28,45 @@
             "const": "missing"
           }
         },
-        "required": ["kind"],
+        "required": [
+          "kind"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "const": "view"
+          },
+          "mode": {
+            "enum": [
+              "raw",
+              "lazy",
+              "prompt"
+            ]
+          },
+          "statWithMeta": {},
+          "statWithoutMeta": {}
+        },
+        "required": [
+          "kind",
+          "mode",
+          "statWithMeta",
+          "statWithoutMeta"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "const": "projection-only"
+          }
+        },
+        "required": [
+          "kind"
+        ],
         "additionalProperties": false
       }
     ]

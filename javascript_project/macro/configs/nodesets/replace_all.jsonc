@@ -46,8 +46,8 @@
       {
         "id": "scan_occurrences",
         "type_used": "era.macro.scan_occurrences",
-        "display_name": "按同源宏语法扫描匹配项",
-        "description": "将原宏正则与文本解析入口收拢为登记库，既有扫描继续调用同源语法；延迟宏和直接文本解析复用此扫描、路径解析与格式化链。",
+        "display_name": "扫描普通宏或延迟标记内的宏",
+        "description": "原位置扫描普通宏；延迟模式记录编码标记原始跨度及解码文本的内部宏匹配，出站提示中的普通裸宏保持原样。复用同一正则与路径语法，不新增工作流。",
         "status": "planned",
         "flow_kind": "process",
         "requires": [
@@ -73,14 +73,46 @@
       {
         "id": "resolve_occurrences",
         "type_used": "era.macro.resolve_occurrences",
-        "display_name": "解析快照路径",
-        "description": "逐项选择含或不含元数据的快照，处理 $ALLDATA；快照缺失时保留原宏，路径缺失时作显式标记。"
+        "display_name": "按同一快照解析实际匹配",
+        "description": "保留原路径、ALLDATA、withmeta、空视图和缺失路径语义；延迟标记内的匹配使用调用方同一份已提交视图，不重新读取宿主状态。",
+        "status": "planned",
+        "flow_kind": "process",
+        "requires": [
+          {
+            "type": "era.macro.occurrence_plan",
+            "cardinality": "exactly_one",
+            "display_name": "宏匹配计划"
+          }
+        ],
+        "provides": [
+          {
+            "key": "macro.resolved_occurrences",
+            "type": "era.macro.resolved_occurrences",
+            "display_name": "已解析宏匹配项"
+          }
+        ]
       },
       {
         "id": "format_values",
         "type_used": "era.macro.format_values",
-        "display_name": "格式化宏值",
-        "description": "对象序列化为 JSON，标量转为字符串，缺失路径替换为空串，快照缺失时保留原宏文本。"
+        "display_name": "重建原文本及延迟标记结果",
+        "description": "沿用对象和标量原格式化；延迟模式只替换实际编码标记跨度，原样保留外部裸宏、无效编码及未匹配文本。",
+        "status": "planned",
+        "flow_kind": "process",
+        "requires": [
+          {
+            "type": "era.macro.resolved_occurrences",
+            "cardinality": "exactly_one",
+            "display_name": "已解析宏匹配项"
+          }
+        ],
+        "provides": [
+          {
+            "key": "macro.replacement.internal",
+            "type": "era.macro.replacement.internal",
+            "display_name": "内部宏替换结果"
+          }
+        ]
       },
       {
         "id": "adapt_output",
