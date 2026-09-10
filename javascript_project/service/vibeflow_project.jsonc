@@ -22,6 +22,10 @@
       {
         "workflow": "configs/era.service.jsonc",
         "document": "ARCHITECTURE.jsonc"
+      },
+      {
+        "workflow": "configs/era.audit-proposal.jsonc",
+        "document": "ARCHITECTURE.audit-proposal.jsonc"
       }
     ]
   }

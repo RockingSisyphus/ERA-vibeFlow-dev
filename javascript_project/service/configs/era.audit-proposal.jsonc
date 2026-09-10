@@ -1,0 +1,183 @@
+{
+  "nodeset_imports": [
+    {
+      "path": "nodesets/service_iteration.jsonc"
+    }
+  ],
+  "host_extensions": [
+    {
+      "id": "era.tavern.service_host",
+      "status": "planned",
+      "enabled": true,
+      "display_name": "ERA 酒馆服务宿主",
+      "description": "待人工批准的审核副本，禁止用于生产构建。复用现有FIFO、receipt、barrier、Capability和生命周期；修改按楼纯投影的实现归属：将packages/era-floor-snapshot/index.js迁入Service已登记base_lib，snapshot_query直接依赖该纯库，App仍消费由唯一源码发布的同步包；不迁移DOM到Node，不改公开API/Sidecar。新增传统及外置HTML内嵌脚本生命周期检查与关闭后ready续体退出。删除原包手写副本，保留生成出口与声明。详细批次及验收见reports/architecture-audit-20260910/变更清单.md。",
+      "category": "宿主接线",
+      "version": "0.1.0",
+      "targets": [
+        "browser"
+      ],
+      "provides": [
+        "vibeflow.port",
+        "era.tavern.agent",
+        "era.tavern.variables",
+        "era.tavern.messages",
+        "era.tavern.worldbook",
+        "era.tavern.regex",
+        "era.tavern.character",
+        "era.tavern.identity",
+        "era.tavern.sidecar",
+        "era.tavern.installation_scope",
+        "era.tavern.startup_gate"
+      ],
+      "dependencies": [],
+      "config": {
+        "ports": {
+          "inbound": "era.service.in",
+          "outbound": "era.service.out"
+        },
+        "limits": {
+          "max_event_bytes": 262144,
+          "max_fifo_events": 256,
+          "max_fifo_bytes": 8388608,
+          "max_host_refs_per_event": 32
+        },
+        "barrier_watchdog_ms": 5000,
+        "staged_startup": true
+      }
+    }
+  ],
+  "global_config": {
+    "config": {
+      "max_event_bytes": 262144,
+      "max_fifo_events": 256,
+      "max_fifo_bytes": 8388608,
+      "max_collection_events": 128,
+      "max_collection_bytes": 2097152,
+      "max_batch_steps": 128,
+      "barrier_watchdog_ms": 5000,
+      "max_host_refs_per_event": 32
+    },
+    "allow_config_override": false
+  },
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [],
+    "max_steps": 12,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.service.terminal",
+        "display_name": "ERA 服务启动",
+        "description": "启动 ERA 异步服务工作流。"
+      },
+      {
+        "id": "inspect_current_script_scope",
+        "type_used": "era.installation.scope.inspect",
+        "display_name": "读取当前脚本与脚本树",
+        "description": "经既有 service_host.ts 的无监听器启动期能力读取 getScriptId 与 global、preset、character 三类脚本树；只采集启用层级和脚本 ID。"
+      },
+      {
+        "id": "classify_installation_scope",
+        "type_used": "era.installation.scope.classify",
+        "display_name": "分类安装作用域",
+        "description": "纯 workflow 规则根据启用祖先文件夹和当前脚本 ID 分类 character、global、preset、ambiguous 或 unknown。"
+      },
+      {
+        "id": "decide_startup_policy",
+        "type_used": "era.installation.scope.decide",
+        "display_name": "决定启动策略",
+        "description": "character 允许完整启动；global、preset 与 ambiguous 要求 dormant；unknown 允许启动并要求一次兼容警告。"
+      },
+      {
+        "id": "activate_tavern_ingress",
+        "type_used": "era.installation.scope.activate_ingress",
+        "display_name": "登记单层显示窗口与角色卡设置",
+        "description": "复用现有 Host 启停，登记角色卡单层开关和单一显示窗口控制器。优先监听真实显示事件，在 Helper 审计前移除非目标 DOM，保留最新 AI 原 iframe；用户发言不重建保留实例。切聊天重建显示关系，关闭恢复普通历史入口与原范围，观察器仅兜底非标准 DOM 变化。角色卡保存仍走 Service，不新增业务调度器。详见 reports/era-single-floor-change-list.md。"
+      },
+      {
+        "id": "publish_dormant_startup",
+        "type_used": "era.installation.scope.publish_dormant",
+        "display_name": "发布休眠安装提示",
+        "description": "仅 dormant 时调用启动期 Host 的机械提示操作，随后结束；不登记事件、不运行 Sidecar、宏或 UI。"
+      },
+      {
+        "id": "initialize_state",
+        "type_used": "era.service.initialize_state",
+        "display_name": "初始化服务与 Scope 窗口状态",
+        "description": "创建有界事件、定时器、迭代与连续 MK 状态，并增加仅存在于当前页面实例的单调窗口 token 和未解析准入缓存；stop、pagehide、reload 或重新初始化随服务状态一并清除，不写消息或 Sidecar。"
+      },
+      {
+        "id": "service_loop",
+        "type_used": "vibeflow.loop.while",
+        "display_name": "永久服务循环",
+        "description": "持续接收并处理服务迭代，直至宿主取消异步工作流。",
+        "requires": [
+          {
+            "type": "era.service.state",
+            "cardinality": "exactly_one",
+            "display_name": "服务状态"
+          }
+        ],
+        "loop": {
+          "body": "era.service.iteration",
+          "max_iterations": null,
+          "carry": [
+            {
+              "from": "era.service.state",
+              "as": "service_state",
+              "update": "serviceStateNext"
+            }
+          ]
+        },
+        "provides": []
+      },
+      {
+        "id": "end",
+        "type_used": "era.service.terminal",
+        "display_name": "ERA 服务结束",
+        "description": "表示永久循环将来按受控停止策略退出后到达的终点。"
+      }
+    ],
+    "edges": [
+      [
+        "start",
+        "inspect_current_script_scope"
+      ],
+      [
+        "inspect_current_script_scope",
+        "classify_installation_scope"
+      ],
+      [
+        "classify_installation_scope",
+        "decide_startup_policy"
+      ],
+      {
+        "from": "decide_startup_policy",
+        "to": "activate_tavern_ingress",
+        "when": "installation_scope_route == 'allow'"
+      },
+      {
+        "from": "decide_startup_policy",
+        "to": "publish_dormant_startup",
+        "when": "installation_scope_route == 'dormant'"
+      },
+      [
+        "activate_tavern_ingress",
+        "initialize_state"
+      ],
+      [
+        "initialize_state",
+        "service_loop"
+      ],
+      [
+        "service_loop",
+        "end"
+      ],
+      [
+        "publish_dormant_startup",
+        "end"
+      ]
+    ],
+    "outputs": []
+  }
+}
