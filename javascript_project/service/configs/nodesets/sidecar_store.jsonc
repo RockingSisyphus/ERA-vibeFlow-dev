@@ -26,39 +26,165 @@
   "pipeline": {
     "entry_mode": "async",
     "inputs": [
-      {"key": "sync_context", "type": "era.sync.context", "display_name": "同步上下文", "required": true}
+      {
+        "key": "sync_context",
+        "type": "era.sync.context",
+        "display_name": "同步上下文",
+        "required": true
+      }
     ],
     "max_steps": 10,
     "nodes": [
-      {"id": "start", "type_used": "era.service.terminal", "display_name": "Sidecar 状态存储启动", "description": "开始一次当前聊天状态加载或绑定事务。"},
+      {
+        "id": "start",
+        "type_used": "era.service.terminal",
+        "display_name": "Sidecar 状态存储启动",
+        "description": "开始一次当前聊天状态加载或绑定事务。"
+      },
       {
         "id": "inspect_current",
         "type_used": "era.sidecar_binding.inspect_current",
-        "display_name": "检查 Sidecar V3 指针、身份与状态",
-        "description": "读取当前身份、聊天 SidecarId 和本地 V1/V2/V3 文件事实。无指针新聊天进入 create；旧聊天仅在一次迁移事务读取聊天旧状态；V3 只读 statData、eraMeta 与 statFunc。"
+        "display_name": "读取并核对本次 Sidecar 事务来源",
+        "description": "从真实派发上下文保留原聊天、消息/Swipe/原文依据；读取 Sidecar 前后比对身份和指针，读取失败或来源改变形成 failed 同步上下文，不把新聊天事实与旧消息拼接。",
+        "status": "planned",
+        "flow_kind": "process",
+        "requires": [
+          {
+            "type": "era.sync.context",
+            "cardinality": "exactly_one",
+            "display_name": "同步上下文"
+          }
+        ],
+        "provides": [
+          {
+            "key": "sidecar_binding_input",
+            "type": "era.sidecar.binding.input",
+            "display_name": "Sidecar 绑定输入"
+          },
+          {
+            "key": "sidecar_binding_facts",
+            "type": "era.sidecar.binding.facts",
+            "display_name": "当前 Sidecar 事实"
+          }
+        ]
       },
-      {"id": "resolve_choice", "type_used": "era.sidecar_binding.resolve_choice", "display_name": "解析绑定选择", "description": "纯规则决定继续、阻塞或迁移/独立/复制事务。"},
-      {"id": "publish_choice_prompt", "type_used": "era.sidecar_binding.publish_choice_prompt", "display_name": "发布 Sidecar 冲突选择", "description": "显示 workflow 已决定的不可关闭选择提示。"},
+      {
+        "id": "resolve_choice",
+        "type_used": "era.sidecar_binding.resolve_choice",
+        "display_name": "保留失败来源或解析绑定选择",
+        "description": "源上下文已失败时直接沿原 continue 下游进入同步失败结算，禁止新弹窗和写入；正常情况下复用 create/migrate-legacy/matched/conflict/repair 的既有选择规则。",
+        "status": "planned",
+        "flow_kind": "process",
+        "requires": [
+          {
+            "type": "era.sidecar.binding.input",
+            "cardinality": "exactly_one",
+            "display_name": "Sidecar 绑定输入"
+          },
+          {
+            "type": "era.sidecar.binding.facts",
+            "cardinality": "exactly_one",
+            "display_name": "当前 Sidecar 事实"
+          }
+        ],
+        "provides": [
+          {
+            "key": "sidecar_binding_resolution",
+            "type": "era.sidecar.binding.resolution",
+            "display_name": "Sidecar 绑定决议"
+          }
+        ]
+      },
+      {
+        "id": "publish_choice_prompt",
+        "type_used": "era.sidecar_binding.publish_choice_prompt",
+        "display_name": "发布 Sidecar 冲突选择",
+        "description": "显示 workflow 已决定的不可关闭选择提示。"
+      },
       {
         "id": "apply_resolution",
         "type_used": "era.sidecar_binding.apply_resolution",
-        "display_name": "应用 Sidecar 决议并发布已验证快照",
-        "description": "保留现有 create、migrate、repair、迁移、独立和复制事务；当严格消息派发上下文暂未 ready 时，仍允许将 owner 与当前身份匹配的已验证 V3 记录只读发布到当前页面运行时快照，但禁止迁移、修复、指针或文件写入。正常 ready 路径仍以 revision 复核执行原有受控事务。"
+        "display_name": "按原来源执行恢复、确认保存并提交 Sidecar",
+        "description": "用生产 activeText 构造恢复消息；复核原聊天/绑定/记录 revision，向消息写入、文件写入和指针提交传递 sourceBasis。只在消息持久化 confirmed 后更新本任务依据并继续文件/指针提交；来源变化或保存失败保留实际已写事实并进入既有同步失败结算，不自动重试，不回写新聊天。",
+        "status": "planned",
+        "flow_kind": "process",
+        "requires": [
+          {
+            "type": "era.sidecar.binding.input",
+            "cardinality": "exactly_one",
+            "display_name": "Sidecar 绑定输入"
+          },
+          {
+            "type": "era.sidecar.binding.resolution",
+            "cardinality": "exactly_one",
+            "display_name": "Sidecar 绑定决议"
+          }
+        ],
+        "provides": [
+          {
+            "key": "sidecar_applied_context",
+            "type": "era.sync.context",
+            "display_name": "事务后的同步上下文"
+          },
+          {
+            "key": "sidecar_binding_route",
+            "type": "era.sidecar.binding.route",
+            "display_name": "外部 Sidecar 绑定路由"
+          }
+        ]
       },
-      {"id": "end", "type_used": "era.service.terminal", "display_name": "Sidecar 状态存储结束", "description": "输出已加载的同步上下文及路由。"}
+      {
+        "id": "end",
+        "type_used": "era.service.terminal",
+        "display_name": "Sidecar 状态存储结束",
+        "description": "输出已加载的同步上下文及路由。"
+      }
     ],
     "edges": [
-      ["start", "inspect_current"],
-      ["inspect_current", "resolve_choice"],
-      {"from": "inspect_current", "to": "apply_resolution", "schedule": false},
-      {"from": "resolve_choice", "to": "apply_resolution", "schedule": false},
-      ["resolve_choice", "publish_choice_prompt"],
-      ["publish_choice_prompt", "apply_resolution"],
-      ["apply_resolution", "end"]
+      [
+        "start",
+        "inspect_current"
+      ],
+      [
+        "inspect_current",
+        "resolve_choice"
+      ],
+      {
+        "from": "inspect_current",
+        "to": "apply_resolution",
+        "schedule": false
+      },
+      {
+        "from": "resolve_choice",
+        "to": "apply_resolution",
+        "schedule": false
+      },
+      [
+        "resolve_choice",
+        "publish_choice_prompt"
+      ],
+      [
+        "publish_choice_prompt",
+        "apply_resolution"
+      ],
+      [
+        "apply_resolution",
+        "end"
+      ]
     ],
     "outputs": [
-      {"type": "era.sync.context", "cardinality": "exactly_one", "display_name": "已加载 Sidecar 状态的同步上下文", "as": "sidecarBindingContext"},
-      {"type": "era.sidecar.binding.route", "cardinality": "exactly_one", "display_name": "Sidecar 状态路由", "as": "sidecarBindingRoute"}
+      {
+        "type": "era.sync.context",
+        "cardinality": "exactly_one",
+        "display_name": "已加载 Sidecar 状态的同步上下文",
+        "as": "sidecarBindingContext"
+      },
+      {
+        "type": "era.sidecar.binding.route",
+        "cardinality": "exactly_one",
+        "display_name": "Sidecar 状态路由",
+        "as": "sidecarBindingRoute"
+      }
     ]
   }
 }

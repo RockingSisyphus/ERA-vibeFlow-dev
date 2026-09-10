@@ -7497,18 +7497,20 @@
               "path": "configs/nodesets/sidecar_store.jsonc"
             },
             "role": {
-              "display_name": "检查 Sidecar V3 指针、身份与状态",
-              "description": "读取当前身份、聊天 SidecarId 和本地 V1/V2/V3 文件事实。无指针新聊天进入 create；旧聊天仅在一次迁移事务读取聊天旧状态；V3 只读 statData、eraMeta 与 statFunc。"
+              "display_name": "读取并核对本次 Sidecar 事务来源",
+              "description": "从真实派发上下文保留原聊天、消息/Swipe/原文依据；读取 Sidecar 前后比对身份和指针，读取失败或来源改变形成 failed 同步上下文，不把新聊天事实与旧消息拼接。"
             },
-            "contract_source": "node_type",
+            "contract_source": "planned_config",
             "flow_kind": "process",
             "effect_scope": "none",
             "runtime_dispatch": "unknown",
             "execution_lock": null,
             "effective_execution_lock": null,
             "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
+            "status": "planned",
+            "planned_behavior": {
+              "kind": "blocking"
+            },
             "requires": [
               {
                 "type": "era.sync.context",
@@ -7547,18 +7549,20 @@
               "path": "configs/nodesets/sidecar_store.jsonc"
             },
             "role": {
-              "display_name": "解析绑定选择",
-              "description": "纯规则决定继续、阻塞或迁移/独立/复制事务。"
+              "display_name": "保留失败来源或解析绑定选择",
+              "description": "源上下文已失败时直接沿原 continue 下游进入同步失败结算，禁止新弹窗和写入；正常情况下复用 create/migrate-legacy/matched/conflict/repair 的既有选择规则。"
             },
-            "contract_source": "node_type",
+            "contract_source": "planned_config",
             "flow_kind": "process",
             "effect_scope": "none",
             "runtime_dispatch": "unknown",
             "execution_lock": null,
             "effective_execution_lock": null,
             "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
+            "status": "planned",
+            "planned_behavior": {
+              "kind": "blocking"
+            },
             "requires": [
               {
                 "type": "era.sidecar.binding.input",
@@ -7636,18 +7640,20 @@
               "path": "configs/nodesets/sidecar_store.jsonc"
             },
             "role": {
-              "display_name": "应用 Sidecar 决议并发布已验证快照",
-              "description": "保留现有 create、migrate、repair、迁移、独立和复制事务；当严格消息派发上下文暂未 ready 时，仍允许将 owner 与当前身份匹配的已验证 V3 记录只读发布到当前页面运行时快照，但禁止迁移、修复、指针或文件写入。正常 ready 路径仍以 revision 复核执行原有受控事务。"
+              "display_name": "按原来源执行恢复、确认保存并提交 Sidecar",
+              "description": "用生产 activeText 构造恢复消息；复核原聊天/绑定/记录 revision，向消息写入、文件写入和指针提交传递 sourceBasis。只在消息持久化 confirmed 后更新本任务依据并继续文件/指针提交；来源变化或保存失败保留实际已写事实并进入既有同步失败结算，不自动重试，不回写新聊天。"
             },
-            "contract_source": "node_type",
+            "contract_source": "planned_config",
             "flow_kind": "process",
             "effect_scope": "none",
             "runtime_dispatch": "unknown",
             "execution_lock": null,
             "effective_execution_lock": null,
             "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
+            "status": "planned",
+            "planned_behavior": {
+              "kind": "blocking"
+            },
             "requires": [
               {
                 "type": "era.sidecar.binding.input",
