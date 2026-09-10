@@ -2,7 +2,7 @@
   <li v-if="matchesFilter" class="variable-node">
     <div class="variable-row" :style="{ paddingLeft: `${depth * 14 + 8}px` }">
       <button
-        v-if="isContainer"
+        v-if="isObject"
         class="tree-toggle"
         type="button"
         :aria-label="`${expanded ? '折叠' : '展开'}变量 ${label}`"
@@ -44,7 +44,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 defineOptions({ name: 'VariableTreeNode' });
 
@@ -64,16 +64,30 @@ defineEmits<{
 
 const expanded = ref(props.depth < 1);
 const isObject = computed(() => props.value !== null && typeof props.value === 'object' && !Array.isArray(props.value));
-const isContainer = computed(() => isObject.value || Array.isArray(props.value));
 const objectValue = computed(() => (isObject.value ? (props.value as Record<string, unknown>) : {}));
 const childKeys = computed(() => Object.keys(objectValue.value));
 const pathLabel = computed(() => props.path.join('.'));
+const searchNeedle = computed(() => props.filter.trim().toLocaleLowerCase());
+watch(
+  searchNeedle,
+  needle => {
+    if (needle) expanded.value = true;
+  },
+  { immediate: true },
+);
 const matchesFilter = computed(() => {
-  const needle = props.filter.trim().toLocaleLowerCase();
-  if (!needle) return true;
-  if (`${pathLabel.value} ${summary.value}`.toLocaleLowerCase().includes(needle)) return true;
-  return isObject.value && childKeys.value.some(key => key.toLocaleLowerCase().includes(needle));
+  if (!searchNeedle.value) return true;
+  return matchesVariable(props.value, pathLabel.value, searchNeedle.value);
 });
+function matchesVariable(value: unknown, path: string, needle: string): boolean {
+  if (path.toLocaleLowerCase().includes(needle)) return true;
+  if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+    return Object.entries(value).some(([key, child]) => matchesVariable(child, `${path}.${key}`, needle));
+  }
+  return String(typeof value === 'string' ? value : JSON.stringify(value))
+    .toLocaleLowerCase()
+    .includes(needle);
+}
 const typeLabel = computed(() => {
   if (props.value === null) return 'null';
   if (Array.isArray(props.value)) return `数组 ${props.value.length}`;

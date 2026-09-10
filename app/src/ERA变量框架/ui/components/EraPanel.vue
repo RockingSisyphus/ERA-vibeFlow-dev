@@ -57,9 +57,8 @@ const requestSwitchView = (viewName: 'FloatingBall' | 'ExpandedView') => {
   height: var(--era-region-height);
   display: flex;
   flex-direction: column;
-  background: var(--bg-blur-heavy);
+  background: var(--bg-solid);
   border: 1px solid var(--border-strong);
-  backdrop-filter: blur(10px);
   border-radius: 16px;
   box-shadow: var(--shadow-panel), var(--shadow-inset);
   overflow: hidden;

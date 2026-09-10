@@ -25,8 +25,7 @@ defineEmits<{ close: [] }>();
   display: flex;
   flex-direction: column;
   border-left: 1px solid var(--border-normal);
-  background: var(--bg-blur-heavy);
-  backdrop-filter: blur(18px);
+  background: var(--bg-solid);
   box-shadow: -18px 0 40px rgba(0, 0, 0, 0.16);
 }
 .drawer-header {
