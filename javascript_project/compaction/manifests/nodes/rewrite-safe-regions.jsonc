@@ -1,1 +1,57 @@
-{"kind":"node","type_key":"era.command_compaction.rewrite_safe_regions","display_name":"局部重写标准标签","category":"ERA 命令压缩","description":"把已证明等价的片段缩写为标准 ERA 标签。","version":"1.0.0","flow_kind":"process","contract":{"requires":[{"type":"era.command_compaction.symbols","cardinality":"exactly_one","display_name":"符号依赖"}],"provides":[{"key":"candidate","type":"era.command_compaction.candidate","display_name":"压缩候选"}],"params_schema":{},"params_defaults":{},"input_semantics":{"era.command_compaction.symbols":["输入：符号依赖。"]},"output_semantics":{"candidate":["输出：保留残余命令的候选。"]}},"implementations":[{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/rewrite_safe_regions.ts","export":"run"}}],"base_libs":["era.command_compaction.engine"],"capabilities":[]}
+{
+  "kind": "node",
+  "type_key": "era.command_compaction.rewrite_safe_regions",
+  "display_name": "生成段候选",
+  "description": "只消费依赖分析结果形成替换，保留单事务不合并及不可重写段原文策略。",
+  "category": "ERA 命令压缩",
+  "version": "1.1.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.command_compaction.symbols",
+        "cardinality": "exactly_one",
+        "display_name": "依赖及屏障"
+      }
+    ],
+    "provides": [
+      {
+        "key": "candidate",
+        "type": "era.command_compaction.candidate",
+        "display_name": "段候选"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.command_compaction.symbols": [
+        "依赖及屏障"
+      ]
+    },
+    "output_semantics": {
+      "candidate": [
+        "段候选"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/rewrite_safe_regions.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.command_compaction.stages",
+    "era.command_compaction.engine"
+  ],
+  "capabilities": []
+}

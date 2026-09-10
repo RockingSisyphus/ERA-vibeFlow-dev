@@ -29,7 +29,7 @@
     "contains_global_state": false,
     "summary": {
       "nodes": 3,
-      "nodesets": 1,
+      "nodesets": 2,
       "explicit_edges": 2,
       "data_edges": 0,
       "reported_edges": 2,
@@ -190,7 +190,7 @@
         "path": "configs/nodesets/compact_layer.jsonc"
       },
       "display_name": "ERA 命令层安全压缩",
-      "description": "纯计算 Nodeset：解析真实六类 ERA 指令，使用显式楼层随机上下文重放原语义，建立跨历史重算仍成立的不变量，并把自动随机闭包作为局部屏障后输出已证明安全的候选。",
+      "description": "按真实顺序分段压缩，统一作用域所有权；最终输出已确认结果，公共同步入口将调用本工作流。",
       "status": "implemented",
       "flow_kind": "process",
       "effect_scope": "none",
@@ -231,16 +231,16 @@
             "as": "compactionResponse"
           }
         ],
-        "max_steps": 11,
+        "max_steps": 7,
         "entry_mode": "sync",
         "execution_lock": null,
         "contains_global_state": false,
         "summary": {
-          "nodes": 11,
-          "nodesets": 1,
-          "explicit_edges": 10,
+          "nodes": 7,
+          "nodesets": 2,
+          "explicit_edges": 6,
           "data_edges": 0,
-          "reported_edges": 10,
+          "reported_edges": 6,
           "contains_global_state": false
         },
         "entry_nodes": [
@@ -260,7 +260,7 @@
             },
             "role": {
               "display_name": "压缩开始",
-              "description": "进入无副作用的命令层压缩。"
+              "description": "压缩开始，不执行算法或宿主操作。"
             },
             "contract_source": "node_type",
             "flow_kind": "terminal",
@@ -292,8 +292,8 @@
               "path": "configs/nodesets/compact_layer.jsonc"
             },
             "role": {
-              "display_name": "解析真实标签",
-              "description": "按原文顺序读取六类 ERA 标签。"
+              "display_name": "解析整层与作用域段",
+              "description": "保留原六类命令解析，按原文区分正文、未知 scope 和相邻同 scope 事务；只在此处划分组。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -315,7 +315,7 @@
               {
                 "key": "parsed",
                 "type": "era.command_compaction.parsed",
-                "display_name": "已解析命令层"
+                "display_name": "整层解析与有序分段"
               }
             ],
             "join_policy": "safe_any",
@@ -330,15 +330,15 @@
             }
           },
           {
-            "id": "execute",
-            "type_used": "era.command_compaction.execute_original_semantics",
+            "id": "initialize_segments",
+            "type_used": "era.command_compaction.initialize_segments",
             "source": {
               "root_id": "era-command-compaction",
               "path": "configs/nodesets/compact_layer.jsonc"
             },
             "role": {
-              "display_name": "重放原始语义",
-              "description": "执行原始变量、函数、meta 与快照语义。"
+              "display_name": "建立顺序压缩状态",
+              "description": "以请求起始 statData/statFunc/drawOffset 初始化分段游标、累计文本和计数，不执行候选重写。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -353,14 +353,14 @@
               {
                 "type": "era.command_compaction.parsed",
                 "cardinality": "exactly_one",
-                "display_name": "已解析命令层"
+                "display_name": "整层解析与分段"
               }
             ],
             "provides": [
               {
-                "key": "trace",
-                "type": "era.command_compaction.semantic_trace",
-                "display_name": "原始语义轨迹"
+                "key": "segment_state",
+                "type": "era.command_compaction.segment.state",
+                "display_name": "顺序压缩状态"
               }
             ],
             "join_policy": "safe_any",
@@ -375,18 +375,18 @@
             }
           },
           {
-            "id": "invariants",
-            "type_used": "era.command_compaction.derive_replay_invariants",
+            "id": "segment_loop",
+            "type_used": "vibeflow.loop.while",
             "source": {
               "root_id": "era-command-compaction",
               "path": "configs/nodesets/compact_layer.jsonc"
             },
             "role": {
-              "display_name": "建立重放不变量",
-              "description": "标注不能跨越的存在性、锁、快照与函数版本条件。"
+              "display_name": "按原文顺序处理分段",
+              "description": "显式运行分段体，前段结果供后段使用，直至 cursor 到达分段末尾。"
             },
-            "contract_source": "node_type",
-            "flow_kind": "process",
+            "contract_source": "system_config",
+            "flow_kind": "predefined",
             "effect_scope": "none",
             "runtime_dispatch": "unknown",
             "execution_lock": null,
@@ -396,23 +396,47 @@
             "planned_behavior": null,
             "requires": [
               {
-                "type": "era.command_compaction.semantic_trace",
+                "type": "era.command_compaction.segment.state",
                 "cardinality": "exactly_one",
-                "display_name": "原始语义轨迹"
+                "display_name": "顺序状态"
               }
             ],
             "provides": [
               {
-                "key": "invariants",
-                "type": "era.command_compaction.invariants",
-                "display_name": "重放不变量"
+                "key": "segment_state_final",
+                "type": "era.command_compaction.segment.state",
+                "display_name": "全部分段结果"
               }
             ],
             "join_policy": "safe_any",
             "async": null,
-            "loop": null,
+            "loop": {
+              "body": "era.command_compaction.segment_step",
+              "max_iterations": null,
+              "stop_when": {
+                "from": "segmentDone",
+                "equals": true
+              },
+              "carry": [
+                {
+                  "from": "era.command_compaction.segment.state",
+                  "as": "segment_state",
+                  "update": "segmentStateNext"
+                }
+              ],
+              "outputs": [
+                {
+                  "from": "segmentStateNext",
+                  "as": "segment_state_final"
+                }
+              ]
+            },
             "io": null,
-            "invokes": null,
+            "invokes": {
+              "kind": "loop_body",
+              "target": "era.command_compaction.segment_step",
+              "target_status": "implemented"
+            },
             "config": {
               "call": {},
               "node_configs": {},
@@ -420,15 +444,15 @@
             }
           },
           {
-            "id": "classify_random_barriers",
-            "type_used": "era.command_compaction.classify_random_barriers",
+            "id": "verify_layer",
+            "type_used": "era.command_compaction.verify_layer",
             "source": {
               "root_id": "era-command-compaction",
               "path": "configs/nodesets/compact_layer.jsonc"
             },
             "role": {
-              "display_name": "划定自动随机局部屏障",
-              "description": "识别 random()、random(seed) 以及通过 statFunc 间接调用它们的闭包，禁止常数折叠、删除或跨越合并；random(seed, draw) 保持普通确定性证明资格。"
+              "display_name": "确认整层候选",
+              "description": "保留原整层复放确认：最终状态、函数库、随机游标及诊断一致；失败保留原文；不重新调用 compactCommandLayer。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -441,196 +465,16 @@
             "planned_behavior": null,
             "requires": [
               {
-                "type": "era.command_compaction.invariants",
+                "type": "era.command_compaction.segment.state",
                 "cardinality": "exactly_one",
-                "display_name": "命令重放不变量"
-              }
-            ],
-            "provides": [
-              {
-                "key": "random_invariants",
-                "type": "era.command_compaction.invariants",
-                "display_name": "含随机屏障的不变量"
-              }
-            ],
-            "join_policy": "safe_any",
-            "async": null,
-            "loop": null,
-            "io": null,
-            "invokes": null,
-            "config": {
-              "call": {},
-              "node_configs": {},
-              "allow_config_override": false
-            }
-          },
-          {
-            "id": "regions",
-            "type_used": "era.command_compaction.partition_safe_regions",
-            "source": {
-              "root_id": "era-command-compaction",
-              "path": "configs/nodesets/compact_layer.jsonc"
-            },
-            "role": {
-              "display_name": "划分安全区间",
-              "description": "把存在性、保护、模板、无效命令与自动随机等不可证明区域作为局部屏障。"
-            },
-            "contract_source": "node_type",
-            "flow_kind": "process",
-            "effect_scope": "none",
-            "runtime_dispatch": "unknown",
-            "execution_lock": null,
-            "effective_execution_lock": null,
-            "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
-            "requires": [
-              {
-                "type": "era.command_compaction.invariants",
-                "cardinality": "exactly_one",
-                "display_name": "重放不变量"
-              }
-            ],
-            "provides": [
-              {
-                "key": "regions",
-                "type": "era.command_compaction.regions",
-                "display_name": "安全压缩区间"
-              }
-            ],
-            "join_policy": "safe_any",
-            "async": null,
-            "loop": null,
-            "io": null,
-            "invokes": null,
-            "config": {
-              "call": {},
-              "node_configs": {},
-              "allow_config_override": false
-            }
-          },
-          {
-            "id": "symbols",
-            "type_used": "era.command_compaction.symbolize_dependencies",
-            "source": {
-              "root_id": "era-command-compaction",
-              "path": "configs/nodesets/compact_layer.jsonc"
-            },
-            "role": {
-              "display_name": "符号化依赖",
-              "description": "复用 expression root 处理表达式和快照依赖。"
-            },
-            "contract_source": "node_type",
-            "flow_kind": "process",
-            "effect_scope": "none",
-            "runtime_dispatch": "unknown",
-            "execution_lock": null,
-            "effective_execution_lock": null,
-            "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
-            "requires": [
-              {
-                "type": "era.command_compaction.regions",
-                "cardinality": "exactly_one",
-                "display_name": "安全压缩区间"
-              }
-            ],
-            "provides": [
-              {
-                "key": "symbols",
-                "type": "era.command_compaction.symbols",
-                "display_name": "符号依赖"
-              }
-            ],
-            "join_policy": "safe_any",
-            "async": null,
-            "loop": null,
-            "io": null,
-            "invokes": null,
-            "config": {
-              "call": {},
-              "node_configs": {},
-              "allow_config_override": false
-            }
-          },
-          {
-            "id": "rewrite",
-            "type_used": "era.command_compaction.rewrite_safe_regions",
-            "source": {
-              "root_id": "era-command-compaction",
-              "path": "configs/nodesets/compact_layer.jsonc"
-            },
-            "role": {
-              "display_name": "局部重写",
-              "description": "只缩写已经证明安全的命令片段。"
-            },
-            "contract_source": "node_type",
-            "flow_kind": "process",
-            "effect_scope": "none",
-            "runtime_dispatch": "unknown",
-            "execution_lock": null,
-            "effective_execution_lock": null,
-            "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
-            "requires": [
-              {
-                "type": "era.command_compaction.symbols",
-                "cardinality": "exactly_one",
-                "display_name": "符号依赖"
-              }
-            ],
-            "provides": [
-              {
-                "key": "candidate",
-                "type": "era.command_compaction.candidate",
-                "display_name": "压缩候选"
-              }
-            ],
-            "join_policy": "safe_any",
-            "async": null,
-            "loop": null,
-            "io": null,
-            "invokes": null,
-            "config": {
-              "call": {},
-              "node_configs": {},
-              "allow_config_override": false
-            }
-          },
-          {
-            "id": "verify",
-            "type_used": "era.command_compaction.verify_replay_equivalence",
-            "source": {
-              "root_id": "era-command-compaction",
-              "path": "configs/nodesets/compact_layer.jsonc"
-            },
-            "role": {
-              "display_name": "验证候选",
-              "description": "以真实重放拒绝不等价候选。"
-            },
-            "contract_source": "node_type",
-            "flow_kind": "process",
-            "effect_scope": "none",
-            "runtime_dispatch": "unknown",
-            "execution_lock": null,
-            "effective_execution_lock": null,
-            "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
-            "requires": [
-              {
-                "type": "era.command_compaction.candidate",
-                "cardinality": "exactly_one",
-                "display_name": "压缩候选"
+                "display_name": "全部分段结果"
               }
             ],
             "provides": [
               {
                 "key": "verified",
                 "type": "era.command_compaction.verified",
-                "display_name": "已验证候选"
+                "display_name": "整层确认结果"
               }
             ],
             "join_policy": "safe_any",
@@ -652,8 +496,8 @@
               "path": "configs/nodesets/compact_layer.jsonc"
             },
             "role": {
-              "display_name": "输出压缩结果",
-              "description": "保留非 ERA 文本并返回规范候选。"
+              "display_name": "输出已确认结果",
+              "description": "仅整理最终 status/content/stat/diagnostics/reasons/parsedCommands/drawOffset；无第二套压缩编排。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -668,14 +512,14 @@
               {
                 "type": "era.command_compaction.verified",
                 "cardinality": "exactly_one",
-                "display_name": "已验证候选"
+                "display_name": "整层确认结果"
               }
             ],
             "provides": [
               {
                 "key": "compaction_response",
                 "type": "era.command_compaction.response",
-                "display_name": "压缩结果"
+                "display_name": "原公共返回格式"
               }
             ],
             "join_policy": "safe_any",
@@ -698,7 +542,7 @@
             },
             "role": {
               "display_name": "压缩结束",
-              "description": "返回纯计算结果。"
+              "description": "压缩结束，不执行算法或宿主操作。"
             },
             "contract_source": "node_type",
             "flow_kind": "terminal",
@@ -736,7 +580,7 @@
           },
           {
             "from": "parse",
-            "to": "execute",
+            "to": "initialize_segments",
             "when": "",
             "roles": [
               "mainline",
@@ -745,8 +589,8 @@
             ]
           },
           {
-            "from": "execute",
-            "to": "invariants",
+            "from": "initialize_segments",
+            "to": "segment_loop",
             "when": "",
             "roles": [
               "mainline",
@@ -755,8 +599,8 @@
             ]
           },
           {
-            "from": "invariants",
-            "to": "classify_random_barriers",
+            "from": "segment_loop",
+            "to": "verify_layer",
             "when": "",
             "roles": [
               "mainline",
@@ -765,47 +609,7 @@
             ]
           },
           {
-            "from": "classify_random_barriers",
-            "to": "regions",
-            "when": "",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "regions",
-            "to": "symbols",
-            "when": "",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "symbols",
-            "to": "rewrite",
-            "when": "",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "rewrite",
-            "to": "verify",
-            "when": "",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "verify",
+            "from": "verify_layer",
             "to": "render",
             "when": "",
             "roles": [
@@ -826,38 +630,568 @@
           }
         ]
       }
+    },
+    "era.command_compaction.segment_step": {
+      "type_key": "era.command_compaction.segment_step",
+      "source": {
+        "root_id": "era-command-compaction",
+        "path": "configs/nodesets/segment_step.jsonc"
+      },
+      "display_name": "顺序压缩一个真实文本段",
+      "description": "原 compact_layer 内的实际循环体；保持原文顺序和跨段状态，不是独立工作流。",
+      "status": "implemented",
+      "flow_kind": "predefined",
+      "effect_scope": "none",
+      "reachable_from_workflow": true,
+      "requires": [
+        {
+          "type": "era.command_compaction.segment.state",
+          "cardinality": "exactly_one",
+          "display_name": "顺序状态"
+        }
+      ],
+      "provides": [
+        {
+          "key": "segment_state_next",
+          "type": "era.command_compaction.segment.state",
+          "display_name": "下一段状态"
+        },
+        {
+          "key": "segment_done",
+          "type": "era.command_compaction.segment.done",
+          "display_name": "全部段结束"
+        }
+      ],
+      "global_config": {},
+      "body": {
+        "source": {
+          "root_id": "era-command-compaction",
+          "path": "configs/nodesets/segment_step.jsonc"
+        },
+        "inputs": [
+          {
+            "key": "segment_state",
+            "type": "era.command_compaction.segment.state",
+            "display_name": "顺序状态",
+            "required": true
+          }
+        ],
+        "outputs": [
+          {
+            "type": "era.command_compaction.segment.state",
+            "cardinality": "exactly_one",
+            "display_name": "下一段状态",
+            "as": "segmentStateNext"
+          },
+          {
+            "type": "era.command_compaction.segment.done",
+            "cardinality": "exactly_one",
+            "display_name": "全部段结束",
+            "as": "segmentDone"
+          }
+        ],
+        "max_steps": 8,
+        "entry_mode": "sync",
+        "execution_lock": null,
+        "contains_global_state": false,
+        "summary": {
+          "nodes": 8,
+          "nodesets": 2,
+          "explicit_edges": 8,
+          "data_edges": 1,
+          "reported_edges": 8,
+          "contains_global_state": false
+        },
+        "entry_nodes": [
+          "start"
+        ],
+        "terminal_nodes": [
+          "end"
+        ],
+        "god_nodes": [],
+        "nodes": [
+          {
+            "id": "start",
+            "type_used": "era.command_compaction.terminal",
+            "source": {
+              "root_id": "era-command-compaction",
+              "path": "configs/nodesets/segment_step.jsonc"
+            },
+            "role": {
+              "display_name": "分段开始",
+              "description": "分段开始，不执行算法或宿主操作。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "terminal",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [],
+            "provides": [],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "select_segment",
+            "type_used": "era.command_compaction.select_segment",
+            "source": {
+              "root_id": "era-command-compaction",
+              "path": "configs/nodesets/segment_step.jsonc"
+            },
+            "role": {
+              "display_name": "准备当前段与起点",
+              "description": "依照 cursor 取正文段或同 scope 事务组；带入前段 statData/statFunc/drawOffset。无段时保留原状态并结束，不制造文本变更。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "process",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.command_compaction.segment.state",
+                "cardinality": "exactly_one",
+                "display_name": "顺序状态"
+              }
+            ],
+            "provides": [
+              {
+                "key": "parsed",
+                "type": "era.command_compaction.parsed",
+                "display_name": "当前段解析结果"
+              },
+              {
+                "key": "segment_state_before",
+                "type": "era.command_compaction.segment.state.before",
+                "display_name": "本段起始状态"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "execute",
+            "type_used": "era.command_compaction.execute_original_semantics",
+            "source": {
+              "root_id": "era-command-compaction",
+              "path": "configs/nodesets/segment_step.jsonc"
+            },
+            "role": {
+              "display_name": "重放当前段原语义",
+              "description": "复用六类命令解释，记录该段原结果和随机游标；携带作用域与是否允许重写的信息。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "process",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.command_compaction.parsed",
+                "cardinality": "exactly_one",
+                "display_name": "当前段"
+              }
+            ],
+            "provides": [
+              {
+                "key": "trace",
+                "type": "era.command_compaction.semantic_trace",
+                "display_name": "原语义轨迹"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "analyze_dependencies",
+            "type_used": "era.command_compaction.analyze_dependencies",
+            "source": {
+              "root_id": "era-command-compaction",
+              "path": "configs/nodesets/segment_step.jsonc"
+            },
+            "role": {
+              "display_name": "分析依赖与局部屏障",
+              "description": "实际计算现有 candidateFor 使用的变量/函数依赖、随机闭包和可重写区域；不再仅传递 trace。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "process",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.command_compaction.semantic_trace",
+                "cardinality": "exactly_one",
+                "display_name": "原语义轨迹"
+              }
+            ],
+            "provides": [
+              {
+                "key": "symbols",
+                "type": "era.command_compaction.symbols",
+                "display_name": "分析结果与原轨迹"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "rewrite",
+            "type_used": "era.command_compaction.rewrite_safe_regions",
+            "source": {
+              "root_id": "era-command-compaction",
+              "path": "configs/nodesets/segment_step.jsonc"
+            },
+            "role": {
+              "display_name": "生成段候选",
+              "description": "只消费依赖分析结果形成替换，保留单事务不合并及不可重写段原文策略。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "process",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.command_compaction.symbols",
+                "cardinality": "exactly_one",
+                "display_name": "依赖及屏障"
+              }
+            ],
+            "provides": [
+              {
+                "key": "candidate",
+                "type": "era.command_compaction.candidate",
+                "display_name": "段候选"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "verify",
+            "type_used": "era.command_compaction.verify_replay_equivalence",
+            "source": {
+              "root_id": "era-command-compaction",
+              "path": "configs/nodesets/segment_step.jsonc"
+            },
+            "role": {
+              "display_name": "确认段候选",
+              "description": "按原起点复放候选；保持原结果、诊断和随机游标语义，输出已确认文本与保留原文理由。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "process",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.command_compaction.candidate",
+                "cardinality": "exactly_one",
+                "display_name": "段候选"
+              }
+            ],
+            "provides": [
+              {
+                "key": "verified",
+                "type": "era.command_compaction.verified",
+                "display_name": "段确认结果"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "advance_segment",
+            "type_used": "era.command_compaction.advance_segment",
+            "source": {
+              "root_id": "era-command-compaction",
+              "path": "configs/nodesets/segment_step.jsonc"
+            },
+            "role": {
+              "display_name": "继承状态并推进分段",
+              "description": "继承原段的结束状态与随机游标，累计文本/诊断/理由/计数并推进 cursor；不重新执行压缩算法。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "process",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.command_compaction.segment.state.before",
+                "cardinality": "exactly_one",
+                "display_name": "原顺序状态"
+              },
+              {
+                "type": "era.command_compaction.verified",
+                "cardinality": "exactly_one",
+                "display_name": "段确认结果"
+              }
+            ],
+            "provides": [
+              {
+                "key": "segment_state_next",
+                "type": "era.command_compaction.segment.state",
+                "display_name": "下一段状态"
+              },
+              {
+                "key": "segment_done",
+                "type": "era.command_compaction.segment.done",
+                "display_name": "全部段结束"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "end",
+            "type_used": "era.command_compaction.terminal",
+            "source": {
+              "root_id": "era-command-compaction",
+              "path": "configs/nodesets/segment_step.jsonc"
+            },
+            "role": {
+              "display_name": "分段结束",
+              "description": "分段结束，不执行算法或宿主操作。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "terminal",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [],
+            "provides": [],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": "start",
+            "to": "select_segment",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "select_segment",
+            "to": "execute",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "execute",
+            "to": "analyze_dependencies",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "analyze_dependencies",
+            "to": "rewrite",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "rewrite",
+            "to": "verify",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "verify",
+            "to": "advance_segment",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "advance_segment",
+            "to": "end",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "select_segment",
+            "to": "advance_segment",
+            "when": "",
+            "roles": [
+              "data_bypass",
+              "transfer"
+            ]
+          }
+        ]
+      }
     }
   },
   "node_types": {
-    "era.command_compaction.classify_random_barriers": {
-      "display_name": "划定自动随机局部屏障",
-      "description": "把直接或间接自动 random 命令作为局部屏障；显式 random(seed,draw) 保持确定性资格。",
+    "era.command_compaction.advance_segment": {
+      "display_name": "继承状态并推进分段",
+      "description": "继承原段的结束状态与随机游标，累计文本/诊断/理由/计数并推进 cursor；不重新执行压缩算法。",
       "category": "ERA 命令压缩",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "flow_kind": "process",
       "contract": {
         "requires": [
           {
-            "type": "era.command_compaction.invariants",
+            "type": "era.command_compaction.segment.state.before",
             "cardinality": "exactly_one",
-            "display_name": "命令重放不变量"
+            "display_name": "原顺序状态"
+          },
+          {
+            "type": "era.command_compaction.verified",
+            "cardinality": "exactly_one",
+            "display_name": "段确认结果"
           }
         ],
         "provides": [
           {
-            "key": "random_invariants",
-            "type": "era.command_compaction.invariants",
-            "display_name": "含随机屏障的不变量"
+            "key": "segment_state_next",
+            "type": "era.command_compaction.segment.state",
+            "display_name": "下一段状态"
+          },
+          {
+            "key": "segment_done",
+            "type": "era.command_compaction.segment.done",
+            "display_name": "全部段结束"
           }
         ],
         "input_semantics": {
-          "era.command_compaction.invariants": [
-            "输入：原命令重放不变量。"
+          "era.command_compaction.verified": [
+            "段确认结果"
+          ],
+          "era.command_compaction.segment.state.before": [
+            "原顺序状态"
           ]
         },
         "output_semantics": {
-          "random_invariants": [
-            "输出：由纯引擎执行局部随机屏障规则的不变量。"
+          "segment_state_next": [
+            "下一段状态"
+          ],
+          "segment_done": [
+            "全部段结束"
           ]
         },
         "params_schema": {},
@@ -873,42 +1207,42 @@
           ],
           "source": {
             "kind": "file",
-            "ref": "nodes/classify_random_barriers.ts",
+            "ref": "nodes/advance_segment.ts",
             "export": "run"
           },
           "completion": "immediate"
         }
       ]
     },
-    "era.command_compaction.derive_replay_invariants": {
-      "display_name": "建立重放不变量",
-      "description": "标注存在性、保护和快照等不可丢失条件。",
+    "era.command_compaction.analyze_dependencies": {
+      "display_name": "分析依赖与局部屏障",
+      "description": "实际计算现有 candidateFor 使用的变量/函数依赖、随机闭包和可重写区域；不再仅传递 trace。",
       "category": "ERA 命令压缩",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "flow_kind": "process",
       "contract": {
         "requires": [
           {
             "type": "era.command_compaction.semantic_trace",
             "cardinality": "exactly_one",
-            "display_name": "原始语义轨迹"
+            "display_name": "原语义轨迹"
           }
         ],
         "provides": [
           {
-            "key": "invariants",
-            "type": "era.command_compaction.invariants",
-            "display_name": "重放不变量"
+            "key": "symbols",
+            "type": "era.command_compaction.symbols",
+            "display_name": "分析结果与原轨迹"
           }
         ],
         "input_semantics": {
           "era.command_compaction.semantic_trace": [
-            "输入：原始重放轨迹。"
+            "原语义轨迹"
           ]
         },
         "output_semantics": {
-          "invariants": [
-            "输出：保守不变量。"
+          "symbols": [
+            "分析结果与原轨迹"
           ]
         },
         "params_schema": {},
@@ -924,7 +1258,7 @@
           ],
           "source": {
             "kind": "file",
-            "ref": "nodes/derive_replay_invariants.ts",
+            "ref": "nodes/analyze_dependencies.ts",
             "export": "run"
           },
           "completion": "immediate"
@@ -932,34 +1266,34 @@
       ]
     },
     "era.command_compaction.execute_original_semantics": {
-      "display_name": "执行原始严格语义",
-      "description": "重放变量、函数、模板、meta 与快照语义。",
+      "display_name": "重放当前段原语义",
+      "description": "复用六类命令解释，记录该段原结果和随机游标；携带作用域与是否允许重写的信息。",
       "category": "ERA 命令压缩",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "flow_kind": "process",
       "contract": {
         "requires": [
           {
             "type": "era.command_compaction.parsed",
             "cardinality": "exactly_one",
-            "display_name": "已解析命令层"
+            "display_name": "当前段"
           }
         ],
         "provides": [
           {
             "key": "trace",
             "type": "era.command_compaction.semantic_trace",
-            "display_name": "原始语义轨迹"
+            "display_name": "原语义轨迹"
           }
         ],
         "input_semantics": {
           "era.command_compaction.parsed": [
-            "输入：有序真实命令。"
+            "当前段"
           ]
         },
         "output_semantics": {
           "trace": [
-            "输出：原始状态、函数库与诊断。"
+            "原语义轨迹"
           ]
         },
         "params_schema": {},
@@ -982,11 +1316,62 @@
         }
       ]
     },
-    "era.command_compaction.parse_command_blocks": {
-      "display_name": "解析真实 ERA 指令标签",
-      "description": "按原文位置读取六类标签并保留非 ERA 文本。",
+    "era.command_compaction.initialize_segments": {
+      "display_name": "建立顺序压缩状态",
+      "description": "以请求起始 statData/statFunc/drawOffset 初始化分段游标、累计文本和计数，不执行候选重写。",
       "category": "ERA 命令压缩",
-      "version": "1.0.0",
+      "version": "1.1.0",
+      "flow_kind": "process",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.command_compaction.parsed",
+            "cardinality": "exactly_one",
+            "display_name": "整层解析与分段"
+          }
+        ],
+        "provides": [
+          {
+            "key": "segment_state",
+            "type": "era.command_compaction.segment.state",
+            "display_name": "顺序压缩状态"
+          }
+        ],
+        "input_semantics": {
+          "era.command_compaction.parsed": [
+            "整层解析与分段"
+          ]
+        },
+        "output_semantics": {
+          "segment_state": [
+            "顺序压缩状态"
+          ]
+        },
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser",
+            "node"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/initialize_segments.ts",
+            "export": "run"
+          },
+          "completion": "immediate"
+        }
+      ]
+    },
+    "era.command_compaction.parse_command_blocks": {
+      "display_name": "解析整层与作用域段",
+      "description": "保留原六类命令解析，按原文区分正文、未知 scope 和相邻同 scope 事务；只在此处划分组。",
+      "category": "ERA 命令压缩",
+      "version": "1.1.0",
       "flow_kind": "process",
       "contract": {
         "requires": [
@@ -1000,17 +1385,17 @@
           {
             "key": "parsed",
             "type": "era.command_compaction.parsed",
-            "display_name": "已解析命令层"
+            "display_name": "整层解析与有序分段"
           }
         ],
         "input_semantics": {
           "era.command_compaction.request": [
-            "输入：消息文本及层起始状态。"
+            "压缩请求"
           ]
         },
         "output_semantics": {
           "parsed": [
-            "输出：有定位的标准命令层。"
+            "整层解析与有序分段"
           ]
         },
         "params_schema": {},
@@ -1033,86 +1418,35 @@
         }
       ]
     },
-    "era.command_compaction.partition_safe_regions": {
-      "display_name": "划分安全压缩区间",
-      "description": "保留屏障并隔离可局部证明的标准命令片段。",
-      "category": "ERA 命令压缩",
-      "version": "1.0.0",
-      "flow_kind": "process",
-      "contract": {
-        "requires": [
-          {
-            "type": "era.command_compaction.invariants",
-            "cardinality": "exactly_one",
-            "display_name": "重放不变量"
-          }
-        ],
-        "provides": [
-          {
-            "key": "regions",
-            "type": "era.command_compaction.regions",
-            "display_name": "安全压缩区间"
-          }
-        ],
-        "input_semantics": {
-          "era.command_compaction.invariants": [
-            "输入：重放约束。"
-          ]
-        },
-        "output_semantics": {
-          "regions": [
-            "输出：可压缩区间与屏障。"
-          ]
-        },
-        "params_schema": {},
-        "params_defaults": {},
-        "examples": []
-      },
-      "implementations": [
-        {
-          "language": "typescript",
-          "targets": [
-            "browser",
-            "node"
-          ],
-          "source": {
-            "kind": "file",
-            "ref": "nodes/partition_safe_regions.ts",
-            "export": "run"
-          },
-          "completion": "immediate"
-        }
-      ]
-    },
     "era.command_compaction.render_compaction_result": {
-      "display_name": "输出规范压缩结果",
-      "description": "回填非 ERA 文本并输出最终规范消息。",
+      "display_name": "输出已确认结果",
+      "description": "仅整理最终 status/content/stat/diagnostics/reasons/parsedCommands/drawOffset；无第二套压缩编排。",
       "category": "ERA 命令压缩",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "flow_kind": "process",
       "contract": {
         "requires": [
           {
             "type": "era.command_compaction.verified",
             "cardinality": "exactly_one",
-            "display_name": "已验证候选"
+            "display_name": "整层确认结果"
           }
         ],
         "provides": [
           {
             "key": "compaction_response",
             "type": "era.command_compaction.response",
-            "display_name": "压缩结果"
+            "display_name": "原公共返回格式"
           }
         ],
         "input_semantics": {
           "era.command_compaction.verified": [
-            "输入：验证后的候选。"
+            "整层确认结果"
           ]
         },
         "output_semantics": {
           "compaction_response": [
-            "输出：压缩消息和可观察状态。"
+            "原公共返回格式"
           ]
         },
         "params_schema": {},
@@ -1136,34 +1470,34 @@
       ]
     },
     "era.command_compaction.rewrite_safe_regions": {
-      "display_name": "局部重写标准标签",
-      "description": "把已证明等价的片段缩写为标准 ERA 标签。",
+      "display_name": "生成段候选",
+      "description": "只消费依赖分析结果形成替换，保留单事务不合并及不可重写段原文策略。",
       "category": "ERA 命令压缩",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "flow_kind": "process",
       "contract": {
         "requires": [
           {
             "type": "era.command_compaction.symbols",
             "cardinality": "exactly_one",
-            "display_name": "符号依赖"
+            "display_name": "依赖及屏障"
           }
         ],
         "provides": [
           {
             "key": "candidate",
             "type": "era.command_compaction.candidate",
-            "display_name": "压缩候选"
+            "display_name": "段候选"
           }
         ],
         "input_semantics": {
           "era.command_compaction.symbols": [
-            "输入：符号依赖。"
+            "依赖及屏障"
           ]
         },
         "output_semantics": {
           "candidate": [
-            "输出：保留残余命令的候选。"
+            "段候选"
           ]
         },
         "params_schema": {},
@@ -1186,35 +1520,43 @@
         }
       ]
     },
-    "era.command_compaction.symbolize_dependencies": {
-      "display_name": "符号化变量与函数依赖",
-      "description": "借助表达式 root 推导变量和函数快照依赖。",
+    "era.command_compaction.select_segment": {
+      "display_name": "准备当前段与起点",
+      "description": "依照 cursor 取正文段或同 scope 事务组；带入前段 statData/statFunc/drawOffset。无段时保留原状态并结束，不制造文本变更。",
       "category": "ERA 命令压缩",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "flow_kind": "process",
       "contract": {
         "requires": [
           {
-            "type": "era.command_compaction.regions",
+            "type": "era.command_compaction.segment.state",
             "cardinality": "exactly_one",
-            "display_name": "安全压缩区间"
+            "display_name": "顺序状态"
           }
         ],
         "provides": [
           {
-            "key": "symbols",
-            "type": "era.command_compaction.symbols",
-            "display_name": "符号依赖"
+            "key": "parsed",
+            "type": "era.command_compaction.parsed",
+            "display_name": "当前段解析结果"
+          },
+          {
+            "key": "segment_state_before",
+            "type": "era.command_compaction.segment.state.before",
+            "display_name": "本段起始状态"
           }
         ],
         "input_semantics": {
-          "era.command_compaction.regions": [
-            "输入：局部命令区域。"
+          "era.command_compaction.segment.state": [
+            "顺序状态"
           ]
         },
         "output_semantics": {
-          "symbols": [
-            "输出：规范符号依赖。"
+          "parsed": [
+            "当前段解析结果"
+          ],
+          "segment_state_before": [
+            "保持本段起始状态供推进游标"
           ]
         },
         "params_schema": {},
@@ -1230,7 +1572,7 @@
           ],
           "source": {
             "kind": "file",
-            "ref": "nodes/symbolize_dependencies.ts",
+            "ref": "nodes/select_segment.ts",
             "export": "run"
           },
           "completion": "immediate"
@@ -1268,35 +1610,86 @@
         }
       ]
     },
-    "era.command_compaction.verify_replay_equivalence": {
-      "display_name": "验证重放等价",
-      "description": "以真实重放拒绝候选的状态或函数库差异。",
+    "era.command_compaction.verify_layer": {
+      "display_name": "确认整层候选",
+      "description": "保留原整层复放确认：最终状态、函数库、随机游标及诊断一致；失败保留原文；不重新调用 compactCommandLayer。",
       "category": "ERA 命令压缩",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "flow_kind": "process",
       "contract": {
         "requires": [
           {
-            "type": "era.command_compaction.candidate",
+            "type": "era.command_compaction.segment.state",
             "cardinality": "exactly_one",
-            "display_name": "压缩候选"
+            "display_name": "全部分段结果"
           }
         ],
         "provides": [
           {
             "key": "verified",
             "type": "era.command_compaction.verified",
-            "display_name": "已验证候选"
+            "display_name": "整层确认结果"
           }
         ],
         "input_semantics": {
-          "era.command_compaction.candidate": [
-            "输入：局部重写候选。"
+          "era.command_compaction.segment.state": [
+            "全部分段结果"
           ]
         },
         "output_semantics": {
           "verified": [
-            "输出：已验证候选或退回决定。"
+            "整层确认结果"
+          ]
+        },
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser",
+            "node"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/verify_layer.ts",
+            "export": "run"
+          },
+          "completion": "immediate"
+        }
+      ]
+    },
+    "era.command_compaction.verify_replay_equivalence": {
+      "display_name": "确认段候选",
+      "description": "按原起点复放候选；保持原结果、诊断和随机游标语义，输出已确认文本与保留原文理由。",
+      "category": "ERA 命令压缩",
+      "version": "1.1.0",
+      "flow_kind": "process",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.command_compaction.candidate",
+            "cardinality": "exactly_one",
+            "display_name": "段候选"
+          }
+        ],
+        "provides": [
+          {
+            "key": "verified",
+            "type": "era.command_compaction.verified",
+            "display_name": "段确认结果"
+          }
+        ],
+        "input_semantics": {
+          "era.command_compaction.candidate": [
+            "段候选"
+          ]
+        },
+        "output_semantics": {
+          "verified": [
+            "段确认结果"
           ]
         },
         "params_schema": {},
@@ -1394,6 +1787,121 @@
           "$schema": "https://json-schema.org/draft/2020-12/schema"
         }
       },
+      "era.command_compaction.segment.done": {
+        "kind": "data_schema",
+        "type_key": "era.command_compaction.segment.done",
+        "representation": "json",
+        "display_name": "全部分段处理完成",
+        "description": "cursor 已处理完所有分段的循环终止值。",
+        "schema": {
+          "type": "boolean",
+          "$schema": "https://json-schema.org/draft/2020-12/schema"
+        }
+      },
+      "era.command_compaction.segment.state": {
+        "kind": "data_schema",
+        "type_key": "era.command_compaction.segment.state",
+        "representation": "json",
+        "display_name": "按顺序继承的分段压缩状态",
+        "description": "顺序分段循环的当前状态；含游标、层请求、段列表和累计结果。",
+        "schema": {
+          "type": "object",
+          "required": [
+            "cursor",
+            "segments",
+            "request",
+            "statData",
+            "statFunc",
+            "drawOffset",
+            "parts",
+            "diagnostics",
+            "reasons"
+          ],
+          "properties": {
+            "cursor": {
+              "type": "integer"
+            },
+            "segments": {
+              "type": "array"
+            },
+            "request": {
+              "type": "object"
+            },
+            "statData": {
+              "type": "object"
+            },
+            "statFunc": {
+              "type": "object"
+            },
+            "drawOffset": {
+              "type": "integer"
+            },
+            "parts": {
+              "type": "array"
+            },
+            "diagnostics": {
+              "type": "array"
+            },
+            "reasons": {
+              "type": "array"
+            }
+          },
+          "additionalProperties": true,
+          "$schema": "https://json-schema.org/draft/2020-12/schema"
+        }
+      },
+      "era.command_compaction.segment.state.before": {
+        "kind": "data_schema",
+        "type_key": "era.command_compaction.segment.state.before",
+        "representation": "json",
+        "display_name": "按顺序继承的分段压缩状态",
+        "description": "本段执行前状态，仅供段结束时推进游标；与循环下一状态分离。",
+        "schema": {
+          "type": "object",
+          "required": [
+            "cursor",
+            "segments",
+            "request",
+            "statData",
+            "statFunc",
+            "drawOffset",
+            "parts",
+            "diagnostics",
+            "reasons"
+          ],
+          "properties": {
+            "cursor": {
+              "type": "integer"
+            },
+            "segments": {
+              "type": "array"
+            },
+            "request": {
+              "type": "object"
+            },
+            "statData": {
+              "type": "object"
+            },
+            "statFunc": {
+              "type": "object"
+            },
+            "drawOffset": {
+              "type": "integer"
+            },
+            "parts": {
+              "type": "array"
+            },
+            "diagnostics": {
+              "type": "array"
+            },
+            "reasons": {
+              "type": "array"
+            }
+          },
+          "additionalProperties": true,
+          "$schema": "https://json-schema.org/draft/2020-12/schema"
+        }
+      },
       "era.command_compaction.semantic_trace": {
         "kind": "data_schema",
         "type_key": "era.command_compaction.semantic_trace",
@@ -1436,7 +1944,7 @@
         "kind": "base_lib",
         "id": "era.command_compaction.engine",
         "display_name": "ERA 命令层安全压缩引擎",
-        "description": "解析真实 ERA 六类指令、重放严格语义、建立保守不变量并输出可证明安全的局部压缩；不访问宿主或全局状态。",
+        "description": "六类指令解析、语义重放、依赖事实与候选重写算法；完整流程由原 Config 编排，算法不访问宿主。",
         "category": "ERA 命令压缩",
         "version": "1.0.0",
         "implementations": [
@@ -1457,6 +1965,32 @@
         "external_packages": [
           "@era/vibeflow-expression"
         ]
+      },
+      "era.command_compaction.stages": {
+        "kind": "base_lib",
+        "id": "era.command_compaction.stages",
+        "display_name": "顺序分段压缩阶段",
+        "description": "拥有作用域分段、段状态继承与确认结果构造；流程顺序由 Config 控制。",
+        "category": "命令压缩",
+        "version": "1.0.0",
+        "implementations": [
+          {
+            "language": "typescript",
+            "targets": [
+              "browser",
+              "node"
+            ],
+            "source": {
+              "kind": "file",
+              "ref": "base_lib/compaction_stages.ts"
+            },
+            "completion": "immediate"
+          }
+        ],
+        "dependencies": [
+          "era.command_compaction.engine"
+        ],
+        "external_packages": []
       }
     },
     "capabilities": {},

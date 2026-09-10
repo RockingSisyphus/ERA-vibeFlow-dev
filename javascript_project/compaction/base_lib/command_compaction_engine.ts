@@ -30,6 +30,7 @@ export type CommandKind =
   | "function-delete";
 
 export interface CommandDiagnostic {
+  readonly [key: string]: unknown;
   readonly code: string;
   readonly message: string;
   readonly commandIndex?: number;
@@ -37,6 +38,7 @@ export interface CommandDiagnostic {
 }
 
 export interface ParsedCommand {
+  readonly [key: string]: unknown;
   readonly index: number;
   readonly kind: CommandKind;
   readonly tag: string;
@@ -47,6 +49,7 @@ export interface ParsedCommand {
 }
 
 export interface CommandCompactionRequest {
+  readonly [key: string]: unknown;
   readonly content: string;
   readonly initialStatData: Readonly<Record<string, unknown>>;
   readonly initialStatFunc?: Readonly<Record<string, unknown>>;
@@ -64,6 +67,7 @@ export interface CommandCompactionRequest {
 }
 
 export interface CommandCompactionResponse {
+  readonly [key: string]: unknown;
   readonly status: "compacted" | "partial" | "unchanged" | "invalid";
   readonly content: string;
   readonly finalStatData: Readonly<Record<string, unknown>>;
@@ -74,20 +78,23 @@ export interface CommandCompactionResponse {
   readonly nextRandomDrawOffset: number;
 }
 
-interface ParsedLayer {
+export interface ParsedLayer {
+  readonly [key: string]: unknown;
   readonly request: CommandCompactionRequest;
   readonly commands: readonly ParsedCommand[];
   readonly diagnostics: readonly CommandDiagnostic[];
 }
 
-interface SemanticTrace extends ParsedLayer {
+export interface SemanticTrace extends ParsedLayer {
+  readonly [key: string]: unknown;
   readonly finalStatData: Readonly<Record<string, unknown>>;
   readonly finalStatFunc: Readonly<Record<string, unknown>>;
   readonly diagnostics: readonly CommandDiagnostic[];
   readonly nextRandomDrawOffset: number;
 }
 
-interface Candidate extends SemanticTrace {
+export interface Candidate extends SemanticTrace {
+  readonly [key: string]: unknown;
   readonly replacements: ReadonlyMap<number, string>;
   readonly reasons: readonly string[];
 }
@@ -112,11 +119,11 @@ function plain(value: unknown): value is Record<string, unknown> {
   return proto === Object.prototype || proto === null;
 }
 
-function clone<T>(value: T): T {
+export function clone<T>(value: T): T {
   return structuredClone(value);
 }
 
-function equal(left: unknown, right: unknown): boolean {
+export function equal(left: unknown, right: unknown): boolean {
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
@@ -550,7 +557,7 @@ function nestingRecord(paths: readonly { readonly path: string; readonly value: 
   return result;
 }
 
-function renderTag(tag: string, data: Record<string, unknown>): string {
+export function renderTag(tag: string, data: Record<string, unknown>): string {
   return `<${tag}>\n${JSON.stringify(data)}\n</${tag}>`;
 }
 
@@ -696,7 +703,8 @@ function compactInsertRun(commands: readonly ParsedCommand[]): string | null {
   return plain(merged) && Object.keys(merged).length > 0 ? renderTag("VariableInsert", merged) : null;
 }
 
-function candidateFor(trace: SemanticTrace): Candidate {
+export function candidateFor(analysis: DependencyAnalysis): Candidate {
+  const { trace } = analysis;
   const replacements = new Map<number, string>();
   const reasons: string[] = [];
   if (trace.diagnostics.length > 0) return { ...trace, replacements, reasons: ["原命令含诊断，保留全部标签。"] };
@@ -709,7 +717,7 @@ function candidateFor(trace: SemanticTrace): Candidate {
     let replacement: string | null = null;
     if (kind === "edit") {
       if (cursor === 0) {
-        const facts = run.map((command) => commandExpressionFacts(trace, command));
+        const facts = run.map((command) => analysis.facts[command.index]!);
         const priorPaths = new Set<string>();
         let segmentStart = 0;
         const compactSegment = (segmentEnd: number): void => {
@@ -760,7 +768,7 @@ function candidateFor(trace: SemanticTrace): Candidate {
   return { ...trace, replacements, reasons };
 }
 
-function render(trace: SemanticTrace, replacements: ReadonlyMap<number, string>): string {
+export function render(trace: SemanticTrace, replacements: ReadonlyMap<number, string>): string {
   let content = trace.request.content;
   for (const command of [...trace.commands].sort((left, right) => right.start - left.start)) {
     const replacement = replacements.get(command.index);
@@ -769,7 +777,7 @@ function render(trace: SemanticTrace, replacements: ReadonlyMap<number, string>)
   return content;
 }
 
-function equivalent(trace: SemanticTrace, content: string): boolean {
+export function equivalent(trace: SemanticTrace, content: string): boolean {
   const replay = executeOriginalSemantics(parseCommandLayer({ ...trace.request, content }));
   const sameDiagnostics = replay.diagnostics.length === trace.diagnostics.length && replay.diagnostics.every((issue, index) => {
     const expected = trace.diagnostics[index];
@@ -781,194 +789,20 @@ function equivalent(trace: SemanticTrace, content: string): boolean {
     replay.nextRandomDrawOffset === trace.nextRandomDrawOffset;
 }
 
-function compactBareCommandLayer(input: unknown): CommandCompactionResponse {
-  const parsed = parseCommandLayer(input);
-  const trace = executeOriginalSemantics(parsed);
-  if (parsed.diagnostics.length > 0) return { status: "invalid", content: parsed.request.content, finalStatData: trace.finalStatData, finalStatFunc: trace.finalStatFunc, diagnostics: trace.diagnostics, reasons: ["标签 JSON 无效，未改写消息。"], parsedCommands: parsed.commands, nextRandomDrawOffset: trace.nextRandomDrawOffset };
-  const candidate = candidateFor(trace);
-  if (candidate.replacements.size === 0) return { status: "unchanged", content: trace.request.content, finalStatData: trace.finalStatData, finalStatFunc: trace.finalStatFunc, diagnostics: trace.diagnostics, reasons: candidate.reasons.length ? candidate.reasons : ["没有可证明安全的缩写。"], parsedCommands: trace.commands, nextRandomDrawOffset: trace.nextRandomDrawOffset };
-  const content = render(trace, candidate.replacements);
-  if (!equivalent(trace, content)) return { status: "unchanged", content: trace.request.content, finalStatData: trace.finalStatData, finalStatFunc: trace.finalStatFunc, diagnostics: trace.diagnostics, reasons: [...candidate.reasons, "候选未通过同一起点真实重放，已退回原命令。"], parsedCommands: trace.commands, nextRandomDrawOffset: trace.nextRandomDrawOffset };
-  const all = trace.commands.every((command) => candidate.replacements.has(command.index));
-  return { status: all ? "compacted" : "partial", content, finalStatData: trace.finalStatData, finalStatFunc: trace.finalStatFunc, diagnostics: trace.diagnostics, reasons: candidate.reasons, parsedCommands: trace.commands, nextRandomDrawOffset: trace.nextRandomDrawOffset };
-}
 
-interface ScopedTransaction {
-  readonly start: number;
-  readonly end: number;
-  readonly raw: string;
-  readonly body: string;
-  readonly scope: "m" | "b" | "a" | null;
+/** Facts used by rewriting are computed at the explicit analysis stage. */
+export interface DependencyAnalysis {
+  readonly [key: string]: unknown;
+  readonly trace: SemanticTrace;
+  readonly facts: Readonly<Record<number, ReturnType<typeof commandExpressionFacts>>>;
 }
-
-function scopedTransactions(content: string): readonly ScopedTransaction[] {
-  const result: ScopedTransaction[] = [];
-  const pattern = /<era_tx\b([^>]*)>([\s\S]*?)<\/era_tx>/giu;
-  let match: RegExpExecArray | null;
-  while ((match = pattern.exec(content)) !== null) {
-    const scopeMatch = /\bs\s*=\s*["']([^"']+)["']/iu.exec(match[1] ?? "");
-    const rawScope = scopeMatch?.[1] ?? "";
-    result.push({
-      start: match.index,
-      end: match.index + match[0].length,
-      raw: match[0],
-      body: match[2] ?? "",
-      scope: rawScope === "m" || rawScope === "b" || rawScope === "a" ? rawScope : null,
-    });
+export function analyzeDependencies(trace: SemanticTrace): DependencyAnalysis {
+  const facts: Record<number, ReturnType<typeof commandExpressionFacts>> = {};
+  if (trace.diagnostics.length === 0) {
+    for (const command of trace.commands) {
+      if (command.kind !== "edit") break;
+      facts[command.index] = commandExpressionFacts(trace, command);
+    }
   }
-  return result;
+  return { trace, facts };
 }
-
-function withStartState(
-  request: CommandCompactionRequest,
-  content: string,
-  statData: Readonly<Record<string, unknown>>,
-  statFunc: Readonly<Record<string, unknown>>,
-): CommandCompactionRequest {
-  return { ...request, content, initialStatData: statData, initialStatFunc: statFunc };
-}
-
-/**
- * era_tx 的 scope 是不可跨越的语义边界。只有相邻、同 scope 且中间只有空白的
- * wrapper 才合并为一个候选；不同 scope、非法 wrapper 与普通正文均保留原顺序。
- */
-export function compactCommandLayer(input: unknown): CommandCompactionResponse {
-  const parsed = parseCommandLayer(input);
-  const transactions = scopedTransactions(parsed.request.content);
-  if (transactions.length === 0) return compactBareCommandLayer(parsed.request);
-
-  let cursor = 0;
-  let statData = clone(parsed.request.initialStatData);
-  let statFunc = clone(parsed.request.initialStatFunc ?? {});
-  let randomDrawOffset = parsed.request.randomContext?.drawOffset ?? 0;
-  let content = "";
-  let changed = false;
-  let commandSegments = 0;
-  let rewrittenSegments = 0;
-  const diagnostics: CommandDiagnostic[] = [];
-  const reasons: string[] = [];
-
-  const consume = (text: string, allowRewrite: boolean): string => {
-    const result = compactBareCommandLayer(
-      withStartState(
-        {
-          ...parsed.request,
-          ...(parsed.request.randomContext
-            ? {
-                randomContext: {
-                  sourceKey: parsed.request.randomContext.sourceKey,
-                  drawOffset: randomDrawOffset,
-                },
-              }
-            : {}),
-        },
-        text,
-        statData,
-        statFunc,
-      ),
-    );
-    statData = clone(result.finalStatData);
-    statFunc = clone(result.finalStatFunc);
-    randomDrawOffset = result.nextRandomDrawOffset;
-    diagnostics.push(...result.diagnostics);
-    reasons.push(...result.reasons);
-    if (result.parsedCommands.length > 0) {
-      commandSegments += 1;
-      if (allowRewrite && result.content !== text && result.diagnostics.length === 0) {
-        rewrittenSegments += 1;
-        changed = true;
-        return result.content;
-      }
-    }
-    return text;
-  };
-
-  for (let index = 0; index < transactions.length;) {
-    const current = transactions[index]!;
-    const prefix = parsed.request.content.slice(cursor, current.start);
-    content += consume(prefix, true);
-
-    if (current.scope === null) {
-      consume(current.body, false);
-      content += current.raw;
-      cursor = current.end;
-      index += 1;
-      continue;
-    }
-
-    let endIndex = index;
-    let combinedBody = current.body;
-    let rawGroup = current.raw;
-    while (endIndex + 1 < transactions.length) {
-      const next = transactions[endIndex + 1]!;
-      const between = parsed.request.content.slice(transactions[endIndex]!.end, next.start);
-      if (next.scope !== current.scope || between.trim().length > 0) break;
-      combinedBody += `${between}${next.body}`;
-      rawGroup += `${between}${next.raw}`;
-      endIndex += 1;
-    }
-
-    // 单个事务不是 API 分段压缩目标；避免只因规范化空白或改写为 @path
-    // 而制造无收益的消息变更。只有至少两个相邻同 scope 事务才允许合并。
-    const compactedBody = consume(combinedBody, endIndex > index);
-    if (compactedBody !== combinedBody) {
-      content += `<era_tx s="${current.scope}">${compactedBody}</era_tx>`;
-    } else {
-      content += rawGroup;
-    }
-    cursor = transactions[endIndex]!.end;
-    index = endIndex + 1;
-  }
-
-  content += consume(parsed.request.content.slice(cursor), true);
-  const originalTrace = executeOriginalSemantics(parsed);
-  const replay = executeOriginalSemantics(parseCommandLayer({ ...parsed.request, content }));
-  const equivalentResult = equal(originalTrace.finalStatData, replay.finalStatData) &&
-    equal(originalTrace.finalStatFunc, replay.finalStatFunc) &&
-    originalTrace.nextRandomDrawOffset === replay.nextRandomDrawOffset &&
-    originalTrace.diagnostics.length === replay.diagnostics.length &&
-    originalTrace.diagnostics.every((issue, index) => issue.code === replay.diagnostics[index]?.code && issue.path === replay.diagnostics[index]?.path);
-  if (!changed || !equivalentResult) {
-    return {
-      status: diagnostics.length > 0 ? "invalid" : "unchanged",
-      content: parsed.request.content,
-      finalStatData: originalTrace.finalStatData,
-      finalStatFunc: originalTrace.finalStatFunc,
-      diagnostics: originalTrace.diagnostics,
-      reasons: equivalentResult ? reasons : [...reasons, "同 scope 分段候选未通过整层真实重放，已保留原事务。"],
-      parsedCommands: parsed.commands,
-      nextRandomDrawOffset: originalTrace.nextRandomDrawOffset,
-    };
-  }
-  return {
-    status: rewrittenSegments === commandSegments ? "compacted" : "partial",
-    content,
-    finalStatData: originalTrace.finalStatData,
-    finalStatFunc: originalTrace.finalStatFunc,
-    diagnostics: originalTrace.diagnostics,
-    reasons,
-    parsedCommands: parsed.commands,
-    nextRandomDrawOffset: originalTrace.nextRandomDrawOffset,
-  };
-}
-
-type Inputs = any;
-function input<T>(inputs: Inputs, key: string): T {
-  const value = inputs[key];
-  return value !== null && typeof value === "object" && "value" in value ? (value as { value: T }).value : value as T;
-}
-
-export function parseCommandBlocksNode(inputs: any): any { return { parsed: parseCommandLayer(input(inputs, "era.command_compaction.request")) }; }
-export function executeOriginalSemanticsNode(inputs: any): any { return { trace: executeOriginalSemantics(input(inputs, "era.command_compaction.parsed")) }; }
-export function deriveReplayInvariantsNode(inputs: any): any { const trace = input<SemanticTrace>(inputs, "era.command_compaction.semantic_trace"); return { invariants: { trace, conservative: true } }; }
-export function classifyRandomBarriersNode(inputs: any): any {
-  return {
-    random_invariants: input(inputs, "era.command_compaction.invariants"),
-  };
-}
-export function partitionSafeRegionsNode(inputs: any): any { const invariants = input<{ trace: SemanticTrace }>(inputs, "era.command_compaction.invariants"); return { regions: { ...invariants, regions: invariants.trace.commands.map((command) => ({ index: command.index, kind: command.kind })) } }; }
-export function symbolizeDependenciesNode(inputs: any): any { return { symbols: input(inputs, "era.command_compaction.regions") }; }
-export function rewriteSafeRegionsNode(inputs: any): any { const payload = input<{ trace: SemanticTrace }>(inputs, "era.command_compaction.symbols"); return { candidate: candidateFor(payload.trace) }; }
-export function verifyReplayEquivalenceNode(inputs: any): any { const candidate = input<Candidate>(inputs, "era.command_compaction.candidate"); const content = render(candidate, candidate.replacements); return { verified: { candidate, content, equivalent: equivalent(candidate, content) } }; }
-export function renderCompactionResultNode(inputs: any): any { const verified = input<{ candidate: Candidate; content: string; equivalent: boolean }>(inputs, "era.command_compaction.verified"); return { compaction_response: verified.equivalent ? compactCommandLayer(verified.candidate.request) : compactCommandLayer({ ...verified.candidate.request, content: verified.candidate.request.content }) }; }
-export function terminalNode(): any { return {}; }

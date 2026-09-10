@@ -1,0 +1,10 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.command_compaction.segment.done",
+  "representation": "json",
+  "display_name": "全部分段处理完成",
+  "description": "cursor 已处理完所有分段的循环终止值。",
+  "schema": {
+    "type": "boolean"
+  }
+}

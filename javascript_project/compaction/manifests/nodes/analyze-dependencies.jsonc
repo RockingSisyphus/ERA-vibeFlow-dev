@@ -1,0 +1,57 @@
+{
+  "kind": "node",
+  "type_key": "era.command_compaction.analyze_dependencies",
+  "display_name": "分析依赖与局部屏障",
+  "description": "实际计算现有 candidateFor 使用的变量/函数依赖、随机闭包和可重写区域；不再仅传递 trace。",
+  "category": "ERA 命令压缩",
+  "version": "1.1.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.command_compaction.semantic_trace",
+        "cardinality": "exactly_one",
+        "display_name": "原语义轨迹"
+      }
+    ],
+    "provides": [
+      {
+        "key": "symbols",
+        "type": "era.command_compaction.symbols",
+        "display_name": "分析结果与原轨迹"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.command_compaction.semantic_trace": [
+        "原语义轨迹"
+      ]
+    },
+    "output_semantics": {
+      "symbols": [
+        "分析结果与原轨迹"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/analyze_dependencies.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.command_compaction.stages",
+    "era.command_compaction.engine"
+  ],
+  "capabilities": []
+}

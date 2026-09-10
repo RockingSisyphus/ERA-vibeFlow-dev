@@ -1,0 +1,64 @@
+{
+  "kind": "node",
+  "type_key": "era.command_compaction.select_segment",
+  "display_name": "准备当前段与起点",
+  "description": "依照 cursor 取正文段或同 scope 事务组；带入前段 statData/statFunc/drawOffset。无段时保留原状态并结束，不制造文本变更。",
+  "category": "ERA 命令压缩",
+  "version": "1.1.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.command_compaction.segment.state",
+        "cardinality": "exactly_one",
+        "display_name": "顺序状态"
+      }
+    ],
+    "provides": [
+      {
+        "key": "parsed",
+        "type": "era.command_compaction.parsed",
+        "display_name": "当前段解析结果"
+      },
+      {
+        "key": "segment_state_before",
+        "type": "era.command_compaction.segment.state.before",
+        "display_name": "本段起始状态"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.command_compaction.segment.state": [
+        "顺序状态"
+      ]
+    },
+    "output_semantics": {
+      "parsed": [
+        "当前段解析结果"
+      ],
+      "segment_state_before": [
+        "保持本段起始状态供推进游标"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/select_segment.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.command_compaction.stages"
+  ],
+  "capabilities": []
+}

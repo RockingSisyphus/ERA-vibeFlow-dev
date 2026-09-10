@@ -3422,7 +3422,7 @@
         "path": "configs/nodesets/command_compaction.jsonc"
       },
       "display_name": "应用同 Scope 封存命令压缩",
-      "description": "从既有同步工作项识别封存楼层，按 era_tx 原文顺序把相邻相同 scope 划成连续段，逐段调用已验证安全压缩 root，并经 Service 真实重放后回填消息、日志与 marker。",
+      "description": "选择封存楼层，调用发布的同步 Compaction AOT 工作流；作用域划分由 Compaction 唯一负责，Service 保留真实 CRUD 复放与计划回填。",
       "status": "implemented",
       "flow_kind": "predefined",
       "effect_scope": "none",
@@ -3463,16 +3463,16 @@
             "as": "commandCompactionResult"
           }
         ],
-        "max_steps": 11,
+        "max_steps": 8,
         "entry_mode": "async",
         "execution_lock": null,
         "contains_global_state": false,
         "summary": {
-          "nodes": 10,
+          "nodes": 8,
           "nodesets": 17,
-          "explicit_edges": 9,
+          "explicit_edges": 7,
           "data_edges": 0,
-          "reported_edges": 9,
+          "reported_edges": 7,
           "contains_global_state": false
         },
         "entry_nodes": [
@@ -3562,15 +3562,15 @@
             }
           },
           {
-            "id": "parse_scoped_transactions",
-            "type_used": "era.command_compaction.parse_scopes",
+            "id": "attach_random_context",
+            "type_used": "era.command_compaction.attach_random_context",
             "source": {
               "root_id": "era-service",
               "path": "configs/nodesets/command_compaction.jsonc"
             },
             "role": {
-              "display_name": "解析 era_tx 与 Scope",
-              "description": "按原文顺序解析每个 era_tx，只接受 s=m、s=b、s=a；保留非 ERA 正文、模板、保护规则、未知或无法证明的文本屏障。"
+              "display_name": "附加封存楼层随机上下文",
+              "description": "从已识别楼层直接生成压缩请求，保留 MK/sourceKey 与零起始 drawOffset；不要求 Service 解析作用域。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -3586,96 +3586,6 @@
                 "type": "era.command_compaction.identified",
                 "cardinality": "exactly_one",
                 "display_name": "已识别封存楼层"
-              }
-            ],
-            "provides": [
-              {
-                "key": "parsed",
-                "type": "era.command_compaction.parsed",
-                "display_name": "已解析 Scope 事务"
-              }
-            ],
-            "join_policy": "safe_any",
-            "async": null,
-            "loop": null,
-            "io": null,
-            "invokes": null,
-            "config": {
-              "call": {},
-              "node_configs": {},
-              "allow_config_override": false
-            }
-          },
-          {
-            "id": "partition_same_scope_segments",
-            "type_used": "era.command_compaction.partition_scopes",
-            "source": {
-              "root_id": "era-service",
-              "path": "configs/nodesets/command_compaction.jsonc"
-            },
-            "role": {
-              "display_name": "划分相邻同 Scope 段",
-              "description": "仅把原文中相邻且 s 完全相同的事务放入同一段；scope 变化是硬边界，相同 scope 被其他 scope 隔开时不得跨越，禁止生成混合 scope。"
-            },
-            "contract_source": "node_type",
-            "flow_kind": "process",
-            "effect_scope": "none",
-            "runtime_dispatch": "unknown",
-            "execution_lock": null,
-            "effective_execution_lock": null,
-            "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
-            "requires": [
-              {
-                "type": "era.command_compaction.parsed",
-                "cardinality": "exactly_one",
-                "display_name": "已解析 Scope 事务"
-              }
-            ],
-            "provides": [
-              {
-                "key": "partitioned",
-                "type": "era.command_compaction.partitioned",
-                "display_name": "已划分同 Scope 段"
-              }
-            ],
-            "join_policy": "safe_any",
-            "async": null,
-            "loop": null,
-            "io": null,
-            "invokes": null,
-            "config": {
-              "call": {},
-              "node_configs": {},
-              "allow_config_override": false
-            }
-          },
-          {
-            "id": "attach_random_context",
-            "type_used": "era.command_compaction.attach_random_context",
-            "source": {
-              "root_id": "era-service",
-              "path": "configs/nodesets/command_compaction.jsonc"
-            },
-            "role": {
-              "display_name": "附加封存楼层随机上下文",
-              "description": "为每个封存楼层及其候选复放附加相同 MK/sourceKey 和零起始 drawOffset，确保原始命令、候选与历史重算使用同一随机序列。"
-            },
-            "contract_source": "node_type",
-            "flow_kind": "process",
-            "effect_scope": "none",
-            "runtime_dispatch": "unknown",
-            "execution_lock": null,
-            "effective_execution_lock": null,
-            "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
-            "requires": [
-              {
-                "type": "era.command_compaction.partitioned",
-                "cardinality": "exactly_one",
-                "display_name": "已划分同 Scope 段"
               }
             ],
             "provides": [
@@ -3704,8 +3614,8 @@
               "path": "configs/nodesets/command_compaction.jsonc"
             },
             "role": {
-              "display_name": "逐段调用安全压缩 Nodeset",
-              "description": "以每段开始前的 statData/statFunc 快照和楼层 MK 调用 @era/vibeflow-command-compaction；自动随机闭包保持局部原文，API workflow 从不调用压缩器。"
+              "display_name": "调用 Compaction 同步工作流",
+              "description": "原 compactCommandLayer API 委托已生成的同步 runWorkflow；每个封存楼层调用一次，由 Compaction 内部顺序处理各段。保留原返回格式与 Service 后续复放。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -3923,26 +3833,6 @@
           },
           {
             "from": "identify_sealed_layers",
-            "to": "parse_scoped_transactions",
-            "when": "",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "parse_scoped_transactions",
-            "to": "partition_same_scope_segments",
-            "when": "",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "partition_same_scope_segments",
             "to": "attach_random_context",
             "when": "",
             "roles": [
@@ -12134,16 +12024,16 @@
     },
     "era.command_compaction.attach_random_context": {
       "display_name": "附加封存楼层随机上下文",
-      "description": "保留封存候选的稳定 MK；压缩器和 Service 复放均用该 MK 与零 drawOffset，不建立持久化随机状态。",
+      "description": "从已识别楼层直接生成压缩请求，保留 MK/sourceKey 与零起始 drawOffset；不要求 Service 解析作用域。",
       "category": "命令压缩集成",
       "version": "1.0.0",
       "flow_kind": "process",
       "contract": {
         "requires": [
           {
-            "type": "era.command_compaction.partitioned",
+            "type": "era.command_compaction.identified",
             "cardinality": "exactly_one",
-            "display_name": "已划分同 Scope 段"
+            "display_name": "已识别封存楼层"
           }
         ],
         "provides": [
@@ -12154,13 +12044,13 @@
           }
         ],
         "input_semantics": {
-          "era.command_compaction.partitioned": [
-            "输入：含每个封存楼层 MK 的纯候选。"
+          "era.command_compaction.identified": [
+            "已识别封存楼层"
           ]
         },
         "output_semantics": {
           "partitioned_segments": [
-            "输出：供压缩原文与候选以相同随机上下文复放的分段。"
+            "带消息随机身份的同 Scope 段"
           ]
         },
         "params_schema": {},
@@ -12184,8 +12074,8 @@
       ]
     },
     "era.command_compaction.compact_segments": {
-      "display_name": "逐段调用安全压缩 Nodeset",
-      "description": "把消息层快照交给发布的纯压缩 root，取得带证明的同 scope 候选。",
+      "display_name": "调用 Compaction 同步工作流",
+      "description": "原 compactCommandLayer API 委托已生成的同步 runWorkflow；每个封存楼层调用一次，由 Compaction 内部顺序处理各段。保留原返回格式与 Service 后续复放。",
       "category": "命令压缩集成",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -12206,12 +12096,12 @@
         ],
         "input_semantics": {
           "era.command_compaction.partitioned": [
-            "输入：连续同 scope 分段及层起始状态。"
+            "已划分同 Scope 段"
           ]
         },
         "output_semantics": {
           "compacted": [
-            "输出：纯压缩 root 生成的证明候选。"
+            "安全压缩候选"
           ]
         },
         "params_schema": {},
@@ -12279,108 +12169,6 @@
           "source": {
             "kind": "file",
             "ref": "nodes/sync/command_compaction_identify.ts",
-            "export": "run"
-          },
-          "completion": "immediate"
-        }
-      ]
-    },
-    "era.command_compaction.parse_scopes": {
-      "display_name": "解析 era_tx 与 Scope",
-      "description": "按原文位置读取 era_tx 并只接受 m、b、a 三种短 scope。",
-      "category": "命令压缩集成",
-      "version": "1.0.0",
-      "flow_kind": "process",
-      "contract": {
-        "requires": [
-          {
-            "type": "era.command_compaction.identified",
-            "cardinality": "exactly_one",
-            "display_name": "已识别封存楼层"
-          }
-        ],
-        "provides": [
-          {
-            "key": "parsed",
-            "type": "era.command_compaction.parsed",
-            "display_name": "已解析 Scope 事务"
-          }
-        ],
-        "input_semantics": {
-          "era.command_compaction.identified": [
-            "输入：已识别的封存候选。"
-          ]
-        },
-        "output_semantics": {
-          "parsed": [
-            "输出：按原文顺序解析的事务及 scope。"
-          ]
-        },
-        "params_schema": {},
-        "params_defaults": {},
-        "examples": []
-      },
-      "implementations": [
-        {
-          "language": "typescript",
-          "targets": [
-            "browser",
-            "node"
-          ],
-          "source": {
-            "kind": "file",
-            "ref": "nodes/sync/command_compaction_parse.ts",
-            "export": "run"
-          },
-          "completion": "immediate"
-        }
-      ]
-    },
-    "era.command_compaction.partition_scopes": {
-      "display_name": "划分相邻同 Scope 段",
-      "description": "scope 变化、普通正文或非法 scope 都形成硬边界，禁止跨段合并。",
-      "category": "命令压缩集成",
-      "version": "1.0.0",
-      "flow_kind": "process",
-      "contract": {
-        "requires": [
-          {
-            "type": "era.command_compaction.parsed",
-            "cardinality": "exactly_one",
-            "display_name": "已解析 Scope 事务"
-          }
-        ],
-        "provides": [
-          {
-            "key": "partitioned",
-            "type": "era.command_compaction.partitioned",
-            "display_name": "已划分同 Scope 段"
-          }
-        ],
-        "input_semantics": {
-          "era.command_compaction.parsed": [
-            "输入：已解析的 scope 事务。"
-          ]
-        },
-        "output_semantics": {
-          "partitioned": [
-            "输出：带硬边界的连续同 scope 分段。"
-          ]
-        },
-        "params_schema": {},
-        "params_defaults": {},
-        "examples": []
-      },
-      "implementations": [
-        {
-          "language": "typescript",
-          "targets": [
-            "browser",
-            "node"
-          ],
-          "source": {
-            "kind": "file",
-            "ref": "nodes/sync/command_compaction_partition.ts",
             "export": "run"
           },
           "completion": "immediate"

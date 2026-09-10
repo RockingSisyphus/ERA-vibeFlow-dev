@@ -1,1 +1,34 @@
-{"kind":"node","type_key":"era.command_compaction.terminal","display_name":"命令压缩终端","category":"ERA 命令压缩","description":"无副作用的流程起止节点。","version":"1.0.0","flow_kind":"terminal","contract":{"requires":[],"provides":[],"params_schema":{},"params_defaults":{},"input_semantics":{},"output_semantics":{}},"implementations":[{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/terminal.ts","export":"run"}}],"base_libs":["era.command_compaction.engine"],"capabilities":[]}
+{
+  "kind": "node",
+  "type_key": "era.command_compaction.terminal",
+  "display_name": "命令压缩终端",
+  "category": "ERA 命令压缩",
+  "description": "无副作用的流程起止节点。",
+  "version": "1.0.0",
+  "flow_kind": "terminal",
+  "contract": {
+    "requires": [],
+    "provides": [],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {},
+    "output_semantics": {}
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/terminal.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [],
+  "capabilities": []
+}

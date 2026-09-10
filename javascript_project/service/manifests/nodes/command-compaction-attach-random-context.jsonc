@@ -3,18 +3,54 @@
   "type_key": "era.command_compaction.attach_random_context",
   "display_name": "附加封存楼层随机上下文",
   "category": "命令压缩集成",
-  "description": "保留封存候选的稳定 MK；压缩器和 Service 复放均用该 MK 与零 drawOffset，不建立持久化随机状态。",
+  "description": "从已识别楼层直接生成压缩请求，保留 MK/sourceKey 与零起始 drawOffset；不要求 Service 解析作用域。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
-    "requires": [{"type":"era.command_compaction.partitioned","cardinality":"exactly_one","display_name":"已划分同 Scope 段"}],
-    "provides": [{"key":"partitioned_segments","type":"era.command_compaction.partitioned","display_name":"带消息随机身份的同 Scope 段"}],
+    "requires": [
+      {
+        "type": "era.command_compaction.identified",
+        "cardinality": "exactly_one",
+        "display_name": "已识别封存楼层"
+      }
+    ],
+    "provides": [
+      {
+        "key": "partitioned_segments",
+        "type": "era.command_compaction.partitioned",
+        "display_name": "带消息随机身份的同 Scope 段"
+      }
+    ],
     "params_schema": {},
     "params_defaults": {},
-    "input_semantics": {"era.command_compaction.partitioned":["输入：含每个封存楼层 MK 的纯候选。"]},
-    "output_semantics": {"partitioned_segments":["输出：供压缩原文与候选以相同随机上下文复放的分段。"]}
+    "input_semantics": {
+      "era.command_compaction.identified": [
+        "已识别封存楼层"
+      ]
+    },
+    "output_semantics": {
+      "partitioned_segments": [
+        "带消息随机身份的同 Scope 段"
+      ]
+    }
   },
-  "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/sync/command_compaction_random_context.ts","export":"run"}}],
-  "base_libs": ["era.service.command_compaction"],
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/sync/command_compaction_random_context.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.command_compaction"
+  ],
   "capabilities": []
 }

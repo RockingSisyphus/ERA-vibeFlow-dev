@@ -1,0 +1,51 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.command_compaction.segment.state.before",
+  "representation": "json",
+  "display_name": "按顺序继承的分段压缩状态",
+  "description": "本段执行前状态，仅供段结束时推进游标；与循环下一状态分离。",
+  "schema": {
+    "type": "object",
+    "required": [
+      "cursor",
+      "segments",
+      "request",
+      "statData",
+      "statFunc",
+      "drawOffset",
+      "parts",
+      "diagnostics",
+      "reasons"
+    ],
+    "properties": {
+      "cursor": {
+        "type": "integer"
+      },
+      "segments": {
+        "type": "array"
+      },
+      "request": {
+        "type": "object"
+      },
+      "statData": {
+        "type": "object"
+      },
+      "statFunc": {
+        "type": "object"
+      },
+      "drawOffset": {
+        "type": "integer"
+      },
+      "parts": {
+        "type": "array"
+      },
+      "diagnostics": {
+        "type": "array"
+      },
+      "reasons": {
+        "type": "array"
+      }
+    },
+    "additionalProperties": true
+  }
+}

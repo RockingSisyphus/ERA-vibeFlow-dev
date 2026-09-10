@@ -79,3 +79,15 @@ npm --prefix javascript_project/compaction run test:workflow
 
 `examples/era_command_compaction_sandbox` 的 JSON fixture 会同时执行直接引擎、Node AOT
 和 Browser AOT，并对原文本与冻结压缩文本做重放对照。
+
+
+## 生产入口与构建
+
+从 0.4.1 起，`/engine` 发布编译后的 ESM 与类型声明。`compactCommandLayer` 同步委托
+原 `era.command_compaction` 的 AOT `runWorkflow`，不再另行编排完整压缩过程。
+原 `compact_layer` 通过 `segment_step` 循环依次继承状态和随机游标；段内执行依赖分析、
+重写及确认，整层确认后直接返回结果。Service 不再重复解析或划分作用域。
+
+`pnpm build` 从原 Config 生成 Node/Browser 工作流，再打包公共入口和类型；`pnpm pack`
+会先执行该构建。纯 Expression 依赖在发布时编译进入 ESM，数学运行库仍保持包依赖。
+Node 实现直接引用内部登记库，不导入公共 facade，避免递归进入工作流。

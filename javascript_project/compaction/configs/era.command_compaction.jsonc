@@ -1,16 +1,59 @@
 {
   "nodeset_imports": [
-    {"path":"nodesets/compact_layer.jsonc"}
+    {
+      "path": "nodesets/compact_layer.jsonc"
+    },
+    {
+      "path": "nodesets/segment_step.jsonc"
+    }
   ],
   "pipeline": {
     "entry_mode": "sync",
-    "inputs": [{"key":"compaction_request","type":"era.command_compaction.request","display_name":"ERA 命令层压缩请求","required":true}],
-    "nodes": [
-      {"id":"start","type_used":"era.command_compaction.terminal","display_name":"命令层压缩启动","description":"启动独立、无宿主副作用的 ERA 命令层压缩。"},
-      {"id":"compact_layer","type_used":"era.command_compaction.compact_layer","display_name":"执行命令层安全压缩","description":"调用独立 Nodeset 解析六类真实 ERA 标签、保留重放不变量并输出可验证的候选。"},
-      {"id":"end","type_used":"era.command_compaction.terminal","display_name":"命令层压缩结束","description":"结束纯压缩工作流并返回规范结果。"}
+    "inputs": [
+      {
+        "key": "compaction_request",
+        "type": "era.command_compaction.request",
+        "display_name": "ERA 命令层压缩请求",
+        "required": true
+      }
     ],
-    "edges": [["start","compact_layer"],["compact_layer","end"]],
-    "outputs": [{"type":"era.command_compaction.response","cardinality":"exactly_one","display_name":"ERA 命令层压缩结果","as":"compactionResponse"}]
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.command_compaction.terminal",
+        "display_name": "命令层压缩启动",
+        "description": "启动独立、无宿主副作用的 ERA 命令层压缩。"
+      },
+      {
+        "id": "compact_layer",
+        "type_used": "era.command_compaction.compact_layer",
+        "display_name": "执行命令层安全压缩",
+        "description": "调用独立 Nodeset 解析六类真实 ERA 标签、保留重放不变量并输出可验证的候选。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.command_compaction.terminal",
+        "display_name": "命令层压缩结束",
+        "description": "结束纯压缩工作流并返回规范结果。"
+      }
+    ],
+    "edges": [
+      [
+        "start",
+        "compact_layer"
+      ],
+      [
+        "compact_layer",
+        "end"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.command_compaction.response",
+        "cardinality": "exactly_one",
+        "display_name": "ERA 命令层压缩结果",
+        "as": "compactionResponse"
+      }
+    ]
   }
 }

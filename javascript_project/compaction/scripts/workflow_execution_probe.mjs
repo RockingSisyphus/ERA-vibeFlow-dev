@@ -31,12 +31,14 @@ try {
   const node = await import(pathToFileURL(path.join(temp, "node.mjs")).href);
   const browser = await import(pathToFileURL(path.join(temp, "browser.mjs")).href);
   const input = { compaction_request: { content: "<VariableEdit>{\"a\":{\"$expr\":\"a+1\"}}</VariableEdit><VariableEdit>{\"b\":{\"$expr\":\"a*2\"}}</VariableEdit>", initialStatData: { a: 2, b: 0 } } };
-  const nodeResponse = node.runWorkflow(input).compactionResponse;
+  const trace = [];
+  const nodeResponse = node.runWorkflow(input, { trace: "full", onTrace: event => trace.push(event) }).compactionResponse;
   const browserResponse = browser.runWorkflow(input).compactionResponse;
   assert.deepEqual(browserResponse, nodeResponse);
   assert.deepEqual(nodeResponse.finalStatData, { a: 3, b: 6 });
   assert.match(nodeResponse.content, /@a \+ 1/u);
-  console.log(JSON.stringify({ status: "PASS", result: nodeResponse }));
+  assert(trace.some(event => String(event.nodePath ?? "").includes("segment_loop")), "actual segment workflow must execute");
+  console.log(JSON.stringify({ status: "PASS", result: nodeResponse, nodePaths: [...new Set(trace.map(event => event.nodePath).filter(Boolean))] }));
 } finally {
   await rm(temp, { recursive: true, force: true });
 }

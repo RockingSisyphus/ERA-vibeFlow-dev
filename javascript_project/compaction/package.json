@@ -1,17 +1,24 @@
 {
   "name": "@era/vibeflow-command-compaction",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "private": true,
   "type": "module",
   "exports": {
-    "./engine": "./base_lib/command_compaction_engine.ts"
+    "./engine": {
+      "types": "./generated/release/engine.d.ts",
+      "default": "./generated/release/engine.js"
+    }
   },
-  "engines": { "node": ">=24.18.0" },
+  "engines": {
+    "node": ">=24.18.0"
+  },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
-    "test": "esbuild base_lib/command_compaction_engine.ts --bundle --platform=node --format=esm --outfile=generated/test/command_compaction_engine.mjs && node --test tests/command_compaction_engine.test.mjs",
+    "test": "pnpm build && esbuild api/engine.ts --bundle --platform=node --format=esm --outfile=generated/test/command_compaction_engine.mjs && node --test tests/command_compaction_engine.test.mjs",
     "test:sandbox": "node ../../examples/era_command_compaction_sandbox/run.mjs",
-    "test:workflow": "node scripts/workflow_execution_probe.mjs"
+    "test:workflow": "node scripts/workflow_execution_probe.mjs",
+    "build": "node scripts/build-package.mjs",
+    "prepack": "pnpm build"
   },
   "dependencies": {
     "@stdlib/math-base-special-gamma": "^0.3.1",
@@ -24,5 +31,10 @@
     "@era/vibeflow-expression": "file:vendor/era-vibeflow-expression-0.2.0.tgz",
     "esbuild": "^0.28.1",
     "typescript": "^7.0.2"
-  }
+  },
+  "files": [
+    "api",
+    "base_lib",
+    "generated/release"
+  ]
 }

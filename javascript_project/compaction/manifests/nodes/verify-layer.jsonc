@@ -1,0 +1,56 @@
+{
+  "kind": "node",
+  "type_key": "era.command_compaction.verify_layer",
+  "display_name": "确认整层候选",
+  "description": "保留原整层复放确认：最终状态、函数库、随机游标及诊断一致；失败保留原文；不重新调用 compactCommandLayer。",
+  "category": "ERA 命令压缩",
+  "version": "1.1.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.command_compaction.segment.state",
+        "cardinality": "exactly_one",
+        "display_name": "全部分段结果"
+      }
+    ],
+    "provides": [
+      {
+        "key": "verified",
+        "type": "era.command_compaction.verified",
+        "display_name": "整层确认结果"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.command_compaction.segment.state": [
+        "全部分段结果"
+      ]
+    },
+    "output_semantics": {
+      "verified": [
+        "整层确认结果"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/verify_layer.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.command_compaction.stages"
+  ],
+  "capabilities": []
+}

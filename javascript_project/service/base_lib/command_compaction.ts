@@ -15,14 +15,9 @@ import {
 import { readMessageKey } from "./domain/mk_engine.ts";
 import { cloneSyncJson, type SyncWorkV1 } from "./sync_transaction.ts";
 
-type ScopeCode = "m" | "b" | "a";
-interface ScopedTransactionSummary { readonly start: number; readonly end: number; readonly scope: ScopeCode | null; }
-interface ScopeSegmentSummary { readonly start: number; readonly end: number; readonly scope: ScopeCode | null; readonly transactionCount: number; }
 interface CandidateStage {
   readonly candidate: EraSealedCompactionCandidateV1;
   readonly original: string | null;
-  readonly transactions: readonly ScopedTransactionSummary[];
-  readonly segments: readonly ScopeSegmentSummary[];
   readonly compaction: ReturnType<typeof compactCommandLayer> | null;
   readonly replay: ReturnType<typeof applyMessageCommands> | null;
   readonly accepted: boolean;
@@ -88,45 +83,9 @@ export function identifySealedLayers(work: SyncWorkV1): ServiceCompactionContext
     candidates: plan.sealedCompactionCandidates.map((candidate) => {
       const message = messages[candidate.messageIndex];
       const original = message !== undefined && message.messageId === candidate.messageId && message.content.kind === "text" ? message.content.text : null;
-      return { candidate, original, transactions: [], segments: [], compaction: null, replay: null, accepted: false };
+      return { candidate, original, compaction: null, replay: null, accepted: false };
     }),
   };
-}
-
-/** Parse era_tx wrappers and their short scope code in original text order. */
-export function parseScopedTransactions(context: ServiceCompactionContext): ServiceCompactionContext {
-  return mapCandidates(context, (entry) => {
-    if (entry.original === null) return entry;
-    const transactions: ScopedTransactionSummary[] = [];
-    const pattern = /<era_tx\b([^>]*)>[\s\S]*?<\/era_tx>/giu;
-    let match: RegExpExecArray | null;
-    while ((match = pattern.exec(entry.original)) !== null) {
-      const rawScope = /\bs\s*=\s*["']([^"']+)["']/iu.exec(match[1] ?? "")?.[1];
-      transactions.push({ start: match.index, end: match.index + match[0].length, scope: rawScope === "m" || rawScope === "b" || rawScope === "a" ? rawScope : null });
-    }
-    return { ...entry, transactions };
-  });
-}
-
-/** Partition adjacent equal scopes; prose, invalid scopes and changes are hard barriers. */
-export function partitionSameScopeSegments(context: ServiceCompactionContext): ServiceCompactionContext {
-  return mapCandidates(context, (entry) => {
-    if (entry.original === null || entry.transactions.length === 0) return entry;
-    const segments: ScopeSegmentSummary[] = [];
-    for (let index = 0; index < entry.transactions.length;) {
-      const first = entry.transactions[index]!;
-      let endIndex = index;
-      while (endIndex + 1 < entry.transactions.length) {
-        const current = entry.transactions[endIndex]!;
-        const next = entry.transactions[endIndex + 1]!;
-        if (first.scope === null || next.scope !== first.scope || entry.original.slice(current.end, next.start).trim().length > 0) break;
-        endIndex += 1;
-      }
-      segments.push({ start: first.start, end: entry.transactions[endIndex]!.end, scope: first.scope, transactionCount: endIndex - index + 1 });
-      index = endIndex + 1;
-    }
-    return { ...entry, segments };
-  });
 }
 
 /** Delegate symbolic rewriting and scope-aware proof to the published pure root. */
@@ -191,7 +150,7 @@ export function updateCompactionMarkers(context: ServiceCompactionContext): Sync
 
 /** Direct composition kept for focused unit tests and non-workflow callers. */
 export function applySealedCommandCompactionToWork(work: SyncWorkV1): SyncWorkV1 {
-  return updateCompactionMarkers(writeSingleScopeSegments(replayWithServiceEngine(compactEachSegment(partitionSameScopeSegments(parseScopedTransactions(identifySealedLayers(work)))))));
+  return updateCompactionMarkers(writeSingleScopeSegments(replayWithServiceEngine(compactEachSegment(identifySealedLayers(work)))));
 }
 
 /** Compatibility for focused pure-plan tests; production workflow uses staged nodes. */

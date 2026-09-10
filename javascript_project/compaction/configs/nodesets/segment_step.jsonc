@@ -1,0 +1,136 @@
+{
+  "type_key": "era.command_compaction.segment_step",
+  "status": "implemented",
+  "display_name": "顺序压缩一个真实文本段",
+  "description": "原 compact_layer 内的实际循环体；保持原文顺序和跨段状态，不是独立工作流。",
+  "requires": [
+    {
+      "type": "era.command_compaction.segment.state",
+      "cardinality": "exactly_one",
+      "display_name": "顺序状态"
+    }
+  ],
+  "provides": [
+    {
+      "key": "segment_state_next",
+      "type": "era.command_compaction.segment.state",
+      "display_name": "下一段状态"
+    },
+    {
+      "key": "segment_done",
+      "type": "era.command_compaction.segment.done",
+      "display_name": "全部段结束"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "sync",
+    "inputs": [
+      {
+        "key": "segment_state",
+        "type": "era.command_compaction.segment.state",
+        "display_name": "顺序状态",
+        "required": true
+      }
+    ],
+    "max_steps": 8,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.command_compaction.terminal",
+        "display_name": "分段开始",
+        "description": "分段开始，不执行算法或宿主操作。"
+      },
+      {
+        "id": "select_segment",
+        "type_used": "era.command_compaction.select_segment",
+        "display_name": "准备当前段与起点",
+        "description": "依照 cursor 取正文段或同 scope 事务组；带入前段 statData/statFunc/drawOffset。无段时保留原状态并结束，不制造文本变更。"
+      },
+      {
+        "id": "execute",
+        "type_used": "era.command_compaction.execute_original_semantics",
+        "display_name": "重放当前段原语义",
+        "description": "复用六类命令解释，记录该段原结果和随机游标；携带作用域与是否允许重写的信息。"
+      },
+      {
+        "id": "analyze_dependencies",
+        "type_used": "era.command_compaction.analyze_dependencies",
+        "display_name": "分析依赖与局部屏障",
+        "description": "实际计算现有 candidateFor 使用的变量/函数依赖、随机闭包和可重写区域；不再仅传递 trace。"
+      },
+      {
+        "id": "rewrite",
+        "type_used": "era.command_compaction.rewrite_safe_regions",
+        "display_name": "生成段候选",
+        "description": "只消费依赖分析结果形成替换，保留单事务不合并及不可重写段原文策略。"
+      },
+      {
+        "id": "verify",
+        "type_used": "era.command_compaction.verify_replay_equivalence",
+        "display_name": "确认段候选",
+        "description": "按原起点复放候选；保持原结果、诊断和随机游标语义，输出已确认文本与保留原文理由。"
+      },
+      {
+        "id": "advance_segment",
+        "type_used": "era.command_compaction.advance_segment",
+        "display_name": "继承状态并推进分段",
+        "description": "继承原段的结束状态与随机游标，累计文本/诊断/理由/计数并推进 cursor；不重新执行压缩算法。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.command_compaction.terminal",
+        "display_name": "分段结束",
+        "description": "分段结束，不执行算法或宿主操作。"
+      }
+    ],
+    "edges": [
+      [
+        "start",
+        "select_segment"
+      ],
+      [
+        "select_segment",
+        "execute"
+      ],
+      [
+        "execute",
+        "analyze_dependencies"
+      ],
+      [
+        "analyze_dependencies",
+        "rewrite"
+      ],
+      [
+        "rewrite",
+        "verify"
+      ],
+      [
+        "verify",
+        "advance_segment"
+      ],
+      [
+        "advance_segment",
+        "end"
+      ],
+      {
+        "from": "select_segment",
+        "to": "advance_segment",
+        "schedule": false
+      }
+    ],
+    "outputs": [
+      {
+        "type": "era.command_compaction.segment.state",
+        "cardinality": "exactly_one",
+        "display_name": "下一段状态",
+        "as": "segmentStateNext"
+      },
+      {
+        "type": "era.command_compaction.segment.done",
+        "cardinality": "exactly_one",
+        "display_name": "全部段结束",
+        "as": "segmentDone"
+      }
+    ]
+  }
+}
