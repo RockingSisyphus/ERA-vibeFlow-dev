@@ -18,7 +18,7 @@ export function planSessionBinding(
       nativeExecutionId: null,
     };
   let session = value;
-  const startStoryObservation = value.status === "opened";
+  const startStoryObservation = opening && value.status === "opened";
   const previous = facts.previous;
   if (
     !startStoryObservation &&
