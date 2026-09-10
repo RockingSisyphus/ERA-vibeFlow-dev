@@ -8,7 +8,11 @@
 
 import type { EraCapabilityContext } from './types';
 import { publishSidecarRuntimeSnapshot, type SidecarRuntimeIdentity } from './sidecar-runtime-snapshot';
-import { assertCurrentMessageBasis, assertMessageWriteTargets } from './message-write-target';
+import {
+  assertCurrentMessageBasis,
+  assertMessageWriteTargets,
+  assertExpectedSidecarPointer,
+} from './message-write-target';
 
 export const SIDECAR_PROMPT_EVENT = 'era-sidecar-binding-prompt';
 
@@ -156,6 +160,7 @@ async function writeSidecarFile(
   if (!isRecord(input.record)) throw new TypeError('ERA Sidecar 文件写入缺少 record。');
   const record = clonePortable(input.record);
   if (input.sourceBasis !== undefined) assertCurrentMessageBasis(input.sourceBasis);
+  assertExpectedSidecarPointer(input);
   const response = await fetch('/api/files/upload', {
     method: 'POST',
     headers: requestHeaders(),
@@ -177,6 +182,7 @@ async function commitSidecarPointer(
   throwIfAborted(context.signal);
   const id = sidecarId(input.sidecarId);
   if (input.sourceBasis !== undefined) assertCurrentMessageBasis(input.sourceBasis);
+  assertExpectedSidecarPointer(input);
   // 绑定/迁移流程也会调用本能力，且未必携带消息依据。文件等待后必须在
   // 实际写当前聊天指针之前核对 owner；快照发布时再拒绝已经太晚。
   if (isRecord(input.snapshot)) {
@@ -240,8 +246,10 @@ export function createSidecarAdapter() {
       topWindow()?.dispatchEvent(new CustomEvent(SIDECAR_PROMPT_EVENT, { detail: clonePortable(input.prompt) }));
       return { status: 'presented' };
     },
-    clear_prompt: (_input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown => {
+    clear_prompt: (input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown => {
       throwIfAborted(context.signal);
+      if (input.sourceBasis !== undefined) assertCurrentMessageBasis(input.sourceBasis);
+      assertExpectedSidecarPointer(input);
       topWindow()?.dispatchEvent(new CustomEvent(SIDECAR_PROMPT_EVENT, { detail: null }));
       return { status: 'cleared' };
     },

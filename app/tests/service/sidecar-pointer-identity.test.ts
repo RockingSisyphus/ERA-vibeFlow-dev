@@ -41,6 +41,30 @@ describe('Sidecar 指针提交紧贴当前宿主身份', () => {
     expect(variables).toEqual({ stat_data: { hp: 88 }, ERAMetaData: { SidecarId: 'era_chat_87654321' } });
     expect(readActiveSidecarRuntimeSnapshot()).toBeNull();
   });
+  it.each(['write_record', 'commit_metadata', 'clear_prompt'] as const)(
+    '同聊天重新绑定后 %s 不执行副作用',
+    async operation => {
+      const { variables, write } = fixture(owner);
+      const fetch = vi.fn();
+      vi.stubGlobal('fetch', fetch);
+      await expect(
+        Promise.resolve().then(() =>
+          createSidecarAdapter()[operation](
+            { ...input, record: input.snapshot, expectedSidecarId: sidecarId },
+            context,
+          ),
+        ),
+      ).rejects.toMatchObject({
+        code: 'ERA_MESSAGE_WRITE_TARGET_CHANGED',
+        reason: 'binding',
+        written: false,
+      });
+      expect(fetch).not.toHaveBeenCalled();
+      expect(write).not.toHaveBeenCalled();
+      expect(variables.ERAMetaData.SidecarId).toBe('era_chat_87654321');
+      expect(readActiveSidecarRuntimeSnapshot()).toBeNull();
+    },
+  );
   it('身份一致时提交原指针并发布已确认的快照', async () => {
     const { variables, write } = fixture(owner);
     await expect(createSidecarAdapter().commit_metadata(input, context)).resolves.toMatchObject({

@@ -7500,17 +7500,15 @@
               "display_name": "读取并核对本次 Sidecar 事务来源",
               "description": "从真实派发上下文保留原聊天、消息/Swipe/原文依据；读取 Sidecar 前后比对身份和指针，读取失败或来源改变形成 failed 同步上下文，不把新聊天事实与旧消息拼接。"
             },
-            "contract_source": "planned_config",
+            "contract_source": "node_type",
             "flow_kind": "process",
             "effect_scope": "none",
             "runtime_dispatch": "unknown",
             "execution_lock": null,
             "effective_execution_lock": null,
             "contains_global_state": false,
-            "status": "planned",
-            "planned_behavior": {
-              "kind": "blocking"
-            },
+            "status": "implemented",
+            "planned_behavior": null,
             "requires": [
               {
                 "type": "era.sync.context",
@@ -7552,17 +7550,15 @@
               "display_name": "保留失败来源或解析绑定选择",
               "description": "源上下文已失败时直接沿原 continue 下游进入同步失败结算，禁止新弹窗和写入；正常情况下复用 create/migrate-legacy/matched/conflict/repair 的既有选择规则。"
             },
-            "contract_source": "planned_config",
+            "contract_source": "node_type",
             "flow_kind": "process",
             "effect_scope": "none",
             "runtime_dispatch": "unknown",
             "execution_lock": null,
             "effective_execution_lock": null,
             "contains_global_state": false,
-            "status": "planned",
-            "planned_behavior": {
-              "kind": "blocking"
-            },
+            "status": "implemented",
+            "planned_behavior": null,
             "requires": [
               {
                 "type": "era.sidecar.binding.input",
@@ -7643,17 +7639,15 @@
               "display_name": "按原来源执行恢复、确认保存并提交 Sidecar",
               "description": "用生产 activeText 构造恢复消息；复核原聊天/绑定/记录 revision，向消息写入、文件写入和指针提交传递 sourceBasis。只在消息持久化 confirmed 后更新本任务依据并继续文件/指针提交；来源变化或保存失败保留实际已写事实并进入既有同步失败结算，不自动重试，不回写新聊天。"
             },
-            "contract_source": "planned_config",
+            "contract_source": "node_type",
             "flow_kind": "process",
             "effect_scope": "none",
             "runtime_dispatch": "unknown",
             "execution_lock": null,
             "effective_execution_lock": null,
             "contains_global_state": false,
-            "status": "planned",
-            "planned_behavior": {
-              "kind": "blocking"
-            },
+            "status": "implemented",
+            "planned_behavior": null,
             "requires": [
               {
                 "type": "era.sidecar.binding.input",
@@ -14989,7 +14983,7 @@
     },
     "era.sidecar_binding.apply_resolution": {
       "display_name": "执行 Sidecar 绑定事务",
-      "description": "执行 workflow 决定的迁移、独立或复制事务；严格消息上下文暂未就绪时只发布已验证 matched V3 快照。",
+      "description": "核对原聊天、消息与绑定，确认恢复消息持久化后提交并回读 Sidecar；失败保留实际写入事实。",
       "category": "Sidecar 绑定",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -15157,7 +15151,7 @@
     },
     "era.sidecar_binding.inspect_current": {
       "display_name": "检查当前 Sidecar 绑定",
-      "description": "读取事实与 files，不做事务决策。",
+      "description": "围绕原派发身份和指针读取 Sidecar 事实；读取失败进入原同步失败结算。",
       "category": "Sidecar 绑定",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -15255,7 +15249,7 @@
     },
     "era.sidecar_binding.resolve_choice": {
       "display_name": "规划 Sidecar 绑定选择",
-      "description": "纯规则规划继续、阻塞或事务。",
+      "description": "纯规则规划绑定选择；失败上下文继续原失败结算，不生成选择提示。",
       "category": "Sidecar 绑定",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -40948,7 +40942,15 @@
         "schema": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
           "type": "object",
-          "additionalProperties": true
+          "additionalProperties": true,
+          "properties": {
+            "expectedSidecarId": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
         }
       },
       "era.tavern.messages.update_content.result": {
@@ -41020,7 +41022,92 @@
         "schema": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
           "type": "object",
-          "additionalProperties": false
+          "additionalProperties": false,
+          "properties": {
+            "expectedSidecarId": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "sourceBasis": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "identity",
+                "messages"
+              ],
+              "properties": {
+                "identity": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "characterId",
+                    "chatId",
+                    "groupId"
+                  ],
+                  "properties": {
+                    "characterId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "chatId": {
+                      "type": "string"
+                    },
+                    "groupId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  }
+                },
+                "messages": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "schemaVersion",
+                      "messageId",
+                      "role",
+                      "activeText",
+                      "swipeIndex"
+                    ],
+                    "properties": {
+                      "schemaVersion": {
+                        "const": 1
+                      },
+                      "messageId": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "role": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "activeText": {
+                        "type": "string"
+                      },
+                      "swipeIndex": {
+                        "oneOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       },
       "era.tavern.sidecar.clear_prompt.result": {
@@ -41130,6 +41217,12 @@
                   }
                 }
               }
+            },
+            "expectedSidecarId": {
+              "type": [
+                "string",
+                "null"
+              ]
             }
           },
           "additionalProperties": false
@@ -41363,6 +41456,12 @@
                   }
                 }
               }
+            },
+            "expectedSidecarId": {
+              "type": [
+                "string",
+                "null"
+              ]
             }
           },
           "additionalProperties": false

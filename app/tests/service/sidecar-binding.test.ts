@@ -305,7 +305,10 @@ describe('ERA Sidecar 绑定纯规则', () => {
         'era.sidecar.binding.input': {
           value: {
             sync: {
-              step: sidecarChoiceStep('repair'),
+              step: {
+                ...sidecarChoiceStep('repair'),
+                dispatchContext: { sourceBasis: { identity: current, messages: [] } },
+              },
               variablesRaw: { ERAMetaData: { SidecarId: sidecarId }, stat_data: {} },
               messagesRaw: { schemaVersion: 2, messages: [] },
             },
@@ -345,7 +348,7 @@ describe('ERA Sidecar 绑定纯规则', () => {
         record: expect.objectContaining({ state: expect.objectContaining({ statData: { player: { hp: 10 } } }) }),
       }),
     ]);
-    expect(clears).toEqual([{}]);
+    expect(clears).toEqual([{ expectedSidecarId: sidecarId, sourceBasis: { identity: current, messages: [] } }]);
   });
 
   it('迁移完成后只向 task_sync 输出规范 continue 路由', async () => {
@@ -358,12 +361,27 @@ describe('ERA Sidecar 绑定纯规则', () => {
         'era.sidecar.binding.input': {
           value: {
             sync: {
-              step: sidecarChoiceStep('migrate'),
+              step: {
+                ...sidecarChoiceStep('migrate'),
+                dispatchContext: {
+                  sourceBasis: {
+                    identity: current,
+                    messages: [
+                      { schemaVersion: 1, messageId: 7, role: 'assistant', activeText: '原始回复', swipeIndex: 0 },
+                    ],
+                  },
+                },
+              },
               variablesRaw: {
                 scope: { type: 'chat' },
                 variables: { ERAMetaData: { SidecarId: sidecarId }, stat_data: { player: { hp: 1 } } },
               },
-              messagesRaw: { schemaVersion: 2, messages: [{ messageId: 7, role: 'assistant', content: '原始回复' }] },
+              messagesRaw: {
+                schemaVersion: 2,
+                messages: [
+                  { schemaVersion: 1, messageId: 7, role: 'assistant', activeText: '原始回复', swipeIndex: 0 },
+                ],
+              },
             },
           },
         },

@@ -249,13 +249,17 @@ async function probeGeneratedHost(workflow) {
   }
 
   const outcomes = [];
-  for (let sequence = 1; sequence <= 9; sequence += 1) {
-    const type = sequence === 1 ? 'message_received' : sequence === 3 || sequence >= 5 ? 'era.facade.commit' : 'era.facade.sync';
+  const readCurrent = fake.adapter.sidecar.read_current;
+  for (let sequence = 1; sequence <= 11; sequence += 1) {
+    fake.adapter.sidecar.read_current = sequence === 10
+      ? async () => { throw new Error('Sidecar 读取故障探针'); }
+      : readCurrent;
+    const type = sequence === 1 ? 'message_received' : sequence === 3 || (sequence >= 5 && sequence <= 9) ? 'era.facade.commit' : 'era.facade.sync';
     const admission = fake.emit({
       type,
       source: sequence === 1 ? 'tavern' : 'era-api',
       args:
-        sequence >= 5
+        sequence >= 5 && sequence <= 9
           ? [workbenchProbePayload(sequence, fake)]
           : sequence === 3
           ? [{ scope: 'always', operations: [{ insert: { __eraRuntimeProbe: { value: sequence } } }], windowToken: 1 }]
@@ -295,8 +299,8 @@ async function probeGeneratedHost(workflow) {
   assert(afterActivation.registrations === 1, 'workflow allow 分支必须只注册一套监听器。');
   assert(afterStop.removals === 1, 'host.stop() 必须只注销一次监听器。');
   assert(
-    outcomes.every((outcome, index) => outcome.status === (index === 7 ? 'failed' : 'completed')),
-    '真实同步与 Facade 事件必须完整结算。',
+    outcomes.every((outcome, index) => outcome.status === (index === 7 || index === 9 ? 'failed' : 'completed')),
+    '真实同步与 Facade 事件必须完整结算，Sidecar 失败后下一任务仍须完成。',
   );
   assert(afterStop.message.includes('<era_tx s="a">'), 'ERA.commit 必须写入独立 always 事务。');
   assert(!afterStop.message.includes('999'), '陈旧草稿失败后不能把拟写入值追加到消息。');

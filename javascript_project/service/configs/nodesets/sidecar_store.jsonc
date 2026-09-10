@@ -45,55 +45,13 @@
         "id": "inspect_current",
         "type_used": "era.sidecar_binding.inspect_current",
         "display_name": "读取并核对本次 Sidecar 事务来源",
-        "description": "从真实派发上下文保留原聊天、消息/Swipe/原文依据；读取 Sidecar 前后比对身份和指针，读取失败或来源改变形成 failed 同步上下文，不把新聊天事实与旧消息拼接。",
-        "status": "planned",
-        "flow_kind": "process",
-        "requires": [
-          {
-            "type": "era.sync.context",
-            "cardinality": "exactly_one",
-            "display_name": "同步上下文"
-          }
-        ],
-        "provides": [
-          {
-            "key": "sidecar_binding_input",
-            "type": "era.sidecar.binding.input",
-            "display_name": "Sidecar 绑定输入"
-          },
-          {
-            "key": "sidecar_binding_facts",
-            "type": "era.sidecar.binding.facts",
-            "display_name": "当前 Sidecar 事实"
-          }
-        ]
+        "description": "从真实派发上下文保留原聊天、消息/Swipe/原文依据；读取 Sidecar 前后比对身份和指针，读取失败或来源改变形成 failed 同步上下文，不把新聊天事实与旧消息拼接。"
       },
       {
         "id": "resolve_choice",
         "type_used": "era.sidecar_binding.resolve_choice",
         "display_name": "保留失败来源或解析绑定选择",
-        "description": "源上下文已失败时直接沿原 continue 下游进入同步失败结算，禁止新弹窗和写入；正常情况下复用 create/migrate-legacy/matched/conflict/repair 的既有选择规则。",
-        "status": "planned",
-        "flow_kind": "process",
-        "requires": [
-          {
-            "type": "era.sidecar.binding.input",
-            "cardinality": "exactly_one",
-            "display_name": "Sidecar 绑定输入"
-          },
-          {
-            "type": "era.sidecar.binding.facts",
-            "cardinality": "exactly_one",
-            "display_name": "当前 Sidecar 事实"
-          }
-        ],
-        "provides": [
-          {
-            "key": "sidecar_binding_resolution",
-            "type": "era.sidecar.binding.resolution",
-            "display_name": "Sidecar 绑定决议"
-          }
-        ]
+        "description": "源上下文已失败时直接沿原 continue 下游进入同步失败结算，禁止新弹窗和写入；正常情况下复用 create/migrate-legacy/matched/conflict/repair 的既有选择规则。"
       },
       {
         "id": "publish_choice_prompt",
@@ -105,33 +63,7 @@
         "id": "apply_resolution",
         "type_used": "era.sidecar_binding.apply_resolution",
         "display_name": "按原来源执行恢复、确认保存并提交 Sidecar",
-        "description": "用生产 activeText 构造恢复消息；复核原聊天/绑定/记录 revision，向消息写入、文件写入和指针提交传递 sourceBasis。只在消息持久化 confirmed 后更新本任务依据并继续文件/指针提交；来源变化或保存失败保留实际已写事实并进入既有同步失败结算，不自动重试，不回写新聊天。",
-        "status": "planned",
-        "flow_kind": "process",
-        "requires": [
-          {
-            "type": "era.sidecar.binding.input",
-            "cardinality": "exactly_one",
-            "display_name": "Sidecar 绑定输入"
-          },
-          {
-            "type": "era.sidecar.binding.resolution",
-            "cardinality": "exactly_one",
-            "display_name": "Sidecar 绑定决议"
-          }
-        ],
-        "provides": [
-          {
-            "key": "sidecar_applied_context",
-            "type": "era.sync.context",
-            "display_name": "事务后的同步上下文"
-          },
-          {
-            "key": "sidecar_binding_route",
-            "type": "era.sidecar.binding.route",
-            "display_name": "外部 Sidecar 绑定路由"
-          }
-        ]
+        "description": "用生产 activeText 构造恢复消息；复核原聊天/绑定/记录 revision，向消息写入、文件写入和指针提交传递 sourceBasis。只在消息持久化 confirmed 后更新本任务依据并继续文件/指针提交；来源变化或保存失败保留实际已写事实并进入既有同步失败结算，不自动重试，不回写新聊天。"
       },
       {
         "id": "end",

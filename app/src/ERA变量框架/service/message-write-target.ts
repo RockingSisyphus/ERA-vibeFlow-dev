@@ -20,7 +20,7 @@ export class MessageWriteTargetChanged extends Error {
   readonly written = false;
 
   constructor(
-    readonly reason: 'chat' | 'missing-message' | 'swipe' | 'source-text' | 'message-count' | 'role',
+    readonly reason: 'chat' | 'missing-message' | 'swipe' | 'source-text' | 'message-count' | 'role' | 'binding',
     readonly messageId: number | null,
   ) {
     super(`消息写入目标已变化：${reason}${messageId === null ? '' : ` (#${messageId})`}。`);
@@ -84,4 +84,14 @@ export function assertMessageWriteTargets(
       throw new MessageWriteTargetChanged('role', target.messageId);
     if (current.text !== target.sourceText) throw new MessageWriteTargetChanged('source-text', target.messageId);
   }
+}
+
+/** 在实际副作用前同步核对 Service 决议对应的聊天绑定。 */
+export function assertExpectedSidecarPointer(input: Readonly<Record<string, unknown>>): void {
+  if (!Object.hasOwn(input, 'expectedSidecarId')) return;
+  const variables = getVariables({ type: 'chat' });
+  const meta = variables.ERAMetaData;
+  const value = meta !== null && typeof meta === 'object' ? (meta as Record<string, unknown>).SidecarId : null;
+  const actual = typeof value === 'string' && /^era_chat_[a-z0-9-]{8,80}$/iu.test(value) ? value : null;
+  if (actual !== input.expectedSidecarId) throw new MessageWriteTargetChanged('binding', null);
 }

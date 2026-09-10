@@ -7,6 +7,16 @@ describe('message writer host extra merge', () => {
     vi.unstubAllGlobals();
   });
 
+  it('rejects a replaced Sidecar pointer immediately before restoring message text', async () => {
+    const setChatMessages = vi.fn();
+    vi.stubGlobal('setChatMessages', setChatMessages);
+    vi.stubGlobal('getVariables', () => ({ ERAMetaData: { SidecarId: 'era_chat_87654321' } }));
+    await expect(
+      updateEraMessageContent({ messageId: 0, content: 'restore', expectedSidecarId: 'era_chat_12345678' }, new Map()),
+    ).rejects.toMatchObject({ code: 'ERA_MESSAGE_WRITE_TARGET_CHANGED', reason: 'binding', written: false });
+    expect(setChatMessages).not.toHaveBeenCalled();
+  });
+
   it('keeps host-only extra fields while applying the portable ERA patch', async () => {
     const setChatMessages = vi.fn(async () => undefined);
     vi.stubGlobal(

@@ -93,6 +93,12 @@
             }
           }
         }
+      },
+      "expectedSidecarId": {
+        "type": [
+          "string",
+          "null"
+        ]
       }
     },
     "additionalProperties": false

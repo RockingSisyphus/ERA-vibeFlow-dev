@@ -1,4 +1,4 @@
-import { cloneEraPortableJsonV1 } from "@era/vibeflow-contracts";
+import { cloneEraPortableJsonV1, type EraMessageSourceBasisV1 } from "@era/vibeflow-contracts";
 
 /** Sidecar 的纯规则：聊天变量只提供身份指针；状态只来自 V3 用户文件。 */
 export interface SyncContextV1 {
@@ -223,6 +223,7 @@ export function enrich(context: SyncContextV1, facts: SidecarFactsV1, route: "co
 }
 
 export function resolveSidecar(facts: SidecarFactsV1, context: SyncContextV1): SidecarResolutionV1 {
+  if (context.status === "failed") return { facts, route: "continue", choice: null };
   if (facts.status === "create" || facts.status === "migrate-legacy") return { facts, route: "apply", choice: null };
   const choice = choiceFromSyncContext(context);
   if (facts.status === "matched" && choice === "repair") return { facts, route: "apply", choice };
@@ -304,4 +305,53 @@ export function durableFunctionRestoreInstruction(
     ? ""
     : `<FunctionInsert>\n${JSON.stringify(target)}\n</FunctionInsert>\n`;
   return `${deleteBlock}${insertBlock}`;
+}
+
+/** 原始派发依据必须跨越文件等待保留；不能改读当前聊天来补齐旧任务。 */
+export function sidecarSourceBasis(sync: SyncContextV1): EraMessageSourceBasisV1 {
+  const step = isRecord(sync.step) ? sync.step : {};
+  const dispatch = isRecord(step.dispatchContext) ? step.dispatchContext : {};
+  const basis = dispatch.sourceBasis;
+  if (!isRecord(basis) || owner(basis.identity) === null || !Array.isArray(basis.messages)) {
+    throw new TypeError("Sidecar 事务缺少原始聊天和消息依据。");
+  }
+  return cloneSyncJson(basis) as unknown as EraMessageSourceBasisV1;
+}
+
+/** 当前身份和指针是写入的直接来源事实；变更不能沿用旧绑定选择。 */
+export function assertSidecarCurrent(current: unknown, basis: EraMessageSourceBasisV1, expectedId: string | null): void {
+  const raw = isRecord(current) ? current : {};
+  const actual = owner(raw.identity);
+  const id = sidecarIdFromVariables({ ERAMetaData: raw.meta }).sidecarId;
+  if (actual === null || !sameOwner(actual, basis.identity) || id !== expectedId) {
+    throw Object.assign(new Error("Sidecar 操作的聊天或绑定已变化，请在当前聊天重新操作。"), { code: "ERA_MESSAGE_WRITE_TARGET_CHANGED" });
+  }
+}
+
+/** 规范化记录后比较完整快照，避免同 revision 的不同内容冒充本次保存。 */
+export function sameSidecarValue(left: unknown, right: unknown): boolean {
+  if (left === right) return true;
+  if (Array.isArray(left) && Array.isArray(right)) return left.length === right.length && left.every((value, i) => sameSidecarValue(value, right[i]));
+  if (!isRecord(left) || !isRecord(right)) return false;
+  const keys = Object.keys(left);
+  return keys.length === Object.keys(right).length && keys.every(key => Object.hasOwn(right, key) && sameSidecarValue(left[key], right[key]));
+}
+
+/** 失败沿原同步终态结算，保留真实写入事实，不让永久 Service 因普通事务错误退出。 */
+export function failedSidecarContext(sync: SyncContextV1, error: unknown, details: Record<string, unknown> = {}): SyncContextV1 {
+  const code = isRecord(error) && typeof error.code === "string" ? error.code : "ERA_SIDECAR_TRANSACTION_FAILED";
+  return { ...sync, status: "failed", failure: {
+    code,
+    message: error instanceof Error ? error.message : String(error),
+    category: code === "VF_ABORTED" || (error instanceof Error && error.name === "AbortError") ? "cancelled" : "tavern",
+    retryable: false,
+    details,
+  }, sidecarBindingRoute: "continue" };
+}
+
+/** 使用同步入口已读的指针；后续读取不得重新定义本次绑定。 */
+export function sidecarInitialId(sync: SyncContextV1): string | null {
+  const raw = isRecord(sync.variablesRaw) ? sync.variablesRaw : {};
+  if (Object.hasOwn(raw, "identity")) return sidecarIdFromVariables({ ERAMetaData: raw.meta }).sidecarId;
+  return sidecarIdFromVariables(isRecord(raw.variables) ? raw.variables : raw).sidecarId;
 }
