@@ -21,10 +21,6 @@
       {
         "workflow": "configs/era.macro.jsonc",
         "document": "ARCHITECTURE.jsonc"
-      },
-      {
-        "workflow": "configs/era.prompt.jsonc",
-        "document": "PROMPT_ARCHITECTURE.jsonc"
       }
     ]
   }
