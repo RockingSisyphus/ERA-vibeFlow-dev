@@ -1078,7 +1078,7 @@
             },
             "role": {
               "display_name": "构造直接结果",
-              "description": "结算设置、生成栅栏、失败或默认 ignore。"
+              "description": "结算生成栅栏、失败或默认 ignore 的直接结果。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -5024,8 +5024,8 @@
         "root_id": "era-service",
         "path": "configs/nodesets/expression_engine_bridge.jsonc"
       },
-      "display_name": "执行 ERA 表达式命令",
-      "description": "跨 root 的实际表达式 Nodeset 边界：Service 以消息 MK 建立随机 sourceKey，在同一消息全部普通标签与 era_tx 间连续传递 drawOffset，再调用本地版本化 @era/vibeflow-expression 包；本 Nodeset 不做 Tavern I/O。",
+      "display_name": "含表达式的同步规划",
+      "description": "Service 规划库组织真实消息重放；完整求值经发布包执行 Expression 同步 AOT。随机 sourceKey 与 drawOffset 的算法所有者位于实际求值链。",
       "status": "implemented",
       "flow_kind": "predefined",
       "effect_scope": "none",
@@ -5071,11 +5071,11 @@
         "execution_lock": null,
         "contains_global_state": false,
         "summary": {
-          "nodes": 5,
+          "nodes": 3,
           "nodesets": 18,
-          "explicit_edges": 4,
+          "explicit_edges": 2,
           "data_edges": 0,
-          "reported_edges": 4,
+          "reported_edges": 2,
           "contains_global_state": false
         },
         "entry_nodes": [
@@ -5120,51 +5120,6 @@
             }
           },
           {
-            "id": "attach_message_random_context",
-            "type_used": "era.expression.attach_message_random_context",
-            "source": {
-              "root_id": "era-service",
-              "path": "configs/nodesets/expression_engine_bridge.jsonc"
-            },
-            "role": {
-              "display_name": "从消息 MK 建立随机上下文",
-              "description": "为每个被重放消息使用其稳定 MK 作为 sourceKey，并把本楼层 drawOffset 初始化为零；不使用变量目标路径、时间或 Sidecar 游标。"
-            },
-            "contract_source": "node_type",
-            "flow_kind": "process",
-            "effect_scope": "none",
-            "runtime_dispatch": "unknown",
-            "execution_lock": null,
-            "effective_execution_lock": null,
-            "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
-            "requires": [
-              {
-                "type": "era.expression.command.request",
-                "cardinality": "exactly_one",
-                "display_name": "表达式命令请求"
-              }
-            ],
-            "provides": [
-              {
-                "key": "message_random_command_request",
-                "type": "era.expression.command.request",
-                "display_name": "带消息随机身份的命令请求"
-              }
-            ],
-            "join_policy": "safe_any",
-            "async": null,
-            "loop": null,
-            "io": null,
-            "invokes": null,
-            "config": {
-              "call": {},
-              "node_configs": {},
-              "allow_config_override": false
-            }
-          },
-          {
             "id": "execute",
             "type_used": "era.expression.execute_era_commands.bridge",
             "source": {
@@ -5173,7 +5128,7 @@
             },
             "role": {
               "display_name": "计算历史同步计划",
-              "description": "保留 planSyncWork → planEraSync → CRUD 的真实调用链；完整表达式求值经版本化包同步委托 Expression AOT 工作流，解析与函数编译工具仍是登记纯算法。该节点不执行 Tavern 写入。"
+              "description": "消费收窄的 SyncPlanningInput，调用登记 sync_planning 的 planSyncWork；其真实重放链进入 Expression 同步 AOT，返回规划工作项，不读写宿主。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -5196,51 +5151,6 @@
                 "key": "expression_command_result",
                 "type": "era.expression.command.result",
                 "display_name": "表达式命令结果"
-              }
-            ],
-            "join_policy": "safe_any",
-            "async": null,
-            "loop": null,
-            "io": null,
-            "invokes": null,
-            "config": {
-              "call": {},
-              "node_configs": {},
-              "allow_config_override": false
-            }
-          },
-          {
-            "id": "publish_message_random_cursor",
-            "type_used": "era.expression.publish_message_random_cursor",
-            "source": {
-              "root_id": "era-service",
-              "path": "configs/nodesets/expression_engine_bridge.jsonc"
-            },
-            "role": {
-              "display_name": "发布楼层随机游标结果",
-              "description": "把 randomDrawsConsumed 与 nextDrawOffset 保留在纯同步工作项中，供候选复放校验；游标不写入消息或 Sidecar。"
-            },
-            "contract_source": "node_type",
-            "flow_kind": "process",
-            "effect_scope": "none",
-            "runtime_dispatch": "unknown",
-            "execution_lock": null,
-            "effective_execution_lock": null,
-            "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
-            "requires": [
-              {
-                "type": "era.expression.command.result",
-                "cardinality": "exactly_one",
-                "display_name": "表达式命令结果"
-              }
-            ],
-            "provides": [
-              {
-                "key": "message_random_cursor_report",
-                "type": "era.expression.random.cursor.report",
-                "display_name": "楼层随机游标报告"
               }
             ],
             "join_policy": "safe_any",
@@ -5291,16 +5201,6 @@
         "edges": [
           {
             "from": "start",
-            "to": "attach_message_random_context",
-            "when": "",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "attach_message_random_context",
             "to": "execute",
             "when": "",
             "roles": [
@@ -5311,16 +5211,6 @@
           },
           {
             "from": "execute",
-            "to": "publish_message_random_cursor",
-            "when": "",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "publish_message_random_cursor",
             "to": "end",
             "when": "",
             "roles": [
@@ -9850,8 +9740,8 @@
               "path": "configs/nodesets/task_sync.jsonc"
             },
             "role": {
-              "display_name": "读取原子楼层同步上下文 V3",
-              "description": "消费 EraDispatchContextV3 中的严格消息投影、稳定楼层身份、暂存更新和可选最终楼层候选，仅补读 Sidecar 指针与迁移来源；不得用旧 processingMk 覆盖当前楼层身份。"
+              "display_name": "读取同步输入与连续处理事实",
+              "description": "读取 Sidecar 指针与当前派发输入；在 Node 边界从批次状态投影连续 MK 和计数，后续规划不携带批次来源、通知或队列状态。"
             },
             "contract_source": "node_type",
             "flow_kind": "data_store",
@@ -9954,8 +9844,8 @@
               "path": "configs/nodesets/task_sync.jsonc"
             },
             "role": {
-              "display_name": "整理表达式命令、双快照与消息身份",
-              "description": "在既有 Sidecar V3 上下文中整理同步 DTO，并为每个重放楼层携带已确认的 MK；保留 full/latest/rollback/Swipe 的既有同步范围，不重新实现解析、函数调用图、随机算法或数学求值。"
+              "display_name": "准备同步规划请求",
+              "description": "将已加载 Sidecar 的同步输入投影为规划所需消息、状态、派发事实和连续计数；不再透传整个上下文。调用登记 sync_planning 模块。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -9999,8 +9889,8 @@
               "path": "configs/nodesets/task_sync.jsonc"
             },
             "role": {
-              "display_name": "调用可重放函数表达式 Nodeset",
-              "description": "调用独立 expression root，按消息 MK 和原文顺序执行变量、函数与随机表达式；同楼层普通标签与 era_tx 共用自动 draw 序列。数学语义、随机算法、函数嵌套、递归拒绝与双快照由该 root 提供。"
+              "display_name": "计算含表达式的同步计划",
+              "description": "经现有同步规划库重放消息和指令；完整表达式求值实际调用版本化 Expression AOT，输出纯同步工作项。"
             },
             "contract_source": "nodeset",
             "flow_kind": "predefined",
@@ -10049,7 +9939,7 @@
             },
             "role": {
               "display_name": "按同 Scope 压缩封存事务",
-              "description": "把同步重放产生的封存候选按 era_tx scope 划分相邻段，再交给独立命令压缩 root；跨 scope、正文与无法证明语义都是硬边界。"
+              "description": "Service 选择封存楼层，调用 Compaction 同步 AOT；作用域分段由 Compaction 负责，Service 执行 CRUD 重放确认并回填计划。"
             },
             "contract_source": "nodeset",
             "flow_kind": "predefined",
@@ -10097,8 +9987,8 @@
               "path": "configs/nodesets/task_sync.jsonc"
             },
             "role": {
-              "display_name": "组装表达式同步计划",
-              "description": "把 expression root 的纯结果映射回既有 no-op、CRUD 或历史协调工作项，携带 statFunc 和函数编辑日志；外层原有路由、事务和通知边界保持不变。"
+              "display_name": "选择同步提交分支",
+              "description": "消费已完成表达式计算和压缩的工作项，选择无提交、CRUD 结果适配或协调结果适配；不再次运行同步算法。"
             },
             "contract_source": "node_type",
             "flow_kind": "decision",
@@ -10147,8 +10037,8 @@
               "path": "configs/nodesets/task_sync.jsonc"
             },
             "role": {
-              "display_name": "结算无变化或空聊天终态",
-              "description": "非空历史的真正 no-op 保留当前状态；空历史由纯同步引擎形成可提交的空 statData/statFunc、SelectedMks 与编辑日志终态。"
+              "display_name": "结算无需提交的同步结果",
+              "description": "由 sync_result_policy 把无变化或失败工作项映射为来源回执与批次更新。空聊天清空状态按规划结果进入原提交分支。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -10192,8 +10082,8 @@
               "path": "configs/nodesets/task_sync.jsonc"
             },
             "role": {
-              "display_name": "应用 CRUD 指令",
-              "description": "确认纯引擎已经应用插入、更新或删除指令，并保留逻辑提交候选。"
+              "display_name": "适配已计算的 CRUD 结果",
+              "description": "保留纯规划阶段已经应用的 CRUD 工作项，适配到共享提交契约；此处不重新执行指令或写入宿主。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -10237,8 +10127,8 @@
               "path": "configs/nodesets/task_sync.jsonc"
             },
             "role": {
-              "display_name": "计算协调结果",
-              "description": "以纯计算方式生成普通、full、latest、auto 或 rollbackTo 的状态与编辑日志变更，不写入宿主。"
+              "display_name": "适配已计算的协调结果",
+              "description": "把已有普通/full/latest/auto/rollbackTo 规划结果交给共享提交候选构造；不重复计算。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -10282,8 +10172,8 @@
               "path": "configs/nodesets/task_sync.jsonc"
             },
             "role": {
-              "display_name": "构造共享最终楼层呈现意图",
-              "description": "保留原子提交和009源依据，将首次呈现意图从Agent专有候选提升到共享提交，非Agent原生生成/Regenerate完成也能明确指向最终楼层。意图依据真实生成周期及最终展示变化，不将每次messageWrites或API更新等同重绘，不伪造Agent会话，不持久化意图。见reports/era-statusbar-presentation-change-list.md。"
+              "display_name": "构造消息与 Sidecar 提交候选",
+              "description": "由 sync_commit_policy 从同步工作项构造消息写入、状态、来源依据和首次呈现意图；不执行宿主写入。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -10327,8 +10217,8 @@
               "path": "configs/nodesets/task_sync.jsonc"
             },
             "role": {
-              "display_name": "校验最终楼层身份完全一致",
-              "description": "校验完整提交候选及原始宿主依据；最终消息、processing floor、SelectedMks 和双日志 MK 不一致时零写入失败，实际目标变化由紧贴 Host 写入的事实核对报告。"
+              "display_name": "检查提交候选契约",
+              "description": "调用 sync_commit_policy 的原提交检查，输出有效提交请求或可结算的契约失败；保持现有判断及错误代码。"
             },
             "contract_source": "node_type",
             "flow_kind": "decision",
@@ -10382,8 +10272,8 @@
               "path": "configs/nodesets/task_sync.jsonc"
             },
             "role": {
-              "display_name": "构造同步提交合同失败",
-              "description": "在未执行 Capability 写入时把无效提交候选转换为普通 failed 结果；API 已先写消息的场景由外层 finalizer 统一升级 fatal。"
+              "display_name": "结算未提交的契约失败",
+              "description": "由 sync_result_policy 根据原步骤来源生成失败回执；不执行写入。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -10427,8 +10317,8 @@
               "path": "configs/nodesets/task_sync.jsonc"
             },
             "role": {
-              "display_name": "分别确认原候选保存与当前来源有效性",
-              "description": "原B候选落盘与用户当前选择C是两个事实：Host读回原候选正文、MK及ERA extra，不要求它仍是活动Swipe；写入后的来源核对复用sourceBasis，包含本任务自身写入后的正文。Service沿现有sourceChanged分支阻止旧Sidecar/快照发布，已写任务保留真实写入计数，不误报repair、不伪装API/Agent成功。真实保存失败仍报告；不加等待、重试、锁或第二套队列。详见reports/era-swipe-persistence-separation-change-list.md。"
+              "display_name": "提交消息与 Sidecar 并确认读回",
+              "description": "保持原唯一提交顺序和 Capability 调用；sync_commit_policy 负责候选、来源依据和读回判定。记录消息写入数、Sidecar 状态与来源变化，交给结果模块结算。"
             },
             "contract_source": "node_type",
             "flow_kind": "data_store",
@@ -10472,8 +10362,8 @@
               "path": "configs/nodesets/task_sync.jsonc"
             },
             "role": {
-              "display_name": "按共享意图首次呈现最终楼层",
-              "description": "消费共享首次呈现意图，不再只认Agent候选。消息及Sidecar成功且当前来源一致后，对指定楼层执行一次原生affected render；API/历史回放/普通revision不重建iframe。失败只附显示诊断，不回滚已提交状态，不恢复强制重载。"
+              "display_name": "呈现已提交的最终楼层",
+              "description": "消息及 Sidecar 提交成功且来源一致时，消费首次呈现意图刷新指定楼层；返回现有呈现诊断，不改变提交结果。"
             },
             "contract_source": "node_type",
             "flow_kind": "data_store",
@@ -10517,8 +10407,8 @@
               "path": "configs/nodesets/task_sync.jsonc"
             },
             "role": {
-              "display_name": "构造同步结算结果",
-              "description": "按真实写入结论构造 receipt 和诊断；源事实已变化时不发布旧计划 stateUpdate，普通零写入过时任务与已提交但未呈现分别结算。"
+              "display_name": "结算提交结果与批次更新",
+              "description": "由 sync_result_policy 根据实际提交与来源结果生成来源回执、诊断和连续处理更新；批次合并仍在原 merge_task_result。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -10562,8 +10452,8 @@
               "path": "configs/nodesets/task_sync.jsonc"
             },
             "role": {
-              "display_name": "构造 Sidecar 选择等待结果",
-              "description": "仅在专用 Sidecar Nodeset 已确认冲突且等待用户选择时，构造无写入的正常结算结果。"
+              "display_name": "结算等待 Sidecar 选择的任务",
+              "description": "读取已判定的 Sidecar 等待结果，复用登记契约及结果策略生成无写入回执。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -10607,8 +10497,8 @@
               "path": "configs/nodesets/task_sync.jsonc"
             },
             "role": {
-              "display_name": "构造已完成 Sidecar 修复结果",
-              "description": "保留给未来纯绑定 no-op 修复；当前 Sidecar repair 会进入完整重放，确保已确认的聊天指令重新生成文件状态。"
+              "display_name": "结算已完成的 Sidecar 绑定",
+              "description": "根据 Sidecar 分支结果生成任务回执；保持原路由条件与行为。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -13621,60 +13511,9 @@
         }
       ]
     },
-    "era.expression.attach_message_random_context": {
-      "display_name": "从消息 MK 建立随机上下文",
-      "description": "保留带稳定消息 MK 的纯同步 DTO；CRUD 引擎在逐楼层重放时以 MK 建立零起始、仅内存存在的抽取游标。",
-      "category": "表达式集成",
-      "version": "1.0.0",
-      "flow_kind": "process",
-      "contract": {
-        "requires": [
-          {
-            "type": "era.expression.command.request",
-            "cardinality": "exactly_one",
-            "display_name": "表达式命令请求"
-          }
-        ],
-        "provides": [
-          {
-            "key": "message_random_command_request",
-            "type": "era.expression.command.request",
-            "display_name": "带消息随机身份的命令请求"
-          }
-        ],
-        "input_semantics": {
-          "era.expression.command.request": [
-            "输入：每个可重放消息均已确认 MK 的纯同步 DTO。"
-          ]
-        },
-        "output_semantics": {
-          "message_random_command_request": [
-            "输出：不含宿主引用、持久化游标或目标路径种子的请求。"
-          ]
-        },
-        "params_schema": {},
-        "params_defaults": {},
-        "examples": []
-      },
-      "implementations": [
-        {
-          "language": "typescript",
-          "targets": [
-            "browser",
-            "node"
-          ],
-          "source": {
-            "kind": "file",
-            "ref": "nodes/sync/attach_message_random_context.ts",
-            "export": "run"
-          },
-          "completion": "immediate"
-        }
-      ]
-    },
     "era.expression.execute_era_commands.bridge": {
-      "display_name": "执行表达式命令桥接",
-      "description": "调用同步适配器；其 VariableEdit 求值和函数库校验委托 @era/vibeflow-expression，不复制其语法或数学实现。",
+      "display_name": "计算历史同步计划",
+      "description": "消费收窄的 SyncPlanningInput，调用登记 sync_planning 的 planSyncWork；其真实重放链进入 Expression 同步 AOT，返回规划工作项，不读写宿主。",
       "category": "表达式集成",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -13717,57 +13556,6 @@
           "source": {
             "kind": "file",
             "ref": "nodes/sync/execute_expression_commands.ts",
-            "export": "run"
-          },
-          "completion": "immediate"
-        }
-      ]
-    },
-    "era.expression.publish_message_random_cursor": {
-      "display_name": "发布楼层随机游标结果",
-      "description": "发布纯重放结果中的随机抽取计数；计数只供同一计算链验证，不进入消息、Sidecar 或公共 API。",
-      "category": "表达式集成",
-      "version": "1.0.0",
-      "flow_kind": "process",
-      "contract": {
-        "requires": [
-          {
-            "type": "era.expression.command.result",
-            "cardinality": "exactly_one",
-            "display_name": "表达式命令结果"
-          }
-        ],
-        "provides": [
-          {
-            "key": "message_random_cursor_report",
-            "type": "era.expression.random.cursor.report",
-            "display_name": "楼层随机游标报告"
-          }
-        ],
-        "input_semantics": {
-          "era.expression.command.result": [
-            "输入：按消息 MK 重放完成的纯同步结果。"
-          ]
-        },
-        "output_semantics": {
-          "message_random_cursor_report": [
-            "输出：仅供当前工作流追踪的随机抽取计数；命令结果仍由执行节点唯一提供。"
-          ]
-        },
-        "params_schema": {},
-        "params_defaults": {},
-        "examples": []
-      },
-      "implementations": [
-        {
-          "language": "typescript",
-          "targets": [
-            "browser",
-            "node"
-          ],
-          "source": {
-            "kind": "file",
-            "ref": "nodes/sync/publish_message_random_cursor.ts",
             "export": "run"
           },
           "completion": "immediate"
@@ -15476,8 +15264,8 @@
       ]
     },
     "era.service.terminal": {
-      "display_name": "ERA 服务终端",
-      "description": "定义工作流及 nodeset 的空起止边界。",
+      "display_name": "表达式命令结束",
+      "description": "返回纯同步工作项。",
       "category": "服务生命周期",
       "version": "1.0.0",
       "flow_kind": "terminal",
@@ -15734,8 +15522,8 @@
       ]
     },
     "era.sidecar_binding.build_applied_result": {
-      "display_name": "构造已完成 Sidecar 修复结果",
-      "description": "将已完成的本地镜像修复结算为无变量重算的正常结果。",
+      "display_name": "结算已完成的 Sidecar 绑定",
+      "description": "根据 Sidecar 分支结果生成任务回执；保持原路由条件与行为。",
       "category": "Sidecar 绑定",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -15785,8 +15573,8 @@
       ]
     },
     "era.sidecar_binding.build_blocked_result": {
-      "display_name": "构造 Sidecar 选择等待结果",
-      "description": "将未决 Sidecar 冲突结算为无写入同步失败，避免普通任务无结果终止。",
+      "display_name": "结算等待 Sidecar 选择的任务",
+      "description": "读取已判定的 Sidecar 等待结果，复用登记契约及结果策略生成无写入回执。",
       "category": "Sidecar 绑定",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -15992,8 +15780,8 @@
       ]
     },
     "era.sync.assemble_expression_plan": {
-      "display_name": "组装表达式同步计划",
-      "description": "把表达式 root 和封存压缩 root 的纯结果映射为现有 no-op、CRUD 或历史协调分支；不重新计算表达式。",
+      "display_name": "选择同步提交分支",
+      "description": "消费已完成表达式计算和压缩的工作项，选择无提交、CRUD 结果适配或协调结果适配；不再次运行同步算法。",
       "category": "同步规划",
       "version": "1.0.0",
       "flow_kind": "decision",
@@ -16051,8 +15839,8 @@
       ]
     },
     "era.sync.build_commit": {
-      "display_name": "构造同步逻辑提交",
-      "description": "把逻辑结果、稳定楼层身份和 Agent 候选转换为 canonical 消息与 Sidecar 的提交 V2；同一消息只写一次。",
+      "display_name": "构造消息与 Sidecar 提交候选",
+      "description": "由 sync_commit_policy 从同步工作项构造消息写入、状态、来源依据和首次呈现意图；不执行宿主写入。",
       "category": "同步事务",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -16102,8 +15890,8 @@
       ]
     },
     "era.sync.build_contract_failure": {
-      "display_name": "构造同步提交合同失败",
-      "description": "把预提交合同失败转换为无通知、无状态推进且逐来源结算的普通同步失败。",
+      "display_name": "结算未提交的契约失败",
+      "description": "由 sync_result_policy 根据原步骤来源生成失败回执；不执行写入。",
       "category": "同步事务",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -16153,8 +15941,8 @@
       ]
     },
     "era.sync.build_notification": {
-      "display_name": "构造同步结算与通知",
-      "description": "按业务提交状态形成每个来源的唯一结算；首次呈现失败作为独立 diagnostic，不伪装业务回滚。",
+      "display_name": "结算提交结果与批次更新",
+      "description": "由 sync_result_policy 根据实际提交与来源结果生成来源回执、诊断和连续处理更新；批次合并仍在原 merge_task_result。",
       "category": "同步事务",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -16204,8 +15992,8 @@
       ]
     },
     "era.sync.compute": {
-      "display_name": "确认历史协调结果",
-      "description": "保留纯引擎已计算的普通、完全、最新、自动或定向回滚候选，进入统一逻辑提交边界。",
+      "display_name": "适配已计算的协调结果",
+      "description": "把已有普通/full/latest/auto/rollbackTo 规划结果交给共享提交候选构造；不重复计算。",
       "category": "同步规划",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -16255,8 +16043,8 @@
       ]
     },
     "era.sync.no_change": {
-      "display_name": "确认无提交同步结果",
-      "description": "保留纯引擎形成的 no-op 或 failed 工作项，交给统一提交边界完成结算。",
+      "display_name": "结算无需提交的同步结果",
+      "description": "由 sync_result_policy 把无变化或失败工作项映射为来源回执与批次更新。空聊天清空状态按规划结果进入原提交分支。",
       "category": "同步规划",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -16365,8 +16153,8 @@
       ]
     },
     "era.sync.prepare_expression_command_request": {
-      "display_name": "整理表达式命令请求",
-      "description": "将已加载 Sidecar 的同步上下文作为纯表达式命令 DTO 传给跨 root Nodeset；不解析表达式。",
+      "display_name": "准备同步规划请求",
+      "description": "将已加载 Sidecar 的同步输入投影为规划所需消息、状态、派发事实和连续计数；不再透传整个上下文。调用登记 sync_planning 模块。",
       "category": "同步规划",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -16416,8 +16204,8 @@
       ]
     },
     "era.sync.present_finalized_floor": {
-      "display_name": "首次呈现已提交楼层",
-      "description": "仅在最终消息与 Sidecar 已提交后，为要求首次呈现的新楼层执行一次正常 affected render；呈现失败仅附加诊断。",
+      "display_name": "呈现已提交的最终楼层",
+      "description": "消息及 Sidecar 提交成功且来源一致时，消费首次呈现意图刷新指定楼层；返回现有呈现诊断，不改变提交结果。",
       "category": "同步事务",
       "version": "1.0.0",
       "flow_kind": "data_store",
@@ -16466,8 +16254,8 @@
       ]
     },
     "era.sync.validate_commit_candidate": {
-      "display_name": "校验同步提交候选",
-      "description": "在任何 Capability 写入前验证最终消息、processing floor、SelectedMks、变量日志、函数日志和状态栏绑定 MK 完全一致。",
+      "display_name": "检查提交候选契约",
+      "description": "调用 sync_commit_policy 的原提交检查，输出有效提交请求或可结算的契约失败；保持现有判断及错误代码。",
       "category": "同步事务",
       "version": "1.0.0",
       "flow_kind": "decision",
@@ -16533,8 +16321,8 @@
       ]
     },
     "era.task.crud_write": {
-      "display_name": "确认 CRUD 同步结果",
-      "description": "保留纯引擎已计算的 CRUD 状态与编辑日志候选，进入统一逻辑提交边界。",
+      "display_name": "适配已计算的 CRUD 结果",
+      "description": "保留纯规划阶段已经应用的 CRUD 工作项，适配到共享提交契约；此处不重新执行指令或写入宿主。",
       "category": "同步规划",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -16894,8 +16682,8 @@
       ]
     },
     "era.tavern.sync_read": {
-      "display_name": "读取 Tavern 同步上下文",
-      "description": "消费 V2/V3 派发上下文中的严格消息投影、稳定楼层身份、暂存更新与候选，仅读取聊天 Sidecar 指针与旧状态迁移来源。",
+      "display_name": "读取同步输入与连续处理事实",
+      "description": "读取 Sidecar 指针与当前派发输入；在 Node 边界从批次状态投影连续 MK 和计数，后续规划不携带批次来源、通知或队列状态。",
       "category": "同步宿主边界",
       "version": "1.0.0",
       "flow_kind": "data_store",
@@ -16952,8 +16740,8 @@
       ]
     },
     "era.tavern.variables_commit": {
-      "display_name": "提交同步消息与 Sidecar 状态",
-      "description": "以 refresh:none 一次写入 canonical 消息与 extra，再提交并回读 V2 Sidecar，回读成功后发布当前身份的运行时快照。",
+      "display_name": "提交消息与 Sidecar 并确认读回",
+      "description": "保持原唯一提交顺序和 Capability 调用；sync_commit_policy 负责候选、来源依据和读回判定。记录消息写入数、Sidecar 状态与来源变化，交给结果模块结算。",
       "category": "同步宿主边界",
       "version": "1.0.0",
       "flow_kind": "data_store",
@@ -43556,11 +43344,11 @@
           }
         ],
         "dependencies": [
-          "era.service.sync_transaction",
           "era.crud.engine",
-          "era.service.sync_engine",
+          "era.service.command_compaction_marker",
           "era.service.mk_engine",
-          "era.service.command_compaction_marker"
+          "era.service.sync_contracts",
+          "era.service.sync_engine"
         ],
         "external_packages": [
           "@era/vibeflow-command-compaction"
@@ -43850,8 +43638,63 @@
             "completion": "immediate"
           }
         ],
+        "dependencies": [],
+        "external_packages": []
+      },
+      "era.service.sync_commit_policy": {
+        "kind": "base_lib",
+        "id": "era.service.sync_commit_policy",
+        "display_name": "同步提交与读回策略",
+        "description": "构造和检查提交候选、更新来源依据、判断读回结果；非提交候选复用结果模块检查可结算性。",
+        "category": "同步事务",
+        "version": "1.0.0",
+        "implementations": [
+          {
+            "language": "typescript",
+            "targets": [
+              "browser",
+              "node"
+            ],
+            "source": {
+              "kind": "file",
+              "ref": "base_lib/sync_commit_policy.ts"
+            },
+            "completion": "immediate"
+          }
+        ],
         "dependencies": [
-          "era.service.sync_transaction"
+          "era.service.mk_engine",
+          "era.service.sync_contracts",
+          "era.service.sync_engine",
+          "era.service.sync_result_policy",
+          "era.service.types"
+        ],
+        "external_packages": []
+      },
+      "era.service.sync_contracts": {
+        "kind": "base_lib",
+        "id": "era.service.sync_contracts",
+        "display_name": "同步阶段基础契约",
+        "description": "同步阶段类型、批次连续事实投影、JSON 与错误适配、共享输入断言。",
+        "category": "同步事务",
+        "version": "1.0.0",
+        "implementations": [
+          {
+            "language": "typescript",
+            "targets": [
+              "browser",
+              "node"
+            ],
+            "source": {
+              "kind": "file",
+              "ref": "base_lib/sync_contracts.ts"
+            },
+            "completion": "immediate"
+          }
+        ],
+        "dependencies": [
+          "era.service.sync_engine",
+          "era.service.types"
         ],
         "external_packages": []
       },
@@ -43884,11 +43727,11 @@
         ],
         "external_packages": []
       },
-      "era.service.sync_transaction": {
+      "era.service.sync_planning": {
         "kind": "base_lib",
-        "id": "era.service.sync_transaction",
-        "display_name": "ERA 同步事务纯适配层",
-        "description": "规范化 Tavern JSON、调用同步纯引擎、构造逻辑提交与最终任务结果；不直接访问宿主能力。",
+        "id": "era.service.sync_planning",
+        "display_name": "同步输入与规划",
+        "description": "投影同步计算输入、规范化消息与状态，调用纯同步引擎生成工作项；不持有批次状态或调用宿主。",
         "category": "同步事务",
         "version": "1.0.0",
         "implementations": [
@@ -43900,15 +43743,44 @@
             ],
             "source": {
               "kind": "file",
-              "ref": "base_lib/sync_transaction.ts"
+              "ref": "base_lib/sync_planning.ts"
             },
             "completion": "immediate"
           }
         ],
         "dependencies": [
-          "era.service.types",
           "era.service.mk_engine",
-          "era.service.sync_engine"
+          "era.service.sync_contracts",
+          "era.service.sync_engine",
+          "era.service.types"
+        ],
+        "external_packages": []
+      },
+      "era.service.sync_result_policy": {
+        "kind": "base_lib",
+        "id": "era.service.sync_result_policy",
+        "display_name": "同步结果与批次结算",
+        "description": "根据实际同步结论生成来源回执、诊断和连续处理更新；不执行提交。",
+        "category": "同步事务",
+        "version": "1.0.0",
+        "implementations": [
+          {
+            "language": "typescript",
+            "targets": [
+              "browser",
+              "node"
+            ],
+            "source": {
+              "kind": "file",
+              "ref": "base_lib/sync_result_policy.ts"
+            },
+            "completion": "immediate"
+          }
+        ],
+        "dependencies": [
+          "era.service.sync_contracts",
+          "era.service.sync_engine",
+          "era.service.types"
         ],
         "external_packages": []
       },

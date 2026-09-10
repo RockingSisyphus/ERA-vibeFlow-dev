@@ -1,1 +1,64 @@
-{"kind":"node","type_key":"era.sync.assemble_expression_plan","display_name":"组装表达式同步计划","category":"同步规划","description":"把表达式 root 和封存压缩 root 的纯结果映射为现有 no-op、CRUD 或历史协调分支；不重新计算表达式。","version":"1.0.0","flow_kind":"decision","contract":{"requires":[{"type":"era.command_compaction.result","cardinality":"exactly_one","display_name":"已验证封存压缩结果"}],"provides":[{"key":"sync_route","type":"era.sync.route","display_name":"同步路由"},{"key":"sync_work","type":"era.sync.work","display_name":"同步工作项"}],"params_schema":{},"params_defaults":{},"input_semantics":{"era.command_compaction.result":["输入：已完成表达式求值并完成封存压缩复放确认的同步工作项。"]},"output_semantics":{"sync_route":["输出：既有同步分支。"],"sync_work":["输出：既有提交工作项。"]}},"implementations":[{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/sync/assemble_expression_sync_plan.ts","export":"run"}}],"base_libs":["era.service.sync_transaction"],"capabilities":[]}
+{
+  "kind": "node",
+  "type_key": "era.sync.assemble_expression_plan",
+  "display_name": "选择同步提交分支",
+  "category": "同步规划",
+  "description": "消费已完成表达式计算和压缩的工作项，选择无提交、CRUD 结果适配或协调结果适配；不再次运行同步算法。",
+  "version": "1.0.0",
+  "flow_kind": "decision",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.command_compaction.result",
+        "cardinality": "exactly_one",
+        "display_name": "已验证封存压缩结果"
+      }
+    ],
+    "provides": [
+      {
+        "key": "sync_route",
+        "type": "era.sync.route",
+        "display_name": "同步路由"
+      },
+      {
+        "key": "sync_work",
+        "type": "era.sync.work",
+        "display_name": "同步工作项"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.command_compaction.result": [
+        "输入：已完成表达式求值并完成封存压缩复放确认的同步工作项。"
+      ]
+    },
+    "output_semantics": {
+      "sync_route": [
+        "输出：既有同步分支。"
+      ],
+      "sync_work": [
+        "输出：既有提交工作项。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/sync/assemble_expression_sync_plan.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.sync_contracts"
+  ],
+  "capabilities": []
+}

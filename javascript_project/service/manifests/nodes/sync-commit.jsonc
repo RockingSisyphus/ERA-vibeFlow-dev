@@ -1,22 +1,74 @@
 {
   "kind": "node",
   "type_key": "era.tavern.variables_commit",
-  "display_name": "提交同步消息与 Sidecar 状态",
+  "display_name": "提交消息与 Sidecar 并确认读回",
   "category": "同步宿主边界",
-  "description": "以 refresh:none 一次写入 canonical 消息与 extra，再提交并回读 V2 Sidecar，回读成功后发布当前身份的运行时快照。",
+  "description": "保持原唯一提交顺序和 Capability 调用；sync_commit_policy 负责候选、来源依据和读回判定。记录消息写入数、Sidecar 状态与来源变化，交给结果模块结算。",
   "version": "1.0.0",
   "flow_kind": "data_store",
   "contract": {
-    "requires": [{"type": "era.tavern.commit.request", "cardinality": "exactly_one", "display_name": "同步提交请求"}],
-    "provides": [{"key": "sync_commit_result", "type": "era.tavern.commit.result", "display_name": "同步提交结果"}],
-    "params_schema": {}, "params_defaults": {},
-    "input_semantics": {"era.tavern.commit.request":["输入：同步提交请求。"]},
-    "output_semantics": {"sync_commit_result":["输出：同步提交结果。"]}
+    "requires": [
+      {
+        "type": "era.tavern.commit.request",
+        "cardinality": "exactly_one",
+        "display_name": "同步提交请求"
+      }
+    ],
+    "provides": [
+      {
+        "key": "sync_commit_result",
+        "type": "era.tavern.commit.result",
+        "display_name": "同步提交结果"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.tavern.commit.request": [
+        "输入：同步提交请求。"
+      ]
+    },
+    "output_semantics": {
+      "sync_commit_result": [
+        "输出：同步提交结果。"
+      ]
+    }
   },
-  "implementations": [{"language": "typescript", "targets": ["browser"], "completion": "suspend", "source": {"kind": "file", "ref": "nodes/sync/commit_sync.ts", "export": "run"}}],
-  "base_libs": ["era.service.sync_transaction", "era.service.sidecar_binding"],
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser"
+      ],
+      "completion": "suspend",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/sync/commit_sync.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.sidecar_binding",
+    "era.service.sync_commit_policy",
+    "era.service.sync_contracts"
+  ],
   "capabilities": [
-    {"id": "era.tavern.messages", "operations": ["update_content"]},
-    {"id": "era.tavern.sidecar", "operations": ["read_current", "read_record", "write_record", "commit_metadata", "present_prompt"]}
+    {
+      "id": "era.tavern.messages",
+      "operations": [
+        "update_content"
+      ]
+    },
+    {
+      "id": "era.tavern.sidecar",
+      "operations": [
+        "read_current",
+        "read_record",
+        "write_record",
+        "commit_metadata",
+        "present_prompt"
+      ]
+    }
   ]
 }

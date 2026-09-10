@@ -1,8 +1,5 @@
-import {
-  planSyncWork,
-  type SyncContextV1,
-  type SyncWorkV1,
-} from "../../base_lib/sync_transaction.ts";
+import { planSyncWork } from "../../base_lib/sync_planning.ts";
+import { type SyncPlanningInput, type SyncWorkV1 } from "../../base_lib/sync_contracts.ts";
 
 interface Envelope<T> {
   readonly value: T;
@@ -17,7 +14,7 @@ export function run(
   inputs: Readonly<{ "era.sync.context": Envelope<unknown> }>,
 ): any {
   const work = planSyncWork(
-    inputs["era.sync.context"].value as SyncContextV1,
+    inputs["era.sync.context"].value as SyncPlanningInput,
   );
   return {
     sync_route: routeFor(work),

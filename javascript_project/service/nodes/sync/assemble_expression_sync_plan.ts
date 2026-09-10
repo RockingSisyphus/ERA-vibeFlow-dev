@@ -1,4 +1,4 @@
-import type { SyncWorkV1 } from "../../base_lib/sync_transaction.ts";
+import { type SyncWorkV1 } from "../../base_lib/sync_contracts.ts";
 
 function routeFor(work: SyncWorkV1): "no-op" | "crud" | "reconcile" {
   if (work.disposition !== "commit") return "no-op";

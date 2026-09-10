@@ -1,9 +1,9 @@
 {
   "kind": "node",
   "type_key": "era.sync.validate_commit_candidate",
-  "display_name": "校验同步提交候选",
+  "display_name": "检查提交候选契约",
   "category": "同步事务",
-  "description": "在任何 Capability 写入前验证最终消息、processing floor、SelectedMks、变量日志、函数日志和状态栏绑定 MK 完全一致。",
+  "description": "调用 sync_commit_policy 的原提交检查，输出有效提交请求或可结算的契约失败；保持现有判断及错误代码。",
   "version": "1.0.0",
   "flow_kind": "decision",
   "contract": {
@@ -34,10 +34,14 @@
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
-      "era.tavern.commit.request": ["输入：尚未越过副作用边界的同步提交候选。"]
+      "era.tavern.commit.request": [
+        "输入：尚未越过副作用边界的同步提交候选。"
+      ]
     },
     "output_semantics": {
-      "commit_validation_route": ["输出：valid 或 failed。"],
+      "commit_validation_route": [
+        "输出：valid 或 failed。"
+      ],
       "validated_commit_request": [
         "输出：valid 路由下为可以安全提交的候选；failed 路由下不被消费。"
       ],
@@ -49,7 +53,10 @@
   "implementations": [
     {
       "language": "typescript",
-      "targets": ["browser", "node"],
+      "targets": [
+        "browser",
+        "node"
+      ],
       "completion": "immediate",
       "source": {
         "kind": "file",
@@ -58,6 +65,8 @@
       }
     }
   ],
-  "base_libs": ["era.service.sync_transaction"],
+  "base_libs": [
+    "era.service.sync_commit_policy"
+  ],
   "capabilities": []
 }

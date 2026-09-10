@@ -1,18 +1,54 @@
 {
   "kind": "node",
   "type_key": "era.task.crud_write",
-  "display_name": "确认 CRUD 同步结果",
+  "display_name": "适配已计算的 CRUD 结果",
   "category": "同步规划",
-  "description": "保留纯引擎已计算的 CRUD 状态与编辑日志候选，进入统一逻辑提交边界。",
+  "description": "保留纯规划阶段已经应用的 CRUD 工作项，适配到共享提交契约；此处不重新执行指令或写入宿主。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
-    "requires": [{"type": "era.sync.work", "cardinality": "exactly_one", "display_name": "同步工作项"}],
-    "provides": [{"key": "crud_logical_result", "type": "era.sync.logical_result", "display_name": "同步逻辑结果"}],
-    "params_schema": {}, "params_defaults": {},
-    "input_semantics": {"era.sync.work":["输入：同步工作项。"]},
-    "output_semantics": {"crud_logical_result":["输出：同步逻辑结果。"]}
+    "requires": [
+      {
+        "type": "era.sync.work",
+        "cardinality": "exactly_one",
+        "display_name": "同步工作项"
+      }
+    ],
+    "provides": [
+      {
+        "key": "crud_logical_result",
+        "type": "era.sync.logical_result",
+        "display_name": "同步逻辑结果"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.sync.work": [
+        "输入：同步工作项。"
+      ]
+    },
+    "output_semantics": {
+      "crud_logical_result": [
+        "输出：同步逻辑结果。"
+      ]
+    }
   },
-  "implementations": [{"language": "typescript", "targets": ["browser", "node"], "completion": "immediate", "source": {"kind": "file", "ref": "nodes/sync/confirm_crud.ts", "export": "run"}}],
-  "base_libs": ["era.service.sync_transaction"], "capabilities": []
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/sync/confirm_crud.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [],
+  "capabilities": []
 }

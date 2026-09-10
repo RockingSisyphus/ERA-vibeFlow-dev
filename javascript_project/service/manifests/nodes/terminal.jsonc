@@ -1,9 +1,9 @@
 {
   "kind": "node",
   "type_key": "era.service.terminal",
-  "display_name": "ERA 服务终端",
+  "display_name": "表达式命令结束",
   "category": "服务生命周期",
-  "description": "定义工作流及 nodeset 的空起止边界。",
+  "description": "返回纯同步工作项。",
   "version": "1.0.0",
   "flow_kind": "terminal",
   "contract": {

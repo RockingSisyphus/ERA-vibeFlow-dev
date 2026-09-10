@@ -1,30 +1,70 @@
 {
   "kind": "node",
   "type_key": "era.tavern.sync_read",
-  "display_name": "读取 Tavern 同步上下文",
+  "display_name": "读取同步输入与连续处理事实",
   "category": "同步宿主边界",
-  "description": "消费 V2/V3 派发上下文中的严格消息投影、稳定楼层身份、暂存更新与候选，仅读取聊天 Sidecar 指针与旧状态迁移来源。",
+  "description": "读取 Sidecar 指针与当前派发输入；在 Node 边界从批次状态投影连续 MK 和计数，后续规划不携带批次来源、通知或队列状态。",
   "version": "1.0.0",
   "flow_kind": "data_store",
   "contract": {
     "requires": [
-      {"type": "era.step.request.routed", "cardinality": "exactly_one", "display_name": "已路由步骤"},
-      {"type": "era.batch.execution.state", "cardinality": "exactly_one", "display_name": "当前批次执行状态"}
+      {
+        "type": "era.step.request.routed",
+        "cardinality": "exactly_one",
+        "display_name": "已路由步骤"
+      },
+      {
+        "type": "era.batch.execution.state",
+        "cardinality": "exactly_one",
+        "display_name": "当前批次执行状态"
+      }
     ],
-    "provides": [{"key": "sync_context", "type": "era.sync.context", "display_name": "同步上下文"}],
+    "provides": [
+      {
+        "key": "sync_context",
+        "type": "era.sync.context",
+        "display_name": "同步上下文"
+      }
+    ],
     "params_schema": {},
     "params_defaults": {},
-    "input_semantics": {"era.step.request.routed":["输入：已路由步骤。"],"era.batch.execution.state":["输入：当前批次执行状态。"]},
-    "output_semantics": {"sync_context":["输出：同步上下文。"]}
+    "input_semantics": {
+      "era.step.request.routed": [
+        "输入：已路由步骤。"
+      ],
+      "era.batch.execution.state": [
+        "输入：当前批次执行状态。"
+      ]
+    },
+    "output_semantics": {
+      "sync_context": [
+        "输出：同步上下文。"
+      ]
+    }
   },
-  "implementations": [{
-    "language": "typescript",
-    "targets": ["browser"],
-    "completion": "suspend",
-    "source": {"kind": "file", "ref": "nodes/sync/read_sync_context.ts", "export": "run"}
-  }],
-  "base_libs": ["era.service.sync_transaction"],
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser"
+      ],
+      "completion": "suspend",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/sync/read_sync_context.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.sync_contracts"
+  ],
   "capabilities": [
-    {"id": "era.tavern.sidecar", "operations": ["read_current"]}
+    {
+      "id": "era.tavern.sidecar",
+      "operations": [
+        "read_current"
+      ]
+    }
   ]
 }

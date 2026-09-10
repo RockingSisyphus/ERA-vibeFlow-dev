@@ -59,8 +59,8 @@
       {
         "id": "read_sync_context",
         "type_used": "era.tavern.sync_read",
-        "display_name": "读取原子楼层同步上下文 V3",
-        "description": "消费 EraDispatchContextV3 中的严格消息投影、稳定楼层身份、暂存更新和可选最终楼层候选，仅补读 Sidecar 指针与迁移来源；不得用旧 processingMk 覆盖当前楼层身份。"
+        "display_name": "读取同步输入与连续处理事实",
+        "description": "读取 Sidecar 指针与当前派发输入；在 Node 边界从批次状态投影连续 MK 和计数，后续规划不携带批次来源、通知或队列状态。"
       },
       {
         "id": "sidecar_store_prepare",
@@ -71,93 +71,92 @@
       {
         "id": "prepare_expression_command_request",
         "type_used": "era.sync.prepare_expression_command_request",
-        "display_name": "整理表达式命令、双快照与消息身份",
-        "description": "在既有 Sidecar V3 上下文中整理同步 DTO，并为每个重放楼层携带已确认的 MK；保留 full/latest/rollback/Swipe 的既有同步范围，不重新实现解析、函数调用图、随机算法或数学求值。"
+        "display_name": "准备同步规划请求",
+        "description": "将已加载 Sidecar 的同步输入投影为规划所需消息、状态、派发事实和连续计数；不再透传整个上下文。调用登记 sync_planning 模块。"
       },
       {
         "id": "execute_expression_commands",
         "type_used": "era.expression.execute_era_commands",
-        "display_name": "调用可重放函数表达式 Nodeset",
-        "description": "调用独立 expression root，按消息 MK 和原文顺序执行变量、函数与随机表达式；同楼层普通标签与 era_tx 共用自动 draw 序列。数学语义、随机算法、函数嵌套、递归拒绝与双快照由该 root 提供。"
+        "display_name": "计算含表达式的同步计划",
+        "description": "经现有同步规划库重放消息和指令；完整表达式求值实际调用版本化 Expression AOT，输出纯同步工作项。"
       },
       {
         "id": "apply_command_compaction",
         "type_used": "era.command_compaction.apply_sealed_layers",
         "display_name": "按同 Scope 压缩封存事务",
-        "description": "把同步重放产生的封存候选按 era_tx scope 划分相邻段，再交给独立命令压缩 root；跨 scope、正文与无法证明语义都是硬边界。"
+        "description": "Service 选择封存楼层，调用 Compaction 同步 AOT；作用域分段由 Compaction 负责，Service 执行 CRUD 重放确认并回填计划。"
       },
       {
         "id": "assemble_expression_sync_plan",
         "type_used": "era.sync.assemble_expression_plan",
-        "display_name": "组装表达式同步计划",
-        "description": "把 expression root 的纯结果映射回既有 no-op、CRUD 或历史协调工作项，携带 statFunc 和函数编辑日志；外层原有路由、事务和通知边界保持不变。"
+        "display_name": "选择同步提交分支",
+        "description": "消费已完成表达式计算和压缩的工作项，选择无提交、CRUD 结果适配或协调结果适配；不再次运行同步算法。"
       },
       {
         "id": "no_sync_change",
         "type_used": "era.sync.no_change",
-        "display_name": "结算无变化或空聊天终态",
-        "description": "非空历史的真正 no-op 保留当前状态；空历史由纯同步引擎形成可提交的空 statData/statFunc、SelectedMks 与编辑日志终态。"
+        "display_name": "结算无需提交的同步结果",
+        "description": "由 sync_result_policy 把无变化或失败工作项映射为来源回执与批次更新。空聊天清空状态按规划结果进入原提交分支。"
       },
       {
         "id": "crud_write",
         "type_used": "era.task.crud_write",
-        "display_name": "应用 CRUD 指令",
-        "description": "确认纯引擎已经应用插入、更新或删除指令，并保留逻辑提交候选。"
+        "display_name": "适配已计算的 CRUD 结果",
+        "description": "保留纯规划阶段已经应用的 CRUD 工作项，适配到共享提交契约；此处不重新执行指令或写入宿主。"
       },
       {
         "id": "compute_reconciliation",
         "type_used": "era.sync.compute",
-        "display_name": "计算协调结果",
-        "description": "以纯计算方式生成普通、full、latest、auto 或 rollbackTo 的状态与编辑日志变更，不写入宿主。"
+        "display_name": "适配已计算的协调结果",
+        "description": "把已有普通/full/latest/auto/rollbackTo 规划结果交给共享提交候选构造；不重复计算。"
       },
       {
         "id": "build_commit_request",
         "type_used": "era.sync.build_commit",
-        "display_name": "构造共享最终楼层呈现意图",
-        "description": "保留原子提交和009源依据，将首次呈现意图从Agent专有候选提升到共享提交，非Agent原生生成/Regenerate完成也能明确指向最终楼层。意图依据真实生成周期及最终展示变化，不将每次messageWrites或API更新等同重绘，不伪造Agent会话，不持久化意图。见reports/era-statusbar-presentation-change-list.md。"
+        "display_name": "构造消息与 Sidecar 提交候选",
+        "description": "由 sync_commit_policy 从同步工作项构造消息写入、状态、来源依据和首次呈现意图；不执行宿主写入。"
       },
       {
         "id": "validate_commit_candidate",
         "type_used": "era.sync.validate_commit_candidate",
-        "display_name": "校验最终楼层身份完全一致",
-        "description": "校验完整提交候选及原始宿主依据；最终消息、processing floor、SelectedMks 和双日志 MK 不一致时零写入失败，实际目标变化由紧贴 Host 写入的事实核对报告。"
+        "display_name": "检查提交候选契约",
+        "description": "调用 sync_commit_policy 的原提交检查，输出有效提交请求或可结算的契约失败；保持现有判断及错误代码。"
       },
       {
         "id": "build_sync_contract_failure",
         "type_used": "era.sync.build_contract_failure",
-        "display_name": "构造同步提交合同失败",
-        "description": "在未执行 Capability 写入时把无效提交候选转换为普通 failed 结果；API 已先写消息的场景由外层 finalizer 统一升级 fatal。"
+        "display_name": "结算未提交的契约失败",
+        "description": "由 sync_result_policy 根据原步骤来源生成失败回执；不执行写入。"
       },
       {
         "id": "commit_variables",
         "type_used": "era.tavern.variables_commit",
-        "display_name": "分别确认原候选保存与当前来源有效性",
-        "status": "implemented",
-        "description": "原B候选落盘与用户当前选择C是两个事实：Host读回原候选正文、MK及ERA extra，不要求它仍是活动Swipe；写入后的来源核对复用sourceBasis，包含本任务自身写入后的正文。Service沿现有sourceChanged分支阻止旧Sidecar/快照发布，已写任务保留真实写入计数，不误报repair、不伪装API/Agent成功。真实保存失败仍报告；不加等待、重试、锁或第二套队列。详见reports/era-swipe-persistence-separation-change-list.md。"
+        "display_name": "提交消息与 Sidecar 并确认读回",
+        "description": "保持原唯一提交顺序和 Capability 调用；sync_commit_policy 负责候选、来源依据和读回判定。记录消息写入数、Sidecar 状态与来源变化，交给结果模块结算。"
       },
       {
         "id": "present_finalized_floor",
         "type_used": "era.sync.present_finalized_floor",
-        "display_name": "按共享意图首次呈现最终楼层",
-        "description": "消费共享首次呈现意图，不再只认Agent候选。消息及Sidecar成功且当前来源一致后，对指定楼层执行一次原生affected render；API/历史回放/普通revision不重建iframe。失败只附显示诊断，不回滚已提交状态，不恢复强制重载。"
+        "display_name": "呈现已提交的最终楼层",
+        "description": "消息及 Sidecar 提交成功且来源一致时，消费首次呈现意图刷新指定楼层；返回现有呈现诊断，不改变提交结果。"
       },
       {
         "id": "build_sync_notification",
         "type_used": "era.sync.build_notification",
-        "display_name": "构造同步结算结果",
-        "description": "按真实写入结论构造 receipt 和诊断；源事实已变化时不发布旧计划 stateUpdate，普通零写入过时任务与已提交但未呈现分别结算。"
+        "display_name": "结算提交结果与批次更新",
+        "description": "由 sync_result_policy 根据实际提交与来源结果生成来源回执、诊断和连续处理更新；批次合并仍在原 merge_task_result。"
       },
       {
         "id": "sidecar_binding_blocked_result",
         "type_used": "era.sidecar_binding.build_blocked_result",
-        "display_name": "构造 Sidecar 选择等待结果",
-        "description": "仅在专用 Sidecar Nodeset 已确认冲突且等待用户选择时，构造无写入的正常结算结果。"
+        "display_name": "结算等待 Sidecar 选择的任务",
+        "description": "读取已判定的 Sidecar 等待结果，复用登记契约及结果策略生成无写入回执。"
       },
       {
         "id": "sidecar_binding_applied_result",
         "type_used": "era.sidecar_binding.build_applied_result",
-        "display_name": "构造已完成 Sidecar 修复结果",
-        "description": "保留给未来纯绑定 no-op 修复；当前 Sidecar repair 会进入完整重放，确保已确认的聊天指令重新生成文件状态。"
+        "display_name": "结算已完成的 Sidecar 绑定",
+        "description": "根据 Sidecar 分支结果生成任务回执；保持原路由条件与行为。"
       },
       {
         "id": "end",

@@ -1,15 +1,5 @@
-import {
-  basisAfterSyncWrites,
-  cloneSyncJson,
-  errorMessage,
-  isCancellation,
-  observeWrite,
-  syncFailure,
-  type SyncCommitRequestV1,
-  type SyncCommitResultV1,
-  type SyncFailureV1,
-  type SyncWorkV1,
-} from "../../base_lib/sync_transaction.ts";
+import { basisAfterSyncWrites, observeWrite } from "../../base_lib/sync_commit_policy.ts";
+import { cloneSyncJson, errorMessage, isCancellation, syncFailure, type SyncCommitRequestV1, type SyncCommitResultV1, type SyncFailureV1, type SyncWorkV1 } from "../../base_lib/sync_contracts.ts";
 import { inspectSidecar, recordFor, type SidecarRecordV1, type SidecarStateV2 } from "../../base_lib/sidecar_binding.ts";
 
 interface Envelope<T> {

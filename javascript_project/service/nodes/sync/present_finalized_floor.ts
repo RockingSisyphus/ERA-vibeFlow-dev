@@ -1,8 +1,5 @@
-import {
-  basisAfterSyncWrites,
-  type SyncCommitResultV1,
-  type SyncWorkV1,
-} from "../../base_lib/sync_transaction.ts";
+import { basisAfterSyncWrites } from "../../base_lib/sync_commit_policy.ts";
+import { type SyncCommitResultV1, type SyncWorkV1 } from "../../base_lib/sync_contracts.ts";
 
 interface Envelope<T> {
   readonly value: T;

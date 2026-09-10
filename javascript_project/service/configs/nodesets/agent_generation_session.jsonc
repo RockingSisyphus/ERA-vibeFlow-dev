@@ -103,7 +103,7 @@
         "id": "build_direct_result",
         "type_used": "era.agent.build_result",
         "display_name": "构造直接结果",
-        "description": "结算设置、生成栅栏、失败或默认 ignore。"
+        "description": "结算生成栅栏、失败或默认 ignore 的直接结果。"
       },
       {
         "id": "end",

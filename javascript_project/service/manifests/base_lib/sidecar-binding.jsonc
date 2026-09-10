@@ -4,7 +4,18 @@
   "display_name": "ERA Sidecar 绑定规则",
   "description": "Sidecar 身份、记录校验、冲突选择和快照记录的纯规则；不访问 Tavern 或 files。",
   "version": "1.0.0",
-  "implementations": [{ "language": "typescript", "targets": ["browser"], "source": { "kind": "file", "ref": "base_lib/sidecar_binding.ts" } }],
-  "dependencies": ["era.service.sync_transaction"],
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser"
+      ],
+      "source": {
+        "kind": "file",
+        "ref": "base_lib/sidecar_binding.ts"
+      }
+    }
+  ],
+  "dependencies": [],
   "external_packages": []
 }

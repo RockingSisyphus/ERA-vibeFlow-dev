@@ -1,18 +1,57 @@
 {
   "kind": "node",
   "type_key": "era.sync.build_commit",
-  "display_name": "构造同步逻辑提交",
+  "display_name": "构造消息与 Sidecar 提交候选",
   "category": "同步事务",
-  "description": "把逻辑结果、稳定楼层身份和 Agent 候选转换为 canonical 消息与 Sidecar 的提交 V2；同一消息只写一次。",
+  "description": "由 sync_commit_policy 从同步工作项构造消息写入、状态、来源依据和首次呈现意图；不执行宿主写入。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
-    "requires": [{"type": "era.sync.logical_result", "cardinality": "exactly_one", "display_name": "同步逻辑结果"}],
-    "provides": [{"key": "sync_commit_request", "type": "era.tavern.commit.request", "display_name": "同步提交请求"}],
-    "params_schema": {}, "params_defaults": {},
-    "input_semantics": {"era.sync.logical_result":["输入：同步逻辑结果。"]},
-    "output_semantics": {"sync_commit_request":["输出：同步提交请求。"]}
+    "requires": [
+      {
+        "type": "era.sync.logical_result",
+        "cardinality": "exactly_one",
+        "display_name": "同步逻辑结果"
+      }
+    ],
+    "provides": [
+      {
+        "key": "sync_commit_request",
+        "type": "era.tavern.commit.request",
+        "display_name": "同步提交请求"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.sync.logical_result": [
+        "输入：同步逻辑结果。"
+      ]
+    },
+    "output_semantics": {
+      "sync_commit_request": [
+        "输出：同步提交请求。"
+      ]
+    }
   },
-  "implementations": [{"language": "typescript", "targets": ["browser", "node"], "completion": "immediate", "source": {"kind": "file", "ref": "nodes/sync/build_sync_commit.ts", "export": "run"}}],
-  "base_libs": ["era.service.sync_transaction"], "capabilities": []
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/sync/build_sync_commit.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.sync_commit_policy",
+    "era.service.sync_contracts"
+  ],
+  "capabilities": []
 }

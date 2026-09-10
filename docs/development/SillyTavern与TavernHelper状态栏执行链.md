@@ -240,7 +240,7 @@ Host 写完 raw message 后会主动调 ERA 技术块投影；该投影又可公
 
 - [`javascript_project/service/base_lib/domain/sync_engine.ts`](../../javascript_project/service/base_lib/domain/sync_engine.ts)
   第 467–491 行；
-- [`javascript_project/service/base_lib/sync_transaction.ts`](../../javascript_project/service/base_lib/sync_transaction.ts)
+- [`javascript_project/service/base_lib/sync_commit_policy.ts`](../../javascript_project/service/base_lib/sync_commit_policy.ts)
   第 474–507 行。
 
 这是 `ERA-PROD-007` 的直接实现根因，不是 iframe 时序的偶发副作用。

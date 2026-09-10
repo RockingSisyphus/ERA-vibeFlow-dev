@@ -1,7 +1,7 @@
 {
   "type_key": "era.expression.execute_era_commands",
-  "display_name": "执行 ERA 表达式命令",
-  "description": "跨 root 的实际表达式 Nodeset 边界：Service 以消息 MK 建立随机 sourceKey，在同一消息全部普通标签与 era_tx 间连续传递 drawOffset，再调用本地版本化 @era/vibeflow-expression 包；本 Nodeset 不做 Tavern I/O。",
+  "display_name": "含表达式的同步规划",
+  "description": "Service 规划库组织真实消息重放；完整求值经发布包执行 Expression 同步 AOT。随机 sourceKey 与 drawOffset 的算法所有者位于实际求值链。",
   "requires": [
     {
       "type": "era.expression.command.request",
@@ -35,22 +35,10 @@
         "description": "进入不含宿主 I/O 的跨 root 计算边界。"
       },
       {
-        "id": "attach_message_random_context",
-        "type_used": "era.expression.attach_message_random_context",
-        "display_name": "从消息 MK 建立随机上下文",
-        "description": "为每个被重放消息使用其稳定 MK 作为 sourceKey，并把本楼层 drawOffset 初始化为零；不使用变量目标路径、时间或 Sidecar 游标。"
-      },
-      {
         "id": "execute",
         "type_used": "era.expression.execute_era_commands.bridge",
         "display_name": "计算历史同步计划",
-        "description": "保留 planSyncWork → planEraSync → CRUD 的真实调用链；完整表达式求值经版本化包同步委托 Expression AOT 工作流，解析与函数编译工具仍是登记纯算法。该节点不执行 Tavern 写入。"
-      },
-      {
-        "id": "publish_message_random_cursor",
-        "type_used": "era.expression.publish_message_random_cursor",
-        "display_name": "发布楼层随机游标结果",
-        "description": "把 randomDrawsConsumed 与 nextDrawOffset 保留在纯同步工作项中，供候选复放校验；游标不写入消息或 Sidecar。"
+        "description": "消费收窄的 SyncPlanningInput，调用登记 sync_planning 的 planSyncWork；其真实重放链进入 Expression 同步 AOT，返回规划工作项，不读写宿主。"
       },
       {
         "id": "end",
@@ -62,18 +50,10 @@
     "edges": [
       [
         "start",
-        "attach_message_random_context"
-      ],
-      [
-        "attach_message_random_context",
         "execute"
       ],
       [
         "execute",
-        "publish_message_random_cursor"
-      ],
-      [
-        "publish_message_random_cursor",
         "end"
       ]
     ],

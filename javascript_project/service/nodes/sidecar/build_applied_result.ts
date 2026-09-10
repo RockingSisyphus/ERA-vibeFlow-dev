@@ -1,4 +1,4 @@
-import { assertSyncStep } from "../../base_lib/sync_transaction.ts";
+import { assertSyncStep } from "../../base_lib/sync_contracts.ts";
 
 interface Envelope<T> { readonly value: T; }
 

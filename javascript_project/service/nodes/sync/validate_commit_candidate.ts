@@ -1,4 +1,4 @@
-import { validateSyncCommitEnvelope } from "../../base_lib/sync_transaction.ts";
+import { validateSyncCommitEnvelope } from "../../base_lib/sync_commit_policy.ts";
 
 interface Envelope<T> {
   readonly value: T;

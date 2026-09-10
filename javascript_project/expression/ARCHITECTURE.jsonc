@@ -85,7 +85,7 @@
         },
         "role": {
           "display_name": "执行表达式层",
-          "description": "调用 planned 节点集，验证函数库和操作，按顺序求值并生成可重放的压缩候选。"
+          "description": "验证函数库与操作，按顺序执行已实现的同步求值流程，并形成结果和符号压缩候选。"
         },
         "contract_source": "nodeset",
         "flow_kind": "predefined",

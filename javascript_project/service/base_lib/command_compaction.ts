@@ -13,7 +13,7 @@ import {
   type EraSyncPlanV1,
 } from "./domain/sync_engine.ts";
 import { readMessageKey } from "./domain/mk_engine.ts";
-import { cloneSyncJson, type SyncWorkV1 } from "./sync_transaction.ts";
+import { cloneSyncJson, type SyncWorkV1 } from "./sync_contracts.ts";
 
 interface CandidateStage {
   readonly candidate: EraSealedCompactionCandidateV1;

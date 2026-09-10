@@ -1,1 +1,58 @@
-{"kind":"node","type_key":"era.sidecar_binding.build_blocked_result","display_name":"构造 Sidecar 选择等待结果","category":"Sidecar 绑定","description":"将未决 Sidecar 冲突结算为无写入同步失败，避免普通任务无结果终止。","version":"1.0.0","flow_kind":"process","contract":{"requires":[{"type":"era.sync.context","cardinality":"exactly_one","display_name":"同步上下文"}],"provides":[{"key":"sidecar_binding_blocked_result","type":"era.task.result","display_name":"Sidecar 选择等待结果"}],"params_schema":{},"params_defaults":{},"input_semantics":{"era.sync.context":["输入：专用 Sidecar Nodeset 已标记为阻塞的同步上下文。"]},"output_semantics":{"sidecar_binding_blocked_result":["输出：无变量写入、可定位的等待选择结果。"]}},"implementations":[{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/sidecar/build_blocked_result.ts","export":"run"}}],"base_libs":["era.service.sync_transaction","era.service.sidecar_binding"],"capabilities":[]}
+{
+  "kind": "node",
+  "type_key": "era.sidecar_binding.build_blocked_result",
+  "display_name": "结算等待 Sidecar 选择的任务",
+  "category": "Sidecar 绑定",
+  "description": "读取已判定的 Sidecar 等待结果，复用登记契约及结果策略生成无写入回执。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.sync.context",
+        "cardinality": "exactly_one",
+        "display_name": "同步上下文"
+      }
+    ],
+    "provides": [
+      {
+        "key": "sidecar_binding_blocked_result",
+        "type": "era.task.result",
+        "display_name": "Sidecar 选择等待结果"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.sync.context": [
+        "输入：专用 Sidecar Nodeset 已标记为阻塞的同步上下文。"
+      ]
+    },
+    "output_semantics": {
+      "sidecar_binding_blocked_result": [
+        "输出：无变量写入、可定位的等待选择结果。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/sidecar/build_blocked_result.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.sidecar_binding",
+    "era.service.sync_contracts",
+    "era.service.sync_result_policy"
+  ],
+  "capabilities": []
+}

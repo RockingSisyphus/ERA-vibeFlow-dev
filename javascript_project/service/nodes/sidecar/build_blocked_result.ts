@@ -1,8 +1,5 @@
-import {
-  buildSyncContractFailureResult,
-  syncFailure,
-  type SyncCommitContractFailureV1,
-} from "../../base_lib/sync_transaction.ts";
+import { buildSyncContractFailureResult } from "../../base_lib/sync_result_policy.ts";
+import { syncFailure, type SyncCommitContractFailureV1 } from "../../base_lib/sync_contracts.ts";
 import type { SyncContextV1 } from "../../base_lib/sidecar_binding.ts";
 
 interface Envelope<T> { readonly value: T; }

@@ -1,11 +1,4 @@
-import {
-  assertBatchState,
-  assertSyncStep,
-  errorMessage,
-  isCancellation,
-  syncFailure,
-  type SyncContextV1,
-} from "../../base_lib/sync_transaction.ts";
+import { consecutiveFacts, assertSyncStep, errorMessage, isCancellation, syncFailure, type SyncContextV1 } from "../../base_lib/sync_contracts.ts";
 
 interface Envelope<T> {
   readonly value: T;
@@ -26,7 +19,7 @@ export async function run(
   context: Context,
 ): Promise<any> {
   const step = assertSyncStep(inputs["era.step.request.routed"].value);
-  const state = assertBatchState(inputs["era.batch.execution.state"].value);
+  const consecutive = consecutiveFacts(inputs["era.batch.execution.state"].value);
   const dispatchContext = isRecord(step.dispatchContext) ? step.dispatchContext : null;
   let variablesRaw: unknown = null;
   const messagesRaw = dispatchContext === null
@@ -42,7 +35,7 @@ export async function run(
     const result: SyncContextV1 = {
       schemaVersion: 1,
       step,
-      state,
+      consecutive,
       status: "ready",
       messagesRaw,
       variablesRaw,
@@ -56,7 +49,7 @@ export async function run(
     const result: SyncContextV1 = {
       schemaVersion: 1,
       step,
-      state,
+      consecutive,
       status: "failed",
       messagesRaw,
       variablesRaw,

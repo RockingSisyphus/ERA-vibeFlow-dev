@@ -30,3 +30,5 @@ UI 与完整回归。ST-Test-Harness 会为每条 path 创建独立 sandbox、ST
 
 目录分层规则写在根 `AGENTS.md` 及各局部 `AGENTS.md`。若修改跨越 `app/**` 与
 `javascript_project/**`，必须同时遵守二者的局部规则；不能以其中一层的便利性绕过另一层的边界。
+
+- [ERA 生产工作流与职责](era-workflow-architecture.md)：四个 root 的实际调用、Agent 与同步模块边界。

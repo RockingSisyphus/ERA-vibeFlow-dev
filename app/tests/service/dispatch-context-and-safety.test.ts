@@ -1,3 +1,9 @@
+const sync_commit_policy = await import(
+  /* @vite-ignore */ new URL('../../../javascript_project/service/base_lib/sync_commit_policy.ts', import.meta.url).href
+);
+const sync_contracts = await import(
+  /* @vite-ignore */ new URL('../../../javascript_project/service/base_lib/sync_contracts.ts', import.meta.url).href
+);
 import { describe, expect, it, vi } from 'vitest';
 
 import { isEraTavernMessageContextV2, normalizeLegacySafeObjectV1 } from '../../../packages/era-contracts/index.js';
@@ -6,8 +12,7 @@ type JsonRecord = Record<string, any>;
 
 const preparationUrl = new URL('../../../javascript_project/service/base_lib/dispatch_preparation.ts', import.meta.url)
   .href;
-const transactionUrl = new URL('../../../javascript_project/service/base_lib/sync_transaction.ts', import.meta.url)
-  .href;
+const transactionUrl = new URL('../../../javascript_project/service/base_lib/sync_planning.ts', import.meta.url).href;
 const commitUrl = new URL('../../../javascript_project/service/nodes/dispatch/commit_preparation.ts', import.meta.url)
   .href;
 const planMessagePreparationUrl = new URL(
@@ -325,7 +330,7 @@ describe('统一执行前上下文', () => {
       const work = transaction.planSyncWork({
         schemaVersion: 1,
         step: routed,
-        state: state(routed),
+        consecutive: sync_contracts.consecutiveFacts(state(routed)),
         status: 'ready',
         messagesRaw: { schemaVersion: 2, messages: [] },
         variablesRaw: {
@@ -337,7 +342,7 @@ describe('统一执行前上下文', () => {
       });
       expect(work.failure).toBeNull();
       expect(work.disposition).toBe('commit');
-      expect(transaction.buildSyncCommitRequest(work)).toMatchObject({
+      expect(sync_commit_policy.buildSyncCommitRequest(work)).toMatchObject({
         messageWrites: [],
         stat: {},
         statFunc: {},
@@ -502,7 +507,7 @@ describe('严格 DTO、安全对象与 API 状态策略', () => {
     const apiWork = transaction.planSyncWork({
       schemaVersion: 1,
       step: apiStep,
-      state: state(apiStep),
+      consecutive: sync_contracts.consecutiveFacts(state(apiStep)),
       status: 'ready',
       messagesRaw: messages,
       variablesRaw: variables,
@@ -515,7 +520,7 @@ describe('严格 DTO、安全对象与 API 状态策略', () => {
     const normalWork = transaction.planSyncWork({
       schemaVersion: 1,
       step: normalStep,
-      state: state(normalStep),
+      consecutive: sync_contracts.consecutiveFacts(state(normalStep)),
       status: 'ready',
       messagesRaw: messages,
       variablesRaw: variables,
@@ -530,7 +535,7 @@ describe('严格 DTO、安全对象与 API 状态策略', () => {
     const work = transaction.planSyncWork({
       schemaVersion: 1,
       step,
-      state: state(step),
+      consecutive: sync_contracts.consecutiveFacts(state(step)),
       status: 'ready',
       messagesRaw: { schemaVersion: 2, messages: [] },
       variablesRaw: {
@@ -556,7 +561,7 @@ describe('严格 DTO、安全对象与 API 状态策略', () => {
         meta: { SelectedMks: [], EditLogs: {}, FunctionEditLogs: {} },
       },
     });
-    const request = transaction.buildSyncCommitRequest(work);
+    const request = sync_commit_policy.buildSyncCommitRequest(work);
     expect(request).toMatchObject({
       payload: null,
       messageWrites: [],
@@ -564,7 +569,9 @@ describe('严格 DTO、安全对象与 API 状态策略', () => {
       statFunc: {},
       meta: { SelectedMks: [], EditLogs: {}, FunctionEditLogs: {} },
     });
-    expect(transaction.validateSyncCommitEnvelope({ mode: 'commit', request })).toMatchObject({ route: 'valid' });
+    expect(sync_commit_policy.validateSyncCommitEnvelope({ mode: 'commit', request })).toMatchObject({
+      route: 'valid',
+    });
   });
 
   it('swipe 新 MK 不预提交消息，由同步事务原子写入并撤销 A、应用 B', async () => {
@@ -615,7 +622,7 @@ describe('严格 DTO、安全对象与 API 状态策略', () => {
     const work = transaction.planSyncWork({
       schemaVersion: 1,
       step: routedStep,
-      state: state(routedStep),
+      consecutive: sync_contracts.consecutiveFacts(state(routedStep)),
       status: 'ready',
       messagesRaw: { schemaVersion: 2, messages: dispatchContext.messages },
       variablesRaw: variables,
@@ -632,7 +639,7 @@ describe('严格 DTO、安全对象与 API 状态策略', () => {
     expect((work.plan?.meta.EditLogs as JsonRecord)[String(plan.processingMk)]).toEqual([
       { op: 'insert', path: 'ui_swipe', value_new: { branch: 'B' } },
     ]);
-    const request = transaction.buildSyncCommitRequest(work);
+    const request = sync_commit_policy.buildSyncCommitRequest(work);
     expect(request).toMatchObject({
       schemaVersion: 2,
       messageWrites: [
@@ -689,7 +696,7 @@ describe('严格 DTO、安全对象与 API 状态策略', () => {
     const work = transaction.planSyncWork({
       schemaVersion: 1,
       step,
-      state: state(step),
+      consecutive: sync_contracts.consecutiveFacts(state(step)),
       status: 'ready',
       messagesRaw: { schemaVersion: 2, messages: [message] },
       variablesRaw: {
@@ -699,8 +706,10 @@ describe('严格 DTO、安全对象与 API 状态策略', () => {
       },
       failure: null,
     });
-    const request = transaction.buildSyncCommitRequest(work);
-    expect(transaction.validateSyncCommitEnvelope({ mode: 'commit', request })).toMatchObject({ route: 'valid' });
+    const request = sync_commit_policy.buildSyncCommitRequest(work);
+    expect(sync_commit_policy.validateSyncCommitEnvelope({ mode: 'commit', request })).toMatchObject({
+      route: 'valid',
+    });
     expect(request).toMatchObject({
       schemaVersion: 2,
       floorIdentity: { messageId: 0, swipeId: 0, mk },
@@ -722,9 +731,50 @@ describe('严格 DTO、安全对象与 API 状态策略', () => {
         },
       ],
     };
-    expect(transaction.validateSyncCommitEnvelope({ mode: 'commit', request: mismatched })).toMatchObject({
+    expect(sync_commit_policy.validateSyncCommitEnvelope({ mode: 'commit', request: mismatched })).toMatchObject({
       route: 'failed',
       failure: { failure: { code: 'ERA_FLOOR_IDENTITY_MISMATCH' } },
     });
+  });
+});
+
+describe('同步阶段输入归属', () => {
+  it('Node 边界只投影连续事实，规划请求不携带批次和存储编排字段', async () => {
+    const readSync = await import(
+      /* @vite-ignore */ new URL('../../../javascript_project/service/nodes/sync/read_sync_context.ts', import.meta.url)
+        .href
+    );
+    const prepareRequest = await import(
+      /* @vite-ignore */ new URL(
+        '../../../javascript_project/service/nodes/sync/prepare_expression_command_request.ts',
+        import.meta.url,
+      ).href
+    );
+    const step = { ...syncStep(), dispatchContext: { status: 'ready', messages: [] } };
+    const batch = state(step);
+    const stored = { SidecarId: 'fixture' };
+    const read = await readSync.run(
+      {
+        'era.step.request.routed': { value: step },
+        'era.batch.execution.state': { value: batch },
+      },
+      {},
+      { capabilities: { 'era.tavern.sidecar': { read_current: async () => stored } } },
+    );
+    expect(read.sync_context.consecutive).toEqual({ mk: 'mk-existing', count: 4 });
+    expect(read.sync_context).not.toHaveProperty('state');
+    batch.nextState.consecutiveProcessingCount = 99;
+    const request = prepareRequest.run({
+      'era.sync.context': { value: { ...read.sync_context, sidecarBinding: { temporary: true } } },
+    }).expression_command_request;
+    expect(request.consecutive).toEqual({ mk: 'mk-existing', count: 4 });
+    expect(Object.keys(request).sort()).toEqual([
+      'consecutive',
+      'failure',
+      'messagesRaw',
+      'status',
+      'step',
+      'variablesRaw',
+    ]);
   });
 });

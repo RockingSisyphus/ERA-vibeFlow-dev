@@ -1,3 +1,12 @@
+const sync_commit_policy = await import(
+  /* @vite-ignore */ new URL('../../../javascript_project/service/base_lib/sync_commit_policy.ts', import.meta.url).href
+);
+const sync_result_policy = await import(
+  /* @vite-ignore */ new URL('../../../javascript_project/service/base_lib/sync_result_policy.ts', import.meta.url).href
+);
+const sync_contracts = await import(
+  /* @vite-ignore */ new URL('../../../javascript_project/service/base_lib/sync_contracts.ts', import.meta.url).href
+);
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { updateEraMessageContent } from '../../src/ERA变量框架/service/message-writer';
@@ -5,7 +14,7 @@ import { assertCurrentMessageBasis } from '../../src/ERA变量框架/service/mes
 import { prepareMessagePersistence } from '../../src/ERA变量框架/service/message-persistence';
 
 const transaction = await import(
-  /* @vite-ignore */ new URL('../../../javascript_project/service/base_lib/sync_transaction.ts', import.meta.url).href
+  /* @vite-ignore */ new URL('../../../javascript_project/service/base_lib/sync_planning.ts', import.meta.url).href
 );
 const preparation = await import(
   /* @vite-ignore */ new URL('../../../javascript_project/service/base_lib/dispatch_preparation.ts', import.meta.url)
@@ -74,14 +83,14 @@ function fixture(source = 'tavern', eventType = 'message_swiped', placeholder = 
   const work = transaction.planSyncWork({
     schemaVersion: 1,
     step: { ...step, dispatchContext },
-    state,
+    consecutive: sync_contracts.consecutiveFacts(state),
     status: 'ready',
     messagesRaw: { schemaVersion: 2, messages: dispatchContext.messages },
     variablesRaw: { stat_data: {}, statFunc: {}, ERAMetaData: {} },
     failure: null,
   });
   expect(work.disposition).toBe('commit');
-  const request = transaction.buildSyncCommitRequest(work);
+  const request = sync_commit_policy.buildSyncCommitRequest(work);
   const current = { chatId: identity.chatId, swipe: 1, texts: ['A', original, 'C'], deleted: false };
   vi.stubGlobal('getCurrentCharacterId', () => identity.characterId);
   vi.stubGlobal('SillyTavern', { getCurrentChatId: () => current.chatId, groupId: null });
@@ -211,7 +220,7 @@ describe('sync source survives asynchronous host interleaving', () => {
       });
       expect(f.trace).toEqual(['message']);
       expect(f.capabilities['era.tavern.sidecar'].present_prompt).not.toHaveBeenCalled();
-      expect(transaction.buildSyncCommittedResult(outcome)).not.toHaveProperty('stateUpdate');
+      expect(sync_result_policy.buildSyncCommittedResult(outcome)).not.toHaveProperty('stateUpdate');
       expect(f.current.texts[2]).toBe('C');
     },
   );
@@ -220,9 +229,9 @@ describe('sync source survives asynchronous host interleaving', () => {
     const f = fixture('tavern', 'message_received');
     expect(f.request.agentFloorCandidate).toBeNull();
     expect(f.request.initialPresentation).toEqual(f.request.floorIdentity);
-    expect(transaction.validateSyncCommitEnvelope({ mode: 'commit', request: f.request }).route).toBe('valid');
+    expect(sync_commit_policy.validateSyncCommitEnvelope({ mode: 'commit', request: f.request }).route).toBe('valid');
     expect(
-      transaction.validateSyncCommitEnvelope({
+      sync_commit_policy.validateSyncCommitEnvelope({
         mode: 'commit',
         request: {
           ...f.request,
@@ -302,7 +311,7 @@ describe('sync source survives asynchronous host interleaving', () => {
       });
       expect(f.trace).toEqual([]);
       expect(f.current.texts[2]).toBe('C');
-      const settled = transaction.buildSyncCommittedResult(outcome);
+      const settled = sync_result_policy.buildSyncCommittedResult(outcome);
       expect(settled.status).toBe('no-op');
       expect(settled.notifications).toEqual([]);
       expect(settled).not.toHaveProperty('stateUpdate');
@@ -357,6 +366,6 @@ describe('sync source survives asynchronous host interleaving', () => {
     expect(outcome).toMatchObject({ status: 'committed', variablesCommitted: true, sourceChanged: true });
     await presentation.run({ 'era.tavern.commit.result': { value: outcome } }, {}, { capabilities: f.capabilities });
     expect(f.trace).toEqual(['message', 'file']);
-    expect(transaction.buildSyncCommittedResult(outcome)).not.toHaveProperty('stateUpdate');
+    expect(sync_result_policy.buildSyncCommittedResult(outcome)).not.toHaveProperty('stateUpdate');
   });
 });
