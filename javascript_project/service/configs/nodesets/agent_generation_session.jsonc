@@ -1,40 +1,173 @@
 {
-  "type_key":"era.agent.generation_session",
-  "display_name":"ERA 三阶段故事生成会话",
-  "description":"以一个 Service 会话包装 generation lifecycle；关闭功能时恢复并调用原 task.kind，开启时先归一化不含密钥的辅助阶段配置，再执行规划、纯函数、故事衔接和变量结算并复用既有同步。",
-  "requires":[{"type":"era.step.request.routed","cardinality":"exactly_one","display_name":"Agent 包装步骤"},{"type":"era.batch.execution.state","cardinality":"exactly_one","display_name":"当前批次状态"}],
-  "provides":[{"key":"agent_task_result","type":"era.task.result","display_name":"生成会话任务结果"}],
-  "pipeline":{
-    "entry_mode":"async",
-    "inputs":[{"key":"routed_step","type":"era.step.request.routed","display_name":"Agent 包装步骤","required":true},{"key":"execution_state","type":"era.batch.execution.state","display_name":"当前批次状态","required":true}],
-    "max_steps":16,
-    "nodes":[
-      {"id":"start","type_used":"era.service.terminal","display_name":"生成会话开始","description":"进入一个 FIFO 内的生成阶段。"},
+  "type_key": "era.agent.generation_session",
+  "display_name": "ERA 三阶段故事生成会话",
+  "description": "以一个 Service 会话包装 generation lifecycle；关闭功能时恢复并调用原 task.kind，开启时先归一化不含密钥的辅助阶段配置，再执行规划、纯函数、故事衔接和变量结算并复用既有同步。",
+  "requires": [
+    {
+      "type": "era.step.request.routed",
+      "cardinality": "exactly_one",
+      "display_name": "Agent 包装步骤"
+    },
+    {
+      "type": "era.batch.execution.state",
+      "cardinality": "exactly_one",
+      "display_name": "当前批次状态"
+    }
+  ],
+  "provides": [
+    {
+      "key": "agent_task_result",
+      "type": "era.task.result",
+      "display_name": "生成会话任务结果"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
       {
-        "id":"prepare_auxiliary_execution_request",
-        "type_used":"era.agent.prepare_auxiliary_execution_request",
-        "display_name":"准备多阶段生成与内联连接草稿",
-        "description":"在单一 AgentGenerationSession 内冻结角色卡 V1/V2 开关、尝试预设与模型来源；设置命令同时整理每张尝试卡内联编辑的本机连接草稿，生成阶段不再读取角色卡局部正则开关，且任何领域请求均不包含密钥正文。"
+        "key": "routed_step",
+        "type": "era.step.request.routed",
+        "display_name": "Agent 包装步骤",
+        "required": true
+      },
+      {
+        "key": "execution_state",
+        "type": "era.batch.execution.state",
+        "display_name": "当前批次状态",
+        "required": true
+      }
+    ],
+    "max_steps": 16,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.service.terminal",
+        "display_name": "生成会话开始",
+        "description": "进入一个 FIFO 内的生成阶段。"
+      },
+      {
+        "id": "prepare_auxiliary_execution_request",
+        "type_used": "era.agent.prepare_auxiliary_execution_request",
+        "display_name": "准备多阶段生成与内联连接草稿",
+        "description": "在单一 AgentGenerationSession 内冻结角色卡 V1/V2 开关、尝试预设与模型来源；设置命令同时整理每张尝试卡内联编辑的本机连接草稿，生成阶段不再读取角色卡局部正则开关，且任何领域请求均不包含密钥正文。"
       },
       {
         "id": "execute_agent_phase_v2",
         "type_used": "era.agent.execute_session_v2",
-        "display_name": "执行生成阶段及连接方案保存计划",
-        "description": "在现有独立连接保存和 write-with-connections 两个真实入口，读取本机连接的公开记录事实，由 Service 决定新建/更新、数量上限、名称、ID 和密钥更新意图，再调用原 Host 写入；删除/清密钥命令复用同一事实与计划边界。保留前端、地址/模型接口转换、秘密值、本机存储及生成阶段原有行为。"
+        "display_name": "执行 Agent 阶段与会话关联计划",
+        "description": "保留原阶段和连接计划；在全部原 write_session 调用位置读取即时宿主关联事实，由登记纯库决定 nativeGeneration 与 storyRequestId 的继承及观察/等待启动意图。Host只执行请求记录、原生等待与会话存储，不再选择会话字段继承规则。",
+        "status": "planned",
+        "flow_kind": "process",
+        "requires": [
+          {
+            "type": "era.agent.auxiliary.execution_request",
+            "cardinality": "exactly_one",
+            "display_name": "不含密钥的辅助阶段执行请求"
+          }
+        ],
+        "provides": [
+          {
+            "key": "agent_transition",
+            "type": "era.agent.session.transition",
+            "display_name": "Agent 阶段转换"
+          },
+          {
+            "key": "agent_execution_state",
+            "type": "era.batch.execution.state",
+            "display_name": "Agent 批次执行状态"
+          }
+        ]
       },
-      {"id":"route_agent_transition","type_used":"era.agent.route_transition","display_name":"路由阶段结果","description":"决定直接结算还是恢复原任务。"},
       {
-        "id":"adapt_legacy_step",
-        "type_used":"era.agent.adapt_legacy_step",
-        "display_name":"把最终楼层候选交给唯一同步事务",
-        "description":"把默认模式或 Agent 最终楼层候选恢复为原 sync/update-mk 路由；故事完成、结算成功、结算耗尽和 UI 手动重试都携带同一个楼层 MK 进入同步，不存在第二条消息提交路径。"
+        "id": "route_agent_transition",
+        "type_used": "era.agent.route_transition",
+        "display_name": "路由阶段结果",
+        "description": "决定直接结算还是恢复原任务。"
       },
-      {"id":"legacy_sync","type_used":"era.task.sync","display_name":"复用原同步任务","description":"故事组合后或默认模式下执行既有 Sidecar、表达式、压缩和历史同步。"},
-      {"id":"legacy_update_mk","type_used":"era.task.update_mk","display_name":"复用原 MK 任务","description":"规划注入后保持既有 message_sent MK 语义。"},
-      {"id":"build_direct_result","type_used":"era.agent.build_result","display_name":"构造直接结果","description":"结算设置、生成栅栏、失败或默认 ignore。"},
-      {"id":"end","type_used":"era.service.terminal","display_name":"生成会话结束","description":"返回单一任务结果。"}
+      {
+        "id": "adapt_legacy_step",
+        "type_used": "era.agent.adapt_legacy_step",
+        "display_name": "把最终楼层候选交给唯一同步事务",
+        "description": "把默认模式或 Agent 最终楼层候选恢复为原 sync/update-mk 路由；故事完成、结算成功、结算耗尽和 UI 手动重试都携带同一个楼层 MK 进入同步，不存在第二条消息提交路径。"
+      },
+      {
+        "id": "legacy_sync",
+        "type_used": "era.task.sync",
+        "display_name": "复用原同步任务",
+        "description": "故事组合后或默认模式下执行既有 Sidecar、表达式、压缩和历史同步。"
+      },
+      {
+        "id": "legacy_update_mk",
+        "type_used": "era.task.update_mk",
+        "display_name": "复用原 MK 任务",
+        "description": "规划注入后保持既有 message_sent MK 语义。"
+      },
+      {
+        "id": "build_direct_result",
+        "type_used": "era.agent.build_result",
+        "display_name": "构造直接结果",
+        "description": "结算设置、生成栅栏、失败或默认 ignore。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.service.terminal",
+        "display_name": "生成会话结束",
+        "description": "返回单一任务结果。"
+      }
     ],
-    "edges":[["start","prepare_auxiliary_execution_request"],["prepare_auxiliary_execution_request","execute_agent_phase_v2"],["execute_agent_phase_v2","route_agent_transition"],{"from":"route_agent_transition","to":"adapt_legacy_step","when":"agent_route == 'legacy'"},{"from":"route_agent_transition","to":"build_direct_result","when":"agent_route == 'direct'"},{"from":"adapt_legacy_step","to":"legacy_sync","when":"legacy_task_route == 'sync'"},{"from":"adapt_legacy_step","to":"legacy_update_mk","when":"legacy_task_route == 'update-mk'"},["legacy_sync","end"],["legacy_update_mk","end"],["build_direct_result","end"]],
-    "outputs":[{"type":"era.task.result","cardinality":"exactly_one","display_name":"生成会话任务结果","as":"agentTaskResult"}]
+    "edges": [
+      [
+        "start",
+        "prepare_auxiliary_execution_request"
+      ],
+      [
+        "prepare_auxiliary_execution_request",
+        "execute_agent_phase_v2"
+      ],
+      [
+        "execute_agent_phase_v2",
+        "route_agent_transition"
+      ],
+      {
+        "from": "route_agent_transition",
+        "to": "adapt_legacy_step",
+        "when": "agent_route == 'legacy'"
+      },
+      {
+        "from": "route_agent_transition",
+        "to": "build_direct_result",
+        "when": "agent_route == 'direct'"
+      },
+      {
+        "from": "adapt_legacy_step",
+        "to": "legacy_sync",
+        "when": "legacy_task_route == 'sync'"
+      },
+      {
+        "from": "adapt_legacy_step",
+        "to": "legacy_update_mk",
+        "when": "legacy_task_route == 'update-mk'"
+      },
+      [
+        "legacy_sync",
+        "end"
+      ],
+      [
+        "legacy_update_mk",
+        "end"
+      ],
+      [
+        "build_direct_result",
+        "end"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.task.result",
+        "cardinality": "exactly_one",
+        "display_name": "生成会话任务结果",
+        "as": "agentTaskResult"
+      }
+    ]
   }
 }

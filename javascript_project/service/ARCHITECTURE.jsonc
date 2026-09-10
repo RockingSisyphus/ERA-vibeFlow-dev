@@ -664,18 +664,20 @@
               "path": "configs/nodesets/agent_generation_session.jsonc"
             },
             "role": {
-              "display_name": "执行生成阶段及连接方案保存计划",
-              "description": "在现有独立连接保存和 write-with-connections 两个真实入口，读取本机连接的公开记录事实，由 Service 决定新建/更新、数量上限、名称、ID 和密钥更新意图，再调用原 Host 写入；删除/清密钥命令复用同一事实与计划边界。保留前端、地址/模型接口转换、秘密值、本机存储及生成阶段原有行为。"
+              "display_name": "执行 Agent 阶段与会话关联计划",
+              "description": "保留原阶段和连接计划；在全部原 write_session 调用位置读取即时宿主关联事实，由登记纯库决定 nativeGeneration 与 storyRequestId 的继承及观察/等待启动意图。Host只执行请求记录、原生等待与会话存储，不再选择会话字段继承规则。"
             },
-            "contract_source": "node_type",
+            "contract_source": "planned_config",
             "flow_kind": "process",
             "effect_scope": "none",
             "runtime_dispatch": "unknown",
             "execution_lock": null,
             "effective_execution_lock": null,
             "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
+            "status": "planned",
+            "planned_behavior": {
+              "kind": "blocking"
+            },
             "requires": [
               {
                 "type": "era.agent.auxiliary.execution_request",
@@ -42528,30 +42530,6 @@
           "@era/vibeflow-expression"
         ]
       },
-      "era.service.agent_connection_policy": {
-        "kind": "base_lib",
-        "id": "era.service.agent_connection_policy",
-        "display_name": "连接方案保存决策",
-        "description": "依据公开记录事实规划保存、删除与清密钥，宿主只执行本机读写。",
-        "category": "故事生成会话",
-        "version": "1.0.0",
-        "implementations": [
-          {
-            "language": "typescript",
-            "targets": [
-              "browser",
-              "node"
-            ],
-            "source": {
-              "kind": "file",
-              "ref": "base_lib/agent_connection_policy.ts"
-            },
-            "completion": "immediate"
-          }
-        ],
-        "dependencies": [],
-        "external_packages": []
-      },
       "era.service.agent_generation_session": {
         "kind": "base_lib",
         "id": "era.service.agent_generation_session",
@@ -42580,30 +42558,6 @@
           "@era/vibeflow-contracts",
           "@era/vibeflow-expression"
         ]
-      },
-      "era.service.agent_request_policy": {
-        "kind": "base_lib",
-        "id": "era.service.agent_request_policy",
-        "display_name": "Agent 预设与请求规则",
-        "description": "组装预设快照、输入顺序和辅助模型请求计划，不读取宿主。",
-        "category": "故事生成会话",
-        "version": "1.0.0",
-        "implementations": [
-          {
-            "language": "typescript",
-            "targets": [
-              "browser",
-              "node"
-            ],
-            "source": {
-              "kind": "file",
-              "ref": "base_lib/agent_request_policy.ts"
-            },
-            "completion": "immediate"
-          }
-        ],
-        "dependencies": [],
-        "external_packages": []
       },
       "era.service.command_compaction": {
         "kind": "base_lib",
@@ -43038,8 +42992,8 @@
       "era.snapshot.floor_projection": {
         "kind": "base_lib",
         "id": "era.snapshot.floor_projection",
-        "display_name": "ERA 按楼快照与作者状态投影",
-        "description": "现有按楼重建及作者状态同步出口；共享data_view/public_state真实源码，由同源包供App消费。",
+        "display_name": "ERA 按楼快照与作者状态（计划扩展消息键解析出口）",
+        "description": "现有按楼重建和作者状态同步出口。本批计划增加保持状态栏原语义的 message_identity 登记依赖及同源包出口，供状态栏身份和报告楼层关联读取；当前 source 仍为已实现 floor_snapshot，未把计划出口标为已实现。",
         "category": "快照查询",
         "version": "0.1.1",
         "implementations": [
