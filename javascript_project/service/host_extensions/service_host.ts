@@ -113,6 +113,7 @@ export interface EraTavernCapabilityAdapter {
     readonly generate: EraAsyncHostOperation;
     readonly generate_story: EraAsyncHostOperation;
     readonly inject_once: EraHostOperation;
+    readonly read_session_binding: EraHostOperation;
     readonly write_session: EraHostOperation;
     readonly clear_session: EraHostOperation;
     readonly create_error_message: EraAsyncHostOperation;
@@ -652,6 +653,8 @@ class ServiceHostRuntime {
         this.invokeSuspend("agent", "generate_story", input, options),
       inject_once: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
         this.invokeImmediate("agent", "inject_once", input, options),
+      read_session_binding: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
+        this.invokeImmediate("agent", "read_session_binding", input, options),
       write_session: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
         this.invokeImmediate("agent", "write_session", input, options),
       clear_session: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
@@ -910,6 +913,7 @@ class ServiceHostRuntime {
       [adapter.agent?.generate, "agent.generate"],
       [adapter.agent?.generate_story, "agent.generate_story"],
       [adapter.agent?.inject_once, "agent.inject_once"],
+      [adapter.agent?.read_session_binding, "agent.read_session_binding"],
       [adapter.agent?.write_session, "agent.write_session"],
       [adapter.agent?.clear_session, "agent.clear_session"],
       [adapter.agent?.create_error_message, "agent.create_error_message"],

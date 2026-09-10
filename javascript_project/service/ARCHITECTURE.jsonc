@@ -667,17 +667,15 @@
               "display_name": "执行 Agent 阶段与会话关联计划",
               "description": "保留原阶段和连接计划；在全部原 write_session 调用位置读取即时宿主关联事实，由登记纯库决定 nativeGeneration 与 storyRequestId 的继承及观察/等待启动意图。Host只执行请求记录、原生等待与会话存储，不再选择会话字段继承规则。"
             },
-            "contract_source": "planned_config",
+            "contract_source": "node_type",
             "flow_kind": "process",
             "effect_scope": "none",
             "runtime_dispatch": "unknown",
             "execution_lock": null,
             "effective_execution_lock": null,
             "contains_global_state": false,
-            "status": "planned",
-            "planned_behavior": {
-              "kind": "blocking"
-            },
+            "status": "implemented",
+            "planned_behavior": null,
             "requires": [
               {
                 "type": "era.agent.auxiliary.execution_request",
@@ -17474,6 +17472,39 @@
               }
             }
           }
+        }
+      },
+      "era.agent.session.binding.facts": {
+        "kind": "data_schema",
+        "type_key": "era.agent.session.binding.facts",
+        "representation": "json",
+        "display_name": "会话关联即时事实",
+        "description": "原生生成是否活动及旧会话关联字段，不含宿主控制器。",
+        "schema": {
+          "type": "object",
+          "required": [
+            "active",
+            "previous"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "active": {
+              "type": "boolean"
+            },
+            "previous": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "properties": {
+                "execution": {},
+                "storyRequestId": {},
+                "nativeGeneration": {}
+              },
+              "additionalProperties": false
+            }
+          },
+          "$schema": "https://json-schema.org/draft/2020-12/schema"
         }
       },
       "era.agent.session.context": {
@@ -42530,6 +42561,30 @@
           "@era/vibeflow-expression"
         ]
       },
+      "era.service.agent_connection_policy": {
+        "kind": "base_lib",
+        "id": "era.service.agent_connection_policy",
+        "display_name": "连接方案保存决策",
+        "description": "依据公开记录事实规划保存、删除与清密钥，宿主只执行本机读写。",
+        "category": "故事生成会话",
+        "version": "1.0.0",
+        "implementations": [
+          {
+            "language": "typescript",
+            "targets": [
+              "browser",
+              "node"
+            ],
+            "source": {
+              "kind": "file",
+              "ref": "base_lib/agent_connection_policy.ts"
+            },
+            "completion": "immediate"
+          }
+        ],
+        "dependencies": [],
+        "external_packages": []
+      },
       "era.service.agent_generation_session": {
         "kind": "base_lib",
         "id": "era.service.agent_generation_session",
@@ -42558,6 +42613,54 @@
           "@era/vibeflow-contracts",
           "@era/vibeflow-expression"
         ]
+      },
+      "era.service.agent_request_policy": {
+        "kind": "base_lib",
+        "id": "era.service.agent_request_policy",
+        "display_name": "Agent 预设与请求规则",
+        "description": "组装预设快照、输入顺序和辅助模型请求计划，不读取宿主。",
+        "category": "故事生成会话",
+        "version": "1.0.0",
+        "implementations": [
+          {
+            "language": "typescript",
+            "targets": [
+              "browser",
+              "node"
+            ],
+            "source": {
+              "kind": "file",
+              "ref": "base_lib/agent_request_policy.ts"
+            },
+            "completion": "immediate"
+          }
+        ],
+        "dependencies": [],
+        "external_packages": []
+      },
+      "era.service.agent_session_binding": {
+        "kind": "base_lib",
+        "id": "era.service.agent_session_binding",
+        "display_name": "Agent 会话关联计划",
+        "description": "原生来源和正文观察关联字段的纯计划，由原 Agent 执行节点在写入时消费。",
+        "category": "故事生成会话",
+        "version": "1.0.0",
+        "implementations": [
+          {
+            "language": "typescript",
+            "targets": [
+              "browser",
+              "node"
+            ],
+            "source": {
+              "kind": "file",
+              "ref": "base_lib/agent_session_binding.ts"
+            },
+            "completion": "immediate"
+          }
+        ],
+        "dependencies": [],
+        "external_packages": []
       },
       "era.service.command_compaction": {
         "kind": "base_lib",
@@ -42992,8 +43095,8 @@
       "era.snapshot.floor_projection": {
         "kind": "base_lib",
         "id": "era.snapshot.floor_projection",
-        "display_name": "ERA 按楼快照与作者状态（计划扩展消息键解析出口）",
-        "description": "现有按楼重建和作者状态同步出口。本批计划增加保持状态栏原语义的 message_identity 登记依赖及同源包出口，供状态栏身份和报告楼层关联读取；当前 source 仍为已实现 floor_snapshot，未把计划出口标为已实现。",
+        "display_name": "ERA 按楼快照、作者状态与消息键",
+        "description": "按楼重建、作者状态和消息键的真实同步出口，由同源包供 App 消费。",
         "category": "快照查询",
         "version": "0.1.1",
         "implementations": [
@@ -43012,8 +43115,33 @@
         ],
         "dependencies": [
           "era.snapshot.data_view",
-          "era.snapshot.public_state"
+          "era.snapshot.public_state",
+          "era.snapshot.message_identity"
         ],
+        "external_packages": []
+      },
+      "era.snapshot.message_identity": {
+        "kind": "base_lib",
+        "id": "era.snapshot.message_identity",
+        "display_name": "ERA 消息键文本解析",
+        "description": "保持状态栏及报告关联原有的严格文本消息键规则。",
+        "category": "快照查询",
+        "version": "0.1.1",
+        "implementations": [
+          {
+            "language": "typescript",
+            "targets": [
+              "browser",
+              "node"
+            ],
+            "source": {
+              "kind": "file",
+              "ref": "base_lib/domain/message_identity.ts"
+            },
+            "completion": "immediate"
+          }
+        ],
+        "dependencies": [],
         "external_packages": []
       },
       "era.snapshot.public_state": {
@@ -43267,6 +43395,11 @@
           "stop_native_generation": {
             "input_type": "era.agent.host.request",
             "output_type": "era.agent.host.result",
+            "completion": "immediate"
+          },
+          "read_session_binding": {
+            "input_type": "era.agent.host.request",
+            "output_type": "era.agent.session.binding.facts",
             "completion": "immediate"
           }
         }

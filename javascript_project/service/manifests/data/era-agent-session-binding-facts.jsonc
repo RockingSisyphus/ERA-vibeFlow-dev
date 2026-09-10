@@ -1,0 +1,32 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.agent.session.binding.facts",
+  "representation": "json",
+  "display_name": "会话关联即时事实",
+  "description": "原生生成是否活动及旧会话关联字段，不含宿主控制器。",
+  "schema": {
+    "type": "object",
+    "required": [
+      "active",
+      "previous"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "active": {
+        "type": "boolean"
+      },
+      "previous": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "properties": {
+          "execution": {},
+          "storyRequestId": {},
+          "nativeGeneration": {}
+        },
+        "additionalProperties": false
+      }
+    }
+  }
+}

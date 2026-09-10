@@ -138,6 +138,7 @@ function createTavernCapabilities() {
       generate_story: async () => ({ status: 'completed', text: '' }),
       await_native_completion: async () => ({ status: 'completed', messageId: 0 }),
       inject_once: () => ({ status: 'injected' }),
+      read_session_binding: () => ({ active: false, previous: null }),
       write_session: () => ({ status: 'committed' }),
       clear_session: () => ({ status: 'cleared' }),
       write_message: async () => ({ status: 'committed' }),

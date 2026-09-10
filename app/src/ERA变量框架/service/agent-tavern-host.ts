@@ -395,15 +395,23 @@ export class AgentTavernHost {
   }
 
   /** 会话证据只在当前页面内按聊天身份保存，切换聊天或停止服务时必须整体清除。 */
-  private createSessionOperations(): Pick<AgentOperations, 'write_session' | 'clear_session'> {
+  private createSessionOperations(): Pick<AgentOperations, 'read_session_binding' | 'write_session' | 'clear_session'> {
     return {
+      read_session_binding: (input, context) => {
+        throwIfAborted(context.signal);
+        return this.nativeGeneration.readBinding(input.chatKey as string);
+      },
+      /** 执行 Service 的观察和关联意图；必须保持记录、等待、存储与通知的原顺序。 */
       write_session: (input, context) => {
         throwIfAborted(context.signal);
         if (typeof input.chatKey !== 'string' || input.chatKey.length === 0) {
           throw new TypeError('Agent 会话写入缺少 chatKey。');
         }
-        const observed = this.observeSession(input.chatKey, input.session);
-        const session = this.nativeGeneration.bind(input.chatKey, observed, input.nativeGeneration === true);
+        const session =
+          input.startStoryObservation === true
+            ? this.beginStoryObservation(input.session as Record<string, unknown>)
+            : input.session;
+        this.nativeGeneration.begin(input.chatKey, input.nativeExecutionId);
         if (
           typeof input.observationEventId === 'string' &&
           isRecord(session) &&
@@ -435,25 +443,19 @@ export class AgentTavernHost {
   }
 
   /** 原生正文也可能没有规划注入；必须以已建立会话关联，避免误借最近一次无关生成。 */
-  private observeSession(chatKey: string, value: unknown): unknown {
-    if (!isRecord(value)) return value ?? null;
-    if (value.status === 'opened') {
-      const storyRequestId = `era-story-${crypto.randomUUID()}`;
-      agentExecutionRecords.begin(
-        storyRequestId,
-        currentAgentRecordChat(),
-        'story',
-        { injection: null },
-        storyHostConfiguration(),
-        nativeStoryRequestContext(value),
-      );
-      agentExecutionRecords.armNative(storyRequestId);
-      return { ...value, storyRequestId };
-    }
-    const previous = this.sessions.get(chatKey);
-    return typeof value.storyRequestId !== 'string' && isRecord(previous) && typeof previous.storyRequestId === 'string'
-      ? { ...value, storyRequestId: previous.storyRequestId }
-      : value;
+  /** 请求 ID 必须由宿主实际创建记录后回填，纯计划不预造观察记录。 */
+  private beginStoryObservation(value: Record<string, unknown>): unknown {
+    const storyRequestId = `era-story-${crypto.randomUUID()}`;
+    agentExecutionRecords.begin(
+      storyRequestId,
+      currentAgentRecordChat(),
+      'story',
+      { injection: null },
+      storyHostConfiguration(),
+      nativeStoryRequestContext(value),
+    );
+    agentExecutionRecords.armNative(storyRequestId);
+    return { ...value, storyRequestId };
   }
 
   /**

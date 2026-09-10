@@ -51,24 +51,24 @@ export class NativeGenerationHost {
     }
   }
 
-  /** 必须只给同一执行保留来源事实，避免 Helper 创建消息等待不存在的原生结束。 */
-  bind(chatId: string, value: unknown, opening: boolean): unknown {
-    if (!isRecord(value)) return value;
-    if (opening) {
-      if (this.active && isRecord(value.execution) && typeof value.execution.id === 'string') {
-        this.completion.begin({ chatId, executionId: value.execution.id });
-      }
-      return { ...value, nativeGeneration: this.active };
-    }
+  /** 只投影即时关联事实，避免把宿主会话对象或控制器交给 Service。 */
+  readBinding(chatId: string): unknown {
     const previous = this.ports.readSession(chatId);
-    const sameExecution =
-      isRecord(previous) &&
-      isRecord(previous.execution) &&
-      isRecord(value.execution) &&
-      previous.execution.id === value.execution.id;
-    return sameExecution && typeof previous.nativeGeneration === 'boolean'
-      ? { ...value, nativeGeneration: previous.nativeGeneration }
-      : value;
+    return clonePortable({
+      active: this.active,
+      previous: isRecord(previous)
+        ? {
+            execution: isRecord(previous.execution) ? { id: previous.execution.id } : previous.execution,
+            storyRequestId: previous.storyRequestId,
+            nativeGeneration: previous.nativeGeneration,
+          }
+        : null,
+    });
+  }
+
+  /** 按 Service 的明确执行身份登记原生等待，不补写会话字段。 */
+  begin(chatId: string, executionId: unknown): void {
+    if (typeof executionId === 'string') this.completion.begin({ chatId, executionId });
   }
 
   /** 等待真实结束后重新读取上下文，不能把等待前的会话当成仍然有效。 */

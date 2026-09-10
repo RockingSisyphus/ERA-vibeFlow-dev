@@ -7,14 +7,86 @@
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
-    "requires": [{"type":"era.agent.auxiliary.execution_request","cardinality":"exactly_one","display_name":"不含密钥的辅助阶段执行请求"}],
-    "provides": [{"key":"agent_transition","type":"era.agent.session.transition","display_name":"Agent 阶段转换"},{"key":"agent_execution_state","type":"era.batch.execution.state","display_name":"Agent 批次执行状态"}],
+    "requires": [
+      {
+        "type": "era.agent.auxiliary.execution_request",
+        "cardinality": "exactly_one",
+        "display_name": "不含密钥的辅助阶段执行请求"
+      }
+    ],
+    "provides": [
+      {
+        "key": "agent_transition",
+        "type": "era.agent.session.transition",
+        "display_name": "Agent 阶段转换"
+      },
+      {
+        "key": "agent_execution_state",
+        "type": "era.batch.execution.state",
+        "display_name": "Agent 批次执行状态"
+      }
+    ],
     "params_schema": {},
     "params_defaults": {},
-    "input_semantics": {"era.agent.auxiliary.execution_request":["输入：已冻结的 V2 阶段配置、宿主事实与本机方案引用。"]},
-    "output_semantics": {"agent_transition":["输出：阶段副作用完成后的显式委托或直接结算路由。"],"agent_execution_state":["输出：未经修改的当前批次执行状态。"]}
+    "input_semantics": {
+      "era.agent.auxiliary.execution_request": [
+        "输入：已冻结的 V2 阶段配置、宿主事实与本机方案引用。"
+      ]
+    },
+    "output_semantics": {
+      "agent_transition": [
+        "输出：阶段副作用完成后的显式委托或直接结算路由。"
+      ],
+      "agent_execution_state": [
+        "输出：未经修改的当前批次执行状态。"
+      ]
+    }
   },
-  "implementations": [{"language":"typescript","targets":["browser"],"completion":"suspend","source":{"kind":"file","ref":"nodes/agent/execute_generation_session.ts","export":"run"}}],
-  "base_libs": ["era.service.agent_generation_session", "era.service.agent_request_policy", "era.service.agent_connection_policy", "era.service.mk_engine", "era.service.types"],
-  "capabilities": [{"id":"era.tavern.agent","operations":["await_native_completion","write_configuration","capture_preset","read_configuration_sources","read_connection_state","upsert_connection_profile","delete_connection_profile","clear_connection_profile_key","list_connection_models","list_connection_models_draft","generate","generate_story","inject_once","write_session","clear_session","create_error_message","stop_native_generation"]}]
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser"
+      ],
+      "completion": "suspend",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/agent/execute_generation_session.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.agent_generation_session",
+    "era.service.agent_request_policy",
+    "era.service.agent_connection_policy",
+    "era.service.mk_engine",
+    "era.service.types",
+    "era.service.agent_session_binding"
+  ],
+  "capabilities": [
+    {
+      "id": "era.tavern.agent",
+      "operations": [
+        "await_native_completion",
+        "write_configuration",
+        "capture_preset",
+        "read_configuration_sources",
+        "read_connection_state",
+        "upsert_connection_profile",
+        "delete_connection_profile",
+        "clear_connection_profile_key",
+        "list_connection_models",
+        "list_connection_models_draft",
+        "generate",
+        "generate_story",
+        "inject_once",
+        "write_session",
+        "clear_session",
+        "create_error_message",
+        "stop_native_generation",
+        "read_session_binding"
+      ]
+    }
+  ]
 }

@@ -78,6 +78,7 @@ class FakeAdapter implements EraTavernHostAdapter {
     generate_story: async (input: Readonly<Record<string, unknown>>) => ({ ...input, response: 'story' }),
     await_native_completion: async () => ({ status: 'completed', messageId: 0 }),
     inject_once: (input: Readonly<Record<string, unknown>>) => ({ ...input }),
+    read_session_binding: () => ({ active: false, previous: null }),
     write_session: (input: Readonly<Record<string, unknown>>) => ({ ...input }),
     clear_session: (input: Readonly<Record<string, unknown>>) => ({ ...input }),
     create_error_message: async (input: Readonly<Record<string, unknown>>) => ({ ...input }),

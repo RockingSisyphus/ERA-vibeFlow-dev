@@ -1,27 +1,106 @@
 {
   "kind": "capability",
   "id": "era.tavern.agent",
-  "targets": ["browser"],
+  "targets": [
+    "browser"
+  ],
   "display_name": "ERA 多阶段生成宿主 I/O",
   "description": "只执行 Service 已声明的角色卡、页面会话、独立模型请求、一次性注入与规划失败消息；最终楼层消息由同步事务提交。",
   "operations": {
-    "await_native_completion": {"input_type": "era.agent.host.request", "output_type": "era.agent.host.result", "completion": "suspend"},
-    "read_context": {"input_type": "era.agent.host.request", "output_type": "era.agent.host.result", "completion": "suspend"},
-    "write_configuration": {"input_type": "era.agent.host.request", "output_type": "era.agent.host.result", "completion": "suspend"},
-    "capture_preset": {"input_type": "era.agent.host.request", "output_type": "era.agent.host.result", "completion": "immediate"},
-    "read_configuration_sources": {"input_type": "era.agent.host.request", "output_type": "era.agent.host.result", "completion": "immediate"},
-    "read_connection_state": {"input_type": "era.agent.host.request", "output_type": "era.agent.connection.state", "completion": "immediate"},
-    "upsert_connection_profile": {"input_type": "era.agent.host.request", "output_type": "era.agent.host.result", "completion": "suspend"},
-    "delete_connection_profile": {"input_type": "era.agent.host.request", "output_type": "era.agent.host.result", "completion": "suspend"},
-    "clear_connection_profile_key": {"input_type": "era.agent.host.request", "output_type": "era.agent.host.result", "completion": "suspend"},
-    "list_connection_models": {"input_type": "era.agent.host.request", "output_type": "era.agent.host.result", "completion": "suspend"},
-    "list_connection_models_draft": {"input_type": "era.agent.host.request", "output_type": "era.agent.host.result", "completion": "suspend"},
-    "generate": {"input_type": "era.agent.host.request", "output_type": "era.agent.host.result", "completion": "suspend"},
-    "generate_story": {"input_type": "era.agent.host.request", "output_type": "era.agent.host.result", "completion": "suspend"},
-    "inject_once": {"input_type": "era.agent.host.request", "output_type": "era.agent.host.result", "completion": "immediate"},
-    "write_session": {"input_type": "era.agent.host.request", "output_type": "era.agent.host.result", "completion": "immediate"},
-    "clear_session": {"input_type": "era.agent.host.request", "output_type": "era.agent.host.result", "completion": "immediate"},
-    "create_error_message": {"input_type": "era.agent.host.request", "output_type": "era.agent.host.result", "completion": "suspend"},
-    "stop_native_generation": {"input_type": "era.agent.host.request", "output_type": "era.agent.host.result", "completion": "immediate"}
+    "await_native_completion": {
+      "input_type": "era.agent.host.request",
+      "output_type": "era.agent.host.result",
+      "completion": "suspend"
+    },
+    "read_context": {
+      "input_type": "era.agent.host.request",
+      "output_type": "era.agent.host.result",
+      "completion": "suspend"
+    },
+    "write_configuration": {
+      "input_type": "era.agent.host.request",
+      "output_type": "era.agent.host.result",
+      "completion": "suspend"
+    },
+    "capture_preset": {
+      "input_type": "era.agent.host.request",
+      "output_type": "era.agent.host.result",
+      "completion": "immediate"
+    },
+    "read_configuration_sources": {
+      "input_type": "era.agent.host.request",
+      "output_type": "era.agent.host.result",
+      "completion": "immediate"
+    },
+    "read_connection_state": {
+      "input_type": "era.agent.host.request",
+      "output_type": "era.agent.connection.state",
+      "completion": "immediate"
+    },
+    "upsert_connection_profile": {
+      "input_type": "era.agent.host.request",
+      "output_type": "era.agent.host.result",
+      "completion": "suspend"
+    },
+    "delete_connection_profile": {
+      "input_type": "era.agent.host.request",
+      "output_type": "era.agent.host.result",
+      "completion": "suspend"
+    },
+    "clear_connection_profile_key": {
+      "input_type": "era.agent.host.request",
+      "output_type": "era.agent.host.result",
+      "completion": "suspend"
+    },
+    "list_connection_models": {
+      "input_type": "era.agent.host.request",
+      "output_type": "era.agent.host.result",
+      "completion": "suspend"
+    },
+    "list_connection_models_draft": {
+      "input_type": "era.agent.host.request",
+      "output_type": "era.agent.host.result",
+      "completion": "suspend"
+    },
+    "generate": {
+      "input_type": "era.agent.host.request",
+      "output_type": "era.agent.host.result",
+      "completion": "suspend"
+    },
+    "generate_story": {
+      "input_type": "era.agent.host.request",
+      "output_type": "era.agent.host.result",
+      "completion": "suspend"
+    },
+    "inject_once": {
+      "input_type": "era.agent.host.request",
+      "output_type": "era.agent.host.result",
+      "completion": "immediate"
+    },
+    "write_session": {
+      "input_type": "era.agent.host.request",
+      "output_type": "era.agent.host.result",
+      "completion": "immediate"
+    },
+    "clear_session": {
+      "input_type": "era.agent.host.request",
+      "output_type": "era.agent.host.result",
+      "completion": "immediate"
+    },
+    "create_error_message": {
+      "input_type": "era.agent.host.request",
+      "output_type": "era.agent.host.result",
+      "completion": "suspend"
+    },
+    "stop_native_generation": {
+      "input_type": "era.agent.host.request",
+      "output_type": "era.agent.host.result",
+      "completion": "immediate"
+    },
+    "read_session_binding": {
+      "input_type": "era.agent.host.request",
+      "output_type": "era.agent.session.binding.facts",
+      "completion": "immediate"
+    }
   }
 }

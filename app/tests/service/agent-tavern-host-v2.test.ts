@@ -1,3 +1,4 @@
+import { writeSession as writeWorkflowSession } from '../../../javascript_project/service/nodes/agent/execute_generation_session';
 import {
   connectionId,
   planConnectionSave,
@@ -24,6 +25,21 @@ function save(
   return operations.upsert_connection_profile(
     { ...planConnectionSave(input, state), keyProvider: input.keyProvider },
     context,
+  );
+}
+
+/** 调用原 Node 的真实写入入口，Host 测试只绑定能力上下文。 */
+function writeSession(
+  operations: AgentTavernHost['operations'],
+  input: Readonly<Record<string, unknown>>,
+  context: { signal: AbortSignal },
+) {
+  return writeWorkflowSession(
+    {
+      read_session_binding: request => operations.read_session_binding(request, context),
+      write_session: request => operations.write_session(request, context),
+    },
+    input,
   );
 }
 
@@ -112,7 +128,8 @@ describe('AgentTavernHost V2 local routes', () => {
     const instance = host();
     const stop = instance.nativeGeneration.observe();
     instance.nativeGeneration.start();
-    instance.operations.write_session(
+    writeSession(
+      instance.operations,
       {
         chatKey: 'test-chat',
         nativeGeneration: true,
@@ -140,7 +157,8 @@ describe('AgentTavernHost V2 local routes', () => {
   it('does not wait for a future native event when Helper creates messages outside generation', async () => {
     vi.stubGlobal('getChatMessages', () => []);
     const instance = host();
-    instance.operations.write_session(
+    writeSession(
+      instance.operations,
       { chatKey: 'test-chat', nativeGeneration: true, session: { status: 'opened', execution: { id: 'manual' } } },
       capabilityContext,
     );
@@ -152,10 +170,11 @@ describe('AgentTavernHost V2 local routes', () => {
 
   it('records native story without planning and retains its request across settlement writes', () => {
     const instance = host();
-    instance.operations.write_session({ chatKey: 'test-chat', session: { status: 'opened' } }, capabilityContext);
+    writeSession(instance.operations, { chatKey: 'test-chat', session: { status: 'opened' } }, capabilityContext);
     const id = String(instance.readSessionForViewer()?.storyRequestId);
     agentExecutionRecords.capture(currentAgentRecordChat(), [{ role: 'user', content: 'native actual prompt' }], false);
-    instance.operations.write_session(
+    writeSession(
+      instance.operations,
       { chatKey: 'test-chat', session: { status: 'settled', story: 'native response' } },
       capabilityContext,
     );
@@ -165,7 +184,7 @@ describe('AgentTavernHost V2 local routes', () => {
       response: 'native response',
       prompt: [{ role: 'user', content: 'native actual prompt' }],
     });
-    instance.operations.write_session({ chatKey: 'test-chat', session: { status: 'opened' } }, capabilityContext);
+    writeSession(instance.operations, { chatKey: 'test-chat', session: { status: 'opened' } }, capabilityContext);
     expect(instance.readSessionForViewer()?.storyRequestId).not.toBe(id);
     instance.stop();
   });

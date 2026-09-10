@@ -16,11 +16,7 @@ export function activeMessageText(message: unknown): string | null {
   return typeof value === 'string' ? value : null;
 }
 
-/** 从活动消息正文读取 ERA 消息键。 */
-export function messageMk(text: string): string | null {
-  const block = text.match(/<era_data>(\{[\s\S]*?\})<\/era_data>/iu)?.[1];
-  return block?.match(/"era-message-key"\s*=\s*"([^"]+)"/u)?.[1] ?? null;
-}
+export { messageMk } from '@era/vibeflow-floor-snapshot';
 
 /** 从 Tavern Helper iframe 名称读取楼层号。 */
 export function iframeMessageId(name: string): number | null {

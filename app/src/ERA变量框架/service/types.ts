@@ -110,6 +110,7 @@ export interface EraTavernAdapter {
     generate(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
     generate_story(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
     inject_once(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
+    read_session_binding(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
     write_session(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
     clear_session(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
     create_error_message(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;

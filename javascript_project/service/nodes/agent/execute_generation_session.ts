@@ -1,3 +1,4 @@
+import { planSessionBinding, type SessionBindingFacts } from "../../base_lib/agent_session_binding.ts";
 import {
   connectionId,
   planConnectionSave,
@@ -70,12 +71,19 @@ interface AgentCapability {
   generate(input: Readonly<Record<string, unknown>>): Promise<unknown>;
   generate_story(input: Readonly<Record<string, unknown>>): Promise<unknown>;
   inject_once(input: Readonly<Record<string, unknown>>): unknown;
+  read_session_binding(input: Readonly<Record<string, unknown>>): unknown;
   write_session(input: Readonly<Record<string, unknown>>): unknown;
   clear_session(input: Readonly<Record<string, unknown>>): unknown;
   create_error_message(
     input: Readonly<Record<string, unknown>>,
   ): Promise<unknown>;
   stop_native_generation(input: Readonly<Record<string, unknown>>): unknown;
+}
+/** 保留原写入时机，事实读取、纯决议和宿主提交之间不让出执行权。 */
+export function writeSession(capability: Pick<AgentCapability, "read_session_binding" | "write_session">, input: Readonly<Record<string, unknown>>): unknown {
+  const facts = capability.read_session_binding({ chatKey: input.chatKey }) as SessionBindingFacts;
+  const binding = planSessionBinding(input.session, input.nativeGeneration === true, facts);
+  return capability.write_session({ ...input, ...binding });
 }
 /** 两个真实保存入口共用同一规则，每次写入前读取当时的本机事实。 */
 function saveConnection(
@@ -769,7 +777,7 @@ async function runSettlement(
         .join("\n");
       const storyPrefix = [baseMessage, planReport].filter(Boolean).join("\n");
       const storyStart = storyPrefix.length + (storyPrefix.length > 0 ? 1 : 0);
-      capability.write_session({
+      writeSession(capability, {
         chatKey: chatKey(context),
         observationEventId,
         session: {
@@ -831,7 +839,7 @@ async function runSettlement(
   const message = [baseMessage, planReport, isolated.story, updateReport]
     .filter(Boolean)
     .join("\n");
-  capability.write_session({
+  writeSession(capability, {
     chatKey: chatKey(context),
     observationEventId,
     session: {
@@ -950,7 +958,7 @@ async function retryStory(
     ]
       .filter(Boolean)
       .join("\n");
-    capability.write_session({
+    writeSession(capability, {
       chatKey: chatKey(context),
       session: {
         ...nextSession,
@@ -1389,7 +1397,7 @@ export async function run(
           kind,
           step.task.primaryEvent.eventId,
         );
-        capability.write_session({ chatKey: chatKey(rawContext), session, nativeGeneration: true });
+        writeSession(capability, { chatKey: chatKey(rawContext), session, nativeGeneration: true });
       }
       if (session === null) {
         throw new TypeError("Agent 生成周期未能建立会话。");
@@ -1409,7 +1417,7 @@ export async function run(
           planningContext,
           step,
         );
-        capability.write_session({ chatKey: chatKey(rawContext), session });
+        writeSession(capability, { chatKey: chatKey(rawContext), session });
         capability.inject_once({
           id: `era-agent-story-${step.task.primaryEvent.eventId}`,
           content: buildStoryInjection({
@@ -1501,7 +1509,7 @@ export async function run(
             terminalStatus: "story-complete",
             requiresInitialPresentation: true,
           });
-          capability.write_session({
+          writeSession(capability, {
             chatKey: chatKey(rawContext),
             session: {
               ...(session ?? {}),
@@ -1568,7 +1576,7 @@ export async function run(
           { ...rawContext, session },
           step,
         );
-        capability.write_session({ chatKey: chatKey(rawContext), session });
+        writeSession(capability, { chatKey: chatKey(rawContext), session });
         candidate = await retryStory(
           capability,
           configuration,

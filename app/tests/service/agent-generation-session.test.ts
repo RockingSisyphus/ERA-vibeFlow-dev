@@ -206,6 +206,7 @@ describe('retry failure boundaries', () => {
             })),
             generate,
             ...(nativeCompletion ? { await_native_completion: nativeCompletion } : {}),
+            read_session_binding: () => ({ active: false, previous: null }),
             write_session: writeSession,
             inject_once: vi.fn(),
             stop_native_generation: vi.fn(),
@@ -764,6 +765,7 @@ describe('AgentGenerationSession pure contracts', () => {
               latestMessage: { message_id: 5, role: 'user', message: '下一轮' },
               state: { revision: 3, statData: { time: 10 }, statFunc: {} },
             })),
+            read_session_binding: () => ({ active: false, previous: null }),
             write_session: writeSession,
           } as never,
         },
@@ -773,6 +775,8 @@ describe('AgentGenerationSession pure contracts', () => {
     expect(writeSession).toHaveBeenCalledOnce();
     expect(writeSession).toHaveBeenCalledWith({
       chatKey: 'chat-agent-next',
+      startStoryObservation: true,
+      nativeExecutionId: null,
       nativeGeneration: true,
       session: expect.objectContaining({ chatKey: 'chat-agent-next', status: 'opened', cycleIndex: 0 }),
     });
@@ -817,6 +821,7 @@ describe('AgentGenerationSession pure contracts', () => {
               session: null,
               latestMessage: { message_id: 0, role: 'assistant', message: '角色卡开场白' },
             })),
+            read_session_binding: () => ({ active: false, previous: null }),
             write_session: writeSession,
           } as never,
         },
@@ -882,6 +887,7 @@ describe('AgentGenerationSession pure contracts', () => {
                 extra: { api: 'openai', transientHostField: undefined },
               },
             })),
+            read_session_binding: () => ({ active: false, previous: null }),
             write_session: vi.fn(() => ({ status: 'committed' })),
           } as never,
         },
@@ -975,6 +981,7 @@ describe('AgentGenerationSession pure contracts', () => {
               latestMessage: { message_id: 6, role: 'assistant', message: story, extra: {} },
             })),
             generate,
+            read_session_binding: () => ({ active: false, previous: null }),
             write_session: vi.fn(() => ({ status: 'committed' })),
           } as never,
         },
@@ -1047,6 +1054,7 @@ describe('AgentGenerationSession pure contracts', () => {
               latestMessage: { message_id: 7, role: 'assistant', message: 'settle this story', extra: {} },
             })),
             generate,
+            read_session_binding: () => ({ active: false, previous: null }),
             write_session: vi.fn(() => ({ status: 'committed' })),
           } as never,
         },
@@ -1129,6 +1137,7 @@ describe('AgentGenerationSession pure contracts', () => {
               state: { revision: 1, statData: {}, statFunc: {} },
             })),
             generate,
+            read_session_binding: () => ({ active: false, previous: null }),
             write_session: writeSession,
             inject_once: vi.fn(() => ({ status: 'injected' })),
           } as never,
@@ -1139,6 +1148,8 @@ describe('AgentGenerationSession pure contracts', () => {
     expect(generate).toHaveBeenCalledTimes(2);
     expect(writeSession).toHaveBeenLastCalledWith({
       chatKey: 'chat-profile-retry',
+      startStoryObservation: false,
+      nativeExecutionId: null,
       session: expect.objectContaining({
         status: 'planned',
         planningAttempts: [
@@ -1193,6 +1204,7 @@ describe('AgentGenerationSession pure contracts', () => {
               },
               session: null,
             })),
+            read_session_binding: () => ({ active: false, previous: null }),
             write_session: writeSession,
             generate,
           } as never,

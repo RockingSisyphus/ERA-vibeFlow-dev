@@ -1,4 +1,5 @@
 // Generated from Service base_lib/domain; do not edit.
+export { messageMk } from './message_identity.js';
 export type { EraDataTransformDirection } from './data_view.js';
 export { selectedMks, transformEraData, removeMetaFields } from './data_view.js';
 export { projectPublicState } from './public_state.js';

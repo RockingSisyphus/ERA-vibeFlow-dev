@@ -55,28 +55,7 @@
         "id": "execute_agent_phase_v2",
         "type_used": "era.agent.execute_session_v2",
         "display_name": "执行 Agent 阶段与会话关联计划",
-        "description": "保留原阶段和连接计划；在全部原 write_session 调用位置读取即时宿主关联事实，由登记纯库决定 nativeGeneration 与 storyRequestId 的继承及观察/等待启动意图。Host只执行请求记录、原生等待与会话存储，不再选择会话字段继承规则。",
-        "status": "planned",
-        "flow_kind": "process",
-        "requires": [
-          {
-            "type": "era.agent.auxiliary.execution_request",
-            "cardinality": "exactly_one",
-            "display_name": "不含密钥的辅助阶段执行请求"
-          }
-        ],
-        "provides": [
-          {
-            "key": "agent_transition",
-            "type": "era.agent.session.transition",
-            "display_name": "Agent 阶段转换"
-          },
-          {
-            "key": "agent_execution_state",
-            "type": "era.batch.execution.state",
-            "display_name": "Agent 批次执行状态"
-          }
-        ]
+        "description": "保留原阶段和连接计划；在全部原 write_session 调用位置读取即时宿主关联事实，由登记纯库决定 nativeGeneration 与 storyRequestId 的继承及观察/等待启动意图。Host只执行请求记录、原生等待与会话存储，不再选择会话字段继承规则。"
       },
       {
         "id": "route_agent_transition",
