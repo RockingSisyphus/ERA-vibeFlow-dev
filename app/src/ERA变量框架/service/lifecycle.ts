@@ -227,11 +227,17 @@ export async function startEraApplication(dependencies: EraApplicationDependenci
     runtime.bindClient(installEraServiceClient(adapter));
     runtime.bindPublicApi(dependencies.startPublicApi?.() ?? (() => undefined));
     dependencies.globals[ERA_RUNTIME_GLOBAL_KEY] = runtime;
+    runtime.attachPagehide();
     await awaitStartupAdmission(adapter, dependencies);
+    // stop/pagehide 可以在初始化回执等待中拆除 Facade。旧启动续体必须
+    // 在这里结束，不能在停止已结算后重新挂载宏、UI 或监听器。
+    if (runtime.stopping) {
+      await runtime.stop();
+      return runtime;
+    }
     dependencies.refreshSettings();
     runtime.bindMacro(dependencies.startMacro());
     runtime.bindUi(dependencies.startUi());
-    runtime.attachPagehide();
     return runtime;
   } catch (error) {
     await runtime.stop();

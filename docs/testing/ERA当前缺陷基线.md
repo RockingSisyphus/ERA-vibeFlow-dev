@@ -1,5 +1,10 @@
 # ERA 当前缺陷基线
 
+2026-09-10 后续验收：12 并发完整综合业务判定 413/413 passed；一条路径出现 Harness DOM 采集截断。采集器在独立仓库修复后，该路径单独复测 88/88 动作执行及捕获完整、业务通过。保留全量原始 partial 状态，不拼接为新全量通过；运行编号及范围见[变更清单](../../reports/era-four-ui-regression-change-list.md)。
+
+2026-09-10 四项综合定向修复：旧初始化实例在stop后继续启动的问题已修复；三个UI组合补独立聊天，最终异步观察等待已接纳请求结算且不改业务oracle。独立run `st-run-20260909T23564786-8065bddea97b` 为4/4passed、281actions全部completed/complete、audit consistent/complete。详见[变更清单](../../reports/era-four-ui-regression-change-list.md)。这是四项定向结果，不代表最终同版本完整两层通过。
+
+
 > 状态：当前 ERA 开放缺陷的唯一权威入口
 >
 > 基线日期：2026-09-03

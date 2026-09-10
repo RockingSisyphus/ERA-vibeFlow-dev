@@ -217,6 +217,47 @@ describe('ERA 生产生命周期', () => {
     vi.restoreAllMocks();
   });
 
+  it.each(['stop', 'pagehide'] as const)('初始化回执等待中 %s 后旧续体不晚挂载或影响新实例', async mode => {
+    let releaseAdmission!: () => void;
+    let admissionStarted!: () => void;
+    const started = new Promise<void>(resolve => (admissionStarted = resolve));
+    const pending = new Promise<void>(resolve => (releaseAdmission = resolve));
+    const createAdapter = fixture.dependencies.createAdapter;
+    fixture.dependencies.createAdapter = options => {
+      const adapter = createAdapter(options);
+      const enqueue = adapter.enqueue.bind(adapter);
+      adapter.enqueue = (...args) => {
+        const admission = enqueue(...args);
+        if (admission.accepted && args[0] === INPUT_EVENT.APP_READY) {
+          admissionStarted();
+          return { ...admission, done: pending.then(() => admission.done) };
+        }
+        return admission;
+      };
+      return adapter;
+    };
+    const starting = startEraApplication(fixture.dependencies);
+    await started;
+    const old = fixture.globals[ERA_RUNTIME_GLOBAL_KEY] as EraAppRuntime;
+    expect(fixture.page.count).toBe(1);
+    if (mode === 'pagehide') fixture.page.dispatchPagehide();
+    await old.stop();
+    expect(fixture.active).toEqual({ macro: 0, ui: 0, dom: 0 });
+    expect(fixture.page.count).toBe(0);
+
+    fixture.dependencies.createAdapter = createAdapter;
+    runtime = await startEraApplication(fixture.dependencies);
+    releaseAdmission();
+    expect(await starting).toBe(old);
+    expect(old.stopping).toBe(true);
+    expect(fixture.globals[ERA_RUNTIME_GLOBAL_KEY]).toBe(runtime);
+    expect(fixture.active).toEqual({ macro: 1, ui: 1, dom: 1 });
+    expect(fixture.order.filter(item => item === 'macro.start')).toHaveLength(1);
+    expect(fixture.order.filter(item => item === 'ui.start')).toHaveLength(1);
+    expect(fixture.page.count).toBe(1);
+    expect(fixture.fatals).toEqual([]);
+  });
+
   it('按 Host → workflow → 初始化 → 宏 → UI 顺序启动，热重载 10 次不增长资源', async () => {
     for (let index = 0; index < 10; index += 1) {
       runtime = await startEraApplication(fixture.dependencies);
