@@ -19,6 +19,10 @@
   "architecture": {
     "documents": [
       {
+        "workflow": "configs/era.workbench.jsonc",
+        "document": "ARCHITECTURE.workbench.jsonc"
+      },
+      {
         "workflow": "configs/era.service.jsonc",
         "document": "ARCHITECTURE.jsonc"
       },

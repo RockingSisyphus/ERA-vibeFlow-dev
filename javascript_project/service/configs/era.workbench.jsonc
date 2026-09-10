@@ -1,0 +1,78 @@
+{
+  "host_extensions": [],
+  "global_config": {
+    "config": {},
+    "allow_config_override": false
+  },
+  "pipeline": {
+    "entry_mode": "sync",
+    "inputs": [
+      {
+        "key": "request",
+        "type": "era.workbench.request",
+        "required": true,
+        "display_name": "工作台草稿意图与只读基准"
+      }
+    ],
+    "max_steps": 4,
+    "nodes": [
+      {
+        "id": "plan",
+        "type_used": "era.workbench.plan",
+        "status": "planned",
+        "display_name": "计算实际操作与保护事实",
+        "description": "待批准：承接变量差异、插入、删除、表达式与函数库差异；从实际操作变更计算保护，输出结构化事实。唯一实现位于已登记base_lib/domain/workbench_planner.ts，禁止读取Host或UI。",
+        "flow_kind": "process",
+        "requires": [
+          {
+            "type": "era.workbench.request",
+            "cardinality": "exactly_one",
+            "display_name": "era.workbench.request"
+          }
+        ],
+        "provides": [
+          {
+            "key": "plan",
+            "type": "era.workbench.plan",
+            "display_name": "era.workbench.plan"
+          }
+        ]
+      },
+      {
+        "id": "protect",
+        "type_used": "era.workbench.protect",
+        "status": "planned",
+        "display_name": "按用户选择组合提交计划",
+        "description": "待批准：消费实际变更与保护事实，按用户显式选择生成同次commit的解锁、原操作与可恢复保护；necessary不提供临时恢复，UI只展示可选项。同步返回计划不提交状态。",
+        "flow_kind": "process",
+        "requires": [
+          {
+            "type": "era.workbench.plan",
+            "cardinality": "exactly_one",
+            "display_name": "era.workbench.plan"
+          }
+        ],
+        "provides": [
+          {
+            "key": "result",
+            "type": "era.workbench.result",
+            "display_name": "era.workbench.result"
+          }
+        ]
+      }
+    ],
+    "edges": [
+      [
+        "plan",
+        "protect"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.workbench.result",
+        "cardinality": "exactly_one",
+        "display_name": "era.workbench.result"
+      }
+    ]
+  }
+}
