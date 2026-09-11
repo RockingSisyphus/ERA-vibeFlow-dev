@@ -155,6 +155,17 @@ UI 同步预览使用 `packages/era-workbench` 从 Service base_lib 唯一源码
   与 `era.message.invoke_*` 内部事件。作者用法见
   [ERA消息内函数调用作者指南](ERA%E6%B6%88%E6%81%AF%E5%86%85%E5%87%BD%E6%95%B0%E8%B0%83%E7%94%A8%E4%BD%9C%E8%80%85%E6%8C%87%E5%8D%97.md)。
 
+### 消息内函数调用的交接契约（现行实现）
+
+| 方向 | 载体 | 载荷 | 约束 |
+| --- | --- | --- | --- |
+| Service → Host | 后置通知 `era.message.invoke_required` | 楼层、MK、块下标、调用标识、函数名、参数、调用位置累计 `stat`/`statFunc` | 只在无标记调用处发出；发出时本批次**不提交任何状态**，连续处理状态也不推进 |
+| Host → Service | 输入事件 `era.message.invoke_continue` | 楼层、MK、调用标识、函数名、终态（`completed`/`failed`/`cancelled`）、`unregistered`、`error` 文本、**产出操作** | 必须是真实新事件（`SYNC` 组、零收集窗口）；Service 按它把调用标记与操作区写进处理楼层文本，再走既有重放与提交链 |
+| Host 内部 | 位置门面 | `ERA.commit` / `ERA.get` | 函数运行期间提交走位置通道并**绝不入队**；`ERA.sync`/`ERA.history`/`ERA.statusbar` 报 `ERA_POSITION_BOUND_UNSUPPORTED` |
+
+函数效果唯一生效路径是操作区记录随消息重放；因此 ERA 自己写出的操作区**不带**
+`applied="1"`，函数内也不保证 `ERA.get()` 读回自己刚提交的写入。
+
 ## 验证选择
 
 代码/工作流改动先跑相应的 VibeFlow validate、quality、build 与 app 合同测试；需要证实浏览器行为时，

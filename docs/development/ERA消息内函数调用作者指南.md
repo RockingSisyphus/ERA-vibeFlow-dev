@@ -76,9 +76,13 @@ ERA 把消息里的每个操作块当作**一步**，按原文位置逐块读取
 
 | 调用 | 行为 |
 | --- | --- |
-| `await ERA.commit(operations)` | 操作**立即应用到当前位置**，返回 `{ status: 'applied', sequence }`。返回后再次 `ERA.get()` 能看到刚提交的效果。 |
-| `ERA.get()` | 读取调用位置的当前状态。 |
-| `ERA.sync` / `ERA.history` / `ERA.statusbar` | **位置绑定上下文不支持**，报类型化错误。 |
+| `await ERA.commit(operations)` | 操作被登记为**本次调用在调用位置的操作**，返回 `{ status: 'applied', sequence }`。这些操作随后写进调用块下方的操作区，整条消息按原文位置重放时生效。 |
+| `ERA.get()` | 读取调用位置的累计状态：已提交侧车状态 + 本条消息在调用之前的块。 |
+| `ERA.sync` / `ERA.history` / `ERA.statusbar` | **位置绑定上下文不支持**，报 `ERA_POSITION_BOUND_UNSUPPORTED`。 |
+
+**同一函数内不要依赖 `ERA.get()` 读回自己刚提交的写入**：位置状态的推进由 Service 在
+整条消息重放时按原文位置完成，宿主不会在函数内再跑一遍变量引擎（复制一套会让两侧
+状态分歧）。需要读回时请在函数内自行维护派生值，或把计算拆到调用前后的普通操作块里。
 
 `commit` 的两种拒绝（都不会静默丢弃）：
 
@@ -142,8 +146,9 @@ ERA 把消息里的每个操作块当作**一步**，按原文位置逐块读取
 以下部分**尚未接通**，因此本文描述的端到端行为目前在真实酒馆中还不能完整生效：
 
 1. **服务侧交接与恢复已接通**：无标记调用会无条件断开本批次，交接事实以 `era.message.invoke_required` 后置通知交出；`era.message.invoke_continue` 恢复事件会把调用标记与操作区写进处理楼层文本，再走既有重放与提交链。交接工作项声明为不提交，因此未完成的消息不会推进连续处理状态。
-2. **块级工作流步骤尚未拆开**：块推进目前仍在一次同步运行内按序走完，尚未体现为 `vibeflow.loop.while` 的逐块步骤与跨批次块游标；游标（`block_cursor`）已报出，但还没有写入服务状态。
-3. **Host 适配层接线未完成**：宿主调用会话、位置绑定执行器与工具调用器均已实现并有测试，但 `tavern-adapter` 还没有：收到 `era.message.invoke_required` 后驱动函数执行、把观察到的操作放进恢复事件、以及给函数提供调用位置状态的位置门面。因此真实酒馆里调用还不会被执行。
+2. **Host 执行驱动与位置门面已接通**：`tavern-adapter` 收到 `era.message.invoke_required` 后在步骤之外驱动函数（登记 → 位置门面下执行 → 收集产出操作 → 回送终态），函数内 `ERA.commit` 走位置通道而**不入队**，`ERA.get()` 读到的是调用位置状态。
+3. **块级工作流步骤尚未拆开**：块推进目前仍在一次同步运行内按序走完，尚未体现为 `vibeflow.loop.while` 的逐块步骤；`block_cursor` 已报出，但还没有写入服务状态（需要给 `EraTaskStateUpdateV1` 增加 `syncCursor`，属独立 ABI 变更）。
+4. **尚未在真实酒馆端到端验收**：以上接通目前只有单元与集成测试证据；Pack 的函数注册资产与 MSG-FCALL 预期结果（Evaluator/oracle）尚未落地，因此专项测试还不能在真实酒馆里执行。
 
 在这些接通之前，请不要把本特性用于生产角色卡。实现证据与每轮结论见
 [`reports/era-message-function-call-review-20260911/B1实施进度.md`](../../reports/era-message-function-call-review-20260911/B1实施进度.md)。
