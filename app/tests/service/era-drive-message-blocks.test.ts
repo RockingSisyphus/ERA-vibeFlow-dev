@@ -81,7 +81,7 @@ function contextWith(text: string) {
         messageId: 1,
         role: 'assistant',
         swipeIndex: 0,
-        text,
+        activeText: text,
         extra: {},
       },
     ],
@@ -176,56 +176,49 @@ describe('era.sync.drive_message_blocks 节点', () => {
     expect(result.message_incomplete).toBe(false);
   });
 
-  it('宿主能力可用时在此完成一次完整交接并回报终态', async () => {
-    const released: unknown[] = [];
-    const capability = {
-      invoke: async (input: Readonly<Record<string, unknown>>) => ({
-        status: 'accepted',
-        invocationId: input.invocationId,
-      }),
-      result: async () => ({
-        status: 'completed',
-        name: 'attack',
-        result: 'ok',
-        message: '',
-        unregistered: false,
-        appliedCount: 1,
-      }),
-      release: (input: Readonly<Record<string, unknown>>) => {
-        released.push(input.invocationId);
-        return { released: true };
-      },
-    };
-
-    const result = await run(
-      {
-        'era.sync.context': {
-          value: contextWith(
-            ['<VariableInsert>{"hp":100}</VariableInsert>', '<EraFCall name="attack" id="c1"/>'].join('\n'),
-          ),
-        },
-      },
-      {},
-      { capabilities: { 'era.tavern.functions': capability } },
-    );
-
-    // 交接完成后不再需要外部执行：不再声称未完成，并带回终态。
-    expect(result.message_incomplete).toBe(false);
-    expect(result.function_outcome).toMatchObject({ status: 'completed' });
-    expect(released).toHaveLength(1);
-  });
-
-  it('宿主能力不可用时保持待调用与未完成，不伪造成功', async () => {
+  it('交接工作项声明为不提交，并携带调用位置事实', async () => {
     const result = await run({
       'era.sync.context': {
         value: contextWith(
-          ['<VariableInsert>{"hp":100}</VariableInsert>', '<EraFCall name="attack" id="c1"/>'].join('\n'),
+          [
+            '<VariableInsert>{"gold":5}</VariableInsert>',
+            '<EraFCall name="attack" args=\'{"damage":30}\' id="c1"/>',
+            '<VariableEdit>{"hp":{"$expr":"hp-10"}}</VariableEdit>',
+          ].join('\n'),
         ),
       },
     });
 
-    expect(result.function_outcome).toBe(null);
-    expect(result.message_incomplete).toBe(true);
+    // 函数效果只能由它自己的操作区记录带来，因此本批次不得提交任何状态。
+    const work = result.expression_command_result;
+    expect(work.disposition).toBe('no-op');
+    expect(work.plan).toBe(null);
+    expect(work.failure).toBe(null);
+    expect(work.handoff).toMatchObject({
+      messageId: 1,
+      mk: 'mk-1',
+      callId: 'c1',
+      name: 'attack',
+      args: { damage: 30 },
+    });
+    expect(result.function_handoff).toMatchObject({ callId: 'c1' });
+  });
+
+  it('交接事实里的位置状态包含调用之前的块效果', async () => {
+    const result = await run({
+      'era.sync.context': {
+        value: contextWith(
+          [
+            '<VariableInsert>{"gold":5}</VariableInsert>',
+            '<EraFCall name="attack" id="c1"/>',
+          ].join('\n'),
+        ),
+      },
+    });
+
+    // 函数读取的是自己所在位置的状态：已提交基线 + 本条消息调用之前的块。
+    expect(result.function_handoff.stat).toEqual({ hp: 100, gold: 5 });
+    expect(result.block_cursor.done).toBe(false);
   });
 
   it('报出块步进游标，作为跨步骤续做的依据', async () => {

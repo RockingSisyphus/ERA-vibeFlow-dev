@@ -9,6 +9,9 @@ import {
 } from "./sync_contracts.ts";
 import { type EraSyncPlanV1 } from "./domain/sync_engine.ts";
 
+/** Host 收到后必须在步骤之外执行函数，再以 `era.message.invoke_continue` 恢复。 */
+export const MESSAGE_FUNCTION_INVOKE_REQUIRED = "era.message.invoke_required";
+
 export function sourceKey(eventId: string, sequence: number): string {
   return `${eventId}\u0000${sequence}`;
 }
@@ -48,6 +51,30 @@ export function stateUpdateForPlan(plan: EraSyncPlanV1 | null) {
         consecutiveMk: next.mk,
         consecutiveProcessingCount: next.count,
       };
+}
+
+/**
+ * 把工作项上的交接与附加通知投影为 Host 后置通知。
+ *
+ * 函数交接必须走既有的 notification 通道：它只在新批次里恢复，不能占用当前
+ * FIFO，也不能凭空多出第二套回调口。
+ */
+function notificationsForWork(work: SyncWorkV1) {
+  const handoff = work.handoff;
+  return [
+    ...(handoff === undefined
+      ? []
+      : [
+          {
+            type: MESSAGE_FUNCTION_INVOKE_REQUIRED,
+            args: [{ kind: "json" as const, value: handoff as never }],
+          },
+        ]),
+    ...(work.notifications ?? []).map((item) => ({
+      type: item.type,
+      args: item.args.map((value) => ({ kind: "json" as const, value: value as never })),
+    })),
+  ];
 }
 
 export function settlementsFor(
@@ -115,7 +142,7 @@ export function buildSyncNonCommitResult(work: SyncWorkV1): TaskResultV1 {
   return {
     status,
     settlements: settlementsFor(work.step, status, work.failure),
-    notifications: [],
+    notifications: notificationsForWork(work),
     diagnostics,
     ...(stateUpdateForPlan(work.plan) === undefined
       ? {}

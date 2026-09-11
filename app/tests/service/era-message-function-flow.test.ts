@@ -46,7 +46,9 @@ describe('ERA 一步一块：Service 侧消息函数流程（纯状态机）', (
       operations: [{ edit: { hp: { $expr: 'hp - 30' } } }],
     });
 
-    expect(current.content).toContain('<EraFCallTx for="c1" applied="1">');
+    // 操作区不带 applied：它随消息重放才是函数效果唯一一次生效。
+    expect(current.content).toContain('<EraFCallTx for="c1">');
+    expect(current.content).not.toContain('applied="1"');
     expect(current.content).toContain('hp - 30');
     expect(current.content).toContain('status="done"');
     expect(current.pendingCall).toBe(null);
@@ -67,7 +69,7 @@ describe('ERA 一步一块：Service 侧消息函数流程（纯状态机）', (
     }
 
     expect(current.done).toBe(true);
-    // 100 - 30（函数，就地应用）= 70，再执行原文最后一块 -10 = 60；已应用操作区不重放。
+    // 100 - 30（操作区随位置重放）= 70，再执行原文最后一块 -10 = 60。
     expect(current.stat).toEqual({ gold: 1, hp: 60 });
   });
 
@@ -82,7 +84,15 @@ describe('ERA 一步一块：Service 侧消息函数流程（纯状态机）', (
     });
 
     expect(current.content).toContain('error="ERA_FCALL_FAILED"');
-    expect(current.stat).toEqual({ gold: 1, hp: 70 });
+    // 回送只写记录，不预先并入累计状态：操作由后续推进按位置执行。
+    expect(current.stat).toEqual({ gold: 1, hp: 100 });
+
+    let guard = 0;
+    while (!current.done && guard < 10) {
+      current = advanceMessageFunctionFlow(current);
+      guard += 1;
+    }
+    expect(current.stat).toEqual({ gold: 1, hp: 60 });
   });
 
   it('未注册调用同样以失败标记收口，并保留未注册事实', () => {
@@ -102,7 +112,7 @@ describe('ERA 一步一块：Service 侧消息函数流程（纯状态机）', (
     });
 
     expect(current.content).toContain('error="ERA_FCALL_FAILED"');
-    expect(current.content).toContain('<EraFCallTx for="c1" applied="1"></EraFCallTx>');
+    expect(current.content).toContain('<EraFCallTx for="c1"></EraFCallTx>');
     expect(current.unregisteredCalls).toContain('attack');
   });
 

@@ -3,7 +3,7 @@
   "type_key": "era.sync.drive_message_blocks",
   "display_name": "一步一块驱动消息块",
   "category": "同步规划",
-  "description": "按块推进当前处理楼层：每次只处理一个块，遇到无标记 <EraFCall/> 时把函数调用路由置为 invoke 并把待调用交回调用方，函数本体不在本节点内执行。同步工作项仍由登记的 sync_planning 纯函数产出，保持既有提交链不变；块游标随结果报出，供跨步骤续做。",
+  "description": "按块推进当前处理楼层：遇到无标记 <EraFCall/> 时无条件断开本批次——不提交任何状态，只把调用位置与交接事实挂到工作项上交给 Host；函数由 Host 在步骤之外执行，产出的操作以 era.message.invoke_continue 恢复事件回送后整条消息一次性重放并提交。同步工作项仍由登记的 sync_planning 纯函数产出，保持既有提交链不变。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
@@ -38,7 +38,7 @@
         "输出：既有一致性规划产出的同步工作项，本节点不伪造同步结论。"
       ],
       "function_invocation_route": [
-        "输出：none 表示没有待调用；invoke 表示遇到无标记调用需要交接。"
+        "输出：none 表示没有待调用；invoke 表示遇到无标记调用已把本批次置为不提交并交接给 Host。"
       ]
     }
   },
@@ -46,7 +46,7 @@
     {
       "language": "typescript",
       "targets": ["browser", "node"],
-      "completion": "suspend",
+      "completion": "immediate",
       "source": {
         "kind": "file",
         "ref": "nodes/sync/drive_message_blocks.ts",
@@ -61,10 +61,5 @@
     "era.service.sync_contracts",
     "era.service.sync_planning"
   ],
-  "capabilities": [
-    {
-      "id": "era.tavern.functions",
-      "operations": ["invoke", "result", "release"]
-    }
-  ]
+  "capabilities": []
 }

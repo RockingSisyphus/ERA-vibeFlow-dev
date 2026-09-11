@@ -46,6 +46,25 @@ export interface SyncPayloadV1 {
   readonly consecutiveProcessingCount: number;
 }
 
+/**
+ * 一次消息内函数调用的交接事实。
+ *
+ * 调用在块边界被无条件断开：本批次不提交任何状态，只把「调用位置」交给 Host。
+ * `stat`/`statFunc` 是调用位置的累计状态，供函数读取自己所在位置的状态；它不是
+ * 已提交状态，函数产出仍会作为操作区随该消息一起提交。
+ */
+export interface EraMessageFunctionHandoffV1 {
+  readonly schemaVersion: 1;
+  readonly messageId: number;
+  readonly mk: string;
+  readonly blockIndex: number;
+  readonly callId: string;
+  readonly name: string;
+  readonly args: Readonly<Record<string, unknown>>;
+  readonly stat: Readonly<Record<string, unknown>>;
+  readonly statFunc: Readonly<Record<string, unknown>>;
+}
+
 export interface SyncWorkV1 {
   readonly schemaVersion: 1;
   readonly step: PlannedStepV1;
@@ -53,6 +72,15 @@ export interface SyncWorkV1 {
   readonly plan: EraSyncPlanV1 | null;
   readonly payload: SyncPayloadV1 | null;
   readonly failure: SyncFailureV1 | null;
+  /** 需要 Host 在步骤之外执行的调用；存在时本工作项必然不提交。 */
+  readonly handoff?: EraMessageFunctionHandoffV1;
+  /** 附加给 Host 的后置通知；当前只有函数交接使用。 */
+  readonly notifications?: readonly SyncNotificationV1[];
+}
+
+export interface SyncNotificationV1 {
+  readonly type: string;
+  readonly args: readonly JsonValue[];
 }
 
 export interface SyncMessageWriteV1 {

@@ -10,6 +10,6 @@
     "targets": ["browser", "node"],
     "source": { "kind": "file", "ref": "base_lib/dispatch_preparation.ts" }
   }],
-  "dependencies": ["era.service.types", "era.service.mk_engine"],
+  "dependencies": ["era.service.types", "era.service.mk_engine", "era.service.message_function_flow"],
   "external_packages": ["@era/vibeflow-contracts"]
 }

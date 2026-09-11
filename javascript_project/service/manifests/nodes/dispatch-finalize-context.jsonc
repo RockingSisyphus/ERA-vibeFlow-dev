@@ -66,7 +66,8 @@
     }
   ],
   "base_libs": [
-    "era.service.dispatch_preparation"
+    "era.service.dispatch_preparation",
+    "era.service.message_function_flow"
   ],
   "capabilities": []
 }

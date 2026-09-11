@@ -72,7 +72,7 @@
         "id": "drive_message_blocks",
         "type_used": "era.sync.drive_message_blocks",
         "display_name": "按块驱动当前消息",
-        "description": "一步一块推进当前处理楼层；遇到无标记调用时把路由置为 invoke 并结束本步，函数由 Host 在步骤之外调用。同步工作项仍来自登记的规划库。"
+        "description": "一步一块推进当前处理楼层；遇到无标记调用时无条件断开本批次（不提交任何状态），把调用位置交给 Host，函数由 Host 在步骤之外执行。同步工作项仍来自登记的规划库。"
       },
       {
         "id": "apply_command_compaction",

@@ -93,12 +93,14 @@ describe('ERA 消息内函数调用：端到端链路', () => {
 
     // 1. 函数确实被调用了一次，且只调用一次。
     expect(toolCalls).toBe(1);
-    // 2. 位置绑定提交在函数运行期间被就地应用：流程状态在写回后即为应用后的值。
+    // 2. 函数产出的操作是回送的唯一内容；权威状态只由流程按位置重放得到。
     //    （world.read() 只是测试用的合成镜像，权威状态以流程状态为准。）
     expect(world.applied).toEqual([{ edit: { hp: { $expr: 'hp - 30' } } }]);
     // 3. 调用块写入已处理标记，产出写回其下方的操作区记录。
     expect(flow.content).toContain('status="done"');
-    expect(flow.content).toContain('<EraFCallTx for="c1" applied="1">');
+    // 操作区不带 applied：它随消息重放才是函数效果唯一一次生效。
+    expect(flow.content).toContain('<EraFCallTx for="c1">');
+    expect(flow.content).not.toContain('applied="1"');
     expect(flow.content).toContain('hp - 30');
     // 4. 流程最终完成，并且原文后续块在其后执行：70 - 10 = 60。
     expect(flow.done).toBe(true);

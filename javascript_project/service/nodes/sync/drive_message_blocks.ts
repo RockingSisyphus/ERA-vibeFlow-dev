@@ -1,12 +1,16 @@
 /**
- * 一步一块：驱动一条消息的块序列，并产出下游既有节点消费的同步工作项。
+ * 一步一块：驱动一条消息的块序列，并在块边界把函数调用交给宿主。
  *
- * 本节点取代原先「准备请求 + 一次性重放」两步：它在同一个 run 内按块推进会话，
- * 遇到无标记 `<EraFCall/>` 时把路由置为 `invoke` 并把待调用交回调用方；
- * 函数本体不在本节点内执行（B3 接入 Capability 与 Host 绑定会话）。
+ * 遇到无标记 `<EraFCall/>` 时**无条件断开**：本批次不提交任何状态，只把调用位置
+ * （楼层、块下标、调用标识、参数、该位置的累计状态）随工作项交给 Host。函数由
+ * Host 在步骤之外执行，产出的操作随后以 `era.message.invoke_continue` 恢复事件
+ * 回送，届时整条消息按原文位置一次性重放并提交。
  *
- * 工作项仍由登记的 sync_planning 纯函数产出，因此与既有提交链完全兼容；
- * 块游标随结果报出，供跨步骤续做使用。
+ * 为什么本批次必须不提交：函数效果的唯一生效路径是它自己的操作区记录，而这份
+ * 记录只有在函数返回之后才存在。先提交一次「还没有函数效果的半条消息」，会让
+ * 侧车状态与消息文本对不上，也会让恢复后的重放把前段块的效果算两次。
+ *
+ * 工作项仍由登记的 sync_planning 纯函数产出，因此与既有提交链完全兼容。
  */
 
 import {
@@ -16,7 +20,11 @@ import {
 } from "../../base_lib/domain/message_function_flow.ts";
 import type { EraFunctionCallSite } from "../../base_lib/domain/message_function_calls.ts";
 import { planSyncWork } from "../../base_lib/sync_planning.ts";
-import type { SyncContextV1 } from "../../base_lib/sync_contracts.ts";
+import type {
+  SyncContextV1,
+  SyncWorkV1,
+  EraMessageFunctionHandoffV1,
+} from "../../base_lib/sync_contracts.ts";
 
 interface Envelope<T> {
   readonly value: T;
@@ -51,24 +59,49 @@ function processingFloor(
 }
 
 /**
- * 按块推进一条消息，返回流程状态与需要宿主机执行的调用。
+ * 取出该楼层起点已提交的变量与函数状态。
+ *
+ * 函数要读的是自己所在位置的状态，因此位置状态必须从「这条消息之前已提交的
+ * 侧车状态」出发，再叠加本条消息调用之前的块；从空对象出发会让函数读到空世界。
+ */
+function committedState(context: SyncContextV1): {
+  readonly stat: unknown;
+  readonly statFunc: Readonly<Record<string, unknown>>;
+  readonly meta: Readonly<Record<string, unknown>>;
+} {
+  const raw = record(context.variablesRaw) ? context.variablesRaw : {};
+  const stat = raw.stat_data ?? raw.stat ?? {};
+  const statFunc = record(raw.statFunc) ? raw.statFunc : {};
+  const meta = record(raw.ERAMetaData)
+    ? raw.ERAMetaData
+    : record(raw.meta)
+      ? raw.meta
+      : {};
+  return { stat, statFunc, meta };
+}
+
+/**
+ * 按块推进一条消息，直到没有待调用或到达末尾。
  *
  * 每次推进只处理一个块；遇到未处理调用立即停止，函数由宿主机在块边界之外执行。
- * 流程状态自带块游标与累计状态，因此可以随步骤跨批次携带。
  */
-function driveBlocks(
-  text: string,
-  messageId: number,
-  mk: string,
-  formal: boolean,
-): { readonly flow: MessageFunctionFlow; readonly pendingCall: EraFunctionCallSite | null } {
+function driveBlocks(input: {
+  readonly text: string;
+  readonly messageId: number;
+  readonly mk: string;
+  readonly formal: boolean;
+  readonly stat: unknown;
+  readonly statFunc: Readonly<Record<string, unknown>>;
+  readonly meta: Readonly<Record<string, unknown>>;
+}): { readonly flow: MessageFunctionFlow; readonly pendingCall: EraFunctionCallSite | null } {
   let flow = startMessageFunctionFlow({
-    content: text,
-    messageId,
-    mk,
-    initialStat: {},
-    meta: {},
-    formal,
+    content: input.text,
+    messageId: input.messageId,
+    mk: input.mk,
+    initialStat: input.stat,
+    initialStatFunc: input.statFunc,
+    meta: input.meta,
+    formal: input.formal,
   });
   let guard = 0;
   while (!flow.done && flow.pendingCall === null && guard < MAX_BLOCKS_PER_RUN) {
@@ -88,74 +121,115 @@ function inputFormal(): boolean {
   return true;
 }
 
-interface EraFunctionCapability {
-  invoke(input: Readonly<Record<string, unknown>>): Promise<unknown>;
-  result(input: Readonly<Record<string, unknown>>): Promise<unknown>;
-  release(input: Readonly<Record<string, unknown>>): unknown;
+/** 有条文可执行、但缺调用标识的调用无法被回送匹配：按待处理报出。 */
+function handoffOf(input: {
+  readonly floor: { readonly messageId: number; readonly mk: string };
+  readonly call: EraFunctionCallSite;
+  readonly blockIndex: number;
+  readonly stat: unknown;
+  readonly statFunc: Readonly<Record<string, unknown>>;
+}): EraMessageFunctionHandoffV1 {
+  return {
+    schemaVersion: 1,
+    messageId: input.floor.messageId,
+    mk: input.floor.mk,
+    blockIndex: input.blockIndex,
+    callId: input.call.callId ?? "",
+    name: input.call.name ?? "",
+    args: input.call.args ?? {},
+    stat: record(input.stat) ? input.stat : {},
+    statFunc: input.statFunc,
+  };
 }
 
-export async function run(
+/** 交接工作项：保留既有工作项身份，但声明为不提交并附带交接事实。 */
+function deferredWork(work: SyncWorkV1, handoff: EraMessageFunctionHandoffV1): SyncWorkV1 {
+  return {
+    ...work,
+    disposition: "no-op",
+    plan: null,
+    payload: null,
+    failure: null,
+    handoff,
+  };
+}
+
+export function run(
   inputs: Readonly<{ "era.sync.context": Envelope<unknown> }>,
-  _params?: Readonly<Record<string, unknown>>,
-  runtime?: { readonly capabilities?: { readonly "era.tavern.functions"?: EraFunctionCapability } },
-): Promise<any> {
+): any {
   const context = inputs["era.sync.context"].value as SyncContextV1;
   const work = planSyncWork(context);
   const floor = processingFloor(context);
 
   if (floor === null) {
-    const empty = work as unknown as Readonly<Record<string, unknown>>;
     return {
-      expression_command_result: empty,
+      expression_command_result: work as unknown as Readonly<Record<string, unknown>>,
       function_invocation_route: "none",
       pending_function_call: null,
       block_cursor: null,
       // 没有处理楼层时谈不上「未完成」：这里没有可续做的块。
       message_incomplete: false,
+      function_handoff: null,
     };
   }
 
-  const formal = inputFormal();
-  const driven = driveBlocks(floor.text, floor.messageId, floor.mk, formal);
-  const pending = driven.pendingCall;
-  const capability = runtime?.capabilities?.["era.tavern.functions"];
-
-  // 有待调用且宿主能力可用时，在这里完成一次完整交接：
-  // 登记 → 执行 → 取回终态与已应用操作 → 释放会话。
-  // 未能取得能力时不伪造成功：保持待调用与未完成状态，由上层决定后续。
-  let outcome: Readonly<Record<string, unknown>> | null = null;
-  if (pending !== null && pending.name !== null && capability !== undefined) {
-    const invocationId = `${floor.mk}#${pending.callId ?? pending.start}`;
-    await capability.invoke({
-      invocationId,
-      name: pending.name,
-      args: pending.args ?? {},
-      position: {
-        messageId: floor.messageId,
-        mk: floor.mk,
-        blockIndex: driven.flow.cursor.blockIndex,
-      },
-    });
-    const settled = await capability.result({ invocationId });
-    outcome = record(settled) ? settled : null;
-    capability.release({ invocationId });
+  // 读取或规划已经失败时不做交接：把失败如实交给既有失败分支处理。
+  if (work.disposition === "failed") {
+    return {
+      expression_command_result: work as unknown as Readonly<Record<string, unknown>>,
+      function_invocation_route: "none",
+      pending_function_call: null,
+      block_cursor: null,
+      message_incomplete: false,
+      function_handoff: null,
+    };
   }
 
+  const base = committedState(context);
+  const driven = driveBlocks({
+    text: floor.text,
+    messageId: floor.messageId,
+    mk: floor.mk,
+    formal: inputFormal(),
+    stat: base.stat,
+    statFunc: base.statFunc,
+    meta: base.meta,
+  });
+  const pending = driven.pendingCall;
+  const cursor = {
+    messageId: floor.messageId,
+    mk: floor.mk,
+    blockIndex: driven.flow.cursor.blockIndex,
+    done: driven.flow.done && pending === null,
+  };
+
+  if (pending === null || pending.name === null) {
+    return {
+      expression_command_result: work as unknown as Readonly<Record<string, unknown>>,
+      function_invocation_route: "none",
+      pending_function_call: null,
+      block_cursor: cursor,
+      message_incomplete: false,
+      function_handoff: null,
+    };
+  }
+
+  const handoff = handoffOf({
+    floor,
+    call: pending,
+    blockIndex: cursor.blockIndex,
+    stat: driven.flow.stat,
+    statFunc: driven.flow.statFunc ?? base.statFunc,
+  });
   return {
-    expression_command_result: work as unknown as Readonly<Record<string, unknown>>,
-    function_invocation_route: pending === null ? "none" : "invoke",
+    expression_command_result: deferredWork(work, handoff) as unknown as Readonly<
+      Record<string, unknown>
+    >,
+    function_invocation_route: "invoke",
     pending_function_call: pending,
-    // 流程状态随结果报出：它自带块游标与累计状态，是跨步骤续做的依据。
-    block_cursor: {
-      messageId: floor.messageId,
-      mk: floor.mk,
-      blockIndex: driven.flow.cursor.blockIndex,
-      done: driven.flow.done && pending === null,
-    },
-    // 调用尚未执行时，这条消息**没有**处理完：下游据此保留续做状态，
-    // 不得按「已完成」走提交与收尾。
-    message_incomplete: pending !== null && outcome === null,
-    function_outcome: outcome,
-    message_function_flow: driven.flow,
+    block_cursor: cursor,
+    // 调用尚未执行时，这条消息**没有**处理完：既不能提交，也不能标记连续处理。
+    message_incomplete: true,
+    function_handoff: handoff,
   };
 }

@@ -1,5 +1,6 @@
 {
   "kind":"node","type_key":"era.dispatch.classify_context","display_name":"分类任务与上下文","category":"任务派发","description":"验证规划步骤与批次状态，形成显式任务来源和上下文准备路由。","version":"1.0.0","flow_kind":"decision",
   "contract":{"requires":[{"type":"era.step.request","cardinality":"exactly_one","display_name":"已选规划步骤"},{"type":"era.batch.execution.state","cardinality":"exactly_one","display_name":"当前批次执行状态"}],"provides":[{"key":"dispatch_seed","type":"era.dispatch.seed","display_name":"派发准备种子"},{"key":"context_route","type":"era.dispatch.context.route","display_name":"上下文准备路由"}],"params_schema":{},"params_defaults":{},"input_semantics":{"era.step.request":["输入：等待执行的唯一规划步骤。"],"era.batch.execution.state":["输入：当前有界批次执行状态。"]},"output_semantics":{"dispatch_seed":["输出：携带显式任务来源和准备要求的种子。"],"context_route":["输出：none 或 read 的互斥路由。"]}},
-  "implementations":[{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/dispatch/classify_context.ts","export":"run"}}],"base_libs":["era.service.dispatch_preparation","era.service.types"],"capabilities":[]
+  "implementations":[{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/dispatch/classify_context.ts","export":"run"}}],"base_libs":["era.service.dispatch_preparation",
+    "era.service.message_function_flow","era.service.types"],"capabilities":[]
 }

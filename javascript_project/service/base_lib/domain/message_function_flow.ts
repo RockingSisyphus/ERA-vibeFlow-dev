@@ -12,6 +12,7 @@
 import {
   advanceEraBlockSession,
   createEraBlockCursor,
+  parseEraFunctionCalls,
   parseMessageBlocks,
   renderEraFunctionCallOperationsRegion,
   startEraBlockSession,
@@ -42,6 +43,41 @@ export interface MessageFunctionOutcome {
   readonly result: string | null;
   readonly message: string;
   readonly unregistered: boolean;
+}
+
+/**
+ * 把一次函数调用写成「已处理」记录：给调用块打标记并紧随其后插入操作区。
+ *
+ * 为什么操作区不带 `applied`：函数产出从未被任何一侧就地写入已提交状态，唯一
+ * 生效路径就是这份记录随消息一起重放。标成已应用会让重放跳过它，函数效果凭空
+ * 消失；只有「宿主机确实就地应用过」的历史记录才允许带该标记。
+ *
+ * 已经带标记的调用原样返回：重复回送不得改写正文，否则同一条消息会写两次。
+ */
+export function recordEraFunctionCallOutcome(input: {
+  readonly content: string;
+  readonly callId: string;
+  readonly outcome: MessageFunctionOutcome;
+  readonly operations: readonly Readonly<Record<string, unknown>>[];
+}): string {
+  const call = parseEraFunctionCalls(input.content).find(
+    item => item.callId === input.callId,
+  );
+  if (call === undefined || call.processed) return input.content;
+  const region = renderEraFunctionCallOperationsRegion(
+    input.callId,
+    input.operations,
+    { applied: false },
+  );
+  const failed = input.outcome.status !== "completed";
+  const marker = failed ? ' status="done" error="ERA_FCALL_FAILED"' : ' status="done"';
+  const original = input.content.slice(call.start, call.end);
+  const marked = original.replace(/\/\s*>$/, `${marker}/>`);
+  return (
+    input.content.slice(0, call.start) +
+    `${marked}\n${region}` +
+    input.content.slice(call.end)
+  );
 }
 
 export interface MessageFunctionFlow {
@@ -134,9 +170,9 @@ export interface MessageFunctionResume {
 /**
  * 回送一次函数结果，并把产出写成调用块下方的操作区记录。
  *
- * 操作在函数运行期间已就地应用，因此操作区写成 `applied="1"` 的只读记录：
- * 重放时跳过它，避免同一个变化生效两次；失败时同时写 `status` 与 `error`，
- * 让作者不必翻日志就能看到原因。
+ * 操作区随文本一起重放，因此这里**不**再把操作预先并入累计状态：文本推进会
+ * 按原文位置执行操作区里的操作块，那才是它们唯一一次生效。预先并入会让同一次
+ * 变化在累计状态里生效两次。
  */
 export function resumeMessageFunctionFlow(
   flow: MessageFunctionFlow,
@@ -146,43 +182,26 @@ export function resumeMessageFunctionFlow(
   const call = flow.pendingCall;
   if (call === null || call.callId === null) return flow;
 
-  const region = renderEraFunctionCallOperationsRegion(
-    call.callId,
-    resume.operations,
-    { applied: true },
-  );
-  const failed = resume.outcome.status !== "completed";
-  const marker = failed ? ' status="done" error="ERA_FCALL_FAILED"' : ' status="done"';
-  const original = flow.content.slice(call.start, call.end);
-  const marked = original.replace(/\/\s*>$/, `${marker}/>`);
-  const content =
-    flow.content.slice(0, call.start) +
-    `${marked}\n${region}` +
-    flow.content.slice(call.end);
+  const content = recordEraFunctionCallOutcome({
+    content: flow.content,
+    callId: call.callId,
+    outcome: resume.outcome,
+    operations: resume.operations,
+  });
 
   const unregisteredCalls =
     resume.outcome.unregistered && !flow.unregisteredCalls.includes(resume.outcome.name)
       ? [...flow.unregisteredCalls, resume.outcome.name]
       : flow.unregisteredCalls;
 
-  // 宿主机在函数运行期间已就地应用这些操作；流程必须把它们并入自身状态，
-  // 否则后续块会从旧状态继续计算（表现为函数产生的变化凭空消失）。
-  const applied = applyFunctionOperations({
-    content: flow.content,
-    messageId: flow.messageId,
-    mk: flow.mk,
-    stat: flow.stat,
-    meta: flow.meta,
-    operations: resume.operations,
-  });
-
   return {
     ...flow,
     content,
-    stat: applied.stat,
     pendingCall: null,
-    // 调用块已写入 status：下一次推进会跳过它，游标位置保持不变即可。
+    // 调用块已写入 status：下一次推进会跳过它并把操作区当作普通操作块执行。
     unregisteredCalls,
+    diagnostics: [...flow.diagnostics],
+    executedBlockIndexes: [],
   };
 }
 

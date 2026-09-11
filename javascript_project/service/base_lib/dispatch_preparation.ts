@@ -11,7 +11,86 @@ import {
   ensureMessageKey,
   type EraMkMessageV1,
 } from "./domain/mk_engine.ts";
+import { recordEraFunctionCallOutcome } from "./domain/message_function_flow.ts";
 import type { BatchExecutionStateV1, PlannedStepV1 } from "./service_types.ts";
+
+/** Host 在步骤之外执行完函数后用它恢复同一条消息；与事件规划器登记保持一致。 */
+const MESSAGE_INVOKE_CONTINUE = "era.message.invoke_continue";
+
+interface FunctionCallResumeV1 {
+  readonly messageId: number;
+  readonly mk: string;
+  readonly callId: string;
+  readonly status: "completed" | "failed" | "cancelled";
+  readonly message: string;
+  readonly unregistered: boolean;
+  readonly operations: readonly Readonly<Record<string, unknown>>[];
+}
+
+/**
+ * 解析恢复事件载荷。
+ *
+ * 只接受身份、终态与操作都齐全的回送：缺字段时按「没有回送」处理，让消息保持
+ * 待处理而不是写入半份记录——错误记录比没有记录更难恢复。
+ */
+export function functionCallResumeOf(
+  step: PlannedStepV1,
+): FunctionCallResumeV1 | null {
+  if (step.kind !== "execute") return null;
+  const primary = step.task.primaryEvent;
+  if (primary.type !== MESSAGE_INVOKE_CONTINUE) return null;
+  const arg = primary.args[0];
+  const value = arg?.kind === "json" ? arg.value : null;
+  if (!isRecord(value)) return null;
+  const messageId = value.messageId;
+  const callId = value.callId;
+  if (!Number.isSafeInteger(messageId) || typeof callId !== "string" || callId.length === 0) {
+    return null;
+  }
+  const status = value.status;
+  if (status !== "completed" && status !== "failed" && status !== "cancelled") {
+    return null;
+  }
+  return {
+    messageId: Number(messageId),
+    mk: typeof value.mk === "string" ? value.mk : "",
+    callId,
+    status,
+    message: typeof value.message === "string" ? value.message : "",
+    unregistered: value.unregistered === true,
+    operations: Array.isArray(value.operations)
+      ? value.operations.filter(isRecord)
+      : [],
+  };
+}
+
+/**
+ * 把恢复事件记录写进处理楼层的文本。
+ *
+ * 只有楼层身份与 MK 都对得上才写：迟到的回送不能把函数效果写到另一条消息上。
+ */
+function recordedFunctionCallText(input: {
+  readonly step: PlannedStepV1;
+  readonly text: string;
+  readonly messageId: number;
+  readonly mk: string;
+}): string {
+  const resume = functionCallResumeOf(input.step);
+  if (resume === null || resume.messageId !== input.messageId) return input.text;
+  if (resume.mk.length > 0 && resume.mk !== input.mk) return input.text;
+  return recordEraFunctionCallOutcome({
+    content: input.text,
+    callId: resume.callId,
+    outcome: {
+      status: resume.status,
+      name: "",
+      result: null,
+      message: resume.message,
+      unregistered: resume.unregistered,
+    },
+    operations: resume.operations,
+  });
+}
 
 export interface DispatchSeedV1 {
   readonly schemaVersion: 1;
@@ -329,13 +408,22 @@ function planPreparation(
     ensured.textUpdate?.content.kind === "text"
       ? ensured.textUpdate.content.text
       : latest.activeText;
+  // 函数恢复事件带回「函数产出的操作」：这里把调用块标记为已处理并把操作写成
+  // 紧随其后的操作区，随本次消息快照一起进入既有重放与提交链。位置由文本决定，
+  // 因此刷新、切聊、重算都不会让函数效果错位。
+  const recordedText = recordedFunctionCallText({
+    step: context.seed.step,
+    text: mkText,
+    messageId: latest.messageId,
+    mk: ensured.mk,
+  });
   const preparedText =
     latest.role !== "user" &&
     context.placeholder.enabled &&
     context.placeholder.value.length > 0 &&
-    !mkText.includes(context.placeholder.value)
-      ? `${mkText.trimEnd()}\n${context.placeholder.value}`
-      : mkText;
+    !recordedText.includes(context.placeholder.value)
+      ? `${recordedText.trimEnd()}\n${context.placeholder.value}`
+      : recordedText;
   const preparedLatest: EraTavernMessageV1 = {
     ...latest,
     activeText: preparedText,
