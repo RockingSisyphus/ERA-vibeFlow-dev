@@ -251,9 +251,7 @@ describe('VibeFlow Service 宿主资源规划器差分', () => {
   });
 
   it('Service 规划器产出的变量操作规则与 App 同源文本逐字一致', () => {
-    const planned = planner.getEraWorldbookEntries().find(
-      entry => entry.name === 'ERA 变量操作规则',
-    );
+    const planned = planner.getEraWorldbookEntries().find(entry => entry.name === 'ERA 变量操作规则');
     expect(planned).toBeTruthy();
     expect(planned?.content).toBe(eraVarOperationRuleEntry.content);
   });
