@@ -65,6 +65,10 @@ export function run(
     baseStatFunc: state.baseStatFunc,
     consecutive: state.consecutive,
     route: pending === null || pending.name === null ? "none" : "invoke",
+    // 本次迭代真正推进的块（最多一个）：交接迭代不推进任何块，因此这里为 null。
+    executedBlockIndex: advanced.executedBlockIndexes[0] ?? null,
+    // 累加抽取次数：本次推进消耗的抽取从这里接着记，逐块提交时写进记录。
+    drawOffset: state.drawOffset + advanced.cursor.randomDrawOffset,
     content: state.content,
     meta: state.meta,
     work: state.work,

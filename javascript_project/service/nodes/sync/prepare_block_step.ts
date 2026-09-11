@@ -10,6 +10,7 @@ import {
   processingFloor,
   type EraBlockStepStateV1,
 } from "../../base_lib/block_step_state.ts";
+import { appliedRecordDrawOffset } from "../../base_lib/domain/message_function_calls.ts";
 import { planSyncWork } from "../../base_lib/sync_planning.ts";
 import type { SyncContextV1 } from "../../base_lib/sync_contracts.ts";
 
@@ -66,6 +67,9 @@ export function prepare(
     baseStatFunc: resume?.statFunc ?? world.statFunc,
     consecutive: context.consecutive,
     route: "none",
+    executedBlockIndex: null,
+    // 被中断的楼层把「已抽了多少次」留在记录里：续做必须从这里接着抽。
+    drawOffset: appliedRecordDrawOffset(floor?.text ?? ""),
     handoff: null,
     content: floor?.text ?? "",
     meta: world.meta,

@@ -38830,6 +38830,17 @@
               ],
               "additionalProperties": false
             },
+            "drawOffset": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "executedBlockIndex": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            },
             "route": {
               "enum": [
                 "none",
@@ -38866,6 +38877,8 @@
             "baseStat",
             "baseStatFunc",
             "consecutive",
+            "executedBlockIndex",
+            "drawOffset",
             "route",
             "handoff",
             "content",
@@ -38931,6 +38944,17 @@
               ],
               "additionalProperties": false
             },
+            "drawOffset": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "executedBlockIndex": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            },
             "route": {
               "enum": [
                 "none",
@@ -38967,6 +38991,8 @@
             "baseStat",
             "baseStatFunc",
             "consecutive",
+            "executedBlockIndex",
+            "drawOffset",
             "route",
             "handoff",
             "content",
@@ -42603,6 +42629,53 @@
                 "consecutiveProcessingCount": {
                   "type": "integer",
                   "minimum": 0
+                },
+                "syncCursor": {
+                  "oneOf": [
+                    {
+                      "type": "null"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "messageId": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "mk": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "blockIndex": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "stat": {
+                          "type": "object"
+                        },
+                        "statFunc": {
+                          "type": "object"
+                        },
+                        "resolvedCallIds": {
+                          "type": "array",
+                          "maxItems": 64,
+                          "items": {
+                            "type": "string",
+                            "minLength": 1
+                          }
+                        },
+                        "done": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "messageId",
+                        "mk",
+                        "blockIndex"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
                 },
                 "scopeWindow": {
                   "type": "object",

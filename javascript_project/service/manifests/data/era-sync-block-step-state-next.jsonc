@@ -54,6 +54,17 @@
         ],
         "additionalProperties": false
       },
+      "drawOffset": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "executedBlockIndex": {
+        "type": [
+          "integer",
+          "null"
+        ],
+        "minimum": 0
+      },
       "route": {
         "enum": [
           "none",
@@ -90,6 +101,8 @@
       "baseStat",
       "baseStatFunc",
       "consecutive",
+      "executedBlockIndex",
+      "drawOffset",
       "route",
       "handoff",
       "content",

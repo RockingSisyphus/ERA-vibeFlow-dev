@@ -5,7 +5,12 @@
  * 一致的解释；把形状与提取逻辑放在这里，避免三处各自解释而漂移。
  */
 
-import type { EraFunctionCallSite } from "./domain/message_function_calls.ts";
+import {
+  parseMessageBlocks,
+  unwrapAppliedRecords,
+  wrapBlockAsAppliedRecord,
+  type EraFunctionCallSite,
+} from "./domain/message_function_calls.ts";
 import type { MessageFunctionFlow } from "./domain/message_function_flow.ts";
 import type {
   SyncContextV1,
@@ -34,6 +39,20 @@ export interface EraBlockStepStateV1 {
   /** 本批次开始时的连续处理事实；交接不算「这条楼层已处理完」，因此不得推进它。 */
   readonly consecutive: SyncConsecutiveFacts;
   readonly route: "none" | "invoke";
+  /**
+   * 本次迭代真正执行（推进）的块下标；没有推进任何块时为 null。
+   *
+   * 逐块提交只提交「这一块」：调用块交接的那次迭代不执行任何块（handoff），因此这里必须是
+   * 显式事实，而不是让写者去猜 `blockIndex` 为什么变了。
+   */
+  readonly executedBlockIndex: number | null;
+  /**
+   * 这条楼层到当前位置为止已消耗的随机抽取次数（含）。
+   *
+   * 续做只执行剩下的指令，抽取序列必须接着已提交块继续；记录里的 `draws` 就是这个值，
+   * 恢复时再用 `appliedRecordDrawOffset` 读回来，否则续做与整楼重放会抽到不同的值。
+   */
+  readonly drawOffset: number;
   readonly handoff: EraMessageFunctionHandoffV1 | null;
   /**
    * 楼层原文与元数据随状态携带。
@@ -121,6 +140,80 @@ export function handoffOf(input: {
     stat: record(input.flow.stat) ? input.flow.stat : {},
     statFunc: input.flow.statFunc ?? {},
   };
+}
+
+/**
+ * 构造**逐块提交**的工作项：这一块之后的累计状态 + 把该块包成「已应用」记录。
+ *
+ * 为什么必须同时写这两样：状态写进 sidecar 后，`stat` 就停在「这条楼层算到一半」的位置；
+ * 若消息里没有对应的记录，重载后的重放无法知道前几块已经算过，会把它们再算一遍。记录包住
+ * 该块（`<era_block applied="1">`）并与游标一起提交，才让「续做」与「整楼重放」终值一致。
+ *
+ * 楼层算完的那一次提交（`done`）反过来要把记录**全部删掉**并把游标写 `null`：凭据只在
+ * 计算期间存在，删掉后原文与「从楼层起点重算」完全一致，封存压缩永远不会遇到它。
+ *
+ * 没有真正执行块（交接迭代）时返回 null：那次迭代没有任何东西要提交。
+ */
+export function buildPerBlockCommitWork(input: {
+  readonly work: SyncWorkV1;
+  readonly state: EraBlockStepStateV1;
+}): SyncWorkV1 | null {
+  const { work, state } = input;
+  const plan = work.plan;
+  if (plan === null || typeof plan !== "object" || plan.status === "failed") return null;
+  if (state.executedBlockIndex === null) return null;
+  const blocks = parseMessageBlocks({ content: state.content });
+  const executed = blocks[state.executedBlockIndex];
+  if (executed === undefined) return null;
+  const content = wrapBlockAsAppliedRecord({
+    content: state.content,
+    start: executed.start,
+    end: executed.end,
+    mk: state.mk,
+    draws: state.drawOffset,
+  });
+  return {
+    ...work,
+    disposition: "commit",
+    plan: {
+      ...plan,
+      stat: state.stat,
+      statFunc: state.statFunc,
+      meta: state.meta,
+      sealedCompactionCandidates: [],
+      recalculatedMessageIndexes: [],
+      nextConsecutiveState: {
+        mk: state.consecutive.mk,
+        count: state.consecutive.count,
+      },
+      messageUpdates: [
+        {
+          kind: "update-message-content",
+          messageId: state.messageId,
+          messageIndex: 0,
+          mk: state.mk,
+          content: { kind: "text", text: content },
+        },
+      ],
+    },
+    syncCursor: {
+      messageId: state.messageId,
+      mk: state.mk,
+      blockIndex: state.executedBlockIndex,
+      stat: state.stat,
+      statFunc: state.statFunc,
+    },
+    failure: null,
+  };
+}
+
+/**
+ * 楼层算完时的收尾文本与游标：删掉全部「已应用」记录，把续做点写 `null`。
+ *
+ * 只在 `state.done` 为真时调用；此时 sidecar 的状态已经是这条楼层的终值，凭据不再需要。
+ */
+export function buildCompletedFloorContent(state: EraBlockStepStateV1): string {
+  return unwrapAppliedRecords(state.content);
 }
 
 /**

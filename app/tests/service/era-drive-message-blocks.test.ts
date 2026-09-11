@@ -310,3 +310,40 @@ describe('块级续做游标：已提交的块不再重放', () => {
     expect(prepared.stat).toEqual({ hp: 100 });
   });
 });
+
+describe('块步进状态：推进了哪一块、抽了多少次', () => {
+  it('prepare 从记录里接上抽取偏移；交接迭代不报告执行块', () => {
+    const text = [
+      '<era_block mk="mk-1" applied="1" draws="3"><VariableEdit>{"hp":{"$expr":"hp-10"}}</VariableEdit></era_block>',
+      '<EraFCall name="attack" id="c1"/>',
+    ].join('\n');
+    const context = contextWith(
+      text,
+      { hp: 90 },
+      {
+        messageId: 1,
+        mk: 'mk-1',
+        blockIndex: 0,
+        stat: { hp: 90 },
+        statFunc: {},
+      },
+    );
+    const prepared = prepare({ 'era.sync.context': { value: context } }).block_step_state;
+
+    expect(prepared.drawOffset).toBe(3);
+    expect(prepared.executedBlockIndex).toBe(null);
+
+    const stepped = run({ 'era.sync.block.step.state': { value: prepared } });
+    expect(stepped.block_step_state_next.route).toBe('invoke');
+    expect(stepped.block_step_state_next.executedBlockIndex).toBe(null);
+  });
+
+  it('执行一个块时报告它的下标；随机抽取会累加偏移', () => {
+    const context = contextWith('<VariableEdit>{"roll":{"$expr":"random()"}}</VariableEdit>', { roll: 0 });
+    const prepared = prepare({ 'era.sync.context': { value: context } }).block_step_state;
+    const stepped = run({ 'era.sync.block.step.state': { value: prepared } });
+
+    expect(stepped.block_step_state_next.executedBlockIndex).toBe(0);
+    expect(stepped.block_step_state_next.drawOffset).toBe(1);
+  });
+});
