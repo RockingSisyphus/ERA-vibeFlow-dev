@@ -102,6 +102,8 @@ export function run(
       function_invocation_route: "none",
       pending_function_call: null,
       block_cursor: null,
+      // 没有处理楼层时谈不上「未完成」：这里没有可续做的块。
+      message_incomplete: false,
     };
   }
 
@@ -120,6 +122,9 @@ export function run(
       blockIndex: driven.flow.cursor.blockIndex,
       done: driven.flow.done && pending === null,
     },
+    // 调用尚未执行时，这条消息**没有**处理完：下游据此保留续做状态，
+    // 不得按「已完成」走提交与收尾。
+    message_incomplete: pending !== null,
     message_function_flow: driven.flow,
   };
 }

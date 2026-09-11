@@ -146,6 +146,36 @@ describe('era.sync.drive_message_blocks 节点', () => {
     expect(result.block_cursor.done).toBe(true);
   });
 
+  it('有未处理调用时明确回报「未完成」，不得声称本消息处理完毕', () => {
+    const result = run({
+      'era.sync.context': {
+        value: contextWith(
+          [
+            '<VariableInsert>{"hp":100}</VariableInsert>',
+            '<EraFCall name="attack" id="c1"/>',
+            '<VariableEdit>{"hp":{"$expr":"hp-10"}}</VariableEdit>',
+          ].join('\n'),
+        ),
+      },
+    });
+
+    // 调用未执行，因此这条消息**没有**处理完：游标不得报 done。
+    expect(result.function_invocation_route).toBe('invoke');
+    expect(result.block_cursor.done).toBe(false);
+    expect(result.message_incomplete).toBe(true);
+  });
+
+  it('没有待调用时才算本消息处理完毕', () => {
+    const result = run({
+      'era.sync.context': {
+        value: contextWith('<VariableInsert>{"hp":100}</VariableInsert>'),
+      },
+    });
+
+    expect(result.block_cursor.done).toBe(true);
+    expect(result.message_incomplete).toBe(false);
+  });
+
   it('报出块步进游标，作为跨步骤续做的依据', () => {
     const result = run({
       'era.sync.context': {
