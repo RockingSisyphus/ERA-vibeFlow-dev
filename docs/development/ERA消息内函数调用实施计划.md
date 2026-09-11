@@ -256,7 +256,7 @@ skill 监控；**真实 suite 未运行时必须明说「未运行」**，不得
 | B2 一步一块骨架 | **已完成（循环 + 交接记录提交）**；逐块状态提交待做 | 块推进已落成真实工作流步骤：`vibeflow.loop.while`（body `era.sync.block_step`）+ `era.sync.prepare_block_step` / `advance_message_block` / `era.sync.finalize_block_step`；遇无标记调用**无条件断开本批次**，且交接批次提交**消息记录**（见偏差 4）。**尚未做到**「每块执行完提交一次状态」（见偏差 1） |
 | B3 Capability 与调用编排 | 已完成 | 交接事实 → `era.message.invoke_required` 后置通知；Host 在步骤之外驱动函数；`era.message.invoke_continue` 恢复事件把终态与产出操作送回；函数内 `ERA.commit`/`ERA.get` 走位置门面且绝不入队；工具失败**跨 realm** 判定（注册表在顶层窗口，它返回的 `Error` 在 iframe 里 `instanceof Error` 为 false，必须按 Error 标签/三件套判定） |
 | B4 Agent 与压缩 | 已完成 | 三阶段输出统一执行（`isolateStoryEraCommands` 覆盖调用块）、含 `<EraFCall` 的楼层整层跳过封存压缩、规划提示词含调用语法 |
-| B5 ABI 收口与文档 | **部分完成** | 交接 ABI 与位置门面约束已写入 `era-host-contract.md` 与作者指南，Architecture 已刷新；`era-host-contract.md` 的队列边界已按「交接提交记录而不是状态」改写；`syncCursor` 的持久化通道仍未接通（见偏差 1、2），作者指南的读回承诺仍不得声称已兑现 |
+| B5 ABI 收口与文档 | **部分完成** | 交接 ABI 与位置门面约束已写入 `era-host-contract.md` 与作者指南，Architecture 已刷新；`era-host-contract.md` 的队列边界已按「交接提交记录而不是状态」改写；`syncCursor` 的持久化通道（契约 1.9.3 + 服务传递链）已接通（见偏差 2），但写入者未落地；作者指南的读回承诺仍不得声称已兑现 |
 
 ### 偏差 4（2026-09-11，已修）：交接批次必须提交消息记录
 
@@ -293,12 +293,19 @@ skill 监控；**真实 suite 未运行时必须明说「未运行」**，不得
 操作块就提交一次状态」。切片 1a（提交记录的位置锚定）已完成；切片 1b 起见本文档
 「这项锁定的实现面」一节。在切片完成前，块进度不跨批次携带，恢复按「从楼层起点重算」执行。
 
-### 偏差 2：`syncCursor` 只声明未写入
+### 偏差 2（载体已接通，写入待逐块提交落地）：`syncCursor` 的持久化通道
 
-`EraServiceStateV1.syncCursor` 已作为公共 ABI 声明并随服务状态 schema 生成类型，但当前没有任何节点写入它。
+`EraServiceStateV1.syncCursor` 已作为公共 ABI 声明并随服务状态 schema 生成类型。
 要写入必须让游标经 `EraTaskStateUpdateV1` 穿过批次合并：这是 `packages/era-contracts` 的
-canonical schema + `index.d.ts` 变更，需要升版打包并让服务 root 重装 `file:` tarball。在完成该
-配套变更前，游标保持 `null`，恢复走重算路径。
+canonical schema + `index.d.ts` 变更，需要升版打包并让服务 root 重装 `file:` tarball。
+
+**2026-09-11 更新（第 70 轮）**：载体已经接通——契约包升到 **1.9.3**，
+`EraTaskStateUpdateV1.syncCursor` 成为可选字段（`isEraSyncCursorV1` 校验 + canonical schema +
+`index.d.ts`），服务 root 的 `file:` 依赖切到新 tarball 重装，源码与安装副本字节一致；
+服务侧 `SyncWorkV1`/`SyncCommitRequestV1` → `stateUpdateForPlan` → `buildSyncCommittedResult`
+→ `mergeTaskResult` 整条传递链已实现并有红→绿测试（区分「缺键」与「显式 null 清空」）。
+**仍未写入**：游标的产生者是逐块提交（本条锁定语义的另一半），在该实现落地前它保持 `null`，
+恢复仍走重算路径。
 
 ### 偏差 3（未决）：函数内的即时读回尚未兑现
 
