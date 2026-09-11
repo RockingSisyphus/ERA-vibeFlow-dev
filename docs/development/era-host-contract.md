@@ -159,12 +159,22 @@ UI 同步预览使用 `packages/era-workbench` 从 Service base_lib 唯一源码
 
 | 方向 | 载体 | 载荷 | 约束 |
 | --- | --- | --- | --- |
-| Service → Host | 后置通知 `era.message.invoke_required` | 楼层、MK、块下标、调用标识、函数名、参数、调用位置累计 `stat`/`statFunc` | 只在无标记调用处发出；发出时本批次**不提交任何状态**，连续处理状态也不推进 |
+| Service → Host | 后置通知 `era.message.invoke_required` | 楼层、MK、块下标、调用标识、函数名、参数、调用位置累计 `stat`/`statFunc` | 只在无标记调用处发出；发出时**提交的是消息记录而不是状态**——调用块标记、已落盘的操作区与 MK 写进消息文本，`stat`/`statFunc`/`meta` 停在已提交世界，连续处理状态不推进，封存压缩候选为空 |
 | Host → Service | 输入事件 `era.message.invoke_continue` | 楼层、MK、调用标识、函数名、终态（`completed`/`failed`/`cancelled`）、`unregistered`、`error` 文本、**产出操作** | 必须是真实新事件（`SYNC` 组、零收集窗口）；Service 按它把调用标记与操作区写进处理楼层文本，再走既有重放与提交链 |
 | Host 内部 | 位置门面 | `ERA.commit` / `ERA.get` | 函数运行期间提交走位置通道并**绝不入队**；`ERA.sync`/`ERA.history`/`ERA.statusbar` 报 `ERA_POSITION_BOUND_UNSUPPORTED` |
 
+交接提交为什么必须落盘记录：一条消息里可以有多处调用，而恢复只能从**消息文本**读到
+「哪些调用已经处理过」。若交接批次什么都不写，先前调用块上的 `status="done"` 会随批次丢掉，
+两处调用互相覆盖对方的标记，形成永不前进的交接循环（真机 MSG-FCALL-004：41 次重复调用、
+零落盘）。反过来，交接时只提交「前段块的累计状态」也不行：恢复后的整楼重放会把 `$expr`
+这类非幂等操作算两遍——状态停在已提交世界，重放恰好一次。
+
 函数效果唯一生效路径是操作区记录随消息重放；因此 ERA 自己写出的操作区**不带**
-`applied="1"`，函数内也不保证 `ERA.get()` 读回自己刚提交的写入。
+`applied="1"`，函数内也不保证 `ERA.get()` 读回自己刚提交的写入（读回承诺要等逐块提交把
+调用之前的块也落成 Sidecar 状态，见实施计划「这项锁定的实现面」）。
+
+交接提交不呈现楼层（`initialPresentation` 为空）：这条楼层还没处理完，且呈现身份与
+`meta.SelectedMks` 的一致性前置校验不适用于「meta 故意停在已提交 MK 链上」的它。
 
 ## 验证选择
 

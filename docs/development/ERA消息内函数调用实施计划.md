@@ -253,10 +253,34 @@ skill 监控；**真实 suite 未运行时必须明说「未运行」**，不得
 | 批次 | 状态 | 依据 |
 | --- | --- | --- |
 | B1 语法与纯解析 | 已完成 | `<EraFCall/>`/`<EraFCallTx>` 解析、块列表、标记判定、操作区渲染均在 `base_lib/domain/message_function_calls.ts`，有专项测试 |
-| B2 一步一块骨架 | **已完成（循环）**；逐块提交待做 | 块推进已落成真实工作流步骤：`vibeflow.loop.while`（body `era.sync.block_step`）+ `era.sync.prepare_block_step` / `advance_message_block` / `era.sync.finalize_block_step`；遇无标记调用**无条件断开本批次**。**尚未做到**「每块执行完提交一次状态」（见偏差 1） |
-| B3 Capability 与调用编排 | 已完成 | 交接事实 → `era.message.invoke_required` 后置通知；Host 在步骤之外驱动函数；`era.message.invoke_continue` 恢复事件把终态与产出操作送回；函数内 `ERA.commit`/`ERA.get` 走位置门面且绝不入队 |
+| B2 一步一块骨架 | **已完成（循环 + 交接记录提交）**；逐块状态提交待做 | 块推进已落成真实工作流步骤：`vibeflow.loop.while`（body `era.sync.block_step`）+ `era.sync.prepare_block_step` / `advance_message_block` / `era.sync.finalize_block_step`；遇无标记调用**无条件断开本批次**，且交接批次提交**消息记录**（见偏差 4）。**尚未做到**「每块执行完提交一次状态」（见偏差 1） |
+| B3 Capability 与调用编排 | 已完成 | 交接事实 → `era.message.invoke_required` 后置通知；Host 在步骤之外驱动函数；`era.message.invoke_continue` 恢复事件把终态与产出操作送回；函数内 `ERA.commit`/`ERA.get` 走位置门面且绝不入队；工具失败**跨 realm** 判定（注册表在顶层窗口，它返回的 `Error` 在 iframe 里 `instanceof Error` 为 false，必须按 Error 标签/三件套判定） |
 | B4 Agent 与压缩 | 已完成 | 三阶段输出统一执行（`isolateStoryEraCommands` 覆盖调用块）、含 `<EraFCall` 的楼层整层跳过封存压缩、规划提示词含调用语法 |
-| B5 ABI 收口与文档 | **部分完成** | 交接 ABI 与位置门面约束已写入 `era-host-contract.md` 与作者指南，Architecture 已刷新；`syncCursor` 的持久化通道未接通（见偏差 1、2）；`era-host-contract.md` 的队列边界描述仍待按 A1-全 改写 |
+| B5 ABI 收口与文档 | **部分完成** | 交接 ABI 与位置门面约束已写入 `era-host-contract.md` 与作者指南，Architecture 已刷新；`era-host-contract.md` 的队列边界已按「交接提交记录而不是状态」改写；`syncCursor` 的持久化通道仍未接通（见偏差 1、2），作者指南的读回承诺仍不得声称已兑现 |
+
+### 偏差 4（2026-09-11，已修）：交接批次必须提交消息记录
+
+真机 MSG-FCALL-004（同一楼层两处同名同参调用）暴露：交接批次原先把工作项整体置为
+`no-op`（`plan`/`payload` 归 null），而「已处理调用」的标记只存在于 `plan.messageUpdates`
+里，于是记录随批次一起丢掉；恢复步只给本次回送的 `callId` 打标记，前一处的标记又没了，
+两处调用互相覆盖、永不前进（实测 41 次重复调用、零标记、零落盘）。
+
+现行修法（锁定语义中「消息记录逐块落盘」的那一半，`buildHandoffRecordWork`）：交接批次
+**提交记录而不是状态**——`plan.stat`/`statFunc`/`meta` 回到已提交世界（块步进状态新增
+`baseStat`/`baseStatFunc`，并携带 `consecutive`），清空封存压缩候选，不推进连续处理事实；
+交接通知随 `SyncCommitRequestV1.handoff` 走提交分支，交接提交不呈现楼层。恢复时该楼层从
+已提交世界整楼重放，恰好一次。
+
+**仍待人工确认的两点**（属切片 1b 的另一半「状态也逐块落盘」与切片 3，未确认前不实施）：
+
+1. **收尾/呈现/通知归属**：处理楼层改为逐块提交后，原整条提交链
+   （`assemble_expression_sync_plan → crud_write → commit_variables`）应退化为「只做收尾与
+   呈现」，还是完全跳过？本轮的答案是「交接与收口仍复用整条链、只把状态换回已提交世界」；
+   逐块提交落地后必须重新定这一条。
+2. **单块记录与封存压缩共存**：逐块提交在消息中留下的记录（每块一条、按原文位置）与
+   「封存压缩按 scope 分段且不跨正文」如何共存——尤其位置锚定的记录层不能被错误合并。
+
+两者都动共享同步核心（处理楼层的提交粒度、封存压缩边界），实施前需要人工确认。
 
 ### 偏差 1（部分消除）：块级步骤已落地，逐块提交未落地
 
@@ -516,3 +540,34 @@ ERA_BEHAVIOR_EVIDENCE_MISSING
 3. 必要时用 `--path MSG-FCALL-001` 单条运行缩小范围，避免一次跑 6 条。
 
 **在取得有结论（或有明确修复方向）的真实结果之前，不得把该特性记为「真实酒馆验收通过」。**
+
+### 真实 suite 第二次运行记录（2026-09-11，专项 6/6 通过）
+
+运行命令同 §6.2.1（`--suite era-message-function-call --workers 8`）。
+Artifact：`本地运行资料/live/artifacts-v4/st-run-20260911T15542066-e9262bb76377`
+
+| 项 | 结果 |
+| --- | --- |
+| Pack CLI | `completed` |
+| Harness | `recordingStatus=completed`、**`evaluationStatus=passed`**、`structuralStatus=consistent`、`recorderEvidenceStatus=complete` |
+| 记录计数 | `selectedPaths=6`、`recordedPaths=6`、`actions=90` |
+| 逐条评估 | MSG-FCALL-001..006 **全部 passed、findings 0** |
+
+工具调用次数（`[ERA] 工具注册表解析`）：001=1、002=0（文本已带标记，不重跑）、003=1（未注册、
+一次失败）、**004=2（修复前 41）**、005=0（嵌套只报诊断）、006=1。
+
+决定性终态证据：
+
+```
+003：statData.mfc_fixture.hp = 90；
+     <EraFCall name="era_message_call_missing_v1" args='{}' id="c1" status="done" error="ERA_FCALL_FAILED"/>
+     + 空操作区 <EraFCallTx for="c1"></EraFCallTx>
+004：statData.mfc_fixture.hp = 100；
+     c1、c2 各自 status="done" 且各带一个 <EraFCallTx>
+```
+
+回归门（不劣于基线）：`--path SEM-INS-001` → `evaluationStatus=passed`、18 actions。
+Artifact：`本地运行资料/live/artifacts-v4/st-run-20260911T15564682-0e4821694899`
+
+⇒ **功能行为已通过真实酒馆验收（专项 6/6）**；仍未完成的是锁定语义的另一半
+（状态也逐块落盘，见偏差 1、4 与两个待确认点），以及 `syncCursor` 的正式升版打包。
