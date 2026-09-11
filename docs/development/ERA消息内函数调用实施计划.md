@@ -219,18 +219,21 @@ ERA 构建预期测试 bundle，Pack 使用明确指定的预构建 bundle。按
 | 批次 | 状态 | 依据 |
 | --- | --- | --- |
 | B1 语法与纯解析 | 已完成 | `<EraFCall/>`/`<EraFCallTx>` 解析、块列表、标记判定、操作区渲染均在 `base_lib/domain/message_function_calls.ts`，有专项测试 |
-| B2 一步一块骨架 | **部分完成** | 块按原文位置逐块推进、遇到无标记调用**无条件断开本批次**、游标随结果报出；但「每块一个工作流步骤」未拆成 `vibeflow.loop.while` 循环，块推进仍在一次运行内按序走完（见偏差 1） |
+| B2 一步一块骨架 | **已完成（循环）**；逐块提交待做 | 块推进已落成真实工作流步骤：`vibeflow.loop.while`（body `era.sync.block_step`）+ `era.sync.prepare_block_step` / `advance_message_block` / `era.sync.finalize_block_step`；遇无标记调用**无条件断开本批次**。**尚未做到**「每块执行完提交一次状态」（见偏差 1） |
 | B3 Capability 与调用编排 | 已完成 | 交接事实 → `era.message.invoke_required` 后置通知；Host 在步骤之外驱动函数；`era.message.invoke_continue` 恢复事件把终态与产出操作送回；函数内 `ERA.commit`/`ERA.get` 走位置门面且绝不入队 |
 | B4 Agent 与压缩 | 已完成 | 三阶段输出统一执行（`isolateStoryEraCommands` 覆盖调用块）、含 `<EraFCall` 的楼层整层跳过封存压缩、规划提示词含调用语法 |
-| B5 ABI 收口与文档 | **部分完成** | 交接 ABI 与位置门面约束已写入 `era-host-contract.md` 与作者指南，Architecture 已刷新；`syncCursor` 的持久化通道未接通（见偏差 1、2） |
+| B5 ABI 收口与文档 | **部分完成** | 交接 ABI 与位置门面约束已写入 `era-host-contract.md` 与作者指南，Architecture 已刷新；`syncCursor` 的持久化通道未接通（见偏差 1、2）；`era-host-contract.md` 的队列边界描述仍待按 A1-全 改写 |
 
-### 偏差 1：块级工作流步骤
+### 偏差 1（部分消除）：块级步骤已落地，逐块提交未落地
 
-计划的 `process_message_blocks`（`vibeflow.loop.while`）+ `era.sync.block.step` 尚未建立。现行实现由单个已实现节点
-`era.sync.drive_message_blocks` 在一次同步运行内按块推进，**在调用处无条件断开**。可观察行为一致
-（顺序、标记、函数在步骤之外执行、未完成不提交），差异只在内部粒度：块进度目前不跨批次携带，
-恢复时按「从楼层起点重算」执行（与作者指南的游标丢失规则一致）。补齐需要新增循环 Nodeset 与
-承载状态 schema，并让恢复读取 `EraSyncCursorV1`。
+`process_message_blocks`（`vibeflow.loop.while`）+ body `era.sync.block_step` 已实现并接线
+（`sidecar_store_prepare → prepare_block_step → process_message_blocks → finalize_block_step
+→ apply_command_compaction`），承载状态为 `era.sync.block.step.state`/`.next`，单块推进节点为
+`era.sync.drive_message_blocks`。
+
+**仍未落地的是锁定的提交粒度**：现在仍是「整条消息一次规划 + 一次提交」，而不是「每执行完一个
+操作块就提交一次状态」。切片 1a（提交记录的位置锚定）已完成；切片 1b 起见本文档
+「这项锁定的实现面」一节。在切片完成前，块进度不跨批次携带，恢复按「从楼层起点重算」执行。
 
 ### 偏差 2：`syncCursor` 只声明未写入
 
@@ -368,7 +371,7 @@ resume 端不再写 `<EraFCallTx>` 操作区，只给调用块打 `status="done"
 | 检查 | 结果 |
 | --- | --- |
 | Service `run.py validate` / `quality-check` / `build`（era.service） | PASS / PASS / PASS |
-| App `pnpm verify`（format → lint → typecheck → aot → quality → 全量单测） | PASS；86 文件 / 663 测试，quality 无 `[NEW]` |
+| App `pnpm verify`（format → lint → typecheck → aot → quality → 全量单测） | PASS；87 文件 / 665 测试，quality 无 `[NEW]` |
 | ERA-Test-Pack 离线门禁 | typecheck / format:check / build / catalog:check（`valid`）/ test:contract 253 项 / verify:baseline（`valid`）全部 PASS |
 
 ### 人工验收状态
