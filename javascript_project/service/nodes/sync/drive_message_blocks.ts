@@ -88,9 +88,17 @@ function inputFormal(): boolean {
   return true;
 }
 
-export function run(
+interface EraFunctionCapability {
+  invoke(input: Readonly<Record<string, unknown>>): Promise<unknown>;
+  result(input: Readonly<Record<string, unknown>>): Promise<unknown>;
+  release(input: Readonly<Record<string, unknown>>): unknown;
+}
+
+export async function run(
   inputs: Readonly<{ "era.sync.context": Envelope<unknown> }>,
-): any {
+  _params?: Readonly<Record<string, unknown>>,
+  runtime?: { readonly capabilities?: { readonly "era.tavern.functions"?: EraFunctionCapability } },
+): Promise<any> {
   const context = inputs["era.sync.context"].value as SyncContextV1;
   const work = planSyncWork(context);
   const floor = processingFloor(context);
@@ -110,6 +118,28 @@ export function run(
   const formal = inputFormal();
   const driven = driveBlocks(floor.text, floor.messageId, floor.mk, formal);
   const pending = driven.pendingCall;
+  const capability = runtime?.capabilities?.["era.tavern.functions"];
+
+  // 有待调用且宿主能力可用时，在这里完成一次完整交接：
+  // 登记 → 执行 → 取回终态与已应用操作 → 释放会话。
+  // 未能取得能力时不伪造成功：保持待调用与未完成状态，由上层决定后续。
+  let outcome: Readonly<Record<string, unknown>> | null = null;
+  if (pending !== null && pending.name !== null && capability !== undefined) {
+    const invocationId = `${floor.mk}#${pending.callId ?? pending.start}`;
+    await capability.invoke({
+      invocationId,
+      name: pending.name,
+      args: pending.args ?? {},
+      position: {
+        messageId: floor.messageId,
+        mk: floor.mk,
+        blockIndex: driven.flow.cursor.blockIndex,
+      },
+    });
+    const settled = await capability.result({ invocationId });
+    outcome = record(settled) ? settled : null;
+    capability.release({ invocationId });
+  }
 
   return {
     expression_command_result: work as unknown as Readonly<Record<string, unknown>>,
@@ -124,7 +154,8 @@ export function run(
     },
     // 调用尚未执行时，这条消息**没有**处理完：下游据此保留续做状态，
     // 不得按「已完成」走提交与收尾。
-    message_incomplete: pending !== null,
+    message_incomplete: pending !== null && outcome === null,
+    function_outcome: outcome,
     message_function_flow: driven.flow,
   };
 }

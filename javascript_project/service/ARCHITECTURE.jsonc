@@ -16149,7 +16149,7 @@
             "ref": "nodes/sync/drive_message_blocks.ts",
             "export": "run"
           },
-          "completion": "immediate"
+          "completion": "suspend"
         }
       ]
     },

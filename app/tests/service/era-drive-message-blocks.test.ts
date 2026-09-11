@@ -95,8 +95,8 @@ function contextWith(text: string) {
 }
 
 describe('era.sync.drive_message_blocks 节点', () => {
-  it('产出同步工作项与函数调用路由，供下游既有节点消费', () => {
-    const result = run({
+  it('产出同步工作项与函数调用路由，供下游既有节点消费', async () => {
+    const result = await run({
       'era.sync.context': { value: contextWith('<VariableInsert>{"hp":100}</VariableInsert>') },
     });
 
@@ -105,8 +105,8 @@ describe('era.sync.drive_message_blocks 节点', () => {
     expect(result.function_invocation_route).toBe('none');
   });
 
-  it('无可执行块时路由为 none，且不改写工作项', () => {
-    const result = run({
+  it('无可执行块时路由为 none，且不改写工作项', async () => {
+    const result = await run({
       'era.sync.context': { value: contextWith('纯故事，没有指令块。') },
     });
 
@@ -117,8 +117,8 @@ describe('era.sync.drive_message_blocks 节点', () => {
     expect(['no-op', 'commit', 'failed']).toContain(result.expression_command_result.disposition);
   });
 
-  it('遇到无标记调用时路由为 invoke，并报出待调用块', () => {
-    const result = run({
+  it('遇到无标记调用时路由为 invoke，并报出待调用块', async () => {
+    const result = await run({
       'era.sync.context': {
         value: contextWith(
           ['<VariableInsert>{"hp":100}</VariableInsert>', '<EraFCall name="attack" id="c1"/>'].join('\n'),
@@ -130,8 +130,8 @@ describe('era.sync.drive_message_blocks 节点', () => {
     expect(result.pending_function_call).toMatchObject({ callId: 'c1', name: 'attack' });
   });
 
-  it('游标反映按块推进到的位置，而不是停在起点', () => {
-    const result = run({
+  it('游标反映按块推进到的位置，而不是停在起点', async () => {
+    const result = await run({
       'era.sync.context': {
         value: contextWith(
           ['<VariableInsert>{"hp":100}</VariableInsert>', '<VariableEdit>{"hp":{"$expr":"hp-30"}}</VariableEdit>'].join(
@@ -146,8 +146,8 @@ describe('era.sync.drive_message_blocks 节点', () => {
     expect(result.block_cursor.done).toBe(true);
   });
 
-  it('有未处理调用时明确回报「未完成」，不得声称本消息处理完毕', () => {
-    const result = run({
+  it('有未处理调用时明确回报「未完成」，不得声称本消息处理完毕', async () => {
+    const result = await run({
       'era.sync.context': {
         value: contextWith(
           [
@@ -165,8 +165,8 @@ describe('era.sync.drive_message_blocks 节点', () => {
     expect(result.message_incomplete).toBe(true);
   });
 
-  it('没有待调用时才算本消息处理完毕', () => {
-    const result = run({
+  it('没有待调用时才算本消息处理完毕', async () => {
+    const result = await run({
       'era.sync.context': {
         value: contextWith('<VariableInsert>{"hp":100}</VariableInsert>'),
       },
@@ -176,8 +176,60 @@ describe('era.sync.drive_message_blocks 节点', () => {
     expect(result.message_incomplete).toBe(false);
   });
 
-  it('报出块步进游标，作为跨步骤续做的依据', () => {
-    const result = run({
+  it('宿主能力可用时在此完成一次完整交接并回报终态', async () => {
+    const released: unknown[] = [];
+    const capability = {
+      invoke: async (input: Readonly<Record<string, unknown>>) => ({
+        status: 'accepted',
+        invocationId: input.invocationId,
+      }),
+      result: async () => ({
+        status: 'completed',
+        name: 'attack',
+        result: 'ok',
+        message: '',
+        unregistered: false,
+        appliedCount: 1,
+      }),
+      release: (input: Readonly<Record<string, unknown>>) => {
+        released.push(input.invocationId);
+        return { released: true };
+      },
+    };
+
+    const result = await run(
+      {
+        'era.sync.context': {
+          value: contextWith(
+            ['<VariableInsert>{"hp":100}</VariableInsert>', '<EraFCall name="attack" id="c1"/>'].join('\n'),
+          ),
+        },
+      },
+      {},
+      { capabilities: { 'era.tavern.functions': capability } },
+    );
+
+    // 交接完成后不再需要外部执行：不再声称未完成，并带回终态。
+    expect(result.message_incomplete).toBe(false);
+    expect(result.function_outcome).toMatchObject({ status: 'completed' });
+    expect(released).toHaveLength(1);
+  });
+
+  it('宿主能力不可用时保持待调用与未完成，不伪造成功', async () => {
+    const result = await run({
+      'era.sync.context': {
+        value: contextWith(
+          ['<VariableInsert>{"hp":100}</VariableInsert>', '<EraFCall name="attack" id="c1"/>'].join('\n'),
+        ),
+      },
+    });
+
+    expect(result.function_outcome).toBe(null);
+    expect(result.message_incomplete).toBe(true);
+  });
+
+  it('报出块步进游标，作为跨步骤续做的依据', async () => {
+    const result = await run({
       'era.sync.context': {
         value: contextWith('<VariableInsert>{"hp":100}</VariableInsert>'),
       },
