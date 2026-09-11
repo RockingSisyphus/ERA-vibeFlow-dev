@@ -15,14 +15,38 @@ interface TavernToolManager {
   invokeFunctionTool(name: string, args: Readonly<Record<string, unknown>>): Promise<unknown>;
 }
 
+/**
+ * 按「顶层窗口优先、当前全局兜底」解析酒馆容器。
+ *
+ * ERA 运行在 Tavern Helper 的脚本 iframe 内，而工具是注册在**顶层页面**的
+ * `SillyTavern` 上下文里的（实测脚本 iframe 内的 `SillyTavern` 没有 ToolManager，
+ * 直接读它会得到 ERA_TOOL_MANAGER_UNAVAILABLE）。同源 iframe 可以安全地读顶层，
+ * 跨源读取会抛异常，因此必须逐个候选兜底而不是一次性取定。
+ */
+function tavernContainers(): readonly unknown[] {
+  const containers: unknown[] = [];
+  try {
+    const top = window.top;
+    if (top !== null && top !== window) {
+      containers.push((top as unknown as { SillyTavern?: unknown }).SillyTavern);
+    }
+  } catch {
+    // 跨源访问顶层被拒绝：忽略这个候选，继续用当前全局。
+  }
+  containers.push((globalThis as { SillyTavern?: unknown }).SillyTavern);
+  return containers;
+}
+
 function toolManager(): TavernToolManager | null {
-  const container = (globalThis as { SillyTavern?: unknown }).SillyTavern;
-  if (container === null || typeof container !== 'object') return null;
-  const manager = (container as { ToolManager?: unknown }).ToolManager;
-  if (manager === null || typeof manager !== 'object') return null;
-  const invoke = (manager as { invokeFunctionTool?: unknown }).invokeFunctionTool;
-  if (typeof invoke !== 'function') return null;
-  return manager as TavernToolManager;
+  for (const container of tavernContainers()) {
+    if (container === null || typeof container !== 'object') continue;
+    const manager = (container as { ToolManager?: unknown }).ToolManager;
+    if (manager === null || typeof manager !== 'object') continue;
+    const invoke = (manager as { invokeFunctionTool?: unknown }).invokeFunctionTool;
+    if (typeof invoke !== 'function') continue;
+    return manager as TavernToolManager;
+  }
+  return null;
 }
 
 /**

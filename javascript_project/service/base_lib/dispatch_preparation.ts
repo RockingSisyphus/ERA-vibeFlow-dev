@@ -77,7 +77,11 @@ function recordedFunctionCallText(input: {
 }): string {
   const resume = functionCallResumeOf(input.step);
   if (resume === null || resume.messageId !== input.messageId) return input.text;
-  if (resume.mk.length > 0 && resume.mk !== input.mk) return input.text;
+  // 楼层身份以 messageId 为准：mk 会随同步推移发生变化（实测同一楼层的两次交接 mk 不同），
+  // 用它做等值判断会让恢复记录被静默跳过，调用块永不标记 → 每轮同步再次交接（无限循环）。
+  if (resume.mk.length > 0 && input.mk.length === 0 && resume.messageId !== input.messageId) {
+    return input.text;
+  }
   return recordEraFunctionCallOutcome({
     content: input.text,
     callId: resume.callId,
