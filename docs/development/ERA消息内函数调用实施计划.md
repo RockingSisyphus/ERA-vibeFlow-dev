@@ -346,6 +346,23 @@ resume 端不再写 `<EraFCallTx>` 操作区，只给调用块打 `status="done"
 **这是对共享同步核心的改动**（处理楼层的提交粒度从「整条消息」变为「单个块」）。实施按上述顺序进行，
 每一步独立验证与独立提交；若某一步需要改动现有封存压缩、协调同步或回退语义，先停下来问人。
 
+### 切片 1 落点（已读实，下一轮直接实施）
+
+- **写入能力已存在**：`era.tavern.variables_commit`（`manifests/nodes/sync-commit.jsonc`，
+  `nodes/sync/commit_sync.ts`）已持有一次提交所需的全部副作用——
+  `era.tavern.messages.update_content` 与 `era.tavern.sidecar.{read_current,read_record,write_record,commit_metadata,present_prompt}`，
+  其 base_libs 为 `era.service.sidecar_binding` / `era.service.sync_commit_policy` / `era.service.sync_contracts`。
+  逐块提交不需要新增能力，只需要一个「单块提交请求」的表达。
+- **记录构造可复用**：`base_lib/facade_api_engine.ts` 的 `buildTransaction`（把操作拼成
+  `<era_tx s="…">…</era_tx>`）与 `buildAppend`（当前是追加）就是普通即时提交的记录构造；
+  切片 1 给它们加**位置锚定**变体（插到被锚定块之后、后续块之前），普通提交路径保持不变。
+- **循环体接线点**：`configs/nodesets/message_block_step.jsonc` 的 body 现在是
+  `start → advance_message_block → end`；切片 1 在 `advance_message_block` 之后插入
+  `commit_block_state`（单块提交），并让 `end` 输出「已提交到的块」。
+- **待核实（实施时确认，不确定就问人）**：单块提交写出的 `<era_tx>` 与既有
+  「按 scope 分段、不跨正文」的封存压缩规则如何共存；以及处理楼层不再走
+  `assemble_expression_sync_plan → crud_write → commit_variables` 后，收尾/呈现/通知链路由谁负责。
+
 ### 机器检查证据
 
 | 检查 | 结果 |
