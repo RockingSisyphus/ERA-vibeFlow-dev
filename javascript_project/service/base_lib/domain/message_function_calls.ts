@@ -80,11 +80,22 @@ const COMMAND_TAG_BY_TYPE: Readonly<Record<string, string>> = Object.freeze({
   "function-delete": "FunctionDelete",
 });
 
-const CALL_BLOCK_PATTERN = /<erafcall\b([^>]*?)\/?>/giu;
-const OPERATIONS_REGION_PATTERN =
-  /<erafcalltx\b([^>]*)>([\s\S]*?)<\/erafcalltx>/giu;
-const COMMAND_BLOCK_PATTERN =
-  /<((?:Variable|Function)(?:Insert|Edit|Delete))>\s*(?=[\s\S]*?\S[\s\S]*?<\/\1>)((?:(?!<(?:era_data|Variable(?:Think|Insert|Edit|Delete)|Function(?:Insert|Edit|Delete))>|<\/\1>)[\s\S])*?)\s*<\/\1>/giu;
+/** 六类指令块的字节范围，用于判定调用块是否被嵌套在指令块内部。 */
+function commandBlockRanges(
+  input: EraCommandParseInput,
+): readonly { readonly start: number; readonly end: number }[] {
+  return parsePositionedMessageCommands(input).map(command => ({
+    start: command.start,
+    end: command.end,
+  }));
+}
+
+function insideRange(
+  position: number,
+  ranges: readonly { readonly start: number; readonly end: number }[],
+): boolean {
+  return ranges.some(range => position > range.start && position < range.end);
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -112,9 +123,10 @@ interface OperationsRegion {
 /** 收集操作区；`for` 为空的操作区没有归属，直接忽略。 */
 function collectOperationsRegions(content: string): readonly OperationsRegion[] {
   const regions: OperationsRegion[] = [];
+  // 在函数内新建：模块级 g 标志正则会在调用之间保留 lastIndex。
+  const pattern = /<erafcalltx\b([^>]*)>([\s\S]*?)<\/erafcalltx>/giu;
   let match: RegExpExecArray | null;
-  OPERATIONS_REGION_PATTERN.lastIndex = 0;
-  while ((match = OPERATIONS_REGION_PATTERN.exec(content)) !== null) {
+  while ((match = pattern.exec(content)) !== null) {
     const id = attributesOf(match[1] ?? "").get("for");
     if (id === undefined || id.length === 0) continue;
     regions.push({
@@ -124,26 +136,6 @@ function collectOperationsRegions(content: string): readonly OperationsRegion[] 
     });
   }
   return regions;
-}
-
-/** 六类指令块的字节范围，用于判定调用块是否被嵌套在指令块内部。 */
-function collectCommandRanges(
-  content: string,
-): readonly { readonly start: number; readonly end: number }[] {
-  const ranges: { start: number; end: number }[] = [];
-  let match: RegExpExecArray | null;
-  COMMAND_BLOCK_PATTERN.lastIndex = 0;
-  while ((match = COMMAND_BLOCK_PATTERN.exec(content)) !== null) {
-    ranges.push({ start: match.index, end: match.index + match[0].length });
-  }
-  return ranges;
-}
-
-function insideRange(
-  position: number,
-  ranges: readonly { readonly start: number; readonly end: number }[],
-): boolean {
-  return ranges.some(range => position > range.start && position < range.end);
 }
 
 /** 调用块下方紧邻的操作区：允许其间只有空白。 */
@@ -174,12 +166,13 @@ export function parseEraFunctionCalls(content: string): readonly EraFunctionCall
   if (typeof content !== "string" || content.length === 0) return [];
 
   const regions = collectOperationsRegions(content);
-  const commandRanges = collectCommandRanges(content);
+  const commandRanges = commandBlockRanges({ content });
   const calls: EraFunctionCallSite[] = [];
 
+  // 同上：每次调用新建正则，避免 lastIndex 泄漏到下一次工作流调用。
+  const callPattern = /<erafcall\b([^>]*?)\/?>/giu;
   let match: RegExpExecArray | null;
-  CALL_BLOCK_PATTERN.lastIndex = 0;
-  while ((match = CALL_BLOCK_PATTERN.exec(content)) !== null) {
+  while ((match = callPattern.exec(content)) !== null) {
     const start = match.index;
     const end = start + match[0].length;
     const attributes = attributesOf(match[1] ?? "");
@@ -599,6 +592,8 @@ export interface EraBlockSessionInput {
   /** 跨步骤续做时传入既有游标；省略时从楼层起点开始。 */
   readonly cursor?: EraBlockCursor;
   readonly pendingCall?: EraFunctionCallSite | null;
+  /** 已处理但文本尚未写回的调用标识；跨步骤续做时原样带回来。 */
+  readonly resolvedCallIds?: readonly string[];
 }
 
 /**
@@ -617,7 +612,7 @@ export function startEraBlockSession(
     cursor,
     done: cursor.done,
     pendingCall: input.pendingCall ?? null,
-    resolvedCallIds: [],
+    resolvedCallIds: input.resolvedCallIds ?? [],
     meta: input.meta,
     formal: input.formal ?? true,
     traditionalToSimplified: input.traditionalToSimplified ?? false,

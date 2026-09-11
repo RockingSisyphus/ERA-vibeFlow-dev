@@ -7,7 +7,15 @@
 
 import {
   applyMessageCommands,
+  type EraCrudDiagnostic,
+  type EraCrudEditLog,
+  type EraFunctionEditLog,
 } from "./crud_engine.ts";
+import {
+  startEraBlockSession,
+  advanceEraBlockSession,
+  type EraFunctionCallSite,
+} from "./message_function_calls.ts";
 import {
   ensureMessageKey,
   readMessageKey,
@@ -724,5 +732,105 @@ export function planEraSync(input: EraSyncInputV1): EraSyncPlanV1 {
     consecutiveProcessingCount: consecutive.count,
     nextConsecutiveState: consecutive.state,
     diagnostics,
+  };
+}
+
+
+/** 一步一块重放的可续做检查点：只保存续做所需的最小状态。 */
+export interface EraMessageReplayCheckpoint {
+  readonly messageIndex: number;
+  readonly blockIndex: number;
+  readonly stat: unknown;
+  readonly statFunc: Readonly<Record<string, unknown>>;
+  readonly meta: Readonly<Record<string, unknown>>;
+  readonly done?: boolean;
+  /** 调用方已处理但文本尚未写回的调用标识。 */
+  readonly resolvedCallIds?: readonly string[];
+}
+
+export interface EraMessageReplayBlockInput {
+  readonly message: EraMkMessageV1;
+  readonly messageIndex: number;
+  readonly messageId: number;
+  readonly mk: string;
+  readonly checkpoint: EraMessageReplayCheckpoint;
+  /** 正式同步为 true；只读与试算为 false。 */
+  readonly formal?: boolean;
+  readonly traditionalToSimplified?: boolean;
+  /** 调用方已把上一次的调用写回文本时传 true，清除待调用后按标识跳过它。 */
+  readonly resolvePendingCall?: boolean;
+}
+
+export interface EraMessageReplayBlockResult {
+  readonly checkpoint: EraMessageReplayCheckpoint;
+  readonly done: boolean;
+  readonly executedBlockIndexes: readonly number[];
+  readonly stat: unknown;
+  readonly statFunc?: Readonly<Record<string, unknown>>;
+  readonly editLog: readonly EraCrudEditLog[];
+  readonly functionEditLog: readonly EraFunctionEditLog[];
+  readonly pendingCall: EraFunctionCallSite | null;
+  readonly diagnostics: readonly EraCrudDiagnostic[];
+}
+
+/**
+ * 按块重放一条消息的一步。
+ *
+ * 与 `applyMessageCommands` 的重放使用同一套块解析与执行语义，区别只在于每次
+ * 只推进一个块并把续做状态交回调用方，因此可以跨步骤、跨 FIFO 事件续做。
+ */
+export function replayMessageBlock(
+  input: EraMessageReplayBlockInput,
+): EraMessageReplayBlockResult {
+  const session = startEraBlockSession({
+    content: readMkMessageText(input.message),
+    messageId: input.messageId,
+    mk: input.mk,
+    initialStat: input.checkpoint.stat,
+    initialStatFunc: input.checkpoint.statFunc,
+    meta: input.checkpoint.meta,
+    randomSourceKey: input.mk,
+    traditionalToSimplified: input.traditionalToSimplified ?? false,
+    formal: input.formal ?? true,
+    ...(input.checkpoint.resolvedCallIds === undefined
+      ? {}
+      : { resolvedCallIds: input.checkpoint.resolvedCallIds }),
+    cursor: {
+      messageId: input.messageId,
+      mk: input.mk,
+      blockIndex: input.checkpoint.blockIndex,
+      done: input.checkpoint.done ?? false,
+      randomDrawOffset: 0,
+      editLog: [],
+      functionEditLog: [],
+    },
+  });
+
+  const advanced =
+    input.resolvePendingCall === true
+      ? advanceEraBlockSession(
+          advanceEraBlockSession(session, { resolvePendingCall: true }),
+          {},
+        )
+      : advanceEraBlockSession(session);
+
+  return {
+    checkpoint: {
+      messageIndex: input.messageIndex,
+      blockIndex: advanced.cursor.blockIndex,
+      stat: advanced.stat,
+      statFunc: advanced.statFunc ?? input.checkpoint.statFunc,
+      meta: input.checkpoint.meta,
+      done: advanced.done,
+      resolvedCallIds: advanced.resolvedCallIds,
+    },
+    done: advanced.done,
+    executedBlockIndexes: advanced.executedBlockIndexes,
+    stat: advanced.stat,
+    ...(advanced.statFunc === undefined ? {} : { statFunc: advanced.statFunc }),
+    editLog: advanced.editLog,
+    functionEditLog: advanced.functionEditLog,
+    pendingCall: advanced.pendingCall,
+    diagnostics: advanced.diagnostics,
   };
 }
