@@ -245,6 +245,16 @@ describe('逐块提交：算完那一次与结果折回', () => {
     expect(folded.content).toBe(committedText);
   });
 
+  it('交接迭代的非提交信封原样放行，不算失败', () => {
+    const original = state({ done: false });
+    const folded = foldBlockCommitOutcome({
+      state: original,
+      outcome: { mode: 'non-commit' },
+    });
+
+    expect(folded).toBe(original);
+  });
+
   it('提交失败必须让任务失败，不能悄悄继续推进', () => {
     expect(() =>
       foldBlockCommitOutcome({

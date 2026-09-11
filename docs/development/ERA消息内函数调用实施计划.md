@@ -462,6 +462,30 @@ sidecar 状态**；它只负责逐块保存做不到的事（刷新楼层显示�
 
 **待做，按依赖顺序**：
 
+**循环体装配配方（2026-09-12 已读实各节点 type key，可直接照做）**：
+
+```
+start
+ → advance_message_block        era.sync.block.step.state → era.sync.block.step.state.next + era.step.done
+ → build_block_commit (新)      era.sync.block.step.state.next → 同名透传 + era.tavern.commit.request
+ → era.tavern.variables_commit   era.tavern.commit.request → era.tavern.commit.result
+ → fold_block_commit (新)        era.tavern.commit.result + era.sync.block.step.state.next → era.sync.block.step.state.next
+ → end                          outputs：era.sync.block.step.state.next + era.step.done
+```
+
+已核实的事实与取舍：
+
+- `validate_commit_candidate` 是「requires 与 provides 同类型」的透传节点（`era.tavern.commit.request`
+  进、同名出），所以**透传模式在核心里合法**：`build_block_commit` 与 `fold_block_commit` 都用它
+  把状态带过提交节点。
+- 第一版装配**先不接** `validate_commit_candidate`：失败分支会让 `fold` 的输入类型在某些路径上
+  无法满足。单块请求由 `buildSyncCommitRequest` 构造、本身即契约合法，且 `foldBlockCommitOutcome`
+  对非成功状态抛 `ERA_BLOCK_COMMIT_FAILED`（内核按失败结算），因此少一道校验不会写出坏状态。
+  接校验作为后续加固（需要给失败分支补一个产出 `era.tavern.commit.result` 的结算节点）。
+- 交接迭代（没有执行块）：`build_block_commit` 产出 `{mode: "non-commit"}` 信封，`era.tavern.variables_commit`
+  原样返回、不写任何宿主状态，`foldBlockCommitOutcome` 对此信封**原样放行**（已实现并测试）。
+- `era.step.done` 由 `advance_message_block` 产出、由 `end` 消费，中间节点不得消费它。
+
 1. **记录写入者 `commit_block_state`（循环体内）**：body 改为
    `start → advance_message_block → build_block_commit → validate_commit_candidate →
    era.tavern.variables_commit → fold_block_commit → end`。

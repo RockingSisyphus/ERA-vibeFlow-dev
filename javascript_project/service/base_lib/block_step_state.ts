@@ -221,15 +221,20 @@ export function buildPerBlockCommitWork(input: {
  */
 export function foldBlockCommitOutcome(input: {
   readonly state: EraBlockStepStateV1;
-  readonly outcome: {
-    readonly status: "committed" | "no-op" | "failed" | "fatal";
-    readonly messageWrites?: readonly {
-      readonly messageId: number;
-      readonly content: string;
-    }[];
-  };
+  readonly outcome:
+    | { readonly mode: "non-commit" }
+    | {
+        readonly status: "committed" | "no-op" | "failed" | "fatal";
+        readonly messageWrites?: readonly {
+          readonly messageId: number;
+          readonly content: string;
+        }[];
+      };
 }): EraBlockStepStateV1 {
   const { state, outcome } = input;
+  // 交接迭代不提交任何东西：循环体给它的是 `{mode: "non-commit"}` 信封（该路径不写任何宿主
+  // 状态），因此这里是「原样放行」而不是失败。
+  if ("mode" in outcome) return state;
   if (outcome.status !== "committed" && outcome.status !== "no-op") {
     throw new TypeError(
       `ERA_BLOCK_COMMIT_FAILED: 逐块提交未成功（status=${outcome.status}），本批次按失败结算。`,
