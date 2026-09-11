@@ -113,6 +113,14 @@ export interface EraApplyMessageCommandsInput {
    * 省略时保持既有语义，一次执行整条消息的全部六类指令。
    */
   readonly commandRange?: Readonly<{ readonly fromIndex: number; readonly toIndex: number }>;
+  /**
+   * 本次重放从第几次抽取开始。
+   *
+   * 被中断的逐块提交楼层恢复时，重放只执行「剩下」的指令，但抽取序列必须接着已提交块继续：
+   * 否则同一份原文在「整楼重放」与「续做」两条路径上会抽到不同的随机值，终值不再等价。
+   * 省略时保持既有语义（从 0 开始）。
+   */
+  readonly randomDrawOffset?: number;
 }
 
 export interface EraApplyMessageCommandsResult extends EraCrudResult {
@@ -1218,9 +1226,13 @@ export function applyMessageCommands(
   const layerStartStatFunc = cloneCrudValue(
     input.initialStatFunc ?? {},
   ) as Record<string, unknown>;
+  const seededDrawOffset =
+    Number.isSafeInteger(input.randomDrawOffset) && Number(input.randomDrawOffset) > 0
+      ? Number(input.randomDrawOffset)
+      : 0;
   const randomCursor =
     typeof input.randomSourceKey === "string" && input.randomSourceKey.length > 0
-      ? { sourceKey: input.randomSourceKey, drawOffset: 0 }
+      ? { sourceKey: input.randomSourceKey, drawOffset: seededDrawOffset }
       : undefined;
   try {
     const allCommands = parseMessageCommands({

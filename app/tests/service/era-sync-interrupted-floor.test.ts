@@ -62,6 +62,8 @@ function commitPrefix(blocks: readonly string[], initialStat: unknown) {
     messageId: 1,
     initialStat,
     meta: { SelectedMks: [], EditLogs: {}, FunctionEditLogs: {} },
+    // 省略随机源时 `random()` 没有游标可用，会静默不生效——随机用例必须带上它。
+    randomSourceKey: 'mk-1',
     commandRange: { fromIndex: 0, toIndex: blocks.length },
   });
   return { stat: applied.finalStat, editLog: applied.editLog };
@@ -118,6 +120,39 @@ describe('被中断楼层：重算窗口、重放前缀与日志累积', () => {
     expect(plan.stat).toEqual({ hp: 50 });
     // 日志必须是「已提交块 + 剩余块」的完整序列，否则回退会漏掉第一块。
     expect((plan.meta.EditLogs as Record<string, unknown>)['mk-1']).toHaveLength(3);
+  });
+
+  it('随机抽取的续做必须接着已提交块继续（否则两条路径随机值不同）', () => {
+    const randomBlocks = [
+      '<VariableEdit>{"roll":{"$expr":"random()"}}</VariableEdit>',
+      '<VariableEdit>{"roll2":{"$expr":"random()"}}</VariableEdit>',
+    ];
+    // 两条路径都必须真的抽到值：`VariableEdit` 只改不增，所以先给两个键初值。
+    const initial = { roll: 0, roll2: 0 };
+    // 整楼重放：一次调用内连续抽两次。
+    const full = commitPrefix(randomBlocks, initial);
+    // 续做：第一块已提交（记录里带该块之后的 draws=1），第二块单独抽。
+    const first = commitPrefix([randomBlocks[0]], initial);
+    const text = [
+      `<era_block mk="mk-1" applied="1" draws="1">${randomBlocks[0]}</era_block>`,
+      randomBlocks[1],
+      mkBlock('mk-1'),
+    ].join('\n');
+    const plan = planEraSync({
+      messages: [message(1, 'mk-1', text)],
+      stat: first.stat,
+      statFunc: {},
+      meta: { SelectedMks: [], EditLogs: {}, FunctionEditLogs: {} },
+      reason: 'manual',
+      processingMk: 'mk-1',
+      consecutiveState: null,
+    });
+
+    if (plan.status === 'failed') throw new Error(plan.error.message);
+    // 只改不增：确认两条路径都真的抽了，而不是「因为指令没生效所以相等」。
+    expect(first.stat).not.toEqual(initial);
+    expect(full.stat).not.toEqual(first.stat);
+    expect(plan.stat).toEqual(full.stat);
   });
 
   it('没有记录时行为不变：整楼从起点重放', () => {

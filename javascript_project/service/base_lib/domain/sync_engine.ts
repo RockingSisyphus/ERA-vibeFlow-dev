@@ -13,6 +13,7 @@ import {
 } from "./crud_engine.ts";
 import {
   appliedCommandPrefix,
+  appliedRecordDrawOffset,
   hasAppliedBlockRecords,
   startEraBlockSession,
   advanceEraBlockSession,
@@ -714,6 +715,8 @@ export function planEraSync(input: EraSyncInputV1): EraSyncPlanV1 {
               fromIndex: appliedPrefix,
               toIndex: Number.MAX_SAFE_INTEGER,
             },
+            // 抽取序列必须接着已提交块继续，否则续做与整楼重放的随机值不同、终值不等价。
+            randomDrawOffset: appliedRecordDrawOffset(floorText),
           }
         : {}),
     });

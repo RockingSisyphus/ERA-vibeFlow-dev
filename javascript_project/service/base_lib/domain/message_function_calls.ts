@@ -401,12 +401,41 @@ export function wrapBlockAsAppliedRecord(input: {
   readonly start: number;
   readonly end: number;
   readonly mk: string;
+  /**
+   * 该块执行完时的随机抽取偏移（含）。续做时要从这里接着抽，否则同一份原文在
+   * 「整楼重放」与「续做」两条路径上会抽到不同的随机值，终值不再等价。
+   */
+  readonly draws?: number;
 }): string {
   const block = input.content.slice(input.start, input.end);
-  const record = `<${ERA_APPLIED_BLOCK_TAG} mk="${input.mk}" applied="1">${block}</${ERA_APPLIED_BLOCK_TAG}>`;
+  const draws =
+    Number.isSafeInteger(input.draws) && Number(input.draws) > 0
+      ? ` draws="${Number(input.draws)}"`
+      : "";
+  const record = `<${ERA_APPLIED_BLOCK_TAG} mk="${input.mk}" applied="1"${draws}>${block}</${ERA_APPLIED_BLOCK_TAG}>`;
   return (
     input.content.slice(0, input.start) + record + input.content.slice(input.end)
   );
+}
+
+/**
+ * 楼层里最靠后的已应用记录声明的抽取偏移。
+ *
+ * 逐块提交按原文顺序推进，因此最后一条记录就是最新的进度：它的 `draws` 是续做起点。
+ * 没有任何记录（或记录未声明偏移）时返回 0，即既有语义「从头开始抽」。
+ */
+export function appliedRecordDrawOffset(content: string): number {
+  const pattern = new RegExp(
+    `<${ERA_APPLIED_BLOCK_TAG}\\b[^>]*\\bdraws\\s*=\\s*"?(\\d+)"?[^>]*>`,
+    "giu",
+  );
+  let offset = 0;
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(content)) !== null) {
+    const value = Number(match[1]);
+    if (Number.isSafeInteger(value) && value > offset) offset = value;
+  }
+  return offset;
 }
 
 /**
