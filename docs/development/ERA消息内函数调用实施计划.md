@@ -516,6 +516,22 @@ start
 ⇒ 装配只剩：两个薄节点 + 三个描述符（drive 改型 + 两个新节点）+ 节点集编辑；实现全部已在
 base_lib（`buildPerBlockCommitWork` / `foldBlockCommitOutcome`）。
 
+**装配必须与尾链改道同批做（第 82 轮真机失败教训）**：只接线不改尾链时，循环体逐块写消息文本后，
+尾链那条「整条消息提交」会再写同一楼层文本，此时请求里的 source basis 已过期 ⇒ 真机报
+`ERA_SYNC_SOURCE_CHANGED: 消息写入目标已变化：source-text (#3)`，专项由 6/6 掉到 failed
+（artifact `st-run-20260911T17311617`）。回退后同一 bundle 复跑恢复 passed
+（`st-run-20260911T17341579`）。
+
+同批需要做的收口：
+- `finalize_block_step`：已由循环逐块提交的处理楼层，工作项**不再携带楼层文本更新**（清空
+  `plan.messageUpdates`），只保留元数据记账（`meta`/`SelectedMks`/`EditLogs`）与
+  `syncCursor`/`initialPresentation`；`buildSyncNonCommitResult` 已能承载后两者；
+- 「已逐块提交」用**显式状态事实**表达（建议 block-step state 加 `committedPerBlock: boolean`，
+  由折回节点置真），不要靠 `blockIndex > 0` 猜；
+- 交接迭代仍走 `{mode:"non-commit"}`（该路径不写宿主状态）；
+- 改完**先跑 `--path MSG-FCALL-001`** 确认 `ERA_SYNC_SOURCE_CHANGED` 消失，再跑整套专项 +
+  回归门（并记录冻结产物哈希）。
+
 1. **记录写入者 `commit_block_state`（循环体内）**：body 改为
    `start → advance_message_block → build_block_commit → validate_commit_candidate →
    era.tavern.variables_commit → fold_block_commit → end`。
