@@ -33,6 +33,20 @@ export type DomainTaskV1 = ContractDomainTaskV1;
 export type PlannedSourceV1 = ContractPlannedSourceV1;
 export type TaskStateUpdateV1 = EraTaskStateUpdateV1;
 
+/** 一步一块处理中，跨批次携带的块游标。不保存整条消息，只保存续做所需最小状态。 */
+export interface EraSyncCursorV1 {
+  readonly messageId: number;
+  /** 楼层稳定 MK；恢复时按它核对楼层身份。 */
+  readonly mk: string;
+  readonly blockIndex: number;
+  /** 该楼层起点累计到当前块的变量状态。 */
+  readonly stat?: unknown;
+  readonly statFunc?: Readonly<Record<string, unknown>>;
+  /** 调用方已处理但文本尚未写回的调用标识。 */
+  readonly resolvedCallIds?: readonly string[];
+  readonly done?: boolean;
+}
+
 export interface EraServiceStateV1 {
   readonly [key: string]: unknown;
   readonly schemaVersion: 1;
@@ -42,6 +56,12 @@ export interface EraServiceStateV1 {
   readonly consecutiveProcessingCount: number;
   readonly consecutiveMk: string | null;
   readonly timerToken: string | null;
+  /**
+   * 一步一块的续做游标：函数调用会把一条消息的处理推到下一个批次，
+   * 因此块进度必须随服务状态跨批次携带，而不能只放在批次执行状态里。
+   * 该键只在实际存在未完成消息时出现，省略时状态仍满足契约 schema。
+   */
+  readonly syncCursor?: EraSyncCursorV1 | null;
   readonly scopeWindow: {
     readonly token: number | null;
     readonly messageId: number | null;

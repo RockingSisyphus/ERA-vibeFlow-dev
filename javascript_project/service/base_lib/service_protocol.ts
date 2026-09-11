@@ -97,6 +97,7 @@ export function createInitialServiceState(): EraServiceStateV1 {
     consecutiveProcessingCount: 0,
     consecutiveMk: null,
     timerToken: null,
+    syncCursor: null,
     scopeWindow: {
       token: null,
       messageId: null,
