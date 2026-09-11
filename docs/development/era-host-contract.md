@@ -149,7 +149,11 @@ UI 同步预览使用 `packages/era-workbench` 从 Service base_lib 唯一源码
 - `{{ERA:...}}`、`{{ERA-withmeta:...}}` 的宏语法和缺失值语义；
 - 持久化的 `ERAMetaData`、MK、EditLogs 或设置结构；
 - receipt 结算、写入确认、通知的可观察顺序；
-- UI 公开操作及其成功/失败结果。
+- UI 公开操作及其成功/失败结果；
+- 消息内函数调用：`<EraFCall name=.. args=.. [id] [status] [error]/>`、
+  `<EraFCallTx for=.. [applied]>` 的语法与语义，以及 `era.tavern.functions` Capability
+  与 `era.message.invoke_*` 内部事件。作者用法见
+  [ERA消息内函数调用作者指南](ERA%E6%B6%88%E6%81%AF%E5%86%85%E5%87%BD%E6%95%B0%E8%B0%83%E7%94%A8%E4%BD%9C%E8%80%85%E6%8C%87%E5%8D%97.md)。
 
 ## 验证选择
 

@@ -20,6 +20,11 @@
 - [`development/README.md`](development/README.md)：酒馆运行时接口、ERA 宿主边界、上游兼容性
   与 Codex 分层开发入口。
 
+## 功能计划
+
+- [ERA 消息内函数调用实施计划](development/ERA消息内函数调用实施计划.md)：当前源码基线、已确定需求、计划变更与测试范围；尚未实施，待接口定稿和原位架构审核。
+- [ERA 消息内函数调用作者指南](development/ERA消息内函数调用作者指南.md)：作者用法、调用语法、一步一块执行顺序、位置绑定 API、失败与取消语义，以及**当前未接通项**的明确说明。
+
 ## 审核与迁移证据
 
 `migration/*-architecture-change-inventory.md`、版本升级 inventory、baseline manifest、
