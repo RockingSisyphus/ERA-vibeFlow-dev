@@ -1,0 +1,63 @@
+{
+  "kind": "node",
+  "type_key": "era.sync.drive_message_blocks",
+  "display_name": "一步一块驱动消息块",
+  "category": "同步规划",
+  "description": "按块推进当前处理楼层：每次只处理一个块，遇到无标记 <EraFCall/> 时把函数调用路由置为 invoke 并把待调用交回调用方，函数本体不在本节点内执行。同步工作项仍由登记的 sync_planning 纯函数产出，保持既有提交链不变；块游标随结果报出，供跨步骤续做。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.sync.context",
+        "cardinality": "exactly_one",
+        "display_name": "同步上下文"
+      }
+    ],
+    "provides": [
+      {
+        "key": "expression_command_result",
+        "type": "era.expression.command.result",
+        "display_name": "表达式命令结果"
+      },
+      {
+        "key": "function_invocation_route",
+        "type": "era.sync.function.invocation.route",
+        "display_name": "函数调用路由"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.sync.context": [
+        "输入：已加载 Sidecar 状态的同步上下文。"
+      ]
+    },
+    "output_semantics": {
+      "expression_command_result": [
+        "输出：既有一致性规划产出的同步工作项，本节点不伪造同步结论。"
+      ],
+      "function_invocation_route": [
+        "输出：none 表示没有待调用；invoke 表示遇到无标记调用需要交接。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": ["browser", "node"],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/sync/drive_message_blocks.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.message_function_calls",
+    "era.service.sync_contracts",
+    "era.service.sync_planning"
+  ],
+  "capabilities": []
+}

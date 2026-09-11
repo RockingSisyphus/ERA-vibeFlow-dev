@@ -59,9 +59,9 @@ export interface EraServiceStateV1 {
   /**
    * 一步一块的续做游标：函数调用会把一条消息的处理推到下一个批次，
    * 因此块进度必须随服务状态跨批次携带，而不能只放在批次执行状态里。
-   * 该键只在实际存在未完成消息时出现，省略时状态仍满足契约 schema。
+   * 不在途时为 null；契约 schema 允许 null 与对象两种取值。
    */
-  readonly syncCursor?: EraSyncCursorV1 | null;
+  readonly syncCursor: EraSyncCursorV1 | null;
   readonly scopeWindow: {
     readonly token: number | null;
     readonly messageId: number | null;
