@@ -601,5 +601,19 @@ Artifact：`本地运行资料/live/artifacts-v4/st-run-20260911T15542066-e9262b
 回归门（不劣于基线）：`--path SEM-INS-001` → `evaluationStatus=passed`、18 actions。
 Artifact：`本地运行资料/live/artifacts-v4/st-run-20260911T15564682-0e4821694899`
 
+### 交付冻结复跑（2026-09-12，晚于全部源码提交）
+
+把两份构建产物冻结并记录哈希后，用同一份产物重跑两条验收：
+
+| 产物 | sha256 | 字节 |
+| --- | --- | --- |
+| `app/dist/ERA变量框架/index.js` | `8e42e55d3b207d8e52129c24578ae2afc8e856622bbac18e8d65778e96b28e56` | 12951511 |
+| `generated/era-service/workflow.js` | `2ecbf90c7b68af79b4a86db998af75e1fbfda79f975befae85291bd0c0822a11` | 12694999 |
+
+| 运行 | Artifact | 结果 |
+| --- | --- | --- |
+| `--suite era-message-function-call` | `st-run-20260911T16374264-997653e52f67` | `evaluationStatus=passed`，6/6 passed、findings 0 |
+| `--path SEM-INS-001` | `st-run-20260911T16400427-f8dde8eab83c` | `evaluationStatus=passed`，18 actions |
+
 ⇒ **功能行为已通过真实酒馆验收（专项 6/6）**；仍未完成的是锁定语义的另一半
 （状态也逐块落盘，见偏差 1、4 与两个待确认点），以及 `syncCursor` 的正式升版打包。

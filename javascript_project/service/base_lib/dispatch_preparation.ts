@@ -67,7 +67,8 @@ export function functionCallResumeOf(
 /**
  * 把恢复事件记录写进处理楼层的文本。
  *
- * 只有楼层身份与 MK 都对得上才写：迟到的回送不能把函数效果写到另一条消息上。
+ * 只有**楼层**（messageId）对得上才写：迟到的回送不能把函数效果写到另一条消息上。
+ * MK 不进身份判定——它会随同步推移变化（见函数内注释）。
  */
 function recordedFunctionCallText(input: {
   readonly step: PlannedStepV1;

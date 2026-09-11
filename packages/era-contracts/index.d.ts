@@ -50,6 +50,16 @@ export interface EraServiceConfigV1 {
 
 export declare const DEFAULT_ERA_SERVICE_CONFIG_V1: Readonly<EraServiceConfigV1>;
 
+export interface EraSyncCursorV1 {
+  readonly messageId: number;
+  readonly mk: string;
+  readonly blockIndex: number;
+  readonly stat?: Readonly<Record<string, unknown>>;
+  readonly statFunc?: Readonly<Record<string, unknown>>;
+  readonly resolvedCallIds?: readonly string[];
+  readonly done?: boolean;
+}
+
 export interface EraServiceStateV1 {
   readonly schemaVersion: 1;
   readonly collection: readonly EraTransportEventV1[];
@@ -58,6 +68,13 @@ export interface EraServiceStateV1 {
   readonly consecutiveProcessingCount: number;
   readonly consecutiveMk: string | null;
   readonly timerToken: string | null;
+  /**
+   * 消息内函数调用的块级续做游标；未接通写入时为 null。
+   *
+   * 校验器（`isEraServiceStateV1`）把它算作服务状态的必填字段，因此这里必须声明，
+   * 否则声明的 ABI 与实际接受的形状不一致。
+   */
+  readonly syncCursor: EraSyncCursorV1 | null;
   readonly scopeWindow: EraScopeWindowStateV1;
 }
 
