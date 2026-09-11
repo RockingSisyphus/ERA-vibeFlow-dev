@@ -8,10 +8,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-const engineUrl = new URL(
-  '../../../javascript_project/service/base_lib/facade_api_engine.ts',
-  import.meta.url,
-).href;
+const engineUrl = new URL('../../../javascript_project/service/base_lib/facade_api_engine.ts', import.meta.url).href;
 const engine = await import(/* @vite-ignore */ engineUrl);
 
 const MESSAGE = [
@@ -63,8 +60,6 @@ describe('逐块提交的位置锚定落点', () => {
   it('锚点找不到时退回追加，不静默丢记录', () => {
     const text: string = appendWith({ callId: 'missing' }).committedContent;
 
-    expect(text).toBe(
-      `${MESSAGE}\n<era_tx s="m"><VariableEdit>{"hp":{"$expr":"hp+30"}}</VariableEdit></era_tx>`,
-    );
+    expect(text).toBe(`${MESSAGE}\n<era_tx s="m"><VariableEdit>{"hp":{"$expr":"hp+30"}}</VariableEdit></era_tx>`);
   });
 });

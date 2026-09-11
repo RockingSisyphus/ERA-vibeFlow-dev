@@ -13,7 +13,13 @@ import type { BatchExecutionStateV1, PlannedStepV1 } from "./service_types.ts";
 
 export type FacadeScope = "message" | "branch" | "always";
 
-type OperationName = "insert" | "edit" | "delete" | "functionInsert" | "functionEdit" | "functionDelete";
+type OperationName =
+  | "insert"
+  | "edit"
+  | "delete"
+  | "functionInsert"
+  | "functionEdit"
+  | "functionDelete";
 
 function scopeCode(scope: FacadeScope): "m" | "b" | "a" {
   return scope === "message" ? "m" : scope === "branch" ? "b" : "a";
@@ -29,8 +35,14 @@ function operationTag(name: OperationName): string {
 }
 
 function isOperationName(value: string): value is OperationName {
-  return value === "insert" || value === "edit" || value === "delete" ||
-    value === "functionInsert" || value === "functionEdit" || value === "functionDelete";
+  return (
+    value === "insert" ||
+    value === "edit" ||
+    value === "delete" ||
+    value === "functionInsert" ||
+    value === "functionEdit" ||
+    value === "functionDelete"
+  );
 }
 
 interface ScopeWindowState {
@@ -64,7 +76,11 @@ function errorMessage(error: unknown): string {
 }
 
 function requireRequest(value: unknown): ApiRequest {
-  if (!isRecord(value) || !isRecord(value.task) || !Array.isArray(value.sources)) {
+  if (
+    !isRecord(value) ||
+    !isRecord(value.task) ||
+    !Array.isArray(value.sources)
+  ) {
     throw new TypeError("公共 Facade 请求缺少 task 或来源。");
   }
   const task = value.task as unknown as EraApiTaskV1;
@@ -82,7 +98,9 @@ function requireRequest(value: unknown): ApiRequest {
 
 function messagesFrom(value: unknown) {
   if (!isEraTavernMessageContextV2(value)) {
-    throw new TypeError("消息 Capability 未返回严格 era-active-message-v1 上下文。");
+    throw new TypeError(
+      "消息 Capability 未返回严格 era-active-message-v1 上下文。",
+    );
   }
   return value.messages;
 }
@@ -99,13 +117,17 @@ function targetAi(
   messages: ReturnType<typeof messagesFrom>,
   request: ApiRequest,
   identity: unknown,
-): { readonly message: ReturnType<typeof latestAi>; readonly sourceInvalid: boolean } {
+): {
+  readonly message: ReturnType<typeof latestAi>;
+  readonly sourceInvalid: boolean;
+} {
   if (!Object.prototype.hasOwnProperty.call(request.detail, "sourceContext")) {
     return { message: latestAi(messages), sourceInvalid: false };
   }
-  const verified = isRecord(identity) && isRecord(identity.statusbarSource)
-    ? identity.statusbarSource
-    : null;
+  const verified =
+    isRecord(identity) && isRecord(identity.statusbarSource)
+      ? identity.statusbarSource
+      : null;
   const requested = request.detail.sourceContext;
   if (!verified || !isRecord(requested)) {
     return { message: latestAi(messages), sourceInvalid: true };
@@ -122,7 +144,10 @@ function targetAi(
     "swipeId",
     "iframeName",
   ].every((key) => verified[key] === requested[key]);
-  const message = messages.find((candidate) => candidate.messageId === verified.messageId && candidate.role !== "user");
+  const message = messages.find(
+    (candidate) =>
+      candidate.messageId === verified.messageId && candidate.role !== "user",
+  );
   return message && exact
     ? { message, sourceInvalid: false }
     : { message: latestAi(messages), sourceInvalid: true };
@@ -130,7 +155,9 @@ function targetAi(
 
 function hasScopeMarker(text: string, code: "m" | "b"): boolean {
   const escaped = code === "m" ? "m" : "b";
-  return new RegExp(`<era_tx\\b[^>]*\\bs=["']${escaped}["'][^>]*>`, "i").test(text);
+  return new RegExp(`<era_tx\\b[^>]*\\bs=["']${escaped}["'][^>]*>`, "i").test(
+    text,
+  );
 }
 
 function readLifecycleToken(identity: unknown): number {
@@ -143,9 +170,13 @@ function readLifecycleToken(identity: unknown): number {
 
 function sameIdentity(left: unknown, right: unknown): boolean {
   if (!isRecord(left) || !isRecord(right)) return false;
-  return ["characterId", "groupId", "chatId", "scriptId", "lifecycleToken"].every(
-    (key) => left[key] === right[key],
-  );
+  return [
+    "characterId",
+    "groupId",
+    "chatId",
+    "scriptId",
+    "lifecycleToken",
+  ].every((key) => left[key] === right[key]);
 }
 
 function stateUpdate(
@@ -196,12 +227,14 @@ export function routeFacadeCommand(
     dispatchContext: step.dispatchContext,
   };
   const first = step.task.args[0];
-  if (first?.kind === "json" && isRecord(first.value)) request.detail = first.value;
-  const route = step.task.eventType === "era.facade.commit"
-    ? "commit"
-    : step.task.eventType === "era.facade.sync"
-      ? "sync"
-      : "failed";
+  if (first?.kind === "json" && isRecord(first.value))
+    request.detail = first.value;
+  const route =
+    step.task.eventType === "era.facade.commit"
+      ? "commit"
+      : step.task.eventType === "era.facade.sync"
+        ? "sync"
+        : "failed";
   return { request, executionState, route };
 }
 
@@ -220,27 +253,46 @@ export function inspectWindow(
     prepared.processingMessage?.messageId === targeted.message.messageId
       ? prepared.processingMessage
       : null;
-  const latest = preparedMessage === null
-    ? targeted.message
-    : { ...targeted.message, activeText: preparedMessage.activeText };
+  const latest =
+    preparedMessage === null
+      ? targeted.message
+      : { ...targeted.message, activeText: preparedMessage.activeText };
   const token = readLifecycleToken(identity);
   const previous = executionState.nextState.scopeWindow as ScopeWindowState;
-  const window: ScopeWindowState = previous.token === token && previous.messageId === latest.messageId
-    ? previous
-    : {
-        token,
-        messageId: latest.messageId,
-        messageAdmission: !hasScopeMarker(latest.activeText, "m"),
-        branchAdmission: !messages.some((message) => hasScopeMarker(message.activeText, "b")),
-      };
-  const sourceBasis = isEraDispatchContextV3(prepared) && prepared.sourceBasis !== undefined
-    ? prepared.sourceBasis
-    : { identity: {
-        characterId: isRecord(identity) ? identity.characterId ?? null : null,
-        chatId: isRecord(identity) ? identity.chatId : null,
-        groupId: isRecord(identity) ? identity.groupId ?? null : null,
-      }, messages };
-  return { request, executionState, identity, messages, latest, window, sourceBasis, sourceInvalid: targeted.sourceInvalid };
+  const window: ScopeWindowState =
+    previous.token === token && previous.messageId === latest.messageId
+      ? previous
+      : {
+          token,
+          messageId: latest.messageId,
+          messageAdmission: !hasScopeMarker(latest.activeText, "m"),
+          branchAdmission: !messages.some((message) =>
+            hasScopeMarker(message.activeText, "b"),
+          ),
+        };
+  const sourceBasis =
+    isEraDispatchContextV3(prepared) && prepared.sourceBasis !== undefined
+      ? prepared.sourceBasis
+      : {
+          identity: {
+            characterId: isRecord(identity)
+              ? (identity.characterId ?? null)
+              : null,
+            chatId: isRecord(identity) ? identity.chatId : null,
+            groupId: isRecord(identity) ? (identity.groupId ?? null) : null,
+          },
+          messages,
+        };
+  return {
+    request,
+    executionState,
+    identity,
+    messages,
+    latest,
+    window,
+    sourceBasis,
+    sourceInvalid: targeted.sourceInvalid,
+  };
 }
 
 function normalizeScope(value: unknown): FacadeScope | null {
@@ -254,14 +306,16 @@ function normalizeOperations(value: unknown) {
     throw new TypeError("ERA.commit operations 必须是非空数组。");
   }
   return value.map((raw, index) => {
-    if (!isRecord(raw)) throw new TypeError(`operations[${index}] 必须是对象。`);
+    if (!isRecord(raw))
+      throw new TypeError(`operations[${index}] 必须是对象。`);
     const keys = Object.keys(raw);
     if (keys.length !== 1 || !isOperationName(keys[0]!)) {
       throw new TypeError(`operations[${index}] 必须且只能包含六类操作之一。`);
     }
     const name = keys[0] as OperationName;
     const payload = raw[name];
-    if (!isRecord(payload)) throw new TypeError(`operations[${index}].${name} 必须是对象。`);
+    if (!isRecord(payload))
+      throw new TypeError(`operations[${index}].${name} 必须是对象。`);
     return { name, payload: cloneEraPortableJsonV1(payload) };
   });
 }
@@ -283,25 +337,45 @@ export function validateCommit(inspected: unknown) {
     }
     const requestedToken = request.detail.windowToken;
     const currentToken = readLifecycleToken(inspected.identity);
-    if (!Number.isSafeInteger(requestedToken) || Number(requestedToken) !== currentToken) {
+    if (
+      !Number.isSafeInteger(requestedToken) ||
+      Number(requestedToken) !== currentToken
+    ) {
       return {
         route: "failed",
         context: inspected,
-        error: failure("ERA_API_WINDOW_CHANGED", "ERA.commit 入队后 Tavern 生命周期窗口已经变化。", "cancelled"),
+        error: failure(
+          "ERA_API_WINDOW_CHANGED",
+          "ERA.commit 入队后 Tavern 生命周期窗口已经变化。",
+          "cancelled",
+        ),
       };
     }
     const scope = normalizeScope(request.detail.scope);
     if (scope === null) {
-      return { route: "failed", context: inspected, error: failure("ERA_API_SCOPE_INVALID", "scope 只允许 message、branch 或 always。") };
+      return {
+        route: "failed",
+        context: inspected,
+        error: failure(
+          "ERA_API_SCOPE_INVALID",
+          "scope 只允许 message、branch 或 always。",
+        ),
+      };
     }
     const operations = normalizeOperations(request.detail.operations);
     const window = inspected.window as ScopeWindowState;
-    const allowed = scope === "always" || (scope === "message" ? window.messageAdmission : window.branchAdmission);
+    const allowed =
+      scope === "always" ||
+      (scope === "message" ? window.messageAdmission : window.branchAdmission);
     return allowed
       ? { route: "commit", context: { ...inspected, scope, operations } }
       : { route: "skipped", context: { ...inspected, scope, operations } };
   } catch (error) {
-    return { route: "failed", context: inspected, error: failure("ERA_API_COMMIT_INVALID", errorMessage(error)) };
+    return {
+      route: "failed",
+      context: inspected,
+      error: failure("ERA_API_COMMIT_INVALID", errorMessage(error)),
+    };
   }
 }
 
@@ -310,14 +384,19 @@ export function buildTransaction(validated: unknown) {
     throw new TypeError("事务构造只接受已准入的 commit。");
   }
   const scope = validated.scope as FacadeScope;
-  const content = validated.operations.map((operation) => {
-    if (!isRecord(operation) || !isOperationName(String(operation.name))) {
-      throw new TypeError("已校验操作在事务构造阶段损坏。");
-    }
-    const tag = operationTag(operation.name as OperationName);
-    return `<${tag}>${JSON.stringify(operation.payload)}</${tag}>`;
-  }).join("");
-  return { ...validated, transaction: `<era_tx s="${scopeCode(scope)}">${content}</era_tx>` };
+  const content = validated.operations
+    .map((operation) => {
+      if (!isRecord(operation) || !isOperationName(String(operation.name))) {
+        throw new TypeError("已校验操作在事务构造阶段损坏。");
+      }
+      const tag = operationTag(operation.name as OperationName);
+      return `<${tag}>${JSON.stringify(operation.payload)}</${tag}>`;
+    })
+    .join("");
+  return {
+    ...validated,
+    transaction: `<era_tx s="${scopeCode(scope)}">${content}</era_tx>`,
+  };
 }
 
 /** 正则元字符转义；调用标识来自作者，不能直接拼进正则。 */
@@ -362,7 +441,11 @@ function anchoredTransactionContent(input: {
       }
     }
     const offset = input.position.afterOffset;
-    if (Number.isSafeInteger(offset) && Number(offset) >= 0 && Number(offset) <= input.base.length) {
+    if (
+      Number.isSafeInteger(offset) &&
+      Number(offset) >= 0 &&
+      Number(offset) <= input.base.length
+    ) {
       const at = Number(offset);
       return `${input.base.slice(0, at)}\n${input.transaction}${input.base.slice(at)}`;
     }
@@ -371,12 +454,20 @@ function anchoredTransactionContent(input: {
 }
 
 export function buildAppend(transaction: unknown) {
-  if (!isRecord(transaction) || !isRecord(transaction.latest) || typeof transaction.transaction !== "string") {
+  if (
+    !isRecord(transaction) ||
+    !isRecord(transaction.latest) ||
+    typeof transaction.transaction !== "string"
+  ) {
     throw new TypeError("消息追加计划缺少目标或 era_tx。");
   }
   const latest = transaction.latest;
   const id = latest.messageId;
-  if (!Number.isSafeInteger(id) || Number(id) < 0 || typeof latest.activeText !== "string") {
+  if (
+    !Number.isSafeInteger(id) ||
+    Number(id) < 0 ||
+    typeof latest.activeText !== "string"
+  ) {
     throw new TypeError("最新 AI 消息不是严格文本投影。");
   }
   const content = anchoredTransactionContent({
@@ -402,46 +493,110 @@ export function buildAppend(transaction: unknown) {
 
 export function recheckWindow(append: unknown, currentIdentity: unknown) {
   if (!isRecord(append)) throw new TypeError("窗口复核缺少追加计划。");
-  const request = isRecord(append.request) ? requireRequest(append.request) : null;
-  const sourceRequested = request && Object.prototype.hasOwnProperty.call(request.detail, "sourceContext");
-  const currentSource = isRecord(currentIdentity) ? currentIdentity.statusbarSource : null;
-  const sourceCurrent = !sourceRequested || (
-    isRecord(request!.detail.sourceContext) &&
-    isRecord(currentSource) &&
-    ["kind", "pageEpoch", "instanceId", "characterId", "groupId", "chatId", "messageId", "mk", "swipeId", "iframeName"]
-      .every((key) => (request!.detail.sourceContext as Record<string, unknown>)[key] === currentSource[key])
-  );
+  const request = isRecord(append.request)
+    ? requireRequest(append.request)
+    : null;
+  const sourceRequested =
+    request &&
+    Object.prototype.hasOwnProperty.call(request.detail, "sourceContext");
+  const currentSource = isRecord(currentIdentity)
+    ? currentIdentity.statusbarSource
+    : null;
+  const sourceCurrent =
+    !sourceRequested ||
+    (isRecord(request!.detail.sourceContext) &&
+      isRecord(currentSource) &&
+      [
+        "kind",
+        "pageEpoch",
+        "instanceId",
+        "characterId",
+        "groupId",
+        "chatId",
+        "messageId",
+        "mk",
+        "swipeId",
+        "iframeName",
+      ].every(
+        (key) =>
+          (request!.detail.sourceContext as Record<string, unknown>)[key] ===
+          currentSource[key],
+      ));
   return sameIdentity(append.identity, currentIdentity) && sourceCurrent
     ? { route: "current", context: append }
     : {
         route: "changed",
         context: append,
-        error: failure("ERA_API_WINDOW_CHANGED", "写入前身份或生命周期窗口已经变化。", "cancelled"),
+        error: failure(
+          "ERA_API_WINDOW_CHANGED",
+          "写入前身份或生命周期窗口已经变化。",
+          "cancelled",
+        ),
       };
 }
 
 export function verifyCommitted(appendResult: unknown, rawMessages: unknown) {
-  if (!isRecord(appendResult) || appendResult.status !== "committed" || !isRecord(appendResult.context)) {
+  if (
+    !isRecord(appendResult) ||
+    appendResult.status !== "committed" ||
+    !isRecord(appendResult.context)
+  ) {
     const append = isRecord(appendResult) ? appendResult : {};
     const observed = isRecord(append.observed) ? append.observed : {};
-    return { route: "failed", context: append.context ?? appendResult,
-      error: failure("ERA_API_MESSAGE_APPEND_FAILED",
-        typeof observed.message === "string" ? observed.message : "Tavern 未确认 era_tx 写入。", "tavern") };
+    return {
+      route: "failed",
+      context: append.context ?? appendResult,
+      error: failure(
+        "ERA_API_MESSAGE_APPEND_FAILED",
+        typeof observed.message === "string"
+          ? observed.message
+          : "Tavern 未确认 era_tx 写入。",
+        "tavern",
+      ),
+    };
   }
   const context = appendResult.context;
   try {
     const messages = messagesFrom(rawMessages);
-    const matches = messages.filter((message) => message.messageId === context.messageId);
-    if (matches.length !== 1 || matches[0]!.activeText !== context.committedContent) {
-      return { route: "failed", context, error: failure("ERA_API_MESSAGE_READBACK_MISMATCH", "era_tx 回读文本与写入计划不一致。", "tavern") };
+    const matches = messages.filter(
+      (message) => message.messageId === context.messageId,
+    );
+    if (
+      matches.length !== 1 ||
+      matches[0]!.activeText !== context.committedContent
+    ) {
+      return {
+        route: "failed",
+        context,
+        error: failure(
+          "ERA_API_MESSAGE_READBACK_MISMATCH",
+          "era_tx 回读文本与写入计划不一致。",
+          "tavern",
+        ),
+      };
     }
-    const originalDispatch = context.request && isRecord(context.request)
-      ? context.request.dispatchContext
-      : null;
-    if (!isEraDispatchContextV2(originalDispatch) && !isEraDispatchContextV3(originalDispatch)) {
-      return { route: "failed", context, error: failure("ERA_API_DISPATCH_CONTEXT_INVALID", "原始派发上下文损坏。", "domain") };
+    const originalDispatch =
+      context.request && isRecord(context.request)
+        ? context.request.dispatchContext
+        : null;
+    if (
+      !isEraDispatchContextV2(originalDispatch) &&
+      !isEraDispatchContextV3(originalDispatch)
+    ) {
+      return {
+        route: "failed",
+        context,
+        error: failure(
+          "ERA_API_DISPATCH_CONTEXT_INVALID",
+          "原始派发上下文损坏。",
+          "domain",
+        ),
+      };
     }
-    if (!isRecord(context.sourceBasis) || !isRecord(context.sourceBasis.identity)) {
+    if (
+      !isRecord(context.sourceBasis) ||
+      !isRecord(context.sourceBasis.identity)
+    ) {
       throw new TypeError("API 写入缺少原始聊天依据。");
     }
     const dispatchContext = {
@@ -454,7 +609,8 @@ export function verifyCommitted(appendResult: unknown, rawMessages: unknown) {
               messages: cloneEraPortableJsonV1(messages),
             },
             processingMessage:
-              originalDispatch.processingMessage?.messageId === context.messageId
+              originalDispatch.processingMessage?.messageId ===
+              context.messageId
                 ? {
                     ...originalDispatch.processingMessage,
                     activeText: context.committedContent,
@@ -472,17 +628,43 @@ export function verifyCommitted(appendResult: unknown, rawMessages: unknown) {
           }
         : {}),
     };
-    if (!isEraDispatchContextV2(dispatchContext) && !isEraDispatchContextV3(dispatchContext)) {
-      return { route: "failed", context, error: failure("ERA_API_DISPATCH_CONTEXT_INVALID", "提交后消息无法形成同步上下文。", "domain") };
+    if (
+      !isEraDispatchContextV2(dispatchContext) &&
+      !isEraDispatchContextV3(dispatchContext)
+    ) {
+      return {
+        route: "failed",
+        context,
+        error: failure(
+          "ERA_API_DISPATCH_CONTEXT_INVALID",
+          "提交后消息无法形成同步上下文。",
+          "domain",
+        ),
+      };
     }
-    return { route: "sync", context: { ...context, messages, dispatchContext } };
+    return {
+      route: "sync",
+      context: { ...context, messages, dispatchContext },
+    };
   } catch (error) {
-    return { route: "failed", context, error: failure("ERA_API_POST_COMMIT_READ_FAILED", errorMessage(error), "tavern") };
+    return {
+      route: "failed",
+      context,
+      error: failure(
+        "ERA_API_POST_COMMIT_READ_FAILED",
+        errorMessage(error),
+        "tavern",
+      ),
+    };
   }
 }
 
 export function prepareCommitSync(verified: unknown) {
-  if (!isRecord(verified) || !isRecord(verified.request) || !isRecord(verified.dispatchContext)) {
+  if (
+    !isRecord(verified) ||
+    !isRecord(verified.request) ||
+    !isRecord(verified.dispatchContext)
+  ) {
     throw new TypeError("即时同步步骤缺少提交后上下文。");
   }
   const request = requireRequest(verified.request);
@@ -493,7 +675,11 @@ export function prepareCommitSync(verified: unknown) {
     context: "latest-message-with-mk",
     kind: "sync",
     reason: "facade-commit",
-    target: { kind: "message", messageId: Number(verified.messageId), stopAfterTarget: false },
+    target: {
+      kind: "message",
+      messageId: Number(verified.messageId),
+      stopAfterTarget: false,
+    },
     fullRebuild: false,
   };
   return {
@@ -513,7 +699,11 @@ export function prepareCommitSync(verified: unknown) {
 }
 
 export function buildSkippedResult(context: unknown): EraTaskResultV1 {
-  if (!isRecord(context) || !isRecord(context.request) || !isRecord(context.executionState)) {
+  if (
+    !isRecord(context) ||
+    !isRecord(context.request) ||
+    !isRecord(context.executionState)
+  ) {
     throw new TypeError("skipped receipt 缺少请求或执行状态。");
   }
   const request = requireRequest(context.request);
@@ -523,11 +713,16 @@ export function buildSkippedResult(context: unknown): EraTaskResultV1 {
     settlements: settlements(request, "completed", {
       status: "skipped",
       scope: String(context.scope),
-      messageId: Number(isRecord(context.latest) ? context.latest.messageId : -1),
+      messageId: Number(
+        isRecord(context.latest) ? context.latest.messageId : -1,
+      ),
     }),
     notifications: [],
     diagnostics: [],
-    stateUpdate: stateUpdate(execution, context.window as unknown as ScopeWindowState),
+    stateUpdate: stateUpdate(
+      execution,
+      context.window as unknown as ScopeWindowState,
+    ),
   };
 }
 
@@ -539,19 +734,35 @@ export function buildFailureResult(candidate: unknown): EraTaskResultV1 {
   const request = requireRequest(context.request);
   const execution = context.executionState as unknown as BatchExecutionStateV1;
   const failed = isRecord(candidate.error)
-    ? candidate.error as unknown as EraFailureV1
+    ? (candidate.error as unknown as EraFailureV1)
     : failure("ERA_API_COMMIT_FAILED", "ERA.commit 失败。");
   return {
     status: "failed",
     settlements: settlements(request, "failed", failed),
     notifications: [],
-    diagnostics: [{ code: failed.code, message: failed.message, sequence: request.task.primaryEvent.sequence }],
-    stateUpdate: stateUpdate(execution, context.window as unknown as ScopeWindowState),
+    diagnostics: [
+      {
+        code: failed.code,
+        message: failed.message,
+        sequence: request.task.primaryEvent.sequence,
+      },
+    ],
+    stateUpdate: stateUpdate(
+      execution,
+      context.window as unknown as ScopeWindowState,
+    ),
   };
 }
 
-export function buildCommittedResult(syncResult: EraTaskResultV1, context: unknown): EraTaskResultV1 {
-  if (!isRecord(context) || !isRecord(context.request) || !isRecord(context.executionState)) {
+export function buildCommittedResult(
+  syncResult: EraTaskResultV1,
+  context: unknown,
+): EraTaskResultV1 {
+  if (
+    !isRecord(context) ||
+    !isRecord(context.request) ||
+    !isRecord(context.executionState)
+  ) {
     throw new TypeError("committed receipt 缺少请求上下文。");
   }
   if (syncResult.status !== "committed" && syncResult.status !== "no-op") {
@@ -567,7 +778,10 @@ export function buildCommittedResult(syncResult: EraTaskResultV1, context: unkno
       messageId: Number(context.messageId),
     }),
     notifications: [],
-    stateUpdate: stateUpdate(execution, context.window as unknown as ScopeWindowState),
+    stateUpdate: stateUpdate(
+      execution,
+      context.window as unknown as ScopeWindowState,
+    ),
   };
 }
 
@@ -577,8 +791,15 @@ export function planFacadeSync(rawRequest: unknown) {
   const mode = detail.mode ?? "auto";
   let target: EraSyncTaskV1["target"];
   let fullRebuild = false;
-  if (Number.isSafeInteger(detail.rollbackTo) && Number(detail.rollbackTo) >= 0) {
-    target = { kind: "message", messageId: Number(detail.rollbackTo), stopAfterTarget: true };
+  if (
+    Number.isSafeInteger(detail.rollbackTo) &&
+    Number(detail.rollbackTo) >= 0
+  ) {
+    target = {
+      kind: "message",
+      messageId: Number(detail.rollbackTo),
+      stopAfterTarget: true,
+    };
   } else if (mode === "full") {
     target = { kind: "auto" };
     fullRebuild = true;
@@ -587,7 +808,14 @@ export function planFacadeSync(rawRequest: unknown) {
   } else if (mode === "auto" || mode === undefined) {
     target = { kind: "auto" };
   } else {
-    return { route: "failed", request, error: failure("ERA_API_SYNC_MODE_INVALID", "sync mode 只允许 auto、latest、full 或 rollbackTo。") };
+    return {
+      route: "failed",
+      request,
+      error: failure(
+        "ERA_API_SYNC_MODE_INVALID",
+        "sync mode 只允许 auto、latest、full 或 rollbackTo。",
+      ),
+    };
   }
   const task: EraSyncTaskV1 = {
     id: `${request.task.id}:facade-sync`,
@@ -616,9 +844,14 @@ export function planFacadeSync(rawRequest: unknown) {
   };
 }
 
-export function adaptSyncResult(syncResult: EraTaskResultV1, planned: unknown): EraTaskResultV1 {
-  if (!isRecord(planned) || !isRecord(planned.request)) throw new TypeError("同步结果缺少 Facade 请求。");
-  if (syncResult.status !== "committed" && syncResult.status !== "no-op") return { ...syncResult, notifications: [] };
+export function adaptSyncResult(
+  syncResult: EraTaskResultV1,
+  planned: unknown,
+): EraTaskResultV1 {
+  if (!isRecord(planned) || !isRecord(planned.request))
+    throw new TypeError("同步结果缺少 Facade 请求。");
+  if (syncResult.status !== "committed" && syncResult.status !== "no-op")
+    return { ...syncResult, notifications: [] };
   const request = requireRequest(planned.request);
   return {
     ...syncResult,
@@ -628,18 +861,32 @@ export function adaptSyncResult(syncResult: EraTaskResultV1, planned: unknown): 
 }
 
 export function buildSyncFailure(planned: unknown): EraTaskResultV1 {
-  if (!isRecord(planned) || !isRecord(planned.request)) throw new TypeError("同步失败缺少 Facade 请求。");
+  if (!isRecord(planned) || !isRecord(planned.request))
+    throw new TypeError("同步失败缺少 Facade 请求。");
   const request = requireRequest(planned.request);
-  const failed = isRecord(planned.error) ? planned.error as unknown as EraFailureV1 : failure("ERA_API_SYNC_FAILED", "ERA.sync 失败。");
+  const failed = isRecord(planned.error)
+    ? (planned.error as unknown as EraFailureV1)
+    : failure("ERA_API_SYNC_FAILED", "ERA.sync 失败。");
   return {
     status: "failed",
     settlements: settlements(request, "failed", failed),
     notifications: [],
-    diagnostics: [{ code: failed.code, message: failed.message, sequence: request.task.primaryEvent.sequence }],
+    diagnostics: [
+      {
+        code: failed.code,
+        message: failed.message,
+        sequence: request.task.primaryEvent.sequence,
+      },
+    ],
   };
 }
 
-export function mergeExclusiveResults(values: readonly EraTaskResultV1[]): EraTaskResultV1 {
-  if (values.length !== 1) throw new TypeError(`公共 Facade 分支必须且只能产生一个结果，实际 ${values.length} 个。`);
+export function mergeExclusiveResults(
+  values: readonly EraTaskResultV1[],
+): EraTaskResultV1 {
+  if (values.length !== 1)
+    throw new TypeError(
+      `公共 Facade 分支必须且只能产生一个结果，实际 ${values.length} 个。`,
+    );
   return values[0]!;
 }
