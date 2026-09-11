@@ -108,6 +108,11 @@ export interface EraApplyMessageCommandsInput {
   /** Stable message MK used as the default deterministic-random seed. */
   readonly randomSourceKey?: string;
   readonly traditionalToSimplified?: boolean;
+  /**
+   * 逐块推进一步一块的生命周期：只执行 [fromIndex, toIndex) 内的块。
+   * 省略时保持既有语义，一次执行整条消息的全部六类指令。
+   */
+  readonly commandRange?: Readonly<{ readonly fromIndex: number; readonly toIndex: number }>;
 }
 
 export interface EraApplyMessageCommandsResult extends EraCrudResult {
@@ -1218,10 +1223,17 @@ export function applyMessageCommands(
       ? { sourceKey: input.randomSourceKey, drawOffset: 0 }
       : undefined;
   try {
-    const commands = parseMessageCommands({
+    const allCommands = parseMessageCommands({
       content: input.content,
       traditionalToSimplified: input.traditionalToSimplified,
     });
+    const commands =
+      input.commandRange === undefined
+        ? allCommands
+        : allCommands.slice(
+            Math.max(0, input.commandRange.fromIndex),
+            Math.max(0, input.commandRange.toIndex),
+          );
     let current = initial;
     let currentStatFunc = cloneCrudValue(layerStartStatFunc) as Record<
       string,

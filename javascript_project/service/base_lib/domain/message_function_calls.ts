@@ -7,10 +7,13 @@
  */
 
 import {
+  applyMessageCommands,
   parsePositionedMessageCommands,
   type EraCommandParseInput,
   type EraCrudCommand,
   type EraCrudDiagnostic,
+  type EraCrudEditLog,
+  type EraFunctionEditLog,
 } from "./crud_engine.ts";
 
 /** 规范写法首字母大写；解析大小写不敏感。 */
@@ -361,4 +364,194 @@ export function describeEraFunctionCallBlock(call: EraFunctionCallSite): string 
     diagnosticCodes.length > 0 ? ` [${diagnosticCodes.join(",")}]` : "";
   const state = call.processed ? "已处理" : "待处理";
   return `EraFCall{name=${call.name ?? "?"}${anchor} ${state}}${suffix}`;
+}
+
+/** 纯计算模式跳过无标记调用时使用的诊断码。 */
+export const ERA_FCALL_NOT_EXECUTED = "ERA_FCALL_NOT_EXECUTED";
+/** 已处理调用重放其操作区时使用的提示码。 */
+export const ERA_FCALL_REPLAYED = "ERA_FCALL_REPLAYED";
+/** 推进上限保护：超过该块数仍未结束时报诊断而不是静默截断。 */
+export const ERA_BLOCK_CURSOR_LIMIT = "ERA_BLOCK_CURSOR_LIMIT";
+
+/**
+ * 一步一块的块游标。只保存续做所需的最小状态：当前楼层与块下标、本楼已记日志
+ * 增量与当前随机抽取偏移；不保存累计变量（由调用方随步骤携带）。
+ */
+export interface EraBlockCursor {
+  readonly messageId: number;
+  readonly mk: string;
+  readonly blockIndex: number;
+  readonly done: boolean;
+  readonly randomDrawOffset: number;
+  readonly editLog: readonly EraCrudEditLog[];
+  readonly functionEditLog: readonly EraFunctionEditLog[];
+}
+
+export interface EraBlockAdvanceInput {
+  readonly content: string;
+  readonly messageId: number;
+  readonly cursor: EraBlockCursor;
+  readonly initialStat: unknown;
+  readonly meta: Readonly<Record<string, unknown>>;
+  readonly initialStatFunc?: Readonly<Record<string, unknown>>;
+  readonly randomSourceKey?: string;
+  readonly traditionalToSimplified?: boolean;
+  /** 正式同步为 true（可要求调用函数）；只读与试算为 false。 */
+  readonly formal?: boolean;
+}
+
+export interface EraBlockAdvanceResult {
+  /** 本次推进实际执行的块下标；最多一个。 */
+  readonly executedBlockIndexes: readonly number[];
+  readonly cursor: EraBlockCursor;
+  readonly finalStat: unknown;
+  readonly finalStatFunc?: Readonly<Record<string, unknown>>;
+  /** 本块要求调用的函数；没有待调用时为 null。 */
+  readonly pendingCall: EraFunctionCallSite | null;
+  readonly diagnostics: readonly EraCrudDiagnostic[];
+}
+
+/** 从楼层起点创建游标：不携带上次推进的任何累计状态。 */
+export function createEraBlockCursor(input: {
+  readonly messageId: number;
+  readonly mk: string;
+}): EraBlockCursor {
+  return {
+    messageId: input.messageId,
+    mk: input.mk,
+    blockIndex: 0,
+    done: false,
+    randomDrawOffset: 0,
+    editLog: [],
+    functionEditLog: [],
+  };
+}
+
+function blockDiagnostic(code: string, message: string): EraCrudDiagnostic {
+  return { code, message, path: "" };
+}
+
+/**
+ * 推进一个块：读到一块 → 执行一块 → 推进一步，然后结束。
+ *
+ * 调用块本身不产生变量操作；未处理调用会以 pendingCall 交回调用方，
+ * 由调用方在块边界之外执行函数并把结果写回操作区。嵌套调用块只报诊断。
+ */
+export function advanceEraBlockCursor(
+  input: EraBlockAdvanceInput,
+): EraBlockAdvanceResult {
+  const formal = input.formal ?? true;
+  const blocks = parseMessageBlocks({
+    content: input.content,
+    traditionalToSimplified: input.traditionalToSimplified,
+  });
+  const index = input.cursor.blockIndex;
+  const diagnostics: EraCrudDiagnostic[] = [];
+
+  if (index >= blocks.length) {
+    return {
+      executedBlockIndexes: [],
+      cursor: { ...input.cursor, done: true },
+      finalStat: input.initialStat,
+      ...(input.initialStatFunc === undefined
+        ? {}
+        : { finalStatFunc: input.initialStatFunc }),
+      pendingCall: null,
+      diagnostics,
+    };
+  }
+
+  const block = blocks[index];
+  const nextCursorBase = {
+    ...input.cursor,
+    blockIndex: index + 1,
+  };
+
+  if (block.kind === "call") {
+    const call = block.call;
+    diagnostics.push(...call.diagnostics);
+    const requiresCall = !call.nested && !call.processed;
+    if (requiresCall && !formal) {
+      diagnostics.push(
+        blockDiagnostic(
+          ERA_FCALL_NOT_EXECUTED,
+          `只读或试算入口不执行 EraFCall ${call.name ?? "?"}；其操作区已有的操作仍按普通块重放。`,
+        ),
+      );
+      return {
+        executedBlockIndexes: [],
+        cursor: { ...nextCursorBase, done: nextCursorBase.blockIndex >= blocks.length },
+        finalStat: input.initialStat,
+        ...(input.initialStatFunc === undefined
+          ? {}
+          : { finalStatFunc: input.initialStatFunc }),
+        pendingCall: null,
+        diagnostics,
+      };
+    }
+    if (requiresCall) {
+      // 游标停在调用块：写成已处理后重入自然跳过它并继续操作区，
+      // 也避免「末尾是调用块」时被误判为本消息已完成。
+      return {
+        executedBlockIndexes: [],
+        cursor: { ...input.cursor, done: false },
+        finalStat: input.initialStat,
+        ...(input.initialStatFunc === undefined
+          ? {}
+          : { finalStatFunc: input.initialStatFunc }),
+        pendingCall: call,
+        diagnostics,
+      };
+    }
+    return {
+      executedBlockIndexes: [],
+      cursor: { ...nextCursorBase, done: nextCursorBase.blockIndex >= blocks.length },
+      finalStat: input.initialStat,
+      ...(input.initialStatFunc === undefined
+        ? {}
+        : { finalStatFunc: input.initialStatFunc }),
+      pendingCall: null,
+      diagnostics,
+    };
+  }
+
+  // 指令块：块下标与「指令序号」不是同一个数——调用块不进入指令列表，
+  // 因此这里按块序列数出前面有多少个指令块，得到本块在指令列表中的位置。
+  const commandOrdinal = blocks
+    .slice(0, index)
+    .filter(item => item.kind === "command").length;
+  const applied = applyMessageCommands({
+    content: input.content,
+    messageId: input.messageId,
+    initialStat: input.initialStat,
+    initialStatFunc: input.initialStatFunc,
+    meta: input.meta,
+    randomSourceKey: input.randomSourceKey,
+    traditionalToSimplified: input.traditionalToSimplified,
+    commandRange: {
+      fromIndex: commandOrdinal,
+      toIndex: commandOrdinal + 1,
+    },
+  });
+  diagnostics.push(...applied.diagnostics);
+
+  return {
+    executedBlockIndexes: applied.commands.length > 0 ? [index] : [],
+    cursor: {
+      ...nextCursorBase,
+      done: nextCursorBase.blockIndex >= blocks.length,
+      randomDrawOffset: applied.nextRandomDrawOffset ?? input.cursor.randomDrawOffset,
+      editLog: [...input.cursor.editLog, ...applied.editLog],
+      functionEditLog: [
+        ...input.cursor.functionEditLog,
+        ...(applied.functionEditLog ?? []),
+      ],
+    },
+    finalStat: applied.finalStat,
+    ...(applied.finalStatFunc === undefined
+      ? {}
+      : { finalStatFunc: applied.finalStatFunc }),
+    pendingCall: null,
+    diagnostics,
+  };
 }
