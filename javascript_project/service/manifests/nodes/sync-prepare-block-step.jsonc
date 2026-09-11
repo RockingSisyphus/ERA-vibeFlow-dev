@@ -1,0 +1,57 @@
+{
+  "kind": "node",
+  "type_key": "era.sync.prepare_block_step",
+  "display_name": "准备块步进状态",
+  "category": "同步规划",
+  "description": "从同步上下文建立块步进的初始状态：楼层身份、块下标 0、以及该楼层起点已提交的变量与函数库。位置状态必须从已提交侧车状态出发，否则函数读到的是空世界。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.sync.context",
+        "cardinality": "exactly_one",
+        "display_name": "同步上下文"
+      }
+    ],
+    "provides": [
+      {
+        "key": "block_step_state",
+        "type": "era.sync.block.step.state",
+        "display_name": "块步进状态"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.sync.context": [
+        "输入：同步上下文。"
+      ]
+    },
+    "output_semantics": {
+      "block_step_state": [
+        "输出：块步进状态。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/sync/prepare_block_step.ts",
+        "export": "prepare"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.block_step_state",
+    "era.service.sync_contracts"
+  ],
+  "capabilities": []
+}

@@ -4,6 +4,9 @@
       "path": "sidecar_store.jsonc"
     },
     {
+      "path": "message_block_step.jsonc"
+    },
+    {
       "path": "expression_engine_bridge.jsonc"
     },
     {
@@ -69,10 +72,57 @@
         "description": "调用专用 Sidecar 状态节点集：检查身份与唯一聊天指针，读取或迁移 V2 用户文件状态，并规划冲突选择或继续同步。"
       },
       {
-        "id": "drive_message_blocks",
-        "type_used": "era.sync.drive_message_blocks",
-        "display_name": "按块驱动当前消息",
-        "description": "一步一块推进当前处理楼层；遇到无标记调用时无条件断开本批次（不提交任何状态），把调用位置交给 Host，函数由 Host 在步骤之外执行。同步工作项仍来自登记的规划库。"
+        "id": "prepare_block_step",
+        "type_used": "era.sync.prepare_block_step",
+        "display_name": "准备块步进状态",
+        "description": "从已提交侧车状态与当前处理楼层建立块步进初始状态；位置状态必须从这里出发，函数与后续块才不会读到空世界。"
+      },
+      {
+        "id": "process_message_blocks",
+        "type_used": "vibeflow.loop.while",
+        "display_name": "逐块推进当前消息",
+        "description": "每个操作块各自一步：循环 body 每次只推进一个块；遇到无标记调用或整条消息处理完即结束循环，随后由收口节点决定提交还是把调用交给 Host。",
+        "requires": [
+          {
+            "type": "era.sync.block.step.state",
+            "cardinality": "exactly_one",
+            "display_name": "初始块步进状态"
+          }
+        ],
+        "provides": [
+          {
+            "key": "block_step_state_after",
+            "type": "era.sync.block.step.state.next",
+            "display_name": "块步进后状态"
+          }
+        ],
+        "loop": {
+          "body": "era.sync.block_step",
+          "max_iterations": 64,
+          "stop_when": {
+            "from": "block_step_done",
+            "equals": true
+          },
+          "carry": [
+            {
+              "from": "era.sync.block.step.state",
+              "as": "block_step_state",
+              "update": "block_step_state_after"
+            }
+          ],
+          "outputs": [
+            {
+              "from": "block_step_state_after",
+              "as": "block_step_state_after"
+            }
+          ]
+        }
+      },
+      {
+        "id": "finalize_block_step",
+        "type_used": "era.sync.finalize_block_step",
+        "display_name": "收口块步进工作项",
+        "description": "没有待交接调用时使用既有规划库产出的工作项；有待交接调用时把工作项声明为不提交并附带交接事实，未完成的消息既不提交也不推进连续处理状态。"
       },
       {
         "id": "apply_command_compaction",
@@ -170,7 +220,7 @@
       ],
       {
         "from": "sidecar_store_prepare",
-        "to": "drive_message_blocks",
+        "to": "prepare_block_step",
         "when": "sidecar_binding_route == 'continue'"
       },
       {
@@ -200,7 +250,15 @@
       },
 
       [
-        "drive_message_blocks",
+        "prepare_block_step",
+        "process_message_blocks"
+      ],
+      [
+        "process_message_blocks",
+        "finalize_block_step"
+      ],
+      [
+        "finalize_block_step",
         "apply_command_compaction"
       ],
       [

@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import { run } from '../../../javascript_project/service/nodes/sync/drive_message_blocks';
+import { prepare } from '../../../javascript_project/service/nodes/sync/prepare_block_step';
+import { finalize } from '../../../javascript_project/service/nodes/sync/finalize_block_step';
 
-function contextWith(text: string) {
+function contextWith(text: string, statData: Record<string, unknown> = { hp: 100 }) {
   return {
     schemaVersion: 1,
     step: {
@@ -51,15 +53,7 @@ function contextWith(text: string) {
         status: 'ready',
         dispatchClass: 'sync',
         requirement: 'latest-message-with-mk',
-        messages: [
-          {
-            schemaVersion: 1,
-            messageId: 1,
-            role: 'assistant',
-            activeText: text,
-            swipeIndex: 0,
-          },
-        ],
+        messages: [{ schemaVersion: 1, messageId: 1, role: 'assistant', activeText: text, swipeIndex: 0 }],
         processingMessage: {
           schemaVersion: 1,
           messageId: 1,
@@ -86,7 +80,7 @@ function contextWith(text: string) {
       },
     ],
     variablesRaw: {
-      stat_data: { hp: 100 },
+      stat_data: statData,
       statFunc: {},
       ERAMetaData: { SelectedMks: [], EditLogs: {}, FunctionEditLogs: {} },
     },
@@ -94,141 +88,128 @@ function contextWith(text: string) {
   };
 }
 
-describe('era.sync.drive_message_blocks 节点', () => {
-  it('产出同步工作项与函数调用路由，供下游既有节点消费', async () => {
-    const result = await run({
-      'era.sync.context': { value: contextWith('<VariableInsert>{"hp":100}</VariableInsert>') },
+/** 从初始状态按块迭代，直到本次块驱动结束；返回每次迭代后的状态。 */
+function driveToStop(text: string, statData?: Record<string, unknown>) {
+  const context = contextWith(text, statData);
+  let state = prepare({ 'era.sync.context': { value: context } }).block_step_state;
+  const states: any[] = [];
+  let done = false;
+  let guard = 0;
+  while (!done && guard < 12) {
+    const stepped = run({
+      'era.sync.context': { value: context },
+      'era.sync.block.step.state': { value: state },
     });
+    state = stepped.block_step_state_next;
+    done = stepped.block_step_done;
+    states.push(state);
+    guard += 1;
+  }
+  return { context, state, states };
+}
 
-    expect(result.expression_command_result).toBeTruthy();
-    expect(result.expression_command_result.schemaVersion).toBe(1);
-    expect(result.function_invocation_route).toBe('none');
+describe('era.sync 块步进循环的三个节点', () => {
+  it('prepare 从已提交侧车状态建立初始状态', () => {
+    const context = contextWith('<VariableInsert>{"gold":5}</VariableInsert>', { hp: 100 });
+    const prepared = prepare({ 'era.sync.context': { value: context } });
+
+    expect(prepared.block_step_state).toMatchObject({
+      messageId: 1,
+      mk: 'mk-1',
+      blockIndex: 0,
+      done: false,
+      stat: { hp: 100 },
+      route: 'none',
+      handoff: null,
+    });
   });
 
-  it('无可执行块时路由为 none，且不改写工作项', async () => {
-    const result = await run({
-      'era.sync.context': { value: contextWith('纯故事，没有指令块。') },
-    });
+  it('每次迭代只推进一个块，累计状态随状态传递', () => {
+    const { states } = driveToStop(
+      ['<VariableInsert>{"gold":5}</VariableInsert>', '<VariableEdit>{"hp":{"$expr":"hp-30"}}</VariableEdit>'].join(
+        '\n',
+      ),
+    );
 
-    expect(result.function_invocation_route).toBe('none');
-    expect(result.pending_function_call).toBe(null);
-    // 工作项原样来自登记规划库：本节点只做块驱动，不伪造同步结论。
-    expect(result.expression_command_result.schemaVersion).toBe(1);
-    expect(['no-op', 'commit', 'failed']).toContain(result.expression_command_result.disposition);
+    // 第一块只插入 gold；第二块才把 hp 减到 70：一步一块，状态逐次累积。
+    expect(states[0]).toMatchObject({ blockIndex: 1, stat: { hp: 100, gold: 5 }, done: false });
+    expect(states[1]).toMatchObject({ blockIndex: 2, stat: { hp: 70, gold: 5 }, done: true });
   });
 
-  it('遇到无标记调用时路由为 invoke，并报出待调用块', async () => {
-    const result = await run({
-      'era.sync.context': {
-        value: contextWith(
-          ['<VariableInsert>{"hp":100}</VariableInsert>', '<EraFCall name="attack" id="c1"/>'].join('\n'),
-        ),
-      },
-    });
+  it('遇到无标记调用即断开本批次，并把调用位置写成交接事实', () => {
+    const { state } = driveToStop(
+      [
+        '<VariableInsert>{"gold":5}</VariableInsert>',
+        '<EraFCall name="attack" args=\'{"damage":30}\' id="c1"/>',
+        '<VariableEdit>{"hp":{"$expr":"hp-10"}}</VariableEdit>',
+      ].join('\n'),
+    );
 
-    expect(result.function_invocation_route).toBe('invoke');
-    expect(result.pending_function_call).toMatchObject({ callId: 'c1', name: 'attack' });
-  });
-
-  it('游标反映按块推进到的位置，而不是停在起点', async () => {
-    const result = await run({
-      'era.sync.context': {
-        value: contextWith(
-          ['<VariableInsert>{"hp":100}</VariableInsert>', '<VariableEdit>{"hp":{"$expr":"hp-30"}}</VariableEdit>'].join(
-            '\n',
-          ),
-        ),
-      },
-    });
-
-    // 两个指令块都已推进：游标应越过它们，而不是停在 0。
-    expect(result.block_cursor.blockIndex).toBeGreaterThan(0);
-    expect(result.block_cursor.done).toBe(true);
-  });
-
-  it('有未处理调用时明确回报「未完成」，不得声称本消息处理完毕', async () => {
-    const result = await run({
-      'era.sync.context': {
-        value: contextWith(
-          [
-            '<VariableInsert>{"hp":100}</VariableInsert>',
-            '<EraFCall name="attack" id="c1"/>',
-            '<VariableEdit>{"hp":{"$expr":"hp-10"}}</VariableEdit>',
-          ].join('\n'),
-        ),
-      },
-    });
-
-    // 调用未执行，因此这条消息**没有**处理完：游标不得报 done。
-    expect(result.function_invocation_route).toBe('invoke');
-    expect(result.block_cursor.done).toBe(false);
-    expect(result.message_incomplete).toBe(true);
-  });
-
-  it('没有待调用时才算本消息处理完毕', async () => {
-    const result = await run({
-      'era.sync.context': {
-        value: contextWith('<VariableInsert>{"hp":100}</VariableInsert>'),
-      },
-    });
-
-    expect(result.block_cursor.done).toBe(true);
-    expect(result.message_incomplete).toBe(false);
-  });
-
-  it('交接工作项声明为不提交，并携带调用位置事实', async () => {
-    const result = await run({
-      'era.sync.context': {
-        value: contextWith(
-          [
-            '<VariableInsert>{"gold":5}</VariableInsert>',
-            '<EraFCall name="attack" args=\'{"damage":30}\' id="c1"/>',
-            '<VariableEdit>{"hp":{"$expr":"hp-10"}}</VariableEdit>',
-          ].join('\n'),
-        ),
-      },
-    });
-
-    // 函数效果只能由它自己的操作区记录带来，因此本批次不得提交任何状态。
-    const work = result.expression_command_result;
-    expect(work.disposition).toBe('no-op');
-    expect(work.plan).toBe(null);
-    expect(work.failure).toBe(null);
-    expect(work.handoff).toMatchObject({
+    expect(state.route).toBe('invoke');
+    expect(state.handoff).toMatchObject({
       messageId: 1,
       mk: 'mk-1',
       callId: 'c1',
       name: 'attack',
       args: { damage: 30 },
+      // 位置状态必须包含调用之前的块效果。
+      stat: { hp: 100, gold: 5 },
     });
-    expect(result.function_handoff).toMatchObject({ callId: 'c1' });
   });
 
-  it('交接事实里的位置状态包含调用之前的块效果', async () => {
-    const result = await run({
-      'era.sync.context': {
-        value: contextWith(
-          ['<VariableInsert>{"gold":5}</VariableInsert>', '<EraFCall name="attack" id="c1"/>'].join('\n'),
-        ),
-      },
-    });
+  it('已处理的调用被跳过，不产生新的交接', () => {
+    const { state } = driveToStop(
+      [
+        '<EraFCall name="attack" id="c1" status="done"/>',
+        '<EraFCallTx for="c1">',
+        '<VariableEdit>{"hp":{"$expr":"hp-30"}}</VariableEdit>',
+        '</EraFCallTx>',
+      ].join('\n'),
+    );
 
-    // 函数读取的是自己所在位置的状态：已提交基线 + 本条消息调用之前的块。
-    expect(result.function_handoff.stat).toEqual({ hp: 100, gold: 5 });
-    expect(result.block_cursor.done).toBe(false);
+    expect(state.route).toBe('none');
+    expect(state.done).toBe(true);
+    // 操作区按位置重放：100 - 30 = 70。
+    expect(state.stat).toMatchObject({ hp: 70 });
   });
 
-  it('报出块步进游标，作为跨步骤续做的依据', async () => {
-    const result = await run({
-      'era.sync.context': {
-        value: contextWith('<VariableInsert>{"hp":100}</VariableInsert>'),
-      },
+  it('finalize 在没有交接时使用既有规划库的工作项', () => {
+    const { context, state } = driveToStop('<VariableInsert>{"gold":5}</VariableInsert>');
+    const finished = finalize({
+      'era.sync.context': { value: context },
+      'era.sync.block.step.state.next': { value: state },
     });
 
-    expect(result.block_cursor).toMatchObject({
-      messageId: 1,
-      blockIndex: expect.any(Number),
+    expect(finished.function_invocation_route).toBe('none');
+    expect(finished.expression_command_result.schemaVersion).toBe(1);
+    expect(['no-op', 'commit', 'failed']).toContain(finished.expression_command_result.disposition);
+  });
+
+  it('finalize 在有待交接调用时把工作项声明为不提交', () => {
+    const { context, state } = driveToStop(
+      ['<VariableInsert>{"gold":5}</VariableInsert>', '<EraFCall name="attack" id="c1"/>'].join('\n'),
+    );
+    const finished = finalize({
+      'era.sync.context': { value: context },
+      'era.sync.block.step.state.next': { value: state },
     });
-    expect(result.block_cursor.done).toBe(true);
+
+    // 函数效果只能由操作区记录带来：本批次不得提交任何状态。
+    expect(finished.function_invocation_route).toBe('invoke');
+    expect(finished.expression_command_result.disposition).toBe('no-op');
+    expect(finished.expression_command_result.plan).toBe(null);
+    expect(finished.expression_command_result.payload).toBe(null);
+    expect(finished.expression_command_result.handoff).toMatchObject({
+      callId: 'c1',
+      name: 'attack',
+    });
+  });
+
+  it('没有处理楼层时不空转，也不伪造工作项结论', () => {
+    const context = contextWith('纯故事。');
+    delete (context.step.dispatchContext as Record<string, unknown>).processingMessage;
+    const prepared = prepare({ 'era.sync.context': { value: context } });
+
+    expect(prepared.block_step_state).toMatchObject({ done: true, blockIndex: 0, route: 'none' });
   });
 });

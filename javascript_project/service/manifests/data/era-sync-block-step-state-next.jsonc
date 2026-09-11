@@ -1,0 +1,60 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.sync.block.step.state.next",
+  "representation": "json",
+  "display_name": "ERA·同步·块步进状态·下一个",
+  "description": "块步进循环单次迭代产出的下一个状态，与输入状态同形；与输入分开声明是为了让循环的 carry 输入与 body 输出在类型上不混淆。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "messageId": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "mk": {
+        "type": "string"
+      },
+      "blockIndex": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "done": {
+        "type": "boolean"
+      },
+      "stat": {
+        "type": "object"
+      },
+      "statFunc": {
+        "type": "object"
+      },
+      "route": {
+        "enum": [
+          "none",
+          "invoke"
+        ]
+      },
+      "handoff": {
+        "oneOf": [
+          {
+            "type": "object"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
+    "required": [
+      "messageId",
+      "mk",
+      "blockIndex",
+      "done",
+      "stat",
+      "statFunc",
+      "route",
+      "handoff"
+    ],
+    "additionalProperties": false
+  }
+}

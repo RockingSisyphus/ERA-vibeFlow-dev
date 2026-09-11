@@ -1,0 +1,92 @@
+{
+  "nodeset_imports": [],
+  "type_key": "era.sync.block_step",
+  "display_name": "ERA 块步进单次迭代",
+  "description": "块步进循环的 body：每次迭代只读取当前承载状态与同步上下文，推进一个块并返回下一个状态与本次是否结束（消息处理完或遇到无标记调用需交接）。",
+  "requires": [
+    {
+      "type": "era.sync.block.step.state",
+      "cardinality": "exactly_one",
+      "display_name": "块步进状态"
+    },
+    {
+      "type": "era.sync.context",
+      "cardinality": "exactly_one",
+      "display_name": "同步上下文"
+    }
+  ],
+  "provides": [
+    {
+      "key": "block_step_state_after",
+      "type": "era.sync.block.step.state.next",
+      "display_name": "块步进后状态"
+    },
+    {
+      "key": "block_step_done",
+      "type": "era.step.done",
+      "display_name": "本次块驱动结束"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "block_step_state",
+        "type": "era.sync.block.step.state",
+        "display_name": "块步进状态",
+        "required": true
+      },
+      {
+        "key": "sync_context",
+        "type": "era.sync.context",
+        "display_name": "同步上下文",
+        "required": true
+      }
+    ],
+    "max_steps": 4,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.service.terminal",
+        "display_name": "块迭代开始",
+        "description": "进入单块推进边界。"
+      },
+      {
+        "id": "advance_message_block",
+        "type_used": "era.sync.drive_message_blocks",
+        "display_name": "推进一个块",
+        "description": "按原文位置推进一个块；遇到无标记 <EraFCall/> 时结束本次迭代并把交接事实写入状态，函数由 Host 在步骤之外执行。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.service.terminal",
+        "display_name": "块迭代结束",
+        "description": "返回下一个块步进状态与是否结束本次块驱动。"
+      }
+    ],
+    "edges": [
+      [
+        "start",
+        "advance_message_block"
+      ],
+      [
+        "advance_message_block",
+        "end"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.sync.block.step.state.next",
+        "cardinality": "exactly_one",
+        "display_name": "块步进后状态",
+        "as": "block_step_state_after"
+      },
+      {
+        "type": "era.step.done",
+        "cardinality": "exactly_one",
+        "display_name": "本次块驱动结束",
+        "as": "block_step_done"
+      }
+    ]
+  }
+}
