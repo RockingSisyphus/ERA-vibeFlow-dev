@@ -12,9 +12,12 @@ const preparationUrl = new URL('../../../javascript_project/service/base_lib/dis
 const policyUrl = new URL('../../../javascript_project/service/base_lib/sync_result_policy.ts', import.meta.url).href;
 const commitPolicyUrl = new URL('../../../javascript_project/service/base_lib/sync_commit_policy.ts', import.meta.url)
   .href;
-const prepareUrl = new URL('../../../javascript_project/service/nodes/sync/prepare_block_step.ts', import.meta.url).href;
-const driveUrl = new URL('../../../javascript_project/service/nodes/sync/drive_message_blocks.ts', import.meta.url).href;
-const finalizeUrl = new URL('../../../javascript_project/service/nodes/sync/finalize_block_step.ts', import.meta.url).href;
+const prepareUrl = new URL('../../../javascript_project/service/nodes/sync/prepare_block_step.ts', import.meta.url)
+  .href;
+const driveUrl = new URL('../../../javascript_project/service/nodes/sync/drive_message_blocks.ts', import.meta.url)
+  .href;
+const finalizeUrl = new URL('../../../javascript_project/service/nodes/sync/finalize_block_step.ts', import.meta.url)
+  .href;
 
 const preparation = await import(/* @vite-ignore */ preparationUrl);
 const policy = await import(/* @vite-ignore */ policyUrl);

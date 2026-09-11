@@ -61,8 +61,8 @@ class FakeAdapter implements EraTavernHostAdapter {
 
   /** 消息内函数调用能力的桩：真实实现见 service/era-functions-capability。 */
   readonly functions = {
-    invoke: async () => ({ status: "accepted" as const }),
-    result: async () => ({ status: "failed" as const, message: "unused" }),
+    invoke: async () => ({ status: 'accepted' as const }),
+    result: async () => ({ status: 'failed' as const, message: 'unused' }),
     release: () => ({ released: true }),
   };
 

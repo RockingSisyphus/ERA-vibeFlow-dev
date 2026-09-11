@@ -1,7 +1,10 @@
 /**
  * @file ERA 消息内函数调用的宿主会话
- * @description 只负责调用酒馆已注册工具并把结果机械地分类；不决定业务顺序、
- * 不写入 ERA 业务状态，块顺序与提交仍由 Service 决定。
+ * @description 模块职责：只负责调用酒馆已注册工具，并把「成功 / 失败 / 未注册 / 取消」
+ * 机械地分类成 Host 侧终态。
+ *
+ * 模块边界：本模块不决定业务顺序、不写入 ERA 业务状态、不保存块进度，也不得让异常
+ * 泄漏给调用方；块顺序与最终提交由 Service 决定，工具注册表由宿主适配层注入。
  *
  * 关键事实：SillyTavern 的 `ToolManager.invokeFunctionTool` 在失败时**不抛异常**，
  * 而是返回一个 `Error` 对象（并设置 `error.cause = 工具名`）。而且注册表在顶层窗口、
@@ -60,9 +63,7 @@ function isErrorValue(value: unknown): value is Error {
   if (Object.prototype.toString.call(value) === '[object Error]') return true;
   const candidate = value as { name?: unknown; message?: unknown; stack?: unknown };
   return (
-    typeof candidate.name === 'string' &&
-    typeof candidate.message === 'string' &&
-    typeof candidate.stack === 'string'
+    typeof candidate.name === 'string' && typeof candidate.message === 'string' && typeof candidate.stack === 'string'
   );
 }
 

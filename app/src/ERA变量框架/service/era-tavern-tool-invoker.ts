@@ -39,8 +39,12 @@ function tavernContainers(): readonly unknown[] {
 
 function toolManager(): TavernToolManager | null {
   const candidates = tavernContainers();
-  console.info('[ERA] 工具注册表解析', candidates.map((c) =>
-    c === null || c === undefined ? 'none' : typeof (c as { ToolManager?: unknown }).ToolManager).join(','));
+  console.info(
+    '[ERA] 工具注册表解析',
+    candidates
+      .map(c => (c === null || c === undefined ? 'none' : typeof (c as { ToolManager?: unknown }).ToolManager))
+      .join(','),
+  );
   for (const container of candidates) {
     if (container === null || typeof container !== 'object') continue;
     const manager = (container as { ToolManager?: unknown }).ToolManager;

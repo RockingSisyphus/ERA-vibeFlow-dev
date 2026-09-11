@@ -25,6 +25,10 @@ function fixture() {
     done: false,
     stat: { hp: 130 },
     statFunc: { f: { params: [], expr: '1' } },
+    // 本批次开始时的已提交世界与连续处理事实；逐块提交与交接记录提交都从它们出发。
+    baseStat: { hp: 100 },
+    baseStatFunc: {},
+    consecutive: { mk: null, count: 0 },
     route: 'none' as const,
     handoff: null,
     content: '消息正文',
