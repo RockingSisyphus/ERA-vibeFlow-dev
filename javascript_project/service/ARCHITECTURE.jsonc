@@ -38948,6 +38948,9 @@
               "type": "integer",
               "minimum": 0
             },
+            "committedPerBlock": {
+              "type": "boolean"
+            },
             "executedBlockIndex": {
               "type": [
                 "integer",
@@ -38993,6 +38996,7 @@
             "consecutive",
             "executedBlockIndex",
             "drawOffset",
+            "committedPerBlock",
             "route",
             "handoff",
             "content",
@@ -39062,6 +39066,9 @@
               "type": "integer",
               "minimum": 0
             },
+            "committedPerBlock": {
+              "type": "boolean"
+            },
             "executedBlockIndex": {
               "type": [
                 "integer",
@@ -39107,6 +39114,7 @@
             "consecutive",
             "executedBlockIndex",
             "drawOffset",
+            "committedPerBlock",
             "route",
             "handoff",
             "content",

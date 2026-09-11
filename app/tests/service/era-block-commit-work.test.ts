@@ -36,6 +36,7 @@ function fixture() {
     consecutive: { mk: null, count: 0 },
     executedBlockIndex: null,
     drawOffset: 0,
+    committedPerBlock: false,
     route: 'none' as const,
     handoff: null,
     content: '消息正文',

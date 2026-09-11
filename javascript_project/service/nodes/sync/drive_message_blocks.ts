@@ -69,6 +69,7 @@ export function run(
     executedBlockIndex: advanced.executedBlockIndexes[0] ?? null,
     // 累加抽取次数：本次推进消耗的抽取从这里接着记，逐块提交时写进记录。
     drawOffset: state.drawOffset + advanced.cursor.randomDrawOffset,
+    committedPerBlock: state.committedPerBlock,
     content: state.content,
     meta: state.meta,
     work: state.work,

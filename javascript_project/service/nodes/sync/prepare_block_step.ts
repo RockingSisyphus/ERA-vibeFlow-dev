@@ -70,6 +70,8 @@ export function prepare(
     executedBlockIndex: null,
     // 被中断的楼层把「已抽了多少次」留在记录里：续做必须从这里接着抽。
     drawOffset: appliedRecordDrawOffset(floor?.text ?? ""),
+    // 逐块提交由循环体完成；收口节点靠这个事实决定是否还要写楼层文本。
+    committedPerBlock: false,
     handoff: null,
     content: floor?.text ?? "",
     meta: world.meta,

@@ -53,6 +53,14 @@ export interface EraBlockStepStateV1 {
    * 恢复时再用 `appliedRecordDrawOffset` 读回来，否则续做与整楼重放会抽到不同的值。
    */
   readonly drawOffset: number;
+  /**
+   * 这条楼层是否已经由循环体**逐块提交**过状态与消息记录。
+   *
+   * 收口节点据此决定还要不要写楼层文本：循环已经写过就必须跳过文本更新，否则同一条楼层会被写
+   * 两次、请求里的 source basis 过期（真机实测 `ERA_SYNC_SOURCE_CHANGED`）。用显式事实而不是
+   * 靠 `blockIndex > 0` 猜——交接迭代不推进块，那个推断并不成立。
+   */
+  readonly committedPerBlock: boolean;
   readonly handoff: EraMessageFunctionHandoffV1 | null;
   /**
    * 楼层原文与元数据随状态携带。
