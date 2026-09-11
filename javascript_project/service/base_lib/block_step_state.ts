@@ -165,13 +165,16 @@ export function buildPerBlockCommitWork(input: {
   const blocks = parseMessageBlocks({ content: state.content });
   const executed = blocks[state.executedBlockIndex];
   if (executed === undefined) return null;
-  const content = wrapBlockAsAppliedRecord({
+  const wrapped = wrapBlockAsAppliedRecord({
     content: state.content,
     start: executed.start,
     end: executed.end,
     mk: state.mk,
     draws: state.drawOffset,
   });
+  // 楼层算完的那一次提交：文本里不再保留任何凭据（原文与「从楼层起点重算」一致），
+  // 游标也写 null —— 续做点只在计算期间存在。
+  const content = state.done ? unwrapAppliedRecords(wrapped) : wrapped;
   return {
     ...work,
     disposition: "commit",
@@ -196,15 +199,48 @@ export function buildPerBlockCommitWork(input: {
         },
       ],
     },
-    syncCursor: {
-      messageId: state.messageId,
-      mk: state.mk,
-      blockIndex: state.executedBlockIndex,
-      stat: state.stat,
-      statFunc: state.statFunc,
-    },
+    syncCursor: state.done
+      ? null
+      : {
+          messageId: state.messageId,
+          mk: state.mk,
+          blockIndex: state.executedBlockIndex,
+          stat: state.stat,
+          statFunc: state.statFunc,
+        },
     failure: null,
   };
+}
+
+/**
+ * 把一次逐块提交的结果折回块步进状态。
+ *
+ * 只有真正提交成功后状态里的 `content` 才能前进：后续块要在这份「已经写进消息的记录」之上
+ * 继续包下一块，否则前一块的记录会在下一次提交时被丢掉。提交失败必须让整个任务失败
+ * （抛出类型化错误由内核结算），不能悄悄继续推进——那会让 sidecar 与消息文本对不上。
+ */
+export function foldBlockCommitOutcome(input: {
+  readonly state: EraBlockStepStateV1;
+  readonly outcome: {
+    readonly status: "committed" | "no-op" | "failed" | "fatal";
+    readonly messageWrites?: readonly {
+      readonly messageId: number;
+      readonly content: string;
+    }[];
+  };
+}): EraBlockStepStateV1 {
+  const { state, outcome } = input;
+  if (outcome.status !== "committed" && outcome.status !== "no-op") {
+    throw new TypeError(
+      `ERA_BLOCK_COMMIT_FAILED: 逐块提交未成功（status=${outcome.status}），本批次按失败结算。`,
+    );
+  }
+  const written = outcome.messageWrites?.find(
+    write => write.messageId === state.messageId,
+  );
+  return written === undefined
+    ? state
+    : { ...state, content: written.content };
 }
 
 /**

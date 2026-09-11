@@ -11,6 +11,7 @@ import {
   buildBlockCommitWork,
   buildCompletedFloorContent,
   buildPerBlockCommitWork,
+  foldBlockCommitOutcome,
 } from '../../../javascript_project/service/base_lib/block_step_state';
 
 function fixture() {
@@ -174,5 +175,82 @@ describe('逐块提交：单块工作项与收尾文本', () => {
         '<VariableEdit>{"hp":{"$expr":"hp-20"}}</VariableEdit>',
       ].join('\n'),
     );
+  });
+});
+
+describe('逐块提交：算完那一次与结果折回', () => {
+  const TEXT = [
+    '<era_block mk="mk-4" applied="1" draws="1"><VariableInsert>{"hp":100}</VariableInsert></era_block>',
+    '<VariableEdit>{"hp":{"$expr":"hp-10"}}</VariableEdit>',
+  ].join('\n');
+
+  function work() {
+    return {
+      schemaVersion: 1,
+      step: { kind: 'execute' },
+      disposition: 'no-op',
+      plan: {
+        meta: {},
+        messages: [{ messageId: 4 }],
+        nextConsecutiveState: { mk: 'mk-4', count: 1 },
+      },
+      payload: { mk: 'mk-4', message_id: 4, is_user: false, actions: {}, consecutiveProcessingCount: 1 },
+      failure: null,
+    } as never;
+  }
+
+  function state(overrides: Record<string, unknown> = {}) {
+    return {
+      messageId: 4,
+      mk: 'mk-4',
+      blockIndex: 2,
+      done: true,
+      stat: { hp: 90 },
+      statFunc: {},
+      baseStat: { hp: 100 },
+      baseStatFunc: {},
+      consecutive: { mk: null, count: 0 },
+      executedBlockIndex: 1,
+      drawOffset: 1,
+      route: 'none' as const,
+      handoff: null,
+      content: TEXT,
+      meta: {},
+      work: {},
+      ...overrides,
+    } as never;
+  }
+
+  it('楼层算完那一次提交：文本删掉全部凭据、游标写 null', () => {
+    const built = buildPerBlockCommitWork({ work: work(), state: state() });
+    const update = built?.plan?.messageUpdates?.[0];
+    const text = update?.content.kind === 'text' ? update.content.text : '';
+
+    expect(text).not.toContain('<era_block');
+    expect(text).toContain('<VariableEdit>{"hp":{"$expr":"hp-10"}}</VariableEdit>');
+    // 显式 null 才能清空续做点（缺键表示「本次不涉及」）。
+    expect(built).toHaveProperty('syncCursor', null);
+  });
+
+  it('提交成功后状态文本前进到「已写入的记录」，后续块在它之上继续包', () => {
+    const committedText = ['<era_block mk="mk-4" applied="1" draws="2">x</era_block>'].join('\n');
+    const folded = foldBlockCommitOutcome({
+      state: state({ done: false }),
+      outcome: {
+        status: 'committed',
+        messageWrites: [{ messageId: 4, content: committedText }],
+      },
+    });
+
+    expect(folded.content).toBe(committedText);
+  });
+
+  it('提交失败必须让任务失败，不能悄悄继续推进', () => {
+    expect(() =>
+      foldBlockCommitOutcome({
+        state: state({ done: false }),
+        outcome: { status: 'failed' },
+      }),
+    ).toThrow(/ERA_BLOCK_COMMIT_FAILED/);
   });
 });
