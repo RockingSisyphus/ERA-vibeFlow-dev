@@ -121,6 +121,10 @@ describe('era.sync 块步进循环的三个节点', () => {
       route: 'none',
       handoff: null,
     });
+    // 已提交世界与连续处理事实必须单独留存：累计 stat 会被块推进覆盖。
+    expect(prepared.block_step_state.baseStat).toEqual({ hp: 100 });
+    expect(prepared.block_step_state.baseStatFunc).toEqual({});
+    expect(prepared.block_step_state.consecutive).toEqual({ mk: null, count: 0 });
   });
 
   it('每次迭代只推进一个块，累计状态随状态传递', () => {
@@ -183,23 +187,29 @@ describe('era.sync 块步进循环的三个节点', () => {
     expect(['no-op', 'commit', 'failed']).toContain(finished.expression_command_result.disposition);
   });
 
-  it('finalize 在有待交接调用时把工作项声明为不提交', () => {
+  it('finalize 在有待交接调用时提交记录而不提交状态', () => {
     const { state } = driveToStop(
       ['<VariableInsert>{"gold":5}</VariableInsert>', '<EraFCall name="attack" id="c1"/>'].join('\n'),
     );
     const finished = finalize({
       'era.sync.block.step.state.next': { value: state },
     });
+    const work = finished.expression_command_result as {
+      disposition: string;
+      handoff: Record<string, unknown> | null;
+      plan: { stat: Record<string, unknown>; meta: unknown; nextConsecutiveState: unknown } | null;
+      payload: { consecutiveProcessingCount?: number } | null;
+    };
 
-    // 函数效果只能由操作区记录带来：本批次不得提交任何状态。
     expect(finished.function_invocation_route).toBe('invoke');
-    expect(finished.expression_command_result.disposition).toBe('no-op');
-    expect(finished.expression_command_result.plan).toBe(null);
-    expect(finished.expression_command_result.payload).toBe(null);
-    expect(finished.expression_command_result.handoff).toMatchObject({
-      callId: 'c1',
-      name: 'attack',
-    });
+    // 一处调用之后还有别的调用时，先前的标记必须落盘，否则恢复读不到它：
+    // 交接批次写记录、走提交链。
+    expect(work.disposition).toBe('commit');
+    expect(work.handoff).toMatchObject({ callId: 'c1', name: 'attack' });
+    // 状态停在已提交世界（没有 gold），恢复时整楼重放恰好一次。
+    expect(work.plan?.stat).toEqual({ hp: 100 });
+    // 连续处理事实不推进：这条楼层还没处理完，恢复批次不能以为它处理过了。
+    expect(work.plan?.nextConsecutiveState).toEqual({ mk: null, count: 0 });
   });
 
   it('没有处理楼层时不空转，也不伪造工作项结论', () => {

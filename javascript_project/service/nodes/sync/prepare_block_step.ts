@@ -31,6 +31,11 @@ export function prepare(
     done: floor === null,
     stat: world.stat,
     statFunc: world.statFunc,
+    // 已提交世界必须单独留存：`stat`/`statFunc` 会随块推进被覆盖，而交接时的记录提交、
+    // 以及「这条楼层还没处理完」的连续处理事实都要回到本批次开始时的值。
+    baseStat: world.stat,
+    baseStatFunc: world.statFunc,
+    consecutive: context.consecutive,
     route: "none",
     handoff: null,
     content: floor?.text ?? "",

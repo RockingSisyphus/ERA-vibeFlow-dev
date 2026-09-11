@@ -10,6 +10,7 @@ import type { MessageFunctionFlow } from "./domain/message_function_flow.ts";
 import type {
   SyncContextV1,
   EraMessageFunctionHandoffV1,
+  SyncConsecutiveFacts,
 } from "./sync_contracts.ts";
 import type { SyncWorkV1 } from "./sync_contracts.ts";
 
@@ -19,8 +20,19 @@ export interface EraBlockStepStateV1 {
   readonly mk: string;
   readonly blockIndex: number;
   readonly done: boolean;
+  /**
+   * 本块为止的累计状态（从已提交世界出发逐块推进）。
+   *
+   * 交接与收口用的是 `baseStat`/`baseStatFunc`（已提交世界），不是这里的累计值：
+   * 见 `finalize_block_step` 的「只提交记录」说明。
+   */
   readonly stat: Readonly<Record<string, unknown>>;
   readonly statFunc: Readonly<Record<string, unknown>>;
+  /** 本批次开始时的已提交世界；交接时的记录提交必须回到它，才能保证重放恰好一次。 */
+  readonly baseStat: Readonly<Record<string, unknown>>;
+  readonly baseStatFunc: Readonly<Record<string, unknown>>;
+  /** 本批次开始时的连续处理事实；交接不算「这条楼层已处理完」，因此不得推进它。 */
+  readonly consecutive: SyncConsecutiveFacts;
   readonly route: "none" | "invoke";
   readonly handoff: EraMessageFunctionHandoffV1 | null;
   /**
@@ -108,6 +120,48 @@ export function handoffOf(input: {
     args: input.call.args ?? {},
     stat: record(input.flow.stat) ? input.flow.stat : {},
     statFunc: input.flow.statFunc ?? {},
+  };
+}
+
+/**
+ * 把「遇到待交接调用、但本次已经产生的消息记录必须落盘」表达成可提交工作项。
+ *
+ * 为什么交接也必须提交记录：一条消息里可以有多处调用。交接把本批次打断后，下一次恢复
+ * 只能从**消息文本**读到「哪些调用已经处理过」；如果交接批次什么都不写，先前调用块上的
+ * `status="done"` 就会随批次一起丢掉，恢复后仍停在同一处调用上——两处调用会互相把对方
+ * 的标记丢掉，形成永不前进的交接循环（实测 MSG-FCALL-004：41 次重复调用、零落盘）。
+ *
+ * 为什么只提交记录、不提交状态：`plan` 的 `stat` 是**整条消息**重放后的结果，而交接只
+ * 执行到调用块为止。把它写进 sidecar 会让「后续块」在恢复时被算两次；而把「前段块的累计
+ * 状态」写进去、又不在文本里留下「这些块已应用」的凭据，恢复后的整楼重放会**再次**应用
+ * 它们（`$expr` 这类非幂等操作会算两遍）。因此交接提交把状态停在**已提交世界**
+ * （`baseStat`/`baseStatFunc` 与 `meta`），只把消息文本写出去：恢复时该楼层从已提交世界
+ * 重放一次，恰好得到与逐块提交相同的终值。
+ *
+ * 同理不推进连续处理事实、不提交封存压缩候选：这条楼层还没有处理完。
+ */
+export function buildHandoffRecordWork(input: {
+  readonly work: SyncWorkV1;
+  readonly state: EraBlockStepStateV1;
+}): SyncWorkV1 {
+  const plan = input.work.plan;
+  if (plan === null || typeof plan !== "object" || plan.status === "failed") return input.work;
+  return {
+    ...input.work,
+    disposition: "commit",
+    plan: {
+      ...plan,
+      stat: input.state.baseStat,
+      statFunc: input.state.baseStatFunc,
+      meta: input.state.meta,
+      sealedCompactionCandidates: [],
+      recalculatedMessageIndexes: [],
+      nextConsecutiveState: {
+        mk: input.state.consecutive.mk,
+        count: input.state.consecutive.count,
+      },
+    },
+    failure: null,
   };
 }
 

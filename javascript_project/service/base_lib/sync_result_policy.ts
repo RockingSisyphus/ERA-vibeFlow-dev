@@ -59,17 +59,20 @@ export function stateUpdateForPlan(plan: EraSyncPlanV1 | null) {
  * 函数交接必须走既有的 notification 通道：它只在新批次里恢复，不能占用当前
  * FIFO，也不能凭空多出第二套回调口。
  */
+function handoffNotification(handoff: SyncWorkV1["handoff"]) {
+  return handoff === undefined
+    ? []
+    : [
+        {
+          type: MESSAGE_FUNCTION_INVOKE_REQUIRED,
+          args: [{ kind: "json" as const, value: handoff as never }],
+        },
+      ];
+}
+
 function notificationsForWork(work: SyncWorkV1) {
-  const handoff = work.handoff;
   return [
-    ...(handoff === undefined
-      ? []
-      : [
-          {
-            type: MESSAGE_FUNCTION_INVOKE_REQUIRED,
-            args: [{ kind: "json" as const, value: handoff as never }],
-          },
-        ]),
+    ...handoffNotification(work.handoff),
     ...(work.notifications ?? []).map((item) => ({
       type: item.type,
       args: item.args.map((value) => ({ kind: "json" as const, value: value as never })),
@@ -204,7 +207,9 @@ export function buildSyncCommittedResult(
   return {
     status: outcome.status,
     settlements: settlementsFor(outcome.step, outcome.status, outcome.failure),
-    notifications: [],
+    // 交接提交也走提交分支，因此交接通知必须由这里发出；否则函数不会被执行，
+    // 工作流会停在调用块上永不前进。
+    notifications: handoffNotification(outcome.handoff),
     diagnostics,
     ...(outcome.sourceChanged || stateUpdateForPlan(outcome.plan) === undefined
       ? {}

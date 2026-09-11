@@ -5,11 +5,13 @@
  * 收口节点若再消费一次同步上下文就永远不会被调度，表现为所属节点集退不出、声明输出实得 0。
  * 而计划只依赖该消息的静态文本与已提交状态，在循环之前或之后计算等价。
  *
- * 有待交接调用时工作项必须声明为不提交（`plan`/`payload` 归 null）：函数效果只能由它自己的
- * 操作区记录带来，先提交半条消息会让侧车状态与消息文本对不上，也会让恢复后的重放把前段块的效果算两次。
+ * 有待交接调用时提交的是**记录**而不是状态：调用块上的 `status="done"`、已落盘的操作区
+ * 与 MK 必须写进消息文本，否则下一次恢复读不到「哪些调用处理过」，两处调用会互相丢掉对方的
+ * 标记并形成永不前进的交接循环。状态停在已提交世界，恢复时整楼重放恰好一次。构造与理由见
+ * `buildHandoffRecordWork`。
  */
 
-import type { EraBlockStepStateV1 } from "../../base_lib/block_step_state.ts";
+import { buildHandoffRecordWork, type EraBlockStepStateV1 } from "../../base_lib/block_step_state.ts";
 import type { SyncWorkV1 } from "../../base_lib/sync_contracts.ts";
 
 interface Envelope<T> {
@@ -30,16 +32,28 @@ export function finalize(
       function_invocation_route: "none",
     };
   }
-  const deferred: SyncWorkV1 = {
-    ...work,
-    disposition: "no-op",
-    plan: null,
-    payload: null,
-    failure: null,
-    handoff,
-  };
+  // 记录提交以「预规划工作项可用」为前提；不可用时保持不提交，宁可这一批不落盘也不能
+  // 凭空造一份状态提交。
+  const recorded = buildHandoffRecordWork({ work, state });
+  if (recorded.disposition !== "commit") {
+    const deferred: SyncWorkV1 = {
+      ...work,
+      disposition: "no-op",
+      plan: null,
+      payload: null,
+      failure: null,
+      handoff,
+    };
+    return {
+      expression_command_result: deferred as unknown as Readonly<Record<string, unknown>>,
+      function_invocation_route: "invoke",
+    };
+  }
   return {
-    expression_command_result: deferred as unknown as Readonly<Record<string, unknown>>,
+    expression_command_result: {
+      ...recorded,
+      handoff,
+    } as unknown as Readonly<Record<string, unknown>>,
     function_invocation_route: "invoke",
   };
 }

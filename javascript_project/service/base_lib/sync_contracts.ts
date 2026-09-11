@@ -103,6 +103,13 @@ export interface SyncCommitRequestV1 {
   readonly agentFloorCandidate: EraAgentFloorCandidateV1 | null;
   /** 本次生成的最终展示变化；非持久化，不用于普通状态更新。 */
   readonly initialPresentation: EraFloorIdentityV1 | null;
+  /**
+   * 交接提交（只落盘消息记录、函数由 Host 在步骤之外执行）携带的待调用事实。
+   *
+   * 为什么必须随请求走：交接通知原本由「不提交」分支发出；交接提交走提交分支，通知
+   * 只能挂在请求上。丢了这个字段，函数永远不会被驱动，工作流停在调用块上。
+   */
+  readonly handoff?: EraMessageFunctionHandoffV1;
   readonly sourceBasis: EraMessageSourceBasisV1;
 }
 

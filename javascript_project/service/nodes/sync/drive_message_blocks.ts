@@ -60,6 +60,10 @@ export function run(
     done: advanced.done,
     stat: record(advanced.stat) ? advanced.stat : {},
     statFunc: advanced.statFunc ?? state.statFunc,
+    // 已提交世界与连续处理事实在所有迭代中原样携带：交接/收口只认这两个值。
+    baseStat: state.baseStat,
+    baseStatFunc: state.baseStatFunc,
+    consecutive: state.consecutive,
     route: pending === null || pending.name === null ? "none" : "invoke",
     content: state.content,
     meta: state.meta,

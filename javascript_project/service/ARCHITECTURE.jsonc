@@ -38804,6 +38804,32 @@
             "statFunc": {
               "type": "object"
             },
+            "baseStat": {
+              "type": "object"
+            },
+            "baseStatFunc": {
+              "type": "object"
+            },
+            "consecutive": {
+              "type": "object",
+              "properties": {
+                "mk": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "count": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "mk",
+                "count"
+              ],
+              "additionalProperties": false
+            },
             "route": {
               "enum": [
                 "none",
@@ -38837,6 +38863,9 @@
             "done",
             "stat",
             "statFunc",
+            "baseStat",
+            "baseStatFunc",
+            "consecutive",
             "route",
             "handoff",
             "content",
@@ -38876,6 +38905,32 @@
             "statFunc": {
               "type": "object"
             },
+            "baseStat": {
+              "type": "object"
+            },
+            "baseStatFunc": {
+              "type": "object"
+            },
+            "consecutive": {
+              "type": "object",
+              "properties": {
+                "mk": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "count": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "mk",
+                "count"
+              ],
+              "additionalProperties": false
+            },
             "route": {
               "enum": [
                 "none",
@@ -38909,6 +38964,9 @@
             "done",
             "stat",
             "statFunc",
+            "baseStat",
+            "baseStatFunc",
+            "consecutive",
             "route",
             "handoff",
             "content",
