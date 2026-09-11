@@ -555,3 +555,169 @@ export function advanceEraBlockCursor(
     diagnostics,
   };
 }
+
+/** 一次可续做的「一步一块」消息重放会话。 */
+export interface EraBlockSession {
+  readonly content: string;
+  readonly messageId: number;
+  readonly cursor: EraBlockCursor;
+  /** 消息内全部块是否已处理完成。 */
+  readonly done: boolean;
+  /** 调用方需要执行的函数；为 null 表示没有待调用。 */
+  readonly pendingCall: EraFunctionCallSite | null;
+  /**
+   * 调用方已处理、但消息文本尚未写回（或写回的是过期内容）的调用标识集合。
+   * 本会话按标识、而不是按布尔标记或块位置跳过这些调用，避免反复要求同一个调用，
+   * 也避免误跳过后续新出现的调用。
+   */
+  readonly resolvedCallIds: readonly string[];
+  readonly meta: Readonly<Record<string, unknown>>;
+  readonly formal: boolean;
+  readonly traditionalToSimplified: boolean;
+  readonly stat: unknown;
+  readonly statFunc: Readonly<Record<string, unknown>> | undefined;
+  /** 最近一次推进实际执行的块下标；最多一个。 */
+  readonly executedBlockIndexes: readonly number[];
+  /** 本楼累计的变量编辑日志增量，供提交边界一次取出。 */
+  readonly editLog: readonly EraCrudEditLog[];
+  /** 本楼累计的函数编辑日志增量。 */
+  readonly functionEditLog: readonly EraFunctionEditLog[];
+  readonly diagnostics: readonly EraCrudDiagnostic[];
+}
+
+export interface EraBlockSessionInput {
+  readonly content: string;
+  readonly messageId: number;
+  readonly mk: string;
+  readonly initialStat: unknown;
+  readonly meta: Readonly<Record<string, unknown>>;
+  readonly initialStatFunc?: Readonly<Record<string, unknown>>;
+  readonly randomSourceKey?: string;
+  readonly traditionalToSimplified?: boolean;
+  /** 正式同步为 true；只读与试算为 false。 */
+  readonly formal?: boolean;
+  /** 跨步骤续做时传入既有游标；省略时从楼层起点开始。 */
+  readonly cursor?: EraBlockCursor;
+  readonly pendingCall?: EraFunctionCallSite | null;
+}
+
+/**
+ * 建立一个消息重放会话。会话只保存续做所需的最小状态；累计变量与函数库
+ * 由会话自身携带，块游标负责块位置与日志增量。
+ */
+export function startEraBlockSession(
+  input: EraBlockSessionInput,
+): EraBlockSession {
+  const cursor =
+    input.cursor ??
+    createEraBlockCursor({ messageId: input.messageId, mk: input.mk });
+  return {
+    content: input.content,
+    messageId: input.messageId,
+    cursor,
+    done: cursor.done,
+    pendingCall: input.pendingCall ?? null,
+    resolvedCallIds: [],
+    meta: input.meta,
+    formal: input.formal ?? true,
+    traditionalToSimplified: input.traditionalToSimplified ?? false,
+    stat: input.initialStat,
+    statFunc: input.initialStatFunc,
+    executedBlockIndexes: [],
+    editLog: cursor.editLog,
+    functionEditLog: cursor.functionEditLog,
+    diagnostics: [],
+  };
+}
+
+/**
+ * 推进一个块并返回新会话。
+ *
+ * 已经停在待调用上时：
+ * - 未传 `resolvePendingCall`：原样返回，等待调用方完成函数；
+ * - 传了 `resolvePendingCall`：清除待调用并继续推进（调用方已把该调用写为已处理）。
+ */
+export function advanceEraBlockSession(
+  session: EraBlockSession,
+  input: Readonly<{
+    readonly resolvePendingCall?: boolean;
+  }> = {},
+): EraBlockSession {
+  if (session.pendingCall !== null) {
+    if (input.resolvePendingCall !== true) return session;
+    const resolvedId = session.pendingCall.callId;
+    return {
+      ...session,
+      pendingCall: null,
+      resolvedCallIds:
+        resolvedId === null
+          ? session.resolvedCallIds
+          : session.resolvedCallIds.includes(resolvedId)
+            ? session.resolvedCallIds
+            : [...session.resolvedCallIds, resolvedId],
+    };
+  }
+  if (session.done) {
+    // 已经完成：返回清空了「本次执行」痕迹的会话，不能把上一步的结果再报一次。
+    return {
+      ...session,
+      pendingCall: null,
+      executedBlockIndexes: [],
+      diagnostics: [],
+    };
+  }
+
+  const step = (cursor: EraBlockCursor) =>
+    advanceEraBlockCursor({
+      content: session.content,
+      messageId: session.messageId,
+      cursor,
+      initialStat: session.stat,
+      meta: session.meta,
+      ...(session.statFunc === undefined
+        ? {}
+        : { initialStatFunc: session.statFunc }),
+      randomSourceKey: cursor.mk,
+      formal: session.formal,
+      traditionalToSimplified: session.traditionalToSimplified,
+    });
+
+  let advanced = step(session.cursor);
+
+  // 撞到的调用是「调用方已处理、文本尚未写回」的那个时，按标识越过它继续，
+  // 不把它再次交回调用方。
+  const pendingId = advanced.pendingCall?.callId ?? null;
+  if (
+    advanced.pendingCall !== null &&
+    pendingId !== null &&
+    session.resolvedCallIds.includes(pendingId)
+  ) {
+    advanced = step({
+      ...session.cursor,
+      blockIndex: session.cursor.blockIndex + 1,
+      done: false,
+    });
+  }
+
+  const nextPendingId = advanced.pendingCall?.callId ?? null;
+  const resolvedCallIds =
+    nextPendingId === null
+      ? session.resolvedCallIds
+      : session.resolvedCallIds.includes(nextPendingId)
+        ? session.resolvedCallIds
+        : [...session.resolvedCallIds, nextPendingId];
+
+  return {
+    ...session,
+    cursor: advanced.cursor,
+    done: advanced.cursor.done,
+    pendingCall: advanced.pendingCall,
+    resolvedCallIds,
+    stat: advanced.finalStat,
+    statFunc: advanced.finalStatFunc ?? session.statFunc,
+    executedBlockIndexes: advanced.executedBlockIndexes,
+    editLog: advanced.cursor.editLog,
+    functionEditLog: advanced.cursor.functionEditLog,
+    diagnostics: advanced.diagnostics,
+  };
+}
