@@ -10,6 +10,37 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
+/**
+ * 从批次状态读块级续做游标。
+ *
+ * 契约校验器负责形状；这里只做「缺省即 null」的读取。游标形状非法时按没有游标处理，
+ * 让恢复退回「从楼层起点重算」这条安全路径，而不是拿半个游标去续做。
+ */
+function batchSyncCursor(value: unknown): SyncContextV1["syncCursor"] {
+  const nextState = isRecord(value) && isRecord(value.nextState) ? value.nextState : null;
+  if (nextState === null) return null;
+  const cursor = nextState.syncCursor;
+  if (cursor === null || cursor === undefined) return null;
+  if (!isRecord(cursor)) return null;
+  const messageId = cursor.messageId;
+  const mk = cursor.mk;
+  const blockIndex = cursor.blockIndex;
+  if (!Number.isSafeInteger(messageId) || Number(messageId) < 0) return null;
+  if (typeof mk !== "string" || mk.length === 0) return null;
+  if (!Number.isSafeInteger(blockIndex) || Number(blockIndex) < 0) return null;
+  return {
+    messageId: Number(messageId),
+    mk,
+    blockIndex: Number(blockIndex),
+    ...(isRecord(cursor.stat) ? { stat: cursor.stat } : {}),
+    ...(isRecord(cursor.statFunc) ? { statFunc: cursor.statFunc } : {}),
+    ...(Array.isArray(cursor.resolvedCallIds)
+      ? { resolvedCallIds: cursor.resolvedCallIds.filter((id): id is string => typeof id === "string") }
+      : {}),
+    ...(typeof cursor.done === "boolean" ? { done: cursor.done } : {}),
+  };
+}
+
 export async function run(
   inputs: Readonly<{
     "era.step.request.routed": Envelope<unknown>;
@@ -19,7 +50,9 @@ export async function run(
   context: Context,
 ): Promise<any> {
   const step = assertSyncStep(inputs["era.step.request.routed"].value);
-  const consecutive = consecutiveFacts(inputs["era.batch.execution.state"].value);
+  const batchState = inputs["era.batch.execution.state"].value;
+  const consecutive = consecutiveFacts(batchState);
+  const syncCursor = batchSyncCursor(batchState);
   const dispatchContext = isRecord(step.dispatchContext) ? step.dispatchContext : null;
   let variablesRaw: unknown = null;
   const messagesRaw = dispatchContext === null
@@ -36,6 +69,7 @@ export async function run(
       schemaVersion: 1,
       step,
       consecutive,
+      syncCursor,
       status: "ready",
       messagesRaw,
       variablesRaw,
@@ -50,6 +84,7 @@ export async function run(
       schemaVersion: 1,
       step,
       consecutive,
+      syncCursor,
       status: "failed",
       messagesRaw,
       variablesRaw,

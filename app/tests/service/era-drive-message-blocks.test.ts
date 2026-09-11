@@ -4,7 +4,7 @@ import { run } from '../../../javascript_project/service/nodes/sync/drive_messag
 import { prepare } from '../../../javascript_project/service/nodes/sync/prepare_block_step';
 import { finalize } from '../../../javascript_project/service/nodes/sync/finalize_block_step';
 
-function contextWith(text: string, statData: Record<string, unknown> = { hp: 100 }) {
+function contextWith(text: string, statData: Record<string, unknown> = { hp: 100 }, syncCursor: unknown = undefined) {
   return {
     schemaVersion: 1,
     step: {
@@ -85,6 +85,7 @@ function contextWith(text: string, statData: Record<string, unknown> = { hp: 100
       ERAMetaData: { SelectedMks: [], EditLogs: {}, FunctionEditLogs: {} },
     },
     failure: null,
+    ...(syncCursor === undefined ? {} : { syncCursor }),
   };
 }
 
@@ -238,5 +239,74 @@ describe('已处理调用之后的块必须落进最终计划', () => {
 
     expect(work.disposition).toBe('commit');
     expect(work.plan?.stat?.mfc_fixture).toEqual({ hp: 90 });
+  });
+});
+
+describe('块级续做游标：已提交的块不再重放', () => {
+  const TEXT = [
+    '<VariableInsert>{"gold":5}</VariableInsert>',
+    '<VariableEdit>{"hp":{"$expr":"hp-30"}}</VariableEdit>',
+    '<VariableEdit>{"hp":{"$expr":"hp-10"}}</VariableEdit>',
+  ].join('\n');
+
+  it('身份匹配的游标从已提交块的下一块继续，前两块不重放', () => {
+    const context = contextWith(
+      TEXT,
+      { hp: 100 },
+      {
+        messageId: 1,
+        mk: 'mk-1',
+        blockIndex: 1,
+        stat: { hp: 70, gold: 5 },
+        statFunc: {},
+      },
+    );
+    const prepared = prepare({ 'era.sync.context': { value: context } }).block_step_state;
+
+    // 前两块（insert gold、hp-30）已经提交：起点是第 2 块，累计值取游标里的已提交世界。
+    expect(prepared.blockIndex).toBe(2);
+    expect(prepared.stat).toEqual({ hp: 70, gold: 5 });
+    expect(prepared.baseStat).toEqual({ hp: 70, gold: 5 });
+
+    const stepped = run({ 'era.sync.block.step.state': { value: prepared } });
+    expect(stepped.block_step_state_next.stat).toEqual({ hp: 60, gold: 5 });
+    expect(stepped.block_step_state_next.done).toBe(true);
+  });
+
+  it('身份不匹配的游标按「从楼层起点重算」处理', () => {
+    const context = contextWith(
+      TEXT,
+      { hp: 100 },
+      {
+        messageId: 9,
+        mk: 'mk-other',
+        blockIndex: 1,
+        stat: { hp: 70 },
+        statFunc: {},
+      },
+    );
+    const prepared = prepare({ 'era.sync.context': { value: context } }).block_step_state;
+
+    expect(prepared.blockIndex).toBe(0);
+    expect(prepared.stat).toEqual({ hp: 100 });
+  });
+
+  it('已算完的游标（done）不再续做', () => {
+    const context = contextWith(
+      TEXT,
+      { hp: 100 },
+      {
+        messageId: 1,
+        mk: 'mk-1',
+        blockIndex: 2,
+        stat: { hp: 60 },
+        statFunc: {},
+        done: true,
+      },
+    );
+    const prepared = prepare({ 'era.sync.context': { value: context } }).block_step_state;
+
+    expect(prepared.blockIndex).toBe(0);
+    expect(prepared.stat).toEqual({ hp: 100 });
   });
 });

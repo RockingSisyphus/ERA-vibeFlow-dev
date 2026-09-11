@@ -17,24 +17,53 @@ interface Envelope<T> {
   readonly value: T;
 }
 
+/**
+ * 取出可用于本次续做的游标。
+ *
+ * 只有游标身份与当前处理楼层完全一致才可续做：楼层对不上说明游标属于另一条消息（切聊、
+ * 回退或用户编辑过的旧楼），此时必须退回「从楼层起点重算」；`done` 为真的游标说明那条
+ * 楼层已经算完，也不该再续做。
+ */
+function resumableCursor(
+  context: SyncContextV1,
+  floor: { readonly messageId: number; readonly mk: string } | null,
+): {
+  readonly blockIndex: number;
+  readonly stat: Readonly<Record<string, unknown>>;
+  readonly statFunc: Readonly<Record<string, unknown>>;
+} | null {
+  const cursor = context.syncCursor;
+  if (cursor === null || cursor === undefined || floor === null) return null;
+  if (cursor.messageId !== floor.messageId || cursor.mk !== floor.mk) return null;
+  if (cursor.done === true) return null;
+  return {
+    blockIndex: cursor.blockIndex,
+    stat: cursor.stat ?? {},
+    statFunc: cursor.statFunc ?? {},
+  };
+}
+
 export function prepare(
   inputs: Readonly<{ "era.sync.context": Envelope<unknown> }>,
 ): any {
   const context = inputs["era.sync.context"].value as SyncContextV1;
   const floor = processingFloor(context);
   const world = committedWorld(context);
+  const resume = resumableCursor(context, floor);
   const state: EraBlockStepStateV1 = {
     messageId: floor?.messageId ?? 0,
     mk: floor?.mk ?? "",
-    blockIndex: 0,
+    // 有可续做的游标时从「已提交块的下一块」继续：已提交的块不能再重放，否则
+    // `$expr` 这类非幂等操作会被算两遍。
+    blockIndex: resume === null ? 0 : resume.blockIndex + 1,
     // 没有处理楼层时没有可推进的块，直接标记处理完，避免循环空转。
     done: floor === null,
-    stat: world.stat,
-    statFunc: world.statFunc,
+    stat: resume?.stat ?? world.stat,
+    statFunc: resume?.statFunc ?? world.statFunc,
     // 已提交世界必须单独留存：`stat`/`statFunc` 会随块推进被覆盖，而交接时的记录提交、
     // 以及「这条楼层还没处理完」的连续处理事实都要回到本批次开始时的值。
-    baseStat: world.stat,
-    baseStatFunc: world.statFunc,
+    baseStat: resume?.stat ?? world.stat,
+    baseStatFunc: resume?.statFunc ?? world.statFunc,
     consecutive: context.consecutive,
     route: "none",
     handoff: null,

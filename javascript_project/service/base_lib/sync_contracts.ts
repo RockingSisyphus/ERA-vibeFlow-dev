@@ -33,6 +33,13 @@ export interface SyncContextV1 {
   readonly schemaVersion: 1;
   readonly step: PlannedStepV1;
   readonly consecutive: SyncConsecutiveFacts;
+  /**
+   * 批次状态里的块级续做游标：只有「上一层楼层算到一半就被交接/中断」时才有值。
+   *
+   * `blockIndex` 是**已提交块的下标（含）**，恢复时从 `blockIndex + 1` 继续；`stat`/`statFunc`
+   * 是那条楼层算到该块为止的已提交世界。游标身份与当前处理楼层不一致时按「从楼层起点重算」。
+   */
+  readonly syncCursor?: EraSyncCursorV1 | null;
   readonly status: "ready" | "failed";
   readonly messagesRaw: unknown;
   readonly variablesRaw: unknown;
