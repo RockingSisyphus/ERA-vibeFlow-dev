@@ -9,11 +9,6 @@
   "contract": {
     "requires": [
       {
-        "type": "era.sync.context",
-        "cardinality": "exactly_one",
-        "display_name": "同步上下文"
-      },
-      {
         "type": "era.sync.block.step.state.next",
         "cardinality": "exactly_one",
         "display_name": "块步进后状态"
@@ -34,11 +29,8 @@
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
-      "era.sync.context": [
-        "输入：同步上下文。"
-      ],
       "era.sync.block.step.state.next": [
-        "输入：块步进后状态。"
+        "输入：块步进后状态（含预规划工作项）。"
       ]
     },
     "output_semantics": {
@@ -67,7 +59,6 @@
   ],
   "base_libs": [
     "era.service.block_step_state",
-    "era.service.sync_planning",
     "era.service.sync_contracts"
   ],
   "capabilities": []

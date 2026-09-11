@@ -119,6 +119,17 @@ export interface EraTavernCapabilityAdapter {
     readonly create_error_message: EraAsyncHostOperation;
     readonly stop_native_generation: EraHostOperation;
   };
+  /**
+   * 消息内函数调用的宿主 I/O：登记、回送终态、释放会话。
+   *
+   * `release` 必须是同步操作：它只清理宿主自己的会话表；`invoke`/`result` 是异步的，
+   * 因为函数执行与等待终态都发生在宿主侧。
+   */
+  readonly functions: {
+    readonly invoke: EraAsyncHostOperation;
+    readonly result: EraAsyncHostOperation;
+    readonly release: EraHostOperation;
+  };
   readonly variables: {
     readonly read: EraAsyncHostOperation;
     readonly commit: EraAsyncHostOperation;

@@ -8217,11 +8217,6 @@
           "type": "era.sync.block.step.state",
           "cardinality": "exactly_one",
           "display_name": "块步进状态"
-        },
-        {
-          "type": "era.sync.context",
-          "cardinality": "exactly_one",
-          "display_name": "同步上下文"
         }
       ],
       "provides": [
@@ -8247,12 +8242,6 @@
             "key": "block_step_state",
             "type": "era.sync.block.step.state",
             "display_name": "块步进状态",
-            "required": true
-          },
-          {
-            "key": "sync_context",
-            "type": "era.sync.context",
-            "display_name": "同步上下文",
             "required": true
           }
         ],
@@ -8344,11 +8333,6 @@
             "status": "implemented",
             "planned_behavior": null,
             "requires": [
-              {
-                "type": "era.sync.context",
-                "cardinality": "exactly_one",
-                "display_name": "同步上下文"
-              },
               {
                 "type": "era.sync.block.step.state",
                 "cardinality": "exactly_one",
@@ -10262,11 +10246,6 @@
             "status": "implemented",
             "planned_behavior": null,
             "requires": [
-              {
-                "type": "era.sync.context",
-                "cardinality": "exactly_one",
-                "display_name": "同步上下文"
-              },
               {
                 "type": "era.sync.block.step.state.next",
                 "cardinality": "exactly_one",
@@ -16478,11 +16457,6 @@
       "contract": {
         "requires": [
           {
-            "type": "era.sync.context",
-            "cardinality": "exactly_one",
-            "display_name": "同步上下文"
-          },
-          {
             "type": "era.sync.block.step.state",
             "cardinality": "exactly_one",
             "display_name": "块步进状态"
@@ -16501,9 +16475,6 @@
           }
         ],
         "input_semantics": {
-          "era.sync.context": [
-            "输入：同步上下文。"
-          ],
           "era.sync.block.step.state": [
             "输入：块步进状态。"
           ]
@@ -16545,11 +16516,6 @@
       "contract": {
         "requires": [
           {
-            "type": "era.sync.context",
-            "cardinality": "exactly_one",
-            "display_name": "同步上下文"
-          },
-          {
             "type": "era.sync.block.step.state.next",
             "cardinality": "exactly_one",
             "display_name": "块步进后状态"
@@ -16568,11 +16534,8 @@
           }
         ],
         "input_semantics": {
-          "era.sync.context": [
-            "输入：同步上下文。"
-          ],
           "era.sync.block.step.state.next": [
-            "输入：块步进后状态。"
+            "输入：块步进后状态（含预规划工作项）。"
           ]
         },
         "output_semantics": {
@@ -19583,6 +19546,53 @@
                     }
                   ]
                 },
+                "syncCursor": {
+                  "oneOf": [
+                    {
+                      "type": "null"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "messageId": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "mk": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "blockIndex": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "stat": {
+                          "type": "object"
+                        },
+                        "statFunc": {
+                          "type": "object"
+                        },
+                        "resolvedCallIds": {
+                          "type": "array",
+                          "maxItems": 64,
+                          "items": {
+                            "type": "string",
+                            "minLength": 1
+                          }
+                        },
+                        "done": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "messageId",
+                        "mk",
+                        "blockIndex"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                },
                 "scopeWindow": {
                   "type": "object",
                   "properties": {
@@ -22177,6 +22187,53 @@
                     }
                   ]
                 },
+                "syncCursor": {
+                  "oneOf": [
+                    {
+                      "type": "null"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "messageId": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "mk": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "blockIndex": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "stat": {
+                          "type": "object"
+                        },
+                        "statFunc": {
+                          "type": "object"
+                        },
+                        "resolvedCallIds": {
+                          "type": "array",
+                          "maxItems": 64,
+                          "items": {
+                            "type": "string",
+                            "minLength": 1
+                          }
+                        },
+                        "done": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "messageId",
+                        "mk",
+                        "blockIndex"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                },
                 "scopeWindow": {
                   "type": "object",
                   "properties": {
@@ -24768,6 +24825,53 @@
                     },
                     {
                       "type": "null"
+                    }
+                  ]
+                },
+                "syncCursor": {
+                  "oneOf": [
+                    {
+                      "type": "null"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "messageId": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "mk": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "blockIndex": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "stat": {
+                          "type": "object"
+                        },
+                        "statFunc": {
+                          "type": "object"
+                        },
+                        "resolvedCallIds": {
+                          "type": "array",
+                          "maxItems": 64,
+                          "items": {
+                            "type": "string",
+                            "minLength": 1
+                          }
+                        },
+                        "done": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "messageId",
+                        "mk",
+                        "blockIndex"
+                      ],
+                      "additionalProperties": false
                     }
                   ]
                 },
@@ -27376,6 +27480,53 @@
                     }
                   ]
                 },
+                "syncCursor": {
+                  "oneOf": [
+                    {
+                      "type": "null"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "messageId": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "mk": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "blockIndex": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "stat": {
+                          "type": "object"
+                        },
+                        "statFunc": {
+                          "type": "object"
+                        },
+                        "resolvedCallIds": {
+                          "type": "array",
+                          "maxItems": 64,
+                          "items": {
+                            "type": "string",
+                            "minLength": 1
+                          }
+                        },
+                        "done": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "messageId",
+                        "mk",
+                        "blockIndex"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                },
                 "scopeWindow": {
                   "type": "object",
                   "properties": {
@@ -27924,6 +28075,53 @@
                     },
                     {
                       "type": "null"
+                    }
+                  ]
+                },
+                "syncCursor": {
+                  "oneOf": [
+                    {
+                      "type": "null"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "messageId": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "mk": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "blockIndex": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "stat": {
+                          "type": "object"
+                        },
+                        "statFunc": {
+                          "type": "object"
+                        },
+                        "resolvedCallIds": {
+                          "type": "array",
+                          "maxItems": 64,
+                          "items": {
+                            "type": "string",
+                            "minLength": 1
+                          }
+                        },
+                        "done": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "messageId",
+                        "mk",
+                        "blockIndex"
+                      ],
+                      "additionalProperties": false
                     }
                   ]
                 },
@@ -30740,6 +30938,53 @@
                     },
                     {
                       "type": "null"
+                    }
+                  ]
+                },
+                "syncCursor": {
+                  "oneOf": [
+                    {
+                      "type": "null"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "messageId": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "mk": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "blockIndex": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "stat": {
+                          "type": "object"
+                        },
+                        "statFunc": {
+                          "type": "object"
+                        },
+                        "resolvedCallIds": {
+                          "type": "array",
+                          "maxItems": 64,
+                          "items": {
+                            "type": "string",
+                            "minLength": 1
+                          }
+                        },
+                        "done": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "messageId",
+                        "mk",
+                        "blockIndex"
+                      ],
+                      "additionalProperties": false
                     }
                   ]
                 },
@@ -38574,6 +38819,15 @@
                   "type": "null"
                 }
               ]
+            },
+            "content": {
+              "type": "string"
+            },
+            "meta": {
+              "type": "object"
+            },
+            "work": {
+              "type": "object"
             }
           },
           "required": [
@@ -38584,7 +38838,10 @@
             "stat",
             "statFunc",
             "route",
-            "handoff"
+            "handoff",
+            "content",
+            "meta",
+            "work"
           ],
           "additionalProperties": false
         }
@@ -38634,6 +38891,15 @@
                   "type": "null"
                 }
               ]
+            },
+            "content": {
+              "type": "string"
+            },
+            "meta": {
+              "type": "object"
+            },
+            "work": {
+              "type": "object"
             }
           },
           "required": [
@@ -38644,7 +38910,10 @@
             "stat",
             "statFunc",
             "route",
-            "handoff"
+            "handoff",
+            "content",
+            "meta",
+            "work"
           ],
           "additionalProperties": false
         }
@@ -44524,7 +44793,9 @@
           "era.service.message_function_calls",
           "era.service.message_function_flow",
           "era.service.sync_contracts",
-          "era.crud.engine"
+          "era.crud.engine",
+          "era.service.sync_planning",
+          "era.service.sync_engine"
         ],
         "external_packages": []
       },

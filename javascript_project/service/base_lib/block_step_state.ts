@@ -11,6 +11,7 @@ import type {
   SyncContextV1,
   EraMessageFunctionHandoffV1,
 } from "./sync_contracts.ts";
+import type { SyncWorkV1 } from "./sync_contracts.ts";
 
 /** 块步进承载状态；与 `era.sync.block.step.state`/`.next` 两个 schema 同形。 */
 export interface EraBlockStepStateV1 {
@@ -30,6 +31,13 @@ export interface EraBlockStepStateV1 {
    */
   readonly content: string;
   readonly meta: Readonly<Record<string, unknown>>;
+  /**
+   * 预规划的同步工作项随状态携带。
+   *
+   * 收口节点不能再消费一次同步上下文，也不能「消费并再次提供」同一类型（线性消费会让它永不被调度），
+   * 因此工作项必须随块步进状态一起走，收口节点只依赖状态这一个输入。
+   */
+  readonly work: Readonly<Record<string, unknown>>;
 }
 
 export function record(value: unknown): value is Record<string, unknown> {

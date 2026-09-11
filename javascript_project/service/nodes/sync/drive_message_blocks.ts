@@ -28,8 +28,8 @@ export function run(
   }>,
 ): any {
   const state = inputs["era.sync.block.step.state"].value as EraBlockStepStateV1;
-  // 没有处理楼层（messageId 为 -1）或状态已经指向交接：不动状态，直接结束本次块驱动。
-  if (state.messageId < 0 || state.route === "invoke") {
+  // 没有可推进的块（done 已为真，含「没有处理楼层」）或状态已指向交接：不动状态，直接结束本次块驱动。
+  if (state.done || state.route === "invoke") {
     return {
       block_step_state_next: state,
       block_step_done: true,
@@ -63,6 +63,7 @@ export function run(
     route: pending === null || pending.name === null ? "none" : "invoke",
     content: state.content,
     meta: state.meta,
+    work: state.work,
     handoff:
       pending === null || pending.name === null
         ? null

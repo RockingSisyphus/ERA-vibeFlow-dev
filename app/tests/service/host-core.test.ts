@@ -59,6 +59,13 @@ class FakeAdapter implements EraTavernHostAdapter {
   readonly lifecycleOrder: string[] = [];
   sidecarPromptClearCount = 0;
 
+  /** 消息内函数调用能力的桩：真实实现见 service/era-functions-capability。 */
+  readonly functions = {
+    invoke: async () => ({ status: "accepted" as const }),
+    result: async () => ({ status: "failed" as const, message: "unused" }),
+    release: () => ({ released: true }),
+  };
+
   private listener: ((event: EraInboundEvent) => EraAdmissionResult) | null = null;
   notificationImplementation: (notification: EraPreparedNotification, signal: AbortSignal) => void | Promise<void> =
     () => undefined;

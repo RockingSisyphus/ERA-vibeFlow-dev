@@ -49,6 +49,9 @@
       },
       "meta": {
         "type": "object"
+      },
+      "work": {
+        "type": "object"
       }
     },
     "required": [
@@ -61,7 +64,8 @@
       "route",
       "handoff",
       "content",
-      "meta"
+      "meta",
+      "work"
     ],
     "additionalProperties": false
   }

@@ -97,7 +97,6 @@ function driveToStop(text: string, statData?: Record<string, unknown>) {
   let guard = 0;
   while (!done && guard < 12) {
     const stepped = run({
-      'era.sync.context': { value: context },
       'era.sync.block.step.state': { value: state },
     });
     state = stepped.block_step_state_next;
@@ -174,9 +173,8 @@ describe('era.sync 块步进循环的三个节点', () => {
   });
 
   it('finalize 在没有交接时使用既有规划库的工作项', () => {
-    const { context, state } = driveToStop('<VariableInsert>{"gold":5}</VariableInsert>');
+    const { state } = driveToStop('<VariableInsert>{"gold":5}</VariableInsert>');
     const finished = finalize({
-      'era.sync.context': { value: context },
       'era.sync.block.step.state.next': { value: state },
     });
 
@@ -186,11 +184,10 @@ describe('era.sync 块步进循环的三个节点', () => {
   });
 
   it('finalize 在有待交接调用时把工作项声明为不提交', () => {
-    const { context, state } = driveToStop(
+    const { state } = driveToStop(
       ['<VariableInsert>{"gold":5}</VariableInsert>', '<EraFCall name="attack" id="c1"/>'].join('\n'),
     );
     const finished = finalize({
-      'era.sync.context': { value: context },
       'era.sync.block.step.state.next': { value: state },
     });
 

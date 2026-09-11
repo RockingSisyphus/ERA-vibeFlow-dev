@@ -27,6 +27,9 @@ function fixture() {
     statFunc: { f: { params: [], expr: '1' } },
     route: 'none' as const,
     handoff: null,
+    content: '消息正文',
+    meta: {},
+    work: {},
   };
   return { work, state };
 }

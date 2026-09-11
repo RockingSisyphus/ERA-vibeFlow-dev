@@ -10,6 +10,7 @@ import {
   processingFloor,
   type EraBlockStepStateV1,
 } from "../../base_lib/block_step_state.ts";
+import { planSyncWork } from "../../base_lib/sync_planning.ts";
 import type { SyncContextV1 } from "../../base_lib/sync_contracts.ts";
 
 interface Envelope<T> {
@@ -23,7 +24,7 @@ export function prepare(
   const floor = processingFloor(context);
   const world = committedWorld(context);
   const state: EraBlockStepStateV1 = {
-    messageId: floor?.messageId ?? -1,
+    messageId: floor?.messageId ?? 0,
     mk: floor?.mk ?? "",
     blockIndex: 0,
     // 没有处理楼层时没有可推进的块，直接标记处理完，避免循环空转。
@@ -34,8 +35,10 @@ export function prepare(
     handoff: null,
     content: floor?.text ?? "",
     meta: world.meta,
+    work: planSyncWork(context) as unknown as Readonly<Record<string, unknown>>,
   };
   return {
     block_step_state: state as unknown as Readonly<Record<string, unknown>>,
+
   };
 }
