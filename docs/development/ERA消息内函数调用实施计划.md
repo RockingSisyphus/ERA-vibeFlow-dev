@@ -211,3 +211,53 @@ ERA 构建预期测试 bundle，Pack 使用明确指定的预构建 bundle。按
 完成待定设计后，沿各 root 已登记 Architecture 的 source，在真实生产 Config 位置表达 planned 变化，维护四类变更清单并生成完整展开审核图。人工批准后实施，更新 Architecture，执行适用的 validate、quality、build、本地测试和工作流探针，再运行 Pack 验收。
 
 机器结构检查、实际功能测试和人工批准分别报告。本文档写入本身不表示上述工作已经完成。
+
+## 7. 实施状态（截至 2026-09-11）
+
+本节只记录**实际已实现并已验证**的内容，以及相对本文档前六节的偏差；不含计划意图。
+
+| 批次 | 状态 | 依据 |
+| --- | --- | --- |
+| B1 语法与纯解析 | 已完成 | `<EraFCall/>`/`<EraFCallTx>` 解析、块列表、标记判定、操作区渲染均在 `base_lib/domain/message_function_calls.ts`，有专项测试 |
+| B2 一步一块骨架 | **部分完成** | 块按原文位置逐块推进、遇到无标记调用**无条件断开本批次**、游标随结果报出；但「每块一个工作流步骤」未拆成 `vibeflow.loop.while` 循环，块推进仍在一次运行内按序走完（见偏差 1） |
+| B3 Capability 与调用编排 | 已完成 | 交接事实 → `era.message.invoke_required` 后置通知；Host 在步骤之外驱动函数；`era.message.invoke_continue` 恢复事件把终态与产出操作送回；函数内 `ERA.commit`/`ERA.get` 走位置门面且绝不入队 |
+| B4 Agent 与压缩 | 已完成 | 三阶段输出统一执行（`isolateStoryEraCommands` 覆盖调用块）、含 `<EraFCall` 的楼层整层跳过封存压缩、规划提示词含调用语法 |
+| B5 ABI 收口与文档 | **部分完成** | 交接 ABI 与位置门面约束已写入 `era-host-contract.md` 与作者指南，Architecture 已刷新；`syncCursor` 的持久化通道未接通（见偏差 1、2） |
+
+### 偏差 1：块级工作流步骤
+
+计划的 `process_message_blocks`（`vibeflow.loop.while`）+ `era.sync.block.step` 尚未建立。现行实现由单个已实现节点
+`era.sync.drive_message_blocks` 在一次同步运行内按块推进，**在调用处无条件断开**。可观察行为一致
+（顺序、标记、函数在步骤之外执行、未完成不提交），差异只在内部粒度：块进度目前不跨批次携带，
+恢复时按「从楼层起点重算」执行（与作者指南的游标丢失规则一致）。补齐需要新增循环 Nodeset 与
+承载状态 schema，并让恢复读取 `EraSyncCursorV1`。
+
+### 偏差 2：`syncCursor` 只声明未写入
+
+`EraServiceStateV1.syncCursor` 已作为公共 ABI 声明并随服务状态 schema 生成类型，但当前没有任何节点写入它。
+要写入必须让游标经 `EraTaskStateUpdateV1` 穿过批次合并：这是 `packages/era-contracts` 的
+canonical schema + `index.d.ts` 变更，需要升版打包并让服务 root 重装 `file:` tarball。在完成该
+配套变更前，游标保持 `null`，恢复走重算路径。
+
+### 偏差 3（需人工确认）：函数内不保证读回自己刚提交的写入
+
+作者指南原承诺「`ERA.commit` 后再次 `ERA.get()` 能看到刚提交的效果」，现行实现**不保证**：
+把一次提交立刻并入位置状态需要宿主再跑一套变量路径与表达式求值（真实 source 在 Service CRUD
+引擎里），复制会两侧分歧，入队求值会让处理该消息的 FIFO 与等待函数返回的自身互等。现行语义是
+「登记为调用位置的操作 → 写进操作区 → 随消息重放时生效」。若要恢复「函数内立即可读回」，需要
+Service 新增位置状态求值能力（新 Capability），属更大的 ABI 变更。
+
+### 机器检查证据
+
+| 检查 | 结果 |
+| --- | --- |
+| Service `run.py validate` / `quality-check` / `build`（era.service） | PASS / PASS / PASS |
+| App `pnpm verify`（format → lint → typecheck → aot → quality → 全量单测） | PASS；86 文件 / 663 测试，quality 无 `[NEW]` |
+| ERA-Test-Pack 离线门禁 | typecheck / format:check / build / catalog:check（`valid`）/ test:contract 253 项 / verify:baseline（`valid`）全部 PASS |
+
+### 人工验收状态
+
+**未运行真实 suite。** Pack 规则要求真实 ST/浏览器/Lab 运行需另行授权；在授权前不得把离线门禁
+通过当作产品行为通过。专项已具备可评估条件：`era-message-function-call` 套件 6 条
+（MSG-FCALL-001..006），其中 006 使用卡片内注册的 `era_message_call_fixture_v1` 验证「函数在
+调用位置提交的操作随消息重放生效」。
