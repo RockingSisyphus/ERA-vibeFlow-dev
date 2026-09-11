@@ -8371,7 +8371,7 @@
             },
             "role": {
               "display_name": "构造逐块提交请求",
-              "description": "把这一块之后的累计状态构造成待提交请求；交接迭代产出不提交信封。"
+              "description": "把这一块之后的累计状态构造成待提交请求（basis 按当前文本重建）；交接迭代产出不提交信封。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -16411,7 +16411,7 @@
     },
     "era.sync.build_block_commit": {
       "display_name": "构造逐块提交请求",
-      "description": "把「这一块之后的累计状态」构造成待提交请求（状态嵌在请求里）；交接迭代产出不提交信封。",
+      "description": "把「这一块之后的累计状态」构造成待提交请求（状态嵌在请求里、basis 按当前文本重建）；交接迭代产出不提交信封。",
       "category": "同步规划",
       "version": "1.0.0",
       "flow_kind": "process",
