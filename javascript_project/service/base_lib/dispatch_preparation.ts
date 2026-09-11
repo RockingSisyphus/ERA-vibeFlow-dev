@@ -73,15 +73,12 @@ function recordedFunctionCallText(input: {
   readonly step: PlannedStepV1;
   readonly text: string;
   readonly messageId: number;
-  readonly mk: string;
 }): string {
   const resume = functionCallResumeOf(input.step);
+  // 楼层身份以 messageId 为准，MK 不再是身份的一部分：mk 会随同步推移发生变化
+  // （实测同一楼层的两次交接 mk 不同）。若拿 mk 做等值判断，恢复记录会被静默跳过、
+  // 调用块永不标记，于是每轮同步都再交接一次（无限循环）。
   if (resume === null || resume.messageId !== input.messageId) return input.text;
-  // 楼层身份以 messageId 为准：mk 会随同步推移发生变化（实测同一楼层的两次交接 mk 不同），
-  // 用它做等值判断会让恢复记录被静默跳过，调用块永不标记 → 每轮同步再次交接（无限循环）。
-  if (resume.mk.length > 0 && input.mk.length === 0 && resume.messageId !== input.messageId) {
-    return input.text;
-  }
   return recordEraFunctionCallOutcome({
     content: input.text,
     callId: resume.callId,
@@ -419,7 +416,6 @@ function planPreparation(
     step: context.seed.step,
     text: mkText,
     messageId: latest.messageId,
-    mk: ensured.mk,
   });
   const preparedText =
     latest.role !== "user" &&
