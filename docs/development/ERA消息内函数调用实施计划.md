@@ -446,9 +446,23 @@ resume 端不再写 `<EraFCallTx>` 操作区，只给调用块打 `status="done"
   `divergence` 给 `null`、`committed` 置真；其余（`consecutiveProcessingCount`/`nextConsecutiveState`/`diagnostics` 等）
   按既有规划产物同形填写。
 
-**下一次实施前仍需 1 步读实**：`successfulPlan`/`normalizePlan` 对 plan 的归一化要求（`sync_planning.ts` 里
-`normalizePlan(plan, preUpdates, step)` 会改写 `committed`/`actionsTaken`/`messageUpdates`，必须确认单块 plan
-经过它之后不会被还原成整条消息的计划）。确认后再写代码，避免把构建留红。
+**归一化要求已读实（`sync_planning.normalizePlan`，结论：单块 plan 方案可行）**：
+
+```ts
+if (plan.status === "failed") return plan;
+return { ...plan,
+  committed: plan.committed || preUpdates.length > 0,
+  actionsTaken: actionsForStep(step, plan.actionsTaken),   // 由 step 重算，不必自己精确填
+  messageUpdates: [...preUpdates, ...plan.messageUpdates] };
+```
+
+即归一化**只动 `committed`/`actionsTaken`/`messageUpdates` 三项**，`stat`/`statFunc`/`meta`/`messages`
+原样保留——单块 plan 不会被还原成整条消息的计划。另据 `payloadFor`：`plan.consecutiveProcessingCount`
+必须是 ≥ 1 的整数，否则构造 payload 会抛错，单块 plan 必须填它（沿用既有计数或取 1）。
+
+**因此切片 1b 的实施不再有未知项**：按上面的字段配方生成单块 plan → 包成 `disposition: "commit"` 的工作项 →
+`buildSyncCommitRequest` → 既有 `era.tavern.variables_commit` 写入。剩余待人工确认的只有切片 3 的两个红线问题
+（收尾/通知链归属、单块 `<era_tx>` 与封存压缩共存）。
 
 ### 机器检查证据
 
