@@ -478,3 +478,41 @@ return { ...plan,
 通过当作产品行为通过。专项已具备可评估条件：`era-message-function-call` 套件 6 条
 （MSG-FCALL-001..006），其中 006 使用卡片内注册的 `era_message_call_fixture_v1` 验证「函数在
 调用位置提交的操作随消息重放生效」。
+
+### 真实 suite 首次运行记录（2026-09-11，已授权）
+
+运行命令（计划 §6.2.1）：`era-test -- test --project …/.st-harness.jsonc --era-bundle …/app/dist/ERA变量框架/index.js --suite era-message-function-call --workers 8`
+
+Artifact：`本地运行资料/live/artifacts-v4/st-run-20260911T13365826-e091db350beb`
+
+| 项 | 结果 |
+| --- | --- |
+| Pack CLI | `completed_with_findings` |
+| Harness | `status=incomplete`、`recordingStatus=partial`、**`evaluationStatus=failed`** |
+| 记录计数 | `selectedPaths=6`、`recordedPaths=6`、`actions=90`；`structuralStatus=consistent`、`recorderEvidenceStatus=complete` |
+| 逐条评估 | MSG-FCALL-001..006 **全部 failed** |
+
+失败 findings（6 条一致）：
+
+```
+ERA_BEHAVIOR_EVIDENCE_MISSING
+  Action realistic-baseline-quick-initialize is missing, duplicated, incomplete, or has the wrong type
+  Action realistic-baseline-observe-resources is missing, duplicated, incomplete, or has the wrong type
+```
+
+**已排查的关键事实（决定了修哪一侧）**：这些 baseline action **确实被执行并记录**。
+`paths/MSG-FCALL-001/actions.jsonl` 的前 6 条正是
+`realistic-baseline-wait-era-ball`、`-open-era-panel`、`-quick-initialize`、`-observe-resources`、
+`-observe-state`、`-close-era-panel`，各出现一次、无重复。
+
+因此**问题不在场景装配**（`applyRealisticBaseline` 已按 `quick-init` 模式注入并通过了 Harness 记录），
+而在 **Evaluator 的证据要求判定**：它认为这些 action「缺失/重复/不完整/类型不对」。
+下一步排查方向（下一轮）：
+
+1. 对比本套件用例与**通过中**的套件（如 `era-expression-function`）在 catalog fixture 里这些
+   baseline action 的 **type / input 形状**是否一致；
+2. 检查我新加的 `messageFunctionCallAssertions` 接入是否影响了 `exactStateAssertionsForRealisticBaseline`
+   对 baseline 证据的期望构造（例如断言引用的 actionType 与实际记录不一致）；
+3. 必要时用 `--path MSG-FCALL-001` 单条运行缩小范围，避免一次跑 6 条。
+
+**在取得有结论（或有明确修复方向）的真实结果之前，不得把该特性记为「真实酒馆验收通过」。**
