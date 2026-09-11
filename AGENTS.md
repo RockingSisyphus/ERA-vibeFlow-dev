@@ -34,3 +34,11 @@ SillyTavern、Tavern Helper、浏览器事件、ERA 宏、UI 或真实酒馆联�
 `app/开发文档/ERA事件调度与生成栅栏设计.md` 和
 `docs/development/era-host-contract.md`。接口入口、文档索引与联调步骤见
 `docs/development/README.md`。
+
+## 测试监控强制规则
+
+执行全量综合测试、专项测试、单项测试或失败复跑前，必须读取并使用
+`long-running-task-monitor` skill；不因测试数量少或预计耗时短而豁免。
+这是用户明确指定的项目规则，覆盖 skill 的默认时长适用范围。跨轮测试按其心跳/目标模式
+规则监控，不以持续手动轮询代替；短测试完成后直接验收，不留无用心跳。
+具体记录、验收和收尾要求见 [docs/development/README.md](docs/development/README.md#测试任务必须使用长任务-skill)。
