@@ -10,13 +10,11 @@
  */
 
 import {
-  findUnprocessedEraFunctionCalls,
-  parseMessageBlocks,
-  startEraBlockSession,
-  advanceEraBlockSession,
-  type EraBlockSession,
-  type EraFunctionCallSite,
-} from "../../base_lib/domain/message_function_calls.ts";
+  advanceMessageFunctionFlow,
+  startMessageFunctionFlow,
+  type MessageFunctionFlow,
+} from "../../base_lib/domain/message_function_flow.ts";
+import type { EraFunctionCallSite } from "../../base_lib/domain/message_function_calls.ts";
 import { planSyncWork } from "../../base_lib/sync_planning.ts";
 import type { SyncContextV1 } from "../../base_lib/sync_contracts.ts";
 
@@ -53,34 +51,41 @@ function processingFloor(
 }
 
 /**
- * 按块推进一条消息，返回会话与需要执行的首个未处理调用。
+ * 按块推进一条消息，返回流程状态与需要宿主机执行的调用。
  *
- * 每次推进只处理一个块；不需要调用时继续推进，遇到未处理调用立即停止，
- * 由调用方在块边界之外执行函数。上限保护避免异常输入造成无界循环。
+ * 每次推进只处理一个块；遇到未处理调用立即停止，函数由宿主机在块边界之外执行。
+ * 流程状态自带块游标与累计状态，因此可以随步骤跨批次携带。
  */
 function driveBlocks(
   text: string,
   messageId: number,
   mk: string,
-): {
-  readonly session: EraBlockSession;
-  readonly pendingCall: EraFunctionCallSite | null;
-  readonly steps: number;
-} {
-  let session = startEraBlockSession({
+  formal: boolean,
+): { readonly flow: MessageFunctionFlow; readonly pendingCall: EraFunctionCallSite | null } {
+  let flow = startMessageFunctionFlow({
     content: text,
     messageId,
     mk,
     initialStat: {},
     meta: {},
-    formal: true,
+    formal,
   });
-  let steps = 0;
-  while (!session.done && session.pendingCall === null && steps < MAX_BLOCKS_PER_RUN) {
-    session = advanceEraBlockSession(session);
-    steps += 1;
+  let guard = 0;
+  while (!flow.done && flow.pendingCall === null && guard < MAX_BLOCKS_PER_RUN) {
+    flow = advanceMessageFunctionFlow(flow);
+    guard += 1;
   }
-  return { session, pendingCall: session.pendingCall, steps };
+  return { flow, pendingCall: flow.pendingCall };
+}
+
+/**
+ * 本节点当前只服务正式同步路径，因此固定按正式模式驱动。
+ *
+ * 纯计算入口（快照、历史、试算）必须不执行作者函数；它们要走这条路径时，
+ * 需要先把它声明为节点输入，而不是靠未登记的旁路参数。
+ */
+function inputFormal(): boolean {
+  return true;
 }
 
 export function run(
@@ -100,27 +105,21 @@ export function run(
     };
   }
 
-  const driven = driveBlocks(floor.text, floor.messageId, floor.mk);
-  // 会话在 pendingCall 处停止时，pendingCall 即待调用；未停止时再按已处理清单核对。
-  const pending =
-    driven.pendingCall ??
-    findUnprocessedEraFunctionCalls(
-      parseMessageBlocks({ content: floor.text }).flatMap(block =>
-        block.kind === "call" ? [block.call] : [],
-      ),
-    )[0] ??
-    null;
+  const formal = inputFormal();
+  const driven = driveBlocks(floor.text, floor.messageId, floor.mk, formal);
+  const pending = driven.pendingCall;
 
   return {
     expression_command_result: work as unknown as Readonly<Record<string, unknown>>,
     function_invocation_route: pending === null ? "none" : "invoke",
     pending_function_call: pending,
+    // 流程状态随结果报出：它自带块游标与累计状态，是跨步骤续做的依据。
     block_cursor: {
       messageId: floor.messageId,
       mk: floor.mk,
-      blockIndex: driven.session.cursor.blockIndex,
-      done: driven.session.done && pending === null,
-      steps: driven.steps,
+      blockIndex: driven.flow.cursor.blockIndex,
+      done: driven.flow.done && pending === null,
     },
+    message_function_flow: driven.flow,
   };
 }

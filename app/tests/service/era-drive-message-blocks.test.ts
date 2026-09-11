@@ -130,6 +130,22 @@ describe('era.sync.drive_message_blocks 节点', () => {
     expect(result.pending_function_call).toMatchObject({ callId: 'c1', name: 'attack' });
   });
 
+  it('游标反映按块推进到的位置，而不是停在起点', () => {
+    const result = run({
+      'era.sync.context': {
+        value: contextWith(
+          ['<VariableInsert>{"hp":100}</VariableInsert>', '<VariableEdit>{"hp":{"$expr":"hp-30"}}</VariableEdit>'].join(
+            '\n',
+          ),
+        ),
+      },
+    });
+
+    // 两个指令块都已推进：游标应越过它们，而不是停在 0。
+    expect(result.block_cursor.blockIndex).toBeGreaterThan(0);
+    expect(result.block_cursor.done).toBe(true);
+  });
+
   it('报出块步进游标，作为跨步骤续做的依据', () => {
     const result = run({
       'era.sync.context': {
