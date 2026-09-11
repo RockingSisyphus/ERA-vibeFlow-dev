@@ -210,3 +210,23 @@ describe('era.sync 块步进循环的三个节点', () => {
     expect(prepared.block_step_state).toMatchObject({ done: true, blockIndex: 0, route: 'none' });
   });
 });
+
+describe('已处理调用之后的块必须落进最终计划', () => {
+  it('insert + 已标记调用 + 空操作区 + 末尾 edit ⇒ 终值 90', () => {
+    const text = [
+      '<VariableInsert>{"mfc_fixture":{"hp":100}}</VariableInsert>',
+      '<EraFCall name="era_recorder_echo_v1" args=\'{"value":"x"}\' id="c1" status="done"/>',
+      '<EraFCallTx for="c1"></EraFCallTx>',
+      '<VariableEdit>{"mfc_fixture":{"hp":{"$expr":"mfc_fixture.hp - 10"}}}</VariableEdit>',
+    ].join('\n');
+    const context = contextWith(text, {});
+    const prepared = prepare({ 'era.sync.context': { value: context } });
+    const work = prepared.block_step_state.work as {
+      plan: { stat?: Record<string, any> } | null;
+      disposition: string;
+    };
+
+    expect(work.disposition).toBe('commit');
+    expect(work.plan?.stat?.mfc_fixture).toEqual({ hp: 90 });
+  });
+});
