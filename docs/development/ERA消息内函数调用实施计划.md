@@ -557,8 +557,17 @@ base_lib（`buildPerBlockCommitWork` / `foldBlockCommitOutcome`）。
 5. ~~**封存压缩（决定二）**~~（**已完成**，第 95 轮）：`MESSAGE_FUNCTION_CALL_MARKER` 整层跳过已删除；
    压缩安全性由既有的真实重放门承担（`replayWithServiceEngine` 逐字段比对层末状态），实测压缩会把
    `a+1`、`a+2` 合并成 `@a+3` 而终值不变；旧测试已改写为不变量测试。真机复跑专项 6/6 + 回归门 passed。
-6. **打包**：`era-macro-syntax` 升版 0.1.1 重装（让 `era_block` 在显示与提示词里隐藏）——与
-   写入者同批做；同批还要重跑真机专项与回归门。
+6. ~~**打包**~~（**已完成**，第 101 轮）：`era-macro-syntax` 升版 0.1.1 重装（让 `era_block` 在显示与
+   提示词里隐藏）——与写入者同批做；同批还要重跑真机专项与回归门。
+   **真因不是「忘了改包」，而是「包改了但没重新打包」**：`technical_blocks.ts` 与
+   `packages/era-macro-syntax/*.js` 都已含 `era_block`，但 app 消费的是 tarball 副本，而 tarball 仍是
+   加标签之前的内容，于是 `stripEraTechnicalBlocks` 只吃掉内层命令、把
+   `<era_block mk="…" applied="1" draws="N"></era_block>` 当正文留在楼层与提示词里。
+   同批还发现 **macro AOT（`generated/era-macro`）本身是旧的**：它连 `erafcall`/`erafcalltx`
+   都不认识，说明此前真机 6/6 验收跑的是「宏侧不认识函数调用标签」的 bundle。两处都已重建，
+   并加了一条真机之外的门：`app/tests/service/technical-block-projection.test.ts` 直接断言
+   「已应用记录 + 函数调用块」在 `stripEraTechnicalBlocks`、`parseEraTechnicalProjection` 与
+   `projectEraPromptMessages`（宏 AOT 路径）三条出口上都不残留。
 
 ### 切片 1 落点（已读实，下一轮直接实施）
 

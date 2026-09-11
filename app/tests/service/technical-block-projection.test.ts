@@ -164,6 +164,33 @@ describe('ERA technical block projection', () => {
     expect(projected).not.toBe(messages);
   });
 
+  it('把「已应用记录」与函数调用块一起从显示与提示词里隐藏', () => {
+    const applied = [
+      '正式故事',
+      '<era_block mk="era_mk_1" applied="1" draws="2"><VariableInsert>{"hp":100}</VariableInsert></era_block>',
+      `<EraFCall name="recorder" args='{"value":"x"}' id="c1" status="done"/>`,
+      '<EraFCallTx for="c1"><VariableEdit>{"hp":90}</VariableEdit></EraFCallTx>',
+    ].join('\n');
+
+    const stripped = stripEraTechnicalBlocks(applied);
+    expect(stripped).toContain('正式故事');
+    expect(stripped).not.toMatch(/era_block|EraFCall/);
+
+    const projection = parseEraTechnicalProjection(applied);
+    expect(projection.valid).toBe(true);
+    expect(projection.technicalBlockCount).toBe(3);
+    expect(
+      projection.segments
+        .filter(segment => segment.kind === 'story')
+        .map(segment => segment.text)
+        .join(''),
+    ).toBe(stripped);
+
+    const projected = projectEraPromptMessages([{ role: 'assistant', content: applied }])[0].content as string;
+    expect(projected).toContain('正式故事');
+    expect(projected).not.toMatch(/era_block|EraFCall/);
+  });
+
   it('发给模型的普通与多模态文本使用最新已提交状态解析惰性宏', () => {
     const token = createEraLazyMacroToken('{{ERA:player.hp}}');
     const messages: SillyTavern.SendingMessage[] = [
