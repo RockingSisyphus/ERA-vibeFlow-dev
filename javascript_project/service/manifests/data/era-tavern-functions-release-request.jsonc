@@ -1,0 +1,16 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.tavern.functions.release.request",
+  "representation": "json",
+  "display_name": "ERA·函数调用·结束请求",
+  "description": "结束一次调用会话并释放位置绑定状态；结束后该标识的提交一律被拒绝。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "invocationId": { "type": "string", "minLength": 1 }
+    },
+    "required": ["invocationId"],
+    "additionalProperties": false
+  }
+}

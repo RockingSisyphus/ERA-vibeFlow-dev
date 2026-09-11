@@ -1,0 +1,16 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.tavern.functions.release.result",
+  "representation": "json",
+  "display_name": "ERA·函数调用·结束结果",
+  "description": "结束回执。释放是幂等的：重复释放同一标识不报错，也不改变业务结果。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "released": { "type": "boolean" }
+    },
+    "required": ["released"],
+    "additionalProperties": false
+  }
+}
