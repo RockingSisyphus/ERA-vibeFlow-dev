@@ -88,9 +88,20 @@ export function identifySealedLayers(work: SyncWorkV1): ServiceCompactionContext
   };
 }
 
-/** Delegate symbolic rewriting and scope-aware proof to the published pure root. */
+/** 含消息内函数调用的楼层不参与压缩重写。 */
+const MESSAGE_FUNCTION_CALL_MARKER = /<EraFCall\b/iu;
+
+/**
+ * Delegate symbolic rewriting and scope-aware proof to the published pure root.
+ *
+ * 含调用块的楼层整层跳过：调用与其操作区必须保持相对位置与原文，压缩会把相邻
+ * 指令块合并或移位，一旦操作块被移出所属操作区，调用与它产出的操作就会脱钩。
+ */
 export function compactEachSegment(context: ServiceCompactionContext): ServiceCompactionContext {
-  return mapCandidates(context, (entry) => entry.original === null ? entry : {
+  return mapCandidates(context, (entry) => {
+    if (entry.original === null) return entry;
+    if (MESSAGE_FUNCTION_CALL_MARKER.test(entry.original)) return entry;
+    return {
     ...entry,
     compaction: compactCommandLayer({
       content: entry.original,
@@ -99,6 +110,7 @@ export function compactEachSegment(context: ServiceCompactionContext): ServiceCo
       eraMeta: entry.candidate.eraMeta,
       randomContext: { sourceKey: entry.candidate.mk, drawOffset: 0 },
     }),
+    };
   });
 }
 

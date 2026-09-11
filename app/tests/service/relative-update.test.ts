@@ -510,3 +510,65 @@ describe('ERA $expr 与函数指令', () => {
     expect(types).toEqual(['function-insert', 'edit', 'function-delete']);
   });
 });
+
+describe('ERA 消息内函数调用：封存压缩边界保护', () => {
+  it('含调用块的楼层不做压缩重写，保留调用与其操作区的相对位置', () => {
+    const messages = [
+      message(
+        0,
+        'mk-sealed',
+        [
+          edit({ a: { $expr: 'a + 1' } }),
+          '<EraFCall name="attack" id="c1" status="done"/>',
+          '<EraFCallTx for="c1" applied="1">',
+          edit({ a: { $expr: 'a + 2' } }),
+          '</EraFCallTx>',
+        ].join('\n'),
+      ),
+      message(1, 'mk-latest', '最新 AI 楼层保持原样。'),
+    ];
+    const rawPlan = planEraSync({
+      messages,
+      stat: { a: 1 },
+      statFunc: {},
+      meta: { SelectedMks: [], EditLogs: {}, FunctionEditLogs: {} },
+      reason: 'manual',
+      forceFullRebuild: true,
+      processingMk: 'mk-latest',
+      consecutiveState: null,
+    });
+    const compacted = applySealedCommandCompaction(rawPlan);
+
+    // 该楼层含调用块：压缩必须整层放弃，原文（含调用与操作区）保持字节不变。
+    const sealed = compacted.messages[0];
+    expect(sealed).toBeTruthy();
+    const text = sealed && sealed.content.kind === 'text' ? sealed.content.text : '';
+    expect(text).toContain('<EraFCall name="attack" id="c1" status="done"/>');
+    expect(text).toContain('<EraFCallTx for="c1" applied="1">');
+    expect(text).toContain('a + 2');
+  });
+
+  it('不含调用块的楼层仍按原语义压缩', () => {
+    const messages = [
+      message(0, 'mk-sealed', [edit({ a: { $expr: 'a + 1' } }), edit({ a: { $expr: 'a + 2' } })].join('\n')),
+      message(1, 'mk-latest', '最新 AI 楼层保持原样。'),
+    ];
+    const rawPlan = planEraSync({
+      messages,
+      stat: { a: 1 },
+      statFunc: {},
+      meta: { SelectedMks: [], EditLogs: {}, FunctionEditLogs: {} },
+      reason: 'manual',
+      forceFullRebuild: true,
+      processingMk: 'mk-latest',
+      consecutiveState: null,
+    });
+    const compacted = applySealedCommandCompaction(rawPlan);
+    const sealed = compacted.messages[0];
+    const text = sealed && sealed.content.kind === 'text' ? sealed.content.text : '';
+
+    // 两个顺序 edit 合并为一条基于 @快照的表达式，压缩确实生效。
+    expect(text).toContain('$expr');
+    expect(text).not.toContain('a + 1');
+  });
+});
