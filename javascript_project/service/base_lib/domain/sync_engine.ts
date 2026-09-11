@@ -12,6 +12,8 @@ import {
   type EraFunctionEditLog,
 } from "./crud_engine.ts";
 import {
+  appliedCommandPrefix,
+  hasAppliedBlockRecords,
   startEraBlockSession,
   advanceEraBlockSession,
   type EraFunctionCallSite,
@@ -374,6 +376,38 @@ function firstUncompactedSealedAssistant(
 }
 
 /**
+ * 把重算起点收紧到「最早带已应用记录的楼层」。
+ *
+ * 只在记录楼层更靠前时才改变结论：它更靠后时常规分歧点已经覆盖它，不需要动。
+ */
+function tightenToAppliedRecords(
+  divergence: EraSyncDivergenceV1,
+  messages: readonly EraMkMessageV1[],
+): EraSyncDivergenceV1 {
+  const recordFloor = firstAppliedRecordFloor(messages);
+  if (recordFloor === null) return divergence;
+  if (divergence.type === "FULL_RECALC" && divergence.recalcId <= recordFloor) {
+    return divergence;
+  }
+  return { type: "FULL_RECALC", recalcId: recordFloor, cause: "divergence" };
+}
+
+/**
+ * 最早带有「已应用」记录（逐块提交的进度凭据）的楼层下标。
+ *
+ * 这类楼层是被中断的：sidecar 里的 stat 停在它算到一半的位置，因此**必须**从它开始重算，
+ * 否则「中断楼层 + 之后又来了新楼层」会让它永远算不完（常规分歧点落在它后面）。
+ */
+function firstAppliedRecordFloor(messages: readonly EraMkMessageV1[]): number | null {
+  for (let index = 0; index < messages.length; index += 1) {
+    const message = messages[index];
+    if (message === undefined || message.content.kind !== "text") continue;
+    if (hasAppliedBlockRecords(message.content.text)) return index;
+  }
+  return null;
+}
+
+/**
  * 比较 current/old SelectedMks，并保留候选唯一 fast path：只删除且被删 MK
  * 的 EditLog 全部为空。
  */
@@ -412,11 +446,14 @@ export function findSyncDivergence(
     }
   }
   if (firstMismatch === -1) {
-    return {
-      type: "FULL_RECALC",
-      recalcId: messages.length > 0 ? messages.length - 1 : 0,
-      cause: "no-divergence",
-    };
+    return tightenToAppliedRecords(
+      {
+        type: "FULL_RECALC",
+        recalcId: messages.length > 0 ? messages.length - 1 : 0,
+        cause: "no-divergence",
+      },
+      messages,
+    );
   }
   const deleted = difference(oldSelectedMks, current);
   const added = difference(current, oldSelectedMks);
@@ -425,17 +462,23 @@ export function findSyncDivergence(
     deleted.length > 0 &&
     editLogsAreEmpty(deleted, initialMeta)
   ) {
-    return {
-      type: "FAST_SYNC",
-      firstMismatch,
-      newSelectedMks: cloneSnapshotValue(current),
-    };
+    return tightenToAppliedRecords(
+      {
+        type: "FAST_SYNC",
+        firstMismatch,
+        newSelectedMks: cloneSnapshotValue(current),
+      },
+      messages,
+    );
   }
-  return {
-    type: "FULL_RECALC",
-    recalcId: firstMismatch,
-    cause: "divergence",
-  };
+  return tightenToAppliedRecords(
+    {
+      type: "FULL_RECALC",
+      recalcId: firstMismatch,
+      cause: "divergence",
+    },
+    messages,
+  );
 }
 
 function failedPlan(
@@ -651,14 +694,28 @@ export function planEraSync(input: EraSyncInputV1): EraSyncPlanV1 {
       string,
       unknown
     >;
+    const floorText = readMkMessageText(ensured.message);
+    // 这条楼层若还留着「已应用」记录，说明它是被中断的：已提交的块构成指令序列的前缀，
+    // 重放必须从该前缀之后开始（sidecar 的 stat 已经包含它们）。同一条记录也要求下面的
+    // EditLogs **追加**而不是覆盖，否则回退会漏掉已提交块的日志。
+    const appliedPrefix = appliedCommandPrefix({ content: floorText });
+    const interrupted = hasAppliedBlockRecords(floorText);
     const applied = applyMessageCommands({
-      content: readMkMessageText(ensured.message),
+      content: floorText,
       messageId: ensured.message.messageId,
       initialStat: layerStartStat,
       initialStatFunc: layerStartFunctions,
       randomSourceKey: ensured.mk,
       meta: contextMeta,
       traditionalToSimplified: input.traditionalToSimplified,
+      ...(appliedPrefix > 0
+        ? {
+            commandRange: {
+              fromIndex: appliedPrefix,
+              toIndex: Number.MAX_SAFE_INTEGER,
+            },
+          }
+        : {}),
     });
     statForRecalc = applied.finalStat;
     statFuncForRecalc = cloneSnapshotValue(
@@ -672,10 +729,19 @@ export function planEraSync(input: EraSyncInputV1): EraSyncPlanV1 {
         path: diagnostic.path,
       })),
     );
-    const effectiveEditLog = cloneSnapshotValue(applied.editLog);
-    const effectiveFunctionEditLog = cloneSnapshotValue(
-      applied.functionEditLog ?? [],
-    );
+    const alreadyLogged = parseEditLog(editLogs[ensured.mk]);
+    const effectiveEditLog = interrupted
+      ? [...alreadyLogged, ...cloneSnapshotValue(applied.editLog)]
+      : cloneSnapshotValue(applied.editLog);
+    const alreadyLoggedFunctions = parseEditLog(
+      functionEditLogs[ensured.mk],
+    ) as readonly EraFunctionEditLog[];
+    const effectiveFunctionEditLog = interrupted
+      ? [
+          ...alreadyLoggedFunctions,
+          ...cloneSnapshotValue(applied.functionEditLog ?? []),
+        ]
+      : cloneSnapshotValue(applied.functionEditLog ?? []);
     // An assistant floor becomes immutable only after a later assistant message
     // exists. The last floor stays verbatim so streaming/API writers can finish
     // their command sequence before it is ever canonicalised.
