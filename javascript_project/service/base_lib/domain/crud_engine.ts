@@ -355,16 +355,19 @@ function parseBlockContent(source: string): unknown[] {
   return parsed;
 }
 
-/** 从混合消息中按原始出现位置提取六类 ERA 指令。
+/** 从混合消息中按原始出现位置提取六类 ERA 指令，并保留每个块的原文字节范围。
  *
  * 变量 payload 沿用既有路径转义；函数定义是表达式 root 的输入，不能经过路径
  * 转义，否则函数名、参数或表达式中的 `.` 会被改写。
+ *
+ * 逐块推进的生命周期需要把指令块与调用块合并为同一份位置有序块列表，
+ * 因此位置与范围在这里一次算出，调用方不再自行重建匹配位置。
  */
-export function parseMessageCommands(
+export function parsePositionedMessageCommands(
   input: EraCommandParseInput,
-): EraCrudCommand[] {
+): readonly (EraCrudCommand & { readonly start: number; readonly end: number })[] {
   if (!input || typeof input.content !== "string" || !input.content) return [];
-  const commands: PositionedCommand[] = [];
+  const commands: (PositionedCommand & { readonly end: number })[] = [];
   const commandPattern =
     /<((?:Variable|Function)(?:Insert|Edit|Delete))>\s*(?=[\s\S]*?\S[\s\S]*?<\/\1>)((?:(?!<(?:era_data|Variable(?:Think|Insert|Edit|Delete)|Function(?:Insert|Edit|Delete))>|<\/\1>)[\s\S])*?)\s*<\/\1>/gi;
   let match: RegExpExecArray | null;
@@ -391,10 +394,27 @@ export function parseMessageCommands(
         ? cloneCrudValue(parsed)
         : escapeVariableCommandData(parsed),
       index: match.index,
+      end: match.index + match[0].length,
     });
   }
   commands.sort((left, right) => left.index - right.index);
   return commands.map((command) => ({
+    type: command.type,
+    data: cloneCrudValue(command.data),
+    start: command.index,
+    end: command.end,
+  }));
+}
+
+/** 从混合消息中按原始出现位置提取六类 ERA 指令。
+ *
+ * 变量 payload 沿用既有路径转义；函数定义是表达式 root 的输入，不能经过路径
+ * 转义，否则函数名、参数或表达式中的 `.` 会被改写。
+ */
+export function parseMessageCommands(
+  input: EraCommandParseInput,
+): EraCrudCommand[] {
+  return parsePositionedMessageCommands(input).map((command) => ({
     type: command.type,
     data: cloneCrudValue(command.data),
   }));

@@ -90,6 +90,18 @@ describe('ERA technical block projection', () => {
     expect(stripEraTechnicalBlocks(source)).toBe('\n正式故事\n\n\n');
   });
 
+  it('treats a self-closing function call as a complete block instead of an unclosed tag', () => {
+    const source = [
+      '正式故事',
+      '<EraFCall name="dice"/>',
+      '<EraFCallTx for="c1"><VariableEdit>{"hp":{"$expr":"hp-1"}}</VariableEdit></EraFCallTx>',
+    ].join('\n');
+    const projection = parseEraTechnicalProjection(source);
+    expect(projection.valid).toBe(true);
+    expect(projection.technicalBlockCount).toBe(2);
+    expect(stripEraTechnicalBlocks(source)).toBe('正式故事\n\n');
+  });
+
   it('does not greedily remove malformed or misordered blocks', () => {
     const malformed = '开头<era_plan>未闭合故事<era_update>报告</era_plan>结尾';
     expect(stripEraTechnicalBlocks(malformed)).toBe(malformed);

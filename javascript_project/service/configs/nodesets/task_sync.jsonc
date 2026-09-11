@@ -1,6 +1,9 @@
 {
   "nodeset_imports": [
     {
+      "path": "message_block_step.jsonc"
+    },
+    {
       "path": "sidecar_store.jsonc"
     },
     {
@@ -71,14 +74,99 @@
       {
         "id": "prepare_expression_command_request",
         "type_used": "era.sync.prepare_expression_command_request",
-        "display_name": "准备同步规划请求",
-        "description": "将已加载 Sidecar 的同步输入投影为规划所需消息、状态、派发事实和连续计数；不再透传整个上下文。调用登记 sync_planning 模块。"
+        "display_name": "【planned：一步一块】准备单块同步请求",
+        "status": "planned",
+        "flow_kind": "process",
+        "description": "【planned：一步一块·消息内函数调用】只准备游标指向的单个操作块：该楼层文本、消息身份、累计变量与函数状态增量、本楼已记日志；不再一次性投影整条消息的全部指令。",
+        "requires": [
+          {
+            "type": "era.sync.context",
+            "cardinality": "exactly_one",
+            "display_name": "Sidecar 同步上下文"
+          }
+        ],
+        "provides": [
+          {
+            "key": "expression_command_request",
+            "type": "era.expression.command.request",
+            "display_name": "表达式命令请求"
+          },
+          {
+            "key": "block_step_state",
+            "type": "era.sync.block.step.state",
+            "display_name": "块步进状态"
+          }
+        ]
       },
       {
-        "id": "execute_expression_commands",
-        "type_used": "era.expression.execute_era_commands",
-        "display_name": "计算含表达式的同步计划",
-        "description": "经现有同步规划库重放消息和指令；完整表达式求值实际调用版本化 Expression AOT，输出纯同步工作项。"
+        "id": "process_message_blocks",
+        "type_used": "vibeflow.loop.while",
+        "display_name": "【planned：一步一块】逐块推进整条消息",
+        "status": "planned",
+        "flow_kind": "process",
+        "description": "【planned：一步一块·消息内函数调用】用 vibeflow.loop.while 表达“每个操作块各自一步”，与批次级 step_loop 同一模式；body 为新增的 planned Nodeset，每次迭代读一块、执行一块、推进游标。遇到无标记 <EraFCall name=.. args=.. /> 时本次迭代结束，本步 receipt 正常结算，函数由 Host 在该步骤之外调用；函数不新增绕队列的提交通道，其 ERA.commit 作为正常 FIFO 事件结算。stop_when 为该消息所有块已处理完成；只有全部块完成后才进入后续压缩、提交与收尾。",
+        "requires": [
+          {
+            "type": "era.sync.block.step.state",
+            "cardinality": "exactly_one",
+            "display_name": "块步进状态"
+          }
+        ],
+        "provides": [
+          {
+            "key": "sync_work",
+            "type": "era.sync.work",
+            "display_name": "同步工作项"
+          },
+          {
+            "key": "function_invocation_route",
+            "type": "era.sync.function.invocation.route",
+            "display_name": "函数调用路由"
+          }
+        ],
+        "loop": {
+          "body": "era.sync.block_step",
+          "max_iterations": 256,
+          "stop_when": {
+            "from": "blockStepDone",
+            "equals": true
+          },
+          "carry": [
+            {
+              "from": "era.sync.block.step.state",
+              "as": "block_step_state",
+              "update": "blockStepStateNext"
+            }
+          ],
+          "outputs": [
+            {
+              "from": "blockStepStateNext",
+              "as": "sync_work"
+            }
+          ]
+        }
+      },
+      {
+        "id": "build_function_handoff",
+        "type_used": "planned.build_function_handoff",
+        "display_name": "【planned：一步一块】交接函数调用与恢复",
+        "status": "planned",
+        "flow_kind": "process",
+        "description": "【planned：一步一块·消息内函数调用】把待调用位置、调用标识与游标交给 Host 后置通知，并接收 era.message.invoke_continue 恢复事件：函数产出的操作作为新的普通操作块追加到 <EraFCallTx for=..> 区并给调用块打上已处理标记，游标指向第一个新块后继续逐块迭代。本节点不调用函数本体，也不新增第二套调度器。",
+        "requires": [
+          {
+            "type": "era.sync.work",
+            "cardinality": "exactly_one",
+            "display_name": "同步工作项"
+          }
+        ],
+        "provides": [
+          {
+            "key": "sync_task_result",
+            "type": "era.task.result",
+            "display_name": "同步结果"
+          }
+        ]
       },
       {
         "id": "apply_command_compaction",
@@ -206,11 +294,21 @@
       },
       [
         "prepare_expression_command_request",
-        "execute_expression_commands"
+        "process_message_blocks"
       ],
+      {
+        "from": "process_message_blocks",
+        "to": "apply_command_compaction",
+        "when": "function_invocation_route == 'none'"
+      },
+      {
+        "from": "process_message_blocks",
+        "to": "build_function_handoff",
+        "when": "function_invocation_route == 'invoke'"
+      },
       [
-        "execute_expression_commands",
-        "apply_command_compaction"
+        "build_function_handoff",
+        "end"
       ],
       [
         "apply_command_compaction",

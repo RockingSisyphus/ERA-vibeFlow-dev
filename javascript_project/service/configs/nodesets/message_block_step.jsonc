@@ -1,0 +1,20 @@
+{
+  "status": "planned",
+  "type_key": "era.sync.block_step",
+  "display_name": "【planned：一步一块】单块同步步进",
+  "description": "【planned：一步一块·消息内函数调用】vibeflow.loop.while 的 body：每次迭代只处理游标指向的那一个操作块——读一块、执行一块、推进游标，然后本次迭代结束。操作块包含六类既有指令与 <EraFCall name=.. args=.. />；调用块产出或引用的 <EraFCallTx for=..> 区内的操作块与原文操作块同权，各自独立成为一次迭代。无标记调用在本次迭代结束时把待调用位置和游标交给 Host，函数不在本步骤内执行；已处理调用只重放其操作。该消息再无新块时置 blockStepDone 为真，循环结束，后续压缩、提交与收尾按现有顺序进行。",
+  "requires": [
+    {
+      "type": "era.sync.block.step.state",
+      "cardinality": "exactly_one",
+      "display_name": "块步进状态"
+    }
+  ],
+  "provides": [
+    {
+      "key": "block_step_done",
+      "type": "era.step.done",
+      "display_name": "本消息全部块已处理"
+    }
+  ]
+}

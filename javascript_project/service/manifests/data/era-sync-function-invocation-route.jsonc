@@ -1,0 +1,12 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.sync.function.invocation.route",
+  "representation": "json",
+  "display_name": "ERA·同步·函数调用路由",
+  "description": "【planned：一步一块】逐块推进的路由结果：'none' 表示该消息所有块已处理完可进入后续压缩与提交；'invoke' 表示遇到无标记 <EraFCall/>，本次迭代结束并把待调用位置与游标交给 Host 在该步骤之外调用。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "string",
+    "enum": ["none", "invoke"]
+  }
+}

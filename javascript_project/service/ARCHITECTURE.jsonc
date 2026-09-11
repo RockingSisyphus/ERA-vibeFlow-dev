@@ -15,7 +15,7 @@
     "contains_global_state": false,
     "summary": {
       "nodes": 9,
-      "nodesets": 18,
+      "nodesets": 19,
       "explicit_edges": 9,
       "data_edges": 0,
       "reported_edges": 9,
@@ -559,7 +559,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 13,
-          "nodesets": 18,
+          "nodesets": 19,
           "explicit_edges": 15,
           "data_edges": 0,
           "reported_edges": 15,
@@ -1400,7 +1400,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 5,
-          "nodesets": 18,
+          "nodesets": 19,
           "explicit_edges": 5,
           "data_edges": 0,
           "reported_edges": 5,
@@ -1739,7 +1739,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 18,
-          "nodesets": 18,
+          "nodesets": 19,
           "explicit_edges": 24,
           "data_edges": 1,
           "reported_edges": 24,
@@ -2937,7 +2937,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 9,
-          "nodesets": 18,
+          "nodesets": 19,
           "explicit_edges": 11,
           "data_edges": 0,
           "reported_edges": 11,
@@ -3548,7 +3548,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 7,
-          "nodesets": 18,
+          "nodesets": 19,
           "explicit_edges": 8,
           "data_edges": 0,
           "reported_edges": 8,
@@ -4031,7 +4031,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 8,
-          "nodesets": 18,
+          "nodesets": 19,
           "explicit_edges": 7,
           "data_edges": 0,
           "reported_edges": 7,
@@ -4543,7 +4543,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 9,
-          "nodesets": 18,
+          "nodesets": 19,
           "explicit_edges": 10,
           "data_edges": 0,
           "reported_edges": 10,
@@ -5084,7 +5084,7 @@
       "status": "implemented",
       "flow_kind": "predefined",
       "effect_scope": "none",
-      "reachable_from_workflow": true,
+      "reachable_from_workflow": false,
       "requires": [
         {
           "type": "era.expression.command.request",
@@ -5127,7 +5127,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 3,
-          "nodesets": 18,
+          "nodesets": 19,
           "explicit_edges": 2,
           "data_edges": 0,
           "reported_edges": 2,
@@ -5331,7 +5331,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 8,
-          "nodesets": 18,
+          "nodesets": 19,
           "explicit_edges": 8,
           "data_edges": 0,
           "reported_edges": 8,
@@ -5853,7 +5853,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 7,
-          "nodesets": 18,
+          "nodesets": 19,
           "explicit_edges": 10,
           "data_edges": 3,
           "reported_edges": 10,
@@ -6327,7 +6327,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 10,
-          "nodesets": 18,
+          "nodesets": 19,
           "explicit_edges": 14,
           "data_edges": 4,
           "reported_edges": 14,
@@ -6982,7 +6982,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 12,
-          "nodesets": 18,
+          "nodesets": 19,
           "explicit_edges": 18,
           "data_edges": 1,
           "reported_edges": 18,
@@ -7848,7 +7848,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 6,
-          "nodesets": 18,
+          "nodesets": 19,
           "explicit_edges": 7,
           "data_edges": 2,
           "reported_edges": 7,
@@ -8200,6 +8200,35 @@
         ]
       }
     },
+    "era.sync.block_step": {
+      "type_key": "era.sync.block_step",
+      "source": {
+        "root_id": "era-service",
+        "path": "configs/nodesets/message_block_step.jsonc"
+      },
+      "display_name": "【planned：一步一块】单块同步步进",
+      "description": "【planned：一步一块·消息内函数调用】vibeflow.loop.while 的 body：每次迭代只处理游标指向的那一个操作块——读一块、执行一块、推进游标，然后本次迭代结束。操作块包含六类既有指令与 <EraFCall name=.. args=.. />；调用块产出或引用的 <EraFCallTx for=..> 区内的操作块与原文操作块同权，各自独立成为一次迭代。无标记调用在本次迭代结束时把待调用位置和游标交给 Host，函数不在本步骤内执行；已处理调用只重放其操作。该消息再无新块时置 blockStepDone 为真，循环结束，后续压缩、提交与收尾按现有顺序进行。",
+      "status": "planned",
+      "flow_kind": "predefined",
+      "effect_scope": "none",
+      "reachable_from_workflow": true,
+      "requires": [
+        {
+          "type": "era.sync.block.step.state",
+          "cardinality": "exactly_one",
+          "display_name": "块步进状态"
+        }
+      ],
+      "provides": [
+        {
+          "key": "block_step_done",
+          "type": "era.step.done",
+          "display_name": "本消息全部块已处理"
+        }
+      ],
+      "global_config": {},
+      "body": null
+    },
     "era.task.api": {
       "type_key": "era.task.api",
       "source": {
@@ -8265,7 +8294,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 6,
-          "nodesets": 18,
+          "nodesets": 19,
           "explicit_edges": 6,
           "data_edges": 0,
           "reported_edges": 6,
@@ -8688,7 +8717,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 12,
-          "nodesets": 18,
+          "nodesets": 19,
           "explicit_edges": 14,
           "data_edges": 1,
           "reported_edges": 14,
@@ -9451,7 +9480,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 4,
-          "nodesets": 18,
+          "nodesets": 19,
           "explicit_edges": 3,
           "data_edges": 0,
           "reported_edges": 3,
@@ -9739,11 +9768,11 @@
         "execution_lock": null,
         "contains_global_state": false,
         "summary": {
-          "nodes": 19,
-          "nodesets": 18,
-          "explicit_edges": 23,
+          "nodes": 20,
+          "nodesets": 19,
+          "explicit_edges": 25,
           "data_edges": 0,
-          "reported_edges": 23,
+          "reported_edges": 25,
           "contains_global_state": false
         },
         "entry_nodes": [
@@ -9899,23 +9928,25 @@
               "path": "configs/nodesets/task_sync.jsonc"
             },
             "role": {
-              "display_name": "准备同步规划请求",
-              "description": "将已加载 Sidecar 的同步输入投影为规划所需消息、状态、派发事实和连续计数；不再透传整个上下文。调用登记 sync_planning 模块。"
+              "display_name": "【planned：一步一块】准备单块同步请求",
+              "description": "【planned：一步一块·消息内函数调用】只准备游标指向的单个操作块：该楼层文本、消息身份、累计变量与函数状态增量、本楼已记日志；不再一次性投影整条消息的全部指令。"
             },
-            "contract_source": "node_type",
+            "contract_source": "planned_config",
             "flow_kind": "process",
             "effect_scope": "none",
             "runtime_dispatch": "unknown",
             "execution_lock": null,
             "effective_execution_lock": null,
             "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
+            "status": "planned",
+            "planned_behavior": {
+              "kind": "blocking"
+            },
             "requires": [
               {
                 "type": "era.sync.context",
                 "cardinality": "exactly_one",
-                "display_name": "同步上下文"
+                "display_name": "Sidecar 同步上下文"
               }
             ],
             "provides": [
@@ -9923,6 +9954,11 @@
                 "key": "expression_command_request",
                 "type": "era.expression.command.request",
                 "display_name": "表达式命令请求"
+              },
+              {
+                "key": "block_step_state",
+                "type": "era.sync.block.step.state",
+                "display_name": "块步进状态"
               }
             ],
             "join_policy": "safe_any",
@@ -9937,48 +9973,122 @@
             }
           },
           {
-            "id": "execute_expression_commands",
-            "type_used": "era.expression.execute_era_commands",
+            "id": "process_message_blocks",
+            "type_used": "vibeflow.loop.while",
             "source": {
               "root_id": "era-service",
               "path": "configs/nodesets/task_sync.jsonc"
             },
             "role": {
-              "display_name": "计算含表达式的同步计划",
-              "description": "经现有同步规划库重放消息和指令；完整表达式求值实际调用版本化 Expression AOT，输出纯同步工作项。"
+              "display_name": "【planned：一步一块】逐块推进整条消息",
+              "description": "【planned：一步一块·消息内函数调用】用 vibeflow.loop.while 表达“每个操作块各自一步”，与批次级 step_loop 同一模式；body 为新增的 planned Nodeset，每次迭代读一块、执行一块、推进游标。遇到无标记 <EraFCall name=.. args=.. /> 时本次迭代结束，本步 receipt 正常结算，函数由 Host 在该步骤之外调用；函数不新增绕队列的提交通道，其 ERA.commit 作为正常 FIFO 事件结算。stop_when 为该消息所有块已处理完成；只有全部块完成后才进入后续压缩、提交与收尾。"
             },
-            "contract_source": "nodeset",
-            "flow_kind": "predefined",
+            "contract_source": "planned_config",
+            "flow_kind": "process",
             "effect_scope": "none",
             "runtime_dispatch": "unknown",
             "execution_lock": null,
             "effective_execution_lock": null,
             "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
+            "status": "planned",
+            "planned_behavior": {
+              "kind": "blocking"
+            },
             "requires": [
               {
-                "type": "era.expression.command.request",
+                "type": "era.sync.block.step.state",
                 "cardinality": "exactly_one",
-                "display_name": "表达式命令请求"
+                "display_name": "块步进状态"
               }
             ],
             "provides": [
               {
-                "key": "expression_command_result",
-                "type": "era.expression.command.result",
-                "display_name": "表达式命令结果"
+                "key": "sync_work",
+                "type": "era.sync.work",
+                "display_name": "同步工作项"
+              },
+              {
+                "key": "function_invocation_route",
+                "type": "era.sync.function.invocation.route",
+                "display_name": "函数调用路由"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": {
+              "body": "era.sync.block_step",
+              "max_iterations": 256,
+              "stop_when": {
+                "from": "blockStepDone",
+                "equals": true
+              },
+              "carry": [
+                {
+                  "from": "era.sync.block.step.state",
+                  "as": "block_step_state",
+                  "update": "blockStepStateNext"
+                }
+              ],
+              "outputs": [
+                {
+                  "from": "blockStepStateNext",
+                  "as": "sync_work"
+                }
+              ]
+            },
+            "io": null,
+            "invokes": {
+              "kind": "loop_body",
+              "target": "era.sync.block_step",
+              "target_status": "planned"
+            },
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "build_function_handoff",
+            "type_used": "planned.build_function_handoff",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/task_sync.jsonc"
+            },
+            "role": {
+              "display_name": "【planned：一步一块】交接函数调用与恢复",
+              "description": "【planned：一步一块·消息内函数调用】把待调用位置、调用标识与游标交给 Host 后置通知，并接收 era.message.invoke_continue 恢复事件：函数产出的操作作为新的普通操作块追加到 <EraFCallTx for=..> 区并给调用块打上已处理标记，游标指向第一个新块后继续逐块迭代。本节点不调用函数本体，也不新增第二套调度器。"
+            },
+            "contract_source": "planned_config",
+            "flow_kind": "process",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "planned",
+            "planned_behavior": {
+              "kind": "blocking"
+            },
+            "requires": [
+              {
+                "type": "era.sync.work",
+                "cardinality": "exactly_one",
+                "display_name": "同步工作项"
+              }
+            ],
+            "provides": [
+              {
+                "key": "sync_task_result",
+                "type": "era.task.result",
+                "display_name": "同步结果"
               }
             ],
             "join_policy": "safe_any",
             "async": null,
             "loop": null,
             "io": null,
-            "invokes": {
-              "kind": "nodeset",
-              "target": "era.expression.execute_era_commands",
-              "target_status": "implemented"
-            },
+            "invokes": null,
             "config": {
               "call": {},
               "node_configs": {},
@@ -10706,7 +10816,7 @@
           },
           {
             "from": "prepare_expression_command_request",
-            "to": "execute_expression_commands",
+            "to": "process_message_blocks",
             "when": "",
             "roles": [
               "mainline",
@@ -10715,8 +10825,28 @@
             ]
           },
           {
-            "from": "execute_expression_commands",
+            "from": "process_message_blocks",
             "to": "apply_command_compaction",
+            "when": "function_invocation_route == 'none'",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "process_message_blocks",
+            "to": "build_function_handoff",
+            "when": "function_invocation_route == 'invoke'",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "build_function_handoff",
+            "to": "end",
             "when": "",
             "roles": [
               "mainline",
@@ -10911,7 +11041,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 4,
-          "nodesets": 18,
+          "nodesets": 19,
           "explicit_edges": 3,
           "data_edges": 0,
           "reported_edges": 3,
@@ -37835,6 +37965,18 @@
           ]
         }
       },
+      "era.sync.block.step.state": {
+        "kind": "data_schema",
+        "type_key": "era.sync.block.step.state",
+        "representation": "json",
+        "display_name": "ERA·同步·块步进状态",
+        "description": "【planned：一步一块】承载“一次迭代只处理一个操作块”所需的可续做状态：当前楼层与块下标、累计变量与函数状态、本楼已记日志增量与已处理调用标识。丢失时从该楼层楼首按文本重算；不写入聊天变量或 Sidecar 持久化字段。",
+        "schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
       "era.sync.commit.contract.failure": {
         "kind": "data_schema",
         "type_key": "era.sync.commit.contract.failure",
@@ -41110,6 +41252,21 @@
           "additionalProperties": true
         }
       },
+      "era.sync.function.invocation.route": {
+        "kind": "data_schema",
+        "type_key": "era.sync.function.invocation.route",
+        "representation": "json",
+        "display_name": "ERA·同步·函数调用路由",
+        "description": "【planned：一步一块】逐块推进的路由结果：'none' 表示该消息所有块已处理完可进入后续压缩与提交；'invoke' 表示遇到无标记 <EraFCall/>，本次迭代结束并把待调用位置与游标交给 Host 在该步骤之外调用。",
+        "schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "string",
+          "enum": [
+            "none",
+            "invoke"
+          ]
+        }
+      },
       "era.sync.logical_result": {
         "kind": "data_schema",
         "type_key": "era.sync.logical_result",
@@ -43903,35 +44060,6 @@
           "era.crud.engine",
           "era.service.mk_engine",
           "era.service.command_compaction_marker"
-        ],
-        "external_packages": []
-      },
-      "era.service.sync_planning": {
-        "kind": "base_lib",
-        "id": "era.service.sync_planning",
-        "display_name": "同步输入与规划",
-        "description": "投影同步计算输入、规范化消息与状态，调用纯同步引擎生成工作项；不持有批次状态或调用宿主。",
-        "category": "同步事务",
-        "version": "1.0.0",
-        "implementations": [
-          {
-            "language": "typescript",
-            "targets": [
-              "browser",
-              "node"
-            ],
-            "source": {
-              "kind": "file",
-              "ref": "base_lib/sync_planning.ts"
-            },
-            "completion": "immediate"
-          }
-        ],
-        "dependencies": [
-          "era.service.mk_engine",
-          "era.service.sync_contracts",
-          "era.service.sync_engine",
-          "era.service.types"
         ],
         "external_packages": []
       },

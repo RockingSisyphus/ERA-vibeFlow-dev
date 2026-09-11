@@ -36,17 +36,35 @@ function technicalBlockKind(name: string): TechnicalBlockKind {
 function collectTechnicalBlocks(text: string): ClosedBlock[] | null {
   const stack: OpenTag[] = [];
   const blocks: ClosedBlock[] = [];
-  const names = 'era_plan|era_update|era_agent_error|era_tx|variableinsert|variableedit|variabledelete|functioninsert|functionedit|functiondelete|era_data|variablethink';
+  const names = 'era_plan|era_update|era_agent_error|era_tx|erafcall|erafcalltx|variableinsert|variableedit|variabledelete|functioninsert|functionedit|functiondelete|era_data|variablethink';
   const TECHNICAL_TAG_TOKEN = new RegExp(`<\\s*(\\/?)\\s*(${names})\\b[^>]*>`, 'giu');
   for (let match = TECHNICAL_TAG_TOKEN.exec(text); match; match = TECHNICAL_TAG_TOKEN.exec(text)) {
     const closing = match[1] === '/';
     const name = match[2].toLowerCase();
+    // 自闭合标签自身就是完整块：不能压栈，否则后续所有块的配对都会错位，
+    // 使整次解析返回 null，从而让出站剥离与显示投影同时失效。
+    const selfClosing = !closing && /\/\s*>$/.test(match[0]);
     if (!closing) {
+      const start = match.index;
+      const contentStart = start + match[0].length;
+      if (selfClosing) {
+        if (stack.length === 0) {
+          blocks.push({
+            name,
+            kind: technicalBlockKind(name),
+            start,
+            contentStart,
+            contentEnd: start,
+            end: contentStart,
+          });
+        }
+        continue;
+      }
       stack.push({
         name,
         kind: technicalBlockKind(name),
-        start: match.index,
-        contentStart: match.index + match[0].length,
+        start,
+        contentStart,
       });
       continue;
     }
