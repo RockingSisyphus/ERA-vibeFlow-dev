@@ -539,6 +539,10 @@ export function isolateStoryEraCommands(
 ): Readonly<{ story: string; audit: string }> {
   const patterns = [
     /<era_tx\b[^>]*>[\s\S]*?<\/era_tx>/giu,
+    // 消息内函数调用及其操作区同样不是可见故事内容：正文模型写了它们也一律进审计，
+    // 与结算开启时「正文标签不是写入者」的既有合同一致。
+    /<EraFCallTx\b[^>]*>[\s\S]*?<\/EraFCallTx>/giu,
+    /<EraFCall\b[^>]*?\/?>/giu,
     /<(?:Variable|Function)(?:Insert|Edit|Delete)\b[^>]*>[\s\S]*?<\/(?:Variable|Function)(?:Insert|Edit|Delete)>/giu,
   ];
   const captured: string[] = [];

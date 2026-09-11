@@ -629,6 +629,23 @@ describe('AgentGenerationSession pure contracts', () => {
     expect(isolated.audit).not.toContain('era_plan');
   });
 
+  it('isolates story-body function calls and their operations region', () => {
+    const isolated = isolateStoryEraCommands(
+      [
+        'visible story',
+        '<EraFCall name="attack" args=\'{"damage":30}\' id="c1"/>',
+        '<EraFCallTx for="c1" applied="1">',
+        '<VariableEdit>{"hp":{"$expr":"hp-30"}}</VariableEdit>',
+        '</EraFCallTx>',
+      ].join('\n'),
+    );
+
+    // 正文里的调用与操作区都不得进入可见故事，但必须留在审计里。
+    expect(isolated.story).toBe('visible story');
+    expect(isolated.audit).toContain('EraFCall name="attack"');
+    expect(isolated.audit).toContain('hp-30');
+  });
+
   it('recognizes ERA-owned planning failure messages without matching ordinary stories', () => {
     expect(
       isAgentPlanningFailureMessage({
