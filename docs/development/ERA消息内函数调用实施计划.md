@@ -498,11 +498,23 @@ start
    `{...request, status, …}`，因此 `fold_block_commit` 能从结果里读回 `blockStepState`。
    非提交信封同理：`{mode:"non-commit", work: {...work, blockStepState: state}}`。
    请求 schema 是 `additionalProperties: true`，加字段无需改 descriptor。
-2. **新增一个中间状态类型**（`era.sync.block.step.state.pending`，复制现有 schema）：语义最干净，
-   但要新增一份 ~190 行 schema 并登记，成本高。
+2. **新增中间状态类型**（第 80 轮已落地）。
 
-选定后剩下的就是纯节点集编辑 + 两个薄节点（实现已在 base_lib：`buildPerBlockCommitWork` /
-`foldBlockCommitOutcome`），不再有未知项。
+**最终选型（2026-09-12 定稿）**：做法 1 只解决「状态怎么搬运」，没解决「同一类型只能有一个产出者」
+—— `advance_message_block` 现在直接产出 `era.sync.block.step.state.next`，折回节点也要产出它，两者
+冲突。因此最终取做法 2 的变体：
+
+- 新增数据类型 **`era.sync.block.step.pending`**（`manifests/data/era-sync-block-step-pending.jsonc`，
+  与 `.next` 同形，已通过 validate/build，Architecture +114 行）；
+- `era.sync.drive_message_blocks` 的 provides 改为 `.pending`（`block_step_state_next` 的 type 换掉，
+  节点实现不变）；
+- `build_block_commit` 消费 `.pending`、产出提交请求（内部仍嵌状态，做法 1 保留：折回节点据此
+  读回状态，不需要第二个状态输入）；
+- `fold_block_commit` 消费提交结果、产出 `era.sync.block.step.state.next`（body 的唯一产出者）；
+- `era.step.done` 仍由 `advance_message_block` 产出、`end` 消费。
+
+⇒ 装配只剩：两个薄节点 + 三个描述符（drive 改型 + 两个新节点）+ 节点集编辑；实现全部已在
+base_lib（`buildPerBlockCommitWork` / `foldBlockCommitOutcome`）。
 
 1. **记录写入者 `commit_block_state`（循环体内）**：body 改为
    `start → advance_message_block → build_block_commit → validate_commit_candidate →
