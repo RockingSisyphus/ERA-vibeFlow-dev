@@ -486,6 +486,24 @@ start
   原样返回、不写任何宿主状态，`foldBlockCommitOutcome` 对此信封**原样放行**（已实现并测试）。
 - `era.step.done` 由 `advance_message_block` 产出、由 `end` 消费，中间节点不得消费它。
 
+**装配前必须定的一个细节：状态怎么带过提交节点。** 内核按类型做数据流，同一 nodeset 里同一类型
+只能有一个产出者：
+- 若 `build_block_commit` 与 `fold_block_commit` 都提供 `era.sync.block.step.state.next`，两者冲突；
+- 若让 `build_block_commit` 只提供请求、不提供状态，`fold_block_commit` 就拿不到状态。
+
+两个可选做法（实施时任选，均无需改内核）：
+
+1. **把状态嵌进提交请求**（推荐，零新 schema）：`build_block_commit` 产出
+   `{mode:"commit", request: {...request, blockStepState: state}}`；`commit_sync` 的结果是
+   `{...request, status, …}`，因此 `fold_block_commit` 能从结果里读回 `blockStepState`。
+   非提交信封同理：`{mode:"non-commit", work: {...work, blockStepState: state}}`。
+   请求 schema 是 `additionalProperties: true`，加字段无需改 descriptor。
+2. **新增一个中间状态类型**（`era.sync.block.step.state.pending`，复制现有 schema）：语义最干净，
+   但要新增一份 ~190 行 schema 并登记，成本高。
+
+选定后剩下的就是纯节点集编辑 + 两个薄节点（实现已在 base_lib：`buildPerBlockCommitWork` /
+`foldBlockCommitOutcome`），不再有未知项。
+
 1. **记录写入者 `commit_block_state`（循环体内）**：body 改为
    `start → advance_message_block → build_block_commit → validate_commit_candidate →
    era.tavern.variables_commit → fold_block_commit → end`。
