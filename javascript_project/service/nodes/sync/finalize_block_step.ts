@@ -32,6 +32,33 @@ export function finalize(
       function_invocation_route: "none",
     };
   }
+  // 已由循环逐块提交的楼层：写入（含整层记账）都在循环体里完成，尾链**完全不提交**——同一批次里
+  // 它再做任何提交，basis 都已过期。它只走「不提交也能发布」的路：续做点与收尾呈现意图。
+  if (state.committedPerBlock === true) {
+    const floorIdentity = (
+      work.step as { readonly dispatchContext?: { readonly floorIdentity?: unknown } }
+    ).dispatchContext?.floorIdentity;
+    const noOpTail: SyncWorkV1 = {
+      ...work,
+      disposition: "no-op",
+      syncCursor: state.done
+        ? null
+        : {
+            messageId: state.messageId,
+            mk: state.mk,
+            blockIndex: Math.max(0, state.blockIndex - 1),
+            stat: state.stat,
+            statFunc: state.statFunc,
+          },
+      initialPresentation: state.done ? ((floorIdentity ?? null) as never) : null,
+      failure: null,
+      ...(handoff === null ? {} : { handoff }),
+    };
+    return {
+      expression_command_result: noOpTail as unknown as Readonly<Record<string, unknown>>,
+      function_invocation_route: handoff === null ? "none" : "invoke",
+    };
+  }
   // 记录提交以「预规划工作项可用」为前提；不可用时保持不提交，宁可这一批不落盘也不能
   // 凭空造一份状态提交。
   const recorded = buildHandoffRecordWork({ work, state });

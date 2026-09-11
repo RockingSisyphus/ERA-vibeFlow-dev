@@ -1,0 +1,57 @@
+{
+  "kind": "node",
+  "type_key": "era.sync.build_block_commit",
+  "display_name": "构造逐块提交请求",
+  "category": "同步规划",
+  "description": "把「这一块之后的累计状态」构造成待提交请求（状态嵌在请求里、basis 按当前文本重建）；交接迭代产出不提交信封。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.sync.block.step.pending",
+        "cardinality": "exactly_one",
+        "display_name": "已推进待提交的块步进状态"
+      }
+    ],
+    "provides": [
+      {
+        "key": "block_commit_request",
+        "type": "era.tavern.commit.request",
+        "display_name": "逐块提交请求"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.sync.block.step.pending": [
+        "输入：已推进一个块、尚未提交的块步进状态。"
+      ]
+    },
+    "output_semantics": {
+      "block_commit_request": [
+        "输出：逐块提交请求（交接迭代为不提交信封）。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/sync/build_block_commit.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.block_step_state",
+    "era.service.sync_commit_policy",
+    "era.service.sync_contracts"
+  ],
+  "capabilities": []
+}

@@ -32,7 +32,7 @@
         "required": true
       }
     ],
-    "max_steps": 4,
+    "max_steps": 8,
     "nodes": [
       {
         "id": "start",
@@ -45,6 +45,24 @@
         "type_used": "era.sync.drive_message_blocks",
         "display_name": "推进一个块",
         "description": "按原文位置推进一个块；遇到无标记 <EraFCall/> 时结束本次迭代并把交接事实写入状态，函数由 Host 在步骤之外执行。"
+      },
+      {
+        "id": "build_block_commit",
+        "type_used": "era.sync.build_block_commit",
+        "display_name": "构造逐块提交请求",
+        "description": "把这一块之后的累计状态构造成待提交请求（basis 按当前文本重建）；交接迭代产出不提交信封。"
+      },
+      {
+        "id": "commit_block_state",
+        "type_used": "era.tavern.variables_commit",
+        "display_name": "提交该块的消息记录与状态",
+        "description": "复用既有提交链写入该块的消息记录与 sidecar 状态（含续做游标）。"
+      },
+      {
+        "id": "fold_block_commit",
+        "type_used": "era.sync.fold_block_commit",
+        "display_name": "折回提交结果",
+        "description": "从提交结果读回状态并折回；提交未成功则抛类型化错误。"
       },
       {
         "id": "end",
@@ -60,6 +78,18 @@
       ],
       [
         "advance_message_block",
+        "build_block_commit"
+      ],
+      [
+        "build_block_commit",
+        "commit_block_state"
+      ],
+      [
+        "commit_block_state",
+        "fold_block_commit"
+      ],
+      [
+        "fold_block_commit",
         "end"
       ]
     ],

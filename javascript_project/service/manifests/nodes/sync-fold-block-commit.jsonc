@@ -1,0 +1,56 @@
+{
+  "kind": "node",
+  "type_key": "era.sync.fold_block_commit",
+  "display_name": "折回逐块提交结果",
+  "category": "同步规划",
+  "description": "从提交结果里读回随请求搬运的块步进状态并折回；提交未成功时抛类型化错误。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.tavern.commit.result",
+        "cardinality": "exactly_one",
+        "display_name": "逐块提交结果"
+      }
+    ],
+    "provides": [
+      {
+        "key": "folded_block_step_state",
+        "type": "era.sync.block.step.state.next",
+        "display_name": "块步进后状态"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.tavern.commit.result": [
+        "输入：逐块提交结果（带回随请求搬运的块步进状态）。"
+      ]
+    },
+    "output_semantics": {
+      "folded_block_step_state": [
+        "输出：折回后的下一个块步进状态。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/sync/fold_block_commit.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.block_step_state",
+    "era.service.sync_contracts"
+  ],
+  "capabilities": []
+}

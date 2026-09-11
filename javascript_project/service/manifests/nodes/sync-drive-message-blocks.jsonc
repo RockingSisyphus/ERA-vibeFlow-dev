@@ -17,7 +17,7 @@
     "provides": [
       {
         "key": "block_step_state_next",
-        "type": "era.sync.block.step.state.next",
+        "type": "era.sync.block.step.pending",
         "display_name": "块步进后状态"
       },
       {

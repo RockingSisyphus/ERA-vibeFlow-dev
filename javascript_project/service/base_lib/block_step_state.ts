@@ -190,7 +190,8 @@ export function buildPerBlockCommitWork(input: {
       ...plan,
       stat: state.stat,
       statFunc: state.statFunc,
-      meta: state.meta,
+      // 楼层算完那一次才写整层记账：中途登记整层会让下一次同步不重算这条楼层。
+      meta: state.done ? plan.meta : state.meta,
       sealedCompactionCandidates: [],
       recalculatedMessageIndexes: [],
       nextConsecutiveState: {
@@ -251,9 +252,11 @@ export function foldBlockCommitOutcome(input: {
   const written = outcome.messageWrites?.find(
     write => write.messageId === state.messageId,
   );
-  return written === undefined
-    ? state
-    : { ...state, content: written.content };
+  return {
+    ...state,
+    committedPerBlock: true,
+    ...(written === undefined ? {} : { content: written.content }),
+  };
 }
 
 /**
