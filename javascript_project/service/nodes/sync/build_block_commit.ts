@@ -32,6 +32,18 @@ export function run(
   }
   const request = buildSyncCommitRequest(perBlock);
   const basis = request.sourceBasis;
+  console.info(
+    '[ERA-BLOCK-COMMIT]',
+    JSON.stringify({
+      phase: 'build',
+      blockIndex: state.blockIndex,
+      executedBlockIndex: state.executedBlockIndex,
+      done: state.done,
+      statKeys: Object.keys((state.stat ?? {}) as Record<string, unknown>),
+      stat: state.stat,
+      writes: request.messageWrites.map(write => write.messageId),
+    }),
+  );
   return {
     block_commit_request: {
       mode: "commit" as const,
