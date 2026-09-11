@@ -153,3 +153,50 @@ describe('ERA 消息内函数调用：宿主能力操作', () => {
     expect(observeSpy).not.toHaveBeenCalled();
   });
 });
+
+describe('ERA 消息内函数调用：宿主生命周期与在途调用', () => {
+  it('运行中 stop：在途调用以取消终态收口，迟到提交不再应用', async () => {
+    const applied: unknown[] = [];
+    const state: { release: ((value: unknown) => void) | null } = { release: null };
+    const invoker: EraToolInvoker = {
+      invoke: () =>
+        new Promise(resolve => {
+          state.release = resolve;
+        }),
+    };
+    const host = new EraFunctionOperationsHost(invoker, operation => {
+      applied.push(operation);
+      return { sequence: applied.length };
+    });
+
+    await host.invoke({ invocationId: 'i1', name: 'slow', args: {} });
+    // 先取得终态句柄再 stop：stop 会清空会话表，之后 result 只能报未知会话。
+    const settled = host.result({ invocationId: 'i1' });
+    const running = host.run('i1');
+    host.stop();
+
+    const outcome = await settled;
+    expect(outcome.status).toBe('cancelled');
+
+    // 迟到的工具返回值不得改写已取消的会话，也不得再应用操作。
+    state.release?.('late');
+    await running;
+    const late = await host.commit('i1', [{ insert: { late: true } }]);
+    expect(late).toMatchObject({ status: 'rejected' });
+    expect(applied).toEqual([]);
+  });
+
+  it('stop 后重新 invoke 不会被受理，也不会复活旧会话', async () => {
+    const host = new EraFunctionOperationsHost(
+      invokerOf(() => 'ok'),
+      () => ({ sequence: 1 }),
+    );
+    host.stop();
+
+    await host.invoke({ invocationId: 'i2', name: 'dice', args: {} });
+    const outcome = await host.result({ invocationId: 'i2' });
+
+    expect(outcome.status).toBe('failed');
+    expect(outcome.message).toContain('ERA_FUNCTION_INVOCATION_UNKNOWN');
+  });
+});
