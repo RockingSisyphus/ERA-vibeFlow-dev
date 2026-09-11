@@ -400,6 +400,37 @@ resume 端不再写 `<EraFCallTx>` 操作区，只给调用块打 `status="done"
   「按 scope 分段、不跨正文」的封存压缩规则如何共存；以及处理楼层不再走
   `assemble_expression_sync_plan → crud_write → commit_variables` 后，收尾/呈现/通知链路由谁负责。
 
+### 切片 1b 设计（已读实 `sync_commit_policy.buildSyncCommitRequest`，无需新增提交通道）
+
+关键事实：`SyncCommitRequestV1` 的三个状态字段全部来自 **plan**：
+
+```ts
+// sync_commit_policy.buildSyncCommitRequest
+{ …, messageWrites: plan.messageUpdates→写消息, stat: plan.stat, statFunc: plan.statFunc, meta: plan.meta, … }
+```
+
+因此**单块提交不需要发明新的提交类型**，它可以原样复用既有提交链：
+
+1. 为「第 N 块之后」构造一个**只含该块**的 plan：
+   - `plan.stat` / `plan.statFunc` / `plan.meta` = 块步进累计状态（`era.sync.block.step.state` 里已有的值）；
+   - `plan.messageUpdates` = 一条该楼层的文本更新，内容是**锚定记录之后的原文**（锚定由切片 1a 的
+     `anchoredTransactionContent` 完成：`<era_tx s="m">` 插在该块之后，调用块同时标记 `status="done"`）；
+   - `plan.pages`/`messages` 等按既有 `EraSyncPlanV1` 形状给足（`messages.length === 0` 时允许 payload 为 null）。
+2. 把该 plan 包成工作项：`{ ...work, disposition: "commit", plan, payload }`；
+3. 调用既有 `buildSyncCommitRequest(work)` → 交给既有节点 `era.tavern.variables_commit`
+   （`era.tavern.messages.update_content` + `era.tavern.sidecar.*`）执行写入。
+
+这条路线的好处：**零新增能力**、复用既有消息写入与 Sidecar 提交的核对/回读/失败语义；
+循环体只需在 `advance_message_block` 之后加一个「构造单块 plan 并提交」的节点。
+
+仍需在实施时核实并在不确定时问人（红线不变）：
+
+- `plan` 的最小合法形状（`EraSyncPlanV1` 的必填字段、`actionsTaken`、`nextConsecutiveState` 是否需要随块推进，
+  以及它与 `consecutiveMk`/连续处理计数语义的关系）；
+- 处理楼层完成逐块提交后，原本的整条提交链（`assemble_expression_sync_plan → crud_write →
+  commit_variables`）应退化为**收尾与呈现**还是完全跳过——这决定收尾/通知链的归属；
+- 单块记录（每块一条 `<era_tx>`）与封存压缩「按 scope 分段、不跨正文」的共存。
+
 ### 机器检查证据
 
 | 检查 | 结果 |
