@@ -43,8 +43,13 @@ export interface EraSyncCursorV1 {
   /** 楼层稳定 MK；恢复时按它核对楼层身份。 */
   readonly mk: string;
   readonly blockIndex: number;
-  /** 该楼层起点累计到当前块的变量状态。 */
-  readonly stat?: unknown;
+  /**
+   * 该楼层起点累计到当前块的变量状态。
+   *
+   * 必须是对象而不是 `unknown`：契约 schema 把该字段描述为对象，生成的 ABI 类型
+   * 也只接受对象；用 `unknown` 会在 `exactOptionalPropertyTypes` 下无法赋给契约类型。
+   */
+  readonly stat?: Readonly<Record<string, unknown>>;
   readonly statFunc?: Readonly<Record<string, unknown>>;
   /** 调用方已处理但文本尚未写回的调用标识。 */
   readonly resolvedCallIds?: readonly string[];
