@@ -542,6 +542,7 @@ export function isEraServiceStateV1(value) {
       "iteration",
       "consecutiveProcessingCount",
       "consecutiveMk",
+      "syncCursor",
       "timerToken",
       "scopeWindow",
     ])
@@ -828,7 +829,8 @@ export function isEraTaskStateUpdateV1(value) {
   return (
     hasOnlyKeys(
       value,
-      ["consecutiveMk", "consecutiveProcessingCount"],
+      ["consecutiveMk",
+      "syncCursor", "consecutiveProcessingCount"],
       ["scopeWindow"],
     ) &&
     (value.consecutiveMk === null || isNonEmptyString(value.consecutiveMk)) &&
