@@ -250,6 +250,14 @@ describe('VibeFlow Service 宿主资源规划器差分', () => {
     );
   });
 
+  it('Service 规划器产出的变量操作规则与 App 同源文本逐字一致', () => {
+    const planned = planner.getEraWorldbookEntries().find(
+      entry => entry.name === 'ERA 变量操作规则',
+    );
+    expect(planned).toBeTruthy();
+    expect(planned?.content).toBe(eraVarOperationRuleEntry.content);
+  });
+
   it('复用已有主书、保留同名条目且重复规划幂等', () => {
     const existingOperation = { ...eraVarOperationRuleEntry, content: '用户自定义内容', unknown: 1 };
     const input = {
