@@ -273,6 +273,36 @@ describe('ERA 块游标：从工作项到批次状态的传递链', () => {
     expect(buildSyncNonCommitResult(withoutIntent as never)).not.toHaveProperty('initialPresentation');
   });
 
+  it('块步进状态随提交请求搬运（折回节点借此从结果里读回状态）', () => {
+    const blockStepState = { messageId: 4, mk: 'mk-4', blockIndex: 2 };
+    const built = buildSyncCommitRequest({
+      schemaVersion: 1,
+      step: step(),
+      disposition: 'commit',
+      plan: {
+        status: 'fast-sync',
+        messages: [{ messageId: 4 }],
+        messageUpdates: [],
+        stat: { hp: 70 },
+        statFunc: {},
+        meta: {},
+        nextConsecutiveState: { mk: 'mk-4', count: 2 },
+      },
+      payload: {
+        mk: 'mk-4',
+        message_id: 4,
+        is_user: false,
+        actions: {},
+        consecutiveProcessingCount: 2,
+      },
+      failure: null,
+      blockStepState,
+    } as never);
+
+    // 提交结果是 `{...request, status, …}`，因此这个字段会随结果回到折回节点。
+    expect(built.blockStepState).toEqual(blockStepState);
+  });
+
   it('批次合并：带键则写入（含显式清空），缺键则保留旧游标', () => {
     const carried = mergeTaskResult(batchState(null), {
       status: 'committed',

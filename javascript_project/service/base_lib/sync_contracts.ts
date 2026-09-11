@@ -96,6 +96,14 @@ export interface SyncWorkV1 {
    * 事」，因此由工作项显式携带意图，交由呈现节点执行。
    */
   readonly initialPresentation?: EraFloorIdentityV1 | null;
+  /**
+   * 逐块提交时随工作项搬运的块步进状态。
+   *
+   * 为什么要嵌在这里：内核按类型做数据流，同一 nodeset 里同一类型只能有一个产出者，因此
+   * 「构造提交」与「折回状态」两个节点不能都提供块步进状态类型。把状态放进提交请求（请求的
+   * 结果就是 `{...request, status, …}`）可以让折回节点从结果里读回它，不需要新增中间类型。
+   */
+  readonly blockStepState?: Readonly<Record<string, unknown>>;
   /** 附加给 Host 的后置通知；当前只有函数交接使用。 */
   readonly notifications?: readonly SyncNotificationV1[];
 }
@@ -134,6 +142,8 @@ export interface SyncCommitRequestV1 {
   readonly handoff?: EraMessageFunctionHandoffV1;
   /** 与工作项同义的块级续做游标；提交成功后由结果把它投影为任务状态更新。 */
   readonly syncCursor?: EraSyncCursorV1 | null;
+  /** 与该请求一同搬运的块步进状态；提交结果会原样带回来，供折回节点读回。 */
+  readonly blockStepState?: Readonly<Record<string, unknown>>;
   readonly sourceBasis: EraMessageSourceBasisV1;
 }
 

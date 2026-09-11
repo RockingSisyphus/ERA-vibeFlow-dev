@@ -124,6 +124,9 @@ export function buildSyncCommitRequest(work: SyncWorkV1): SyncCommitRequestV1 {
     initialPresentation: handoff === undefined ? initialPresentation : null,
     ...(handoff === undefined ? {} : { handoff }),
     ...(work.syncCursor === undefined ? {} : { syncCursor: work.syncCursor }),
+    ...(work.blockStepState === undefined
+      ? {}
+      : { blockStepState: work.blockStepState }),
     sourceBasis: prepared.sourceBasis,
   };
 }
