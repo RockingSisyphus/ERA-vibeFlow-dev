@@ -1,0 +1,114 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.sync.block.step.pending",
+  "representation": "json",
+  "display_name": "ERA·同步·块步进状态·待提交",
+  "description": "块步进循环内「已推进一个块、尚未提交」的中间状态；与 .next 同形，分开声明是因为内核按类型做数据流、同一节点集里同一类型只能有一个产出者：推进节点产出它、提交折回节点产出 .next。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "messageId": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "mk": {
+        "type": "string"
+      },
+      "blockIndex": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "done": {
+        "type": "boolean"
+      },
+      "stat": {
+        "type": "object"
+      },
+      "statFunc": {
+        "type": "object"
+      },
+      "baseStat": {
+        "type": "object"
+      },
+      "baseStatFunc": {
+        "type": "object"
+      },
+      "consecutive": {
+        "type": "object",
+        "properties": {
+          "mk": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "mk",
+          "count"
+        ],
+        "additionalProperties": false
+      },
+      "drawOffset": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "executedBlockIndex": {
+        "type": [
+          "integer",
+          "null"
+        ],
+        "minimum": 0
+      },
+      "route": {
+        "enum": [
+          "none",
+          "invoke"
+        ]
+      },
+      "handoff": {
+        "oneOf": [
+          {
+            "type": "object"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "content": {
+        "type": "string"
+      },
+      "meta": {
+        "type": "object"
+      },
+      "work": {
+        "type": "object"
+      }
+    },
+    "required": [
+      "messageId",
+      "mk",
+      "blockIndex",
+      "done",
+      "stat",
+      "statFunc",
+      "baseStat",
+      "baseStatFunc",
+      "consecutive",
+      "executedBlockIndex",
+      "drawOffset",
+      "route",
+      "handoff",
+      "content",
+      "meta",
+      "work"
+    ],
+    "additionalProperties": false
+  }
+}
