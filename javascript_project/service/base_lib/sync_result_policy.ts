@@ -1,4 +1,4 @@
-import { type PlannedStepV1, type TaskResultV1 } from "./service_types.ts";
+import { type EraSyncCursorV1, type PlannedStepV1, type TaskResultV1 } from "./service_types.ts";
 import {
   assertSyncStep,
   type SyncFailureV1,
@@ -43,13 +43,26 @@ export function diagnosticsForPlan(
   }));
 }
 
-export function stateUpdateForPlan(plan: EraSyncPlanV1 | null) {
+/**
+ * 把计划的连续处理事实（以及可选的块游标）投影为任务状态更新。
+ *
+ * 游标必须能区分「本次没带」与「显式清空」：逐块提交时它随每个块前进，楼层算完时被显式
+ * 置回 null；若把清空表达成 `undefined`，宿主会保留旧游标，下一个批次就从错误的块继续。
+ */
+export function stateUpdateForPlan(
+  plan: EraSyncPlanV1 | null,
+  syncCursor?: EraSyncCursorV1 | null,
+) {
   const next = plan?.nextConsecutiveState;
+  const withCursor = syncCursor === undefined ? {} : { syncCursor };
   return next === null || next === undefined
-    ? undefined
+    ? Object.keys(withCursor).length === 0
+      ? undefined
+      : { consecutiveMk: null, consecutiveProcessingCount: 0, ...withCursor }
     : {
         consecutiveMk: next.mk,
         consecutiveProcessingCount: next.count,
+        ...withCursor,
       };
 }
 
@@ -204,6 +217,13 @@ export function buildSyncCommittedResult(
           },
         ]),
   ];
+  // 只有请求里真的带了游标键才更新它：`syncCursor: null` 是「楼层算完、清空续做点」，
+  // 而完全没有这个键是「本次不涉及游标」，两者语义不同。
+  const carriesCursor = Object.prototype.hasOwnProperty.call(outcome, "syncCursor");
+  const stateUpdate = stateUpdateForPlan(
+    outcome.plan,
+    carriesCursor ? outcome.syncCursor ?? null : undefined,
+  );
   return {
     status: outcome.status,
     settlements: settlementsFor(outcome.step, outcome.status, outcome.failure),
@@ -211,8 +231,6 @@ export function buildSyncCommittedResult(
     // 工作流会停在调用块上永不前进。
     notifications: handoffNotification(outcome.handoff),
     diagnostics,
-    ...(outcome.sourceChanged || stateUpdateForPlan(outcome.plan) === undefined
-      ? {}
-      : { stateUpdate: stateUpdateForPlan(outcome.plan) }),
+    ...(outcome.sourceChanged || stateUpdate === undefined ? {} : { stateUpdate }),
   };
 }

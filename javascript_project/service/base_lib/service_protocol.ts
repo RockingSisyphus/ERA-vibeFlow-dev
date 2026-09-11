@@ -633,6 +633,14 @@ export function mergeTaskResult(
                 result.stateUpdate.consecutiveProcessingCount,
               scopeWindow:
                 result.stateUpdate.scopeWindow ?? state.nextState.scopeWindow,
+              // 游标只在该更新显式携带时才动它：显式 null 表示「这条楼层算完、清空」，
+              // 缺键表示「本次不涉及游标」，不能混为一谈。
+              ...(Object.prototype.hasOwnProperty.call(
+                result.stateUpdate,
+                "syncCursor",
+              )
+                ? { syncCursor: result.stateUpdate.syncCursor ?? null }
+                : {}),
             },
       index: nextIndex,
       settlements: [...state.settlements, ...result.settlements],

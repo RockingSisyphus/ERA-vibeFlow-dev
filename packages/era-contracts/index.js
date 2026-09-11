@@ -824,18 +824,50 @@ export function isEraDiagnosticV1(value) {
   );
 }
 
+/**
+ * 判断消息内函数调用的块级续做游标。
+ *
+ * 只有计算中的楼层才有游标：逐块提交时把「已提交到哪一块」写进服务状态的
+ * `syncCursor`，该楼层算完即置回 null（恢复点只在计算期间存在）。
+ */
+export function isEraSyncCursorV1(value) {
+  if (value === null) return true;
+  return (
+    hasOnlyKeys(
+      value,
+      ["messageId", "mk", "blockIndex"],
+      ["stat", "statFunc", "resolvedCallIds", "done"],
+    ) &&
+    isSafeIntegerAtLeast(value.messageId, 0) &&
+    isNonEmptyString(value.mk) &&
+    isSafeIntegerAtLeast(value.blockIndex, 0) &&
+    (!Object.prototype.hasOwnProperty.call(value, "stat") ||
+      isRecord(value.stat)) &&
+    (!Object.prototype.hasOwnProperty.call(value, "statFunc") ||
+      isRecord(value.statFunc)) &&
+    (!Object.prototype.hasOwnProperty.call(value, "resolvedCallIds") ||
+      (Array.isArray(value.resolvedCallIds) &&
+        value.resolvedCallIds.length <= 64 &&
+        value.resolvedCallIds.every(isNonEmptyString))) &&
+    (!Object.prototype.hasOwnProperty.call(value, "done") ||
+      typeof value.done === "boolean")
+  );
+}
+
 /** 判断任务携带的易失连续处理状态更新；该值不属于持久化 Schema。 */
 export function isEraTaskStateUpdateV1(value) {
   return (
     hasOnlyKeys(
       value,
       ["consecutiveMk", "consecutiveProcessingCount"],
-      ["scopeWindow"],
+      ["scopeWindow", "syncCursor"],
     ) &&
     (value.consecutiveMk === null || isNonEmptyString(value.consecutiveMk)) &&
     isSafeIntegerAtLeast(value.consecutiveProcessingCount, 0) &&
     (!Object.prototype.hasOwnProperty.call(value, "scopeWindow") ||
-      isEraScopeWindowStateV1(value.scopeWindow))
+      isEraScopeWindowStateV1(value.scopeWindow)) &&
+    (!Object.prototype.hasOwnProperty.call(value, "syncCursor") ||
+      isEraSyncCursorV1(value.syncCursor))
   );
 }
 

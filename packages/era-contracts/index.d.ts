@@ -318,6 +318,10 @@ export type EraTaskStatusV1 = "committed" | "no-op" | "failed" | "fatal";
 export interface EraTaskStateUpdateV1 {
   readonly consecutiveMk: string | null;
   readonly consecutiveProcessingCount: number;
+  /**
+   * 消息内函数调用的块级续做游标；只有计算中的楼层才有值，算完即回到 null。
+   */
+  readonly syncCursor?: EraSyncCursorV1 | null;
   readonly scopeWindow?: EraScopeWindowStateV1;
 }
 
@@ -456,6 +460,7 @@ export declare function isEraNotificationV1(
 export declare function isEraDiagnosticV1(
   value: unknown,
 ): value is EraDiagnosticV1;
+export declare function isEraSyncCursorV1(value: unknown): value is EraSyncCursorV1;
 export declare function isEraTaskStateUpdateV1(
   value: unknown,
 ): value is EraTaskStateUpdateV1;

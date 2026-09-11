@@ -10,6 +10,7 @@ import {
   isEraDispatchContextV3,
 } from "@era/vibeflow-contracts";
 import {
+  type EraSyncCursorV1,
   type PlannedStepV1,
   type BatchExecutionStateV1,
 } from "./service_types.ts";
@@ -74,6 +75,13 @@ export interface SyncWorkV1 {
   readonly failure: SyncFailureV1 | null;
   /** 需要 Host 在步骤之外执行的调用；存在时本工作项必然不提交。 */
   readonly handoff?: EraMessageFunctionHandoffV1;
+  /**
+   * 逐块提交时的块级续做游标；随任务状态更新写进服务状态。
+   *
+   * 只有「计算中的楼层」带它：`null` 表示这条楼层已经算完、续做点清空；完全没有这个键
+   * 表示本次提交不涉及游标（既有整条提交路径就是这样）。
+   */
+  readonly syncCursor?: EraSyncCursorV1 | null;
   /** 附加给 Host 的后置通知；当前只有函数交接使用。 */
   readonly notifications?: readonly SyncNotificationV1[];
 }
@@ -110,6 +118,8 @@ export interface SyncCommitRequestV1 {
    * 只能挂在请求上。丢了这个字段，函数永远不会被驱动，工作流停在调用块上。
    */
   readonly handoff?: EraMessageFunctionHandoffV1;
+  /** 与工作项同义的块级续做游标；提交成功后由结果把它投影为任务状态更新。 */
+  readonly syncCursor?: EraSyncCursorV1 | null;
   readonly sourceBasis: EraMessageSourceBasisV1;
 }
 

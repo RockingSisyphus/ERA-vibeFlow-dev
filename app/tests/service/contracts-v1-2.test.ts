@@ -137,7 +137,7 @@ describe('ERA contracts 1.4 canonical DTO', () => {
     expect(contracts.isEraPlannedStepV1({ ...step, reason: '' })).toBe(false);
   });
 
-  it('stateUpdate 只承载两个易失计数字段，任务结果不要求也不允许持久版本字段', () => {
+  it('stateUpdate 只承载易失计数字段，任务结果不要求也不允许持久版本字段', () => {
     const stateUpdate = { consecutiveMk: 'mk-1', consecutiveProcessingCount: 2 } as const;
     expect(contracts.isEraTaskStateUpdateV1(stateUpdate)).toBe(true);
     expect(contracts.isEraTaskStateUpdateV1({ consecutiveMk: 'mk-1' })).toBe(false);
@@ -157,6 +157,35 @@ describe('ERA contracts 1.4 canonical DTO', () => {
         notifications: [],
         diagnostics: [],
         stateUpdate: { ...stateUpdate, schemaVersion: 1 },
+      }),
+    ).toBe(false);
+  });
+
+  it('stateUpdate 可选携带块游标：合法游标通过，越界或多余键拒绝', () => {
+    const cursor = {
+      messageId: 7,
+      mk: 'mk-7',
+      blockIndex: 2,
+      stat: { hp: 70 },
+      statFunc: {},
+      resolvedCallIds: ['c1'],
+      done: false,
+    };
+    const base = { consecutiveMk: 'mk-1', consecutiveProcessingCount: 2 } as const;
+
+    // 游标是可选的：不携带时形状不变（真机历史状态里没有它）。
+    expect(contracts.isEraTaskStateUpdateV1(base)).toBe(true);
+    expect(contracts.isEraTaskStateUpdateV1({ ...base, syncCursor: cursor })).toBe(true);
+    expect(contracts.isEraTaskStateUpdateV1({ ...base, syncCursor: null })).toBe(true);
+
+    // 非法游标必须被拒，否则宿主会把坏游标写进服务状态。
+    expect(contracts.isEraTaskStateUpdateV1({ ...base, syncCursor: { ...cursor, mk: '' } })).toBe(false);
+    expect(contracts.isEraTaskStateUpdateV1({ ...base, syncCursor: { ...cursor, blockIndex: -1 } })).toBe(false);
+    expect(contracts.isEraTaskStateUpdateV1({ ...base, syncCursor: { ...cursor, unexpected: true } })).toBe(false);
+    expect(
+      contracts.isEraTaskStateUpdateV1({
+        ...base,
+        syncCursor: { ...cursor, resolvedCallIds: [''] },
       }),
     ).toBe(false);
   });

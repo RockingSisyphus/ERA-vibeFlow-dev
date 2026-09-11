@@ -123,6 +123,7 @@ export function buildSyncCommitRequest(work: SyncWorkV1): SyncCommitRequestV1 {
     agentFloorCandidate,
     initialPresentation: handoff === undefined ? initialPresentation : null,
     ...(handoff === undefined ? {} : { handoff }),
+    ...(work.syncCursor === undefined ? {} : { syncCursor: work.syncCursor }),
     sourceBasis: prepared.sourceBasis,
   };
 }

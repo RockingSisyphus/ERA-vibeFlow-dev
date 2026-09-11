@@ -2,8 +2,14 @@ import { describe, expect, it } from 'vitest';
 
 import {
   createInitialServiceState,
+  mergeTaskResult,
   reduceForProtocolSlice,
 } from '../../../javascript_project/service/base_lib/service_protocol';
+import { buildSyncCommitRequest } from '../../../javascript_project/service/base_lib/sync_commit_policy';
+import {
+  buildSyncCommittedResult,
+  stateUpdateForPlan,
+} from '../../../javascript_project/service/base_lib/sync_result_policy';
 
 describe('ERA 服务状态：块游标槽', () => {
   it('初始状态带 null 的 syncCursor 槽', () => {
@@ -60,5 +66,191 @@ describe('ERA 服务状态：块游标槽', () => {
     const cloned = JSON.parse(JSON.stringify(cursor));
 
     expect(cloned).toEqual(cursor);
+  });
+});
+
+/**
+ * 游标的传递链：工作项 → 提交请求 → 提交结果 → 任务状态更新 → 批次状态。
+ *
+ * 逐块提交靠这条链把「已提交到哪一块」跨批次带下去；链上任何一段丢掉游标，恢复就会从
+ * 楼层起点重算、把已经提交过的块再算一遍。
+ */
+describe('ERA 块游标：从工作项到批次状态的传递链', () => {
+  const CURSOR = {
+    messageId: 4,
+    mk: 'mk-4',
+    blockIndex: 2,
+    stat: { hp: 70 },
+    statFunc: {},
+    resolvedCallIds: ['c1'],
+    done: false,
+  };
+
+  function step() {
+    const message = {
+      schemaVersion: 1,
+      messageId: 4,
+      role: 'assistant',
+      activeText: '<EraFCall name="a" id="c1" status="done"/>',
+      swipeIndex: 0,
+    };
+    const source = {
+      schemaVersion: 1,
+      eventId: 'event-1',
+      sequence: 1,
+      type: 'era.message.invoke_continue',
+      occurredAt: 1_001,
+      source: 'era-api',
+      args: [],
+      encodedBytes: 64,
+    };
+    return {
+      kind: 'execute',
+      stepId: 'step:sync:1',
+      index: 0,
+      taskRoute: 'sync',
+      sourceSequences: [1],
+      events: [source],
+      task: {
+        id: 'task:sync:1',
+        sourceEvents: [source],
+        primaryEvent: source,
+        context: 'latest-message-with-mk',
+        kind: 'sync',
+        reason: 'history-changed',
+        target: { kind: 'auto' },
+        fullRebuild: false,
+      },
+      sources: [{ event: source, relation: 'primary' }],
+      // 提交请求要求 V3 派发上下文 + 原始宿主依据；这里给出最小合法形状。
+      dispatchContext: {
+        schemaVersion: 3,
+        status: 'ready',
+        dispatchClass: 'sync',
+        requirement: 'latest-message-with-mk',
+        messages: [message],
+        processingMessage: message,
+        processingMk: 'mk-4',
+        messageChanged: false,
+        variablesChanged: false,
+        failure: null,
+        generationCycleIdentity: null,
+        floorIdentity: { chatId: 'chat-1', messageId: 4, swipeId: 0, mk: 'mk-4' },
+        stagedMessageUpdates: [],
+        agentFloorCandidate: null,
+        sourceBasis: {
+          identity: { characterId: 'char-1', chatId: 'chat-1', groupId: null },
+          messages: [message],
+        },
+      },
+    } as never;
+  }
+
+  function batchState(syncCursor: unknown) {
+    return {
+      schemaVersion: 1,
+      batchId: 'batch-1',
+      throughSequence: 1,
+      nextState: {
+        schemaVersion: 1,
+        collection: [],
+        collectionBytes: 0,
+        iteration: 1,
+        consecutiveProcessingCount: 0,
+        consecutiveMk: null,
+        timerToken: null,
+        scopeWindow: {
+          token: null,
+          messageId: null,
+          messageAdmission: null,
+          branchAdmission: null,
+        },
+        syncCursor,
+      },
+      sources: [],
+      steps: [step()],
+      index: 0,
+      settlements: [],
+      notifications: [],
+      diagnostics: [],
+      fatal: false,
+      coverageError: null,
+    } as never;
+  }
+
+  it('stateUpdateForPlan：不带是缺键、显式 null 是清空', () => {
+    const plan = { nextConsecutiveState: { mk: 'mk-4', count: 2 } } as never;
+
+    expect(stateUpdateForPlan(plan)).toEqual({
+      consecutiveMk: 'mk-4',
+      consecutiveProcessingCount: 2,
+    });
+    expect(stateUpdateForPlan(plan, CURSOR)).toEqual({
+      consecutiveMk: 'mk-4',
+      consecutiveProcessingCount: 2,
+      syncCursor: CURSOR,
+    });
+    expect(stateUpdateForPlan(plan, null)).toEqual({
+      consecutiveMk: 'mk-4',
+      consecutiveProcessingCount: 2,
+      syncCursor: null,
+    });
+  });
+
+  it('提交结果把请求里的游标投影为任务状态更新', () => {
+    const committed = buildSyncCommittedResult({
+      ...buildSyncCommitRequest({
+        schemaVersion: 1,
+        step: step(),
+        disposition: 'commit',
+        plan: {
+          status: 'fast-sync',
+          messages: [{ messageId: 4 }],
+          messageUpdates: [],
+          stat: { hp: 70 },
+          statFunc: {},
+          meta: {},
+          nextConsecutiveState: { mk: 'mk-4', count: 2 },
+        },
+        payload: { mk: 'mk-4', message_id: 4, is_user: false, actions: {}, consecutiveProcessingCount: 2 },
+        failure: null,
+        syncCursor: CURSOR,
+      } as never),
+      status: 'committed',
+      confirmedMessageWrites: 0,
+      variablesCommitted: true,
+      failure: null,
+    } as never);
+
+    expect(committed.stateUpdate).toMatchObject({ syncCursor: CURSOR });
+  });
+
+  it('批次合并：带键则写入（含显式清空），缺键则保留旧游标', () => {
+    const carried = mergeTaskResult(batchState(null), {
+      status: 'committed',
+      settlements: [],
+      notifications: [],
+      diagnostics: [],
+      stateUpdate: { consecutiveMk: 'mk-4', consecutiveProcessingCount: 2, syncCursor: CURSOR },
+    } as never);
+    expect((carried.state.nextState as { syncCursor: unknown }).syncCursor).toEqual(CURSOR);
+
+    const cleared = mergeTaskResult(batchState(CURSOR), {
+      status: 'committed',
+      settlements: [],
+      notifications: [],
+      diagnostics: [],
+      stateUpdate: { consecutiveMk: 'mk-4', consecutiveProcessingCount: 2, syncCursor: null },
+    } as never);
+    expect((cleared.state.nextState as { syncCursor: unknown }).syncCursor).toBe(null);
+
+    const preserved = mergeTaskResult(batchState(CURSOR), {
+      status: 'committed',
+      settlements: [],
+      notifications: [],
+      diagnostics: [],
+      stateUpdate: { consecutiveMk: 'mk-4', consecutiveProcessingCount: 2 },
+    } as never);
+    expect((preserved.state.nextState as { syncCursor: unknown }).syncCursor).toEqual(CURSOR);
   });
 });
