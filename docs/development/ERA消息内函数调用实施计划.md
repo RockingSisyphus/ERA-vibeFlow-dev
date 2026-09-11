@@ -446,6 +446,50 @@ sidecar 状态**；它只负责逐块保存做不到的事（刷新楼层显示�
 4. 文档收口：作者指南恢复读回承诺、`era-host-contract.md` 再次更新；
 5. 每步之后跑机器检查，功能完整后跑真机专项与 `era-regression-all` 全量综合。
 
+### 切片 1b 剩余实施设计（2026-09-12 已读实，逐项可执行）
+
+**决定性问题：进度不能只放内存。** `createWorkflowHost()` 每次页面加载重建，服务/批次状态
+（含 `syncCursor`）**不跨重载持久**；而逐块提交后 sidecar 里的 `stat` 已经是「楼层算到一半」的
+世界。因此「已提交到哪一块」必须同时有**消息级持久记录**，否则重载后整楼重放会把已提交的块算
+第二遍。这就是「凭据」必须存在的硬理由（也解释了为什么它算完要删：删掉之后原文与「从楼层起点
+重算」一致，压缩永不与它相遇）。
+
+**已落地（第 71 轮）**：标签 `<era_block mk="…" applied="1">…</era_block>`、区域解析与跳过
+（复用 `operationsRegionApplied`）、`wrapBlockAsAppliedRecord` / `unwrapAppliedRecords` /
+`hasAppliedBlockRecords` / `appliedCommandPrefix` 四个纯函数、宏技术块名单与
+`packages/era-macro-syntax` 重新生成；以及第 70 轮的 `syncCursor` 载体与 `prepare_block_step`
+续做。
+
+**待做，按依赖顺序**：
+
+1. **记录写入者 `commit_block_state`（循环体内）**：body 改为
+   `start → advance_message_block → build_block_commit → validate_commit_candidate →
+   era.tavern.variables_commit → fold_block_commit → end`。
+   `build_block_commit` 用 `buildBlockCommitWork` 造单块计划（`stat`/`statFunc` = 该块之后的累计
+   状态、`meta` = 已提交 meta、`messageUpdates` = 把该块包进记录后的楼层文本）；
+   `fold_block_commit` 把提交结果折回状态（记录失败则按批次失败结算）。
+   **可行性已读实**：`batch_execute.jsonc` 的循环体就是 `era.service.step`（含能力调用），
+   循环体可以用能力节点。
+   楼层最后一块的提交把 `syncCursor` 写 `null` 并**删除全部记录标签**（`unwrapAppliedRecords`）。
+2. **引擎侧三处耦合（缺一不可）**：
+   a. `findSyncDivergence`：**存在记录的最早楼层必须参与重算**——把 recalcId 收紧到
+      `min(常规 recalcId, 该楼层)`，否则「中断楼层 + 之后新楼层」会让中断楼层永远算不完。
+   b. 逐楼重放：`applyMessageCommands` 传 `commandRange.fromIndex = appliedCommandPrefix`，
+      让已提交的块不被算第二遍（`toIndex` 取 `Number.MAX_SAFE_INTEGER`）。
+   c. **`EditLogs` 累积**：`planEraSync` 现在用 `defineOwn(editLogs, mk, effectiveEditLog)`
+      **覆盖**；有记录的楼层必须**追加**（回退依赖逐块日志完整），否则回退会漏掉已提交块。
+3. **随机抽取偏移**：`applyMessageCommands` 的 `nextRandomDrawOffset` 是块游标的一部分，重载后
+   会丢；把「该块之后的 draws 偏移」一起写进记录（记录加 `draws` 属性），恢复时用它起算，
+   否则重载后后续块会重复抽取。
+4. **尾链改造（决定一）**：处理楼层的写入所有权移入循环后，尾链只做收尾——用 `no-op` 工作项承载
+   `stateUpdate`（`consecutiveMk`/`consecutiveProcessingCount`/`syncCursor`）与交接通知，不写
+   文本与 sidecar；`present_finalized_floor` 扩展为「非提交但带呈现意图时也刷新楼层」。
+5. **封存压缩（决定二）**：删掉 `command_compaction.ts` 的 `MESSAGE_FUNCTION_CALL_MARKER`
+   整层跳过，改为跳过 `<EraFCall>` 那一行、把调用产出的操作当普通操作压缩；加「压缩前后重放
+   终值一致」差分验证。
+6. **打包**：`era-macro-syntax` 升版 0.1.1 重装（让 `era_block` 在显示与提示词里隐藏）——与
+   写入者同批做；同批还要重跑真机专项与回归门。
+
 ### 切片 1 落点（已读实，下一轮直接实施）
 
 - **写入能力已存在**：`era.tavern.variables_commit`（`manifests/nodes/sync-commit.jsonc`，
