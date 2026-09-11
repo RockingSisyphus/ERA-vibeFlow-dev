@@ -624,6 +624,20 @@ class ServiceHostRuntime {
         options: PortCallOptions = {},
       ) => this.invokeSuspend("variables", "commit", input, options),
     },
+    /**
+     * 消息内函数调用：登记、回送终态与释放会话。
+     *
+     * 必须与描述符 provides 一致地出现在这里：运行时会校验「声明了的能力必须由实例提供」，
+     * 少一项就会让整个生产入口启动失败（而不是只在调用时失败）。
+     */
+    "era.tavern.functions": {
+      invoke: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
+        this.invokeSuspend("functions", "invoke", input, options),
+      result: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
+        this.invokeSuspend("functions", "result", input, options),
+      release: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
+        this.invokeImmediate("functions", "release", input, options),
+    },
     "era.tavern.agent": {
       await_native_completion: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
         this.invokeSuspend("agent", "await_native_completion", input, options),
