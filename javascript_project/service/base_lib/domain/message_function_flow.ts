@@ -219,3 +219,71 @@ export function applyFunctionOperations(input: {
   }
   return { stat };
 }
+
+
+/**
+ * 跨批次携带的最小游标。
+ *
+ * 只保留恢复所必需且体积可控的字段：正文、元数据与累计变量都可由宿主重新读取
+ * 或随步骤携带，放进服务状态会让它随业务数据无限膨胀。
+ */
+export interface MessageFunctionFlowCursor {
+  readonly messageId: number;
+  readonly mk: string;
+  readonly blockIndex: number;
+  readonly done: boolean;
+}
+
+/** 从流程状态提取可持久化游标。 */
+export function cursorFromMessageFunctionFlow(
+  flow: MessageFunctionFlow,
+): MessageFunctionFlowCursor {
+  return {
+    messageId: flow.messageId,
+    mk: flow.mk,
+    blockIndex: flow.cursor.blockIndex,
+    done: flow.done,
+  };
+}
+
+/**
+ * 用持久化游标与重新读取的上下文恢复流程状态。
+ *
+ * 楼层身份必须一致：MK 或 messageId 变化说明恢复点已经指向另一条消息，
+ * 此时沿用旧位置会把操作写到错误的楼层，因此直接抛类型化错误而不静默降级。
+ */
+export function rehydrateMessageFunctionFlow(input: {
+  readonly cursor: MessageFunctionFlowCursor;
+  readonly content: string;
+  readonly messageId: number;
+  readonly mk: string;
+  readonly initialStat: unknown;
+  readonly meta: Readonly<Record<string, unknown>>;
+  readonly initialStatFunc?: Readonly<Record<string, unknown>>;
+  readonly traditionalToSimplified?: boolean;
+  readonly formal?: boolean;
+}): MessageFunctionFlow {
+  if (input.cursor.messageId !== input.messageId || input.cursor.mk !== input.mk) {
+    throw new TypeError(
+      `ERA_SYNC_CURSOR_IDENTITY: 恢复游标属于 messageId=${input.cursor.messageId} mk=${input.cursor.mk}，` +
+        `与当前楼层 messageId=${input.messageId} mk=${input.mk} 不一致。`,
+    );
+  }
+  const started = startMessageFunctionFlow({
+    content: input.content,
+    messageId: input.messageId,
+    mk: input.mk,
+    initialStat: input.initialStat,
+    meta: input.meta,
+    ...(input.initialStatFunc === undefined ? {} : { initialStatFunc: input.initialStatFunc }),
+    ...(input.traditionalToSimplified === undefined
+      ? {}
+      : { traditionalToSimplified: input.traditionalToSimplified }),
+    ...(input.formal === undefined ? {} : { formal: input.formal }),
+  });
+  return {
+    ...started,
+    cursor: { ...started.cursor, blockIndex: input.cursor.blockIndex, done: input.cursor.done },
+    done: input.cursor.done,
+  };
+}
