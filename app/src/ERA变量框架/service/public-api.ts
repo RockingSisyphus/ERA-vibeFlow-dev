@@ -270,10 +270,18 @@ export function installEraPublicApi(createStatusbar: EraStatusbarFactory): () =>
   });
   installedFacade = guarded;
   initializeGlobal('ERA', guarded);
+  // Tavern Helper 的 initializeGlobal 把门面发布到**顶层窗口**；而作者函数由工具注册表调用时
+  // 运行在**脚本 iframe** 内，那里的 `globalThis.ERA` 并不存在（真机实测 eraType=undefined，
+  // topEraType=object），函数因此拿不到 `ERA.commit`，表现为「函数执行成功但产出操作为 0」。
+  // 因此在本实例所在窗口也发布一次，并与 stop 成对清理（只清理我们自己设置的那份）。
+  const localGlobal = globalThis as { ERA?: unknown };
+  const hadLocalEra = Object.prototype.hasOwnProperty.call(localGlobal, 'ERA');
+  if (!hadLocalEra) localGlobal.ERA = guarded;
   return () => {
     active = false;
     generationSubscriptions.clear();
     if (installedFacade === guarded) installedFacade = null;
+    if (!hadLocalEra && localGlobal.ERA === guarded) delete localGlobal.ERA;
     (facade.statusbar as EraStatusbarController).stop();
   };
 }
