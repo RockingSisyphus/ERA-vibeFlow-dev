@@ -431,6 +431,25 @@ resume 端不再写 `<EraFCallTx>` 操作区，只给调用块打 `status="done"
   commit_variables`）应退化为**收尾与呈现**还是完全跳过——这决定收尾/通知链的归属；
 - 单块记录（每块一条 `<era_tx>`）与封存压缩「按 scope 分段、不跨正文」的共存。
 
+### 最小合法 plan 配方（已读实 `domain/sync_engine.ts` 的 `EraSyncPlanV1`）
+
+`kind: "sync"` 分支的必填字段（按源码顺序）：`kind, status, committed, divergence, stat, statFunc, meta, messages, messageUpdates, sealedCompactionCandidates, recalculatedMessageIndexes, rollback, applied, fromMk, toMk, actionsTaken, consecutiveProcessingCount, nextConsecutiveState, diagnostics, kind, status, committed, divergence, stat`。
+
+因此切片 1b 的「单块 plan」按此填写即可，不需要新增类型：
+
+- `kind: "sync"`、`status` 取 `"fast-sync"`（本块有实际写入）或 `"no-op"`；
+- `stat`/`statFunc`/`meta` = 块步进状态里的累计值（`era.sync.block.step.state`）；
+- `messages` = 该楼层的消息投影（提交链与压缩候选都会读它，不能空）；
+- `messageUpdates` = 一条 `kind: "update-message-content"`（锚定记录后的文本 + 该楼层 MK + messageIndex）；
+- `actionsTaken` 至少把 `apply` 置真（决定 `assemble_expression_sync_plan` 的 `crud`/`reconcile` 分支）；
+- `sealedCompactionCandidates`/`recalculatedMessageIndexes` 给空数组、`rollback` 给 `{applied:false,fromMk:null,toMk:null}`、
+  `divergence` 给 `null`、`committed` 置真；其余（`consecutiveProcessingCount`/`nextConsecutiveState`/`diagnostics` 等）
+  按既有规划产物同形填写。
+
+**下一次实施前仍需 1 步读实**：`successfulPlan`/`normalizePlan` 对 plan 的归一化要求（`sync_planning.ts` 里
+`normalizePlan(plan, preUpdates, step)` 会改写 `committed`/`actionsTaken`/`messageUpdates`，必须确认单块 plan
+经过它之后不会被还原成整条消息的计划）。确认后再写代码，避免把构建留红。
+
 ### 机器检查证据
 
 | 检查 | 结果 |
