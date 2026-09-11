@@ -129,6 +129,14 @@ export function buildBlockCommitWork(input: {
   readonly messageIndex: number;
 }): SyncWorkV1 {
   const count = input.state.blockIndex > 0 ? input.state.blockIndex : 1;
+  const actionsTaken = {
+    rollback: false,
+    apply: true,
+    resync: false,
+    api: false,
+    editedResync: false,
+    swipedRollback: false,
+  };
   const plan = {
     kind: "sync",
     status: "fast-sync",
@@ -150,14 +158,7 @@ export function buildBlockCommitWork(input: {
     sealedCompactionCandidates: [],
     recalculatedMessageIndexes: [],
     rollback: { applied: false, fromMk: null, toMk: null },
-    actionsTaken: {
-      rollback: false,
-      apply: true,
-      resync: false,
-      api: false,
-      editedResync: false,
-      swipedRollback: false,
-    },
+    actionsTaken,
     consecutiveProcessingCount: count,
     nextConsecutiveState: { mk: input.state.mk, count },
     diagnostics: [],
@@ -173,7 +174,7 @@ export function buildBlockCommitWork(input: {
             ...input.work.payload,
             mk: input.state.mk,
             message_id: input.state.messageId,
-            actions: plan.actionsTaken,
+            actions: actionsTaken,
           },
   };
 }
