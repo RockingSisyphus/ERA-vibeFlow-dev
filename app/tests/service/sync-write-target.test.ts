@@ -253,6 +253,43 @@ describe('sync source survives asynchronous host interleaving', () => {
     expect(fixture('era-api', 'message_received').request.initialPresentation).toBeNull();
   });
 
+  it('presents a per-block-committed floor from a non-commit tail when an intent is carried', async () => {
+    const f = fixture('tavern', 'message_received');
+    const work = {
+      schemaVersion: 1,
+      disposition: 'no-op',
+      plan: null,
+      payload: null,
+      failure: null,
+      initialPresentation: { chatId: 'chat-a', messageId: 1, swipeId: 0, mk: 'mk-1' },
+    };
+    await presentation.run(
+      { 'era.tavern.commit.result': { value: { mode: 'non-commit', work } } },
+      {},
+      { capabilities: f.capabilities },
+    );
+    expect(f.capabilities['era.tavern.messages'].refresh).toHaveBeenCalledTimes(1);
+    const calls = (
+      f.capabilities['era.tavern.messages'].refresh as {
+        mock: { calls: unknown[][] };
+      }
+    ).mock.calls;
+    expect(calls[0]?.[0]).toMatchObject({ messageId: 1, mode: 'affected' });
+
+    // 不带意图（null）时不刷新：逐块提交的普通收尾不该产生额外宿主调用。
+    const withoutIntent = fixture('tavern', 'message_received');
+    await presentation.run(
+      {
+        'era.tavern.commit.result': {
+          value: { mode: 'non-commit', work: { ...work, initialPresentation: null } },
+        },
+      },
+      {},
+      { capabilities: withoutIntent.capabilities },
+    );
+    expect(withoutIntent.capabilities['era.tavern.messages'].refresh).not.toHaveBeenCalled();
+  });
+
   it('does not present a failed or unpublished native floor', async () => {
     const f = fixture('tavern', 'message_received');
     const outcome = { ...f.request, status: 'failed', variablesCommitted: false };

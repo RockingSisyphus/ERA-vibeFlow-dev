@@ -159,6 +159,9 @@ export function buildSyncNonCommitResult(work: SyncWorkV1): TaskResultV1 {
   // 工作项带 `syncCursor` 时，即使它声明不提交，也必须把游标（含显式 null = 楼层算完、
   // 清空续做点）投影成任务状态更新。plan 为空时没有连续处理事实可发布，保持原样。
   const carriesCursor = Object.prototype.hasOwnProperty.call(work, "syncCursor");
+  const presents =
+    Object.prototype.hasOwnProperty.call(work, "initialPresentation") &&
+    (work.initialPresentation ?? null) !== null;
   const cursorUpdate =
     carriesCursor && work.plan !== null && work.plan.status !== "failed"
       ? stateUpdateForPlan(work.plan, work.syncCursor ?? null)
@@ -169,6 +172,8 @@ export function buildSyncNonCommitResult(work: SyncWorkV1): TaskResultV1 {
     notifications: notificationsForWork(work),
     diagnostics,
     ...(cursorUpdate === undefined ? {} : { stateUpdate: cursorUpdate }),
+    // 收尾呈现意图随结果往下传；呈现节点对「非提交但带意图」的结果也刷新一次。
+    ...(presents ? { initialPresentation: work.initialPresentation ?? null } : {}),
   };
 }
 

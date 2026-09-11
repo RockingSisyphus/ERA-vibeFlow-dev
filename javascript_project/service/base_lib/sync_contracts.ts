@@ -89,6 +89,13 @@ export interface SyncWorkV1 {
    * 表示本次提交不涉及游标（既有整条提交路径就是这样）。
    */
   readonly syncCursor?: EraSyncCursorV1 | null;
+  /**
+   * 逐块提交楼层的收尾呈现意图。
+   *
+   * 这条楼层的写入已经发生在循环体里，尾链不再走提交路径；刷新显示属于「逐块提交做不到的
+   * 事」，因此由工作项显式携带意图，交由呈现节点执行。
+   */
+  readonly initialPresentation?: EraFloorIdentityV1 | null;
   /** 附加给 Host 的后置通知；当前只有函数交接使用。 */
   readonly notifications?: readonly SyncNotificationV1[];
 }

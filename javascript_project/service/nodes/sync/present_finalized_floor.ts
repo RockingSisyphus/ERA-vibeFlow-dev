@@ -32,7 +32,31 @@ export async function run(
 ): Promise<any> {
   const outcome = inputs["era.tavern.commit.result"].value as CommitOutcome;
   if ("mode" in outcome && outcome.mode === "non-commit") {
-    return { presented_sync_commit_result: outcome };
+    // 逐块提交的楼层不再由尾链写入，但刷新显示仍然归尾链：工作项带呈现意图时这里执行一次
+    // 「affected」刷新；不带意图（或带 null）时保持原样，不做任何宿主调用。
+    const work = outcome.work as {
+      readonly initialPresentation?: { readonly messageId: number } | null;
+    };
+    const intent = work.initialPresentation ?? null;
+    if (intent === null) return { presented_sync_commit_result: outcome };
+    try {
+      await context.capabilities["era.tavern.messages"].refresh({
+        messageId: intent.messageId,
+        mode: "affected",
+        purpose: "era-final-floor-initial-presentation",
+      });
+      return { presented_sync_commit_result: outcome };
+    } catch (error) {
+      return {
+        presented_sync_commit_result: {
+          ...outcome,
+          presentationDiagnostic: {
+            code: "ERA_FINAL_FLOOR_PRESENTATION_FAILED",
+            message: message(error),
+          },
+        },
+      };
+    }
   }
   if (
     outcome.status !== "committed" ||

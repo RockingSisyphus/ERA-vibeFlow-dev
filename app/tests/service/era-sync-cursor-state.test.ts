@@ -252,6 +252,27 @@ describe('ERA 块游标：从工作项到批次状态的传递链', () => {
     expect(untouched.stateUpdate).not.toHaveProperty('syncCursor');
   });
 
+  it('不提交的尾链把收尾呈现意图传下去（不写状态也能刷新楼层）', () => {
+    const work = {
+      schemaVersion: 1,
+      step: step(),
+      disposition: 'no-op',
+      plan: { nextConsecutiveState: { mk: 'mk-4', count: 2 } },
+      payload: null,
+      failure: null,
+      initialPresentation: { chatId: 'chat-1', messageId: 4, swipeId: 0, mk: 'mk-4' },
+    } as never;
+
+    const carried = buildSyncNonCommitResult(work) as unknown as {
+      readonly initialPresentation?: { readonly messageId: number };
+    };
+    expect(carried.initialPresentation).toMatchObject({ messageId: 4 });
+
+    // 不带意图时不添加该字段：呈现节点因此不会做任何宿主调用。
+    const { initialPresentation: _omitted, ...withoutIntent } = work as Record<string, unknown>;
+    expect(buildSyncNonCommitResult(withoutIntent as never)).not.toHaveProperty('initialPresentation');
+  });
+
   it('批次合并：带键则写入（含显式清空），缺键则保留旧游标', () => {
     const carried = mergeTaskResult(batchState(null), {
       status: 'committed',
