@@ -38,10 +38,15 @@ function tavernContainers(): readonly unknown[] {
 }
 
 function toolManager(): TavernToolManager | null {
-  for (const container of tavernContainers()) {
+  const candidates = tavernContainers();
+  console.info('[ERA] 工具注册表解析', candidates.map((c) =>
+    c === null || c === undefined ? 'none' : typeof (c as { ToolManager?: unknown }).ToolManager).join(','));
+  for (const container of candidates) {
     if (container === null || typeof container !== 'object') continue;
     const manager = (container as { ToolManager?: unknown }).ToolManager;
-    if (manager === null || typeof manager !== 'object') continue;
+    // ToolManager 在不同酒馆版本里可能是对象，也可能是**函数**（类/命名空间形态）。
+    // 只允许 object 会把「函数形态」误判为不可用（实测就是这种情况），因此两者都接受。
+    if (manager === null || (typeof manager !== 'object' && typeof manager !== 'function')) continue;
     const invoke = (manager as { invokeFunctionTool?: unknown }).invokeFunctionTool;
     if (typeof invoke !== 'function') continue;
     return manager as TavernToolManager;
