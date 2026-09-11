@@ -32,31 +32,25 @@ export function run(
   }
   const request = buildSyncCommitRequest(perBlock);
   const basis = request.sourceBasis;
-  console.info(
-    '[ERA-BLOCK-COMMIT]',
-    JSON.stringify({
-      phase: 'build',
-      blockIndex: state.blockIndex,
-      executedBlockIndex: state.executedBlockIndex,
-      done: state.done,
-      statKeys: Object.keys((state.stat ?? {}) as Record<string, unknown>),
-      stat: state.stat,
-      writes: request.messageWrites.map(write => write.messageId),
-    }),
-  );
+  // basis 只在本批次**已经写过这条楼层**时才改写：第一次提交时聊天里还是派发时读到的原文，
+  // 原样 basis 才对得上（改写它反而制造 source-changed）；之后每次提交，聊天里是上一次写下去
+  // 的文本（= 状态里的 content），据它重建 basis 才能继续写。
+  const sourceBasis = state.committedPerBlock
+    ? {
+        ...basis,
+        messages: basis.messages.map(message =>
+          message.messageId === state.messageId
+            ? { ...message, activeText: state.content }
+            : message,
+        ),
+      }
+    : basis;
   return {
     block_commit_request: {
       mode: "commit" as const,
       request: {
         ...request,
-        sourceBasis: {
-          ...basis,
-          messages: basis.messages.map(message =>
-            message.messageId === state.messageId
-              ? { ...message, activeText: state.content }
-              : message,
-          ),
-        },
+        sourceBasis,
         blockStepState: state as unknown as Readonly<Record<string, unknown>>,
       },
     },

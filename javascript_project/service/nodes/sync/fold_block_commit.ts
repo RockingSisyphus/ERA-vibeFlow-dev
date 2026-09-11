@@ -16,19 +16,6 @@ export function run(
     readonly blockStepState?: unknown;
     readonly work?: { readonly blockStepState?: unknown };
   };
-  console.info(
-    '[ERA-BLOCK-COMMIT]',
-    JSON.stringify({
-      phase: 'fold',
-      mode: outcome.mode ?? 'commit',
-      status: (outcome as { status?: unknown }).status ?? null,
-      writes: (outcome as { confirmedMessageWrites?: unknown }).confirmedMessageWrites ?? null,
-      variablesCommitted: (outcome as { variablesCommitted?: unknown }).variablesCommitted ?? null,
-      failure: (outcome as { failure?: { code?: unknown } }).failure?.code ?? null,
-      sourceChanged: (outcome as { sourceChanged?: unknown }).sourceChanged ?? null,
-      stateKeys: Object.keys(((outcome.blockStepState ?? outcome.work?.blockStepState) as { stat?: Record<string, unknown> } | undefined)?.stat ?? {}),
-    }),
-  );
   const carried =
     outcome.mode === "non-commit"
       ? outcome.work?.blockStepState
