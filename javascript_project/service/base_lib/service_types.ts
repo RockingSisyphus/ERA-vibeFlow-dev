@@ -14,18 +14,22 @@ export type { EraTransportArg } from "@era/vibeflow-contracts";
 
 type TransportEventBaseV1 = Omit<ContractTransportEventV1, "source" | "type">;
 
-/** 与 Data Schema 一致地把内部 timer 来源和固定类型绑定为联合分支。 */
-export type EraTransportEventV1 = TransportEventBaseV1 &
-  (
-    | {
-        readonly source: "tavern" | "ui" | "era-api";
-        readonly type: string;
-      }
-    | {
-        readonly source: "timer";
-        readonly type: "era.service.collection_timer";
-      }
-  );
+/**
+ * 与 Data Schema 一致地把内部 timer 来源和固定类型绑定为联合分支。
+ *
+ * 必须把公共字段分别并入每个分支、形成真正的对象字面量联合，而不是用
+ * `Base & (A | B)`：生成契约按 schema 推导出的是后者那种扁平联合，
+ * 交叉类型在嵌套（数组元素）位置无法赋给扁平联合，会让 AOT 的 ABI 校验失败。
+ */
+export type EraTransportEventV1 =
+  | (TransportEventBaseV1 & {
+      readonly source: "tavern" | "ui" | "era-api";
+      readonly type: string;
+    })
+  | (TransportEventBaseV1 & {
+      readonly source: "timer";
+      readonly type: "era.service.collection_timer";
+    });
 
 export type TaskRoute = EraTaskRouteV1;
 export type TaskStatus = "committed" | "no-op" | "failed" | "fatal";
