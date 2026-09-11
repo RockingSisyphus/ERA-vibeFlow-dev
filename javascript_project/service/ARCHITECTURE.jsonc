@@ -8259,16 +8259,16 @@
             "as": "block_step_done"
           }
         ],
-        "max_steps": 4,
+        "max_steps": 8,
         "entry_mode": "async",
         "execution_lock": null,
         "contains_global_state": false,
         "summary": {
-          "nodes": 3,
+          "nodes": 6,
           "nodesets": 19,
-          "explicit_edges": 2,
+          "explicit_edges": 5,
           "data_edges": 0,
-          "reported_edges": 2,
+          "reported_edges": 5,
           "contains_global_state": false
         },
         "entry_nodes": [
@@ -8342,13 +8342,148 @@
             "provides": [
               {
                 "key": "block_step_state_next",
-                "type": "era.sync.block.step.state.next",
+                "type": "era.sync.block.step.pending",
                 "display_name": "块步进后状态"
               },
               {
                 "key": "block_step_done",
                 "type": "era.step.done",
                 "display_name": "本次块驱动结束"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "build_block_commit",
+            "type_used": "era.sync.build_block_commit",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/message_block_step.jsonc"
+            },
+            "role": {
+              "display_name": "构造逐块提交请求",
+              "description": "把这一块之后的累计状态构造成待提交请求；交接迭代产出不提交信封。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "process",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.sync.block.step.pending",
+                "cardinality": "exactly_one",
+                "display_name": "已推进待提交的块步进状态"
+              }
+            ],
+            "provides": [
+              {
+                "key": "block_commit_request",
+                "type": "era.tavern.commit.request",
+                "display_name": "逐块提交请求"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "commit_block_state",
+            "type_used": "era.tavern.variables_commit",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/message_block_step.jsonc"
+            },
+            "role": {
+              "display_name": "提交该块的消息记录与状态",
+              "description": "复用既有提交链写入该块的消息记录与 sidecar 状态（含续做游标）。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "data_store",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.tavern.commit.request",
+                "cardinality": "exactly_one",
+                "display_name": "同步提交请求"
+              }
+            ],
+            "provides": [
+              {
+                "key": "sync_commit_result",
+                "type": "era.tavern.commit.result",
+                "display_name": "同步提交结果"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "fold_block_commit",
+            "type_used": "era.sync.fold_block_commit",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/message_block_step.jsonc"
+            },
+            "role": {
+              "display_name": "折回提交结果",
+              "description": "从提交结果读回状态并折回；提交未成功则抛类型化错误。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "process",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.tavern.commit.result",
+                "cardinality": "exactly_one",
+                "display_name": "逐块提交结果"
+              }
+            ],
+            "provides": [
+              {
+                "key": "folded_block_step_state",
+                "type": "era.sync.block.step.state.next",
+                "display_name": "块步进后状态"
               }
             ],
             "join_policy": "safe_any",
@@ -8409,6 +8544,36 @@
           },
           {
             "from": "advance_message_block",
+            "to": "build_block_commit",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "build_block_commit",
+            "to": "commit_block_state",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "commit_block_state",
+            "to": "fold_block_commit",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "fold_block_commit",
             "to": "end",
             "when": "",
             "roles": [
@@ -16244,6 +16409,56 @@
         }
       ]
     },
+    "era.sync.build_block_commit": {
+      "display_name": "构造逐块提交请求",
+      "description": "把「这一块之后的累计状态」构造成待提交请求（状态嵌在请求里）；交接迭代产出不提交信封。",
+      "category": "同步规划",
+      "version": "1.0.0",
+      "flow_kind": "process",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.sync.block.step.pending",
+            "cardinality": "exactly_one",
+            "display_name": "已推进待提交的块步进状态"
+          }
+        ],
+        "provides": [
+          {
+            "key": "block_commit_request",
+            "type": "era.tavern.commit.request",
+            "display_name": "逐块提交请求"
+          }
+        ],
+        "input_semantics": {
+          "era.sync.block.step.pending": [
+            "输入：已推进一个块、尚未提交的块步进状态。"
+          ]
+        },
+        "output_semantics": {
+          "block_commit_request": [
+            "输出：逐块提交请求（交接迭代为不提交信封）。"
+          ]
+        },
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/sync/build_block_commit.ts",
+            "export": "run"
+          },
+          "completion": "immediate"
+        }
+      ]
+    },
     "era.sync.build_commit": {
       "display_name": "构造消息与 Sidecar 提交候选",
       "description": "由 sync_commit_policy 从同步工作项构造消息写入、状态、来源依据和首次呈现意图；不执行宿主写入。",
@@ -16465,7 +16680,7 @@
         "provides": [
           {
             "key": "block_step_state_next",
-            "type": "era.sync.block.step.state.next",
+            "type": "era.sync.block.step.pending",
             "display_name": "块步进后状态"
           },
           {
@@ -16561,6 +16776,56 @@
             "kind": "file",
             "ref": "nodes/sync/finalize_block_step.ts",
             "export": "finalize"
+          },
+          "completion": "immediate"
+        }
+      ]
+    },
+    "era.sync.fold_block_commit": {
+      "display_name": "折回逐块提交结果",
+      "description": "从提交结果里读回随请求搬运的块步进状态并折回；提交未成功时抛类型化错误。",
+      "category": "同步规划",
+      "version": "1.0.0",
+      "flow_kind": "process",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.tavern.commit.result",
+            "cardinality": "exactly_one",
+            "display_name": "逐块提交结果"
+          }
+        ],
+        "provides": [
+          {
+            "key": "folded_block_step_state",
+            "type": "era.sync.block.step.state.next",
+            "display_name": "块步进后状态"
+          }
+        ],
+        "input_semantics": {
+          "era.tavern.commit.result": [
+            "输入：逐块提交结果（带回随请求搬运的块步进状态）。"
+          ]
+        },
+        "output_semantics": {
+          "folded_block_step_state": [
+            "输出：折回后的下一个块步进状态。"
+          ]
+        },
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/sync/fold_block_commit.ts",
+            "export": "run"
           },
           "completion": "immediate"
         }
@@ -38834,6 +39099,9 @@
               "type": "integer",
               "minimum": 0
             },
+            "committedPerBlock": {
+              "type": "boolean"
+            },
             "executedBlockIndex": {
               "type": [
                 "integer",
@@ -38879,6 +39147,7 @@
             "consecutive",
             "executedBlockIndex",
             "drawOffset",
+            "committedPerBlock",
             "route",
             "handoff",
             "content",
