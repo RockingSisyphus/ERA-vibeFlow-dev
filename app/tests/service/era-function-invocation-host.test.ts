@@ -1,3 +1,5 @@
+import { runInNewContext } from 'node:vm';
+
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -20,8 +22,23 @@ describe('ERA 消息内函数调用：宿主会话与结果分类', () => {
     expect(failure.message).toContain('has been registered');
   });
 
-  it('成功返回字符串时判为成功并保留结果', () => {
-    const ok = classifyToolResult('dice', '5');
+  it('跨 realm 的 Error 仍判为失败：酒馆工具注册表在顶层窗口，Error 不是本 realm 的实例', () => {
+    // 实测形态：ERA 运行在酒馆助手的脚本 iframe 内，ToolManager 在顶层页面，
+    // 它返回的 Error 由顶层 realm 构造，因此 iframe 里的 `instanceof Error` 为 false。
+    const foreign = runInNewContext(
+      'new Error("No tool with the name \\"attack\\" has been registered.")',
+    );
+    expect(foreign instanceof Error).toBe(false);
+
+    const failure = classifyToolResult('attack', foreign);
+
+    expect(failure.status).toBe('failed');
+    expect(failure.unregistered).toBe(true);
+    expect(failure.message).toContain('has been registered');
+    expect(failure.result).toBe(null);
+  });
+
+  it('成功返回字符串时判为成功并保留结果', () => {    const ok = classifyToolResult('dice', '5');
 
     expect(ok.status).toBe('completed');
     expect(ok.result).toBe('5');

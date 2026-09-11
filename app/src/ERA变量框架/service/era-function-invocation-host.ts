@@ -4,8 +4,9 @@
  * 不写入 ERA 业务状态，块顺序与提交仍由 Service 决定。
  *
  * 关键事实：SillyTavern 的 `ToolManager.invokeFunctionTool` 在失败时**不抛异常**，
- * 而是返回一个 `Error` 对象（并设置 `error.cause = 工具名`）。因此调用结果必须
- * 显式分类，否则失败会被当成成功结果静默吞掉。
+ * 而是返回一个 `Error` 对象（并设置 `error.cause = 工具名`）。而且注册表在顶层窗口、
+ * ERA 在脚本 iframe 内，这个 Error 是**跨 realm** 的对象，`instanceof Error` 判不出来。
+ * 因此调用结果必须显式且跨 realm 地分类，否则失败会被当成成功结果静默吞掉。
  */
 
 /** 酒馆工具调用器的机械接口；由 Host 适配层注入真实实现。 */
@@ -37,7 +38,32 @@ const UNREGISTERED_PATTERN = /has not been registered|No tool with the name/i;
 const UNKNOWN_INVOCATION = 'ERA_FUNCTION_INVOCATION_UNKNOWN';
 
 function messageOf(error: unknown): string {
+  if (isErrorValue(error)) return error.message;
   return error instanceof Error ? error.message : String(error);
+}
+
+/**
+ * 判定「酒馆返回的是一个错误对象」。
+ *
+ * 为什么不能只用 `instanceof Error`：ERA 运行在酒馆助手的脚本 iframe 内，而工具注册表
+ * 位于**顶层页面**，`ToolManager.invokeFunctionTool` 返回的 Error 由顶层 realm 构造，
+ * iframe 里 `value instanceof Error` 为 **false**。实测后果：未注册/失败的调用被当成
+ * 成功结果，调用块只写 `status="done"` 而不写 `error="ERA_FCALL_FAILED"`，作者看到
+ * 「函数静默无效」。
+ *
+ * 因此判定必须跨 realm：先看 `Object.prototype.toString` 的 Error 标签（跨 realm 稳定，
+ * Error.prototype 带 @@toStringTag），再用 name/message/stack 三件套兜底。
+ */
+function isErrorValue(value: unknown): value is Error {
+  if (value instanceof Error) return true;
+  if (value === null || typeof value !== 'object') return false;
+  if (Object.prototype.toString.call(value) === '[object Error]') return true;
+  const candidate = value as { name?: unknown; message?: unknown; stack?: unknown };
+  return (
+    typeof candidate.name === 'string' &&
+    typeof candidate.message === 'string' &&
+    typeof candidate.stack === 'string'
+  );
 }
 
 /**
@@ -47,13 +73,14 @@ function messageOf(error: unknown): string {
  * 交给调用方，不做业务解释。
  */
 export function classifyToolResult(name: string, value: unknown): EraFunctionCallOutcome {
-  if (value instanceof Error) {
+  if (isErrorValue(value)) {
+    const message = messageOf(value);
     return {
       status: 'failed',
       name,
       result: null,
-      message: value.message,
-      unregistered: UNREGISTERED_PATTERN.test(value.message),
+      message,
+      unregistered: UNREGISTERED_PATTERN.test(message),
     };
   }
   return {
@@ -61,6 +88,24 @@ export function classifyToolResult(name: string, value: unknown): EraFunctionCal
     name,
     result: typeof value === 'string' ? value : JSON.stringify(value ?? null),
     message: '',
+    unregistered: false,
+  };
+}
+
+/**
+ * 把**抛出**的异常分类为失败终态。
+ *
+ * 抛出的值一律是失败——不能走 `classifyToolResult`，否则 `throw "text"` 会被当成
+ * 工具成功返回的文本。跨 realm 的 Error 仍交给同一个跨 realm 判定，这样
+ * 「未注册」诊断不会因为异常从顶层 realm 抛出而丢失。
+ */
+export function classifyToolFailure(name: string, error: unknown): EraFunctionCallOutcome {
+  if (isErrorValue(error)) return classifyToolResult(name, error);
+  return {
+    status: 'failed',
+    name,
+    result: null,
+    message: String(error),
     unregistered: false,
   };
 }
@@ -156,13 +201,7 @@ export class EraFunctionInvocationSessions {
       const value = await this.invoker.invoke(record.name, record.args);
       outcome = classifyToolResult(record.name, value);
     } catch (error) {
-      outcome = {
-        status: 'failed',
-        name: record.name,
-        result: null,
-        message: messageOf(error),
-        unregistered: UNREGISTERED_PATTERN.test(messageOf(error)),
-      };
+      outcome = classifyToolFailure(record.name, error);
     }
     if (this.cancelled) return;
     this.settle(record, outcome);

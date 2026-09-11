@@ -9,7 +9,7 @@
  * 计算」这条通道，而不是 Host 的入队口。
  */
 
-import { classifyToolResult, type EraFunctionCallOutcome, type EraToolInvoker } from './era-function-invocation-host';
+import { classifyToolFailure, classifyToolResult, type EraFunctionCallOutcome, type EraToolInvoker } from './era-function-invocation-host';
 
 export type { EraToolInvoker };
 
@@ -78,7 +78,7 @@ export class EraPositionBoundInvocation {
       const value = await this.options.invoker.invoke(name, args);
       outcome = classifyToolResult(name, value);
     } catch (error) {
-      outcome = this.failure(name, error instanceof Error ? error.message : String(error));
+      outcome = classifyToolFailure(name, error);
     }
     // cancel 可能在 await 期间被调用，因此按字段重新读取而不是依赖类型收窄。
     const finishedWhileRunning: boolean = this.state === 'running';
