@@ -267,7 +267,9 @@ describe('quality engine', () => {
       acceptPolicyChange: true,
     });
     expect(acceptedMigration).toMatchObject({ baselineWritten: true, report: { status: 'PASS' } });
-  });
+    // 断言只看退出码与报告内容；本用例要冷启动多次 CLI，机器被长跑批量任务（例如 856 路径的
+    // 全量综合）占满时，默认 5 秒墙钟预算会被打穿——放宽预算，避免把「机器负载」误报成代码回归。
+  }, 60_000);
 
   it('拒绝缺少精确文件或对象边界的批量豁免', async () => {
     const root = await fixtureRoot();
