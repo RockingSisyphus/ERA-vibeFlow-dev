@@ -512,7 +512,7 @@ describe('ERA $expr 与函数指令', () => {
 });
 
 describe('ERA 消息内函数调用：封存压缩边界保护', () => {
-  it('含调用块的楼层不做压缩重写，保留调用与其操作区的相对位置', () => {
+  it('含调用块的楼层可以参与压缩，但压缩结果必须通过真实重放门（终值不变）', () => {
     const messages = [
       message(
         0,
@@ -539,13 +539,25 @@ describe('ERA 消息内函数调用：封存压缩边界保护', () => {
     });
     const compacted = applySealedCommandCompaction(rawPlan);
 
-    // 该楼层含调用块：压缩必须整层放弃，原文（含调用与操作区）保持字节不变。
+    // 人工决定（2026-09-11）：不再对含调用块的楼层整层跳过。安全性由真实重放门承担——
+    // 无论这一层被压缩还是保持原样，重放终值都必须与未压缩时一致，且调用块本身不得消失。
     const sealed = compacted.messages[0];
     expect(sealed).toBeTruthy();
     const text = sealed && sealed.content.kind === 'text' ? sealed.content.text : '';
-    expect(text).toContain('<EraFCall name="attack" id="c1" status="done"/>');
-    expect(text).toContain('<EraFCallTx for="c1" applied="1">');
-    expect(text).toContain('a + 2');
+    expect(text).toContain('<EraFCall');
+    // 压缩可以改写指令的写法（例如把 a+1、a+2 合并成 @a+3），但重放终值必须一模一样。
+    const compactedReplay = planEraSync({
+      messages: compacted.messages,
+      stat: { a: 1 },
+      statFunc: {},
+      meta: { SelectedMks: [], EditLogs: {}, FunctionEditLogs: {} },
+      reason: 'manual',
+      forceFullRebuild: true,
+      processingMk: 'mk-latest',
+      consecutiveState: null,
+    });
+    if (compactedReplay.status === 'failed') throw new Error(compactedReplay.error.message);
+    expect(compactedReplay.stat).toEqual(rawPlan.status === 'failed' ? null : { a: 4 });
   });
 
   it('不含调用块的楼层仍按原语义压缩', () => {

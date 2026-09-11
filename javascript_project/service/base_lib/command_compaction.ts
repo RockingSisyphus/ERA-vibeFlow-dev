@@ -88,19 +88,17 @@ export function identifySealedLayers(work: SyncWorkV1): ServiceCompactionContext
   };
 }
 
-/** 含消息内函数调用的楼层不参与压缩重写。 */
-const MESSAGE_FUNCTION_CALL_MARKER = /<EraFCall\b/iu;
-
 /**
  * Delegate symbolic rewriting and scope-aware proof to the published pure root.
  *
- * 含调用块的楼层整层跳过：调用与其操作区必须保持相对位置与原文，压缩会把相邻
- * 指令块合并或移位，一旦操作块被移出所属操作区，调用与它产出的操作就会脱钩。
+ * **含调用块的楼层不再整层跳过**（人工决定 2026-09-11）：调用块执行后带 `status="done"`、
+ * 永不重跑，压缩只要不把它的操作区拆开，就可以把它产出的操作当普通操作一起压缩。
+ * 安全性由后一步的真实重放门承担：`replayWithServiceEngine` 会用 Service 的 CRUD 引擎重放
+ * 压缩结果并与层末状态逐字段比对，任何「压缩把顺序或数值改了」的结果都会被拒绝（`accepted:false`）。
  */
 export function compactEachSegment(context: ServiceCompactionContext): ServiceCompactionContext {
   return mapCandidates(context, (entry) => {
     if (entry.original === null) return entry;
-    if (MESSAGE_FUNCTION_CALL_MARKER.test(entry.original)) return entry;
     return {
     ...entry,
     compaction: compactCommandLayer({

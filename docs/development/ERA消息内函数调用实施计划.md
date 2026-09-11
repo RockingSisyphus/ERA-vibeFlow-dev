@@ -554,9 +554,9 @@ base_lib（`buildPerBlockCommitWork` / `foldBlockCommitOutcome`）。
 4. **尾链改造（决定一）**：处理楼层的写入所有权移入循环后，尾链只做收尾——用 `no-op` 工作项承载
    `stateUpdate`（`consecutiveMk`/`consecutiveProcessingCount`/`syncCursor`）与交接通知，不写
    文本与 sidecar；`present_finalized_floor` 扩展为「非提交但带呈现意图时也刷新楼层」。
-5. **封存压缩（决定二）**：删掉 `command_compaction.ts` 的 `MESSAGE_FUNCTION_CALL_MARKER`
-   整层跳过，改为跳过 `<EraFCall>` 那一行、把调用产出的操作当普通操作压缩；加「压缩前后重放
-   终值一致」差分验证。
+5. ~~**封存压缩（决定二）**~~（**已完成**，第 95 轮）：`MESSAGE_FUNCTION_CALL_MARKER` 整层跳过已删除；
+   压缩安全性由既有的真实重放门承担（`replayWithServiceEngine` 逐字段比对层末状态），实测压缩会把
+   `a+1`、`a+2` 合并成 `@a+3` 而终值不变；旧测试已改写为不变量测试。真机复跑专项 6/6 + 回归门 passed。
 6. **打包**：`era-macro-syntax` 升版 0.1.1 重装（让 `era_block` 在显示与提示词里隐藏）——与
    写入者同批做；同批还要重跑真机专项与回归门。
 
