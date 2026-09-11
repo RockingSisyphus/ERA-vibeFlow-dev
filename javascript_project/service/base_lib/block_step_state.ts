@@ -22,6 +22,14 @@ export interface EraBlockStepStateV1 {
   readonly statFunc: Readonly<Record<string, unknown>>;
   readonly route: "none" | "invoke";
   readonly handoff: EraMessageFunctionHandoffV1 | null;
+  /**
+   * 楼层原文与元数据随状态携带。
+   *
+   * 循环 body 拿不到父作用域的能力输入（实测报 required workflow input 'sync_context' is missing），
+   * 因此 body 需要的一切都必须由携带状态本身提供：否则只能放弃循环体只吃状态的约束。
+   */
+  readonly content: string;
+  readonly meta: Readonly<Record<string, unknown>>;
 }
 
 export function record(value: unknown): value is Record<string, unknown> {

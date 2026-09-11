@@ -8,11 +8,6 @@
       "type": "era.sync.block.step.state",
       "cardinality": "exactly_one",
       "display_name": "块步进状态"
-    },
-    {
-      "type": "era.sync.context",
-      "cardinality": "exactly_one",
-      "display_name": "同步上下文"
     }
   ],
   "provides": [
@@ -34,12 +29,6 @@
         "key": "block_step_state",
         "type": "era.sync.block.step.state",
         "display_name": "块步进状态",
-        "required": true
-      },
-      {
-        "key": "sync_context",
-        "type": "era.sync.context",
-        "display_name": "同步上下文",
         "required": true
       }
     ],

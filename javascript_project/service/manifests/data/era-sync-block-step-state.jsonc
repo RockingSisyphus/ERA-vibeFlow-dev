@@ -43,6 +43,12 @@
             "type": "null"
           }
         ]
+      },
+      "content": {
+        "type": "string"
+      },
+      "meta": {
+        "type": "object"
       }
     },
     "required": [
@@ -53,7 +59,9 @@
       "stat",
       "statFunc",
       "route",
-      "handoff"
+      "handoff",
+      "content",
+      "meta"
     ],
     "additionalProperties": false
   }

@@ -10,9 +10,7 @@
  */
 
 import {
-  committedWorld,
   handoffOf,
-  processingFloor,
   record,
   type EraBlockStepStateV1,
 } from "../../base_lib/block_step_state.ts";
@@ -20,24 +18,18 @@ import {
   advanceMessageFunctionFlow,
   rehydrateMessageFunctionFlow,
 } from "../../base_lib/domain/message_function_flow.ts";
-import type { SyncContextV1 } from "../../base_lib/sync_contracts.ts";
-
 interface Envelope<T> {
   readonly value: T;
 }
 
 export function run(
   inputs: Readonly<{
-    "era.sync.context": Envelope<unknown>;
     "era.sync.block.step.state": Envelope<unknown>;
   }>,
 ): any {
-  const context = inputs["era.sync.context"].value as SyncContextV1;
   const state = inputs["era.sync.block.step.state"].value as EraBlockStepStateV1;
-  const floor = processingFloor(context);
-
-  // 没有处理楼层或状态已经指向交接：不动状态，直接结束本次块驱动。
-  if (floor === null || state.route === "invoke") {
+  // 没有处理楼层（messageId 为 -1）或状态已经指向交接：不动状态，直接结束本次块驱动。
+  if (state.messageId < 0 || state.route === "invoke") {
     return {
       block_step_state_next: state,
       block_step_done: true,
@@ -46,34 +38,36 @@ export function run(
 
   const flow = rehydrateMessageFunctionFlow({
     cursor: {
-      messageId: floor.messageId,
-      mk: floor.mk,
+      messageId: state.messageId,
+      mk: state.mk,
       blockIndex: state.blockIndex,
       done: state.done,
     },
-    content: floor.text,
-    messageId: floor.messageId,
-    mk: floor.mk,
+    content: state.content,
+    messageId: state.messageId,
+    mk: state.mk,
     initialStat: state.stat,
     initialStatFunc: state.statFunc,
-    meta: committedWorld(context).meta,
+    meta: state.meta,
     formal: true,
   });
   const advanced = advanceMessageFunctionFlow(flow);
   const pending = advanced.pendingCall;
   const next: EraBlockStepStateV1 = {
-    messageId: floor.messageId,
-    mk: floor.mk,
+    messageId: state.messageId,
+    mk: state.mk,
     blockIndex: advanced.cursor.blockIndex,
     done: advanced.done,
     stat: record(advanced.stat) ? advanced.stat : {},
     statFunc: advanced.statFunc ?? state.statFunc,
     route: pending === null || pending.name === null ? "none" : "invoke",
+    content: state.content,
+    meta: state.meta,
     handoff:
       pending === null || pending.name === null
         ? null
         : handoffOf({
-            floor,
+            floor: { messageId: state.messageId, mk: state.mk },
             call: pending,
             blockIndex: advanced.cursor.blockIndex,
             flow: advanced,

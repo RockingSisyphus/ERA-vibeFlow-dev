@@ -9,11 +9,6 @@
   "contract": {
     "requires": [
       {
-        "type": "era.sync.context",
-        "cardinality": "exactly_one",
-        "display_name": "同步上下文"
-      },
-      {
         "type": "era.sync.block.step.state",
         "cardinality": "exactly_one",
         "display_name": "块步进状态"
@@ -34,9 +29,6 @@
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
-      "era.sync.context": [
-        "输入：同步上下文。"
-      ],
       "era.sync.block.step.state": [
         "输入：块步进状态。"
       ]

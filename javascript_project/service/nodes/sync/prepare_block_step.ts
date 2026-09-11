@@ -32,6 +32,8 @@ export function prepare(
     statFunc: world.statFunc,
     route: "none",
     handoff: null,
+    content: floor?.text ?? "",
+    meta: world.meta,
   };
   return {
     block_step_state: state as unknown as Readonly<Record<string, unknown>>,
