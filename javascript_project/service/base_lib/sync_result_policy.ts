@@ -155,14 +155,20 @@ export function buildSyncNonCommitResult(work: SyncWorkV1): TaskResultV1 {
           },
         ]),
   ];
+  // 逐块提交的楼层由循环体写入，尾链只剩「结算 + 把续做点/连续处理事实交回批次状态」：
+  // 工作项带 `syncCursor` 时，即使它声明不提交，也必须把游标（含显式 null = 楼层算完、
+  // 清空续做点）投影成任务状态更新。plan 为空时没有连续处理事实可发布，保持原样。
+  const carriesCursor = Object.prototype.hasOwnProperty.call(work, "syncCursor");
+  const cursorUpdate =
+    carriesCursor && work.plan !== null && work.plan.status !== "failed"
+      ? stateUpdateForPlan(work.plan, work.syncCursor ?? null)
+      : stateUpdateForPlan(work.plan);
   return {
     status,
     settlements: settlementsFor(work.step, status, work.failure),
     notifications: notificationsForWork(work),
     diagnostics,
-    ...(stateUpdateForPlan(work.plan) === undefined
-      ? {}
-      : { stateUpdate: stateUpdateForPlan(work.plan) }),
+    ...(cursorUpdate === undefined ? {} : { stateUpdate: cursorUpdate }),
   };
 }
 

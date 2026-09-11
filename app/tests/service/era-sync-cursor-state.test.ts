@@ -8,6 +8,7 @@ import {
 import { buildSyncCommitRequest } from '../../../javascript_project/service/base_lib/sync_commit_policy';
 import {
   buildSyncCommittedResult,
+  buildSyncNonCommitResult,
   stateUpdateForPlan,
 } from '../../../javascript_project/service/base_lib/sync_result_policy';
 
@@ -223,6 +224,32 @@ describe('ERA 块游标：从工作项到批次状态的传递链', () => {
     } as never);
 
     expect(committed.stateUpdate).toMatchObject({ syncCursor: CURSOR });
+  });
+
+  it('不提交的尾链也能发布游标：提交状态不写，但续做点必须回到批次状态', () => {
+    const work = {
+      schemaVersion: 1,
+      step: step(),
+      disposition: 'no-op',
+      plan: { nextConsecutiveState: { mk: 'mk-4', count: 2 } },
+      payload: null,
+      failure: null,
+      syncCursor: CURSOR,
+    } as never;
+
+    const carried = buildSyncNonCommitResult(work);
+    expect(carried.status).toBe('no-op');
+    expect(carried.stateUpdate).toMatchObject({ syncCursor: CURSOR });
+
+    // 楼层算完：显式 null 表示清空续做点（凭据与游标都不该留在已完成楼层上）。
+    const cleared = buildSyncNonCommitResult({ ...(work as object), syncCursor: null } as never);
+    expect(cleared.stateUpdate).toMatchObject({ syncCursor: null });
+
+    // 不带游标键时保持既有行为：只有连续处理事实，不碰游标字段。
+    // （必须真的删掉键：写成 `undefined` 仍然算「带键」，会清空游标。）
+    const { syncCursor: _omitted, ...withoutCursor } = work as Record<string, unknown>;
+    const untouched = buildSyncNonCommitResult(withoutCursor as never);
+    expect(untouched.stateUpdate).not.toHaveProperty('syncCursor');
   });
 
   it('批次合并：带键则写入（含显式清空），缺键则保留旧游标', () => {
