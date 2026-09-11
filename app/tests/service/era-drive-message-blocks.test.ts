@@ -208,10 +208,7 @@ describe('era.sync.drive_message_blocks 节点', () => {
     const result = await run({
       'era.sync.context': {
         value: contextWith(
-          [
-            '<VariableInsert>{"gold":5}</VariableInsert>',
-            '<EraFCall name="attack" id="c1"/>',
-          ].join('\n'),
+          ['<VariableInsert>{"gold":5}</VariableInsert>', '<EraFCall name="attack" id="c1"/>'].join('\n'),
         ),
       },
     });

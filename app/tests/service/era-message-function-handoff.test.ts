@@ -7,14 +7,9 @@
 
 import { describe, expect, it } from 'vitest';
 
-const preparationUrl = new URL(
-  '../../../javascript_project/service/base_lib/dispatch_preparation.ts',
-  import.meta.url,
-).href;
-const policyUrl = new URL(
-  '../../../javascript_project/service/base_lib/sync_result_policy.ts',
-  import.meta.url,
-).href;
+const preparationUrl = new URL('../../../javascript_project/service/base_lib/dispatch_preparation.ts', import.meta.url)
+  .href;
+const policyUrl = new URL('../../../javascript_project/service/base_lib/sync_result_policy.ts', import.meta.url).href;
 
 const preparation = await import(/* @vite-ignore */ preparationUrl);
 const policy = await import(/* @vite-ignore */ policyUrl);
@@ -87,9 +82,7 @@ function state(step: JsonRecord) {
 function messages(activeText: string) {
   return {
     schemaVersion: 2,
-    messages: [
-      { schemaVersion: 1, messageId: 2, role: 'assistant', activeText, swipeIndex: 1 },
-    ],
+    messages: [{ schemaVersion: 1, messageId: 2, role: 'assistant', activeText, swipeIndex: 1 }],
   };
 }
 
@@ -168,15 +161,11 @@ describe('消息内函数调用：交接与恢复接线', () => {
   });
 
   it('恢复事件的身份不匹配时保持待处理，不写入半份记录', () => {
-    const otherMessage = preparedPlan(
-      continueStep([{ kind: 'json', value: resumePayload({ messageId: 9 }) }]),
-    );
+    const otherMessage = preparedPlan(continueStep([{ kind: 'json', value: resumePayload({ messageId: 9 }) }]));
     expect(otherMessage.processingMessage.activeText).not.toContain('<EraFCallTx');
     expect(otherMessage.processingMessage.activeText).not.toContain('status="done"');
 
-    const otherMk = preparedPlan(
-      continueStep([{ kind: 'json', value: resumePayload({ mk: 'mk-other' }) }]),
-    );
+    const otherMk = preparedPlan(continueStep([{ kind: 'json', value: resumePayload({ mk: 'mk-other' }) }]));
     expect(otherMk.processingMessage.activeText).not.toContain('<EraFCallTx');
   });
 

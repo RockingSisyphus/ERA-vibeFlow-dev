@@ -3,12 +3,7 @@
  * 只登记一套事件监听、转交回执和执行声明式 Capability。模块边界：
  * 不得实现领域路由、合并、CRUD、同步、回滚或资源选择，这些规则依赖 AOT workflow。
  */
-import {
-  generationHandoffs,
-  dispatchGenerationHandoff,
-  generationAdmission,
-  cancelGenerationWaitForEvent,
-} from './generation-handoff-host';
+import { generationHandoffs, generationAdmission, cancelGenerationWaitForEvent } from './generation-handoff-host';
 
 import { INPUT_EVENT, LISTENED_EVENT_TYPES, getEventDefinition, shouldCloseCollectionWindow } from '../events/catalog';
 import { Logger } from '../utils/log';
@@ -23,13 +18,15 @@ import type {
   EraTavernAdapter,
   EraWaitThroughResult,
 } from './types';
-import { currentEraMessageText, updateEraMessageContent } from './message-writer';
+import { updateEraMessageContent } from './message-writer';
 import { assertCurrentMessageBasis } from './message-write-target';
 import { prepareMessagePersistence } from './message-persistence';
 import { readInstallationScopeFacts } from './installation-scope';
 import { projectMessage } from './message-projection';
 import { AgentTavernHost } from './agent-tavern-host';
-import { createEraFunctionsCapability } from './era-functions-capability';
+import { createEraFunctionsRuntime } from './era-functions-capability';
+import { EraInternalMessageWrites } from './era-internal-message-writes';
+import { routeEraNotification } from './era-notification-routing';
 import { TavernListeners } from './tavern-listeners';
 import { observeAgentReceipt } from './agent-session-observation';
 import {
@@ -173,9 +170,10 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
   private startupGate: Promise<EraStartupGateDecision>;
   private resolveStartupGate: ((decision: EraStartupGateDecision) => void) | null = null;
   private lifecycleToken = 1;
-  private readonly internalMessageWrites = new Map<number, string>();
+  private readonly internalMessageWrites = new EraInternalMessageWrites();
   private readonly agentHost: AgentTavernHost;
-  /** 消息内函数调用宿主能力；装配见 era-functions-capability。 */
+  /** 消息内函数调用的宿主运行时；装配与位置绑定见 era-functions-capability。 */
+  private readonly functionsRuntime: ReturnType<typeof createEraFunctionsRuntime>;
   readonly functions: EraTavernAdapter['functions'];
   readonly agent: EraTavernAdapter['agent'];
   /**
@@ -189,11 +187,12 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
       this.resolveStartupGate = resolve;
     });
     this.agentHost = new AgentTavernHost({
-      internalMessageWrites: this.internalMessageWrites,
+      internalMessageWrites: this.internalMessageWrites.map,
       readIdentity: (input, context) => this.identity.read(input, context),
     });
     this.agent = this.agentHost.operations;
-    this.functions = createEraFunctionsCapability();
+    this.functionsRuntime = createEraFunctionsRuntime();
+    this.functions = this.functionsRuntime.capability;
   }
 
   waitForStartupGate(): Promise<EraStartupGateDecision> {
@@ -214,22 +213,6 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
   private rotateLifecycleWindow(): void {
     if (this.lifecycleToken >= Number.MAX_SAFE_INTEGER) this.lifecycleToken = 1;
     else this.lifecycleToken += 1;
-  }
-
-  /** ERA 自己的 MK/API/压缩写回不能制造新业务窗口，也不能重新入队同步。 */
-  private consumeInternalMessageUpdate(eventType: string, args: readonly unknown[]): boolean {
-    if (eventType !== INPUT_EVENT.MESSAGE_UPDATED) return false;
-    const rawId = args[0];
-    if (!Number.isSafeInteger(rawId) || Number(rawId) < 0) return false;
-    const id = Number(rawId);
-    const expected = this.internalMessageWrites.get(id);
-    if (expected === undefined) return false;
-    if (currentEraMessageText(id) !== expected) {
-      this.internalMessageWrites.delete(id);
-      return false;
-    }
-    this.internalMessageWrites.delete(id);
-    return true;
   }
 
   /**
@@ -260,7 +243,8 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
           if (type === INPUT_EVENT.GENERATION_STARTED && this.agentHost.isAuxiliaryGenerationActive()) return undefined;
           cancelGenerationWaitForEvent(type, args);
           if (type === INPUT_EVENT.GENERATION_STARTED && args[2] !== true) this.agentHost.nativeGeneration.start();
-          if (this.consumeInternalMessageUpdate(type, args)) return undefined;
+          // ERA 自己的 MK/API/压缩写回不能制造新业务窗口，也不能重新入队同步。
+          if (this.internalMessageWrites.consume(type, args)) return undefined;
           if (type === INPUT_EVENT.GENERATION_STOPPED) this.agentHost.nativeGeneration.clear('stopped');
           if (type === INPUT_EVENT.CHAT_CHANGED) this.agentHost.clearSessions();
           if (WINDOW_LIFECYCLE_EVENTS.has(type)) this.rotateLifecycleWindow();
@@ -309,6 +293,8 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
       stopped = true;
       this.accepting = false;
       this.agentHost.stop();
+      // 在途函数调用以取消终态收口，此后一切位置绑定提交被拒绝。
+      this.functionsRuntime.stop();
       releaseListeners();
       if (this.listener === listener) this.listener = null;
     };
@@ -335,13 +321,24 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
     this.accepting = false;
     this.internalMessageWrites.clear();
     this.agentHost.stop();
+    this.functionsRuntime.stop();
   }
 
-  /** 后置通知在 FIFO 片段结束后执行，因此订阅回调可以提交新的正常任务。 */
+  /**
+   * 后置通知在 FIFO 片段结束后执行，因此订阅回调可以提交新的正常任务。
+   *
+   * 必须先把「需要真实新事件」的通知交给专门路由：直接按普通事件发射会让生成阶段
+   * 与函数调用永不恢复；而重复处理会让作者看到同一条通知触发两次。
+   */
   async notify(notification: EraPreparedNotification, context: EraCapabilityContext): Promise<void> {
     throwIfAborted(context.signal);
-    if (notification.type === 'era.agent.stage_completed')
-      return dispatchGenerationHandoff(notification, context.signal, this.enqueue.bind(this));
+    const routed = await routeEraNotification({
+      notification,
+      context,
+      enqueue: this.enqueue.bind(this),
+      functionsRuntime: this.functionsRuntime,
+    });
+    if (routed) return;
     await eventEmit(notification.type, ...notification.args);
     throwIfAborted(context.signal);
   }
@@ -402,7 +399,7 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
     ): Promise<unknown> => {
       throwIfAborted(context.signal);
       const confirmPersistence = prepareMessagePersistence(input, context.signal);
-      const affectedMessageIds = await updateEraMessageContent(input, this.internalMessageWrites);
+      const affectedMessageIds = await updateEraMessageContent(input, this.internalMessageWrites.map);
       const persistence = await confirmPersistence();
       if (persistence.status !== 'committed') return persistence;
       if (input.projectTechnicalBlocks !== false) refreshDisplayedEraTechnicalBlocks(affectedMessageIds);
