@@ -24,6 +24,16 @@ export const ERA_FUNCTION_CALL_OPERATIONS_TAG = "EraFCallTx";
 export const ERA_FUNCTION_CALL_TAG_LOWER = "erafcall";
 export const ERA_FUNCTION_CALL_OPERATIONS_TAG_LOWER = "erafcalltx";
 
+/**
+ * 逐块提交的「已应用」记录标签。
+ *
+ * 它包住已经提交进 sidecar 的块，是**计算期间**的进度凭据：楼层算完后由收尾提交删除，
+ * 因此正常情况下消息里不会留下它；只要它还在，就说明这条楼层是被中断的，必须先把剩下的
+ * 块算完再删。用独立标签而不是复用 `<era_tx>`：`<era_tx s="m">` 是公共 API 的「记录即应用」
+ * 事务，还有同 scope 去重语义，两者混用会让 facade 提交被误判为已经写过。
+ */
+export const ERA_APPLIED_BLOCK_TAG = "era_block";
+
 /** 调用块的已处理标记属性值与诊断码。 */
 export const ERA_FUNCTION_CALL_DONE_ATTRIBUTE = "done";
 
@@ -122,13 +132,20 @@ interface OperationsRegion {
   readonly applied: boolean;
 }
 
-/** 收集操作区；`for` 为空的操作区没有归属，直接忽略。 */
+/**
+ * 收集两种「操作区」：
+ *
+ * 1. 调用操作区 `<EraFCallTx for="c1">`：按 `for` 归属到调用块；`for` 为空时没有归属，忽略。
+ * 2. **逐块提交的已应用记录** `<era_block applied="1">…</era_block>`：包住「已经提交进
+ *    sidecar 的那一块」。凭据只在计算期间存在，楼层算完即删（见实施计划切片 1b）；只要它还
+ *    在，重放就必须跳过它包住的块，否则同一变化会在下一批次生效两次。
+ */
 function collectOperationsRegions(content: string): readonly OperationsRegion[] {
   const regions: OperationsRegion[] = [];
   // 在函数内新建：模块级 g 标志正则会在调用之间保留 lastIndex。
-  const pattern = /<erafcalltx\b([^>]*)>([\s\S]*?)<\/erafcalltx>/giu;
+  const callPattern = /<erafcalltx\b([^>]*)>([\s\S]*?)<\/erafcalltx>/giu;
   let match: RegExpExecArray | null;
-  while ((match = pattern.exec(content)) !== null) {
+  while ((match = callPattern.exec(content)) !== null) {
     const attributes = attributesOf(match[1] ?? "");
     const id = attributes.get("for");
     if (id === undefined || id.length === 0) continue;
@@ -139,7 +156,22 @@ function collectOperationsRegions(content: string): readonly OperationsRegion[] 
       applied: attributes.get("applied") === "1",
     });
   }
-  return regions;
+  const blockPattern = new RegExp(
+    `<${ERA_APPLIED_BLOCK_TAG}\\b([^>]*)>([\\s\\S]*?)<\\/${ERA_APPLIED_BLOCK_TAG}>`,
+    "giu",
+  );
+  while ((match = blockPattern.exec(content)) !== null) {
+    const attributes = attributesOf(match[1] ?? "");
+    // 只有显式 applied="1" 的记录才表示「该块已经提交」；没有它就是一个惰性容器。
+    if (attributes.get("applied") !== "1") continue;
+    regions.push({
+      id: "",
+      start: match.index,
+      end: match.index + match[0].length,
+      applied: true,
+    });
+  }
+  return regions.sort((left, right) => left.start - right.start);
 }
 
 /** 调用块下方紧邻的操作区：允许其间只有空白。 */
@@ -356,6 +388,71 @@ export function renderEraFunctionCallOperationsRegion(
   const body = rendered.length > 0 ? `\n${rendered.join("\n")}\n` : "";
   const applied = options.applied === true ? ' applied="1"' : "";
   return `<${ERA_FUNCTION_CALL_OPERATIONS_TAG} for="${callId}"${applied}>${body}</${ERA_FUNCTION_CALL_OPERATIONS_TAG}>`;
+}
+
+/**
+ * 把一个块包成「已应用」记录：`<era_block mk="…" applied="1">块原文</era_block>`。
+ *
+ * 包住（而不是在旁边另写一条）是为了让跳过判定与块位置解耦：块在记录内部，重放时按
+ * 「块落在已应用区域内」跳过，周围文字怎么改都不会让记录指向错误的块。
+ */
+export function wrapBlockAsAppliedRecord(input: {
+  readonly content: string;
+  readonly start: number;
+  readonly end: number;
+  readonly mk: string;
+}): string {
+  const block = input.content.slice(input.start, input.end);
+  const record = `<${ERA_APPLIED_BLOCK_TAG} mk="${input.mk}" applied="1">${block}</${ERA_APPLIED_BLOCK_TAG}>`;
+  return (
+    input.content.slice(0, input.start) + record + input.content.slice(input.end)
+  );
+}
+
+/**
+ * 删除全部「已应用」记录标签，保留其中的原文块。
+ *
+ * 楼层算完时的收尾：凭据只在计算期间存在，算完即删。删掉之后这条楼层的原文与「从楼层起点
+ * 重算」完全一致，因此封存压缩永远不会遇到它。
+ */
+export function unwrapAppliedRecords(content: string): string {
+  let result = content;
+  for (;;) {
+    const next = result.replace(
+      new RegExp(
+        `<${ERA_APPLIED_BLOCK_TAG}\\b[^>]*>([\\s\\S]*?)<\\/${ERA_APPLIED_BLOCK_TAG}>`,
+        "iu",
+      ),
+      "$1",
+    );
+    if (next === result) return result;
+    result = next;
+  }
+}
+
+/** 楼层是否还留着「已应用」记录：留着就说明这条楼层是被中断的，必须先算完再删。 */
+export function hasAppliedBlockRecords(content: string): boolean {
+  return collectOperationsRegions(content).some(region => region.applied);
+}
+
+/**
+ * 开头连续多少个指令块已经带「已应用」记录。
+ *
+ * 逐块提交是**按原文顺序**推进的，因此已应用的块必然构成指令序列的前缀：重放从第
+ * `appliedCommandPrefix` 个指令开始，就已提交的块不会被算第二遍。返回值直接就是既有
+ * `applyMessageCommands` 的 `commandRange.fromIndex` 口径。
+ */
+export function appliedCommandPrefix(input: EraCommandParseInput): number {
+  const content = input?.content ?? "";
+  if (typeof content !== "string" || content.length === 0) return 0;
+  const regions = collectOperationsRegions(content);
+  let count = 0;
+  for (const command of parseCommandBlocks(input)) {
+    const region = regionOf(command.start, regions);
+    if (region === null || !region.applied) break;
+    count += 1;
+  }
+  return count;
 }
 
 /** 调用块的可读描述，供诊断与只读展示复用。 */

@@ -36,7 +36,7 @@ function technicalBlockKind(name: string): TechnicalBlockKind {
 function collectTechnicalBlocks(text: string): ClosedBlock[] | null {
   const stack: OpenTag[] = [];
   const blocks: ClosedBlock[] = [];
-  const names = 'era_plan|era_update|era_agent_error|era_tx|erafcall|erafcalltx|variableinsert|variableedit|variabledelete|functioninsert|functionedit|functiondelete|era_data|variablethink';
+  const names = 'era_plan|era_update|era_agent_error|era_tx|erafcall|erafcalltx|era_block|variableinsert|variableedit|variabledelete|functioninsert|functionedit|functiondelete|era_data|variablethink';
   const TECHNICAL_TAG_TOKEN = new RegExp(`<\\s*(\\/?)\\s*(${names})\\b[^>]*>`, 'giu');
   for (let match = TECHNICAL_TAG_TOKEN.exec(text); match; match = TECHNICAL_TAG_TOKEN.exec(text)) {
     const closing = match[1] === '/';
