@@ -206,6 +206,40 @@ scope 复用现有 `message`、`branch`、`always` 规则，不增加按函数�
 
 ERA 构建预期测试 bundle，Pack 使用明确指定的预构建 bundle。按当前项目约定使用已配置的 8 worker；运行独立的新 Artifact，分别报告专项、完整细则和综合结果，不拼接旧结果。
 
+### 6.2.1 真实酒馆测试统一使用 ERA-Test-Pack（人工确认）
+
+真实酒馆验收**不在本仓自建测试流程**，一律通过 ERA-Test-Pack（`era-test` CLI）在真实酒馆
+（SillyTavern + Tavern Helper + Response Lab）中执行；Pack 负责 sandbox、ST origin、浏览器
+上下文与 Artifact，本仓只负责提供预构建产物与其证据。
+
+运行前置（缺一不可，且必须晚于全部编辑）：
+
+1. **发布 service AOT 到 app 实际引用的位置**：`app/webpack.config.ts` 把
+   `@era/vibeflow-service` 别名到 `generated/era-service/workflow.js`，因此必须执行
+
+   ```bash
+   python3 run.py build --workspace vibeflow_config.jsonc \
+     --config javascript_project/service/configs/era.service.jsonc \
+     --target browser --profile esm-module --out-dir generated/era-service --replace
+   ```
+
+2. **重建 ERA bundle**：`pnpm --dir app build`，产物为
+   `app/dist/ERA变量框架/index.js`（Pack 只接受这个预构建 bundle，不自行构建 ERA）。
+
+3. **用 Pack 运行**（专项优先，全量综合只在功能完整后）：
+
+   ```bash
+   pnpm --dir "/home/example/projects/酒馆开发目录/测试工具链/ERA-Test-Pack" \
+     --silent era-test -- test \
+     --project "/home/example/projects/酒馆开发目录/测试工具链/ST-Test-Harness/.st-harness.jsonc" \
+     --era-bundle "/home/example/projects/ERA-vibeFlow/app/dist/ERA变量框架/index.js" \
+     --suite era-message-function-call --workers 8
+   ```
+
+要点：`--suite` / `--path` / `--file` / `--diagnose` 四选一；每次运行的 bundle 只经
+`st-test-harness/domain-runner` 的受信任入口传递；长跑必须按 `long-running-task-monitor`
+skill 监控；**真实 suite 未运行时必须明说「未运行」**，不得用离线门禁代替产品行为通过。
+
 ### 6.3 实施流程
 
 完成待定设计后，沿各 root 已登记 Architecture 的 source，在真实生产 Config 位置表达 planned 变化，维护四类变更清单并生成完整展开审核图。人工批准后实施，更新 Architecture，执行适用的 validate、quality、build、本地测试和工作流探针，再运行 Pack 验收。
