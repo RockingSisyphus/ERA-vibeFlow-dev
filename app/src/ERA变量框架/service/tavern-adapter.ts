@@ -29,6 +29,7 @@ import { prepareMessagePersistence } from './message-persistence';
 import { readInstallationScopeFacts } from './installation-scope';
 import { projectMessage } from './message-projection';
 import { AgentTavernHost } from './agent-tavern-host';
+import { createEraFunctionsCapability } from './era-functions-capability';
 import { TavernListeners } from './tavern-listeners';
 import { observeAgentReceipt } from './agent-session-observation';
 import {
@@ -80,10 +81,6 @@ export interface EraTavernAdapterOptions {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
-
-function clonePortable<T>(value: T): T {
-  return structuredClone(value);
 }
 
 function throwIfAborted(signal: AbortSignal): void {
@@ -178,8 +175,15 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
   private lifecycleToken = 1;
   private readonly internalMessageWrites = new Map<number, string>();
   private readonly agentHost: AgentTavernHost;
+  /** 消息内函数调用宿主能力；装配见 era-functions-capability。 */
+  readonly functions: EraTavernAdapter['functions'];
   readonly agent: EraTavernAdapter['agent'];
-
+  /**
+   * 建立唯一宿主适配器。
+   *
+   * 必须先建立启动闸门 Promise 再装配 Agent 宿主与函数能力：否则启动期等待方会
+   * 拿到未就绪的闸门，函数能力也会在适配器自身端口就位前被引用。
+   */
   constructor(private readonly options: EraTavernAdapterOptions = {}) {
     this.startupGate = new Promise<EraStartupGateDecision>(resolve => {
       this.resolveStartupGate = resolve;
@@ -189,6 +193,7 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
       readIdentity: (input, context) => this.identity.read(input, context),
     });
     this.agent = this.agentHost.operations;
+    this.functions = createEraFunctionsCapability();
   }
 
   waitForStartupGate(): Promise<EraStartupGateDecision> {
@@ -340,13 +345,12 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
     await eventEmit(notification.type, ...notification.args);
     throwIfAborted(context.signal);
   }
-
   readonly variables = {
     /** 读取时克隆宿主值，避免工作流持有 Tavern 的可变对象引用。 */
     read: async (input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown> => {
       throwIfAborted(context.signal);
       const scope = variableScope(input.scope);
-      const variables = clonePortable(getVariables(scope));
+      const variables = structuredClone(getVariables(scope));
       throwIfAborted(context.signal);
       return { scope, variables };
     },
@@ -357,17 +361,17 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
     commit: async (input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown> => {
       throwIfAborted(context.signal);
       const scope = variableScope(input.scope);
-      const explicitVariables = isRecord(input.variables) ? clonePortable(input.variables) : null;
-      const changes: Record<string, unknown> = isRecord(input.changes) ? clonePortable(input.changes) : {};
-      if (Object.prototype.hasOwnProperty.call(input, 'stat')) changes.stat_data = clonePortable(input.stat);
-      if (Object.prototype.hasOwnProperty.call(input, 'meta')) changes.ERAMetaData = clonePortable(input.meta);
+      const explicitVariables = isRecord(input.variables) ? structuredClone(input.variables) : null;
+      const changes: Record<string, unknown> = isRecord(input.changes) ? structuredClone(input.changes) : {};
+      if (Object.prototype.hasOwnProperty.call(input, 'stat')) changes.stat_data = structuredClone(input.stat);
+      if (Object.prototype.hasOwnProperty.call(input, 'meta')) changes.ERAMetaData = structuredClone(input.meta);
 
       if (explicitVariables) {
         replaceVariables(explicitVariables, scope);
       } else {
         updateVariablesWith(current => Object.assign(current, changes), scope);
       }
-      const observed = clonePortable(getVariables(scope));
+      const observed = structuredClone(getVariables(scope));
       throwIfAborted(context.signal);
       if (scope.type === 'script') this.options.onScriptVariablesCommitted?.();
       return { status: 'committed', scope, variables: observed };
@@ -419,10 +423,10 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
     /** 为了避免误覆盖，必须同时读取名称、绑定和条目，供工作流判断冲突与幂等追加。 */
     read: async (input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown> => {
       throwIfAborted(context.signal);
-      const names = clonePortable(getWorldbookNames());
-      const bindings = clonePortable(getCharWorldbookNames('current'));
+      const names = structuredClone(getWorldbookNames());
+      const bindings = structuredClone(getCharWorldbookNames('current'));
       const requestedName = typeof input.name === 'string' ? input.name : bindings.primary;
-      const entries = requestedName ? clonePortable(await getWorldbook(requestedName)) : [];
+      const entries = requestedName ? structuredClone(await getWorldbook(requestedName)) : [];
       throwIfAborted(context.signal);
       return { names, bindings, requestedName, entries };
     },
@@ -467,7 +471,7 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
       if (typeof input.name !== 'string' || !Array.isArray(input.entries)) {
         throw new TypeError('世界书写入请求缺少 name 或 entries。');
       }
-      await replaceWorldbook(input.name, clonePortable(input.entries) as WorldbookEntry[]);
+      await replaceWorldbook(input.name, structuredClone(input.entries) as WorldbookEntry[]);
       throwIfAborted(context.signal);
       return { status: 'committed', name: input.name, count: input.entries.length };
     },
@@ -478,7 +482,7 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
     read: async (_input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown> => {
       throwIfAborted(context.signal);
       const enabled = currentCharacterRegexEnabled();
-      const regexes = clonePortable(getTavernRegexes({ type: 'character' }));
+      const regexes = structuredClone(getTavernRegexes({ type: 'character' }));
       return { enabled, regexes };
     },
     /**
@@ -488,7 +492,7 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
       throwIfAborted(context.signal);
       const regex = input.regex;
       if (!isRecord(regex)) throw new TypeError('正则写入请求缺少 regex。');
-      const updated = [...getTavernRegexes({ type: 'character' }), clonePortable(regex) as TavernRegex];
+      const updated = [...getTavernRegexes({ type: 'character' }), structuredClone(regex) as TavernRegex];
       const tavern = currentTavernContext();
       const characterId = Number(tavern.characterId);
       if (!Number.isSafeInteger(characterId) || characterId < 0) {
@@ -525,7 +529,7 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
       if (Object.prototype.hasOwnProperty.call(input, 'sourceContext')) {
         identity.statusbarSource = verifyEraStatusbarCommitSource(input.sourceContext);
       }
-      return clonePortable(identity);
+      return structuredClone(identity);
     },
   };
 
