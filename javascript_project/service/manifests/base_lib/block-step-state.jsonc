@@ -22,7 +22,9 @@
     "era.service.message_function_calls",
     "era.service.message_function_flow",
     "era.service.sync_contracts",
-    "era.crud.engine"
+    "era.crud.engine",
+    "era.service.sync_planning",
+    "era.service.sync_engine"
   ],
   "external_packages": []
 }

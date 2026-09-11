@@ -7,7 +7,10 @@
 
 import type { EraFunctionCallSite } from "./domain/message_function_calls.ts";
 import type { MessageFunctionFlow } from "./domain/message_function_flow.ts";
-import type { SyncContextV1, EraMessageFunctionHandoffV1 } from "./sync_contracts.ts";
+import type {
+  SyncContextV1,
+  EraMessageFunctionHandoffV1,
+} from "./sync_contracts.ts";
 
 /** 块步进承载状态；与 `era.sync.block.step.state`/`.next` 两个 schema 同形。 */
 export interface EraBlockStepStateV1 {
@@ -28,11 +31,17 @@ export function record(value: unknown): value is Record<string, unknown> {
 /** 从派发上下文取出当前处理楼层的消息身份与文本；不可用时返回 null。 */
 export function processingFloor(
   context: SyncContextV1,
-): { readonly messageId: number; readonly mk: string; readonly text: string } | null {
+): {
+  readonly messageId: number;
+  readonly mk: string;
+  readonly text: string;
+} | null {
   const step = context.step;
   const dispatch = record(step) ? step.dispatchContext : null;
   if (!record(dispatch)) return null;
-  const message = record(dispatch.processingMessage) ? dispatch.processingMessage : null;
+  const message = record(dispatch.processingMessage)
+    ? dispatch.processingMessage
+    : null;
   if (!record(message)) return null;
   const messageId = message.messageId;
   const text = message.activeText;
@@ -52,9 +61,17 @@ export function committedWorld(context: SyncContextV1): {
   readonly meta: Readonly<Record<string, unknown>>;
 } {
   const raw = record(context.variablesRaw) ? context.variablesRaw : {};
-  const stat = record(raw.stat_data) ? raw.stat_data : record(raw.stat) ? raw.stat : {};
+  const stat = record(raw.stat_data)
+    ? raw.stat_data
+    : record(raw.stat)
+      ? raw.stat
+      : {};
   const statFunc = record(raw.statFunc) ? raw.statFunc : {};
-  const meta = record(raw.ERAMetaData) ? raw.ERAMetaData : record(raw.meta) ? raw.meta : {};
+  const meta = record(raw.ERAMetaData)
+    ? raw.ERAMetaData
+    : record(raw.meta)
+      ? raw.meta
+      : {};
   return { stat, statFunc, meta };
 }
 
@@ -75,5 +92,72 @@ export function handoffOf(input: {
     args: input.call.args ?? {},
     stat: record(input.flow.stat) ? input.flow.stat : {},
     statFunc: input.flow.statFunc ?? {},
+  };
+}
+
+/**
+ * 把「一个块之后的状态」收口成可提交工作项。
+ *
+ * 锁定语义要求每个操作块执行完就提交一次状态。既有提交链的 stat/statFunc/meta 全部取自
+ * plan，因此单块提交不需要新的提交通道：为这一块构造一个只含该块的 plan，再交给既有的
+ * `buildSyncCommitRequest` + `era.tavern.variables_commit` 写入即可。
+ *
+ * 为什么 messageUpdates 必须带锚定后的文本：记录要落在该块的位置（切片 1a 的
+ * `anchoredTransactionContent` 负责锚定），否则重放顺序会变成「先后续块、后本块」，
+ * 对非交换操作会算出与实时不同的终值。
+ */
+export function buildBlockCommitWork(input: {
+  readonly work: SyncWorkV1;
+  readonly state: EraBlockStepStateV1;
+  readonly content: string;
+  readonly messageIndex: number;
+}): SyncWorkV1 {
+  const count = input.state.blockIndex > 0 ? input.state.blockIndex : 1;
+  const plan = {
+    kind: "sync",
+    status: "fast-sync",
+    committed: true,
+    divergence: null,
+    stat: input.state.stat,
+    statFunc: input.state.statFunc,
+    meta: input.work.plan === null ? {} : input.work.plan.meta,
+    messages: input.work.plan === null ? [] : input.work.plan.messages,
+    messageUpdates: [
+      {
+        kind: "update-message-content",
+        messageId: input.state.messageId,
+        messageIndex: input.messageIndex,
+        mk: input.state.mk,
+        content: { kind: "text", text: input.content },
+      },
+    ],
+    sealedCompactionCandidates: [],
+    recalculatedMessageIndexes: [],
+    rollback: { applied: false, fromMk: null, toMk: null },
+    actionsTaken: {
+      rollback: false,
+      apply: true,
+      resync: false,
+      api: false,
+      editedResync: false,
+      swipedRollback: false,
+    },
+    consecutiveProcessingCount: count,
+    nextConsecutiveState: { mk: input.state.mk, count },
+    diagnostics: [],
+  } as unknown as SyncWorkV1["plan"];
+  return {
+    ...input.work,
+    disposition: "commit",
+    plan,
+    payload:
+      input.work.payload === null
+        ? null
+        : {
+            ...input.work.payload,
+            mk: input.state.mk,
+            message_id: input.state.messageId,
+            actions: plan.actionsTaken,
+          },
   };
 }
