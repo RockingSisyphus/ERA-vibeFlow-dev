@@ -172,8 +172,8 @@ describe('ERA 消息内函数调用：未处理清单与操作区渲染', () => 
 
   it('渲染操作区保留作者提交含义：$expr 原样、固定值原样', () => {
     const region = renderEraFunctionCallOperationsRegion('c1', [
-      { type: 'edit', data: [{ hp: { $expr: 'hp - 30' } }] },
-      { type: 'insert', data: [{ dead: true }] },
+      { edit: { hp: { $expr: 'hp - 30' } } },
+      { insert: { dead: true } },
     ]);
 
     expect(region).toContain('<EraFCallTx for="c1">');

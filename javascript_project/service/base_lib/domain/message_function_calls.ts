@@ -59,6 +59,7 @@ export type EraMessageBlock =
       readonly command: EraCrudCommand;
       readonly insideOperationsRegion: boolean;
       readonly operationsRegionId: string | null;
+      readonly operationsRegionApplied: boolean;
     }
   | {
       readonly kind: "call";
@@ -68,17 +69,16 @@ export type EraMessageBlock =
       readonly call: EraFunctionCallSite;
       readonly insideOperationsRegion: boolean;
       readonly operationsRegionId: string | null;
+      readonly operationsRegionApplied: boolean;
     };
 
-/** 命令类型到既有标签名的唯一映射，供渲染操作区与展示复用。 */
-const COMMAND_TAG_BY_TYPE: Readonly<Record<string, string>> = Object.freeze({
-  insert: "VariableInsert",
+/** 函数产出操作的 kind → 既有标签名，渲染操作区时使用。 */
+const OPERATION_TAG_BY_KIND: Readonly<Record<string, string>> = Object.freeze({
   edit: "VariableEdit",
+  insert: "VariableInsert",
   delete: "VariableDelete",
-  "function-insert": "FunctionInsert",
-  "function-edit": "FunctionEdit",
-  "function-delete": "FunctionDelete",
 });
+
 
 /** 六类指令块的字节范围，用于判定调用块是否被嵌套在指令块内部。 */
 function commandBlockRanges(
@@ -118,6 +118,8 @@ interface OperationsRegion {
   readonly id: string;
   readonly start: number;
   readonly end: number;
+  /** 该区域的操作已在函数运行期间就地应用，重放时必须跳过，否则同一变化生效两次。 */
+  readonly applied: boolean;
 }
 
 /** 收集操作区；`for` 为空的操作区没有归属，直接忽略。 */
@@ -127,12 +129,14 @@ function collectOperationsRegions(content: string): readonly OperationsRegion[] 
   const pattern = /<erafcalltx\b([^>]*)>([\s\S]*?)<\/erafcalltx>/giu;
   let match: RegExpExecArray | null;
   while ((match = pattern.exec(content)) !== null) {
-    const id = attributesOf(match[1] ?? "").get("for");
+    const attributes = attributesOf(match[1] ?? "");
+    const id = attributes.get("for");
     if (id === undefined || id.length === 0) continue;
     regions.push({
       id,
       start: match.index,
       end: match.index + match[0].length,
+      applied: attributes.get("applied") === "1",
     });
   }
   return regions;
@@ -310,6 +314,7 @@ export function parseMessageBlocks(input: EraCommandParseInput): readonly EraMes
       command: command.command,
       insideOperationsRegion: region !== null,
       operationsRegionId: region?.id ?? null,
+      operationsRegionApplied: region?.applied ?? false,
     });
   }
   for (const call of calls) {
@@ -322,6 +327,7 @@ export function parseMessageBlocks(input: EraCommandParseInput): readonly EraMes
       call,
       insideOperationsRegion: region !== null,
       operationsRegionId: region?.id ?? null,
+      operationsRegionApplied: region?.applied ?? false,
     });
   }
 
@@ -335,18 +341,21 @@ export function parseMessageBlocks(input: EraCommandParseInput): readonly EraMes
  */
 export function renderEraFunctionCallOperationsRegion(
   callId: string,
-  operations: readonly EraCrudCommand[],
+  operations: readonly Readonly<Record<string, unknown>>[],
+  options: Readonly<{ readonly applied?: boolean }> = {},
 ): string {
   const rendered: string[] = [];
   for (const operation of operations) {
-    const tagName = COMMAND_TAG_BY_TYPE[operation.type];
-    if (tagName === undefined) continue;
-    for (const payload of operation.data) {
-      rendered.push(`<${tagName}>${JSON.stringify(payload)}</${tagName}>`);
+    for (const [kind, tagName] of Object.entries(OPERATION_TAG_BY_KIND)) {
+      if (!Object.prototype.hasOwnProperty.call(operation, kind)) continue;
+      rendered.push(
+        `<${tagName}>${JSON.stringify(operation[kind])}</${tagName}>`,
+      );
     }
   }
   const body = rendered.length > 0 ? `\n${rendered.join("\n")}\n` : "";
-  return `<${ERA_FUNCTION_CALL_OPERATIONS_TAG} for="${callId}">${body}</${ERA_FUNCTION_CALL_OPERATIONS_TAG}>`;
+  const applied = options.applied === true ? ' applied="1"' : "";
+  return `<${ERA_FUNCTION_CALL_OPERATIONS_TAG} for="${callId}"${applied}>${body}</${ERA_FUNCTION_CALL_OPERATIONS_TAG}>`;
 }
 
 /** 调用块的可读描述，供诊断与只读展示复用。 */
@@ -496,6 +505,20 @@ export function advanceEraBlockCursor(
         diagnostics,
       };
     }
+    return {
+      executedBlockIndexes: [],
+      cursor: { ...nextCursorBase, done: nextCursorBase.blockIndex >= blocks.length },
+      finalStat: input.initialStat,
+      ...(input.initialStatFunc === undefined
+        ? {}
+        : { finalStatFunc: input.initialStatFunc }),
+      pendingCall: null,
+      diagnostics,
+    };
+  }
+
+  // 已应用区域内的指令块跳过：这些操作在函数运行期间已就地生效。
+  if (block.kind === "command" && block.operationsRegionApplied) {
     return {
       executedBlockIndexes: [],
       cursor: { ...nextCursorBase, done: nextCursorBase.blockIndex >= blocks.length },
