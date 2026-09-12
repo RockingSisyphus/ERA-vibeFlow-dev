@@ -105,6 +105,8 @@ export interface EraApplyMessageCommandsInput {
   readonly meta: Readonly<Record<string, unknown>>;
   /** Current Sidecar function library. It is never read from chat variables. */
   readonly initialStatFunc?: Readonly<Record<string, unknown>>;
+  /** `@f()` 的快照闭包（消息起点函数库）；省略时退回 `initialStatFunc`。 */
+  readonly messageStartStatFunc?: Readonly<Record<string, unknown>>;
   /** Stable message MK used as the default deterministic-random seed. */
   readonly randomSourceKey?: string;
   readonly traditionalToSimplified?: boolean;
@@ -1226,6 +1228,10 @@ export function applyMessageCommands(
   const layerStartStatFunc = cloneCrudValue(
     input.initialStatFunc ?? {},
   ) as Record<string, unknown>;
+  // `@f()` 的快照闭包：显式给了消息起点函数库就用它。
+  const snapshotStatFunc = cloneCrudValue(
+    input.messageStartStatFunc ?? input.initialStatFunc ?? {},
+  ) as Record<string, unknown>;
   const seededDrawOffset =
     Number.isSafeInteger(input.randomDrawOffset) && Number(input.randomDrawOffset) > 0
       ? Number(input.randomDrawOffset)
@@ -1264,7 +1270,7 @@ export function applyMessageCommands(
           meta: input.meta,
           layerStartStat: initial,
           statFunc: currentStatFunc,
-          layerStartStatFunc,
+          layerStartStatFunc: snapshotStatFunc,
           randomCursor,
         });
         diagnostics.push(...editResult.diagnostics);

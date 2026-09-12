@@ -31,6 +31,8 @@ export interface MessageFunctionFlowInput {
   readonly initialStat: unknown;
   readonly meta: Readonly<Record<string, unknown>>;
   readonly initialStatFunc?: Readonly<Record<string, unknown>>;
+  /** `@f()` 的快照闭包（消息起点函数库）；省略时退回 `initialStatFunc`。 */
+  readonly messageStartStatFunc?: Readonly<Record<string, unknown>>;
   readonly traditionalToSimplified?: boolean;
   /** 正式同步为 true；只读与试算为 false。 */
   readonly formal?: boolean;
@@ -87,6 +89,13 @@ export interface MessageFunctionFlow {
   readonly meta: Readonly<Record<string, unknown>>;
   readonly stat: unknown;
   readonly statFunc: Readonly<Record<string, unknown>> | undefined;
+  /**
+   * `@f()` 看到的**消息起点函数闭包**。
+   *
+   * 与 `statFunc`（本条消息的当前函数库）分开保存：逐块执行时每个块都会刷新 `statFunc`，
+   * 若快照跟着走，块 1 的 `FunctionEdit` 就会改掉块 2 的 `@f()` 语义（真机 EXPR-FUNC-006）。
+   */
+  readonly messageStartStatFunc: Readonly<Record<string, unknown>> | undefined;
   readonly cursor: EraBlockCursor;
   readonly done: boolean;
   /** 需要宿主机执行的函数；为 null 表示没有待调用。 */
@@ -110,6 +119,7 @@ export function startMessageFunctionFlow(input: MessageFunctionFlowInput): Messa
     meta: input.meta,
     stat: input.initialStat,
     statFunc: input.initialStatFunc,
+    messageStartStatFunc: input.messageStartStatFunc ?? input.initialStatFunc,
     cursor: createEraBlockCursor({ messageId: input.messageId, mk: input.mk }),
     done: false,
     pendingCall: null,
@@ -141,6 +151,9 @@ export function advanceMessageFunctionFlow(
       mk: flow.mk,
       initialStat: flow.stat,
       ...(flow.statFunc === undefined ? {} : { initialStatFunc: flow.statFunc }),
+      ...(flow.messageStartStatFunc === undefined
+        ? {}
+        : { messageStartStatFunc: flow.messageStartStatFunc }),
       meta: flow.meta,
       randomSourceKey: flow.mk,
       formal: flow.formal,
@@ -279,6 +292,8 @@ export function rehydrateMessageFunctionFlow(input: {
   readonly initialStat: unknown;
   readonly meta: Readonly<Record<string, unknown>>;
   readonly initialStatFunc?: Readonly<Record<string, unknown>>;
+  /** `@f()` 的快照闭包（消息起点函数库）；省略时退回 `initialStatFunc`。 */
+  readonly messageStartStatFunc?: Readonly<Record<string, unknown>>;
   readonly traditionalToSimplified?: boolean;
   readonly formal?: boolean;
 }): MessageFunctionFlow {
@@ -295,6 +310,9 @@ export function rehydrateMessageFunctionFlow(input: {
     initialStat: input.initialStat,
     meta: input.meta,
     ...(input.initialStatFunc === undefined ? {} : { initialStatFunc: input.initialStatFunc }),
+    ...(input.messageStartStatFunc === undefined
+      ? {}
+      : { messageStartStatFunc: input.messageStartStatFunc }),
     ...(input.traditionalToSimplified === undefined
       ? {}
       : { traditionalToSimplified: input.traditionalToSimplified }),

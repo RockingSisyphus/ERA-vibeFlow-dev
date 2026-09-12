@@ -48,6 +48,8 @@ export function run(
     mk: state.mk,
     initialStat: state.stat,
     initialStatFunc: state.statFunc,
+    // `@f()` 只能看到「这条楼层开始时」的函数闭包：本批次起点（已提交世界）的函数库。
+    messageStartStatFunc: state.baseStatFunc,
     meta: state.meta,
     formal: true,
   });

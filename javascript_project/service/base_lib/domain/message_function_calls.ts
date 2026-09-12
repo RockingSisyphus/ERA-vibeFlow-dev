@@ -522,6 +522,8 @@ export interface EraBlockAdvanceInput {
   readonly initialStat: unknown;
   readonly meta: Readonly<Record<string, unknown>>;
   readonly initialStatFunc?: Readonly<Record<string, unknown>>;
+  /** `@f()` 的快照闭包（消息起点函数库）；省略时退回 `initialStatFunc`。 */
+  readonly messageStartStatFunc?: Readonly<Record<string, unknown>>;
   readonly randomSourceKey?: string;
   readonly traditionalToSimplified?: boolean;
   /** 正式同步为 true（可要求调用函数）；只读与试算为 false。 */
@@ -667,6 +669,9 @@ export function advanceEraBlockCursor(
     messageId: input.messageId,
     initialStat: input.initialStat,
     initialStatFunc: input.initialStatFunc,
+    ...(input.messageStartStatFunc === undefined
+      ? {}
+      : { messageStartStatFunc: input.messageStartStatFunc }),
     meta: input.meta,
     randomSourceKey: input.randomSourceKey,
     traditionalToSimplified: input.traditionalToSimplified,
@@ -714,6 +719,8 @@ export interface EraBlockSession {
    */
   readonly resolvedCallIds: readonly string[];
   readonly meta: Readonly<Record<string, unknown>>;
+  /** `@f()` 的快照闭包（消息起点函数库）；省略时退回当前函数库。 */
+  readonly messageStartStatFunc?: Readonly<Record<string, unknown>>;
   readonly formal: boolean;
   readonly traditionalToSimplified: boolean;
   readonly stat: unknown;
@@ -734,6 +741,8 @@ export interface EraBlockSessionInput {
   readonly initialStat: unknown;
   readonly meta: Readonly<Record<string, unknown>>;
   readonly initialStatFunc?: Readonly<Record<string, unknown>>;
+  /** `@f()` 的快照闭包（消息起点函数库）；省略时退回 `initialStatFunc`。 */
+  readonly messageStartStatFunc?: Readonly<Record<string, unknown>>;
   readonly randomSourceKey?: string;
   readonly traditionalToSimplified?: boolean;
   /** 正式同步为 true；只读与试算为 false。 */
@@ -767,6 +776,9 @@ export function startEraBlockSession(
     traditionalToSimplified: input.traditionalToSimplified ?? false,
     stat: input.initialStat,
     statFunc: input.initialStatFunc,
+    ...(input.messageStartStatFunc === undefined
+      ? {}
+      : { messageStartStatFunc: input.messageStartStatFunc }),
     executedBlockIndexes: [],
     editLog: cursor.editLog,
     functionEditLog: cursor.functionEditLog,
@@ -821,6 +833,9 @@ export function advanceEraBlockSession(
       ...(session.statFunc === undefined
         ? {}
         : { initialStatFunc: session.statFunc }),
+      ...(session.messageStartStatFunc === undefined
+        ? {}
+        : { messageStartStatFunc: session.messageStartStatFunc }),
       randomSourceKey: cursor.mk,
       formal: session.formal,
       traditionalToSimplified: session.traditionalToSimplified,
