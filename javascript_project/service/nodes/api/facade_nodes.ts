@@ -146,23 +146,31 @@ export async function commitAppendNode(
   _params: any,
   context: any,
 ): Promise<any> {
+  // 写入**前**的每一步（校验、重读依据、写入）都只允许产出「失败收据」，不允许把异常抛出节点：
+  // 内核会把抛出的异常折成 `node 'commit_message_append' failed`，Host 随即判定永久工作流致命停止，
+  // 整页 ERA 停止接受新命令，其后所有门面提交都收到 `ERA_API_CANCELLED: ERA 服务宿主已停止`。
+  // 真机 `st-run-20260912T05452458-e1b1969ef725` 的 API-WRITE-001 / API-BOUND-002 等 12 条路径就是这样
+  // 成片失败的（receipt 里连 `status`/`scope`/`state.statData` 都没有，侧车停在上一次的值）。
+  // 节点输入缺失（`envelope`）仍视为接线错误照旧抛出。
   const candidate = envelope(inputs, "era.api.commit.rechecked");
-  if (!isRecord(candidate) || !isRecord(candidate.capabilityInput)) {
-    throw new TypeError("已复核 commit 缺少消息写入参数。");
-  }
-  // 依据必须在**写入前**重新读一遍：这条门面命令的 window/依据可能是事件派发时捕获的
-  // （`prepared.sourceBasis`），而新楼层可能在这之后才落地——真机 STATUSBAR-EXAMPLE-020 的
-  // 自动重渲染就是这样被拒的（basis 3 条、聊天 4 条 ⇒ `message-count`）。
-  // 只刷新 messages：identity 沿用计划，目标消息的正文若也变了，宿主仍会以 `source-text` 拒绝。
-  const capabilityInput = { ...(candidate.capabilityInput as Record<string, unknown>) };
-  const plannedBasis = isRecord(capabilityInput.sourceBasis) ? capabilityInput.sourceBasis : null;
-  if (plannedBasis !== null) {
-    const fresh = await readMessages(context, "era-facade-append");
-    if (Array.isArray(fresh)) {
-      capabilityInput.sourceBasis = { ...plannedBasis, messages: fresh };
-    }
-  }
   try {
+    if (!isRecord(candidate) || !isRecord(candidate.capabilityInput)) {
+      throw Object.assign(new TypeError("已复核 commit 缺少消息写入参数。"), {
+        code: "ERA_API_APPEND_CONTEXT_INVALID",
+      });
+    }
+    // 依据必须在**写入前**重新读一遍：这条门面命令的 window/依据可能是事件派发时捕获的
+    // （`prepared.sourceBasis`），而新楼层可能在这之后才落地——真机 STATUSBAR-EXAMPLE-020 的
+    // 自动重渲染就是这样被拒的（basis 3 条、聊天 4 条 ⇒ `message-count`）。
+    // 只刷新 messages：identity 沿用计划，目标消息的正文若也变了，宿主仍会以 `source-text` 拒绝。
+    const capabilityInput = { ...(candidate.capabilityInput as Record<string, unknown>) };
+    const plannedBasis = isRecord(capabilityInput.sourceBasis) ? capabilityInput.sourceBasis : null;
+    if (plannedBasis !== null) {
+      const fresh = await readMessages(context, "era-facade-append");
+      if (Array.isArray(fresh)) {
+        capabilityInput.sourceBasis = { ...plannedBasis, messages: fresh };
+      }
+    }
     const observed = await context.capabilities["era.tavern.messages"].update_content(capabilityInput);
     const accepted = isRecord(observed) &&
       (observed.ok === true || ["committed", "completed", "success"].includes(String(observed.status)));
@@ -185,7 +193,7 @@ export async function commitAppendNode(
     return {
       facade_commit_append_result: {
         status: "failed",
-        context: candidate,
+        context: isRecord(candidate) ? candidate : null,
         observed: {
           message: unwrapped instanceof Error ? unwrapped.message : String(unwrapped),
           ...(unwrapped !== null && typeof unwrapped === "object" &&
@@ -204,7 +212,36 @@ export async function verifyCommitNode(
   context: any,
 ): Promise<any> {
   const append = envelope(inputs, "era.api.commit.append.result");
-  const messages = await readMessages(context, "era-facade-post-commit");
+  // 与 `commit_message_append` 同理：回读阶段的读取失败也只能产出 failed 路由。
+  // 抛出会被内核折成 `node 'read_and_verify_committed_message' failed`，同样让整页 ERA 致命停止。
+  let messages: unknown;
+  try {
+    messages = await readMessages(context, "era-facade-post-commit");
+  } catch (error) {
+    const unwrapped =
+      error !== null && typeof error === "object" &&
+      (error as { code?: unknown }).code === "VF_CAPABILITY_FAILED" &&
+      (error as { cause?: unknown }).cause !== undefined
+        ? (error as { cause: unknown }).cause
+        : error;
+    const detail = isRecord(unwrapped) ? unwrapped : {};
+    return {
+      commit_readback_route: "failed",
+      facade_commit_verified: null,
+      facade_commit_readback_failure: {
+        route: "failed",
+        context: isRecord(append) ? (append.context ?? append) : append,
+        error: {
+          code: typeof detail.code === "string" ? detail.code : "ERA_API_MESSAGE_READBACK_FAILED",
+          message:
+            unwrapped instanceof Error
+              ? unwrapped.message
+              : "提交后回读失败，未能确认 era_tx 写入。",
+          layer: "tavern",
+        },
+      },
+    };
+  }
   const result = verifyCommitted(append, messages);
   return {
     commit_readback_route: result.route,
