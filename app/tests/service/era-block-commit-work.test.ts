@@ -13,6 +13,7 @@ import {
   buildPerBlockCommitWork,
   foldBlockCommitOutcome,
 } from '../../../javascript_project/service/base_lib/block_step_state';
+import { finalize } from '../../../javascript_project/service/nodes/sync/finalize_block_step';
 
 function fixture() {
   const work = {
@@ -254,6 +255,35 @@ describe('逐块提交：算完那一次与结果折回', () => {
     });
 
     expect(folded).toBe(original);
+  });
+
+  it('来源在提交期间被改掉时整批作废：不推进状态，也不把永久工作流打停', () => {
+    // 真机 UI-SWIPE-001：用户切 swipe 比服务快，这一次逐块提交的 basis 已过期。
+    // 既不能按成功推进（会把侧车停在旧分支 A），也不能抛错（会停掉整条永久工作流）。
+    const original = state({ done: false, stat: { ui_swipe: { branch: 'A' } } });
+    const folded = foldBlockCommitOutcome({
+      state: original,
+      outcome: { status: 'failed', sourceChanged: true },
+    });
+
+    expect(folded.superseded).toBe(true);
+    expect(folded.done).toBe(true);
+    expect(folded.stat).toEqual({ ui_swipe: { branch: 'A' } });
+  });
+
+  it('来源被改掉的批次收口时什么都不写：不写续做点、不声明呈现意图', () => {
+    const superseded = {
+      ...(state({ done: false }) as unknown as Record<string, unknown>),
+      superseded: true,
+    };
+    const finalized = finalize({
+      'era.sync.block.step.state.next': { value: superseded },
+    });
+    const work = finalized.expression_command_result as Record<string, unknown>;
+
+    expect(work.disposition).toBe('no-op');
+    expect(Object.hasOwn(work, 'syncCursor')).toBe(false);
+    expect(Object.hasOwn(work, 'initialPresentation')).toBe(false);
   });
 
   it('提交失败必须让任务失败，不能悄悄继续推进', () => {

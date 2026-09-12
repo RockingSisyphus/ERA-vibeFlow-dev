@@ -26,6 +26,21 @@ export function finalize(
   const state = inputs["era.sync.block.step.state.next"].value as EraBlockStepStateV1;
   const work = state.work as unknown as SyncWorkV1;
   const handoff = state.route === "invoke" ? state.handoff : null;
+  // 来源在提交期间被改掉（换 swipe/重新生成/编辑）：整批次工作作废。尾链**什么都不能写**：
+  // 不写文本（那是旧分支的文本）、不写续做点（`syncCursor` 属于作废的版本，写了会让新版本
+  // 从错误的世界续做）、也不声明呈现意图。新事件会从楼层起点重算这条楼层。
+  // 这一支必须排在下面的早退之前：作废批次连「原样放行工作项」都不行。
+  if (state.superseded === true) {
+    const supersededTail: SyncWorkV1 = {
+      ...work,
+      disposition: "no-op",
+      failure: null,
+    };
+    return {
+      expression_command_result: supersededTail as unknown as Readonly<Record<string, unknown>>,
+      function_invocation_route: "none",
+    };
+  }
   if (handoff === null || work.disposition === "failed") {
     return {
       expression_command_result: work as unknown as Readonly<Record<string, unknown>>,

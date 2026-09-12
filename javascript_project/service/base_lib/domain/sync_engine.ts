@@ -110,6 +110,14 @@ export interface EraSealedCompactionCandidateV1 {
   readonly traditionalToSimplified: boolean;
 }
 
+/** 一条被重算楼层的起步世界（已回退旧版本效果）。 */
+export interface EraMessageLayerStartV1 {
+  readonly messageIndex: number;
+  readonly mk: string;
+  readonly stat: Readonly<Record<string, unknown>>;
+  readonly statFunc: Readonly<Record<string, unknown>>;
+}
+
 export type EraSyncPlanV1 =
   | {
       readonly kind: "sync";
@@ -124,6 +132,14 @@ export type EraSyncPlanV1 =
       /** Internal pure-workflow hand-off; never itself becomes persistent state. */
       readonly sealedCompactionCandidates: readonly EraSealedCompactionCandidateV1[];
       readonly recalculatedMessageIndexes: readonly number[];
+      /**
+       * 每条被重算楼层的**起步世界**：引擎回退掉旧分支之后的 stat/statFunc。
+       *
+       * 为什么必须暴露它：块步进循环要一条楼层一条楼场地累计状态，而「侧车里已提交的状态」
+       * 可能还含有这条楼层**旧版本**的效果（换 swipe / 重新生成 / 编辑）。从已提交状态起步，
+       * 新版本的 `insert` 会被「键已存在」挡掉，提交出去的仍是旧分支（真机 UI-SWIPE-001 实测）。
+       */
+      readonly messageLayerStarts: readonly EraMessageLayerStartV1[];
       readonly rollback: {
         readonly applied: boolean;
         readonly fromMk: string | null;
@@ -146,6 +162,7 @@ export type EraSyncPlanV1 =
       readonly messageUpdates: readonly [];
       readonly sealedCompactionCandidates: readonly [];
       readonly recalculatedMessageIndexes: readonly [];
+      readonly messageLayerStarts: readonly [];
       readonly rollback: {
         readonly applied: false;
         readonly fromMk: null;
@@ -507,6 +524,7 @@ function failedPlan(
     messageUpdates: [],
     sealedCompactionCandidates: [],
     recalculatedMessageIndexes: [],
+    messageLayerStarts: [],
     rollback: { applied: false, fromMk: null, toMk: null },
     actionsTaken: createSyncActionsTaken(input.reason, false),
     consecutiveProcessingCount: consecutive.count,
@@ -532,6 +550,7 @@ export function planEraSync(input: EraSyncInputV1): EraSyncPlanV1 {
       messageUpdates: [],
       sealedCompactionCandidates: [],
       recalculatedMessageIndexes: [],
+      messageLayerStarts: [],
       rollback: { applied: false, fromMk: null, toMk: null },
       actionsTaken: createSyncActionsTaken(input.reason, true),
       consecutiveProcessingCount: null,
@@ -596,6 +615,7 @@ export function planEraSync(input: EraSyncInputV1): EraSyncPlanV1 {
       messageUpdates: [],
       sealedCompactionCandidates: [],
       recalculatedMessageIndexes: [],
+      messageLayerStarts: [],
       rollback: { applied: false, fromMk: null, toMk: null },
       actionsTaken: createSyncActionsTaken(input.reason, true),
       consecutiveProcessingCount: consecutive.count,
@@ -655,6 +675,7 @@ export function planEraSync(input: EraSyncInputV1): EraSyncPlanV1 {
   const messageUpdates: EraSyncMessageUpdateV1[] = [];
   const sealedCompactionCandidates: EraSealedCompactionCandidateV1[] = [];
   const recalculatedMessageIndexes: number[] = [];
+  const messageLayerStarts: EraMessageLayerStartV1[] = [];
   const diagnostics: EraSyncDiagnosticV1[] = [];
 
   for (let index = firstRecalcId; index < messages.length; index += 1) {
@@ -719,6 +740,15 @@ export function planEraSync(input: EraSyncInputV1): EraSyncPlanV1 {
             randomDrawOffset: appliedRecordDrawOffset(floorText),
           }
         : {}),
+    });
+    messageLayerStarts.push({
+      messageIndex: index,
+      mk: ensured.mk,
+      stat: cloneSnapshotValue(layerStartStat) as Record<string, unknown>,
+      statFunc: cloneSnapshotValue(layerStartFunctions) as Record<
+        string,
+        unknown
+      >,
     });
     statForRecalc = applied.finalStat;
     statFuncForRecalc = cloneSnapshotValue(
@@ -792,6 +822,7 @@ export function planEraSync(input: EraSyncInputV1): EraSyncPlanV1 {
     messageUpdates,
     sealedCompactionCandidates,
     recalculatedMessageIndexes,
+    messageLayerStarts,
     rollback: {
       applied: rollbackApplied,
       fromMk: rollbackFromMk,

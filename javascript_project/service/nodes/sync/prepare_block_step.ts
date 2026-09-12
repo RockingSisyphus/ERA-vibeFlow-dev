@@ -7,6 +7,7 @@
 
 import {
   committedWorld,
+  layerStartForFloor,
   processingFloor,
   type EraBlockStepStateV1,
 } from "../../base_lib/block_step_state.ts";
@@ -51,6 +52,10 @@ export function prepare(
   const floor = processingFloor(context);
   const world = committedWorld(context);
   const resume = resumableCursor(context, floor);
+  // 这条楼层可能换过版本（swipe/重新生成/编辑）：引擎已经回退掉旧版本效果，块步进必须从那份
+  // 世界起步，否则新版本的 `insert` 会被已存在的键挡掉，提交出去的仍是旧分支。
+  const plan = planSyncWork(context);
+  const layerStart = layerStartForFloor(plan.plan, floor);
   const state: EraBlockStepStateV1 = {
     messageId: floor?.messageId ?? 0,
     mk: floor?.mk ?? "",
@@ -59,8 +64,8 @@ export function prepare(
     blockIndex: resume === null ? 0 : resume.blockIndex + 1,
     // 没有处理楼层时没有可推进的块，直接标记处理完，避免循环空转。
     done: floor === null,
-    stat: resume?.stat ?? world.stat,
-    statFunc: resume?.statFunc ?? world.statFunc,
+    stat: resume?.stat ?? layerStart?.stat ?? world.stat,
+    statFunc: resume?.statFunc ?? layerStart?.statFunc ?? world.statFunc,
     // 已提交世界必须单独留存：`stat`/`statFunc` 会随块推进被覆盖，而交接时的记录提交、
     // 以及「这条楼层还没处理完」的连续处理事实都要回到本批次开始时的值。
     baseStat: resume?.stat ?? world.stat,
@@ -75,7 +80,7 @@ export function prepare(
     handoff: null,
     content: floor?.text ?? "",
     meta: world.meta,
-    work: planSyncWork(context) as unknown as Readonly<Record<string, unknown>>,
+    work: plan as unknown as Readonly<Record<string, unknown>>,
   };
   return {
     block_step_state: state as unknown as Readonly<Record<string, unknown>>,

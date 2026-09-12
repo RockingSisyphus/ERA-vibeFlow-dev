@@ -140,6 +140,36 @@ describe('era.sync 块步进循环的三个节点', () => {
     expect(states[1]).toMatchObject({ blockIndex: 2, stat: { hp: 70, gold: 5 }, done: true });
   });
 
+  it('换 swipe 后必须从「回退掉旧分支」的世界起步，而不是在已提交世界上再插一次', () => {
+    // 真机 UI-SWIPE-001：楼层 3 的 swipe 从 A 换到 B。侧车里已提交的是 A 分支的世界，
+    // 旧分支的 EditLog 记在旧 MK 上；引擎会先回退到「这条楼层之前」的世界，再重放新 swipe。
+    // 块步进过去直接从已提交世界起步，于是 `insert ui_swipe` 被「键已存在」挡掉，
+    // 提交出去的仍是 A（真机实测 capture-swipe-b/c 都读到 A）。
+    const context = contextWith('<VariableInsert>{"ui_swipe":{"branch":"B"}}</VariableInsert>', {
+      ui_swipe: { branch: 'A' },
+    });
+    (context.variablesRaw as Record<string, unknown>).ERAMetaData = {
+      SelectedMks: ['mk-old'],
+      EditLogs: { 'mk-old': [{ op: 'insert', path: 'ui_swipe', value_new: { branch: 'A' } }] },
+      FunctionEditLogs: {},
+    };
+    const prepared = prepare({ 'era.sync.context': { value: context } });
+    // 起步世界必须是「回退掉旧分支之后」的世界：不含 ui_swipe。
+    expect(prepared.block_step_state.stat).not.toHaveProperty('ui_swipe');
+
+    let state = prepared.block_step_state as any;
+    let done = false;
+    let guard = 0;
+    while (!done && guard < 8) {
+      const stepped = run({ 'era.sync.block.step.state': { value: state } });
+      state = stepped.block_step_state_next;
+      done = stepped.block_step_done;
+      guard += 1;
+    }
+    expect(state.done).toBe(true);
+    expect(state.stat).toMatchObject({ ui_swipe: { branch: 'B' } });
+  });
+
   it('遇到无标记调用即断开本批次，并把调用位置写成交接事实', () => {
     const { state } = driveToStop(
       [

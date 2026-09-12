@@ -70,6 +70,7 @@ export function run(
     // 累加抽取次数：本次推进消耗的抽取从这里接着记，逐块提交时写进记录。
     drawOffset: state.drawOffset + advanced.cursor.randomDrawOffset,
     committedPerBlock: state.committedPerBlock,
+    ...(state.superseded === true ? { superseded: true } : {}),
     content: state.content,
     meta: state.meta,
     work: state.work,

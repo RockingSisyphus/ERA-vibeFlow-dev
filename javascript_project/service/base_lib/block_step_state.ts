@@ -12,6 +12,7 @@ import {
   type EraFunctionCallSite,
 } from "./domain/message_function_calls.ts";
 import type { MessageFunctionFlow } from "./domain/message_function_flow.ts";
+import type { EraMessageLayerStartV1 } from "./domain/sync_engine.ts";
 import type {
   SyncContextV1,
   EraMessageFunctionHandoffV1,
@@ -61,6 +62,14 @@ export interface EraBlockStepStateV1 {
    * 靠 `blockIndex > 0` 猜——交接迭代不推进块，那个推断并不成立。
    */
   readonly committedPerBlock: boolean;
+  /**
+   * 这条楼层的来源在提交期间被改掉了（换 swipe / 重新生成 / 编辑），本批次的工作整体作废。
+   *
+   * 为什么不报错：这个失败是**正常竞态**而不是缺陷——用户比服务快，新事件会从楼层起点重算。
+   * 为什么不当成功：按 `committedPerBlock` 一路推进会写出过期文本、并把侧车状态停在旧分支，
+   * 真机 UI-SWIPE-001 就是这样把 swipe B/C 提交成了 A。收口节点见到它会走「什么都不写」的尾链。
+   */
+  readonly superseded?: boolean;
   readonly handoff: EraMessageFunctionHandoffV1 | null;
   /**
    * 楼层原文与元数据随状态携带。
@@ -128,6 +137,33 @@ export function committedWorld(context: SyncContextV1): {
       ? raw.meta
       : {};
   return { stat, statFunc, meta };
+}
+
+/**
+ * 取出这条处理楼层的**起步世界**：引擎已经回退掉这条楼层旧版本效果之后的 stat/statFunc。
+ *
+ * 为什么不能直接用已提交侧车状态：换 swipe / 重新生成 / 编辑会让同一条楼层换一个 MK，
+ * 而侧车里已提交的状态仍含**旧版本**的效果（非幂等的 `insert` 尤其明显：键已存在时插入被挡掉，
+ * 于是新分支永远替换不掉旧分支，真机 UI-SWIPE-001 就是这条）。引擎在重算前已经把旧版本的
+ * EditLog 回退掉，把那份世界交给块步进，才能让逐块累计与整楼重放得到同一个终值。
+ */
+export function layerStartForFloor(
+  plan: unknown,
+  floor: { readonly messageId: number; readonly mk: string } | null,
+): { readonly stat: Readonly<Record<string, unknown>>; readonly statFunc: Readonly<Record<string, unknown>> } | null {
+  if (!record(plan) || floor === null) return null;
+  const starts = Array.isArray(plan.messageLayerStarts)
+    ? (plan.messageLayerStarts as readonly EraMessageLayerStartV1[])
+    : [];
+  const messages = Array.isArray(plan.messages)
+    ? (plan.messages as readonly { readonly messageId?: unknown }[])
+    : [];
+  // 先按 MK 对齐（同一个 MK 就是同一条楼层版本）；MK 缺失或没盖到时退回按 messageId 对齐。
+  const match =
+    starts.find(entry => entry.mk === floor.mk && floor.mk.length > 0) ??
+    starts.find(entry => messages[entry.messageIndex]?.messageId === floor.messageId);
+  if (match === undefined) return null;
+  return { stat: match.stat, statFunc: match.statFunc };
 }
 
 /** 交接事实：函数读取位置状态与调用参数的全部依据。 */
@@ -234,6 +270,7 @@ export function foldBlockCommitOutcome(input: {
     | { readonly mode: "non-commit" }
     | {
         readonly status: "committed" | "no-op" | "failed" | "fatal";
+        readonly sourceChanged?: boolean;
         readonly messageWrites?: readonly {
           readonly messageId: number;
           readonly content: string;
@@ -244,7 +281,19 @@ export function foldBlockCommitOutcome(input: {
   // 交接迭代不提交任何东西：循环体给它的是 `{mode: "non-commit"}` 信封（该路径不写任何宿主
   // 状态），因此这里是「原样放行」而不是失败。
   if ("mode" in outcome) return state;
-  if (outcome.status !== "committed" && outcome.status !== "no-op") {
+  // 来源在提交期间被改掉：本批次作废。既不推进状态（那会把侧车停在旧分支），也不报错
+  // （那会把整条永久工作流停掉）——新事件会从楼层起点重算这条楼层。
+  if (outcome.sourceChanged === true) {
+    return {
+      ...state,
+      superseded: true,
+      done: true,
+      route: "none",
+      handoff: null,
+      committedPerBlock: true,
+    };
+  }
+  if (outcome.status !== "committed") {
     throw new TypeError(
       `ERA_BLOCK_COMMIT_FAILED: 逐块提交未成功（status=${outcome.status}），本批次按失败结算。`,
     );
