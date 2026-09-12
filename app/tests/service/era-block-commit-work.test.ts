@@ -247,6 +247,37 @@ describe('逐块提交：算完那一次与结果折回', () => {
     expect(folded.content).toBe(committedText);
   });
 
+  it('整层算完那次以引擎整楼值为准（块步进会跳过已应用区域）', () => {
+    // 真机 SIDECAR-BIND-014：facade-commit 的操作写在「已应用区域」里，块步进按设计跳过它，
+    // 于是循环累计值停在旧世界 `{hp:18}`；而引擎整楼重放得到 `{hp:11}`。整层算完那一次
+    // 必须写引擎的值，否则侧车被写成旧状态（换来的断言差异正是 hp:18 vs hp:11）。
+    const engineWork = work() as unknown as {
+      plan: { stat?: unknown; statFunc?: unknown };
+    };
+    engineWork.plan.stat = { hp: 11 };
+    engineWork.plan.statFunc = { f: { expr: 'x+1' } };
+
+    const done = buildPerBlockCommitWork({
+      work: engineWork as never,
+      state: state({ done: true, stat: { hp: 18 }, statFunc: {} }),
+    }) as { plan: { stat: unknown; statFunc: unknown } };
+
+    expect(done.plan.stat).toEqual({ hp: 11 });
+    expect(done.plan.statFunc).toEqual({ f: { expr: 'x+1' } });
+  });
+
+  it('中途块仍用循环累计值（续做依赖它）', () => {
+    const engineWork = work() as unknown as { plan: { stat?: unknown } };
+    engineWork.plan.stat = { hp: 11 };
+
+    const mid = buildPerBlockCommitWork({
+      work: engineWork as never,
+      state: state({ done: false, stat: { hp: 18 } }),
+    }) as { plan: { stat: unknown } };
+
+    expect(mid.plan.stat).toEqual({ hp: 18 });
+  });
+
   it('交接迭代的非提交信封原样放行，不算失败', () => {
     const original = state({ done: false });
     const folded = foldBlockCommitOutcome({

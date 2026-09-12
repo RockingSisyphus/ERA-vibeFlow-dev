@@ -230,13 +230,19 @@ export function buildPerBlockCommitWork(input: {
   // 楼层算完的那一次提交：文本里不再保留任何凭据（原文与「从楼层起点重算」一致），
   // 游标也写 null —— 续做点只在计算期间存在。
   const content = state.done ? unwrapAppliedRecords(wrapped) : wrapped;
+  // **整层算完那一次以引擎的整楼值为准**：块步进会跳过「已应用区域」（`operationsRegionApplied`），
+  // 而该区域在侧车写入失败/尚未落盘时并**不在已提交世界**里——真机 SIDECAR-BIND-014 的
+  // `facade-commit` 就是这样：引擎整楼重放算出 `{hp:11,score:8}`（正确），循环因为跳过已应用区域
+  // 只得到旧值 `{hp:18,score:8}`，写出去的也就是旧值。中途块仍用循环累计值（续做要靠它）。
+  const finalStat = state.done ? plan.stat : state.stat;
+  const finalStatFunc = state.done ? plan.statFunc : state.statFunc;
   return {
     ...work,
     disposition: "commit",
     plan: {
       ...plan,
-      stat: state.stat,
-      statFunc: state.statFunc,
+      stat: finalStat,
+      statFunc: finalStatFunc,
       // 楼层算完那一次才写整层记账：中途登记整层会让下一次同步不重算这条楼层。
       meta: state.done ? plan.meta : state.meta,
       sealedCompactionCandidates: [],
