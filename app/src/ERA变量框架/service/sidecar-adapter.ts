@@ -98,14 +98,17 @@ function publishValidatedSnapshot(input: Readonly<Record<string, unknown>>): boo
   if (actual.characterId !== owner.characterId || actual.groupId !== owner.groupId || actual.chatId !== owner.chatId) {
     return false;
   }
-  publishSidecarRuntimeSnapshot({
-    sidecarId: id,
-    identity: owner,
-    revision: revision as number,
-    statData: clonePortable(state.statData),
-    statFunc: clonePortable(state.statFunc),
-    eraMeta: clonePortable(state.eraMeta),
-  });
+  publishSidecarRuntimeSnapshot(
+    {
+      sidecarId: id,
+      identity: owner,
+      revision: revision as number,
+      statData: clonePortable(state.statData),
+      statFunc: clonePortable(state.statFunc),
+      eraMeta: clonePortable(state.eraMeta),
+    },
+    input.notifySubscribers !== false,
+  );
   return true;
 }
 

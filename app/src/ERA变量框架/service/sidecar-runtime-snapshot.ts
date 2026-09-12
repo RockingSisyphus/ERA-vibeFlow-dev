@@ -41,9 +41,9 @@ function sameIdentity(left: SidecarRuntimeIdentity, right: SidecarRuntimeIdentit
   return left.characterId === right.characterId && left.groupId === right.groupId && left.chatId === right.chatId;
 }
 
-export function publishSidecarRuntimeSnapshot(snapshot: SidecarRuntimeSnapshot): void {
+export function publishSidecarRuntimeSnapshot(snapshot: SidecarRuntimeSnapshot, notifySubscribers = true): void {
   active = structuredClone(snapshot);
-  notify(active);
+  if (notifySubscribers) notify(active);
 }
 
 export function clearSidecarRuntimeSnapshot(): void {

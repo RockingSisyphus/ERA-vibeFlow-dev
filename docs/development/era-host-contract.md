@@ -169,3 +169,7 @@ Service 在历史定位和日志回退后逐块执行。每个成功块通过既
 # Overswipe 完整拓扑读取（2026-09-09，已批准实现，真实验证中）
 
 完整消息上下文通过Helper公开`0--1`读取真实消息位置，不用会排除pending Swipe的`lastMessageId`宏确定列表长度。待生成末端Swipe保留真实messageId/swipeId并明确空正文，不读取前一个候选的正文作替身。该投影与提交来源核对共用；Service继续决定生成前回退目标，只回退一次且不提前补写被排除楼层。Agent最近64条提示词历史仍采用排除未生成候选的范围；显式latestMessage读取保持`-1`。详见`reports/era-overswipe-history-range-change-list.md`及保留的expanded审核图；真实验收状态以新独立Artifact为准。
+
+## 逐块保存与订阅通知
+
+Service 每次成功保存块后更新已提交状态的即时读取缓存；只有清除本条消息临时进度后的提交才通知状态订阅者。Sidecar commit_metadata 的 notifySubscribers=false 表示只更新缓存，不触发呈现、ready 或作者订阅；默认保持通知行为。该选择由 Service 的块游标决定，Host 不自行判断消息业务阶段。

@@ -296,6 +296,7 @@ export async function run(
       sidecarId: id,
       snapshot: record,
       sourceBasis,
+      notifySubscribers: request.syncCursor == null,
     });
   } catch (error) {
     const changed = changedSource(

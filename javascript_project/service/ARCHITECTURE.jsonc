@@ -42301,6 +42301,10 @@
             "sidecarId": {
               "type": "string"
             },
+            "notifySubscribers": {
+              "type": "boolean",
+              "description": "false 仅更新已保存块的即时读取缓存；消息完成时通知订阅者，默认 true。"
+            },
             "snapshot": {
               "type": "object"
             },

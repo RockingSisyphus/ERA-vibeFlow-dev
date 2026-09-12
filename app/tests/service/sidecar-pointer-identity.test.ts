@@ -3,6 +3,7 @@ import { createSidecarAdapter } from '../../src/ERA变量框架/service/sidecar-
 import {
   clearSidecarRuntimeSnapshot,
   readActiveSidecarRuntimeSnapshot,
+  subscribeSidecarRuntimeSnapshot,
 } from '../../src/ERA变量框架/service/sidecar-runtime-snapshot';
 
 const owner = { characterId: 'card-a', groupId: null, chatId: 'chat-a' };
@@ -74,4 +75,21 @@ describe('Sidecar 指针提交紧贴当前宿主身份', () => {
     expect(variables).toEqual({ ERAMetaData: { SidecarId: sidecarId } });
     expect(readActiveSidecarRuntimeSnapshot()).toMatchObject({ identity: owner, statData: { hp: 10 } });
   });
+});
+
+it('中间块更新即时读取缓存，消息完成才通知已有订阅者', async () => {
+  fixture(owner);
+  const listener = vi.fn();
+  const unsubscribe = subscribeSidecarRuntimeSnapshot(listener);
+  listener.mockClear();
+  try {
+    await createSidecarAdapter().commit_metadata({ ...input, notifySubscribers: false }, context);
+    expect(readActiveSidecarRuntimeSnapshot()?.statData).toEqual({ hp: 10 });
+    expect(listener).not.toHaveBeenCalled();
+    await createSidecarAdapter().commit_metadata({ ...input, snapshot: { ...input.snapshot, revision: 2 } }, context);
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(listener.mock.calls[0][0].revision).toBe(2);
+  } finally {
+    unsubscribe();
+  }
 });

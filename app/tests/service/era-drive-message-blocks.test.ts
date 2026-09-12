@@ -133,6 +133,7 @@ async function execute(text: string, options: { failAt?: number; staleAt?: numbe
   );
   let currentText = context.step.dispatchContext.sourceBasis.messages[0].activeText;
   const saves: any[] = [];
+  const publications: any[] = [];
   let attempts = 0;
   let messageAttempts = 0;
   const capabilities = {
@@ -156,7 +157,10 @@ async function execute(text: string, options: { failAt?: number; staleAt?: numbe
         saves.push(structuredClone(stored));
         return { status: 'committed' };
       },
-      commit_metadata: async () => ({ status: 'committed' }),
+      commit_metadata: async (input: any) => {
+        publications.push(input);
+        return { status: 'committed' };
+      },
       present_prompt: () => undefined,
     },
   };
@@ -177,6 +181,7 @@ async function execute(text: string, options: { failAt?: number; staleAt?: numbe
   return {
     state,
     saves,
+    publications,
     stored,
     currentText,
     outcome: finalize({ 'era.sync.block.step.state.next': { value: state } }).completed_sync_result,
@@ -298,4 +303,12 @@ describe('逐块表达式与刷新一致性', () => {
     });
     expect(replay.stat).toEqual(whole.stored.state.statData);
   });
+});
+
+it('正式逐块提交只在消息清理进度后通知订阅者', async () => {
+  const result = await execute('<VariableEdit>{"hp":70}</VariableEdit><VariableEdit>{"hp":80}</VariableEdit>');
+  expect(result.publications.length).toBeGreaterThanOrEqual(3);
+  expect(result.publications.slice(0, -1).every(item => item.notifySubscribers === false)).toBe(true);
+  expect(result.publications.at(-1).notifySubscribers).toBe(true);
+  expect(result.currentText).not.toContain('<era_block');
 });
