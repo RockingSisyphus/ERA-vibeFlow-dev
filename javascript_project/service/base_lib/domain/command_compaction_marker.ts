@@ -75,8 +75,10 @@ export function withCommandCompactionMarkers(
   meta: Readonly<Record<string, unknown>>,
   markers: Readonly<Record<string, unknown>>,
 ): Record<string, unknown> {
-  return {
-    ...(cloneSnapshotValue(meta) as Record<string, unknown>),
-    [COMMAND_COMPACTION_META_KEY]: cloneSnapshotValue(markers),
-  };
+  const copy = cloneSnapshotValue(meta) as Record<string, unknown>;
+  // 这一趟没有任何压缩决策时**不要动 meta**：无条件写入 `CommandCompaction: {}` 会让
+  // 「同一聊天读回后侧车逐字段不变」的绑定断言失败（真机 RUNTIME-COALESCE-CHAT-SWITCH-001：
+  // 切换聊天再读回，eraSidecar 只多了这一个空对象）。
+  if (Object.keys(markers).length === 0) return copy;
+  return { ...copy, [COMMAND_COMPACTION_META_KEY]: cloneSnapshotValue(markers) };
 }
