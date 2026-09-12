@@ -150,8 +150,20 @@ export async function commitAppendNode(
   if (!isRecord(candidate) || !isRecord(candidate.capabilityInput)) {
     throw new TypeError("已复核 commit 缺少消息写入参数。");
   }
+  // 依据必须在**写入前**重新读一遍：这条门面命令的 window/依据可能是事件派发时捕获的
+  // （`prepared.sourceBasis`），而新楼层可能在这之后才落地——真机 STATUSBAR-EXAMPLE-020 的
+  // 自动重渲染就是这样被拒的（basis 3 条、聊天 4 条 ⇒ `message-count`）。
+  // 只刷新 messages：identity 沿用计划，目标消息的正文若也变了，宿主仍会以 `source-text` 拒绝。
+  const capabilityInput = { ...(candidate.capabilityInput as Record<string, unknown>) };
+  const plannedBasis = isRecord(capabilityInput.sourceBasis) ? capabilityInput.sourceBasis : null;
+  if (plannedBasis !== null) {
+    const fresh = await readMessages(context, "era-facade-append");
+    if (Array.isArray(fresh)) {
+      capabilityInput.sourceBasis = { ...plannedBasis, messages: fresh };
+    }
+  }
   try {
-    const observed = await context.capabilities["era.tavern.messages"].update_content(candidate.capabilityInput);
+    const observed = await context.capabilities["era.tavern.messages"].update_content(capabilityInput);
     const accepted = isRecord(observed) &&
       (observed.ok === true || ["committed", "completed", "success"].includes(String(observed.status)));
     return {
