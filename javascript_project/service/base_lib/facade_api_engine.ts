@@ -45,7 +45,7 @@ function isOperationName(value: string): value is OperationName {
   );
 }
 
-interface ScopeWindowState {
+export interface ScopeWindowState {
   readonly token: number | null;
   readonly messageId: number | null;
   readonly messageAdmission: boolean | null;

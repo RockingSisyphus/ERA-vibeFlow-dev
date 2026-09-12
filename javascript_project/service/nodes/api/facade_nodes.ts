@@ -1,5 +1,6 @@
 import type { EraTaskResultV1 } from "@era/vibeflow-contracts";
 import {
+  type ScopeWindowState,
   adaptSyncResult,
   buildAppend,
   buildCommittedResult,
@@ -159,11 +160,27 @@ export async function commitAppendNode(
         : { status: "failed", context: candidate, observed },
     };
   } catch (error) {
+    // AOT 的 Capability 边界会把内层异常包成 `VF_CAPABILITY_FAILED`，真正的原因在 `cause`
+    // （与 `commit_sync.changedSource` 同一处理）。不解开的话，作者与诊断只能看到
+    // 「capability 'era.tavern.messages.update_content' failed」这种无信息量的包装，
+    // 真机 STATUSBAR-EXAMPLE-020 的 `ERA_API_MESSAGE_APPEND_FAILED` 就是这样失去线索的。
+    const unwrapped =
+      error !== null && typeof error === "object" &&
+      (error as { code?: unknown }).code === "VF_CAPABILITY_FAILED" &&
+      (error as { cause?: unknown }).cause !== undefined
+        ? (error as { cause: unknown }).cause
+        : error;
     return {
       facade_commit_append_result: {
         status: "failed",
         context: candidate,
-        observed: { message: error instanceof Error ? error.message : String(error) },
+        observed: {
+          message: unwrapped instanceof Error ? unwrapped.message : String(unwrapped),
+          ...(unwrapped !== null && typeof unwrapped === "object" &&
+              typeof (unwrapped as { code?: unknown }).code === "string"
+            ? { code: (unwrapped as { code: string }).code }
+            : {}),
+        },
       },
     };
   }
@@ -191,7 +208,8 @@ export function prepareCommitSyncNode(inputs: any): any {
     ...executionState,
     nextState: {
       ...executionState.nextState,
-      scopeWindow: prepared.context.window,
+      // 与下方 `nextState.scopeWindow` 同一口径：窗口形状由门面引擎保证，这里按既有约定断言。
+      scopeWindow: prepared.context.window as ScopeWindowState,
     },
   };
   return {
