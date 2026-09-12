@@ -170,6 +170,37 @@ describe('era.sync 块步进循环的三个节点', () => {
     expect(state.stat).toMatchObject({ ui_swipe: { branch: 'B' } });
   });
 
+  // 已知未修（真机 EXPR-FUNC-006 仍 failed，2026-09-12 第 102 轮记录）：逐块执行时 `@f()` 的
+  // 「消息起点闭包」没有单独携带，块 1 的 FunctionEdit 会改掉块 2 的 `@f()` 语义，
+  // 实测 snapshot=30（期望 4）、current=30 正确。用 `it.fails` 锁定这个已知缺陷，
+  // 修好之后它会变成「意外通过」，从而提醒把它翻成普通 it。
+  it.fails('`@f()` 逐块执行时仍看到消息起点的函数闭包，`f()` 看到当前闭包', () => {
+    // 真机 EXPR-FUNC-006：楼层先 FunctionEdit（把 f 从 x+1 改成 x*10），再用同一块里的
+    // `@f(...)`（消息起点闭包）与 `f(...)`（当前闭包）取值。逐块执行时每次都会刷新当前函数库，
+    // 若把当前库当成快照，`@f` 会跟着变成 x*10（实测 snapshot=current=30，期望 4 / 30）。
+    const context = contextWith(
+      [
+        '<FunctionEdit>{"f":{"params":["x"],"expr":"x*10"}}</FunctionEdit>',
+        '<VariableEdit>{"expr_fixture":{"snapshot":{"$expr":"@f(expr_fixture.input)"},"current":{"$expr":"f(expr_fixture.input)"}}}</VariableEdit>',
+      ].join('\n'),
+      { expr_fixture: { input: 3, result: 0, snapshot: 0, current: 0 } },
+    );
+    (context.variablesRaw as Record<string, unknown>).statFunc = {
+      f: { params: ['x'], expr: 'x+1' },
+    };
+    let state = prepare({ 'era.sync.context': { value: context } }).block_step_state as any;
+    let done = false;
+    let guard = 0;
+    while (!done && guard < 8) {
+      const stepped = run({ 'era.sync.block.step.state': { value: state } });
+      state = stepped.block_step_state_next;
+      done = stepped.block_step_done;
+      guard += 1;
+    }
+    expect(state.done).toBe(true);
+    expect(state.stat.expr_fixture).toMatchObject({ snapshot: 4, current: 30 });
+  });
+
   it('遇到无标记调用即断开本批次，并把调用位置写成交接事实', () => {
     const { state } = driveToStop(
       [
