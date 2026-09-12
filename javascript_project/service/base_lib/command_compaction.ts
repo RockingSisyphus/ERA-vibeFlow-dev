@@ -124,6 +124,16 @@ export function replayWithServiceEngine(context: ServiceCompactionContext): Serv
 }
 
 /** Write only accepted single-scope replacements and their real replay logs. */
+/**
+ * 去掉全部空白后的文本，用于判断「这次压缩是否真的改了命令」。
+ *
+ * 压缩引擎重建文本时统一用 `renderTag`（多行 JSON）。合并/删除命令一定会改变 JSON 本身，
+ * 因此「去掉空白后相同」只可能意味着**没有真正的压缩**，只是排版被重写。
+ */
+function withoutWhitespace(text: string): string {
+  return text.replace(/\s+/gu, "");
+}
+
 export function writeSingleScopeSegments(context: ServiceCompactionContext): ServiceCompactionContext {
   if (context.plan === null) return context;
   const messages = [...context.messages];
@@ -132,6 +142,17 @@ export function writeSingleScopeSegments(context: ServiceCompactionContext): Ser
   const functionEditLogs = { ...context.functionEditLogs };
   for (const entry of context.candidates) {
     if (!entry.accepted || entry.original === null || entry.compaction === null || entry.replay === null) continue;
+    // 引擎已经判定「这一层的命令没有变化」时必须**原样跳过**：压缩引擎重建文本用的是
+    // `renderTag`（`<Tag>\n{json}\n</Tag>`），把原文的单行块美化成多行，字节与聊天历史不同。
+    // 真机 COMBINED-HISTORY-001 / RUNTIME-COALESCE-CHAT-SWITCH-001 的「messages 不得变化」
+    // 绑定断言就是这样被打掉的——状态完全正确，只是文本被平白重排。
+    if (entry.compaction.status === "unchanged") continue;
+    // 即使引擎报了 `compacted`/`partial`，也可能只是把同一条命令**换个写法重新渲染**
+    // （`renderTag` 会输出 `<Tag>\n{json}\n</Tag>` 的多行形态，而作者的原文可能是单行）。
+    // 命令集合没变、只有空白布局变了时，必须保留原文：改写聊天历史会打破「原文稳定」，
+    // 真机 COMBINED-HISTORY-001 / RUNTIME-COALESCE-CHAT-SWITCH-001 的
+    // 「messages 不得变化」绑定断言正是被这种纯排版重写打掉的。
+    if (withoutWhitespace(entry.compaction.content) === withoutWhitespace(entry.original)) continue;
     const candidate = entry.candidate;
     const message = messages[candidate.messageIndex];
     if (message === undefined || message.messageId !== candidate.messageId || message.content.kind !== "text") continue;
@@ -149,7 +170,12 @@ export function updateCompactionMarkers(context: ServiceCompactionContext): Sync
   const markers = { ...context.markers };
   for (const entry of context.candidates) {
     if (entry.original === null || entry.compaction === null) continue;
-    if (entry.compaction.status === "unchanged") markers[entry.candidate.mk] = markerValue(entry.candidate, entry.original, "unchanged");
+    // 写入阶段会跳过「只有排版不同」的层（命令集合没变），标记必须与聊天里的真实文本一致，
+    // 否则 `commandCompactionMarkerIsCurrent` 会拿压缩文本的哈希去比原文，永远判为过期。
+    const layoutOnly =
+      entry.original !== null &&
+      withoutWhitespace(entry.compaction.content) === withoutWhitespace(entry.original);
+    if (entry.compaction.status === "unchanged" || layoutOnly) markers[entry.candidate.mk] = markerValue(entry.candidate, entry.original ?? entry.compaction.content, "unchanged");
     else if (entry.accepted && (entry.compaction.status === "compacted" || entry.compaction.status === "partial")) markers[entry.candidate.mk] = markerValue(entry.candidate, entry.compaction.content, entry.compaction.status);
   }
   const meta = { ...context.meta, EditLogs: context.editLogs, FunctionEditLogs: context.functionEditLogs };
