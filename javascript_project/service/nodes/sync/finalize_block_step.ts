@@ -30,6 +30,19 @@ export function finalize(
   // 不写文本（那是旧分支的文本）、不写续做点（`syncCursor` 属于作废的版本，写了会让新版本
   // 从错误的世界续做）、也不声明呈现意图。新事件会从楼层起点重算这条楼层。
   // 这一支必须排在下面的早退之前：作废批次连「原样放行工作项」都不行。
+  // 这一块提交真的失败了：把失败**作为任务结果**带回（宿主据此显示修复入口），
+  // 不在节点里抛错——抛错会停掉整条永久工作流，恢复 UI 就永远等不到了（真机 SIDECAR-BIND-014）。
+  if (state.commitFailure !== undefined && state.commitFailure !== null) {
+    const failedTail: SyncWorkV1 = {
+      ...work,
+      disposition: "failed",
+      failure: state.commitFailure,
+    };
+    return {
+      expression_command_result: failedTail as unknown as Readonly<Record<string, unknown>>,
+      function_invocation_route: "none",
+    };
+  }
   if (state.superseded === true) {
     const supersededTail: SyncWorkV1 = {
       ...work,

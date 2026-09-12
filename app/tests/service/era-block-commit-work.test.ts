@@ -286,12 +286,43 @@ describe('逐块提交：算完那一次与结果折回', () => {
     expect(Object.hasOwn(work, 'initialPresentation')).toBe(false);
   });
 
-  it('提交失败必须让任务失败，不能悄悄继续推进', () => {
-    expect(() =>
-      foldBlockCommitOutcome({
-        state: state({ done: false }),
-        outcome: { status: 'failed' },
-      }),
-    ).toThrow(/ERA_BLOCK_COMMIT_FAILED/);
+  it('提交失败必须作为任务级失败带回，而不是抛错停掉永久工作流', () => {
+    // 真机 SIDECAR-BIND-014：注入一次侧车写入故障后，折回节点抛错会让 ERA 永久工作流停止
+    // （宿主报 `ERA 服务宿主已停止`），恢复 UI 永远等不到。侧车写入失败是**可修复**的失败。
+    const folded = foldBlockCommitOutcome({
+      state: state({ done: false }),
+      outcome: {
+        status: 'failed',
+        failure: {
+          code: 'ERA_SYNC_SIDECAR_COMMIT_FAILED',
+          message: '侧车写入失败',
+          category: 'tavern',
+          retryable: false,
+        },
+      },
+    });
+
+    expect(folded.commitFailure).toMatchObject({ code: 'ERA_SYNC_SIDECAR_COMMIT_FAILED' });
+    expect(folded.done).toBe(true);
+    expect(folded.committedPerBlock).toBe(false);
+  });
+
+  it('失败批次的收口产出失败工作项（宿主仍能提供修复入口）', () => {
+    const failed = {
+      ...(state({ done: false }) as unknown as Record<string, unknown>),
+      commitFailure: {
+        code: 'ERA_SYNC_SIDECAR_COMMIT_FAILED',
+        message: '侧车写入失败',
+        category: 'tavern',
+        retryable: false,
+      },
+    };
+    const finalized = finalize({
+      'era.sync.block.step.state.next': { value: failed },
+    });
+    const work = finalized.expression_command_result as Record<string, unknown>;
+
+    expect(work.disposition).toBe('failed');
+    expect((work.failure as { code: string }).code).toBe('ERA_SYNC_SIDECAR_COMMIT_FAILED');
   });
 });

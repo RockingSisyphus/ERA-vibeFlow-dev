@@ -13,10 +13,12 @@ import {
 } from "./domain/message_function_calls.ts";
 import type { MessageFunctionFlow } from "./domain/message_function_flow.ts";
 import type { EraMessageLayerStartV1 } from "./domain/sync_engine.ts";
+import { syncFailure } from "./sync_contracts.ts";
 import type {
   SyncContextV1,
   EraMessageFunctionHandoffV1,
   SyncConsecutiveFacts,
+  SyncFailureV1,
 } from "./sync_contracts.ts";
 import type { SyncWorkV1 } from "./sync_contracts.ts";
 
@@ -70,6 +72,15 @@ export interface EraBlockStepStateV1 {
    * 真机 UI-SWIPE-001 就是这样把 swipe B/C 提交成了 A。收口节点见到它会走「什么都不写」的尾链。
    */
   readonly superseded?: boolean;
+  /**
+   * 这一块提交**真的失败了**（区别于「来源被改掉」的 `superseded`）。
+   *
+   * 为什么要带回状态而不是在折回节点抛错：抛错是内核级 fatal，会把整条 ERA 永久工作流停掉
+   * （真机 SIDECAR-BIND-014：注入一次侧车写入故障后宿主直接 `ERA 服务宿主已停止`，
+   * 恢复 UI 永远等不到，后续动作全部 skipped）。侧车写入失败是**可修复**的失败，必须作为
+   * 任务级失败结算，让宿主保留恢复入口。
+   */
+  readonly commitFailure?: SyncFailureV1;
   readonly handoff: EraMessageFunctionHandoffV1 | null;
   /**
    * 楼层原文与元数据随状态携带。
@@ -271,6 +282,7 @@ export function foldBlockCommitOutcome(input: {
     | {
         readonly status: "committed" | "no-op" | "failed" | "fatal";
         readonly sourceChanged?: boolean;
+        readonly failure?: SyncFailureV1 | null;
         readonly messageWrites?: readonly {
           readonly messageId: number;
           readonly content: string;
@@ -294,9 +306,22 @@ export function foldBlockCommitOutcome(input: {
     };
   }
   if (outcome.status !== "committed") {
-    throw new TypeError(
-      `ERA_BLOCK_COMMIT_FAILED: 逐块提交未成功（status=${outcome.status}），本批次按失败结算。`,
-    );
+    // 失败必须一路带回任务结果（宿主据此显示修复入口），不能在节点里抛错——那会停掉永久工作流。
+    return {
+      ...state,
+      superseded: false,
+      done: true,
+      route: "none",
+      handoff: null,
+      committedPerBlock: false,
+      commitFailure:
+        outcome.failure ??
+        syncFailure(
+          `ERA_BLOCK_COMMIT_${String(outcome.status).toUpperCase()}`,
+          `逐块提交未成功（status=${outcome.status}）。`,
+          "tavern",
+        ),
+    };
   }
   const written = outcome.messageWrites?.find(
     write => write.messageId === state.messageId,
