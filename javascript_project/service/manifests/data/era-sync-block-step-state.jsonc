@@ -64,6 +64,12 @@
       "superseded": {
         "type": "boolean"
       },
+      "commitFailure": {
+        "type": [
+          "object",
+          "null"
+        ]
+      },
       "executedBlockIndex": {
         "type": [
           "integer",
