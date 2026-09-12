@@ -62,7 +62,10 @@ describe('facade 追加提交：写入前必须刷新依据', () => {
       {
         capabilities: {
           'era.tavern.messages': {
-            read_context: () => Promise.resolve(fresh),
+            // **真实宿主契约**（`tavern-adapter.read_context`）：返回
+            // `{schemaVersion: 2, messages}`，不是裸数组。老用例喂裸数组，
+            // 于是把 `Array.isArray(fresh)` 这个恒假的判断一直当成通过。
+            read_context: () => Promise.resolve({ schemaVersion: 2, messages: fresh }),
             update_content: (input: Record<string, unknown>) => {
               seen = input;
               return Promise.resolve({ status: 'committed' });

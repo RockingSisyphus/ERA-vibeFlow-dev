@@ -166,9 +166,13 @@ export async function commitAppendNode(
     const capabilityInput = { ...(candidate.capabilityInput as Record<string, unknown>) };
     const plannedBasis = isRecord(capabilityInput.sourceBasis) ? capabilityInput.sourceBasis : null;
     if (plannedBasis !== null) {
+      // 宿主契约是 `EraTavernMessageContextV2`：`{ schemaVersion: 2, messages }`（见
+      // `base_lib/facade_api_engine.messagesFrom`）。这里曾经写 `Array.isArray(fresh)`，
+      // 而 `read_context` **从不**返回裸数组 ⇒ 判空恒真、依据其实一次都没被刷新过；
+      // 单测喂的是裸数组，于是把这个恒假分支一直当成通过。
       const fresh = await readMessages(context, "era-facade-append");
-      if (Array.isArray(fresh)) {
-        capabilityInput.sourceBasis = { ...plannedBasis, messages: fresh };
+      if (isRecord(fresh) && Array.isArray(fresh.messages)) {
+        capabilityInput.sourceBasis = { ...plannedBasis, messages: fresh.messages };
       }
     }
     const observed = await context.capabilities["era.tavern.messages"].update_content(capabilityInput);
