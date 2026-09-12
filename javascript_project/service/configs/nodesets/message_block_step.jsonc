@@ -1,8 +1,12 @@
 {
-  "nodeset_imports": [],
+  "nodeset_imports": [
+    {
+      "path": "command_compaction.jsonc"
+    }
+  ],
   "type_key": "era.sync.block_step",
   "display_name": "ERA 块步进单次迭代",
-  "description": "块步进循环的 body：每次迭代只读取当前承载状态与同步上下文，推进一个块并返回下一个状态与本次是否结束（消息处理完或遇到无标记调用需交接）。",
+  "description": "单块或楼层维护提交：执行、构造候选、封存压缩、保存、折回。只有保存后的状态可以推进；错误成为任务结果，不抛成永久工作流停止。",
   "requires": [
     {
       "type": "era.sync.block.step.state",
@@ -32,7 +36,7 @@
         "required": true
       }
     ],
-    "max_steps": 8,
+    "max_steps": 12,
     "nodes": [
       {
         "id": "start",
@@ -43,14 +47,26 @@
       {
         "id": "advance_message_block",
         "type_used": "era.sync.drive_message_blocks",
-        "display_name": "推进一个块",
-        "description": "按原文位置推进一个块；遇到无标记 <EraFCall/> 时结束本次迭代并把交接事实写入状态，函数由 Host 在步骤之外执行。"
+        "display_name": "应用下一块或准备楼层维护",
+        "description": "复用纯块应用语义，独立携带消息起点变量/函数及连续随机偏移；done 仅按标签判断，旧 EraFCallTx 只作普通记录容器。无 done 调用返回 ERA_FCALL_NOT_IMPLEMENTED，不改 done，不处理后续块。准备楼层完成清进度、纯回退和空聊天所需的维护写入。"
+      },
+      {
+        "id": "prepare_block_work",
+        "type_used": "era.sync.prepare_block_work",
+        "display_name": "构造单块与日志同步工作项",
+        "description": "从真实累计状态构造当前块的消息/Sidecar候选和完整累计回退日志。仅楼层完成时给出该封存楼层压缩候选；最新楼层不压缩；普通块候选为空。携带状态经工作项传递，禁止另算整楼终值。"
+      },
+      {
+        "id": "apply_command_compaction",
+        "type_used": "era.command_compaction.apply_sealed_layers",
+        "display_name": "保留同 Scope 封存压缩",
+        "description": "沿既有展开节点运行纯压缩和重放校验，候选仅来自已完成封存楼层；允许普通操作相对 done 调用移位，不执行工具，不在此写宿主。"
       },
       {
         "id": "build_block_commit",
         "type_used": "era.sync.build_block_commit",
-        "display_name": "构造逐块提交请求",
-        "description": "把这一块之后的累计状态构造成待提交请求（basis 按当前文本重建）；交接迭代产出不提交信封。"
+        "display_name": "构造唯一提交请求",
+        "description": "将压缩后的单块或楼层维护工作项构造成既有保存请求；依据只吸收本任务已确认的自身写入，不能用新目标依据掩盖旧文本。错误/无需写入使用无提交信封；最后的进度删除和 cursor 清除在此提交路径处理。"
       },
       {
         "id": "commit_block_state",
@@ -61,8 +77,8 @@
       {
         "id": "fold_block_commit",
         "type_used": "era.sync.fold_block_commit",
-        "display_name": "折回提交结果",
-        "description": "从提交结果读回状态并折回；提交未成功则抛类型化错误。"
+        "display_name": "折回实际保存结果与循环终止状态",
+        "description": "保存成功后推进状态、日志及进度；提交失败保留已成功块并返回任务级失败，来源变化作废原目标。最后完成清进度后才能标楼层完成；继续下一受影响楼层或结束。循环终止事实必须来自提交之后。"
       },
       {
         "id": "end",
@@ -78,6 +94,14 @@
       ],
       [
         "advance_message_block",
+        "prepare_block_work"
+      ],
+      [
+        "prepare_block_work",
+        "apply_command_compaction"
+      ],
+      [
+        "apply_command_compaction",
         "build_block_commit"
       ],
       [

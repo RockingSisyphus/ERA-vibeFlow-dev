@@ -54,25 +54,6 @@ export interface SyncPayloadV1 {
   readonly consecutiveProcessingCount: number;
 }
 
-/**
- * 一次消息内函数调用的交接事实。
- *
- * 调用在块边界被无条件断开：本批次不提交任何状态，只把「调用位置」交给 Host。
- * `stat`/`statFunc` 是调用位置的累计状态，供函数读取自己所在位置的状态；它不是
- * 已提交状态，函数产出仍会作为操作区随该消息一起提交。
- */
-export interface EraMessageFunctionHandoffV1 {
-  readonly schemaVersion: 1;
-  readonly messageId: number;
-  readonly mk: string;
-  readonly blockIndex: number;
-  readonly callId: string;
-  readonly name: string;
-  readonly args: Readonly<Record<string, unknown>>;
-  readonly stat: Readonly<Record<string, unknown>>;
-  readonly statFunc: Readonly<Record<string, unknown>>;
-}
-
 export interface SyncWorkV1 {
   readonly schemaVersion: 1;
   readonly step: PlannedStepV1;
@@ -80,8 +61,6 @@ export interface SyncWorkV1 {
   readonly plan: EraSyncPlanV1 | null;
   readonly payload: SyncPayloadV1 | null;
   readonly failure: SyncFailureV1 | null;
-  /** 需要 Host 在步骤之外执行的调用；存在时本工作项必然不提交。 */
-  readonly handoff?: EraMessageFunctionHandoffV1;
   /**
    * 逐块提交时的块级续做游标；随任务状态更新写进服务状态。
    *
@@ -104,8 +83,6 @@ export interface SyncWorkV1 {
    * 结果就是 `{...request, status, …}`）可以让折回节点从结果里读回它，不需要新增中间类型。
    */
   readonly blockStepState?: Readonly<Record<string, unknown>>;
-  /** 附加给 Host 的后置通知；当前只有函数交接使用。 */
-  readonly notifications?: readonly SyncNotificationV1[];
 }
 
 export interface SyncNotificationV1 {
@@ -133,13 +110,6 @@ export interface SyncCommitRequestV1 {
   readonly agentFloorCandidate: EraAgentFloorCandidateV1 | null;
   /** 本次生成的最终展示变化；非持久化，不用于普通状态更新。 */
   readonly initialPresentation: EraFloorIdentityV1 | null;
-  /**
-   * 交接提交（只落盘消息记录、函数由 Host 在步骤之外执行）携带的待调用事实。
-   *
-   * 为什么必须随请求走：交接通知原本由「不提交」分支发出；交接提交走提交分支，通知
-   * 只能挂在请求上。丢了这个字段，函数永远不会被驱动，工作流停在调用块上。
-   */
-  readonly handoff?: EraMessageFunctionHandoffV1;
   /** 与工作项同义的块级续做游标；提交成功后由结果把它投影为任务状态更新。 */
   readonly syncCursor?: EraSyncCursorV1 | null;
   /** 与该请求一同搬运的块步进状态；提交结果会原样带回来，供折回节点读回。 */

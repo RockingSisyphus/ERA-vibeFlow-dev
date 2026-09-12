@@ -28,10 +28,6 @@ describe('ERA 服务状态：块游标槽', () => {
       messageId: 7,
       mk: 'mk-7',
       blockIndex: 2,
-      stat: { hp: 70 },
-      statFunc: {},
-      resolvedCallIds: ['c1'],
-      done: false,
     };
     const withCursor = { ...initial, syncCursor: cursor };
 
@@ -58,10 +54,6 @@ describe('ERA 服务状态：块游标槽', () => {
       messageId: 3,
       mk: 'mk-3',
       blockIndex: 1,
-      stat: { hp: 5 },
-      statFunc: { double: { params: ['x'], expr: 'x * 2' } },
-      resolvedCallIds: [],
-      done: false,
     };
 
     const cloned = JSON.parse(JSON.stringify(cursor));
@@ -81,10 +73,6 @@ describe('ERA 块游标：从工作项到批次状态的传递链', () => {
     messageId: 4,
     mk: 'mk-4',
     blockIndex: 2,
-    stat: { hp: 70 },
-    statFunc: {},
-    resolvedCallIds: ['c1'],
-    done: false,
   };
 
   function step() {
@@ -99,7 +87,7 @@ describe('ERA 块游标：从工作项到批次状态的传递链', () => {
       schemaVersion: 1,
       eventId: 'event-1',
       sequence: 1,
-      type: 'era.message.invoke_continue',
+      type: 'manual_sync',
       occurredAt: 1_001,
       source: 'era-api',
       args: [],
@@ -206,10 +194,10 @@ describe('ERA 块游标：从工作项到批次状态的传递链', () => {
         disposition: 'commit',
         plan: {
           status: 'fast-sync',
-          messages: [{ messageId: 4 }],
-          messageUpdates: [],
           stat: { hp: 70 },
           statFunc: {},
+          messages: [{ messageId: 4 }],
+          messageUpdates: [],
           meta: {},
           nextConsecutiveState: { mk: 'mk-4', count: 2 },
         },
@@ -281,10 +269,10 @@ describe('ERA 块游标：从工作项到批次状态的传递链', () => {
       disposition: 'commit',
       plan: {
         status: 'fast-sync',
-        messages: [{ messageId: 4 }],
-        messageUpdates: [],
         stat: { hp: 70 },
         statFunc: {},
+        messages: [{ messageId: 4 }],
+        messageUpdates: [],
         meta: {},
         nextConsecutiveState: { mk: 'mk-4', count: 2 },
       },

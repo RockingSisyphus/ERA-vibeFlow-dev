@@ -1,58 +1,66 @@
-/**
- * 逐块提交第一步：把该块之后的累计状态构造成待提交请求。
- *
- * 状态嵌在请求里（同一节点集里同一类型只能有一个产出者），提交结果 `{...request, status, …}` 会
- * 把它带回折回节点；`sourceBasis` 必须按**当前文本**重建，否则同一批次里第 2 次及以后的块提交
- * 会报 `ERA_SYNC_SOURCE_CHANGED`（真机实测）。交接迭代产出不提交信封，不写任何宿主状态。
- */
 import {
-  buildPerBlockCommitWork,
-  type EraBlockStepStateV1,
-} from "../../base_lib/block_step_state.ts";
-import { buildSyncCommitRequest } from "../../base_lib/sync_commit_policy.ts";
+  buildSyncCommitRequest,
+  validateSyncCommitEnvelope,
+} from "../../base_lib/sync_commit_policy.ts";
 import type { SyncWorkV1 } from "../../base_lib/sync_contracts.ts";
-
-interface Envelope<T> {
-  readonly value: T;
-}
-
-export function run(
-  inputs: Readonly<{ "era.sync.block.step.pending": Envelope<unknown> }>,
-): any {
-  const state = inputs["era.sync.block.step.pending"].value as EraBlockStepStateV1;
-  const work = state.work as unknown as SyncWorkV1;
-  const perBlock = buildPerBlockCommitWork({ work, state });
-  if (perBlock === null) {
+import type { EraBlockStepStateV1 } from "../../base_lib/block_step_state.ts";
+/** 压缩后的真实候选进入唯一提交链；来源只吸收本任务已确认的写入。 */
+export function run(inputs: any): any {
+  const work = inputs["era.command_compaction.result"].value as SyncWorkV1;
+  const carried = work.blockStepState as unknown as EraBlockStepStateV1;
+  const { blockStepState: _carried, ...cleanWork } = work;
+  const state: EraBlockStepStateV1 = { ...carried, work: cleanWork };
+  if (work.disposition !== "commit")
     return {
       block_commit_request: {
-        mode: "non-commit" as const,
-        work: { ...work, blockStepState: state },
+        mode: "non-commit",
+        work: { ...cleanWork, blockStepState: state },
+      },
+    };
+  const request = buildSyncCommitRequest(cleanWork);
+  const execution =
+    work.plan?.status !== "failed" ? work.plan?.execution : null;
+  const floor = execution?.floorStarted
+    ? work.plan?.messages[execution.messageIndex]
+    : null;
+  const envelope = {
+    mode: "commit",
+    request: {
+      ...request,
+      sourceBasis: state.sourceBasis ?? request.sourceBasis,
+      syncCursor:
+        floor && execution
+          ? {
+              messageId: floor.messageId,
+              mk: String(
+                (work.plan?.meta.SelectedMks as unknown[])?.[
+                  execution.messageIndex
+                ] ?? "",
+              ),
+              blockIndex: Math.max(0, execution.blockIndex - 1),
+            }
+          : null,
+      initialPresentation: state.done ? request.initialPresentation : null,
+      blockStepState: state,
+    },
+  };
+  const checked = validateSyncCommitEnvelope(envelope);
+  if (checked.route === "failed") {
+    const failedWork = {
+      ...cleanWork,
+      disposition: "failed" as const,
+      failure: checked.failure.failure,
+      plan: state.lastResult?.plan ?? null,
+    };
+    return {
+      block_commit_request: {
+        mode: "non-commit",
+        work: {
+          ...failedWork,
+          blockStepState: { ...state, done: true, work: failedWork },
+        },
       },
     };
   }
-  const request = buildSyncCommitRequest(perBlock);
-  const basis = request.sourceBasis;
-  // basis 只在本批次**已经写过这条楼层**时才改写：第一次提交时聊天里还是派发时读到的原文，
-  // 原样 basis 才对得上（改写它反而制造 source-changed）；之后每次提交，聊天里是上一次写下去
-  // 的文本（= 状态里的 content），据它重建 basis 才能继续写。
-  const sourceBasis = state.committedPerBlock
-    ? {
-        ...basis,
-        messages: basis.messages.map(message =>
-          message.messageId === state.messageId
-            ? { ...message, activeText: state.content }
-            : message,
-        ),
-      }
-    : basis;
-  return {
-    block_commit_request: {
-      mode: "commit" as const,
-      request: {
-        ...request,
-        sourceBasis,
-        blockStepState: state as unknown as Readonly<Record<string, unknown>>,
-      },
-    },
-  };
+  return { block_commit_request: envelope };
 }

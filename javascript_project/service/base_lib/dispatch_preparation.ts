@@ -11,88 +11,7 @@ import {
   ensureMessageKey,
   type EraMkMessageV1,
 } from "./domain/mk_engine.ts";
-import { recordEraFunctionCallOutcome } from "./domain/message_function_flow.ts";
 import type { BatchExecutionStateV1, PlannedStepV1 } from "./service_types.ts";
-
-/** Host 在步骤之外执行完函数后用它恢复同一条消息；与事件规划器登记保持一致。 */
-const MESSAGE_INVOKE_CONTINUE = "era.message.invoke_continue";
-
-interface FunctionCallResumeV1 {
-  readonly messageId: number;
-  readonly mk: string;
-  readonly callId: string;
-  readonly status: "completed" | "failed" | "cancelled";
-  readonly message: string;
-  readonly unregistered: boolean;
-  readonly operations: readonly Readonly<Record<string, unknown>>[];
-}
-
-/**
- * 解析恢复事件载荷。
- *
- * 只接受身份、终态与操作都齐全的回送：缺字段时按「没有回送」处理，让消息保持
- * 待处理而不是写入半份记录——错误记录比没有记录更难恢复。
- */
-export function functionCallResumeOf(
-  step: PlannedStepV1,
-): FunctionCallResumeV1 | null {
-  if (step.kind !== "execute") return null;
-  const primary = step.task.primaryEvent;
-  if (primary.type !== MESSAGE_INVOKE_CONTINUE) return null;
-  const arg = primary.args[0];
-  const value = arg?.kind === "json" ? arg.value : null;
-  if (!isRecord(value)) return null;
-  const messageId = value.messageId;
-  const callId = value.callId;
-  if (!Number.isSafeInteger(messageId) || typeof callId !== "string" || callId.length === 0) {
-    return null;
-  }
-  const status = value.status;
-  if (status !== "completed" && status !== "failed" && status !== "cancelled") {
-    return null;
-  }
-  return {
-    messageId: Number(messageId),
-    mk: typeof value.mk === "string" ? value.mk : "",
-    callId,
-    status,
-    message: typeof value.message === "string" ? value.message : "",
-    unregistered: value.unregistered === true,
-    operations: Array.isArray(value.operations)
-      ? value.operations.filter(isRecord)
-      : [],
-  };
-}
-
-/**
- * 把恢复事件记录写进处理楼层的文本。
- *
- * 只有**楼层**（messageId）对得上才写：迟到的回送不能把函数效果写到另一条消息上。
- * MK 不进身份判定——它会随同步推移变化（见函数内注释）。
- */
-function recordedFunctionCallText(input: {
-  readonly step: PlannedStepV1;
-  readonly text: string;
-  readonly messageId: number;
-}): string {
-  const resume = functionCallResumeOf(input.step);
-  // 楼层身份以 messageId 为准，MK 不再是身份的一部分：mk 会随同步推移发生变化
-  // （实测同一楼层的两次交接 mk 不同）。若拿 mk 做等值判断，恢复记录会被静默跳过、
-  // 调用块永不标记，于是每轮同步都再交接一次（无限循环）。
-  if (resume === null || resume.messageId !== input.messageId) return input.text;
-  return recordEraFunctionCallOutcome({
-    content: input.text,
-    callId: resume.callId,
-    outcome: {
-      status: resume.status,
-      name: "",
-      result: null,
-      message: resume.message,
-      unregistered: resume.unregistered,
-    },
-    operations: resume.operations,
-  });
-}
 
 export interface DispatchSeedV1 {
   readonly schemaVersion: 1;
@@ -185,12 +104,9 @@ function stableToken(step: PlannedStepV1, messageId: number): string {
 function selectedMks(
   meta: Readonly<Record<string, unknown>>,
 ): (string | null)[] {
-  return Array.isArray(meta.SelectedMks)
-    ? Array.from({ length: meta.SelectedMks.length }, (_, index) =>
-        typeof meta.SelectedMks?.[index] === "string"
-          ? (meta.SelectedMks[index] as string)
-          : null,
-      )
+  const selected = meta.SelectedMks;
+  return Array.isArray(selected)
+    ? selected.map((value) => (typeof value === "string" ? value : null))
     : [];
 }
 
@@ -324,7 +240,9 @@ function planPreparation(
     const step = context.seed.step;
     if (
       context.seed.dispatchClass === "sync" ||
-      (step.kind === "execute" && step.task.kind === "api" && step.task.intent === "state-sync")
+      (step.kind === "execute" &&
+        step.task.kind === "api" &&
+        step.task.intent === "state-sync")
     ) {
       return {
         schemaVersion: 1,
@@ -410,14 +328,7 @@ function planPreparation(
     ensured.textUpdate?.content.kind === "text"
       ? ensured.textUpdate.content.text
       : latest.activeText;
-  // 函数恢复事件带回「函数产出的操作」：这里把调用块标记为已处理并把操作写成
-  // 紧随其后的操作区，随本次消息快照一起进入既有重放与提交链。位置由文本决定，
-  // 因此刷新、切聊、重算都不会让函数效果错位。
-  const recordedText = recordedFunctionCallText({
-    step: context.seed.step,
-    text: mkText,
-    messageId: latest.messageId,
-  });
+  const recordedText = mkText;
   const preparedText =
     latest.role !== "user" &&
     context.placeholder.enabled &&
@@ -467,16 +378,25 @@ function planPreparation(
 }
 
 /** 保存补 MK/占位符之前的事实，不从生成后的正文逆向推断。 */
-export function planDispatchPreparation(context: DispatchCanonicalContextV1): DispatchPreparationPlanV1 {
+export function planDispatchPreparation(
+  context: DispatchCanonicalContextV1,
+): DispatchPreparationPlanV1 {
   const plan = planPreparation(context);
-  if (context.status !== "ready" || typeof context.identity.chatId !== "string") return plan;
+  if (context.status !== "ready" || typeof context.identity.chatId !== "string")
+    return plan;
   return {
     ...plan,
     sourceBasis: {
       identity: {
-        characterId: typeof context.identity.characterId === "string" ? context.identity.characterId : null,
+        characterId:
+          typeof context.identity.characterId === "string"
+            ? context.identity.characterId
+            : null,
         chatId: context.identity.chatId,
-        groupId: typeof context.identity.groupId === "string" ? context.identity.groupId : null,
+        groupId:
+          typeof context.identity.groupId === "string"
+            ? context.identity.groupId
+            : null,
       },
       messages: context.messages,
     },
@@ -492,27 +412,32 @@ export function preserveDispatchPreparation(
 export function dispatchContextOf(
   outcome: DispatchPreparationOutcomeV1,
 ): EraDispatchContextV3 {
-  const primary = outcome.seed.step.kind === "execute"
-    ? outcome.seed.step.task.primaryEvent
-    : null;
-  const chatId = typeof outcome.identity.chatId === "string" && outcome.identity.chatId.length > 0
-    ? outcome.identity.chatId
-    : "unknown-chat";
-  const generationCycleIdentity = primary === null
-    ? null
-    : {
-        chatId,
-        eventId: primary.eventId,
-        sourceKey: `${chatId}:agent:${primary.sequence}`,
-      };
-  const floorIdentity = outcome.processingMessage !== null && outcome.processingMk !== null
-    ? {
-        chatId,
-        messageId: outcome.processingMessage.messageId,
-        swipeId: outcome.processingMessage.swipeIndex ?? 0,
-        mk: outcome.processingMk,
-      }
-    : null;
+  const primary =
+    outcome.seed.step.kind === "execute"
+      ? outcome.seed.step.task.primaryEvent
+      : null;
+  const chatId =
+    typeof outcome.identity.chatId === "string" &&
+    outcome.identity.chatId.length > 0
+      ? outcome.identity.chatId
+      : "unknown-chat";
+  const generationCycleIdentity =
+    primary === null
+      ? null
+      : {
+          chatId,
+          eventId: primary.eventId,
+          sourceKey: `${chatId}:agent:${primary.sequence}`,
+        };
+  const floorIdentity =
+    outcome.processingMessage !== null && outcome.processingMk !== null
+      ? {
+          chatId,
+          messageId: outcome.processingMessage.messageId,
+          swipeId: outcome.processingMessage.swipeIndex ?? 0,
+          mk: outcome.processingMk,
+        }
+      : null;
   return {
     schemaVersion: 3,
     status: outcome.status,
@@ -526,8 +451,11 @@ export function dispatchContextOf(
     failure: outcome.failure,
     generationCycleIdentity,
     floorIdentity,
-    stagedMessageUpdates: outcome.messageUpdate === null ? [] : [outcome.messageUpdate],
+    stagedMessageUpdates:
+      outcome.messageUpdate === null ? [] : [outcome.messageUpdate],
     agentFloorCandidate: null,
-    ...(outcome.sourceBasis === undefined ? {} : { sourceBasis: outcome.sourceBasis }),
+    ...(outcome.sourceBasis === undefined
+      ? {}
+      : { sourceBasis: outcome.sourceBasis }),
   };
 }

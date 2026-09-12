@@ -1,6 +1,72 @@
 {
-  "kind":"node","type_key":"era.dispatch.commit_preparation","display_name":"提交 MK 与占位符准备","category":"任务派发","description":"以 affected 刷新提交当前激活文本；仅 update-mk 任务提交完整 ERAMetaData，状态任务把 SelectedMks 留给同步事务提交；部分或未知提交立即致命失败。","version":"1.0.0","flow_kind":"data_store",
-  "contract":{"requires":[{"type":"era.dispatch.preparation.plan","cardinality":"exactly_one","display_name":"派发准备计划"}],"provides":[{"key":"committed_preparation_outcome","type":"era.dispatch.preparation.outcome","display_name":"已提交准备结果"}],"params_schema":{},"params_defaults":{},"input_semantics":{"era.dispatch.preparation.plan":["输入：含明确消息写入，或 update-mk 元数据写入的准备计划。"]},"output_semantics":{"committed_preparation_outcome":["输出：当前任务拥有的全部预提交写入确认后的准备结果。"]}},
-  "implementations":[{"language":"typescript","targets":["browser"],"completion":"suspend","source":{"kind":"file","ref":"nodes/dispatch/commit_preparation.ts","export":"run"}}],"base_libs":["era.service.dispatch_preparation",
-    "era.service.message_function_flow","era.service.sidecar_binding"],"capabilities":[{"id":"era.tavern.messages","operations":["update_content"]},{"id":"era.tavern.sidecar","operations":["read_current","read_record","write_record","commit_metadata"]}]
+  "kind": "node",
+  "type_key": "era.dispatch.commit_preparation",
+  "display_name": "提交 MK 与占位符准备",
+  "category": "任务派发",
+  "description": "以 affected 刷新提交当前激活文本；仅 update-mk 任务提交完整 ERAMetaData，状态任务把 SelectedMks 留给同步事务提交；部分或未知提交立即致命失败。",
+  "version": "1.0.0",
+  "flow_kind": "data_store",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.dispatch.preparation.plan",
+        "cardinality": "exactly_one",
+        "display_name": "派发准备计划"
+      }
+    ],
+    "provides": [
+      {
+        "key": "committed_preparation_outcome",
+        "type": "era.dispatch.preparation.outcome",
+        "display_name": "已提交准备结果"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.dispatch.preparation.plan": [
+        "输入：含明确消息写入，或 update-mk 元数据写入的准备计划。"
+      ]
+    },
+    "output_semantics": {
+      "committed_preparation_outcome": [
+        "输出：当前任务拥有的全部预提交写入确认后的准备结果。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser"
+      ],
+      "completion": "suspend",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/dispatch/commit_preparation.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.dispatch_preparation",
+    "era.service.sidecar_binding"
+  ],
+  "capabilities": [
+    {
+      "id": "era.tavern.messages",
+      "operations": [
+        "update_content"
+      ]
+    },
+    {
+      "id": "era.tavern.sidecar",
+      "operations": [
+        "read_current",
+        "read_record",
+        "write_record",
+        "commit_metadata"
+      ]
+    }
+  ]
 }

@@ -399,60 +399,6 @@ export function buildTransaction(validated: unknown) {
   };
 }
 
-/** 正则元字符转义；调用标识来自作者，不能直接拼进正则。 */
-function escapeRegExpToken(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-/**
- * 给锚定的块打上已处理标记。
- *
- * 已经带标记时不重复写：同一条记录被写两次会让重放把同一块算两遍。
- */
-function markAnchoredBlockProcessed(tag: string): string {
-  if (/\bstatus\s*=/i.test(tag)) return tag;
-  return tag.replace(/\/\s*>$/, ' status="done"/>');
-}
-
-/**
- * 位置锚定落点：把块记录插在锚点之后，而不是追加到消息末尾。
- *
- * 为什么必须支持锚定：逐块提交时，若记录追加到末尾，重放顺序会变成「先后续块、后本块」，
- * 对非交换操作（乘法、随机抽取、覆盖写）会算出与实时不同的终值。锚点找不到时退回追加，
- * 宁可记录位置不理想也不能静默丢掉记录。
- */
-function anchoredTransactionContent(input: {
-  readonly base: string;
-  readonly transaction: string;
-  readonly position: unknown;
-}): string {
-  if (isRecord(input.position)) {
-    const callId = input.position.callId;
-    if (typeof callId === "string" && callId.length > 0) {
-      const pattern = new RegExp(
-        `<EraFCall\\b[^>]*\\bid\\s*=\\s*["']${escapeRegExpToken(callId)}["'][^>]*/>`,
-        "i",
-      );
-      const matched = pattern.exec(input.base);
-      if (matched !== null) {
-        const tag = markAnchoredBlockProcessed(matched[0]);
-        const end = matched.index + matched[0].length;
-        return `${input.base.slice(0, matched.index)}${tag}\n${input.transaction}${input.base.slice(end)}`;
-      }
-    }
-    const offset = input.position.afterOffset;
-    if (
-      Number.isSafeInteger(offset) &&
-      Number(offset) >= 0 &&
-      Number(offset) <= input.base.length
-    ) {
-      const at = Number(offset);
-      return `${input.base.slice(0, at)}\n${input.transaction}${input.base.slice(at)}`;
-    }
-  }
-  return `${input.base}\n${input.transaction}`;
-}
-
 export function buildAppend(transaction: unknown) {
   if (
     !isRecord(transaction) ||
@@ -470,11 +416,7 @@ export function buildAppend(transaction: unknown) {
   ) {
     throw new TypeError("最新 AI 消息不是严格文本投影。");
   }
-  const content = anchoredTransactionContent({
-    base: latest.activeText,
-    transaction: transaction.transaction,
-    position: transaction.position,
-  });
+  const content = `${latest.activeText}\n${transaction.transaction}`;
   return {
     ...transaction,
     messageId: Number(id),

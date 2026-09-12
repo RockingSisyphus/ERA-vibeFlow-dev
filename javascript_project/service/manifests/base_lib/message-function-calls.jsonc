@@ -2,19 +2,24 @@
   "kind": "base_lib",
   "id": "era.service.message_function_calls",
   "display_name": "ERA 消息内函数调用语法与块步进",
-  "description": "纯函数解析消息内自闭合 <EraFCall name=.. args=.. /> 调用块、判定其是否已处理（status 标记或下方紧邻 <EraFCallTx for=..> 操作区）、把六类既有指令与调用块合并为同一份按原文位置有序的块序列，并提供一步一块的可续做会话与操作区渲染；不执行宿主调用、不访问或写入 Tavern。",
+  "description": "解析 EraFCall 与普通操作的文本位置；仅 status=done 表示已调用。保留旧 EraFCallTx 普通操作读取和临时 era_block 进度读写，不提供函数执行器或专用操作区写入器。",
   "category": "消息内函数调用",
   "version": "1.0.0",
   "implementations": [
     {
       "language": "typescript",
-      "targets": ["browser", "node"],
+      "targets": [
+        "browser",
+        "node"
+      ],
       "source": {
         "kind": "file",
         "ref": "base_lib/domain/message_function_calls.ts"
       }
     }
   ],
-  "dependencies": ["era.crud.engine"],
+  "dependencies": [
+    "era.crud.engine"
+  ],
   "external_packages": []
 }

@@ -78,6 +78,7 @@ export function deriveStatusbarIdentity(
   const message = getChatMessages(messageId, { include_swipes: true })[0];
   const text = activeMessageText(message);
   if (text === null) throw new Error('ERA_STATUSBAR_MESSAGE_MISSING');
+  if (/<era_block\b[^>]*\bapplied=["']1["']/iu.test(text)) throw new Error('ERA_STATUSBAR_SELECTED_MK_NOT_READY');
   const mk = messageMk(text);
   if (mk === null) throw new Error('ERA_STATUSBAR_MK_NOT_READY');
   const snapshot = readActiveSidecarRuntimeSnapshot();
@@ -115,6 +116,7 @@ export function verifyStatusbarIdentity(identity: EraStatusbarIdentity): boolean
   const text = activeMessageText(message);
   return (
     text !== null &&
+    !/<era_block\b[^>]*\bapplied=["']1["']/iu.test(text) &&
     messageMk(text) === identity.mk &&
     currentSwipeId(message) === identity.swipeId &&
     selectedMks(snapshot.eraMeta)[identity.messageId] === identity.mk

@@ -75,9 +75,16 @@ export function buildSyncCommitRequest(work: SyncWorkV1): SyncCommitRequestV1 {
   const agentFloorCandidate =
     prepared.schemaVersion === 3 ? prepared.agentFloorCandidate : null;
   if (agentFloorCandidate !== null) {
+    const currentContent = plan.messages.find(
+      (message) => message.messageId === agentFloorCandidate.messageId,
+    )?.content;
     writesByMessageId.set(agentFloorCandidate.messageId, {
       messageId: agentFloorCandidate.messageId,
-      content: agentFloorCandidate.content,
+      content:
+        writesByMessageId.get(agentFloorCandidate.messageId)?.content ??
+        (currentContent?.kind === "text"
+          ? currentContent.text
+          : agentFloorCandidate.content),
       extra: cloneSyncJson(agentFloorCandidate.extra),
     });
   }
@@ -107,9 +114,6 @@ export function buildSyncCommitRequest(work: SyncWorkV1): SyncCommitRequestV1 {
     nativeDisplayChanged
       ? floorIdentity
       : null;
-  // 交接提交只落盘消息记录：它的 meta 故意停在已提交 MK 链上（这条楼层还没处理完），
-  // 因此楼层身份呈现的前置校验不适用于它，也不该在中途刷新尚未完成的楼层。
-  const handoff = work.handoff;
   return {
     schemaVersion: 2,
     step: work.step,
@@ -121,8 +125,7 @@ export function buildSyncCommitRequest(work: SyncWorkV1): SyncCommitRequestV1 {
     meta: cloneSyncJson(plan.meta),
     floorIdentity,
     agentFloorCandidate,
-    initialPresentation: handoff === undefined ? initialPresentation : null,
-    ...(handoff === undefined ? {} : { handoff }),
+    initialPresentation,
     ...(work.syncCursor === undefined ? {} : { syncCursor: work.syncCursor }),
     ...(work.blockStepState === undefined
       ? {}
@@ -270,7 +273,7 @@ export function validateSyncCommitEnvelope(value: unknown):
         );
       }
     }
-    if (request.agentFloorCandidate !== null) {
+    if (request.agentFloorCandidate !== null && !request.plan.execution) {
       const candidate = request.agentFloorCandidate;
       const floor = request.floorIdentity;
       const processing = prepared.processingMessage;

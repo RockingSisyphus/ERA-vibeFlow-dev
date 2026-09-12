@@ -54,10 +54,6 @@ export interface EraSyncCursorV1 {
   readonly messageId: number;
   readonly mk: string;
   readonly blockIndex: number;
-  readonly stat?: Readonly<Record<string, unknown>>;
-  readonly statFunc?: Readonly<Record<string, unknown>>;
-  readonly resolvedCallIds?: readonly string[];
-  readonly done?: boolean;
 }
 
 export interface EraServiceStateV1 {
@@ -95,8 +91,7 @@ export interface EraCollectionReductionV1 {
   readonly throughSequence: number | null;
 }
 
-export type EraDispatchClassV1 =
-  "initialize" | "sync" | "api" | "update-mk";
+export type EraDispatchClassV1 = "initialize" | "sync" | "api" | "update-mk";
 export type EraExecutableTaskRouteV1 =
   EraDispatchClassV1 | "agent-generation-session";
 export type EraTaskRouteV1 = EraExecutableTaskRouteV1 | "ignore";
@@ -178,11 +173,19 @@ export interface EraDispatchContextV3 {
 }
 
 export interface EraMessageSourceBasisV1 {
-  readonly identity: Readonly<{ characterId: string | null; chatId: string; groupId: string | null }>;
+  readonly identity: Readonly<{
+    characterId: string | null;
+    chatId: string;
+    groupId: string | null;
+  }>;
   readonly messages: readonly EraTavernMessageV1[];
 }
 export type EraSyncReasonV1 =
-  "history-changed" | "edited" | "swipe-regeneration" | "manual" | "facade-commit";
+  | "history-changed"
+  | "edited"
+  | "swipe-regeneration"
+  | "manual"
+  | "facade-commit";
 export type EraSyncTargetV1 =
   | { readonly kind: "auto" }
   | {
@@ -460,7 +463,9 @@ export declare function isEraNotificationV1(
 export declare function isEraDiagnosticV1(
   value: unknown,
 ): value is EraDiagnosticV1;
-export declare function isEraSyncCursorV1(value: unknown): value is EraSyncCursorV1;
+export declare function isEraSyncCursorV1(
+  value: unknown,
+): value is EraSyncCursorV1;
 export declare function isEraTaskStateUpdateV1(
   value: unknown,
 ): value is EraTaskStateUpdateV1;

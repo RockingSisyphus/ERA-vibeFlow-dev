@@ -1,9 +1,9 @@
 {
   "kind": "node",
   "type_key": "era.api.verify_facade_message",
-  "display_name": "回读确认独立事务",
+  "display_name": "回读真实保存结果（失败可恢复）",
   "category": "公共 Facade",
-  "description": "回读消息并构造严格同步上下文。",
+  "description": "回读确认普通事务的真实保存，读回异常返回失败收据并保留恢复入口；不把失败或不确定保存报告成成功。",
   "version": "1.0.0",
   "flow_kind": "io",
   "contract": {
@@ -35,18 +35,18 @@
     "params_defaults": {},
     "input_semantics": {
       "era.api.commit.append.result": [
-        "输入：era.api.commit.append.result。"
+        "era.api.commit.append.result"
       ]
     },
     "output_semantics": {
       "commit_readback_route": [
-        "输出：commit_readback_route。"
+        "commit_readback_route"
       ],
       "facade_commit_verified": [
-        "输出：facade_commit_verified。"
+        "facade_commit_verified"
       ],
       "facade_commit_readback_failure": [
-        "输出：facade_commit_failure_context。"
+        "facade_commit_failure_context"
       ]
     }
   },

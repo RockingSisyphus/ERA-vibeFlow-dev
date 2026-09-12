@@ -24,9 +24,8 @@ import { prepareMessagePersistence } from './message-persistence';
 import { readInstallationScopeFacts } from './installation-scope';
 import { projectMessage } from './message-projection';
 import { AgentTavernHost } from './agent-tavern-host';
-import { createEraFunctionsRuntime } from './era-functions-capability';
 import { EraInternalMessageWrites } from './era-internal-message-writes';
-import { routeEraNotification } from './era-notification-routing';
+import { dispatchGenerationHandoff } from './generation-handoff-host';
 import { TavernListeners } from './tavern-listeners';
 import { observeAgentReceipt } from './agent-session-observation';
 import {
@@ -172,9 +171,6 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
   private lifecycleToken = 1;
   private readonly internalMessageWrites = new EraInternalMessageWrites();
   private readonly agentHost: AgentTavernHost;
-  /** 消息内函数调用的宿主运行时；装配与位置绑定见 era-functions-capability。 */
-  private readonly functionsRuntime: ReturnType<typeof createEraFunctionsRuntime>;
-  readonly functions: EraTavernAdapter['functions'];
   readonly agent: EraTavernAdapter['agent'];
   /**
    * 建立唯一宿主适配器。
@@ -191,8 +187,6 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
       readIdentity: (input, context) => this.identity.read(input, context),
     });
     this.agent = this.agentHost.operations;
-    this.functionsRuntime = createEraFunctionsRuntime();
-    this.functions = this.functionsRuntime.capability;
   }
 
   waitForStartupGate(): Promise<EraStartupGateDecision> {
@@ -293,8 +287,6 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
       stopped = true;
       this.accepting = false;
       this.agentHost.stop();
-      // 在途函数调用以取消终态收口，此后一切位置绑定提交被拒绝。
-      this.functionsRuntime.stop();
       releaseListeners();
       if (this.listener === listener) this.listener = null;
     };
@@ -321,24 +313,19 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
     this.accepting = false;
     this.internalMessageWrites.clear();
     this.agentHost.stop();
-    this.functionsRuntime.stop();
   }
 
   /**
    * 后置通知在 FIFO 片段结束后执行，因此订阅回调可以提交新的正常任务。
    *
-   * 必须先把「需要真实新事件」的通知交给专门路由：直接按普通事件发射会让生成阶段
-   * 与函数调用永不恢复；而重复处理会让作者看到同一条通知触发两次。
+   * 生成阶段交接进入新的 FIFO 事件，其余通知按原样发射。
    */
   async notify(notification: EraPreparedNotification, context: EraCapabilityContext): Promise<void> {
     throwIfAborted(context.signal);
-    const routed = await routeEraNotification({
-      notification,
-      context,
-      enqueue: this.enqueue.bind(this),
-      functionsRuntime: this.functionsRuntime,
-    });
-    if (routed) return;
+    if (notification.type === 'era.agent.stage_completed') {
+      await dispatchGenerationHandoff(notification, context.signal, this.enqueue.bind(this));
+      return;
+    }
     await eventEmit(notification.type, ...notification.args);
     throwIfAborted(context.signal);
   }

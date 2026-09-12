@@ -1,9 +1,9 @@
 {
   "kind": "node",
   "type_key": "era.sync.prepare_block_step",
-  "display_name": "准备块步进状态",
+  "display_name": "准备回退起点与单一执行状态",
   "category": "同步规划",
-  "description": "从同步上下文建立块步进的初始状态：楼层身份、块下标 0、以及该楼层起点已提交的变量与函数库。位置状态必须从已提交侧车状态出发，否则函数读到的是空世界。",
+  "description": "只定位历史分歧、准备撤销旧效果和有序楼层范围，不预先执行整楼命令。状态持有楼层起点快照、当前累计值、随机偏移、累计日志及真实提交结果；文本进度与已保存日志共同支持恢复，信息不足返回可恢复失败。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
@@ -25,12 +25,12 @@
     "params_defaults": {},
     "input_semantics": {
       "era.sync.context": [
-        "输入：同步上下文。"
+        "同步上下文"
       ]
     },
     "output_semantics": {
       "block_step_state": [
-        "输出：块步进状态。"
+        "块步进状态"
       ]
     }
   },
@@ -51,7 +51,6 @@
   ],
   "base_libs": [
     "era.service.block_step_state",
-    "era.service.message_function_calls",
     "era.service.sync_contracts",
     "era.service.sync_planning"
   ],

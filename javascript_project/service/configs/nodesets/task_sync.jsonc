@@ -5,17 +5,11 @@
     },
     {
       "path": "message_block_step.jsonc"
-    },
-    {
-      "path": "expression_engine_bridge.jsonc"
-    },
-    {
-      "path": "command_compaction.jsonc"
     }
   ],
   "type_key": "era.task.sync",
   "display_name": "ERA 同步任务",
-  "description": "运行共享同步路径，处理普通协调、full/latest/auto 修复、rollbackTo 定向同步、即时 Commit 重放与同 Scope 封存压缩。",
+  "description": "逐块处理普通同步、历史回退和 API 重放；消息写入与 Sidecar 保存统一在块循环内，尾链仅呈现和结算。本轮未完成的消息内工具调用明确失败，既有 Agent 路径保留。",
   "requires": [
     {
       "type": "era.step.request.routed",
@@ -74,14 +68,14 @@
       {
         "id": "prepare_block_step",
         "type_used": "era.sync.prepare_block_step",
-        "display_name": "准备块步进状态",
-        "description": "从已提交侧车状态与当前处理楼层建立块步进初始状态；位置状态必须从这里出发，函数与后续块才不会读到空世界。"
+        "display_name": "准备回退起点与单一执行状态",
+        "description": "只定位历史分歧、准备撤销旧效果和有序楼层范围，不预先执行整楼命令。状态持有楼层起点快照、当前累计值、随机偏移、累计日志及真实提交结果；文本进度与已保存日志共同支持恢复，信息不足返回可恢复失败。"
       },
       {
         "id": "process_message_blocks",
         "type_used": "vibeflow.loop.while",
-        "display_name": "逐块推进当前消息",
-        "description": "每个操作块各自一步：循环 body 每次只推进一个块；遇到无标记调用或整条消息处理完即结束循环，随后由收口节点决定提交还是把调用交给 Host。",
+        "display_name": "逐块执行并提交全部目标楼层",
+        "description": "每次应用一个块并保存状态、累计日志及进度；空楼、纯回退、删除清空与最后的进度清理由同一提交路径处理。done 调用跳过，无 done 调用以 ERA_FCALL_NOT_IMPLEMENTED 结束本消息且不调用工具；错误不停止永久服务。",
         "requires": [
           {
             "type": "era.sync.block.step.state",
@@ -98,7 +92,7 @@
         ],
         "loop": {
           "body": "era.sync.block_step",
-          "max_iterations": 64,
+          "max_iterations": null,
           "stop_when": {
             "from": "block_step_done",
             "equals": true
@@ -121,62 +115,8 @@
       {
         "id": "finalize_block_step",
         "type_used": "era.sync.finalize_block_step",
-        "display_name": "收口块步进工作项",
-        "description": "没有待交接调用时使用既有规划库产出的工作项；有待交接调用时把工作项声明为不提交并附带交接事实，未完成的消息既不提交也不推进连续处理状态。"
-      },
-      {
-        "id": "apply_command_compaction",
-        "type_used": "era.command_compaction.apply_sealed_layers",
-        "display_name": "按同 Scope 压缩封存事务",
-        "description": "Service 选择封存楼层，调用 Compaction 同步 AOT；作用域分段由 Compaction 负责，Service 执行 CRUD 重放确认并回填计划。"
-      },
-      {
-        "id": "assemble_expression_sync_plan",
-        "type_used": "era.sync.assemble_expression_plan",
-        "display_name": "选择同步提交分支",
-        "description": "消费已完成表达式计算和压缩的工作项，选择无提交、CRUD 结果适配或协调结果适配；不再次运行同步算法。"
-      },
-      {
-        "id": "no_sync_change",
-        "type_used": "era.sync.no_change",
-        "display_name": "结算无需提交的同步结果",
-        "description": "由 sync_result_policy 把无变化或失败工作项映射为来源回执与批次更新。空聊天清空状态按规划结果进入原提交分支。"
-      },
-      {
-        "id": "crud_write",
-        "type_used": "era.task.crud_write",
-        "display_name": "适配已计算的 CRUD 结果",
-        "description": "保留纯规划阶段已经应用的 CRUD 工作项，适配到共享提交契约；此处不重新执行指令或写入宿主。"
-      },
-      {
-        "id": "compute_reconciliation",
-        "type_used": "era.sync.compute",
-        "display_name": "适配已计算的协调结果",
-        "description": "把已有普通/full/latest/auto/rollbackTo 规划结果交给共享提交候选构造；不重复计算。"
-      },
-      {
-        "id": "build_commit_request",
-        "type_used": "era.sync.build_commit",
-        "display_name": "构造消息与 Sidecar 提交候选",
-        "description": "由 sync_commit_policy 从同步工作项构造消息写入、状态、来源依据和首次呈现意图；不执行宿主写入。"
-      },
-      {
-        "id": "validate_commit_candidate",
-        "type_used": "era.sync.validate_commit_candidate",
-        "display_name": "检查提交候选契约",
-        "description": "调用 sync_commit_policy 的原提交检查，输出有效提交请求或可结算的契约失败；保持现有判断及错误代码。"
-      },
-      {
-        "id": "build_sync_contract_failure",
-        "type_used": "era.sync.build_contract_failure",
-        "display_name": "结算未提交的契约失败",
-        "description": "由 sync_result_policy 根据原步骤来源生成失败回执；不执行写入。"
-      },
-      {
-        "id": "commit_variables",
-        "type_used": "era.tavern.variables_commit",
-        "display_name": "提交消息与 Sidecar 并确认读回",
-        "description": "保持原唯一提交顺序和 Capability 调用；sync_commit_policy 负责候选、来源依据和读回判定。记录消息写入数、Sidecar 状态与来源变化，交给结果模块结算。"
+        "display_name": "汇总实际提交结果（不再提交）",
+        "description": "仅汇总循环内实际保存结果、失败、来源变化与完成事实，输出既有提交结果信封供呈现及回执处理；不以整楼预计算替换累计值，不写消息或 Sidecar。未完成或失败消息不发布完成呈现。"
       },
       {
         "id": "present_finalized_floor",
@@ -233,22 +173,6 @@
         "to": "sidecar_binding_applied_result",
         "when": "sidecar_binding_route == 'applied'"
       },
-      {
-        "from": "assemble_expression_sync_plan",
-        "to": "no_sync_change",
-        "when": "sync_route == 'no-op'"
-      },
-      {
-        "from": "assemble_expression_sync_plan",
-        "to": "crud_write",
-        "when": "sync_route == 'crud'"
-      },
-      {
-        "from": "assemble_expression_sync_plan",
-        "to": "compute_reconciliation",
-        "when": "sync_route == 'reconcile'"
-      },
-
       [
         "prepare_block_step",
         "process_message_blocks"
@@ -259,40 +183,6 @@
       ],
       [
         "finalize_block_step",
-        "apply_command_compaction"
-      ],
-      [
-        "apply_command_compaction",
-        "assemble_expression_sync_plan"
-      ],
-      [
-        "no_sync_change",
-        "build_commit_request"
-      ],
-      [
-        "crud_write",
-        "build_commit_request"
-      ],
-      [
-        "compute_reconciliation",
-        "build_commit_request"
-      ],
-      [
-        "build_commit_request",
-        "validate_commit_candidate"
-      ],
-      {
-        "from": "validate_commit_candidate",
-        "to": "commit_variables",
-        "when": "commit_validation_route == 'valid'"
-      },
-      {
-        "from": "validate_commit_candidate",
-        "to": "build_sync_contract_failure",
-        "when": "commit_validation_route == 'failed'"
-      },
-      [
-        "commit_variables",
         "present_finalized_floor"
       ],
       [
@@ -301,10 +191,6 @@
       ],
       [
         "build_sync_notification",
-        "end"
-      ],
-      [
-        "build_sync_contract_failure",
         "end"
       ],
       [

@@ -3,124 +3,34 @@
   "type_key": "era.sync.block.step.state",
   "representation": "json",
   "display_name": "ERA·同步·块步进状态",
-  "description": "一次块步进循环的承载状态：楼层身份、块下标、是否已处理完、调用位置为止的累计变量与函数库、以及本次迭代的路由与待交接调用。循环内每迭代只推进一个块，状态随迭代携带；跨批次恢复按「从楼层起点重算」执行，因此不写入服务状态。",
+  "description": "单块工作项、已确认来源依据与最后真实提交结果。",
   "schema": {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "properties": {
-      "messageId": {
-        "type": "integer",
-        "minimum": 0
-      },
-      "mk": {
-        "type": "string"
-      },
-      "blockIndex": {
-        "type": "integer",
-        "minimum": 0
+      "work": {
+        "type": "object"
       },
       "done": {
         "type": "boolean"
       },
-      "stat": {
-        "type": "object"
-      },
-      "statFunc": {
-        "type": "object"
-      },
-      "baseStat": {
-        "type": "object"
-      },
-      "baseStatFunc": {
-        "type": "object"
-      },
-      "consecutive": {
-        "type": "object",
-        "properties": {
-          "mk": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "count": {
-            "type": "integer",
-            "minimum": 0
-          }
-        },
-        "required": [
-          "mk",
-          "count"
-        ],
-        "additionalProperties": false
-      },
-      "drawOffset": {
-        "type": "integer",
-        "minimum": 0
-      },
-      "committedPerBlock": {
-        "type": "boolean"
-      },
-      "superseded": {
-        "type": "boolean"
-      },
-      "commitFailure": {
+      "sourceBasis": {
         "type": [
           "object",
           "null"
         ]
       },
-      "executedBlockIndex": {
+      "lastResult": {
         "type": [
-          "integer",
+          "object",
           "null"
-        ],
-        "minimum": 0
-      },
-      "route": {
-        "enum": [
-          "none",
-          "invoke"
         ]
-      },
-      "handoff": {
-        "oneOf": [
-          {
-            "type": "object"
-          },
-          {
-            "type": "null"
-          }
-        ]
-      },
-      "content": {
-        "type": "string"
-      },
-      "meta": {
-        "type": "object"
-      },
-      "work": {
-        "type": "object"
       }
     },
     "required": [
-      "messageId",
-      "mk",
-      "blockIndex",
+      "work",
       "done",
-      "stat",
-      "statFunc",
-      "baseStat",
-      "baseStatFunc",
-      "consecutive",
-      "executedBlockIndex",
-      "drawOffset",
-      "committedPerBlock",
-      "route",
-      "handoff",
-      "content",
-      "meta",
-      "work"
+      "sourceBasis",
+      "lastResult"
     ],
     "additionalProperties": false
   }

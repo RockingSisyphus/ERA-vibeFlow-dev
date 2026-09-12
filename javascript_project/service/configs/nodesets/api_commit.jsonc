@@ -84,8 +84,8 @@
       {
         "id": "build_no_refresh_append",
         "type_used": "era.api.build_no_refresh_append",
-        "display_name": "构造无刷新消息追加",
-        "description": "执行构造无刷新消息追加。"
+        "display_name": "普通 API 只构造目标末尾追加",
+        "description": "保留公共操作和 scope，删除未接通的函数位置插入分支；保存生成文本所依赖的原目标版本，操作记录仍为普通 era_tx。"
       },
       {
         "id": "recheck_window_before_write",
@@ -96,14 +96,14 @@
       {
         "id": "commit_message_append",
         "type_used": "era.api.commit_facade_message",
-        "display_name": "无刷新提交 era_tx",
-        "description": "执行无刷新提交 era_tx。"
+        "display_name": "核对原目标后写入（失败可恢复）",
+        "description": "重读允许吸收无关消息新增，但必须保留并核对生成内容对应的原目标正文/Swipe及身份；目标已改变则失败，不刷新依据后覆盖。写入前及写入异常结算失败，不致命停止服务。"
       },
       {
         "id": "read_and_verify_committed_message",
         "type_used": "era.api.verify_facade_message",
-        "display_name": "回读确认独立事务",
-        "description": "执行回读确认独立事务。"
+        "display_name": "回读真实保存结果（失败可恢复）",
+        "description": "回读确认普通事务的真实保存，读回异常返回失败收据并保留恢复入口；不把失败或不确定保存报告成成功。"
       },
       {
         "id": "prepare_immediate_sync_step",

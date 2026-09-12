@@ -1,20 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { applyMessageCommands } from '../../../javascript_project/service/base_lib/domain/crud_engine';
-
 import {
-  appliedCommandPrefix,
-  advanceEraBlockSession,
-  createEraBlockCursor,
   describeEraFunctionCallBlock,
   findUnprocessedEraFunctionCalls,
-  hasAppliedBlockRecords,
   parseEraFunctionCalls,
   parseMessageBlocks,
-  renderEraFunctionCallOperationsRegion,
-  startEraBlockSession,
-  unwrapAppliedRecords,
-  wrapBlockAsAppliedRecord,
   type EraFunctionCallSite,
 } from '../../../javascript_project/service/base_lib/domain/message_function_calls';
 
@@ -85,15 +75,15 @@ describe('ERA 消息内函数调用：调用块解析', () => {
     expect(handled[0].processed).toBe(true);
   });
 
-  it('下方紧邻操作区存在时视为已处理，空操作区同样成立', () => {
+  it('下方紧邻操作区不代替 done 标记，空操作区也不代替', () => {
     const withRegion = parseEraFunctionCalls(CALL_WITH_REGION);
     const withEmptyRegion = parseEraFunctionCalls(
       '<EraFCall name="dice" id="c1"/>\n<EraFCallTx for="c1"></EraFCallTx>',
     );
 
-    expect(withRegion[0].processed).toBe(true);
+    expect(withRegion[0].processed).toBe(false);
     expect(withRegion[0].operationsRegionId).toBe('c1');
-    expect(withEmptyRegion[0].processed).toBe(true);
+    expect(withEmptyRegion[0].processed).toBe(false);
   });
 
   it('操作区不属于自己的调用块时不算已处理', () => {
@@ -176,25 +166,7 @@ describe('ERA 消息内函数调用：未处理清单与操作区渲染', () => 
   it('已处理判定由解析结果直接给出', () => {
     expect(parseEraFunctionCalls('<EraFCall name="dice" status="done"/>')[0].processed).toBe(true);
     expect(parseEraFunctionCalls('<EraFCall name="dice"/>')[0].processed).toBe(false);
-    expect(parseEraFunctionCalls(CALL_WITH_REGION)[0].processed).toBe(true);
-  });
-
-  it('渲染操作区保留作者提交含义：$expr 原样、固定值原样', () => {
-    const region = renderEraFunctionCallOperationsRegion('c1', [
-      { edit: { hp: { $expr: 'hp - 30' } } },
-      { insert: { dead: true } },
-    ]);
-
-    expect(region).toContain('<EraFCallTx for="c1">');
-    expect(region).toContain('</EraFCallTx>');
-    expect(region).toContain('<VariableEdit>');
-    expect(region).toContain('<VariableInsert>');
-    expect(region).toContain('"$expr":"hp - 30"');
-    expect(region).toContain('"dead":true');
-  });
-
-  it('无操作时渲染空操作区，作为已处理证据', () => {
-    expect(renderEraFunctionCallOperationsRegion('c1', [])).toBe('<EraFCallTx for="c1"></EraFCallTx>');
+    expect(parseEraFunctionCalls(CALL_WITH_REGION)[0].processed).toBe(false);
   });
 
   it('调用块可读描述用于诊断与展示', () => {
@@ -207,115 +179,5 @@ describe('ERA 消息内函数调用：未处理清单与操作区渲染', () => 
         }),
       ),
     ).toContain('ERA_FCALL_NAME_REQUIRED');
-  });
-});
-
-describe('ERA 消息内函数调用：提示词规则', () => {
-  it('变量操作规则必须写明调用块语法，否则模型不会产出该标签', async () => {
-    const rule = await import('../../src/ERA变量框架/initer/manual/worldbook_entries/era_var_operation_rule');
-    const content = String(rule.eraVarOperationRuleEntry.content ?? '');
-
-    expect(content).toContain('<EraFCall');
-    expect(content).toContain('args');
-    expect(content).toContain('顶层');
-  });
-});
-
-/**
- * 逐块提交的「已应用」记录（切片 1b 的记录面）。
- *
- * 凭据包住已经提交进 sidecar 的块，只在计算期间存在：还在 → 重放跳过它（否则同一变化
- * 会在下一批次生效两次）；楼层算完 → 删掉标签，原文与「从楼层起点重算」完全一致。
- */
-describe('逐块提交的已应用记录', () => {
-  // 全部用非幂等操作：重复应用会立刻反映在终值上，跳过语义才测得出来。
-  const BLOCKS = [
-    '<VariableEdit>{"hp":{"$expr":"hp-10"}}</VariableEdit>',
-    '<VariableEdit>{"hp":{"$expr":"hp-30"}}</VariableEdit>',
-    '<VariableEdit>{"hp":{"$expr":"hp-10"}}</VariableEdit>',
-  ];
-  const TEXT = BLOCKS.join('\n');
-
-  function wrap(content: string, needle: string) {
-    const start = content.indexOf(needle);
-    return wrapBlockAsAppliedRecord({
-      content,
-      start,
-      end: start + needle.length,
-      mk: 'mk-1',
-    });
-  }
-
-  /** 单独应用一个块，得到「该块之后」的已提交世界。 */
-  function afterBlock(stat: Record<string, unknown>, block: string) {
-    const applied = applyMessageCommands({
-      content: block,
-      messageId: 1,
-      initialStat: stat,
-      meta: {},
-      randomSourceKey: 'mk-1',
-      commandRange: { fromIndex: 0, toIndex: 1 },
-    });
-    return applied.finalStat as Record<string, unknown>;
-  }
-
-  function driveToDone(content: string, stat: Record<string, unknown>, blockIndex: number) {
-    let session = startEraBlockSession({
-      content,
-      messageId: 1,
-      mk: 'mk-1',
-      initialStat: stat,
-      meta: {},
-      cursor: { ...createEraBlockCursor({ messageId: 1, mk: 'mk-1' }), blockIndex, done: false },
-    });
-    let guard = 0;
-    while (!session.done && guard < 8) {
-      session = advanceEraBlockSession(session);
-      guard += 1;
-    }
-    return session;
-  }
-
-  it('包住一个块后：块数不变、该块标记为已应用、前缀计数生效', () => {
-    const wrapped = wrap(TEXT, BLOCKS[0]);
-    const blocks = parseMessageBlocks({ content: wrapped });
-
-    expect(wrapped).toContain('<era_block mk="mk-1" applied="1">');
-    // 块的数量与顺序不因包一层记录而改变（游标下标才有意义）。
-    expect(blocks).toHaveLength(3);
-    expect(blocks.map(block => block.operationsRegionApplied)).toEqual([true, false, false]);
-    expect(appliedCommandPrefix({ content: wrapped })).toBe(1);
-    expect(hasAppliedBlockRecords(wrapped)).toBe(true);
-  });
-
-  it('已提交的块不再重放：包住第一块后从已提交世界继续，终值只算一次', () => {
-    const committed = afterBlock({ hp: 100 }, BLOCKS[0]);
-    expect(committed).toEqual({ hp: 90 });
-
-    const advanced = driveToDone(wrap(TEXT, BLOCKS[0]), committed, 0);
-
-    // 从「第一块已提交」的世界继续：只应再应用 -30、-10；若重放第一块会得到 40。
-    expect(advanced.stat).toEqual({ hp: 50 });
-    expect(advanced.done).toBe(true);
-  });
-
-  it('删掉记录后与「从楼层起点重算」终值一致（锁定的等价性）', () => {
-    const plain = driveToDone(TEXT, { hp: 100 }, 0);
-    // 逐块提交的模拟：先把第一块提交出去，再从那个世界继续。
-    const committed = afterBlock({ hp: 100 }, BLOCKS[0]);
-    const incremental = driveToDone(wrap(TEXT, BLOCKS[0]), committed, 0);
-
-    expect(incremental.stat).toEqual(plain.stat);
-    expect(unwrapAppliedRecords(wrap(TEXT, BLOCKS[0]))).toBe(TEXT);
-    expect(hasAppliedBlockRecords(TEXT)).toBe(false);
-    expect(appliedCommandPrefix({ content: TEXT })).toBe(0);
-  });
-
-  it('没有 applied="1" 的容器不产生跳过语义', () => {
-    const inert = `<era_block mk="mk-1">${TEXT}</era_block>`;
-
-    expect(appliedCommandPrefix({ content: inert })).toBe(0);
-    expect(hasAppliedBlockRecords(inert)).toBe(false);
-    expect(parseMessageBlocks({ content: inert }).map(b => b.operationsRegionApplied)).toEqual([false, false, false]);
   });
 });

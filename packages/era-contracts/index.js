@@ -831,26 +831,10 @@ export function isEraDiagnosticV1(value) {
  * `syncCursor`，该楼层算完即置回 null（恢复点只在计算期间存在）。
  */
 export function isEraSyncCursorV1(value) {
-  if (value === null) return true;
-  return (
-    hasOnlyKeys(
-      value,
-      ["messageId", "mk", "blockIndex"],
-      ["stat", "statFunc", "resolvedCallIds", "done"],
-    ) &&
-    isSafeIntegerAtLeast(value.messageId, 0) &&
-    isNonEmptyString(value.mk) &&
-    isSafeIntegerAtLeast(value.blockIndex, 0) &&
-    (!Object.prototype.hasOwnProperty.call(value, "stat") ||
-      isRecord(value.stat)) &&
-    (!Object.prototype.hasOwnProperty.call(value, "statFunc") ||
-      isRecord(value.statFunc)) &&
-    (!Object.prototype.hasOwnProperty.call(value, "resolvedCallIds") ||
-      (Array.isArray(value.resolvedCallIds) &&
-        value.resolvedCallIds.length <= 64 &&
-        value.resolvedCallIds.every(isNonEmptyString))) &&
-    (!Object.prototype.hasOwnProperty.call(value, "done") ||
-      typeof value.done === "boolean")
+  return value === null || (
+    hasOnlyKeys(value, ["messageId", "mk", "blockIndex"]) &&
+    isSafeIntegerAtLeast(value.messageId, 0) && isNonEmptyString(value.mk) &&
+    isSafeIntegerAtLeast(value.blockIndex, 0)
   );
 }
 

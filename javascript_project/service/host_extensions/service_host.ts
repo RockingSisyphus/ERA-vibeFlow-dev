@@ -119,17 +119,6 @@ export interface EraTavernCapabilityAdapter {
     readonly create_error_message: EraAsyncHostOperation;
     readonly stop_native_generation: EraHostOperation;
   };
-  /**
-   * 消息内函数调用的宿主 I/O：登记、回送终态、释放会话。
-   *
-   * `release` 必须是同步操作：它只清理宿主自己的会话表；`invoke`/`result` 是异步的，
-   * 因为函数执行与等待终态都发生在宿主侧。
-   */
-  readonly functions: {
-    readonly invoke: EraAsyncHostOperation;
-    readonly result: EraAsyncHostOperation;
-    readonly release: EraHostOperation;
-  };
   readonly variables: {
     readonly read: EraAsyncHostOperation;
     readonly commit: EraAsyncHostOperation;
@@ -635,58 +624,117 @@ class ServiceHostRuntime {
         options: PortCallOptions = {},
       ) => this.invokeSuspend("variables", "commit", input, options),
     },
-    /**
-     * 消息内函数调用：登记、回送终态与释放会话。
-     *
-     * 必须与描述符 provides 一致地出现在这里：运行时会校验「声明了的能力必须由实例提供」，
-     * 少一项就会让整个生产入口启动失败（而不是只在调用时失败）。
-     */
-    "era.tavern.functions": {
-      invoke: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
-        this.invokeSuspend("functions", "invoke", input, options),
-      result: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
-        this.invokeSuspend("functions", "result", input, options),
-      release: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
-        this.invokeImmediate("functions", "release", input, options),
-    },
     "era.tavern.agent": {
-      await_native_completion: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
+      await_native_completion: (
+        input: Readonly<Record<string, unknown>>,
+        options: PortCallOptions = {},
+      ) =>
         this.invokeSuspend("agent", "await_native_completion", input, options),
-      read_context: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
-        this.invokeSuspend("agent", "read_context", input, options),
-      write_configuration: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
-        this.invokeSuspend("agent", "write_configuration", input, options),
-      capture_preset: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
-        this.invokeImmediate("agent", "capture_preset", input, options),
-      read_configuration_sources: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
-        this.invokeImmediate("agent", "read_configuration_sources", input, options),
-      read_connection_state: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
+      read_context: (
+        input: Readonly<Record<string, unknown>>,
+        options: PortCallOptions = {},
+      ) => this.invokeSuspend("agent", "read_context", input, options),
+      write_configuration: (
+        input: Readonly<Record<string, unknown>>,
+        options: PortCallOptions = {},
+      ) => this.invokeSuspend("agent", "write_configuration", input, options),
+      capture_preset: (
+        input: Readonly<Record<string, unknown>>,
+        options: PortCallOptions = {},
+      ) => this.invokeImmediate("agent", "capture_preset", input, options),
+      read_configuration_sources: (
+        input: Readonly<Record<string, unknown>>,
+        options: PortCallOptions = {},
+      ) =>
+        this.invokeImmediate(
+          "agent",
+          "read_configuration_sources",
+          input,
+          options,
+        ),
+      read_connection_state: (
+        input: Readonly<Record<string, unknown>>,
+        options: PortCallOptions = {},
+      ) =>
         this.invokeImmediate("agent", "read_connection_state", input, options),
-      upsert_connection_profile: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
-        this.invokeSuspend("agent", "upsert_connection_profile", input, options),
-      delete_connection_profile: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
-        this.invokeSuspend("agent", "delete_connection_profile", input, options),
-      clear_connection_profile_key: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
-        this.invokeSuspend("agent", "clear_connection_profile_key", input, options),
-      list_connection_models: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
+      upsert_connection_profile: (
+        input: Readonly<Record<string, unknown>>,
+        options: PortCallOptions = {},
+      ) =>
+        this.invokeSuspend(
+          "agent",
+          "upsert_connection_profile",
+          input,
+          options,
+        ),
+      delete_connection_profile: (
+        input: Readonly<Record<string, unknown>>,
+        options: PortCallOptions = {},
+      ) =>
+        this.invokeSuspend(
+          "agent",
+          "delete_connection_profile",
+          input,
+          options,
+        ),
+      clear_connection_profile_key: (
+        input: Readonly<Record<string, unknown>>,
+        options: PortCallOptions = {},
+      ) =>
+        this.invokeSuspend(
+          "agent",
+          "clear_connection_profile_key",
+          input,
+          options,
+        ),
+      list_connection_models: (
+        input: Readonly<Record<string, unknown>>,
+        options: PortCallOptions = {},
+      ) =>
         this.invokeSuspend("agent", "list_connection_models", input, options),
-      list_connection_models_draft: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
-        this.invokeSuspend("agent", "list_connection_models_draft", input, options),
-      generate: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
-        this.invokeSuspend("agent", "generate", input, options),
-      generate_story: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
-        this.invokeSuspend("agent", "generate_story", input, options),
-      inject_once: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
-        this.invokeImmediate("agent", "inject_once", input, options),
-      read_session_binding: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
+      list_connection_models_draft: (
+        input: Readonly<Record<string, unknown>>,
+        options: PortCallOptions = {},
+      ) =>
+        this.invokeSuspend(
+          "agent",
+          "list_connection_models_draft",
+          input,
+          options,
+        ),
+      generate: (
+        input: Readonly<Record<string, unknown>>,
+        options: PortCallOptions = {},
+      ) => this.invokeSuspend("agent", "generate", input, options),
+      generate_story: (
+        input: Readonly<Record<string, unknown>>,
+        options: PortCallOptions = {},
+      ) => this.invokeSuspend("agent", "generate_story", input, options),
+      inject_once: (
+        input: Readonly<Record<string, unknown>>,
+        options: PortCallOptions = {},
+      ) => this.invokeImmediate("agent", "inject_once", input, options),
+      read_session_binding: (
+        input: Readonly<Record<string, unknown>>,
+        options: PortCallOptions = {},
+      ) =>
         this.invokeImmediate("agent", "read_session_binding", input, options),
-      write_session: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
-        this.invokeImmediate("agent", "write_session", input, options),
-      clear_session: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
-        this.invokeImmediate("agent", "clear_session", input, options),
-      create_error_message: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
-        this.invokeSuspend("agent", "create_error_message", input, options),
-      stop_native_generation: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
+      write_session: (
+        input: Readonly<Record<string, unknown>>,
+        options: PortCallOptions = {},
+      ) => this.invokeImmediate("agent", "write_session", input, options),
+      clear_session: (
+        input: Readonly<Record<string, unknown>>,
+        options: PortCallOptions = {},
+      ) => this.invokeImmediate("agent", "clear_session", input, options),
+      create_error_message: (
+        input: Readonly<Record<string, unknown>>,
+        options: PortCallOptions = {},
+      ) => this.invokeSuspend("agent", "create_error_message", input, options),
+      stop_native_generation: (
+        input: Readonly<Record<string, unknown>>,
+        options: PortCallOptions = {},
+      ) =>
         this.invokeImmediate("agent", "stop_native_generation", input, options),
     },
     "era.tavern.messages": {
@@ -732,22 +780,51 @@ class ServiceHostRuntime {
       ) => this.invokeSuspend("regex", "upsert", input, options),
     },
     "era.tavern.character": {
-      patch_single_floor: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
+      patch_single_floor: (
+        input: Readonly<Record<string, unknown>>,
+        options: PortCallOptions = {},
+      ) =>
         this.invokeSuspend("character", "patch_single_floor", input, options),
       patch_external_statusbar: (
         input: Readonly<Record<string, unknown>>,
         options: PortCallOptions = {},
-      ) => this.invokeSuspend("character", "patch_external_statusbar", input, options),
-      read_greeting_refresh_context: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) => this.invokeImmediate("character", "read_greeting_refresh_context", input, options),
-      apply_greeting_refresh: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) => this.invokeSuspend("character", "apply_greeting_refresh", input, options),
+      ) =>
+        this.invokeSuspend(
+          "character",
+          "patch_external_statusbar",
+          input,
+          options,
+        ),
+      read_greeting_refresh_context: (
+        input: Readonly<Record<string, unknown>>,
+        options: PortCallOptions = {},
+      ) =>
+        this.invokeImmediate(
+          "character",
+          "read_greeting_refresh_context",
+          input,
+          options,
+        ),
+      apply_greeting_refresh: (
+        input: Readonly<Record<string, unknown>>,
+        options: PortCallOptions = {},
+      ) =>
+        this.invokeSuspend(
+          "character",
+          "apply_greeting_refresh",
+          input,
+          options,
+        ),
       read_main_greeting: (
         input: Readonly<Record<string, unknown>>,
         options: PortCallOptions = {},
-      ) => this.invokeSuspend("character", "read_main_greeting", input, options),
+      ) =>
+        this.invokeSuspend("character", "read_main_greeting", input, options),
       write_main_greeting: (
         input: Readonly<Record<string, unknown>>,
         options: PortCallOptions = {},
-      ) => this.invokeSuspend("character", "write_main_greeting", input, options),
+      ) =>
+        this.invokeSuspend("character", "write_main_greeting", input, options),
     },
     "era.tavern.identity": {
       read: (
@@ -788,12 +865,18 @@ class ServiceHostRuntime {
         input: Readonly<Record<string, unknown>>,
         options: PortCallOptions = {},
       ) => this.invokeImmediate("sidecar", "publish_snapshot", input, options),
-      create_id: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
-        this.invokeImmediate("sidecar", "create_id", input, options),
-      present_prompt: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
-        this.invokeImmediate("sidecar", "present_prompt", input, options),
-      clear_prompt: (input: Readonly<Record<string, unknown>>, options: PortCallOptions = {}) =>
-        this.invokeImmediate("sidecar", "clear_prompt", input, options),
+      create_id: (
+        input: Readonly<Record<string, unknown>>,
+        options: PortCallOptions = {},
+      ) => this.invokeImmediate("sidecar", "create_id", input, options),
+      present_prompt: (
+        input: Readonly<Record<string, unknown>>,
+        options: PortCallOptions = {},
+      ) => this.invokeImmediate("sidecar", "present_prompt", input, options),
+      clear_prompt: (
+        input: Readonly<Record<string, unknown>>,
+        options: PortCallOptions = {},
+      ) => this.invokeImmediate("sidecar", "clear_prompt", input, options),
     },
   } as const;
 
@@ -929,11 +1012,23 @@ class ServiceHostRuntime {
       [adapter.agent?.await_native_completion, "agent.await_native_completion"],
       [adapter.agent?.write_configuration, "agent.write_configuration"],
       [adapter.agent?.capture_preset, "agent.capture_preset"],
-      [adapter.agent?.list_connection_models_draft, "agent.list_connection_models_draft"],
+      [
+        adapter.agent?.list_connection_models_draft,
+        "agent.list_connection_models_draft",
+      ],
       [adapter.agent?.read_connection_state, "agent.read_connection_state"],
-      [adapter.agent?.upsert_connection_profile, "agent.upsert_connection_profile"],
-      [adapter.agent?.delete_connection_profile, "agent.delete_connection_profile"],
-      [adapter.agent?.clear_connection_profile_key, "agent.clear_connection_profile_key"],
+      [
+        adapter.agent?.upsert_connection_profile,
+        "agent.upsert_connection_profile",
+      ],
+      [
+        adapter.agent?.delete_connection_profile,
+        "agent.delete_connection_profile",
+      ],
+      [
+        adapter.agent?.clear_connection_profile_key,
+        "agent.clear_connection_profile_key",
+      ],
       [adapter.agent?.list_connection_models, "agent.list_connection_models"],
       [adapter.agent?.generate, "agent.generate"],
       [adapter.agent?.generate_story, "agent.generate_story"],
@@ -954,8 +1049,14 @@ class ServiceHostRuntime {
       [adapter.worldbook?.replace_entries, "worldbook.replace_entries"],
       [adapter.regex?.read, "regex.read"],
       [adapter.regex?.upsert, "regex.upsert"],
-      [adapter.character?.read_greeting_refresh_context, "character.read_greeting_refresh_context"],
-      [adapter.character?.apply_greeting_refresh, "character.apply_greeting_refresh"],
+      [
+        adapter.character?.read_greeting_refresh_context,
+        "character.read_greeting_refresh_context",
+      ],
+      [
+        adapter.character?.apply_greeting_refresh,
+        "character.apply_greeting_refresh",
+      ],
       [adapter.character?.read_main_greeting, "character.read_main_greeting"],
       [adapter.character?.write_main_greeting, "character.write_main_greeting"],
       [adapter.identity?.read, "identity.read"],
@@ -1597,14 +1698,17 @@ class ServiceHostRuntime {
   ): Readonly<Record<string, unknown>> {
     if (
       capability !== "agent" ||
-      (operation !== "upsert_connection_profile" && operation !== "list_connection_models_draft")
+      (operation !== "upsert_connection_profile" &&
+        operation !== "list_connection_models_draft")
     ) {
       return input;
     }
     const reference = input.keyReference;
-    if (!reference || typeof reference !== "object" || Array.isArray(reference)) return input;
+    if (!reference || typeof reference !== "object" || Array.isArray(reference))
+      return input;
     const transport = reference as Readonly<Record<string, unknown>>;
-    if (transport.kind !== "host-ref" || typeof transport.token !== "string") return input;
+    if (transport.kind !== "host-ref" || typeof transport.token !== "string")
+      return input;
     const keyProvider = this.references.resolve(transport.token);
     if (typeof keyProvider !== "function") {
       throw new EraServiceHostError(
@@ -1661,9 +1765,13 @@ class ServiceHostRuntime {
       linked.signal.addEventListener("abort", onAbort, { once: true });
       let result: unknown;
       try {
-        result = callable.call(group, this.resolveSecretReferenceInput(capability, operation, input), {
-          signal: linked.signal,
-        });
+        result = callable.call(
+          group,
+          this.resolveSecretReferenceInput(capability, operation, input),
+          {
+            signal: linked.signal,
+          },
+        );
       } catch (error) {
         finish(() => reject(error));
         return;
@@ -1817,7 +1925,10 @@ class ServiceHostRuntime {
       try {
         // lifecycle 已在上方中止；清理是 adapter 自己的资源释放，使用新的
         // 已激活 signal，避免把正常 teardown 误当成被取消的 capability 调用。
-        this.adapter.sidecar.clear_prompt({}, { signal: new AbortController().signal });
+        this.adapter.sidecar.clear_prompt(
+          {},
+          { signal: new AbortController().signal },
+        );
       } catch (error) {
         this.warn("清理 ERA Sidecar 绑定弹窗时发生异常。", {
           error: error instanceof Error ? error.message : String(error),

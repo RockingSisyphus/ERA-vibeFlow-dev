@@ -45,7 +45,7 @@ describe('facade 追加提交：写入前必须刷新依据', () => {
         'era.api.commit.rechecked': {
           value: {
             capabilityInput: {
-              messageId: 3,
+              messageId: 2,
               content: 'next',
               refresh: 'none',
               purpose: 'era-facade-commit',
@@ -100,7 +100,7 @@ describe('facade 追加提交：写入前的任何异常都不得升级为「工
         'era.api.commit.rechecked': {
           value: {
             capabilityInput: {
-              messageId: 3,
+              messageId: 2,
               content: 'next',
               sourceBasis: { identity: { characterId: 'c', chatId: 'chat', groupId: null }, messages: [] },
             },
@@ -118,7 +118,10 @@ describe('facade 追加提交：写入前的任何异常都不得升级为「工
       },
     );
 
-    const append = result.facade_commit_append_result as { status: string; observed?: { message?: string; code?: string } };
+    const append = result.facade_commit_append_result as {
+      status: string;
+      observed?: { message?: string; code?: string };
+    };
     expect(append.status).toBe('failed');
     expect(append.observed?.message).toContain('读不到当前聊天');
     expect(append.observed?.code).toBe('ERA_READ_CONTEXT_FAILED');
@@ -160,5 +163,41 @@ describe('facade 追加提交：写入前的任何异常都不得升级为「工
     expect(result.commit_readback_route).toBe('failed');
     const failure = result.facade_commit_readback_failure as { error?: { code?: string; message?: string } };
     expect(failure.error?.message).toContain('读不到当前聊天');
+  });
+});
+
+describe('API 目标版本保护', () => {
+  it.each(['text', 'swipe', 'deleted'])('等待期间目标发生 %s 改动时拒绝旧写入', async kind => {
+    const original = { schemaVersion: 1, messageId: 2, role: 'assistant', swipeIndex: 0, activeText: 'original' };
+    const changed = kind === 'text' ? { ...original, activeText: 'edited' } : { ...original, swipeIndex: 1 };
+    let writes = 0;
+    const result = await facadeAppend(
+      {
+        'era.api.commit.rechecked': {
+          value: {
+            capabilityInput: {
+              messageId: 2,
+              content: 'original + operations',
+              sourceBasis: { identity: {}, messages: [original] },
+            },
+          },
+        },
+      },
+      {},
+      {
+        capabilities: {
+          'era.tavern.messages': {
+            read_context: async () => ({ schemaVersion: 2, messages: kind === 'deleted' ? [] : [changed] }),
+            update_content: async () => {
+              writes += 1;
+              return { status: 'committed' };
+            },
+          },
+        },
+      },
+    );
+    expect(result.facade_commit_append_result.status).toBe('failed');
+    expect(result.facade_commit_append_result.observed.code).toBe('ERA_MESSAGE_WRITE_TARGET_CHANGED');
+    expect(writes).toBe(0);
   });
 });

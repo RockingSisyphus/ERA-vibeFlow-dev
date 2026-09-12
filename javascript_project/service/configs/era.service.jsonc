@@ -19,7 +19,6 @@
       "provides": [
         "vibeflow.port",
         "era.tavern.agent",
-        "era.tavern.functions",
         "era.tavern.variables",
         "era.tavern.messages",
         "era.tavern.worldbook",

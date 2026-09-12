@@ -166,10 +166,6 @@ describe('ERA contracts 1.4 canonical DTO', () => {
       messageId: 7,
       mk: 'mk-7',
       blockIndex: 2,
-      stat: { hp: 70 },
-      statFunc: {},
-      resolvedCallIds: ['c1'],
-      done: false,
     };
     const base = { consecutiveMk: 'mk-1', consecutiveProcessingCount: 2 } as const;
 

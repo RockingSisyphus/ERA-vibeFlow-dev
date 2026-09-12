@@ -30,7 +30,9 @@ interface Context {
   readonly capabilities: {
     readonly "era.tavern.messages": {
       read_context(input: Readonly<Record<string, unknown>>): Promise<unknown>;
-      update_content(input: Readonly<Record<string, unknown>>): Promise<unknown>;
+      update_content(
+        input: Readonly<Record<string, unknown>>,
+      ): Promise<unknown>;
     };
     readonly "era.tavern.identity": {
       read(input: Readonly<Record<string, unknown>>): unknown;
@@ -42,13 +44,19 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
-function envelope(inputs: Readonly<Record<string, Envelope<unknown>>>, key: string): unknown {
+function envelope(
+  inputs: Readonly<Record<string, Envelope<unknown>>>,
+  key: string,
+): unknown {
   const value = inputs[key]?.value;
   if (value === undefined) throw new TypeError(`缺少节点输入 ${key}。`);
   return value;
 }
 
-async function readMessages(context: Context, purpose: string): Promise<unknown> {
+async function readMessages(
+  context: Context,
+  purpose: string,
+): Promise<unknown> {
   return context.capabilities["era.tavern.messages"].read_context({
     projection: "era-active-message-v1",
     range: "0--1",
@@ -56,7 +64,10 @@ async function readMessages(context: Context, purpose: string): Promise<unknown>
   });
 }
 
-function identityInput(purpose: string, rawRequest: unknown): Readonly<Record<string, unknown>> {
+function identityInput(
+  purpose: string,
+  rawRequest: unknown,
+): Readonly<Record<string, unknown>> {
   if (!isRecord(rawRequest)) return { purpose };
   const detail = isRecord(rawRequest.detail) ? rawRequest.detail : {};
   return Object.prototype.hasOwnProperty.call(detail, "sourceContext")
@@ -82,7 +93,9 @@ export async function readWindowNode(
   context: any,
 ): Promise<any> {
   const request = envelope(inputs, "era.api.request");
-  const identity = context.capabilities["era.tavern.identity"].read(identityInput("era-facade-window", request));
+  const identity = context.capabilities["era.tavern.identity"].read(
+    identityInput("era-facade-window", request),
+  );
   const messages = await readMessages(context, "era-facade-window");
   return {
     facade_commit_inspected: inspectWindow(
@@ -104,7 +117,11 @@ export function validateCommitNode(inputs: any): any {
 }
 
 export function buildTransactionNode(inputs: any): any {
-  return { facade_commit_transaction: buildTransaction(envelope(inputs, "era.api.commit.validated")) };
+  return {
+    facade_commit_transaction: buildTransaction(
+      envelope(inputs, "era.api.commit.validated"),
+    ),
+  };
 }
 
 export async function readTargetNode(
@@ -115,14 +132,31 @@ export async function readTargetNode(
   const candidate = envelope(inputs, "era.api.commit.transaction");
   const messages = await readMessages(context, "era-facade-commit-target");
   const request = isRecord(candidate) ? candidate.request : null;
-  const identity = context.capabilities["era.tavern.identity"].read(identityInput("era-facade-commit-target", request));
+  const identity = context.capabilities["era.tavern.identity"].read(
+    identityInput("era-facade-commit-target", request),
+  );
   if (!isRecord(candidate)) throw new TypeError("era_tx 上下文损坏。");
-  const refreshed = inspectWindow(candidate.request, candidate.executionState as BatchExecutionStateV1, identity, messages);
-  return { facade_commit_target: { ...candidate, messages: refreshed.messages, latest: refreshed.latest } };
+  const refreshed = inspectWindow(
+    candidate.request,
+    candidate.executionState as BatchExecutionStateV1,
+    identity,
+    messages,
+  );
+  return {
+    facade_commit_target: {
+      ...candidate,
+      messages: refreshed.messages,
+      latest: refreshed.latest,
+    },
+  };
 }
 
 export function buildAppendNode(inputs: any): any {
-  return { facade_commit_append_request: buildAppend(envelope(inputs, "era.api.commit.target")) };
+  return {
+    facade_commit_append_request: buildAppend(
+      envelope(inputs, "era.api.commit.target"),
+    ),
+  };
 }
 
 export function recheckWindowNode(
@@ -132,7 +166,9 @@ export function recheckWindowNode(
 ): any {
   const append = envelope(inputs, "era.api.commit.append.request");
   const request = isRecord(append) ? append.request : null;
-  const current = context.capabilities["era.tavern.identity"].read(identityInput("era-facade-pre-write", request));
+  const current = context.capabilities["era.tavern.identity"].read(
+    identityInput("era-facade-pre-write", request),
+  );
   const result = recheckWindow(append, current);
   return {
     window_recheck_route: result.route,
@@ -146,12 +182,7 @@ export async function commitAppendNode(
   _params: any,
   context: any,
 ): Promise<any> {
-  // 写入**前**的每一步（校验、重读依据、写入）都只允许产出「失败收据」，不允许把异常抛出节点：
-  // 内核会把抛出的异常折成 `node 'commit_message_append' failed`，Host 随即判定永久工作流致命停止，
-  // 整页 ERA 停止接受新命令，其后所有门面提交都收到 `ERA_API_CANCELLED: ERA 服务宿主已停止`。
-  // 真机 `st-run-20260912T05452458-e1b1969ef725` 的 API-WRITE-001 / API-BOUND-002 等 12 条路径就是这样
-  // 成片失败的（receipt 里连 `status`/`scope`/`state.statData` 都没有，侧车停在上一次的值）。
-  // 节点输入缺失（`envelope`）仍视为接线错误照旧抛出。
+  // 消息 I/O 失败通过回执返回，不能使服务永久停止。
   const candidate = envelope(inputs, "era.api.commit.rechecked");
   try {
     if (!isRecord(candidate) || !isRecord(candidate.capabilityInput)) {
@@ -159,25 +190,57 @@ export async function commitAppendNode(
         code: "ERA_API_APPEND_CONTEXT_INVALID",
       });
     }
-    // 依据必须在**写入前**重新读一遍：这条门面命令的 window/依据可能是事件派发时捕获的
-    // （`prepared.sourceBasis`），而新楼层可能在这之后才落地——真机 STATUSBAR-EXAMPLE-020 的
-    // 自动重渲染就是这样被拒的（basis 3 条、聊天 4 条 ⇒ `message-count`）。
-    // 只刷新 messages：identity 沿用计划，目标消息的正文若也变了，宿主仍会以 `source-text` 拒绝。
-    const capabilityInput = { ...(candidate.capabilityInput as Record<string, unknown>) };
-    const plannedBasis = isRecord(capabilityInput.sourceBasis) ? capabilityInput.sourceBasis : null;
+    const capabilityInput = {
+      ...(candidate.capabilityInput as Record<string, unknown>),
+    };
+    const plannedBasis = isRecord(capabilityInput.sourceBasis)
+      ? capabilityInput.sourceBasis
+      : null;
     if (plannedBasis !== null) {
-      // 宿主契约是 `EraTavernMessageContextV2`：`{ schemaVersion: 2, messages }`（见
-      // `base_lib/facade_api_engine.messagesFrom`）。这里曾经写 `Array.isArray(fresh)`，
-      // 而 `read_context` **从不**返回裸数组 ⇒ 判空恒真、依据其实一次都没被刷新过；
-      // 单测喂的是裸数组，于是把这个恒假分支一直当成通过。
       const fresh = await readMessages(context, "era-facade-append");
-      if (isRecord(fresh) && Array.isArray(fresh.messages)) {
-        capabilityInput.sourceBasis = { ...plannedBasis, messages: fresh.messages };
+      if (
+        !isRecord(fresh) ||
+        !Array.isArray(fresh.messages) ||
+        !Array.isArray(plannedBasis.messages)
+      ) {
+        throw new TypeError("消息写入依据不是有效的消息投影。");
       }
+      const targetId = capabilityInput.messageId;
+      const original = plannedBasis.messages.find(
+        (message: unknown) =>
+          isRecord(message) && message.messageId === targetId,
+      );
+      const current = fresh.messages.find(
+        (message: unknown) =>
+          isRecord(message) && message.messageId === targetId,
+      );
+      // 只吸收无关楼层的新事实，目标版本始终使用构造写入内容时的依据。
+      if (
+        !isRecord(original) ||
+        !isRecord(current) ||
+        original.activeText !== current.activeText ||
+        (original.swipeIndex ?? 0) !== (current.swipeIndex ?? 0) ||
+        original.role !== current.role
+      ) {
+        throw Object.assign(new Error("API 等待期间目标消息已改变。"), {
+          code: "ERA_MESSAGE_WRITE_TARGET_CHANGED",
+        });
+      }
+      capabilityInput.sourceBasis = {
+        ...plannedBasis,
+        messages: fresh.messages,
+      };
     }
-    const observed = await context.capabilities["era.tavern.messages"].update_content(capabilityInput);
-    const accepted = isRecord(observed) &&
-      (observed.ok === true || ["committed", "completed", "success"].includes(String(observed.status)));
+    const observed =
+      await context.capabilities["era.tavern.messages"].update_content(
+        capabilityInput,
+      );
+    const accepted =
+      isRecord(observed) &&
+      (observed.ok === true ||
+        ["committed", "completed", "success"].includes(
+          String(observed.status),
+        ));
     return {
       facade_commit_append_result: accepted
         ? { status: "committed", context: candidate, observed }
@@ -189,7 +252,8 @@ export async function commitAppendNode(
     // 「capability 'era.tavern.messages.update_content' failed」这种无信息量的包装，
     // 真机 STATUSBAR-EXAMPLE-020 的 `ERA_API_MESSAGE_APPEND_FAILED` 就是这样失去线索的。
     const unwrapped =
-      error !== null && typeof error === "object" &&
+      error !== null &&
+      typeof error === "object" &&
       (error as { code?: unknown }).code === "VF_CAPABILITY_FAILED" &&
       (error as { cause?: unknown }).cause !== undefined
         ? (error as { cause: unknown }).cause
@@ -199,9 +263,11 @@ export async function commitAppendNode(
         status: "failed",
         context: isRecord(candidate) ? candidate : null,
         observed: {
-          message: unwrapped instanceof Error ? unwrapped.message : String(unwrapped),
-          ...(unwrapped !== null && typeof unwrapped === "object" &&
-              typeof (unwrapped as { code?: unknown }).code === "string"
+          message:
+            unwrapped instanceof Error ? unwrapped.message : String(unwrapped),
+          ...(unwrapped !== null &&
+          typeof unwrapped === "object" &&
+          typeof (unwrapped as { code?: unknown }).code === "string"
             ? { code: (unwrapped as { code: string }).code }
             : {}),
         },
@@ -223,7 +289,8 @@ export async function verifyCommitNode(
     messages = await readMessages(context, "era-facade-post-commit");
   } catch (error) {
     const unwrapped =
-      error !== null && typeof error === "object" &&
+      error !== null &&
+      typeof error === "object" &&
       (error as { code?: unknown }).code === "VF_CAPABILITY_FAILED" &&
       (error as { cause?: unknown }).cause !== undefined
         ? (error as { cause: unknown }).cause
@@ -236,7 +303,10 @@ export async function verifyCommitNode(
         route: "failed",
         context: isRecord(append) ? (append.context ?? append) : append,
         error: {
-          code: typeof detail.code === "string" ? detail.code : "ERA_API_MESSAGE_READBACK_FAILED",
+          code:
+            typeof detail.code === "string"
+              ? detail.code
+              : "ERA_API_MESSAGE_READBACK_FAILED",
           message:
             unwrapped instanceof Error
               ? unwrapped.message
@@ -255,8 +325,11 @@ export async function verifyCommitNode(
 }
 
 export function prepareCommitSyncNode(inputs: any): any {
-  const prepared = prepareCommitSync(envelope(inputs, "era.api.commit.verified"));
-  const executionState = prepared.context.executionState as BatchExecutionStateV1;
+  const prepared = prepareCommitSync(
+    envelope(inputs, "era.api.commit.verified"),
+  );
+  const executionState = prepared.context
+    .executionState as BatchExecutionStateV1;
   const nextExecutionState: BatchExecutionStateV1 = {
     ...executionState,
     nextState: {
@@ -282,24 +355,38 @@ export function committedReceiptNode(inputs: any): any {
 }
 
 export function skippedReceiptNode(inputs: any): any {
-  return { facade_commit_skipped_result: buildSkippedResult(envelope(inputs, "era.api.commit.validated")) };
+  return {
+    facade_commit_skipped_result: buildSkippedResult(
+      envelope(inputs, "era.api.commit.validated"),
+    ),
+  };
 }
 
 export function commitFailureNode(inputs: any): any {
-  return { facade_commit_failed_result: buildFailureResult(envelope(inputs, "era.api.commit.failure_context")) };
+  return {
+    facade_commit_failed_result: buildFailureResult(
+      envelope(inputs, "era.api.commit.failure_context"),
+    ),
+  };
 }
 
 export function mergeCommitNode(inputs: any): any {
   const input = inputs["era.api.commit.result"];
-  const values = Array.isArray(input) ? input.map((item) => item.value) : [input?.value];
-  return { commit_result: mergeExclusiveResults(values.filter(Boolean) as EraTaskResultV1[]) };
+  const values = Array.isArray(input)
+    ? input.map((item) => item.value)
+    : [input?.value];
+  return {
+    commit_result: mergeExclusiveResults(
+      values.filter(Boolean) as EraTaskResultV1[],
+    ),
+  };
 }
 
 export function planSyncNode(inputs: any): any {
   const planned = planFacadeSync(envelope(inputs, "era.api.request"));
   return {
     facade_sync_route: planned.route,
-    facade_sync_step: isRecord(planned) ? planned.syncStep ?? null : null,
+    facade_sync_step: isRecord(planned) ? (planned.syncStep ?? null) : null,
     facade_sync_context: planned,
     facade_sync_execution_state: envelope(inputs, "era.batch.execution.state"),
   };
@@ -315,17 +402,33 @@ export function adaptSyncNode(inputs: any): any {
 }
 
 export function syncFailureNode(inputs: any): any {
-  return { facade_sync_failed_result: buildSyncFailure(envelope(inputs, "era.api.sync.context")) };
+  return {
+    facade_sync_failed_result: buildSyncFailure(
+      envelope(inputs, "era.api.sync.context"),
+    ),
+  };
 }
 
 export function mergeSyncNode(inputs: any): any {
   const input = inputs["era.api.sync.result"];
-  const values = Array.isArray(input) ? input.map((item) => item.value) : [input?.value];
-  return { sync_result: mergeExclusiveResults(values.filter(Boolean) as EraTaskResultV1[]) };
+  const values = Array.isArray(input)
+    ? input.map((item) => item.value)
+    : [input?.value];
+  return {
+    sync_result: mergeExclusiveResults(
+      values.filter(Boolean) as EraTaskResultV1[],
+    ),
+  };
 }
 
 export function mergeFacadeNode(inputs: any): any {
   const input = inputs["era.api.facade.result"];
-  const values = Array.isArray(input) ? input.map((item) => item.value) : [input?.value];
-  return { api_task_result: mergeExclusiveResults(values.filter(Boolean) as EraTaskResultV1[]) };
+  const values = Array.isArray(input)
+    ? input.map((item) => item.value)
+    : [input?.value];
+  return {
+    api_task_result: mergeExclusiveResults(
+      values.filter(Boolean) as EraTaskResultV1[],
+    ),
+  };
 }

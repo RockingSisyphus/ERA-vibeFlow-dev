@@ -147,17 +147,6 @@ export interface EraTavernAdapter {
     read_main_greeting(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
     write_main_greeting(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
   };
-  /**
-   * 消息内函数调用的宿主能力：登记、执行与释放作者注册的工具。
-   *
-   * 契约来自 Service 侧登记的 era.tavern.functions：invoke 只表示「已受理」，
-   * 不表示函数已完成；终态由 result 回送，函数失败以返回值表达而不是抛异常。
-   */
-  readonly functions: {
-    invoke(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
-    result(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
-    release(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
-  };
   readonly identity: {
     read(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
   };

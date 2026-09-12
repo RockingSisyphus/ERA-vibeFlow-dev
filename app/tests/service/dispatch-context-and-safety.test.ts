@@ -744,12 +744,7 @@ describe('同步阶段输入归属', () => {
       /* @vite-ignore */ new URL('../../../javascript_project/service/nodes/sync/read_sync_context.ts', import.meta.url)
         .href
     );
-    const prepareRequest = await import(
-      /* @vite-ignore */ new URL(
-        '../../../javascript_project/service/nodes/sync/prepare_expression_command_request.ts',
-        import.meta.url,
-      ).href
-    );
+    const { prepareSyncPlanningInput } = await import('../../../javascript_project/service/base_lib/sync_planning');
     const step = { ...syncStep(), dispatchContext: { status: 'ready', messages: [] } };
     const batch = state(step);
     const stored = { SidecarId: 'fixture' };
@@ -764,9 +759,7 @@ describe('同步阶段输入归属', () => {
     expect(read.sync_context.consecutive).toEqual({ mk: 'mk-existing', count: 4 });
     expect(read.sync_context).not.toHaveProperty('state');
     batch.nextState.consecutiveProcessingCount = 99;
-    const request = prepareRequest.run({
-      'era.sync.context': { value: { ...read.sync_context, sidecarBinding: { temporary: true } } },
-    }).expression_command_request;
+    const request = prepareSyncPlanningInput({ ...read.sync_context, sidecarBinding: { temporary: true } } as any);
     expect(request.consecutive).toEqual({ mk: 'mk-existing', count: 4 });
     expect(Object.keys(request).sort()).toEqual([
       'consecutive',

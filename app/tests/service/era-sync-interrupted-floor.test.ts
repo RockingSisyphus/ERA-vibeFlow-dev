@@ -142,7 +142,7 @@ describe('被中断楼层：重算窗口、重放前缀与日志累积', () => {
       messages: [message(1, 'mk-1', text)],
       stat: first.stat,
       statFunc: {},
-      meta: { SelectedMks: [], EditLogs: {}, FunctionEditLogs: {} },
+      meta: { SelectedMks: ['mk-1'], EditLogs: { 'mk-1': first.editLog }, FunctionEditLogs: { 'mk-1': [] } },
       reason: 'manual',
       processingMk: 'mk-1',
       consecutiveState: null,

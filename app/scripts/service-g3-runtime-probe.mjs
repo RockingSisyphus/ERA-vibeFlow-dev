@@ -7,7 +7,10 @@ import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const generatedModuleUrl = new URL('../../generated/era-service/workflow.js', import.meta.url);
-const reportUrl = new URL('../../reports/service-g3-runtime.json', import.meta.url);
+const reportArgument = process.argv.indexOf('--report');
+const reportUrl = reportArgument >= 0
+  ? pathToFileURL(resolve(process.argv[reportArgument + 1]))
+  : new URL('../../reports/service-g3-runtime.json', import.meta.url);
 
 /**
  * 生成的 Service workflow 位于仓库根目录，而它的 browser runtime 依赖属于

@@ -32,8 +32,6 @@ const EVENT_UI_UPDATE_SETTINGS = "era.ui.update_settings";
 const EVENT_UI_SIDECAR_BINDING_CHOICE = "era.ui.sidecar_binding_choice";
 const EVENT_UI_AGENT_CONFIGURATION = "era.ui.agent_configuration";
 const EVENT_UI_AGENT_RETRY = "era.ui.agent_retry";
-/** Host 在步骤之外执行完函数后，用该内部事件让 Service 恢复同一条消息。 */
-const EVENT_MESSAGE_INVOKE_CONTINUE = "era.message.invoke_continue";
 
 export type EventGroup =
   | "INIT"
@@ -151,7 +149,6 @@ export function getInputEvents() {
     UI_SIDECAR_BINDING_CHOICE: EVENT_UI_SIDECAR_BINDING_CHOICE,
     UI_AGENT_CONFIGURATION: EVENT_UI_AGENT_CONFIGURATION,
     UI_AGENT_RETRY: EVENT_UI_AGENT_RETRY,
-    MESSAGE_INVOKE_CONTINUE: EVENT_MESSAGE_INVOKE_CONTINUE,
   } as const;
 }
 
@@ -172,7 +169,6 @@ export function getEventGroups() {
       EVENT_MANUAL_SYNC,
       EVENT_MANUAL_FULL_SYNC,
       EVENT_UI_SIDECAR_BINDING_CHOICE,
-      EVENT_MESSAGE_INVOKE_CONTINUE,
     ],
     API: getApiEventTypes(),
     UPDATE_MK_ONLY: [EVENT_MESSAGE_SENT],
@@ -192,7 +188,6 @@ export function getListenedEventTypes(): readonly string[] {
     EVENT_UI_AGENT_CONFIGURATION,
     EVENT_UI_AGENT_RETRY,
     "era.agent.stage_continue",
-    EVENT_MESSAGE_INVOKE_CONTINUE,
     EVENT_MANUAL_WRITE,
     EVENT_MESSAGE_RECEIVED,
     EVENT_MESSAGE_DELETED,
@@ -228,16 +223,13 @@ export function getEventDefinition(
       collectionWindowMs: 0,
     };
   }
-  if (
-    eventType === EVENT_UI_SIDECAR_BINDING_CHOICE ||
-    eventType === EVENT_MESSAGE_INVOKE_CONTINUE
-  ) {
+  if (eventType === EVENT_UI_SIDECAR_BINDING_CHOICE) {
     return {
       type: eventType,
       group: "SYNC",
       listenerOrder: "normal",
       awaitMode: "detached",
-      // 恢复事件是 Host 在函数结束后发出的定向恢复：不得再被收集窗口合并或延迟。
+      // Sidecar 绑定选择直接进入同步派发，不等待事件收集窗口。
       collectionWindowMs: 0,
     };
   }

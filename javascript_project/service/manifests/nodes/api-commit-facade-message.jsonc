@@ -1,9 +1,9 @@
 {
   "kind": "node",
   "type_key": "era.api.commit_facade_message",
-  "display_name": "无刷新提交 era_tx",
+  "display_name": "核对原目标后写入（失败可恢复）",
   "category": "公共 Facade",
-  "description": "每次调用独立写入且不刷新 iframe。",
+  "description": "重读允许吸收无关消息新增，但必须保留并核对生成内容对应的原目标正文/Swipe及身份；目标已改变则失败，不刷新依据后覆盖。写入前及写入异常结算失败，不致命停止服务。",
   "version": "1.0.0",
   "flow_kind": "io",
   "contract": {
@@ -25,12 +25,12 @@
     "params_defaults": {},
     "input_semantics": {
       "era.api.commit.rechecked": [
-        "输入：era.api.commit.rechecked。"
+        "era.api.commit.rechecked"
       ]
     },
     "output_semantics": {
       "facade_commit_append_result": [
-        "输出：facade_commit_append_result。"
+        "facade_commit_append_result"
       ]
     }
   },
@@ -55,6 +55,7 @@
     {
       "id": "era.tavern.messages",
       "operations": [
+        "read_context",
         "update_content"
       ]
     }

@@ -1,9 +1,9 @@
 {
   "kind": "node",
   "type_key": "era.sync.finalize_block_step",
-  "display_name": "收口块步进工作项",
+  "display_name": "汇总实际提交结果（不再提交）",
   "category": "同步规划",
-  "description": "块步进循环结束后产出下游消费的同步工作项：没有待交接调用时交给既有规划库；有待交接调用时把工作项声明为不提交并附带交接事实，未完成的消息因此既不提交也不推进连续处理状态。",
+  "description": "仅汇总循环内实际保存结果、失败、来源变化与完成事实，输出既有提交结果信封供呈现及回执处理；不以整楼预计算替换累计值，不写消息或 Sidecar。未完成或失败消息不发布完成呈现。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
@@ -11,34 +11,26 @@
       {
         "type": "era.sync.block.step.state.next",
         "cardinality": "exactly_one",
-        "display_name": "块步进后状态"
+        "display_name": "执行后的状态与实际提交结果"
       }
     ],
     "provides": [
       {
-        "key": "expression_command_result",
-        "type": "era.expression.command.result",
-        "display_name": "表达式命令结果"
-      },
-      {
-        "key": "function_invocation_route",
-        "type": "era.sync.function.invocation.route",
-        "display_name": "函数调用路由"
+        "key": "completed_sync_result",
+        "type": "era.tavern.commit.result",
+        "display_name": "已发生提交的汇总结果"
       }
     ],
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
       "era.sync.block.step.state.next": [
-        "输入：块步进后状态（含预规划工作项）。"
+        "执行后的状态与实际提交结果"
       ]
     },
     "output_semantics": {
-      "expression_command_result": [
-        "输出：表达式命令结果。"
-      ],
-      "function_invocation_route": [
-        "输出：函数调用路由。"
+      "completed_sync_result": [
+        "已发生提交的汇总结果"
       ]
     }
   },

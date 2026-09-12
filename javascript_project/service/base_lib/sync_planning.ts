@@ -23,6 +23,7 @@ import {
   type EraSyncPlanV1,
   type EraSyncMessageUpdateV1,
   planEraSync,
+  prepareEraSync,
 } from "./domain/sync_engine.ts";
 
 export function messageArray(value: unknown, depth = 0): readonly unknown[] {
@@ -179,7 +180,11 @@ export function payloadFor(
 }
 
 /** 从两个 Capability 读取结果生成唯一、无副作用的同步工作项。 */
-export function planSyncWork(context: SyncPlanningInput): SyncWorkV1 {
+export function planSyncWork(
+  context: SyncPlanningInput,
+  prepareOnly = false,
+): SyncWorkV1 {
+  const planner = prepareOnly ? prepareEraSync : planEraSync;
   const step = assertSyncStep(context.step);
   if (context.status === "failed") {
     return {
@@ -229,7 +234,7 @@ export function planSyncWork(context: SyncPlanningInput): SyncWorkV1 {
     const meta = cloneSyncJson(metaCandidate);
     const messages = messageArray(context.messagesRaw).map(normalizeMessage);
     if (messages.length === 0) {
-      const plan = planEraSync({
+      const plan = planner({
         messages: [],
         stat,
         statFunc,
@@ -292,7 +297,7 @@ export function planSyncWork(context: SyncPlanningInput): SyncWorkV1 {
     );
     const planned = applyDispatchStatePolicy(
       normalizePlan(
-        planEraSync({
+        planner({
           messages: preparedMessages,
           stat,
           statFunc,

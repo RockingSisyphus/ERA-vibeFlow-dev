@@ -40,20 +40,8 @@ export type TaskStateUpdateV1 = EraTaskStateUpdateV1;
 /** 一步一块处理中，跨批次携带的块游标。不保存整条消息，只保存续做所需最小状态。 */
 export interface EraSyncCursorV1 {
   readonly messageId: number;
-  /** 楼层稳定 MK；恢复时按它核对楼层身份。 */
   readonly mk: string;
   readonly blockIndex: number;
-  /**
-   * 该楼层起点累计到当前块的变量状态。
-   *
-   * 必须是对象而不是 `unknown`：契约 schema 把该字段描述为对象，生成的 ABI 类型
-   * 也只接受对象；用 `unknown` 会在 `exactOptionalPropertyTypes` 下无法赋给契约类型。
-   */
-  readonly stat?: Readonly<Record<string, unknown>>;
-  readonly statFunc?: Readonly<Record<string, unknown>>;
-  /** 调用方已处理但文本尚未写回的调用标识。 */
-  readonly resolvedCallIds?: readonly string[];
-  readonly done?: boolean;
 }
 
 export interface EraServiceStateV1 {
@@ -104,8 +92,14 @@ export interface CollectionReductionV1 {
   readonly throughSequence: number | null;
 }
 
-type ContractExecuteStepV1 = Extract<ContractPlannedStepV1, { readonly kind: "execute" }>;
-type ContractIgnoreStepV1 = Extract<ContractPlannedStepV1, { readonly kind: "ignore" }>;
+type ContractExecuteStepV1 = Extract<
+  ContractPlannedStepV1,
+  { readonly kind: "execute" }
+>;
+type ContractIgnoreStepV1 = Extract<
+  ContractPlannedStepV1,
+  { readonly kind: "ignore" }
+>;
 export type PlannedStepV1 =
   | (ContractExecuteStepV1 & { readonly dispatchContext?: unknown })
   | ContractIgnoreStepV1;

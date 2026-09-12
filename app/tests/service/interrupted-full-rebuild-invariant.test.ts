@@ -52,7 +52,7 @@ describe('被中断楼层：回退覆盖到该楼层后不得再跳过已应用�
     expect(plan.stat).toEqual({ repair_player: { hp: 18, score: 8 } });
   });
 
-  it('真·续做（前缀效果仍在基线、无日志）仍要跳过已提交前缀', () => {
+  it('旧中间产物缺少日志时报告恢复问题，不猜测起点', () => {
     const prefix =
       '<era_block mk="mk-1" applied="1"><VariableEdit>{"repair_player":{"hp":{"$expr":"repair_player.hp + 1"}}}</VariableEdit></era_block>';
     const suffix = '<VariableEdit>{"repair_player":{"score":8}}</VariableEdit>';
@@ -68,7 +68,10 @@ describe('被中断楼层：回退覆盖到该楼层后不得再跳过已应用�
       consecutiveState: { mk: null, count: 0 },
     } as never);
 
-    if (plan.status === 'failed') throw new Error(plan.error.message);
-    expect(plan.stat).toEqual({ repair_player: { hp: 18, score: 8 } });
+    expect(plan.status).toBe('failed');
+    expect(plan).toMatchObject({
+      error: { code: 'ERA_SYNC_PROGRESS_UNRECOVERABLE' },
+      stat: { repair_player: { hp: 18, score: 0 } },
+    });
   });
 });

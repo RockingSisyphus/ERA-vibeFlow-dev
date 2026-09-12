@@ -1,4 +1,8 @@
-import { type EraSyncCursorV1, type PlannedStepV1, type TaskResultV1 } from "./service_types.ts";
+import {
+  type EraSyncCursorV1,
+  type PlannedStepV1,
+  type TaskResultV1,
+} from "./service_types.ts";
 import {
   assertSyncStep,
   type SyncFailureV1,
@@ -8,9 +12,6 @@ import {
   type SyncCommitResultV1,
 } from "./sync_contracts.ts";
 import { type EraSyncPlanV1 } from "./domain/sync_engine.ts";
-
-/** Host 收到后必须在步骤之外执行函数，再以 `era.message.invoke_continue` 恢复。 */
-export const MESSAGE_FUNCTION_INVOKE_REQUIRED = "era.message.invoke_required";
 
 export function sourceKey(eventId: string, sequence: number): string {
   return `${eventId}\u0000${sequence}`;
@@ -64,33 +65,6 @@ export function stateUpdateForPlan(
         consecutiveProcessingCount: next.count,
         ...withCursor,
       };
-}
-
-/**
- * 把工作项上的交接与附加通知投影为 Host 后置通知。
- *
- * 函数交接必须走既有的 notification 通道：它只在新批次里恢复，不能占用当前
- * FIFO，也不能凭空多出第二套回调口。
- */
-function handoffNotification(handoff: SyncWorkV1["handoff"]) {
-  return handoff === undefined
-    ? []
-    : [
-        {
-          type: MESSAGE_FUNCTION_INVOKE_REQUIRED,
-          args: [{ kind: "json" as const, value: handoff as never }],
-        },
-      ];
-}
-
-function notificationsForWork(work: SyncWorkV1) {
-  return [
-    ...handoffNotification(work.handoff),
-    ...(work.notifications ?? []).map((item) => ({
-      type: item.type,
-      args: item.args.map((value) => ({ kind: "json" as const, value: value as never })),
-    })),
-  ];
 }
 
 export function settlementsFor(
@@ -158,7 +132,10 @@ export function buildSyncNonCommitResult(work: SyncWorkV1): TaskResultV1 {
   // 逐块提交的楼层由循环体写入，尾链只剩「结算 + 把续做点/连续处理事实交回批次状态」：
   // 工作项带 `syncCursor` 时，即使它声明不提交，也必须把游标（含显式 null = 楼层算完、
   // 清空续做点）投影成任务状态更新。plan 为空时没有连续处理事实可发布，保持原样。
-  const carriesCursor = Object.prototype.hasOwnProperty.call(work, "syncCursor");
+  const carriesCursor = Object.prototype.hasOwnProperty.call(
+    work,
+    "syncCursor",
+  );
   const presents =
     Object.prototype.hasOwnProperty.call(work, "initialPresentation") &&
     (work.initialPresentation ?? null) !== null;
@@ -169,11 +146,13 @@ export function buildSyncNonCommitResult(work: SyncWorkV1): TaskResultV1 {
   return {
     status,
     settlements: settlementsFor(work.step, status, work.failure),
-    notifications: notificationsForWork(work),
+    notifications: [],
     diagnostics,
     ...(cursorUpdate === undefined ? {} : { stateUpdate: cursorUpdate }),
     // 收尾呈现意图随结果往下传；呈现节点对「非提交但带意图」的结果也刷新一次。
-    ...(presents ? { initialPresentation: work.initialPresentation ?? null } : {}),
+    ...(presents
+      ? { initialPresentation: work.initialPresentation ?? null }
+      : {}),
   };
 }
 
@@ -230,18 +209,23 @@ export function buildSyncCommittedResult(
   ];
   // 只有请求里真的带了游标键才更新它：`syncCursor: null` 是「楼层算完、清空续做点」，
   // 而完全没有这个键是「本次不涉及游标」，两者语义不同。
-  const carriesCursor = Object.prototype.hasOwnProperty.call(outcome, "syncCursor");
+  const carriesCursor = Object.prototype.hasOwnProperty.call(
+    outcome,
+    "syncCursor",
+  );
   const stateUpdate = stateUpdateForPlan(
     outcome.plan,
-    carriesCursor ? outcome.syncCursor ?? null : undefined,
+    carriesCursor ? (outcome.syncCursor ?? null) : undefined,
   );
   return {
     status: outcome.status,
     settlements: settlementsFor(outcome.step, outcome.status, outcome.failure),
     // 交接提交也走提交分支，因此交接通知必须由这里发出；否则函数不会被执行，
     // 工作流会停在调用块上永不前进。
-    notifications: handoffNotification(outcome.handoff),
+    notifications: [],
     diagnostics,
-    ...(outcome.sourceChanged || stateUpdate === undefined ? {} : { stateUpdate }),
+    ...(outcome.sourceChanged || stateUpdate === undefined
+      ? {}
+      : { stateUpdate }),
   };
 }

@@ -1,4 +1,11 @@
-import { consecutiveFacts, assertSyncStep, errorMessage, isCancellation, syncFailure, type SyncContextV1 } from "../../base_lib/sync_contracts.ts";
+import {
+  consecutiveFacts,
+  assertSyncStep,
+  errorMessage,
+  isCancellation,
+  syncFailure,
+  type SyncContextV1,
+} from "../../base_lib/sync_contracts.ts";
 
 interface Envelope<T> {
   readonly value: T;
@@ -17,7 +24,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * 让恢复退回「从楼层起点重算」这条安全路径，而不是拿半个游标去续做。
  */
 function batchSyncCursor(value: unknown): SyncContextV1["syncCursor"] {
-  const nextState = isRecord(value) && isRecord(value.nextState) ? value.nextState : null;
+  const nextState =
+    isRecord(value) && isRecord(value.nextState) ? value.nextState : null;
   if (nextState === null) return null;
   const cursor = nextState.syncCursor;
   if (cursor === null || cursor === undefined) return null;
@@ -32,12 +40,6 @@ function batchSyncCursor(value: unknown): SyncContextV1["syncCursor"] {
     messageId: Number(messageId),
     mk,
     blockIndex: Number(blockIndex),
-    ...(isRecord(cursor.stat) ? { stat: cursor.stat } : {}),
-    ...(isRecord(cursor.statFunc) ? { statFunc: cursor.statFunc } : {}),
-    ...(Array.isArray(cursor.resolvedCallIds)
-      ? { resolvedCallIds: cursor.resolvedCallIds.filter((id): id is string => typeof id === "string") }
-      : {}),
-    ...(typeof cursor.done === "boolean" ? { done: cursor.done } : {}),
   };
 }
 
@@ -53,18 +55,29 @@ export async function run(
   const batchState = inputs["era.batch.execution.state"].value;
   const consecutive = consecutiveFacts(batchState);
   const syncCursor = batchSyncCursor(batchState);
-  const dispatchContext = isRecord(step.dispatchContext) ? step.dispatchContext : null;
+  const dispatchContext = isRecord(step.dispatchContext)
+    ? step.dispatchContext
+    : null;
   let variablesRaw: unknown = null;
-  const messagesRaw = dispatchContext === null
-    ? null
-    : { schemaVersion: 2, messages: dispatchContext.messages };
+  const messagesRaw =
+    dispatchContext === null
+      ? null
+      : { schemaVersion: 2, messages: dispatchContext.messages };
   try {
     if (dispatchContext?.status !== "ready") {
-      throw new TypeError(String(isRecord(dispatchContext?.failure) ? dispatchContext.failure.message : "统一派发上下文不可用。"));
+      throw new TypeError(
+        String(
+          isRecord(dispatchContext?.failure)
+            ? dispatchContext.failure.message
+            : "统一派发上下文不可用。",
+        ),
+      );
     }
     // 此处只读取聊天中的 Sidecar 指针和旧状态迁移来源。后续 Nodeset 负责
     // 读取 V2 文件并以其状态替换 variablesRaw，生产同步不再直接读取 chat state。
-    variablesRaw = await context.capabilities["era.tavern.sidecar"].read_current({});
+    variablesRaw = await context.capabilities[
+      "era.tavern.sidecar"
+    ].read_current({});
     const result: SyncContextV1 = {
       schemaVersion: 1,
       step,

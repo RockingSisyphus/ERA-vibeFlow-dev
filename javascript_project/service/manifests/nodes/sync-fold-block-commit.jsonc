@@ -1,9 +1,9 @@
 {
   "kind": "node",
   "type_key": "era.sync.fold_block_commit",
-  "display_name": "折回逐块提交结果",
+  "display_name": "折回实际保存结果与循环终止状态",
   "category": "同步规划",
-  "description": "从提交结果里读回随请求搬运的块步进状态并折回；提交未成功时抛类型化错误。",
+  "description": "保存成功后推进状态、日志及进度；提交失败保留已成功块并返回任务级失败，来源变化作废原目标。最后完成清进度后才能标楼层完成；继续下一受影响楼层或结束。循环终止事实必须来自提交之后。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
@@ -18,19 +18,27 @@
       {
         "key": "folded_block_step_state",
         "type": "era.sync.block.step.state.next",
-        "display_name": "块步进后状态"
+        "display_name": "实际保存后的执行状态"
+      },
+      {
+        "key": "block_step_done",
+        "type": "era.step.done",
+        "display_name": "保存后是否结束本次执行"
       }
     ],
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
       "era.tavern.commit.result": [
-        "输入：逐块提交结果（带回随请求搬运的块步进状态）。"
+        "逐块提交结果"
       ]
     },
     "output_semantics": {
       "folded_block_step_state": [
-        "输出：折回后的下一个块步进状态。"
+        "实际保存后的执行状态"
+      ],
+      "block_step_done": [
+        "保存后是否结束本次执行"
       ]
     }
   },
@@ -50,7 +58,8 @@
   ],
   "base_libs": [
     "era.service.block_step_state",
-    "era.service.sync_contracts"
+    "era.service.sync_contracts",
+    "era.service.sync_commit_policy"
   ],
   "capabilities": []
 }

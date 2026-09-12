@@ -432,8 +432,6 @@ function operationRuleContent(): string {
   const relativeRules = `    - **数值表达式更新**: 仅在需要基于已有变量计算时，把目标值写成只含 \`$expr\` 的对象，例如 \`{"hp":{"$expr":"hp - damage"}}\`。普通数值仍是直接赋值。
     - \`a\` 读取当前消息内已经更新后的 a；\`@a\` 读取本条消息开始时的 a。表达式结果与被引用变量都必须是有限数字。
     - 可先用 \`<FunctionInsert>\`、\`<FunctionEdit>\`、\`<FunctionDelete>\` 管理纯函数库；\`f(x)\` 使用当前函数，\`@f(x)\` 使用本消息开始时函数闭包。
-    - **函数调用块**: 需要调用角色卡作者预先注册的工具时，在正文中按出现位置写出自闭合的 \`<EraFCall name="工具名" args='{"参数":"值"}'/>\`；\`name\` 必填，\`args\` 是 JSON 对象，省略时为 \`{}\`。调用块与其他指令块同级，**只允许出现在顶层**，不得嵌在其它标签内部。
-    - 已经带有 \`status="done"\` 或其下方已有操作区的调用块表示已处理，禁止重复输出。
     - 禁止输出 \`$inc\`、\`$mul\`、\`$div\`、\`$sub\`、\`$set\` 及 \`"+=2"\`、\`"-=2"\`、\`"*=2"\`、\`"/=2"\`；旧运算对象会被跳过，字符串仍只是普通字符串。`;
   return baselineOperationRuleContent()
     .replace(

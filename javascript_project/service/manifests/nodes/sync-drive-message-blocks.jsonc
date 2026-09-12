@@ -1,9 +1,9 @@
 {
   "kind": "node",
   "type_key": "era.sync.drive_message_blocks",
-  "display_name": "推进一个消息块",
+  "display_name": "应用下一块或准备楼层维护",
   "category": "同步规划",
-  "description": "按块推进当前处理楼层，每次只推进一个块：从承载状态恢复流程、执行下一个块、返回下一个状态。遇到无标记 <EraFCall/> 时把路由置为 invoke 并把交接事实（楼层、块下标、调用标识、参数、该位置累计状态）写入状态，本节点不执行函数、也不提交任何状态。",
+  "description": "复用纯块应用语义，独立携带消息起点变量/函数及连续随机偏移；done 仅按标签判断，旧 EraFCallTx 只作普通记录容器。无 done 调用返回 ERA_FCALL_NOT_IMPLEMENTED，不改 done，不处理后续块。准备楼层完成清进度、纯回退和空聊天所需的维护写入。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
@@ -16,29 +16,21 @@
     ],
     "provides": [
       {
-        "key": "block_step_state_next",
+        "key": "block_step_pending",
         "type": "era.sync.block.step.pending",
-        "display_name": "块步进后状态"
-      },
-      {
-        "key": "block_step_done",
-        "type": "era.step.done",
-        "display_name": "本次块驱动结束"
+        "display_name": "待提交状态或本次失败"
       }
     ],
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
       "era.sync.block.step.state": [
-        "输入：块步进状态。"
+        "块步进状态"
       ]
     },
     "output_semantics": {
-      "block_step_state_next": [
-        "输出：块步进后状态。"
-      ],
-      "block_step_done": [
-        "输出：本次块驱动结束。"
+      "block_step_pending": [
+        "待提交状态或本次失败"
       ]
     }
   },
@@ -59,10 +51,8 @@
   ],
   "base_libs": [
     "era.service.block_step_state",
-    "era.service.message_function_flow",
-    "era.crud.engine",
-    "era.service.message_function_calls",
-    "era.service.sync_contracts"
+    "era.service.sync_contracts",
+    "era.service.sync_engine"
   ],
   "capabilities": []
 }

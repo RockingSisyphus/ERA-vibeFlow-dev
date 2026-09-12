@@ -5,19 +5,12 @@
  * 和消息文本更新，不读取或写入 Tavern。候选实现的 Host IO 与通知顺序不在本模块内。
  */
 
+import { applyMessageCommands } from "./crud_engine.ts";
 import {
-  applyMessageCommands,
-  type EraCrudDiagnostic,
-  type EraCrudEditLog,
-  type EraFunctionEditLog,
-} from "./crud_engine.ts";
-import {
-  appliedCommandPrefix,
-  appliedRecordDrawOffset,
+  parseMessageBlocks,
   hasAppliedBlockRecords,
-  startEraBlockSession,
-  advanceEraBlockSession,
-  type EraFunctionCallSite,
+  unwrapAppliedRecords,
+  wrapBlockAsAppliedRecord,
 } from "./message_function_calls.ts";
 import {
   ensureMessageKey,
@@ -38,7 +31,11 @@ import {
 } from "./command_compaction_marker.ts";
 
 export type EraSyncReasonV1 =
-  "history-changed" | "edited" | "swipe-regeneration" | "manual" | "facade-commit";
+  | "history-changed"
+  | "edited"
+  | "swipe-regeneration"
+  | "manual"
+  | "facade-commit";
 
 export interface EraActionsTakenV1 {
   readonly rollback: boolean;
@@ -110,14 +107,6 @@ export interface EraSealedCompactionCandidateV1 {
   readonly traditionalToSimplified: boolean;
 }
 
-/** 一条被重算楼层的起步世界（已回退旧版本效果）。 */
-export interface EraMessageLayerStartV1 {
-  readonly messageIndex: number;
-  readonly mk: string;
-  readonly stat: Readonly<Record<string, unknown>>;
-  readonly statFunc: Readonly<Record<string, unknown>>;
-}
-
 export type EraSyncPlanV1 =
   | {
       readonly kind: "sync";
@@ -139,7 +128,7 @@ export type EraSyncPlanV1 =
        * 可能还含有这条楼层**旧版本**的效果（换 swipe / 重新生成 / 编辑）。从已提交状态起步，
        * 新版本的 `insert` 会被「键已存在」挡掉，提交出去的仍是旧分支（真机 UI-SWIPE-001 实测）。
        */
-      readonly messageLayerStarts: readonly EraMessageLayerStartV1[];
+      readonly execution?: EraSyncExecutionV1 | null;
       readonly rollback: {
         readonly applied: boolean;
         readonly fromMk: string | null;
@@ -162,7 +151,6 @@ export type EraSyncPlanV1 =
       readonly messageUpdates: readonly [];
       readonly sealedCompactionCandidates: readonly [];
       readonly recalculatedMessageIndexes: readonly [];
-      readonly messageLayerStarts: readonly [];
       readonly rollback: {
         readonly applied: false;
         readonly fromMk: null;
@@ -377,7 +365,11 @@ function firstUncompactedSealedAssistant(
     )
       continue;
     const content = readMkMessageText(message);
-    if (!/<((?:Variable|Function)(?:Insert|Edit|Delete))>\s*[\s\S]*?<\/\1>/iu.test(content))
+    if (
+      !/<((?:Variable|Function)(?:Insert|Edit|Delete))>\s*[\s\S]*?<\/\1>/iu.test(
+        content,
+      )
+    )
       continue;
     const mk = readMessageKey(message);
     const marker = mk === null ? null : markers[mk];
@@ -416,7 +408,9 @@ function tightenToAppliedRecords(
  * 这类楼层是被中断的：sidecar 里的 stat 停在它算到一半的位置，因此**必须**从它开始重算，
  * 否则「中断楼层 + 之后又来了新楼层」会让它永远算不完（常规分歧点落在它后面）。
  */
-function firstAppliedRecordFloor(messages: readonly EraMkMessageV1[]): number | null {
+function firstAppliedRecordFloor(
+  messages: readonly EraMkMessageV1[],
+): number | null {
   for (let index = 0; index < messages.length; index += 1) {
     const message = messages[index];
     if (message === undefined || message.content.kind !== "text") continue;
@@ -524,7 +518,6 @@ function failedPlan(
     messageUpdates: [],
     sealedCompactionCandidates: [],
     recalculatedMessageIndexes: [],
-    messageLayerStarts: [],
     rollback: { applied: false, fromMk: null, toMk: null },
     actionsTaken: createSyncActionsTaken(input.reason, false),
     consecutiveProcessingCount: consecutive.count,
@@ -534,8 +527,8 @@ function failedPlan(
   };
 }
 
-/** 生成一次完整的声明式同步计划和候选等价最终 JSON。 */
-export function planEraSync(input: EraSyncInputV1): EraSyncPlanV1 {
+/** 定位历史分歧并撤销旧效果，建立尚未应用命令的逐块执行状态。 */
+export function prepareEraSync(input: EraSyncInputV1): EraSyncPlanV1 {
   if (input.messages.length === 0) {
     const emptyMeta = metaWith(input.meta, [], {}, {});
     return {
@@ -550,7 +543,6 @@ export function planEraSync(input: EraSyncInputV1): EraSyncPlanV1 {
       messageUpdates: [],
       sealedCompactionCandidates: [],
       recalculatedMessageIndexes: [],
-      messageLayerStarts: [],
       rollback: { applied: false, fromMk: null, toMk: null },
       actionsTaken: createSyncActionsTaken(input.reason, true),
       consecutiveProcessingCount: null,
@@ -615,7 +607,6 @@ export function planEraSync(input: EraSyncInputV1): EraSyncPlanV1 {
       messageUpdates: [],
       sealedCompactionCandidates: [],
       recalculatedMessageIndexes: [],
-      messageLayerStarts: [],
       rollback: { applied: false, fromMk: null, toMk: null },
       actionsTaken: createSyncActionsTaken(input.reason, true),
       consecutiveProcessingCount: consecutive.count,
@@ -634,6 +625,35 @@ export function planEraSync(input: EraSyncInputV1): EraSyncPlanV1 {
   let rollbackFromMk: string | null = null;
   let rollbackToMk: string | null = null;
   try {
+    // 旧版本可能已写累计日志却未把中断楼层登记到 SelectedMks；有完整日志时仍能撤回。
+    for (const message of [...input.messages].reverse()) {
+      const mk = readMessageKey(message);
+      if (
+        mk === null ||
+        oldSelectedMks.includes(mk) ||
+        !hasAppliedBlockRecords(readMkMessageText(message))
+      )
+        continue;
+      if (
+        !Object.hasOwn(editLogsOf(input.meta), mk) ||
+        !Object.hasOwn(functionEditLogsOf(input.meta), mk)
+      )
+        continue;
+      statForRecalc = rollbackStatToMK(
+        null,
+        mk,
+        statForRecalc,
+        [mk],
+        editLogsOf(input.meta),
+      );
+      statFuncForRecalc = rollbackFunctionsToMK(
+        null,
+        mk,
+        statFuncForRecalc,
+        [mk],
+        functionEditLogsOf(input.meta),
+      );
+    }
     if (firstRecalcId > -1 && firstRecalcId < oldSelectedMks.length) {
       const currentMk = oldSelectedMks[oldSelectedMks.length - 1];
       const targetMk =
@@ -642,7 +662,7 @@ export function planEraSync(input: EraSyncInputV1): EraSyncPlanV1 {
         statForRecalc = rollbackStatToMK(
           targetMk,
           currentMk,
-          input.stat,
+          statForRecalc,
           oldSelectedMks,
           editLogsOf(input.meta),
         );
@@ -668,178 +688,42 @@ export function planEraSync(input: EraSyncInputV1): EraSyncPlanV1 {
     );
   }
 
-  const messages = cloneMessages(input.messages);
-  const newSelectedMks = oldSelectedMks.slice(0, firstRecalcId);
-  const editLogs = editLogsOf(input.meta);
-  const functionEditLogs = functionEditLogsOf(input.meta);
-  const messageUpdates: EraSyncMessageUpdateV1[] = [];
-  const sealedCompactionCandidates: EraSealedCompactionCandidateV1[] = [];
-  const recalculatedMessageIndexes: number[] = [];
-  const messageLayerStarts: EraMessageLayerStartV1[] = [];
-  const diagnostics: EraSyncDiagnosticV1[] = [];
-
-  for (let index = firstRecalcId; index < messages.length; index += 1) {
-    if (input.stopAtTarget && index > firstRecalcId) break;
-    const ensured = ensureMessageKey(
-      messages[index],
-      input.mkSeedsByIndex?.[index] ?? undefined,
-    );
-    if ("reason" in ensured) {
-      newSelectedMks[index] = null;
-      diagnostics.push({
-        code:
-          ensured.status === "seed-required"
-            ? "ERA_SYNC_MK_SEED_REQUIRED"
-            : "ERA_SYNC_MESSAGE_INVALID",
-        message: ensured.reason,
-        messageIndex: index,
-      });
-      continue;
-    }
-    messages[index] = ensured.message;
-    if (ensured.textUpdate !== null) {
-      messageUpdates.push({
-        ...ensured.textUpdate,
-        messageIndex: index,
-        mk: ensured.mk,
-      });
-    }
-
-    const contextMeta = metaWith(
-      input.meta,
-      newSelectedMks.slice(0, index),
-      editLogs,
-      functionEditLogs,
-    );
-    const layerStartStat = cloneSnapshotValue(statForRecalc);
-    const layerStartFunctions = cloneSnapshotValue(statFuncForRecalc) as Record<
-      string,
-      unknown
-    >;
-    const floorText = readMkMessageText(ensured.message);
-    // 这条楼层若还留着「已应用」记录，说明它是被中断的：已提交的块构成指令序列的前缀，
-    // 重放必须从该前缀之后开始（sidecar 的 stat 已经包含它们）。同一条记录也要求下面的
-    // EditLogs **追加**而不是覆盖，否则回退会漏掉已提交块的日志。
-    const appliedPrefix = appliedCommandPrefix({ content: floorText });
-    const interrupted = hasAppliedBlockRecords(floorText);
-    // 「已应用前缀」到底还在不在本次重放的基线里，取决于**回退有没有把它撤掉**：
-    // 只有该楼层 MK 的 EditLog 存在（回退才能撤掉它），前缀效果才会离开基线。
-    //   - 有日志 ⇒ 回退已撤掉前缀 ⇒ 必须从指令 0 重放（否则前缀效果丢失：真机
-    //     SIDECAR-BIND-014 的 `history-changed` 全量重建就是这样把 score 丢成 0 的）；
-    //   - 无日志（真·续做：块级中途提交只写旧 meta，不记录自己的日志）⇒ 前缀效果仍在基线里
-    //     ⇒ 仍要跳过前缀，否则会把已提交的块算第二遍。
-    const loggedForFloor = parseEditLog(editLogs[ensured.mk]);
-    // 回退是否**覆盖到这条楼层**：只有覆盖到、且它自己记了日志，前缀效果才会被撤出基线。
-    const floorIndexInSelection = oldSelectedMks.indexOf(ensured.mk);
-    const rollbackTargetIndex =
-      rollbackToMk === null ? -1 : oldSelectedMks.indexOf(rollbackToMk);
-    const coveredByRollback =
-      rollbackApplied && floorIndexInSelection >= 0 && rollbackTargetIndex < floorIndexInSelection;
-    const prefixKeptInBaseline =
-      interrupted && (loggedForFloor.length === 0 || !coveredByRollback);
-    const applied = applyMessageCommands({
-      content: floorText,
-      messageId: ensured.message.messageId,
-      initialStat: layerStartStat,
-      initialStatFunc: layerStartFunctions,
-      randomSourceKey: ensured.mk,
-      meta: contextMeta,
-      traditionalToSimplified: input.traditionalToSimplified,
-      ...(prefixKeptInBaseline && appliedPrefix > 0
-        ? {
-            commandRange: {
-              fromIndex: appliedPrefix,
-              toIndex: Number.MAX_SAFE_INTEGER,
-            },
-            // 抽取序列必须接着已提交块继续，否则续做与整楼重放的随机值不同、终值不等价。
-            randomDrawOffset: appliedRecordDrawOffset(floorText),
-          }
-        : {}),
-    });
-    messageLayerStarts.push({
-      messageIndex: index,
-      mk: ensured.mk,
-      stat: cloneSnapshotValue(layerStartStat) as Record<string, unknown>,
-      statFunc: cloneSnapshotValue(layerStartFunctions) as Record<
-        string,
-        unknown
-      >,
-    });
-    statForRecalc = applied.finalStat;
-    statFuncForRecalc = cloneSnapshotValue(
-      applied.finalStatFunc ?? statFuncForRecalc,
-    ) as Record<string, unknown>;
-    diagnostics.push(
-      ...applied.diagnostics.map((diagnostic) => ({
-        code: diagnostic.code,
-        message: diagnostic.message,
-        messageIndex: index,
-        path: diagnostic.path,
-      })),
-    );
-    const alreadyLogged = loggedForFloor;
-    // 只有「前缀仍在基线里」时才追加：那种情况下本次重放只算了后缀，日志必须补在后缀上。
-    // 前缀被回退撤掉时本次重放的是**整条楼层**，日志就该整体覆盖。
-    const effectiveEditLog = prefixKeptInBaseline
-      ? [...alreadyLogged, ...cloneSnapshotValue(applied.editLog)]
-      : cloneSnapshotValue(applied.editLog);
-    const alreadyLoggedFunctions = parseEditLog(
-      functionEditLogs[ensured.mk],
-    ) as readonly EraFunctionEditLog[];
-    const effectiveFunctionEditLog = prefixKeptInBaseline
-      ? [
-          ...alreadyLoggedFunctions,
-          ...cloneSnapshotValue(applied.functionEditLog ?? []),
-        ]
-      : cloneSnapshotValue(applied.functionEditLog ?? []);
-    // An assistant floor becomes immutable only after a later assistant message
-    // exists. The last floor stays verbatim so streaming/API writers can finish
-    // their command sequence before it is ever canonicalised.
-    const hasLaterAssistant = messages
-      .slice(index + 1)
-      .some((item) => item.role === "assistant");
+  // 旧中间产物缺少累计回退日志时无法确定楼层起点，交回恢复入口。
+  for (const message of input.messages) {
+    const text = readMkMessageText(message);
+    const mk = readMessageKey(message);
     if (
-      hasLaterAssistant &&
-      applied.diagnostics.length === 0 &&
-      !commandCompactionMarkerIsCurrent(
-        commandCompactionMarkersOf(input.meta)[ensured.mk],
-        ensured.mk,
-        readMkMessageText(ensured.message),
-        newSelectedMks.slice(0, index),
-      )
+      hasAppliedBlockRecords(text) &&
+      (mk === null ||
+        !Object.hasOwn(editLogsOf(input.meta), mk) ||
+        !Object.hasOwn(functionEditLogsOf(input.meta), mk))
     ) {
-      sealedCompactionCandidates.push({
-        messageId: ensured.message.messageId,
-        messageIndex: index,
-        mk: ensured.mk,
-        layerStartStat: cloneSnapshotValue(layerStartStat),
-        layerStartStatFunc: cloneSnapshotValue(layerStartFunctions) as Record<string, unknown>,
-        layerEndStat: cloneSnapshotValue(applied.finalStat),
-        layerEndStatFunc: cloneSnapshotValue(applied.finalStatFunc ?? layerStartFunctions) as Record<string, unknown>,
-        eraMeta: cloneSnapshotValue(contextMeta) as Record<string, unknown>,
-        traditionalToSimplified: input.traditionalToSimplified ?? false,
-      });
+      return failedPlan(
+        input,
+        divergence,
+        consecutive,
+        "ERA_SYNC_PROGRESS_UNRECOVERABLE",
+        "中断楼层缺少完整累计日志，无法确定其起点状态。",
+      );
     }
-    defineOwn(editLogs, ensured.mk, effectiveEditLog);
-    defineOwn(functionEditLogs, ensured.mk, effectiveFunctionEditLog);
-    newSelectedMks[index] = ensured.mk;
-    recalculatedMessageIndexes.push(index);
   }
-
-  const finalMeta = metaWith(input.meta, newSelectedMks, editLogs, functionEditLogs);
   return {
     kind: "sync",
     status: "recalculated",
     committed: true,
     divergence,
-    stat: cloneSnapshotValue(statForRecalc),
-    statFunc: cloneSnapshotValue(statFuncForRecalc),
-    meta: finalMeta,
-    messages,
-    messageUpdates,
-    sealedCompactionCandidates,
-    recalculatedMessageIndexes,
-    messageLayerStarts,
+    stat: statForRecalc,
+    statFunc: statFuncForRecalc,
+    meta: metaWith(
+      input.meta,
+      oldSelectedMks.slice(0, firstRecalcId),
+      editLogsOf(input.meta),
+      functionEditLogsOf(input.meta),
+    ),
+    messages: cloneMessages(input.messages),
+    messageUpdates: [],
+    sealedCompactionCandidates: [],
+    recalculatedMessageIndexes: [],
     rollback: {
       applied: rollbackApplied,
       fromMk: rollbackFromMk,
@@ -848,106 +732,297 @@ export function planEraSync(input: EraSyncInputV1): EraSyncPlanV1 {
     actionsTaken: createSyncActionsTaken(input.reason, true),
     consecutiveProcessingCount: consecutive.count,
     nextConsecutiveState: consecutive.state,
-    diagnostics,
+    diagnostics: [],
+    execution: {
+      messageIndex: firstRecalcId,
+      endIndex: input.stopAtTarget ? firstRecalcId + 1 : input.messages.length,
+      blockIndex: 0,
+      randomDrawOffset: 0,
+      floorStarted: false,
+      layerStartStat: statForRecalc,
+      layerStartStatFunc: statFuncForRecalc,
+      mkSeedsByIndex: input.mkSeedsByIndex ?? [],
+      traditionalToSimplified: input.traditionalToSimplified ?? false,
+    },
   };
 }
 
-
-/** 一步一块重放的可续做检查点：只保存续做所需的最小状态。 */
-export interface EraMessageReplayCheckpoint {
+/** 可序列化的计算缓存；持久化权威是提交后的状态、累计日志和消息进度。 */
+export interface EraSyncExecutionV1 {
   readonly messageIndex: number;
+  readonly endIndex: number;
   readonly blockIndex: number;
-  readonly stat: unknown;
-  readonly statFunc: Readonly<Record<string, unknown>>;
-  readonly meta: Readonly<Record<string, unknown>>;
-  readonly done?: boolean;
-  /** 调用方已处理但文本尚未写回的调用标识。 */
-  readonly resolvedCallIds?: readonly string[];
+  readonly randomDrawOffset: number;
+  readonly floorStarted: boolean;
+  readonly layerStartStat: unknown;
+  readonly layerStartStatFunc: Readonly<Record<string, unknown>>;
+  readonly mkSeedsByIndex: readonly (EraMkSeedV1 | null)[];
+  readonly traditionalToSimplified: boolean;
 }
 
-export interface EraMessageReplayBlockInput {
-  readonly message: EraMkMessageV1;
-  readonly messageIndex: number;
-  readonly messageId: number;
-  readonly mk: string;
-  readonly checkpoint: EraMessageReplayCheckpoint;
-  /** 正式同步为 true；只读与试算为 false。 */
-  readonly formal?: boolean;
-  readonly traditionalToSimplified?: boolean;
-  /** 调用方已把上一次的调用写回文本时传 true，清除待调用后按标识跳过它。 */
-  readonly resolvePendingCall?: boolean;
-}
-
-export interface EraMessageReplayBlockResult {
-  readonly checkpoint: EraMessageReplayCheckpoint;
+export interface EraSyncBlockResultV1 {
+  readonly plan: EraSyncPlanV1;
   readonly done: boolean;
-  readonly executedBlockIndexes: readonly number[];
-  readonly stat: unknown;
-  readonly statFunc?: Readonly<Record<string, unknown>>;
-  readonly editLog: readonly EraCrudEditLog[];
-  readonly functionEditLog: readonly EraFunctionEditLog[];
-  readonly pendingCall: EraFunctionCallSite | null;
-  readonly diagnostics: readonly EraCrudDiagnostic[];
+  readonly failure: { readonly code: string; readonly message: string } | null;
+  readonly messageIndex: number | null;
 }
 
-/**
- * 按块重放一条消息的一步。
- *
- * 与 `applyMessageCommands` 的重放使用同一套块解析与执行语义，区别只在于每次
- * 只推进一个块并把续做状态交回调用方，因此可以跨步骤、跨 FIFO 事件续做。
- */
-export function replayMessageBlock(
-  input: EraMessageReplayBlockInput,
-): EraMessageReplayBlockResult {
-  const session = startEraBlockSession({
-    content: readMkMessageText(input.message),
-    messageId: input.messageId,
-    mk: input.mk,
-    initialStat: input.checkpoint.stat,
-    initialStatFunc: input.checkpoint.statFunc,
-    meta: input.checkpoint.meta,
-    randomSourceKey: input.mk,
-    traditionalToSimplified: input.traditionalToSimplified ?? false,
-    formal: input.formal ?? true,
-    ...(input.checkpoint.resolvedCallIds === undefined
-      ? {}
-      : { resolvedCallIds: input.checkpoint.resolvedCallIds }),
-    cursor: {
-      messageId: input.messageId,
-      mk: input.mk,
-      blockIndex: input.checkpoint.blockIndex,
-      done: input.checkpoint.done ?? false,
+/** 正式推进和纯历史计算共用的单块语义；正式入口只多记录文本进度。 */
+export function advanceEraSyncBlock(
+  plan: EraSyncPlanV1,
+  formal = true,
+): EraSyncBlockResultV1 {
+  if (plan.status === "failed" || !plan.execution)
+    return { plan, done: true, failure: null, messageIndex: null };
+  let execution = plan.execution;
+  const index = execution.messageIndex;
+  if (index >= execution.endIndex)
+    return {
+      plan: { ...plan, execution: null },
+      done: true,
+      failure: null,
+      messageIndex: null,
+    };
+  const messages = cloneMessages(plan.messages);
+  const ensured = ensureMessageKey(
+    messages[index],
+    execution.mkSeedsByIndex[index] ?? undefined,
+  );
+  if ("reason" in ensured) {
+    const selected = selectedMksOf(plan.meta).slice();
+    selected[index] = null;
+    execution = {
+      ...execution,
+      messageIndex: index + 1,
+      blockIndex: 0,
+      floorStarted: false,
+    };
+    const done = execution.messageIndex >= execution.endIndex;
+    return {
+      plan: {
+        ...plan,
+        meta: metaWith(
+          plan.meta,
+          selected,
+          editLogsOf(plan.meta),
+          functionEditLogsOf(plan.meta),
+        ),
+        messageUpdates: [],
+        sealedCompactionCandidates: [],
+        diagnostics: [
+          ...plan.diagnostics,
+          {
+            code:
+              ensured.status === "seed-required"
+                ? "ERA_SYNC_MK_SEED_REQUIRED"
+                : "ERA_SYNC_MESSAGE_INVALID",
+            message: ensured.reason,
+            messageIndex: index,
+          },
+        ],
+        execution: done ? null : execution,
+      },
+      done,
+      failure: null,
+      messageIndex: index,
+    };
+  }
+  let text = readMkMessageText(ensured.message);
+  const editLogs = editLogsOf(plan.meta);
+  const functionEditLogs = functionEditLogsOf(plan.meta);
+  const selected = selectedMksOf(plan.meta).slice();
+  if (!execution.floorStarted) {
+    // 已撤销旧效果后从原文重算；临时标记不能代替回退日志。
+    text = unwrapAppliedRecords(text);
+    execution = {
+      ...execution,
+      floorStarted: true,
+      blockIndex: 0,
       randomDrawOffset: 0,
-      editLog: [],
-      functionEditLog: [],
-    },
+      layerStartStat: cloneSnapshotValue(plan.stat),
+      layerStartStatFunc: cloneSnapshotValue(plan.statFunc),
+    };
+    defineOwn(editLogs, ensured.mk, []);
+    defineOwn(functionEditLogs, ensured.mk, []);
+  }
+  const blocks = parseMessageBlocks({
+    content: text,
+    traditionalToSimplified: execution.traditionalToSimplified,
   });
-
-  const advanced =
-    input.resolvePendingCall === true
-      ? advanceEraBlockSession(
-          advanceEraBlockSession(session, { resolvePendingCall: true }),
-          {},
-        )
-      : advanceEraBlockSession(session);
-
+  const block = blocks[execution.blockIndex];
+  if (
+    block?.kind === "call" &&
+    !block.call.nested &&
+    !block.call.processed &&
+    formal
+  ) {
+    return {
+      plan,
+      done: true,
+      messageIndex: index,
+      failure: {
+        code: "ERA_FCALL_NOT_IMPLEMENTED",
+        message: `消息 #${ensured.message.messageId} 位置 ${block.start} 的 EraFCall ${block.call.name ?? "?"} 尚未实现。${block.call.diagnostics.map((d) => d.message).join(" ")}`,
+      },
+    };
+  }
+  let stat = plan.stat;
+  let statFunc = plan.statFunc;
+  const diagnostics = [...plan.diagnostics];
+  if (block?.kind === "command") {
+    const ordinal = blocks
+      .slice(0, execution.blockIndex)
+      .filter((b) => b.kind === "command").length;
+    const applied = applyMessageCommands({
+      content: text,
+      messageId: ensured.message.messageId,
+      initialStat: stat,
+      initialStatFunc: statFunc,
+      messageStartStat: execution.layerStartStat,
+      messageStartStatFunc: execution.layerStartStatFunc,
+      meta: metaWith(
+        plan.meta,
+        selected.slice(0, index),
+        editLogs,
+        functionEditLogs,
+      ),
+      randomSourceKey: ensured.mk,
+      randomDrawOffset: execution.randomDrawOffset,
+      commandRange: { fromIndex: ordinal, toIndex: ordinal + 1 },
+      traditionalToSimplified: execution.traditionalToSimplified,
+    });
+    stat = applied.finalStat;
+    statFunc = applied.finalStatFunc ?? statFunc;
+    defineOwn(editLogs, ensured.mk, [
+      ...parseEditLog(editLogs[ensured.mk]),
+      ...applied.editLog,
+    ]);
+    defineOwn(functionEditLogs, ensured.mk, [
+      ...parseEditLog(functionEditLogs[ensured.mk]),
+      ...(applied.functionEditLog ?? []),
+    ]);
+    diagnostics.push(
+      ...applied.diagnostics.map((d) => ({ ...d, messageIndex: index })),
+    );
+    execution = {
+      ...execution,
+      randomDrawOffset:
+        applied.nextRandomDrawOffset ?? execution.randomDrawOffset,
+    };
+    if (formal)
+      text = wrapBlockAsAppliedRecord({
+        content: text,
+        start: block.start,
+        end: block.end,
+        mk: ensured.mk,
+        draws: execution.randomDrawOffset,
+      });
+  }
+  if (formal && block?.kind === "call" && !block.call.nested) {
+    text = wrapBlockAsAppliedRecord({
+      content: text,
+      start: block.start,
+      end: block.end,
+      mk: ensured.mk,
+      draws: execution.randomDrawOffset,
+    });
+  }
+  const floorDone = block === undefined;
+  if (floorDone) text = unwrapAppliedRecords(text);
+  messages[index] = { ...ensured.message, content: { kind: "text", text } };
+  selected[index] = ensured.mk;
+  const meta = metaWith(plan.meta, selected, editLogs, functionEditLogs);
+  const candidates: EraSealedCompactionCandidateV1[] = [];
+  if (
+    floorDone &&
+    messages.slice(index + 1).some((m) => m.role === "assistant") &&
+    !diagnostics.some((d) => d.messageIndex === index) &&
+    !commandCompactionMarkerIsCurrent(
+      commandCompactionMarkersOf(meta)[ensured.mk],
+      ensured.mk,
+      text,
+      selected.slice(0, index),
+    )
+  ) {
+    candidates.push({
+      messageId: ensured.message.messageId,
+      messageIndex: index,
+      mk: ensured.mk,
+      layerStartStat: execution.layerStartStat,
+      layerStartStatFunc: execution.layerStartStatFunc,
+      layerEndStat: stat,
+      layerEndStatFunc: statFunc,
+      eraMeta: metaWith(
+        meta,
+        selected.slice(0, index),
+        editLogs,
+        functionEditLogs,
+      ),
+      traditionalToSimplified: execution.traditionalToSimplified,
+    });
+  }
+  execution = floorDone
+    ? {
+        ...execution,
+        messageIndex: index + 1,
+        blockIndex: 0,
+        randomDrawOffset: 0,
+        floorStarted: false,
+      }
+    : { ...execution, blockIndex: execution.blockIndex + 1 };
+  const done = execution.messageIndex >= execution.endIndex;
   return {
-    checkpoint: {
-      messageIndex: input.messageIndex,
-      blockIndex: advanced.cursor.blockIndex,
-      stat: advanced.stat,
-      statFunc: advanced.statFunc ?? input.checkpoint.statFunc,
-      meta: input.checkpoint.meta,
-      done: advanced.done,
-      resolvedCallIds: advanced.resolvedCallIds,
+    plan: {
+      ...plan,
+      stat,
+      statFunc,
+      meta,
+      messages,
+      diagnostics,
+      messageUpdates: [
+        {
+          kind: "update-message-content",
+          messageId: ensured.message.messageId,
+          messageIndex: index,
+          mk: ensured.mk,
+          content: { kind: "text", text },
+        },
+      ],
+      sealedCompactionCandidates: candidates,
+      recalculatedMessageIndexes: floorDone
+        ? [...plan.recalculatedMessageIndexes, index]
+        : plan.recalculatedMessageIndexes,
+      execution: done ? null : execution,
     },
-    done: advanced.done,
-    executedBlockIndexes: advanced.executedBlockIndexes,
-    stat: advanced.stat,
-    ...(advanced.statFunc === undefined ? {} : { statFunc: advanced.statFunc }),
-    editLog: advanced.editLog,
-    functionEditLog: advanced.functionEditLog,
-    pendingCall: advanced.pendingCall,
-    diagnostics: advanced.diagnostics,
+    done,
+    failure: null,
+    messageIndex: index,
+  };
+}
+
+/** 只读入口仅折叠同一块应用器，不写消息、不调用作者函数。 */
+export function planEraSync(input: EraSyncInputV1): EraSyncPlanV1 {
+  let plan = prepareEraSync(input);
+  const updates: EraSyncMessageUpdateV1[] = [];
+  const candidates: EraSealedCompactionCandidateV1[] = [];
+  while (plan.status !== "failed" && plan.execution) {
+    const step = advanceEraSyncBlock(plan, false);
+    plan = step.plan;
+    updates.push(...plan.messageUpdates);
+    candidates.push(...plan.sealedCompactionCandidates);
+  }
+  if (plan.status === "failed") return plan;
+  const byId = new Map(updates.map((u) => [u.messageId, u]));
+  return {
+    ...plan,
+    messageUpdates: [...byId.values()].filter((update) => {
+      const original = input.messages[update.messageIndex];
+      return (
+        original === undefined ||
+        readMkMessageText(original) !==
+          (update.content.kind === "text" ? update.content.text : "")
+      );
+    }),
+    sealedCompactionCandidates: candidates,
   };
 }

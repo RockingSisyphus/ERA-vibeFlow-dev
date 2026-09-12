@@ -106,6 +106,7 @@ export interface EraApplyMessageCommandsInput {
   /** Current Sidecar function library. It is never read from chat variables. */
   readonly initialStatFunc?: Readonly<Record<string, unknown>>;
   /** `@f()` 的快照闭包（消息起点函数库）；省略时退回 `initialStatFunc`。 */
+  readonly messageStartStat?: unknown;
   readonly messageStartStatFunc?: Readonly<Record<string, unknown>>;
   /** Stable message MK used as the default deterministic-random seed. */
   readonly randomSourceKey?: string;
@@ -114,7 +115,10 @@ export interface EraApplyMessageCommandsInput {
    * 逐块推进一步一块的生命周期：只执行 [fromIndex, toIndex) 内的块。
    * 省略时保持既有语义，一次执行整条消息的全部六类指令。
    */
-  readonly commandRange?: Readonly<{ readonly fromIndex: number; readonly toIndex: number }>;
+  readonly commandRange?: Readonly<{
+    readonly fromIndex: number;
+    readonly toIndex: number;
+  }>;
   /**
    * 本次重放从第几次抽取开始。
    *
@@ -380,7 +384,10 @@ function parseBlockContent(source: string): unknown[] {
  */
 export function parsePositionedMessageCommands(
   input: EraCommandParseInput,
-): readonly (EraCrudCommand & { readonly start: number; readonly end: number })[] {
+): readonly (EraCrudCommand & {
+  readonly start: number;
+  readonly end: number;
+})[] {
   if (!input || typeof input.content !== "string" || !input.content) return [];
   const commands: (PositionedCommand & { readonly end: number })[] = [];
   const commandPattern =
@@ -1233,11 +1240,13 @@ export function applyMessageCommands(
     input.messageStartStatFunc ?? input.initialStatFunc ?? {},
   ) as Record<string, unknown>;
   const seededDrawOffset =
-    Number.isSafeInteger(input.randomDrawOffset) && Number(input.randomDrawOffset) > 0
+    Number.isSafeInteger(input.randomDrawOffset) &&
+    Number(input.randomDrawOffset) > 0
       ? Number(input.randomDrawOffset)
       : 0;
   const randomCursor =
-    typeof input.randomSourceKey === "string" && input.randomSourceKey.length > 0
+    typeof input.randomSourceKey === "string" &&
+    input.randomSourceKey.length > 0
       ? { sourceKey: input.randomSourceKey, drawOffset: seededDrawOffset }
       : undefined;
   try {
@@ -1268,7 +1277,7 @@ export function applyMessageCommands(
         const editResult = applyEditWithDiagnostics(command.data, current, {
           messageId: input.messageId,
           meta: input.meta,
-          layerStartStat: initial,
+          layerStartStat: input.messageStartStat ?? initial,
           statFunc: currentStatFunc,
           layerStartStatFunc: snapshotStatFunc,
           randomCursor,

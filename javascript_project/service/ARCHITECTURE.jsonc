@@ -15,7 +15,7 @@
     "contains_global_state": false,
     "summary": {
       "nodes": 9,
-      "nodesets": 19,
+      "nodesets": 18,
       "explicit_edges": 9,
       "data_edges": 0,
       "reported_edges": 9,
@@ -559,7 +559,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 13,
-          "nodesets": 19,
+          "nodesets": 18,
           "explicit_edges": 15,
           "data_edges": 0,
           "reported_edges": 15,
@@ -1400,7 +1400,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 5,
-          "nodesets": 19,
+          "nodesets": 18,
           "explicit_edges": 5,
           "data_edges": 0,
           "reported_edges": 5,
@@ -1739,7 +1739,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 18,
-          "nodesets": 19,
+          "nodesets": 18,
           "explicit_edges": 24,
           "data_edges": 1,
           "reported_edges": 24,
@@ -2098,8 +2098,8 @@
               "path": "configs/nodesets/api_commit.jsonc"
             },
             "role": {
-              "display_name": "构造无刷新消息追加",
-              "description": "执行构造无刷新消息追加。"
+              "display_name": "普通 API 只构造目标末尾追加",
+              "description": "保留公共操作和 scope，删除未接通的函数位置插入分支；保存生成文本所依赖的原目标版本，操作记录仍为普通 era_tx。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -2198,8 +2198,8 @@
               "path": "configs/nodesets/api_commit.jsonc"
             },
             "role": {
-              "display_name": "无刷新提交 era_tx",
-              "description": "执行无刷新提交 era_tx。"
+              "display_name": "核对原目标后写入（失败可恢复）",
+              "description": "重读允许吸收无关消息新增，但必须保留并核对生成内容对应的原目标正文/Swipe及身份；目标已改变则失败，不刷新依据后覆盖。写入前及写入异常结算失败，不致命停止服务。"
             },
             "contract_source": "node_type",
             "flow_kind": "io",
@@ -2243,8 +2243,8 @@
               "path": "configs/nodesets/api_commit.jsonc"
             },
             "role": {
-              "display_name": "回读确认独立事务",
-              "description": "执行回读确认独立事务。"
+              "display_name": "回读真实保存结果（失败可恢复）",
+              "description": "回读确认普通事务的真实保存，读回异常返回失败收据并保留恢复入口；不把失败或不确定保存报告成成功。"
             },
             "contract_source": "node_type",
             "flow_kind": "io",
@@ -2937,7 +2937,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 9,
-          "nodesets": 19,
+          "nodesets": 18,
           "explicit_edges": 11,
           "data_edges": 0,
           "reported_edges": 11,
@@ -3548,7 +3548,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 7,
-          "nodesets": 19,
+          "nodesets": 18,
           "explicit_edges": 8,
           "data_edges": 0,
           "reported_edges": 8,
@@ -4031,7 +4031,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 8,
-          "nodesets": 19,
+          "nodesets": 18,
           "explicit_edges": 7,
           "data_edges": 0,
           "reported_edges": 7,
@@ -4543,7 +4543,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 9,
-          "nodesets": 19,
+          "nodesets": 18,
           "explicit_edges": 10,
           "data_edges": 0,
           "reported_edges": 10,
@@ -5073,210 +5073,6 @@
         ]
       }
     },
-    "era.expression.execute_era_commands": {
-      "type_key": "era.expression.execute_era_commands",
-      "source": {
-        "root_id": "era-service",
-        "path": "configs/nodesets/expression_engine_bridge.jsonc"
-      },
-      "display_name": "含表达式的同步规划",
-      "description": "Service 规划库组织真实消息重放；完整求值经发布包执行 Expression 同步 AOT。随机 sourceKey 与 drawOffset 的算法所有者位于实际求值链。",
-      "status": "implemented",
-      "flow_kind": "predefined",
-      "effect_scope": "none",
-      "reachable_from_workflow": false,
-      "requires": [
-        {
-          "type": "era.expression.command.request",
-          "cardinality": "exactly_one",
-          "display_name": "表达式命令请求"
-        }
-      ],
-      "provides": [
-        {
-          "key": "expression_command_result",
-          "type": "era.expression.command.result",
-          "display_name": "表达式命令结果"
-        }
-      ],
-      "global_config": {},
-      "body": {
-        "source": {
-          "root_id": "era-service",
-          "path": "configs/nodesets/expression_engine_bridge.jsonc"
-        },
-        "inputs": [
-          {
-            "key": "expression_command_request",
-            "type": "era.expression.command.request",
-            "display_name": "表达式命令请求",
-            "required": true
-          }
-        ],
-        "outputs": [
-          {
-            "type": "era.expression.command.result",
-            "cardinality": "exactly_one",
-            "display_name": "表达式命令结果",
-            "as": "expressionCommandResult"
-          }
-        ],
-        "max_steps": 5,
-        "entry_mode": "async",
-        "execution_lock": null,
-        "contains_global_state": false,
-        "summary": {
-          "nodes": 3,
-          "nodesets": 19,
-          "explicit_edges": 2,
-          "data_edges": 0,
-          "reported_edges": 2,
-          "contains_global_state": false
-        },
-        "entry_nodes": [
-          "start"
-        ],
-        "terminal_nodes": [
-          "end"
-        ],
-        "god_nodes": [],
-        "nodes": [
-          {
-            "id": "start",
-            "type_used": "era.service.terminal",
-            "source": {
-              "root_id": "era-service",
-              "path": "configs/nodesets/expression_engine_bridge.jsonc"
-            },
-            "role": {
-              "display_name": "表达式命令开始",
-              "description": "进入不含宿主 I/O 的跨 root 计算边界。"
-            },
-            "contract_source": "node_type",
-            "flow_kind": "terminal",
-            "effect_scope": "none",
-            "runtime_dispatch": "unknown",
-            "execution_lock": null,
-            "effective_execution_lock": null,
-            "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
-            "requires": [],
-            "provides": [],
-            "join_policy": "safe_any",
-            "async": null,
-            "loop": null,
-            "io": null,
-            "invokes": null,
-            "config": {
-              "call": {},
-              "node_configs": {},
-              "allow_config_override": false
-            }
-          },
-          {
-            "id": "execute",
-            "type_used": "era.expression.execute_era_commands.bridge",
-            "source": {
-              "root_id": "era-service",
-              "path": "configs/nodesets/expression_engine_bridge.jsonc"
-            },
-            "role": {
-              "display_name": "计算历史同步计划",
-              "description": "消费收窄的 SyncPlanningInput，调用登记 sync_planning 的 planSyncWork；其真实重放链进入 Expression 同步 AOT，返回规划工作项，不读写宿主。"
-            },
-            "contract_source": "node_type",
-            "flow_kind": "process",
-            "effect_scope": "none",
-            "runtime_dispatch": "unknown",
-            "execution_lock": null,
-            "effective_execution_lock": null,
-            "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
-            "requires": [
-              {
-                "type": "era.expression.command.request",
-                "cardinality": "exactly_one",
-                "display_name": "表达式命令请求"
-              }
-            ],
-            "provides": [
-              {
-                "key": "expression_command_result",
-                "type": "era.expression.command.result",
-                "display_name": "表达式命令结果"
-              }
-            ],
-            "join_policy": "safe_any",
-            "async": null,
-            "loop": null,
-            "io": null,
-            "invokes": null,
-            "config": {
-              "call": {},
-              "node_configs": {},
-              "allow_config_override": false
-            }
-          },
-          {
-            "id": "end",
-            "type_used": "era.service.terminal",
-            "source": {
-              "root_id": "era-service",
-              "path": "configs/nodesets/expression_engine_bridge.jsonc"
-            },
-            "role": {
-              "display_name": "表达式命令结束",
-              "description": "返回纯同步工作项。"
-            },
-            "contract_source": "node_type",
-            "flow_kind": "terminal",
-            "effect_scope": "none",
-            "runtime_dispatch": "unknown",
-            "execution_lock": null,
-            "effective_execution_lock": null,
-            "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
-            "requires": [],
-            "provides": [],
-            "join_policy": "safe_any",
-            "async": null,
-            "loop": null,
-            "io": null,
-            "invokes": null,
-            "config": {
-              "call": {},
-              "node_configs": {},
-              "allow_config_override": false
-            }
-          }
-        ],
-        "edges": [
-          {
-            "from": "start",
-            "to": "execute",
-            "when": "",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "execute",
-            "to": "end",
-            "when": "",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          }
-        ]
-      }
-    },
     "era.service.batch_execute": {
       "type_key": "era.service.batch_execute",
       "source": {
@@ -5331,7 +5127,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 8,
-          "nodesets": 19,
+          "nodesets": 18,
           "explicit_edges": 8,
           "data_edges": 0,
           "reported_edges": 8,
@@ -5853,7 +5649,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 7,
-          "nodesets": 19,
+          "nodesets": 18,
           "explicit_edges": 10,
           "data_edges": 3,
           "reported_edges": 10,
@@ -6327,7 +6123,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 10,
-          "nodesets": 19,
+          "nodesets": 18,
           "explicit_edges": 14,
           "data_edges": 4,
           "reported_edges": 14,
@@ -6982,7 +6778,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 12,
-          "nodesets": 19,
+          "nodesets": 18,
           "explicit_edges": 18,
           "data_edges": 1,
           "reported_edges": 18,
@@ -7848,7 +7644,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 6,
-          "nodesets": 19,
+          "nodesets": 18,
           "explicit_edges": 7,
           "data_edges": 2,
           "reported_edges": 7,
@@ -8207,7 +8003,7 @@
         "path": "configs/nodesets/message_block_step.jsonc"
       },
       "display_name": "ERA 块步进单次迭代",
-      "description": "块步进循环的 body：每次迭代只读取当前承载状态与同步上下文，推进一个块并返回下一个状态与本次是否结束（消息处理完或遇到无标记调用需交接）。",
+      "description": "单块或楼层维护提交：执行、构造候选、封存压缩、保存、折回。只有保存后的状态可以推进；错误成为任务结果，不抛成永久工作流停止。",
       "status": "implemented",
       "flow_kind": "predefined",
       "effect_scope": "none",
@@ -8259,16 +8055,16 @@
             "as": "block_step_done"
           }
         ],
-        "max_steps": 8,
+        "max_steps": 12,
         "entry_mode": "async",
         "execution_lock": null,
         "contains_global_state": false,
         "summary": {
-          "nodes": 6,
-          "nodesets": 19,
-          "explicit_edges": 5,
+          "nodes": 8,
+          "nodesets": 18,
+          "explicit_edges": 7,
           "data_edges": 0,
-          "reported_edges": 5,
+          "reported_edges": 7,
           "contains_global_state": false
         },
         "entry_nodes": [
@@ -8320,8 +8116,8 @@
               "path": "configs/nodesets/message_block_step.jsonc"
             },
             "role": {
-              "display_name": "推进一个块",
-              "description": "按原文位置推进一个块；遇到无标记 <EraFCall/> 时结束本次迭代并把交接事实写入状态，函数由 Host 在步骤之外执行。"
+              "display_name": "应用下一块或准备楼层维护",
+              "description": "复用纯块应用语义，独立携带消息起点变量/函数及连续随机偏移；done 仅按标签判断，旧 EraFCallTx 只作普通记录容器。无 done 调用返回 ERA_FCALL_NOT_IMPLEMENTED，不改 done，不处理后续块。准备楼层完成清进度、纯回退和空聊天所需的维护写入。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -8341,14 +8137,9 @@
             ],
             "provides": [
               {
-                "key": "block_step_state_next",
+                "key": "block_step_pending",
                 "type": "era.sync.block.step.pending",
-                "display_name": "块步进后状态"
-              },
-              {
-                "key": "block_step_done",
-                "type": "era.step.done",
-                "display_name": "本次块驱动结束"
+                "display_name": "待提交状态或本次失败"
               }
             ],
             "join_policy": "safe_any",
@@ -8363,15 +8154,15 @@
             }
           },
           {
-            "id": "build_block_commit",
-            "type_used": "era.sync.build_block_commit",
+            "id": "prepare_block_work",
+            "type_used": "era.sync.prepare_block_work",
             "source": {
               "root_id": "era-service",
               "path": "configs/nodesets/message_block_step.jsonc"
             },
             "role": {
-              "display_name": "构造逐块提交请求",
-              "description": "把这一块之后的累计状态构造成待提交请求（basis 按当前文本重建）；交接迭代产出不提交信封。"
+              "display_name": "构造单块与日志同步工作项",
+              "description": "从真实累计状态构造当前块的消息/Sidecar候选和完整累计回退日志。仅楼层完成时给出该封存楼层压缩候选；最新楼层不压缩；普通块候选为空。携带状态经工作项传递，禁止另算整楼终值。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -8386,7 +8177,101 @@
               {
                 "type": "era.sync.block.step.pending",
                 "cardinality": "exactly_one",
-                "display_name": "已推进待提交的块步进状态"
+                "display_name": "待提交状态"
+              }
+            ],
+            "provides": [
+              {
+                "key": "expression_command_result",
+                "type": "era.expression.command.result",
+                "display_name": "单块或楼层维护工作项"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "apply_command_compaction",
+            "type_used": "era.command_compaction.apply_sealed_layers",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/message_block_step.jsonc"
+            },
+            "role": {
+              "display_name": "保留同 Scope 封存压缩",
+              "description": "沿既有展开节点运行纯压缩和重放校验，候选仅来自已完成封存楼层；允许普通操作相对 done 调用移位，不执行工具，不在此写宿主。"
+            },
+            "contract_source": "nodeset",
+            "flow_kind": "predefined",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.expression.command.result",
+                "cardinality": "exactly_one",
+                "display_name": "表达式命令同步结果"
+              }
+            ],
+            "provides": [
+              {
+                "key": "command_compaction_result",
+                "type": "era.command_compaction.result",
+                "display_name": "已处理封存压缩的同步结果"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": {
+              "kind": "nodeset",
+              "target": "era.command_compaction.apply_sealed_layers",
+              "target_status": "implemented"
+            },
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "build_block_commit",
+            "type_used": "era.sync.build_block_commit",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/message_block_step.jsonc"
+            },
+            "role": {
+              "display_name": "构造唯一提交请求",
+              "description": "将压缩后的单块或楼层维护工作项构造成既有保存请求；依据只吸收本任务已确认的自身写入，不能用新目标依据掩盖旧文本。错误/无需写入使用无提交信封；最后的进度删除和 cursor 清除在此提交路径处理。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "process",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.command_compaction.result",
+                "cardinality": "exactly_one",
+                "display_name": "已处理压缩的单块工作项"
               }
             ],
             "provides": [
@@ -8460,8 +8345,8 @@
               "path": "configs/nodesets/message_block_step.jsonc"
             },
             "role": {
-              "display_name": "折回提交结果",
-              "description": "从提交结果读回状态并折回；提交未成功则抛类型化错误。"
+              "display_name": "折回实际保存结果与循环终止状态",
+              "description": "保存成功后推进状态、日志及进度；提交失败保留已成功块并返回任务级失败，来源变化作废原目标。最后完成清进度后才能标楼层完成；继续下一受影响楼层或结束。循环终止事实必须来自提交之后。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -8483,7 +8368,12 @@
               {
                 "key": "folded_block_step_state",
                 "type": "era.sync.block.step.state.next",
-                "display_name": "块步进后状态"
+                "display_name": "实际保存后的执行状态"
+              },
+              {
+                "key": "block_step_done",
+                "type": "era.step.done",
+                "display_name": "保存后是否结束本次执行"
               }
             ],
             "join_policy": "safe_any",
@@ -8544,6 +8434,26 @@
           },
           {
             "from": "advance_message_block",
+            "to": "prepare_block_work",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "prepare_block_work",
+            "to": "apply_command_compaction",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "apply_command_compaction",
             "to": "build_block_commit",
             "when": "",
             "roles": [
@@ -8650,7 +8560,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 6,
-          "nodesets": 19,
+          "nodesets": 18,
           "explicit_edges": 6,
           "data_edges": 0,
           "reported_edges": 6,
@@ -9073,7 +8983,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 12,
-          "nodesets": 19,
+          "nodesets": 18,
           "explicit_edges": 14,
           "data_edges": 1,
           "reported_edges": 14,
@@ -9836,7 +9746,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 4,
-          "nodesets": 19,
+          "nodesets": 18,
           "explicit_edges": 3,
           "data_edges": 0,
           "reported_edges": 3,
@@ -10067,7 +9977,7 @@
         "path": "configs/nodesets/task_sync.jsonc"
       },
       "display_name": "ERA 同步任务",
-      "description": "运行共享同步路径，处理普通协调、full/latest/auto 修复、rollbackTo 定向同步、即时 Commit 重放与同 Scope 封存压缩。",
+      "description": "逐块处理普通同步、历史回退和 API 重放；消息写入与 Sidecar 保存统一在块循环内，尾链仅呈现和结算。本轮未完成的消息内工具调用明确失败，既有 Agent 路径保留。",
       "status": "implemented",
       "flow_kind": "predefined",
       "effect_scope": "none",
@@ -10124,11 +10034,11 @@
         "execution_lock": null,
         "contains_global_state": false,
         "summary": {
-          "nodes": 20,
-          "nodesets": 19,
-          "explicit_edges": 24,
+          "nodes": 11,
+          "nodesets": 18,
+          "explicit_edges": 12,
           "data_edges": 0,
-          "reported_edges": 24,
+          "reported_edges": 12,
           "contains_global_state": false
         },
         "entry_nodes": [
@@ -10284,8 +10194,8 @@
               "path": "configs/nodesets/task_sync.jsonc"
             },
             "role": {
-              "display_name": "准备块步进状态",
-              "description": "从已提交侧车状态与当前处理楼层建立块步进初始状态；位置状态必须从这里出发，函数与后续块才不会读到空世界。"
+              "display_name": "准备回退起点与单一执行状态",
+              "description": "只定位历史分歧、准备撤销旧效果和有序楼层范围，不预先执行整楼命令。状态持有楼层起点快照、当前累计值、随机偏移、累计日志及真实提交结果；文本进度与已保存日志共同支持恢复，信息不足返回可恢复失败。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -10329,8 +10239,8 @@
               "path": "configs/nodesets/task_sync.jsonc"
             },
             "role": {
-              "display_name": "逐块推进当前消息",
-              "description": "每个操作块各自一步：循环 body 每次只推进一个块；遇到无标记调用或整条消息处理完即结束循环，随后由收口节点决定提交还是把调用交给 Host。"
+              "display_name": "逐块执行并提交全部目标楼层",
+              "description": "每次应用一个块并保存状态、累计日志及进度；空楼、纯回退、删除清空与最后的进度清理由同一提交路径处理。done 调用跳过，无 done 调用以 ERA_FCALL_NOT_IMPLEMENTED 结束本消息且不调用工具；错误不停止永久服务。"
             },
             "contract_source": "system_config",
             "flow_kind": "predefined",
@@ -10359,7 +10269,7 @@
             "async": null,
             "loop": {
               "body": "era.sync.block_step",
-              "max_iterations": 64,
+              "max_iterations": null,
               "stop_when": {
                 "from": "block_step_done",
                 "equals": true
@@ -10398,8 +10308,8 @@
               "path": "configs/nodesets/task_sync.jsonc"
             },
             "role": {
-              "display_name": "收口块步进工作项",
-              "description": "没有待交接调用时使用既有规划库产出的工作项；有待交接调用时把工作项声明为不提交并附带交接事实，未完成的消息既不提交也不推进连续处理状态。"
+              "display_name": "汇总实际提交结果（不再提交）",
+              "description": "仅汇总循环内实际保存结果、失败、来源变化与完成事实，输出既有提交结果信封供呈现及回执处理；不以整楼预计算替换累计值，不写消息或 Sidecar。未完成或失败消息不发布完成呈现。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -10414,443 +10324,14 @@
               {
                 "type": "era.sync.block.step.state.next",
                 "cardinality": "exactly_one",
-                "display_name": "块步进后状态"
+                "display_name": "执行后的状态与实际提交结果"
               }
             ],
             "provides": [
               {
-                "key": "expression_command_result",
-                "type": "era.expression.command.result",
-                "display_name": "表达式命令结果"
-              },
-              {
-                "key": "function_invocation_route",
-                "type": "era.sync.function.invocation.route",
-                "display_name": "函数调用路由"
-              }
-            ],
-            "join_policy": "safe_any",
-            "async": null,
-            "loop": null,
-            "io": null,
-            "invokes": null,
-            "config": {
-              "call": {},
-              "node_configs": {},
-              "allow_config_override": false
-            }
-          },
-          {
-            "id": "apply_command_compaction",
-            "type_used": "era.command_compaction.apply_sealed_layers",
-            "source": {
-              "root_id": "era-service",
-              "path": "configs/nodesets/task_sync.jsonc"
-            },
-            "role": {
-              "display_name": "按同 Scope 压缩封存事务",
-              "description": "Service 选择封存楼层，调用 Compaction 同步 AOT；作用域分段由 Compaction 负责，Service 执行 CRUD 重放确认并回填计划。"
-            },
-            "contract_source": "nodeset",
-            "flow_kind": "predefined",
-            "effect_scope": "none",
-            "runtime_dispatch": "unknown",
-            "execution_lock": null,
-            "effective_execution_lock": null,
-            "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
-            "requires": [
-              {
-                "type": "era.expression.command.result",
-                "cardinality": "exactly_one",
-                "display_name": "表达式命令同步结果"
-              }
-            ],
-            "provides": [
-              {
-                "key": "command_compaction_result",
-                "type": "era.command_compaction.result",
-                "display_name": "已处理封存压缩的同步结果"
-              }
-            ],
-            "join_policy": "safe_any",
-            "async": null,
-            "loop": null,
-            "io": null,
-            "invokes": {
-              "kind": "nodeset",
-              "target": "era.command_compaction.apply_sealed_layers",
-              "target_status": "implemented"
-            },
-            "config": {
-              "call": {},
-              "node_configs": {},
-              "allow_config_override": false
-            }
-          },
-          {
-            "id": "assemble_expression_sync_plan",
-            "type_used": "era.sync.assemble_expression_plan",
-            "source": {
-              "root_id": "era-service",
-              "path": "configs/nodesets/task_sync.jsonc"
-            },
-            "role": {
-              "display_name": "选择同步提交分支",
-              "description": "消费已完成表达式计算和压缩的工作项，选择无提交、CRUD 结果适配或协调结果适配；不再次运行同步算法。"
-            },
-            "contract_source": "node_type",
-            "flow_kind": "decision",
-            "effect_scope": "none",
-            "runtime_dispatch": "unknown",
-            "execution_lock": null,
-            "effective_execution_lock": null,
-            "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
-            "requires": [
-              {
-                "type": "era.command_compaction.result",
-                "cardinality": "exactly_one",
-                "display_name": "已验证封存压缩结果"
-              }
-            ],
-            "provides": [
-              {
-                "key": "sync_route",
-                "type": "era.sync.route",
-                "display_name": "同步路由"
-              },
-              {
-                "key": "sync_work",
-                "type": "era.sync.work",
-                "display_name": "同步工作项"
-              }
-            ],
-            "join_policy": "safe_any",
-            "async": null,
-            "loop": null,
-            "io": null,
-            "invokes": null,
-            "config": {
-              "call": {},
-              "node_configs": {},
-              "allow_config_override": false
-            }
-          },
-          {
-            "id": "no_sync_change",
-            "type_used": "era.sync.no_change",
-            "source": {
-              "root_id": "era-service",
-              "path": "configs/nodesets/task_sync.jsonc"
-            },
-            "role": {
-              "display_name": "结算无需提交的同步结果",
-              "description": "由 sync_result_policy 把无变化或失败工作项映射为来源回执与批次更新。空聊天清空状态按规划结果进入原提交分支。"
-            },
-            "contract_source": "node_type",
-            "flow_kind": "process",
-            "effect_scope": "none",
-            "runtime_dispatch": "unknown",
-            "execution_lock": null,
-            "effective_execution_lock": null,
-            "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
-            "requires": [
-              {
-                "type": "era.sync.work",
-                "cardinality": "exactly_one",
-                "display_name": "同步工作项"
-              }
-            ],
-            "provides": [
-              {
-                "key": "no_change_result",
-                "type": "era.sync.logical_result",
-                "display_name": "同步逻辑结果"
-              }
-            ],
-            "join_policy": "safe_any",
-            "async": null,
-            "loop": null,
-            "io": null,
-            "invokes": null,
-            "config": {
-              "call": {},
-              "node_configs": {},
-              "allow_config_override": false
-            }
-          },
-          {
-            "id": "crud_write",
-            "type_used": "era.task.crud_write",
-            "source": {
-              "root_id": "era-service",
-              "path": "configs/nodesets/task_sync.jsonc"
-            },
-            "role": {
-              "display_name": "适配已计算的 CRUD 结果",
-              "description": "保留纯规划阶段已经应用的 CRUD 工作项，适配到共享提交契约；此处不重新执行指令或写入宿主。"
-            },
-            "contract_source": "node_type",
-            "flow_kind": "process",
-            "effect_scope": "none",
-            "runtime_dispatch": "unknown",
-            "execution_lock": null,
-            "effective_execution_lock": null,
-            "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
-            "requires": [
-              {
-                "type": "era.sync.work",
-                "cardinality": "exactly_one",
-                "display_name": "同步工作项"
-              }
-            ],
-            "provides": [
-              {
-                "key": "crud_logical_result",
-                "type": "era.sync.logical_result",
-                "display_name": "同步逻辑结果"
-              }
-            ],
-            "join_policy": "safe_any",
-            "async": null,
-            "loop": null,
-            "io": null,
-            "invokes": null,
-            "config": {
-              "call": {},
-              "node_configs": {},
-              "allow_config_override": false
-            }
-          },
-          {
-            "id": "compute_reconciliation",
-            "type_used": "era.sync.compute",
-            "source": {
-              "root_id": "era-service",
-              "path": "configs/nodesets/task_sync.jsonc"
-            },
-            "role": {
-              "display_name": "适配已计算的协调结果",
-              "description": "把已有普通/full/latest/auto/rollbackTo 规划结果交给共享提交候选构造；不重复计算。"
-            },
-            "contract_source": "node_type",
-            "flow_kind": "process",
-            "effect_scope": "none",
-            "runtime_dispatch": "unknown",
-            "execution_lock": null,
-            "effective_execution_lock": null,
-            "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
-            "requires": [
-              {
-                "type": "era.sync.work",
-                "cardinality": "exactly_one",
-                "display_name": "同步工作项"
-              }
-            ],
-            "provides": [
-              {
-                "key": "reconcile_result",
-                "type": "era.sync.logical_result",
-                "display_name": "同步逻辑结果"
-              }
-            ],
-            "join_policy": "safe_any",
-            "async": null,
-            "loop": null,
-            "io": null,
-            "invokes": null,
-            "config": {
-              "call": {},
-              "node_configs": {},
-              "allow_config_override": false
-            }
-          },
-          {
-            "id": "build_commit_request",
-            "type_used": "era.sync.build_commit",
-            "source": {
-              "root_id": "era-service",
-              "path": "configs/nodesets/task_sync.jsonc"
-            },
-            "role": {
-              "display_name": "构造消息与 Sidecar 提交候选",
-              "description": "由 sync_commit_policy 从同步工作项构造消息写入、状态、来源依据和首次呈现意图；不执行宿主写入。"
-            },
-            "contract_source": "node_type",
-            "flow_kind": "process",
-            "effect_scope": "none",
-            "runtime_dispatch": "unknown",
-            "execution_lock": null,
-            "effective_execution_lock": null,
-            "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
-            "requires": [
-              {
-                "type": "era.sync.logical_result",
-                "cardinality": "exactly_one",
-                "display_name": "同步逻辑结果"
-              }
-            ],
-            "provides": [
-              {
-                "key": "sync_commit_request",
-                "type": "era.tavern.commit.request",
-                "display_name": "同步提交请求"
-              }
-            ],
-            "join_policy": "safe_any",
-            "async": null,
-            "loop": null,
-            "io": null,
-            "invokes": null,
-            "config": {
-              "call": {},
-              "node_configs": {},
-              "allow_config_override": false
-            }
-          },
-          {
-            "id": "validate_commit_candidate",
-            "type_used": "era.sync.validate_commit_candidate",
-            "source": {
-              "root_id": "era-service",
-              "path": "configs/nodesets/task_sync.jsonc"
-            },
-            "role": {
-              "display_name": "检查提交候选契约",
-              "description": "调用 sync_commit_policy 的原提交检查，输出有效提交请求或可结算的契约失败；保持现有判断及错误代码。"
-            },
-            "contract_source": "node_type",
-            "flow_kind": "decision",
-            "effect_scope": "none",
-            "runtime_dispatch": "unknown",
-            "execution_lock": null,
-            "effective_execution_lock": null,
-            "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
-            "requires": [
-              {
-                "type": "era.tavern.commit.request",
-                "cardinality": "exactly_one",
-                "display_name": "同步提交请求"
-              }
-            ],
-            "provides": [
-              {
-                "key": "commit_validation_route",
-                "type": "era.sync.commit.validation.route",
-                "display_name": "提交校验路由"
-              },
-              {
-                "key": "validated_commit_request",
-                "type": "era.tavern.commit.request",
-                "display_name": "已校验同步提交请求"
-              },
-              {
-                "key": "sync_contract_failure",
-                "type": "era.sync.commit.contract.failure",
-                "display_name": "同步提交合同失败"
-              }
-            ],
-            "join_policy": "safe_any",
-            "async": null,
-            "loop": null,
-            "io": null,
-            "invokes": null,
-            "config": {
-              "call": {},
-              "node_configs": {},
-              "allow_config_override": false
-            }
-          },
-          {
-            "id": "build_sync_contract_failure",
-            "type_used": "era.sync.build_contract_failure",
-            "source": {
-              "root_id": "era-service",
-              "path": "configs/nodesets/task_sync.jsonc"
-            },
-            "role": {
-              "display_name": "结算未提交的契约失败",
-              "description": "由 sync_result_policy 根据原步骤来源生成失败回执；不执行写入。"
-            },
-            "contract_source": "node_type",
-            "flow_kind": "process",
-            "effect_scope": "none",
-            "runtime_dispatch": "unknown",
-            "execution_lock": null,
-            "effective_execution_lock": null,
-            "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
-            "requires": [
-              {
-                "type": "era.sync.commit.contract.failure",
-                "cardinality": "exactly_one",
-                "display_name": "同步提交合同失败"
-              }
-            ],
-            "provides": [
-              {
-                "key": "sync_contract_task_result",
-                "type": "era.task.result",
-                "display_name": "同步合同失败结果"
-              }
-            ],
-            "join_policy": "safe_any",
-            "async": null,
-            "loop": null,
-            "io": null,
-            "invokes": null,
-            "config": {
-              "call": {},
-              "node_configs": {},
-              "allow_config_override": false
-            }
-          },
-          {
-            "id": "commit_variables",
-            "type_used": "era.tavern.variables_commit",
-            "source": {
-              "root_id": "era-service",
-              "path": "configs/nodesets/task_sync.jsonc"
-            },
-            "role": {
-              "display_name": "提交消息与 Sidecar 并确认读回",
-              "description": "保持原唯一提交顺序和 Capability 调用；sync_commit_policy 负责候选、来源依据和读回判定。记录消息写入数、Sidecar 状态与来源变化，交给结果模块结算。"
-            },
-            "contract_source": "node_type",
-            "flow_kind": "data_store",
-            "effect_scope": "none",
-            "runtime_dispatch": "unknown",
-            "execution_lock": null,
-            "effective_execution_lock": null,
-            "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
-            "requires": [
-              {
-                "type": "era.tavern.commit.request",
-                "cardinality": "exactly_one",
-                "display_name": "同步提交请求"
-              }
-            ],
-            "provides": [
-              {
-                "key": "sync_commit_result",
+                "key": "completed_sync_result",
                 "type": "era.tavern.commit.result",
-                "display_name": "同步提交结果"
+                "display_name": "已发生提交的汇总结果"
               }
             ],
             "join_policy": "safe_any",
@@ -11130,36 +10611,6 @@
             ]
           },
           {
-            "from": "assemble_expression_sync_plan",
-            "to": "no_sync_change",
-            "when": "sync_route == 'no-op'",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "assemble_expression_sync_plan",
-            "to": "crud_write",
-            "when": "sync_route == 'crud'",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "assemble_expression_sync_plan",
-            "to": "compute_reconciliation",
-            "when": "sync_route == 'reconcile'",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
             "from": "prepare_block_step",
             "to": "process_message_blocks",
             "when": "",
@@ -11181,86 +10632,6 @@
           },
           {
             "from": "finalize_block_step",
-            "to": "apply_command_compaction",
-            "when": "",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "apply_command_compaction",
-            "to": "assemble_expression_sync_plan",
-            "when": "",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "no_sync_change",
-            "to": "build_commit_request",
-            "when": "",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "crud_write",
-            "to": "build_commit_request",
-            "when": "",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "compute_reconciliation",
-            "to": "build_commit_request",
-            "when": "",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "build_commit_request",
-            "to": "validate_commit_candidate",
-            "when": "",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "validate_commit_candidate",
-            "to": "commit_variables",
-            "when": "commit_validation_route == 'valid'",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "validate_commit_candidate",
-            "to": "build_sync_contract_failure",
-            "when": "commit_validation_route == 'failed'",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "commit_variables",
             "to": "present_finalized_floor",
             "when": "",
             "roles": [
@@ -11281,16 +10652,6 @@
           },
           {
             "from": "build_sync_notification",
-            "to": "end",
-            "when": "",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "build_sync_contract_failure",
             "to": "end",
             "when": "",
             "roles": [
@@ -11376,7 +10737,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 4,
-          "nodesets": 19,
+          "nodesets": 18,
           "explicit_edges": 3,
           "data_edges": 0,
           "reported_edges": 3,
@@ -12494,8 +11855,8 @@
       ]
     },
     "era.api.build_no_refresh_append": {
-      "display_name": "构造无刷新消息追加",
-      "description": "追加独立 era_tx 并固定 refresh none。",
+      "display_name": "普通 API 只构造目标末尾追加",
+      "description": "保留公共操作和 scope，删除未接通的函数位置插入分支；保存生成文本所依赖的原目标版本，操作记录仍为普通 era_tx。",
       "category": "公共 Facade",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -12516,12 +11877,12 @@
         ],
         "input_semantics": {
           "era.api.commit.target": [
-            "输入：era.api.commit.target。"
+            "era.api.commit.target"
           ]
         },
         "output_semantics": {
           "facade_commit_append_request": [
-            "输出：facade_commit_append_request。"
+            "facade_commit_append_request"
           ]
         },
         "params_schema": {},
@@ -12647,8 +12008,8 @@
       ]
     },
     "era.api.commit_facade_message": {
-      "display_name": "无刷新提交 era_tx",
-      "description": "每次调用独立写入且不刷新 iframe。",
+      "display_name": "核对原目标后写入（失败可恢复）",
+      "description": "重读允许吸收无关消息新增，但必须保留并核对生成内容对应的原目标正文/Swipe及身份；目标已改变则失败，不刷新依据后覆盖。写入前及写入异常结算失败，不致命停止服务。",
       "category": "公共 Facade",
       "version": "1.0.0",
       "flow_kind": "io",
@@ -12669,12 +12030,12 @@
         ],
         "input_semantics": {
           "era.api.commit.rechecked": [
-            "输入：era.api.commit.rechecked。"
+            "era.api.commit.rechecked"
           ]
         },
         "output_semantics": {
           "facade_commit_append_result": [
-            "输出：facade_commit_append_result。"
+            "facade_commit_append_result"
           ]
         },
         "params_schema": {},
@@ -13316,8 +12677,8 @@
       ]
     },
     "era.api.verify_facade_message": {
-      "display_name": "回读确认独立事务",
-      "description": "回读消息并构造严格同步上下文。",
+      "display_name": "回读真实保存结果（失败可恢复）",
+      "description": "回读确认普通事务的真实保存，读回异常返回失败收据并保留恢复入口；不把失败或不确定保存报告成成功。",
       "category": "公共 Facade",
       "version": "1.0.0",
       "flow_kind": "io",
@@ -13348,18 +12709,18 @@
         ],
         "input_semantics": {
           "era.api.commit.append.result": [
-            "输入：era.api.commit.append.result。"
+            "era.api.commit.append.result"
           ]
         },
         "output_semantics": {
           "commit_readback_route": [
-            "输出：commit_readback_route。"
+            "commit_readback_route"
           ],
           "facade_commit_verified": [
-            "输出：facade_commit_verified。"
+            "facade_commit_verified"
           ],
           "facade_commit_readback_failure": [
-            "输出：facade_commit_failure_context。"
+            "facade_commit_failure_context"
           ]
         },
         "params_schema": {},
@@ -16350,77 +15711,18 @@
         }
       ]
     },
-    "era.sync.assemble_expression_plan": {
-      "display_name": "选择同步提交分支",
-      "description": "消费已完成表达式计算和压缩的工作项，选择无提交、CRUD 结果适配或协调结果适配；不再次运行同步算法。",
-      "category": "同步规划",
-      "version": "1.0.0",
-      "flow_kind": "decision",
-      "contract": {
-        "requires": [
-          {
-            "type": "era.command_compaction.result",
-            "cardinality": "exactly_one",
-            "display_name": "已验证封存压缩结果"
-          }
-        ],
-        "provides": [
-          {
-            "key": "sync_route",
-            "type": "era.sync.route",
-            "display_name": "同步路由"
-          },
-          {
-            "key": "sync_work",
-            "type": "era.sync.work",
-            "display_name": "同步工作项"
-          }
-        ],
-        "input_semantics": {
-          "era.command_compaction.result": [
-            "输入：已完成表达式求值并完成封存压缩复放确认的同步工作项。"
-          ]
-        },
-        "output_semantics": {
-          "sync_route": [
-            "输出：既有同步分支。"
-          ],
-          "sync_work": [
-            "输出：既有提交工作项。"
-          ]
-        },
-        "params_schema": {},
-        "params_defaults": {},
-        "examples": []
-      },
-      "implementations": [
-        {
-          "language": "typescript",
-          "targets": [
-            "browser",
-            "node"
-          ],
-          "source": {
-            "kind": "file",
-            "ref": "nodes/sync/assemble_expression_sync_plan.ts",
-            "export": "run"
-          },
-          "completion": "immediate"
-        }
-      ]
-    },
     "era.sync.build_block_commit": {
-      "display_name": "构造逐块提交请求",
-      "description": "把「这一块之后的累计状态」构造成待提交请求（状态嵌在请求里、basis 按当前文本重建）；交接迭代产出不提交信封。",
+      "display_name": "构造唯一提交请求",
+      "description": "将压缩后的单块或楼层维护工作项构造成既有保存请求；依据只吸收本任务已确认的自身写入，不能用新目标依据掩盖旧文本。错误/无需写入使用无提交信封；最后的进度删除和 cursor 清除在此提交路径处理。",
       "category": "同步规划",
       "version": "1.0.0",
       "flow_kind": "process",
       "contract": {
         "requires": [
           {
-            "type": "era.sync.block.step.pending",
+            "type": "era.command_compaction.result",
             "cardinality": "exactly_one",
-            "display_name": "已推进待提交的块步进状态"
+            "display_name": "已处理压缩的单块工作项"
           }
         ],
         "provides": [
@@ -16431,13 +15733,13 @@
           }
         ],
         "input_semantics": {
-          "era.sync.block.step.pending": [
-            "输入：已推进一个块、尚未提交的块步进状态。"
+          "era.command_compaction.result": [
+            "已处理压缩的单块工作项"
           ]
         },
         "output_semantics": {
           "block_commit_request": [
-            "输出：逐块提交请求（交接迭代为不提交信封）。"
+            "逐块提交请求"
           ]
         },
         "params_schema": {},
@@ -16453,108 +15755,6 @@
           "source": {
             "kind": "file",
             "ref": "nodes/sync/build_block_commit.ts",
-            "export": "run"
-          },
-          "completion": "immediate"
-        }
-      ]
-    },
-    "era.sync.build_commit": {
-      "display_name": "构造消息与 Sidecar 提交候选",
-      "description": "由 sync_commit_policy 从同步工作项构造消息写入、状态、来源依据和首次呈现意图；不执行宿主写入。",
-      "category": "同步事务",
-      "version": "1.0.0",
-      "flow_kind": "process",
-      "contract": {
-        "requires": [
-          {
-            "type": "era.sync.logical_result",
-            "cardinality": "exactly_one",
-            "display_name": "同步逻辑结果"
-          }
-        ],
-        "provides": [
-          {
-            "key": "sync_commit_request",
-            "type": "era.tavern.commit.request",
-            "display_name": "同步提交请求"
-          }
-        ],
-        "input_semantics": {
-          "era.sync.logical_result": [
-            "输入：同步逻辑结果。"
-          ]
-        },
-        "output_semantics": {
-          "sync_commit_request": [
-            "输出：同步提交请求。"
-          ]
-        },
-        "params_schema": {},
-        "params_defaults": {},
-        "examples": []
-      },
-      "implementations": [
-        {
-          "language": "typescript",
-          "targets": [
-            "browser",
-            "node"
-          ],
-          "source": {
-            "kind": "file",
-            "ref": "nodes/sync/build_sync_commit.ts",
-            "export": "run"
-          },
-          "completion": "immediate"
-        }
-      ]
-    },
-    "era.sync.build_contract_failure": {
-      "display_name": "结算未提交的契约失败",
-      "description": "由 sync_result_policy 根据原步骤来源生成失败回执；不执行写入。",
-      "category": "同步事务",
-      "version": "1.0.0",
-      "flow_kind": "process",
-      "contract": {
-        "requires": [
-          {
-            "type": "era.sync.commit.contract.failure",
-            "cardinality": "exactly_one",
-            "display_name": "同步提交合同失败"
-          }
-        ],
-        "provides": [
-          {
-            "key": "sync_contract_task_result",
-            "type": "era.task.result",
-            "display_name": "同步合同失败结果"
-          }
-        ],
-        "input_semantics": {
-          "era.sync.commit.contract.failure": [
-            "输入：同步提交合同失败证据。"
-          ]
-        },
-        "output_semantics": {
-          "sync_contract_task_result": [
-            "输出：任何 Capability 写入前的普通失败结果。"
-          ]
-        },
-        "params_schema": {},
-        "params_defaults": {},
-        "examples": []
-      },
-      "implementations": [
-        {
-          "language": "typescript",
-          "targets": [
-            "browser",
-            "node"
-          ],
-          "source": {
-            "kind": "file",
-            "ref": "nodes/sync/build_contract_failure.ts",
             "export": "run"
           },
           "completion": "immediate"
@@ -16612,60 +15812,9 @@
         }
       ]
     },
-    "era.sync.compute": {
-      "display_name": "适配已计算的协调结果",
-      "description": "把已有普通/full/latest/auto/rollbackTo 规划结果交给共享提交候选构造；不重复计算。",
-      "category": "同步规划",
-      "version": "1.0.0",
-      "flow_kind": "process",
-      "contract": {
-        "requires": [
-          {
-            "type": "era.sync.work",
-            "cardinality": "exactly_one",
-            "display_name": "同步工作项"
-          }
-        ],
-        "provides": [
-          {
-            "key": "reconcile_result",
-            "type": "era.sync.logical_result",
-            "display_name": "同步逻辑结果"
-          }
-        ],
-        "input_semantics": {
-          "era.sync.work": [
-            "输入：同步工作项。"
-          ]
-        },
-        "output_semantics": {
-          "reconcile_result": [
-            "输出：同步逻辑结果。"
-          ]
-        },
-        "params_schema": {},
-        "params_defaults": {},
-        "examples": []
-      },
-      "implementations": [
-        {
-          "language": "typescript",
-          "targets": [
-            "browser",
-            "node"
-          ],
-          "source": {
-            "kind": "file",
-            "ref": "nodes/sync/confirm_reconciliation.ts",
-            "export": "run"
-          },
-          "completion": "immediate"
-        }
-      ]
-    },
     "era.sync.drive_message_blocks": {
-      "display_name": "推进一个消息块",
-      "description": "按块推进当前处理楼层，每次只推进一个块：从承载状态恢复流程、执行下一个块、返回下一个状态。遇到无标记 <EraFCall/> 时把路由置为 invoke 并把交接事实（楼层、块下标、调用标识、参数、该位置累计状态）写入状态，本节点不执行函数、也不提交任何状态。",
+      "display_name": "应用下一块或准备楼层维护",
+      "description": "复用纯块应用语义，独立携带消息起点变量/函数及连续随机偏移；done 仅按标签判断，旧 EraFCallTx 只作普通记录容器。无 done 调用返回 ERA_FCALL_NOT_IMPLEMENTED，不改 done，不处理后续块。准备楼层完成清进度、纯回退和空聊天所需的维护写入。",
       "category": "同步规划",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -16679,27 +15828,19 @@
         ],
         "provides": [
           {
-            "key": "block_step_state_next",
+            "key": "block_step_pending",
             "type": "era.sync.block.step.pending",
-            "display_name": "块步进后状态"
-          },
-          {
-            "key": "block_step_done",
-            "type": "era.step.done",
-            "display_name": "本次块驱动结束"
+            "display_name": "待提交状态或本次失败"
           }
         ],
         "input_semantics": {
           "era.sync.block.step.state": [
-            "输入：块步进状态。"
+            "块步进状态"
           ]
         },
         "output_semantics": {
-          "block_step_state_next": [
-            "输出：块步进后状态。"
-          ],
-          "block_step_done": [
-            "输出：本次块驱动结束。"
+          "block_step_pending": [
+            "待提交状态或本次失败"
           ]
         },
         "params_schema": {},
@@ -16723,8 +15864,8 @@
       ]
     },
     "era.sync.finalize_block_step": {
-      "display_name": "收口块步进工作项",
-      "description": "块步进循环结束后产出下游消费的同步工作项：没有待交接调用时交给既有规划库；有待交接调用时把工作项声明为不提交并附带交接事实，未完成的消息因此既不提交也不推进连续处理状态。",
+      "display_name": "汇总实际提交结果（不再提交）",
+      "description": "仅汇总循环内实际保存结果、失败、来源变化与完成事实，输出既有提交结果信封供呈现及回执处理；不以整楼预计算替换累计值，不写消息或 Sidecar。未完成或失败消息不发布完成呈现。",
       "category": "同步规划",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -16733,32 +15874,24 @@
           {
             "type": "era.sync.block.step.state.next",
             "cardinality": "exactly_one",
-            "display_name": "块步进后状态"
+            "display_name": "执行后的状态与实际提交结果"
           }
         ],
         "provides": [
           {
-            "key": "expression_command_result",
-            "type": "era.expression.command.result",
-            "display_name": "表达式命令结果"
-          },
-          {
-            "key": "function_invocation_route",
-            "type": "era.sync.function.invocation.route",
-            "display_name": "函数调用路由"
+            "key": "completed_sync_result",
+            "type": "era.tavern.commit.result",
+            "display_name": "已发生提交的汇总结果"
           }
         ],
         "input_semantics": {
           "era.sync.block.step.state.next": [
-            "输入：块步进后状态（含预规划工作项）。"
+            "执行后的状态与实际提交结果"
           ]
         },
         "output_semantics": {
-          "expression_command_result": [
-            "输出：表达式命令结果。"
-          ],
-          "function_invocation_route": [
-            "输出：函数调用路由。"
+          "completed_sync_result": [
+            "已发生提交的汇总结果"
           ]
         },
         "params_schema": {},
@@ -16782,8 +15915,8 @@
       ]
     },
     "era.sync.fold_block_commit": {
-      "display_name": "折回逐块提交结果",
-      "description": "从提交结果里读回随请求搬运的块步进状态并折回；提交未成功时抛类型化错误。",
+      "display_name": "折回实际保存结果与循环终止状态",
+      "description": "保存成功后推进状态、日志及进度；提交失败保留已成功块并返回任务级失败，来源变化作废原目标。最后完成清进度后才能标楼层完成；继续下一受影响楼层或结束。循环终止事实必须来自提交之后。",
       "category": "同步规划",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -16799,17 +15932,25 @@
           {
             "key": "folded_block_step_state",
             "type": "era.sync.block.step.state.next",
-            "display_name": "块步进后状态"
+            "display_name": "实际保存后的执行状态"
+          },
+          {
+            "key": "block_step_done",
+            "type": "era.step.done",
+            "display_name": "保存后是否结束本次执行"
           }
         ],
         "input_semantics": {
           "era.tavern.commit.result": [
-            "输入：逐块提交结果（带回随请求搬运的块步进状态）。"
+            "逐块提交结果"
           ]
         },
         "output_semantics": {
           "folded_block_step_state": [
-            "输出：折回后的下一个块步进状态。"
+            "实际保存后的执行状态"
+          ],
+          "block_step_done": [
+            "保存后是否结束本次执行"
           ]
         },
         "params_schema": {},
@@ -16831,119 +15972,9 @@
         }
       ]
     },
-    "era.sync.no_change": {
-      "display_name": "结算无需提交的同步结果",
-      "description": "由 sync_result_policy 把无变化或失败工作项映射为来源回执与批次更新。空聊天清空状态按规划结果进入原提交分支。",
-      "category": "同步规划",
-      "version": "1.0.0",
-      "flow_kind": "process",
-      "contract": {
-        "requires": [
-          {
-            "type": "era.sync.work",
-            "cardinality": "exactly_one",
-            "display_name": "同步工作项"
-          }
-        ],
-        "provides": [
-          {
-            "key": "no_change_result",
-            "type": "era.sync.logical_result",
-            "display_name": "同步逻辑结果"
-          }
-        ],
-        "input_semantics": {
-          "era.sync.work": [
-            "输入：同步工作项。"
-          ]
-        },
-        "output_semantics": {
-          "no_change_result": [
-            "输出：同步逻辑结果。"
-          ]
-        },
-        "params_schema": {},
-        "params_defaults": {},
-        "examples": []
-      },
-      "implementations": [
-        {
-          "language": "typescript",
-          "targets": [
-            "browser",
-            "node"
-          ],
-          "source": {
-            "kind": "file",
-            "ref": "nodes/sync/no_sync_change.ts",
-            "export": "run"
-          },
-          "completion": "immediate"
-        }
-      ]
-    },
-    "era.sync.plan": {
-      "display_name": "规划共享同步",
-      "description": "调用纯同步引擎形成唯一工作项，并显式标注无提交、CRUD 或历史协调分支。",
-      "category": "同步规划",
-      "version": "1.0.0",
-      "flow_kind": "decision",
-      "contract": {
-        "requires": [
-          {
-            "type": "era.sync.context",
-            "cardinality": "exactly_one",
-            "display_name": "同步上下文"
-          }
-        ],
-        "provides": [
-          {
-            "key": "sync_route",
-            "type": "era.sync.route",
-            "display_name": "同步路由"
-          },
-          {
-            "key": "sync_work",
-            "type": "era.sync.work",
-            "display_name": "同步工作项"
-          }
-        ],
-        "input_semantics": {
-          "era.sync.context": [
-            "输入：同步上下文。"
-          ]
-        },
-        "output_semantics": {
-          "sync_route": [
-            "输出：同步路由。"
-          ],
-          "sync_work": [
-            "输出：同步工作项。"
-          ]
-        },
-        "params_schema": {},
-        "params_defaults": {},
-        "examples": []
-      },
-      "implementations": [
-        {
-          "language": "typescript",
-          "targets": [
-            "browser",
-            "node"
-          ],
-          "source": {
-            "kind": "file",
-            "ref": "nodes/sync/plan_sync.ts",
-            "export": "run"
-          },
-          "completion": "immediate"
-        }
-      ]
-    },
     "era.sync.prepare_block_step": {
-      "display_name": "准备块步进状态",
-      "description": "从同步上下文建立块步进的初始状态：楼层身份、块下标 0、以及该楼层起点已提交的变量与函数库。位置状态必须从已提交侧车状态出发，否则函数读到的是空世界。",
+      "display_name": "准备回退起点与单一执行状态",
+      "description": "只定位历史分歧、准备撤销旧效果和有序楼层范围，不预先执行整楼命令。状态持有楼层起点快照、当前累计值、随机偏移、累计日志及真实提交结果；文本进度与已保存日志共同支持恢复，信息不足返回可恢复失败。",
       "category": "同步规划",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -16964,12 +15995,12 @@
         ],
         "input_semantics": {
           "era.sync.context": [
-            "输入：同步上下文。"
+            "同步上下文"
           ]
         },
         "output_semantics": {
           "block_step_state": [
-            "输出：块步进状态。"
+            "块步进状态"
           ]
         },
         "params_schema": {},
@@ -16992,35 +16023,35 @@
         }
       ]
     },
-    "era.sync.prepare_expression_command_request": {
-      "display_name": "准备同步规划请求",
-      "description": "将已加载 Sidecar 的同步输入投影为规划所需消息、状态、派发事实和连续计数；不再透传整个上下文。调用登记 sync_planning 模块。",
+    "era.sync.prepare_block_work": {
+      "display_name": "构造单块与日志同步工作项",
+      "description": "从真实累计状态构造当前块的消息/Sidecar候选和完整累计回退日志。仅楼层完成时给出该封存楼层压缩候选；最新楼层不压缩；普通块候选为空。携带状态经工作项传递，禁止另算整楼终值。",
       "category": "同步规划",
       "version": "1.0.0",
       "flow_kind": "process",
       "contract": {
         "requires": [
           {
-            "type": "era.sync.context",
+            "type": "era.sync.block.step.pending",
             "cardinality": "exactly_one",
-            "display_name": "同步上下文"
+            "display_name": "待提交状态"
           }
         ],
         "provides": [
           {
-            "key": "expression_command_request",
-            "type": "era.expression.command.request",
-            "display_name": "表达式命令请求"
+            "key": "expression_command_result",
+            "type": "era.expression.command.result",
+            "display_name": "单块或楼层维护工作项"
           }
         ],
         "input_semantics": {
-          "era.sync.context": [
-            "输入：已加载 Sidecar 状态的同步上下文。"
+          "era.sync.block.step.pending": [
+            "待提交状态"
           ]
         },
         "output_semantics": {
-          "expression_command_request": [
-            "输出：不含 Tavern 引用的命令请求。"
+          "expression_command_result": [
+            "单块或楼层维护工作项"
           ]
         },
         "params_schema": {},
@@ -17036,7 +16067,7 @@
           ],
           "source": {
             "kind": "file",
-            "ref": "nodes/sync/prepare_expression_command_request.ts",
+            "ref": "nodes/sync/prepare_block_work.ts",
             "export": "run"
           },
           "completion": "immediate"
@@ -17090,124 +16121,6 @@
             "export": "run"
           },
           "completion": "suspend"
-        }
-      ]
-    },
-    "era.sync.validate_commit_candidate": {
-      "display_name": "检查提交候选契约",
-      "description": "调用 sync_commit_policy 的原提交检查，输出有效提交请求或可结算的契约失败；保持现有判断及错误代码。",
-      "category": "同步事务",
-      "version": "1.0.0",
-      "flow_kind": "decision",
-      "contract": {
-        "requires": [
-          {
-            "type": "era.tavern.commit.request",
-            "cardinality": "exactly_one",
-            "display_name": "同步提交请求"
-          }
-        ],
-        "provides": [
-          {
-            "key": "commit_validation_route",
-            "type": "era.sync.commit.validation.route",
-            "display_name": "提交校验路由"
-          },
-          {
-            "key": "validated_commit_request",
-            "type": "era.tavern.commit.request",
-            "display_name": "已校验同步提交请求"
-          },
-          {
-            "key": "sync_contract_failure",
-            "type": "era.sync.commit.contract.failure",
-            "display_name": "同步提交合同失败"
-          }
-        ],
-        "input_semantics": {
-          "era.tavern.commit.request": [
-            "输入：尚未越过副作用边界的同步提交候选。"
-          ]
-        },
-        "output_semantics": {
-          "commit_validation_route": [
-            "输出：valid 或 failed。"
-          ],
-          "validated_commit_request": [
-            "输出：valid 路由下为可以安全提交的候选；failed 路由下不被消费。"
-          ],
-          "sync_contract_failure": [
-            "输出：failed 路由下为无副作用的合同失败；valid 路由下为 null。"
-          ]
-        },
-        "params_schema": {},
-        "params_defaults": {},
-        "examples": []
-      },
-      "implementations": [
-        {
-          "language": "typescript",
-          "targets": [
-            "browser",
-            "node"
-          ],
-          "source": {
-            "kind": "file",
-            "ref": "nodes/sync/validate_commit_candidate.ts",
-            "export": "run"
-          },
-          "completion": "immediate"
-        }
-      ]
-    },
-    "era.task.crud_write": {
-      "display_name": "适配已计算的 CRUD 结果",
-      "description": "保留纯规划阶段已经应用的 CRUD 工作项，适配到共享提交契约；此处不重新执行指令或写入宿主。",
-      "category": "同步规划",
-      "version": "1.0.0",
-      "flow_kind": "process",
-      "contract": {
-        "requires": [
-          {
-            "type": "era.sync.work",
-            "cardinality": "exactly_one",
-            "display_name": "同步工作项"
-          }
-        ],
-        "provides": [
-          {
-            "key": "crud_logical_result",
-            "type": "era.sync.logical_result",
-            "display_name": "同步逻辑结果"
-          }
-        ],
-        "input_semantics": {
-          "era.sync.work": [
-            "输入：同步工作项。"
-          ]
-        },
-        "output_semantics": {
-          "crud_logical_result": [
-            "输出：同步逻辑结果。"
-          ]
-        },
-        "params_schema": {},
-        "params_defaults": {},
-        "examples": []
-      },
-      "implementations": [
-        {
-          "language": "typescript",
-          "targets": [
-            "browser",
-            "node"
-          ],
-          "source": {
-            "kind": "file",
-            "ref": "nodes/sync/confirm_crud.ts",
-            "export": "run"
-          },
-          "completion": "immediate"
         }
       ]
     },
@@ -19830,23 +18743,6 @@
                         "blockIndex": {
                           "type": "integer",
                           "minimum": 0
-                        },
-                        "stat": {
-                          "type": "object"
-                        },
-                        "statFunc": {
-                          "type": "object"
-                        },
-                        "resolvedCallIds": {
-                          "type": "array",
-                          "maxItems": 64,
-                          "items": {
-                            "type": "string",
-                            "minLength": 1
-                          }
-                        },
-                        "done": {
-                          "type": "boolean"
                         }
                       },
                       "required": [
@@ -22471,23 +21367,6 @@
                         "blockIndex": {
                           "type": "integer",
                           "minimum": 0
-                        },
-                        "stat": {
-                          "type": "object"
-                        },
-                        "statFunc": {
-                          "type": "object"
-                        },
-                        "resolvedCallIds": {
-                          "type": "array",
-                          "maxItems": 64,
-                          "items": {
-                            "type": "string",
-                            "minLength": 1
-                          }
-                        },
-                        "done": {
-                          "type": "boolean"
                         }
                       },
                       "required": [
@@ -25112,23 +23991,6 @@
                         "blockIndex": {
                           "type": "integer",
                           "minimum": 0
-                        },
-                        "stat": {
-                          "type": "object"
-                        },
-                        "statFunc": {
-                          "type": "object"
-                        },
-                        "resolvedCallIds": {
-                          "type": "array",
-                          "maxItems": 64,
-                          "items": {
-                            "type": "string",
-                            "minLength": 1
-                          }
-                        },
-                        "done": {
-                          "type": "boolean"
                         }
                       },
                       "required": [
@@ -27764,23 +26626,6 @@
                         "blockIndex": {
                           "type": "integer",
                           "minimum": 0
-                        },
-                        "stat": {
-                          "type": "object"
-                        },
-                        "statFunc": {
-                          "type": "object"
-                        },
-                        "resolvedCallIds": {
-                          "type": "array",
-                          "maxItems": 64,
-                          "items": {
-                            "type": "string",
-                            "minLength": 1
-                          }
-                        },
-                        "done": {
-                          "type": "boolean"
                         }
                       },
                       "required": [
@@ -28362,23 +27207,6 @@
                         "blockIndex": {
                           "type": "integer",
                           "minimum": 0
-                        },
-                        "stat": {
-                          "type": "object"
-                        },
-                        "statFunc": {
-                          "type": "object"
-                        },
-                        "resolvedCallIds": {
-                          "type": "array",
-                          "maxItems": 64,
-                          "items": {
-                            "type": "string",
-                            "minLength": 1
-                          }
-                        },
-                        "done": {
-                          "type": "boolean"
                         }
                       },
                       "required": [
@@ -31225,23 +30053,6 @@
                         "blockIndex": {
                           "type": "integer",
                           "minimum": 0
-                        },
-                        "stat": {
-                          "type": "object"
-                        },
-                        "statFunc": {
-                          "type": "object"
-                        },
-                        "resolvedCallIds": {
-                          "type": "array",
-                          "maxItems": 64,
-                          "items": {
-                            "type": "string",
-                            "minLength": 1
-                          }
-                        },
-                        "done": {
-                          "type": "boolean"
                         }
                       },
                       "required": [
@@ -32680,23 +31491,6 @@
                     "blockIndex": {
                       "type": "integer",
                       "minimum": 0
-                    },
-                    "stat": {
-                      "type": "object"
-                    },
-                    "statFunc": {
-                      "type": "object"
-                    },
-                    "resolvedCallIds": {
-                      "type": "array",
-                      "maxItems": 64,
-                      "items": {
-                        "type": "string",
-                        "minLength": 1
-                      }
-                    },
-                    "done": {
-                      "type": "boolean"
                     }
                   },
                   "required": [
@@ -32986,23 +31780,6 @@
                     "blockIndex": {
                       "type": "integer",
                       "minimum": 0
-                    },
-                    "stat": {
-                      "type": "object"
-                    },
-                    "statFunc": {
-                      "type": "object"
-                    },
-                    "resolvedCallIds": {
-                      "type": "array",
-                      "maxItems": 64,
-                      "items": {
-                        "type": "string",
-                        "minLength": 1
-                      }
-                    },
-                    "done": {
-                      "type": "boolean"
                     }
                   },
                   "required": [
@@ -33292,23 +32069,6 @@
                     "blockIndex": {
                       "type": "integer",
                       "minimum": 0
-                    },
-                    "stat": {
-                      "type": "object"
-                    },
-                    "statFunc": {
-                      "type": "object"
-                    },
-                    "resolvedCallIds": {
-                      "type": "array",
-                      "maxItems": 64,
-                      "items": {
-                        "type": "string",
-                        "minLength": 1
-                      }
-                    },
-                    "done": {
-                      "type": "boolean"
                     }
                   },
                   "required": [
@@ -33598,23 +32358,6 @@
                     "blockIndex": {
                       "type": "integer",
                       "minimum": 0
-                    },
-                    "stat": {
-                      "type": "object"
-                    },
-                    "statFunc": {
-                      "type": "object"
-                    },
-                    "resolvedCallIds": {
-                      "type": "array",
-                      "maxItems": 64,
-                      "items": {
-                        "type": "string",
-                        "minLength": 1
-                      }
-                    },
-                    "done": {
-                      "type": "boolean"
                     }
                   },
                   "required": [
@@ -39044,117 +37787,37 @@
         "type_key": "era.sync.block.step.pending",
         "representation": "json",
         "display_name": "ERA·同步·块步进状态·待提交",
-        "description": "块步进循环内「已推进一个块、尚未提交」的中间状态；与 .next 同形，分开声明是因为内核按类型做数据流、同一节点集里同一类型只能有一个产出者：推进节点产出它、提交折回节点产出 .next。",
+        "description": "单块工作项、已确认来源依据与最后真实提交结果。",
         "schema": {
-          "$schema": "https://json-schema.org/draft/2020-12/schema",
           "type": "object",
           "properties": {
-            "messageId": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "mk": {
-              "type": "string"
-            },
-            "blockIndex": {
-              "type": "integer",
-              "minimum": 0
+            "work": {
+              "type": "object"
             },
             "done": {
               "type": "boolean"
             },
-            "stat": {
-              "type": "object"
-            },
-            "statFunc": {
-              "type": "object"
-            },
-            "baseStat": {
-              "type": "object"
-            },
-            "baseStatFunc": {
-              "type": "object"
-            },
-            "consecutive": {
-              "type": "object",
-              "properties": {
-                "mk": {
-                  "type": [
-                    "string",
-                    "null"
-                  ]
-                },
-                "count": {
-                  "type": "integer",
-                  "minimum": 0
-                }
-              },
-              "required": [
-                "mk",
-                "count"
-              ],
-              "additionalProperties": false
-            },
-            "drawOffset": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "committedPerBlock": {
-              "type": "boolean"
-            },
-            "executedBlockIndex": {
+            "sourceBasis": {
               "type": [
-                "integer",
+                "object",
                 "null"
-              ],
-              "minimum": 0
-            },
-            "route": {
-              "enum": [
-                "none",
-                "invoke"
               ]
             },
-            "handoff": {
-              "oneOf": [
-                {
-                  "type": "object"
-                },
-                {
-                  "type": "null"
-                }
+            "lastResult": {
+              "type": [
+                "object",
+                "null"
               ]
-            },
-            "content": {
-              "type": "string"
-            },
-            "meta": {
-              "type": "object"
-            },
-            "work": {
-              "type": "object"
             }
           },
           "required": [
-            "messageId",
-            "mk",
-            "blockIndex",
+            "work",
             "done",
-            "stat",
-            "statFunc",
-            "baseStat",
-            "baseStatFunc",
-            "consecutive",
-            "executedBlockIndex",
-            "drawOffset",
-            "committedPerBlock",
-            "route",
-            "handoff",
-            "content",
-            "meta",
-            "work"
+            "sourceBasis",
+            "lastResult"
           ],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "$schema": "https://json-schema.org/draft/2020-12/schema"
         }
       },
       "era.sync.block.step.state": {
@@ -39162,117 +37825,37 @@
         "type_key": "era.sync.block.step.state",
         "representation": "json",
         "display_name": "ERA·同步·块步进状态",
-        "description": "一次块步进循环的承载状态：楼层身份、块下标、是否已处理完、调用位置为止的累计变量与函数库、以及本次迭代的路由与待交接调用。循环内每迭代只推进一个块，状态随迭代携带；跨批次恢复按「从楼层起点重算」执行，因此不写入服务状态。",
+        "description": "单块工作项、已确认来源依据与最后真实提交结果。",
         "schema": {
-          "$schema": "https://json-schema.org/draft/2020-12/schema",
           "type": "object",
           "properties": {
-            "messageId": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "mk": {
-              "type": "string"
-            },
-            "blockIndex": {
-              "type": "integer",
-              "minimum": 0
+            "work": {
+              "type": "object"
             },
             "done": {
               "type": "boolean"
             },
-            "stat": {
-              "type": "object"
-            },
-            "statFunc": {
-              "type": "object"
-            },
-            "baseStat": {
-              "type": "object"
-            },
-            "baseStatFunc": {
-              "type": "object"
-            },
-            "consecutive": {
-              "type": "object",
-              "properties": {
-                "mk": {
-                  "type": [
-                    "string",
-                    "null"
-                  ]
-                },
-                "count": {
-                  "type": "integer",
-                  "minimum": 0
-                }
-              },
-              "required": [
-                "mk",
-                "count"
-              ],
-              "additionalProperties": false
-            },
-            "drawOffset": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "committedPerBlock": {
-              "type": "boolean"
-            },
-            "executedBlockIndex": {
+            "sourceBasis": {
               "type": [
-                "integer",
+                "object",
                 "null"
-              ],
-              "minimum": 0
-            },
-            "route": {
-              "enum": [
-                "none",
-                "invoke"
               ]
             },
-            "handoff": {
-              "oneOf": [
-                {
-                  "type": "object"
-                },
-                {
-                  "type": "null"
-                }
+            "lastResult": {
+              "type": [
+                "object",
+                "null"
               ]
-            },
-            "content": {
-              "type": "string"
-            },
-            "meta": {
-              "type": "object"
-            },
-            "work": {
-              "type": "object"
             }
           },
           "required": [
-            "messageId",
-            "mk",
-            "blockIndex",
+            "work",
             "done",
-            "stat",
-            "statFunc",
-            "baseStat",
-            "baseStatFunc",
-            "consecutive",
-            "executedBlockIndex",
-            "drawOffset",
-            "committedPerBlock",
-            "route",
-            "handoff",
-            "content",
-            "meta",
-            "work"
+            "sourceBasis",
+            "lastResult"
           ],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "$schema": "https://json-schema.org/draft/2020-12/schema"
         }
       },
       "era.sync.block.step.state.next": {
@@ -39280,117 +37863,37 @@
         "type_key": "era.sync.block.step.state.next",
         "representation": "json",
         "display_name": "ERA·同步·块步进状态·下一个",
-        "description": "块步进循环单次迭代产出的下一个状态，与输入状态同形；与输入分开声明是为了让循环的 carry 输入与 body 输出在类型上不混淆。",
+        "description": "单块工作项、已确认来源依据与最后真实提交结果。",
         "schema": {
-          "$schema": "https://json-schema.org/draft/2020-12/schema",
           "type": "object",
           "properties": {
-            "messageId": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "mk": {
-              "type": "string"
-            },
-            "blockIndex": {
-              "type": "integer",
-              "minimum": 0
+            "work": {
+              "type": "object"
             },
             "done": {
               "type": "boolean"
             },
-            "stat": {
-              "type": "object"
-            },
-            "statFunc": {
-              "type": "object"
-            },
-            "baseStat": {
-              "type": "object"
-            },
-            "baseStatFunc": {
-              "type": "object"
-            },
-            "consecutive": {
-              "type": "object",
-              "properties": {
-                "mk": {
-                  "type": [
-                    "string",
-                    "null"
-                  ]
-                },
-                "count": {
-                  "type": "integer",
-                  "minimum": 0
-                }
-              },
-              "required": [
-                "mk",
-                "count"
-              ],
-              "additionalProperties": false
-            },
-            "drawOffset": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "committedPerBlock": {
-              "type": "boolean"
-            },
-            "executedBlockIndex": {
+            "sourceBasis": {
               "type": [
-                "integer",
+                "object",
                 "null"
-              ],
-              "minimum": 0
-            },
-            "route": {
-              "enum": [
-                "none",
-                "invoke"
               ]
             },
-            "handoff": {
-              "oneOf": [
-                {
-                  "type": "object"
-                },
-                {
-                  "type": "null"
-                }
+            "lastResult": {
+              "type": [
+                "object",
+                "null"
               ]
-            },
-            "content": {
-              "type": "string"
-            },
-            "meta": {
-              "type": "object"
-            },
-            "work": {
-              "type": "object"
             }
           },
           "required": [
-            "messageId",
-            "mk",
-            "blockIndex",
+            "work",
             "done",
-            "stat",
-            "statFunc",
-            "baseStat",
-            "baseStatFunc",
-            "consecutive",
-            "executedBlockIndex",
-            "drawOffset",
-            "committedPerBlock",
-            "route",
-            "handoff",
-            "content",
-            "meta",
-            "work"
+            "sourceBasis",
+            "lastResult"
           ],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "$schema": "https://json-schema.org/draft/2020-12/schema"
         }
       },
       "era.sync.commit.contract.failure": {
@@ -43040,23 +41543,6 @@
                         "blockIndex": {
                           "type": "integer",
                           "minimum": 0
-                        },
-                        "stat": {
-                          "type": "object"
-                        },
-                        "statFunc": {
-                          "type": "object"
-                        },
-                        "resolvedCallIds": {
-                          "type": "array",
-                          "maxItems": 64,
-                          "items": {
-                            "type": "string",
-                            "minLength": 1
-                          }
-                        },
-                        "done": {
-                          "type": "boolean"
                         }
                       },
                       "required": [
@@ -43379,175 +41865,6 @@
           "$schema": "https://json-schema.org/draft/2020-12/schema",
           "type": "object",
           "additionalProperties": true
-        }
-      },
-      "era.tavern.functions.invoke.request": {
-        "kind": "data_schema",
-        "type_key": "era.tavern.functions.invoke.request",
-        "representation": "json",
-        "display_name": "ERA·函数调用·登记请求",
-        "description": "按调用标识登记一次待调用。标识由 Service 生成且在同一消息内稳定，因此同名同参的多处调用不会互相覆盖；args 为作者工具的参数对象。",
-        "schema": {
-          "$schema": "https://json-schema.org/draft/2020-12/schema",
-          "type": "object",
-          "properties": {
-            "invocationId": {
-              "type": "string",
-              "minLength": 1
-            },
-            "name": {
-              "type": "string",
-              "minLength": 1
-            },
-            "args": {
-              "type": "object"
-            }
-          },
-          "required": [
-            "invocationId",
-            "name",
-            "args"
-          ],
-          "additionalProperties": false
-        }
-      },
-      "era.tavern.functions.invoke.result": {
-        "kind": "data_schema",
-        "type_key": "era.tavern.functions.invoke.result",
-        "representation": "json",
-        "display_name": "ERA·函数调用·登记结果",
-        "description": "登记完成回执。只表示调用已受理，不表示函数已执行完成——函数由 Host 在调用位置之外驱动，等待完成会把当前 FIFO 事件钉死。",
-        "schema": {
-          "$schema": "https://json-schema.org/draft/2020-12/schema",
-          "type": "object",
-          "properties": {
-            "status": {
-              "const": "accepted"
-            },
-            "invocationId": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "required": [
-            "status",
-            "invocationId"
-          ],
-          "additionalProperties": false
-        }
-      },
-      "era.tavern.functions.release.request": {
-        "kind": "data_schema",
-        "type_key": "era.tavern.functions.release.request",
-        "representation": "json",
-        "display_name": "ERA·函数调用·结束请求",
-        "description": "结束一次调用会话并释放位置绑定状态；结束后该标识的提交一律被拒绝。",
-        "schema": {
-          "$schema": "https://json-schema.org/draft/2020-12/schema",
-          "type": "object",
-          "properties": {
-            "invocationId": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "required": [
-            "invocationId"
-          ],
-          "additionalProperties": false
-        }
-      },
-      "era.tavern.functions.release.result": {
-        "kind": "data_schema",
-        "type_key": "era.tavern.functions.release.result",
-        "representation": "json",
-        "display_name": "ERA·函数调用·结束结果",
-        "description": "结束回执。释放是幂等的：重复释放同一标识不报错，也不改变业务结果。",
-        "schema": {
-          "$schema": "https://json-schema.org/draft/2020-12/schema",
-          "type": "object",
-          "properties": {
-            "released": {
-              "type": "boolean"
-            }
-          },
-          "required": [
-            "released"
-          ],
-          "additionalProperties": false
-        }
-      },
-      "era.tavern.functions.result.request": {
-        "kind": "data_schema",
-        "type_key": "era.tavern.functions.result.request",
-        "representation": "json",
-        "display_name": "ERA·函数调用·终态请求",
-        "description": "查询一次调用的终态。未登记的标识必须以类型化失败回送，而不是抛异常或静默返回成功。",
-        "schema": {
-          "$schema": "https://json-schema.org/draft/2020-12/schema",
-          "type": "object",
-          "properties": {
-            "invocationId": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "required": [
-            "invocationId"
-          ],
-          "additionalProperties": false
-        }
-      },
-      "era.tavern.functions.result.result": {
-        "kind": "data_schema",
-        "type_key": "era.tavern.functions.result.result",
-        "representation": "json",
-        "display_name": "ERA·函数调用·终态结果",
-        "description": "函数调用的机械终态。completed/failed/cancelled 三态必须区分：酒馆工具调用失败时返回 Error 对象而不是抛异常，因此 unregistered 单独标记，供上层提示作者注册；appliedCount 报告本次调用已经就地应用到当前位置的操作条数。",
-        "schema": {
-          "$schema": "https://json-schema.org/draft/2020-12/schema",
-          "type": "object",
-          "properties": {
-            "status": {
-              "enum": [
-                "completed",
-                "failed",
-                "cancelled"
-              ]
-            },
-            "name": {
-              "type": "string"
-            },
-            "result": {
-              "oneOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ]
-            },
-            "message": {
-              "type": "string"
-            },
-            "unregistered": {
-              "type": "boolean"
-            },
-            "appliedCount": {
-              "type": "integer",
-              "minimum": 0
-            }
-          },
-          "required": [
-            "status",
-            "name",
-            "result",
-            "message",
-            "unregistered",
-            "appliedCount"
-          ],
-          "additionalProperties": false
         }
       },
       "era.tavern.identity.read.request": {
@@ -45294,7 +43611,7 @@
         "kind": "base_lib",
         "id": "era.service.block_step_state",
         "display_name": "ERA 块步进状态形状与事实提取",
-        "description": "块步进循环三个节点共享的状态形状、处理楼层身份提取、已提交世界读取与交接事实构造；集中一处避免三个节点各自解释块步进状态。",
+        "description": "单块工作项、已确认来源依据与最后真实提交结果。",
         "category": "同步规划",
         "version": "1.0.0",
         "implementations": [
@@ -45312,14 +43629,11 @@
           }
         ],
         "dependencies": [
-          "era.service.message_function_calls",
-          "era.service.message_function_flow",
-          "era.service.sync_contracts",
-          "era.crud.engine",
-          "era.service.sync_planning",
-          "era.service.sync_engine"
+          "era.service.sync_contracts"
         ],
-        "external_packages": []
+        "external_packages": [
+          "@era/vibeflow-contracts"
+        ]
       },
       "era.service.command_compaction": {
         "kind": "base_lib",
@@ -45402,8 +43716,7 @@
         ],
         "dependencies": [
           "era.service.types",
-          "era.service.mk_engine",
-          "era.service.message_function_flow"
+          "era.service.mk_engine"
         ],
         "external_packages": [
           "@era/vibeflow-contracts"
@@ -45545,7 +43858,7 @@
         "kind": "base_lib",
         "id": "era.service.message_function_calls",
         "display_name": "ERA 消息内函数调用语法与块步进",
-        "description": "纯函数解析消息内自闭合 <EraFCall name=.. args=.. /> 调用块、判定其是否已处理（status 标记或下方紧邻 <EraFCallTx for=..> 操作区）、把六类既有指令与调用块合并为同一份按原文位置有序的块序列，并提供一步一块的可续做会话与操作区渲染；不执行宿主调用、不访问或写入 Tavern。",
+        "description": "解析 EraFCall 与普通操作的文本位置；仅 status=done 表示已调用。保留旧 EraFCallTx 普通操作读取和临时 era_block 进度读写，不提供函数执行器或专用操作区写入器。",
         "category": "消息内函数调用",
         "version": "1.0.0",
         "implementations": [
@@ -45563,33 +43876,6 @@
           }
         ],
         "dependencies": [
-          "era.crud.engine"
-        ],
-        "external_packages": []
-      },
-      "era.service.message_function_flow": {
-        "kind": "base_lib",
-        "id": "era.service.message_function_flow",
-        "display_name": "ERA 消息内函数调用流程状态机",
-        "description": "纯状态机按原文位置逐块推进一条消息：在调用块处停下并暴露待调用，宿主机回送终态与已应用操作后把产出写成调用块下方的操作区记录，再继续推进直到该消息再无新块。所有状态（文本、块游标、累计变量与函数库、诊断、正式模式）随流程对象携带，可跨 FIFO 事件与步骤恢复；不执行作者函数、不访问宿主。",
-        "category": "消息内函数调用",
-        "version": "1.0.0",
-        "implementations": [
-          {
-            "language": "typescript",
-            "targets": [
-              "browser",
-              "node"
-            ],
-            "source": {
-              "kind": "file",
-              "ref": "base_lib/domain/message_function_flow.ts"
-            },
-            "completion": "immediate"
-          }
-        ],
-        "dependencies": [
-          "era.service.message_function_calls",
           "era.crud.engine"
         ],
         "external_packages": []
@@ -46243,32 +44529,6 @@
           }
         }
       },
-      "era.tavern.functions": {
-        "kind": "capability",
-        "id": "era.tavern.functions",
-        "targets": [
-          "browser"
-        ],
-        "display_name": "ERA 消息内函数调用宿主 I/O",
-        "description": "只执行 Service 已声明的机械操作：按调用标识登记作者注册的工具调用、在调用位置执行它并回送终态，以及结束会话。块顺序、操作应用与最终提交仍由 Service 决定；本能力不决定业务顺序，也不写 ERA 业务状态。",
-        "operations": {
-          "invoke": {
-            "input_type": "era.tavern.functions.invoke.request",
-            "output_type": "era.tavern.functions.invoke.result",
-            "completion": "suspend"
-          },
-          "result": {
-            "input_type": "era.tavern.functions.result.request",
-            "output_type": "era.tavern.functions.result.result",
-            "completion": "suspend"
-          },
-          "release": {
-            "input_type": "era.tavern.functions.release.request",
-            "output_type": "era.tavern.functions.release.result",
-            "completion": "immediate"
-          }
-        }
-      },
       "era.tavern.identity": {
         "kind": "capability",
         "id": "era.tavern.identity",
@@ -46487,7 +44747,6 @@
         "provides": [
           "vibeflow.port",
           "era.tavern.agent",
-          "era.tavern.functions",
           "era.tavern.variables",
           "era.tavern.messages",
           "era.tavern.worldbook",

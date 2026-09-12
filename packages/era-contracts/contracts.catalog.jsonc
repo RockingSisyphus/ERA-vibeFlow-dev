@@ -1,7 +1,7 @@
 {
   "package": "@era/vibeflow-contracts",
   "status": "implemented",
-  "version": "1.9.0",
+  "version": "1.10.0",
   "schema_version": 1,
   "contracts": [
     {

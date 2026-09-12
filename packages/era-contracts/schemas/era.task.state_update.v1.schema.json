@@ -36,23 +36,6 @@
             "blockIndex": {
               "type": "integer",
               "minimum": 0
-            },
-            "stat": {
-              "type": "object"
-            },
-            "statFunc": {
-              "type": "object"
-            },
-            "resolvedCallIds": {
-              "type": "array",
-              "maxItems": 64,
-              "items": {
-                "type": "string",
-                "minLength": 1
-              }
-            },
-            "done": {
-              "type": "boolean"
             }
           },
           "required": [

@@ -16,12 +16,6 @@ import {
 } from './sidecar-runtime-snapshot';
 import type { EraSettlement } from './types';
 import { currentTavernIdentityMatches, projectPublicState, projectPublicStateAtMessage } from './public-state';
-import {
-  assertNoPositionBinding,
-  positionBoundCommit,
-  positionBoundReceipt,
-  positionBoundState,
-} from './era-position-binding';
 import type { EraStatusbarSource } from './statusbar-identity';
 
 export const ERA_FACADE_EVENT = {
@@ -174,13 +168,6 @@ export function createEraFacade(createStatusbar: EraStatusbarFactory): EraFacade
     sourceContext?: EraStatusbarSource,
   ): Promise<EraCommitReceipt> => {
     const scope = options.scope ?? 'message';
-    // 位置绑定调用期间，提交属于调用位置而不是 FIFO：入队会让处理该消息的事件
-    // 与等待函数返回的自身互等。scope 跨消息语义在位置上不成立，按类型化拒绝。
-    if (positionBoundState() !== null) {
-      if (scope !== 'message')
-        throw new Error('ERA_POSITION_BOUND_SCOPE_UNSUPPORTED: 位置绑定调用只支持 message 作用域提交。');
-      return positionBoundReceipt(await positionBoundCommit(operations));
-    }
     const settlement = await submit(ERA_FACADE_EVENT.COMMIT, {
       command: 'commit',
       scope,
@@ -201,10 +188,9 @@ export function createEraFacade(createStatusbar: EraStatusbarFactory): EraFacade
   const facade = {
     commit,
     generation: Object.freeze({ subscribe: generationSubscriptions.subscribe.bind(generationSubscriptions) }),
-    // 位置绑定期间读取的是调用位置状态：函数必须看到自己所在位置的变量，而不是旧侧车状态。
-    get: () => positionBoundState() ?? currentState(),
+    get: () => currentState(),
     async ready() {
-      const immediate = positionBoundState() ?? currentState();
+      const immediate = currentState();
       if (immediate.status === 'ready') return immediate;
       return new Promise<EraPublicState>(resolve => {
         /** 等待期间不向作者暴露上一聊天快照，首个匹配身份的发布才结算。 */
@@ -218,20 +204,17 @@ export function createEraFacade(createStatusbar: EraStatusbarFactory): EraFacade
     },
     subscribe: subscribePublicState,
     async sync(options = {}) {
-      assertNoPositionBinding('ERA.sync');
       await submit(ERA_FACADE_EVENT.SYNC, { command: 'sync', ...structuredClone(options) });
       return currentState();
     },
     history: Object.freeze({
       async atMessage(messageId: number) {
-        assertNoPositionBinding('ERA.history');
         const snapshot = readActiveSidecarRuntimeSnapshot();
         if (snapshot === null || !currentTavernIdentityMatches(snapshot)) throw new Error('ERA_STATE_NOT_READY');
         return projectPublicStateAtMessage(snapshot, messageId);
       },
     }),
     get statusbar() {
-      assertNoPositionBinding('ERA.statusbar');
       if (statusbar === null) throw new Error('ERA_STATUSBAR_RUNTIME_UNAVAILABLE');
       return statusbar;
     },
@@ -270,18 +253,10 @@ export function installEraPublicApi(createStatusbar: EraStatusbarFactory): () =>
   });
   installedFacade = guarded;
   initializeGlobal('ERA', guarded);
-  // Tavern Helper 的 initializeGlobal 把门面发布到**顶层窗口**；而作者函数由工具注册表调用时
-  // 运行在**脚本 iframe** 内，那里的 `globalThis.ERA` 并不存在（真机实测 eraType=undefined，
-  // topEraType=object），函数因此拿不到 `ERA.commit`，表现为「函数执行成功但产出操作为 0」。
-  // 因此在本实例所在窗口也发布一次，并与 stop 成对清理（只清理我们自己设置的那份）。
-  const localGlobal = globalThis as { ERA?: unknown };
-  const hadLocalEra = Object.prototype.hasOwnProperty.call(localGlobal, 'ERA');
-  if (!hadLocalEra) localGlobal.ERA = guarded;
   return () => {
     active = false;
     generationSubscriptions.clear();
     if (installedFacade === guarded) installedFacade = null;
-    if (!hadLocalEra && localGlobal.ERA === guarded) delete localGlobal.ERA;
     (facade.statusbar as EraStatusbarController).stop();
   };
 }
