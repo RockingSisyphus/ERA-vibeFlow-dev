@@ -722,6 +722,21 @@ export function planEraSync(input: EraSyncInputV1): EraSyncPlanV1 {
     // EditLogs **追加**而不是覆盖，否则回退会漏掉已提交块的日志。
     const appliedPrefix = appliedCommandPrefix({ content: floorText });
     const interrupted = hasAppliedBlockRecords(floorText);
+    // 「已应用前缀」到底还在不在本次重放的基线里，取决于**回退有没有把它撤掉**：
+    // 只有该楼层 MK 的 EditLog 存在（回退才能撤掉它），前缀效果才会离开基线。
+    //   - 有日志 ⇒ 回退已撤掉前缀 ⇒ 必须从指令 0 重放（否则前缀效果丢失：真机
+    //     SIDECAR-BIND-014 的 `history-changed` 全量重建就是这样把 score 丢成 0 的）；
+    //   - 无日志（真·续做：块级中途提交只写旧 meta，不记录自己的日志）⇒ 前缀效果仍在基线里
+    //     ⇒ 仍要跳过前缀，否则会把已提交的块算第二遍。
+    const loggedForFloor = parseEditLog(editLogs[ensured.mk]);
+    // 回退是否**覆盖到这条楼层**：只有覆盖到、且它自己记了日志，前缀效果才会被撤出基线。
+    const floorIndexInSelection = oldSelectedMks.indexOf(ensured.mk);
+    const rollbackTargetIndex =
+      rollbackToMk === null ? -1 : oldSelectedMks.indexOf(rollbackToMk);
+    const coveredByRollback =
+      rollbackApplied && floorIndexInSelection >= 0 && rollbackTargetIndex < floorIndexInSelection;
+    const prefixKeptInBaseline =
+      interrupted && (loggedForFloor.length === 0 || !coveredByRollback);
     const applied = applyMessageCommands({
       content: floorText,
       messageId: ensured.message.messageId,
@@ -730,7 +745,7 @@ export function planEraSync(input: EraSyncInputV1): EraSyncPlanV1 {
       randomSourceKey: ensured.mk,
       meta: contextMeta,
       traditionalToSimplified: input.traditionalToSimplified,
-      ...(appliedPrefix > 0
+      ...(prefixKeptInBaseline && appliedPrefix > 0
         ? {
             commandRange: {
               fromIndex: appliedPrefix,
@@ -762,14 +777,16 @@ export function planEraSync(input: EraSyncInputV1): EraSyncPlanV1 {
         path: diagnostic.path,
       })),
     );
-    const alreadyLogged = parseEditLog(editLogs[ensured.mk]);
-    const effectiveEditLog = interrupted
+    const alreadyLogged = loggedForFloor;
+    // 只有「前缀仍在基线里」时才追加：那种情况下本次重放只算了后缀，日志必须补在后缀上。
+    // 前缀被回退撤掉时本次重放的是**整条楼层**，日志就该整体覆盖。
+    const effectiveEditLog = prefixKeptInBaseline
       ? [...alreadyLogged, ...cloneSnapshotValue(applied.editLog)]
       : cloneSnapshotValue(applied.editLog);
     const alreadyLoggedFunctions = parseEditLog(
       functionEditLogs[ensured.mk],
     ) as readonly EraFunctionEditLog[];
-    const effectiveFunctionEditLog = interrupted
+    const effectiveFunctionEditLog = prefixKeptInBaseline
       ? [
           ...alreadyLoggedFunctions,
           ...cloneSnapshotValue(applied.functionEditLog ?? []),
