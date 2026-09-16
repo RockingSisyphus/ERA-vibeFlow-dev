@@ -1,0 +1,87 @@
+{
+  "kind": "node",
+  "type_key": "era.agent.candidate_seed",
+  "display_name": "候选循环 seed",
+  "category": "Agent候选",
+  "description": "候选纠错在当前工作流内继续，成功才进入阶段交接。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.agent.generation.request",
+        "cardinality": "exactly_one",
+        "display_name": "era.agent.generation.request"
+      },
+      {
+        "type": "era.step.request.routed",
+        "cardinality": "exactly_one",
+        "display_name": "era.step.request.routed"
+      },
+      {
+        "type": "era.batch.execution.state",
+        "cardinality": "exactly_one",
+        "display_name": "era.batch.execution.state"
+      }
+    ],
+    "provides": [
+      {
+        "key": "candidate_state",
+        "type": "era.agent.candidate.state",
+        "display_name": "candidate_state"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.agent.generation.request": [
+        "era.agent.generation.request"
+      ],
+      "era.step.request.routed": [
+        "era.step.request.routed"
+      ],
+      "era.batch.execution.state": [
+        "era.batch.execution.state"
+      ]
+    },
+    "output_semantics": {
+      "candidate_state": [
+        "era.agent.candidate.state"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/agent/candidate_seed.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.agent_session_binding"
+  ],
+  "capabilities": [
+    {
+      "id": "era.tavern.sidecar",
+      "operations": [
+        "read_working",
+        "write_working"
+      ]
+    },
+    {
+      "id": "era.tavern.agent",
+      "operations": [
+        "read_session_binding",
+        "write_session"
+      ]
+    }
+  ]
+}

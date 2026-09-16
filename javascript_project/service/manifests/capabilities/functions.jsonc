@@ -1,0 +1,31 @@
+{
+  "kind": "capability",
+  "id": "era.tavern.functions",
+  "targets": [
+    "browser"
+  ],
+  "display_name": "消息内原生工具调用通道",
+  "description": "调用酒馆注册工具，显式绑定参数对象，依次搬运API请求和应用回执；不执行变量规则。",
+  "operations": {
+    "begin": {
+      "input_type": "era.working.request",
+      "output_type": "era.working.result",
+      "completion": "immediate"
+    },
+    "next": {
+      "input_type": "era.working.request",
+      "output_type": "era.working.result",
+      "completion": "suspend"
+    },
+    "acknowledge": {
+      "input_type": "era.working.request",
+      "output_type": "era.working.result",
+      "completion": "immediate"
+    },
+    "release": {
+      "input_type": "era.working.request",
+      "output_type": "era.working.result",
+      "completion": "immediate"
+    }
+  }
+}

@@ -3,7 +3,7 @@
   "type_key": "era.sync.drive_message_blocks",
   "display_name": "应用下一块或准备楼层维护",
   "category": "同步规划",
-  "description": "复用纯块应用语义，独立携带消息起点变量/函数及连续随机偏移；done 仅按标签判断，旧 EraFCallTx 只作普通记录容器。无 done 调用返回 ERA_FCALL_NOT_IMPLEMENTED，不改 done，不处理后续块。准备楼层完成清进度、纯回退和空聊天所需的维护写入。",
+  "description": "复用纯块应用语义，独立携带消息起点变量/函数及连续随机偏移；done 仅按标签判断，旧 EraFCallTx 只作普通记录容器。未执行调用通过原生工具通道运行，其 API 交回同一块循环应用；成功或作者异常后标 done，服务应用失败时拒绝等待请求并释放调用。准备楼层完成清进度、纯回退和空聊天所需的维护写入。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
@@ -41,7 +41,7 @@
         "browser",
         "node"
       ],
-      "completion": "immediate",
+      "completion": "suspend",
       "source": {
         "kind": "file",
         "ref": "nodes/sync/drive_message_blocks.ts",
@@ -52,7 +52,25 @@
   "base_libs": [
     "era.service.block_step_state",
     "era.service.sync_contracts",
-    "era.service.sync_engine"
+    "era.service.sync_engine",
+    "era.service.function_block_execution",
+    "era.service.agent_stage_program"
   ],
-  "capabilities": []
+  "capabilities": [
+    {
+      "id": "era.tavern.functions",
+      "operations": [
+        "begin",
+        "next",
+        "acknowledge",
+        "release"
+      ]
+    },
+    {
+      "id": "era.tavern.identity",
+      "operations": [
+        "read"
+      ]
+    }
+  ]
 }

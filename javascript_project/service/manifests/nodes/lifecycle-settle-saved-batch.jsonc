@@ -1,0 +1,68 @@
+{
+  "kind": "node",
+  "type_key": "era.lifecycle.settle_saved_batch",
+  "display_name": "结算已保存批次与恢复事实",
+  "category": "内存生命周期",
+  "description": "保存成功仅清除本批待保存内容，保留后到操作；分别维护内存已应用与已保存事实。失败通过原恢复入口报告，不逆转已返回API成功，不永久停服。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.tavern.commit.result",
+        "cardinality": "exactly_one",
+        "display_name": "era.tavern.commit.result"
+      }
+    ],
+    "provides": [
+      {
+        "key": "completed_sync_result",
+        "type": "era.tavern.commit.result",
+        "display_name": "completed_sync_result"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.tavern.commit.result": [
+        "era.tavern.commit.result"
+      ]
+    },
+    "output_semantics": {
+      "completed_sync_result": [
+        "completed_sync_result"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/sync/settle_saved_batch.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [],
+  "capabilities": [
+    {
+      "id": "era.lifecycle.admission",
+      "operations": [
+        "cancel",
+        "schedule"
+      ]
+    },
+    {
+      "id": "era.tavern.sidecar",
+      "operations": [
+        "read_working"
+      ]
+    }
+  ]
+}

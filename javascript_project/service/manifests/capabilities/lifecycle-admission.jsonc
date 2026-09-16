@@ -1,0 +1,21 @@
+{
+  "kind": "capability",
+  "id": "era.lifecycle.admission",
+  "targets": [
+    "browser"
+  ],
+  "display_name": "执行域延迟准入",
+  "description": "按Node提供的事件和防抖窗口机械准入；不选择业务任务或操作变量。",
+  "operations": {
+    "schedule": {
+      "input_type": "era.working.request",
+      "output_type": "era.working.result",
+      "completion": "immediate"
+    },
+    "cancel": {
+      "input_type": "era.working.request",
+      "output_type": "era.working.result",
+      "completion": "immediate"
+    }
+  }
+}

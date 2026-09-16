@@ -181,3 +181,15 @@ describe('ERA 消息内函数调用：未处理清单与操作区渲染', () => 
     ).toContain('ERA_FCALL_NAME_REQUIRED');
   });
 });
+
+it('参数里的标签字符不截断调用，也不把参数中的操作文本当作消息指令', () => {
+  const args = { nested: { list: ['a > b', '<VariableEdit>{"hp":0}</VariableEdit>', '\\"中文'] } };
+  const text = `<EraFCall name="payload" args='${JSON.stringify(args)}'/><VariableEdit>{"hp":7}</VariableEdit>`;
+  const calls = parseEraFunctionCalls(text);
+  expect(calls).toHaveLength(1);
+  expect(calls[0].args).toEqual(args);
+  expect(calls[0].diagnostics).toEqual([]);
+  const blocks = parseMessageBlocks({ content: text });
+  expect(blocks.map(block => block.kind)).toEqual(['call', 'command']);
+  expect(blocks[1].start).toBe(text.lastIndexOf('<VariableEdit>'));
+});

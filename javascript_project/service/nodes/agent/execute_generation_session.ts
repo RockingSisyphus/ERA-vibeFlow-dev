@@ -1,15 +1,20 @@
+import { parseMessageBlocks } from "../../base_lib/domain/message_function_calls.ts";
+import {
+  inspectSettlementText,
+  splitAgentStageText,
+} from "../../base_lib/agent_stage_text.ts";
 import {
   AgentStageBoundary,
   stageHandoff,
 } from "../../base_lib/agent_stage_handoff.ts";
 import {
-  planSessionBinding,
-  compactSessionStorage,
+  prepareSessionWrite,
   type SessionBindingFacts,
 } from "../../base_lib/agent_session_binding.ts";
 import { buildAgentRequestPolicy } from "../../base_lib/agent_request_policy.ts";
 import {
   AgentFunctionCallFailure,
+  agentRetryMatchesSession,
   attemptProfile,
   buildStoryInjection,
   buildAgentRetryFeedback,
@@ -22,10 +27,7 @@ import {
   extractEraMessageKey,
   formatAgentPlanReport,
   isAgentPlanningFailureMessage,
-  isolateStoryEraCommands,
   parsePlanningOutput,
-  parseSettlementOutput,
-  validateSettlementOperations,
   type EraAgentConfigurationV2,
   type EraAgentPlanningOutputV1,
 } from "../../base_lib/agent_generation_session.ts";
@@ -62,17 +64,7 @@ export function writeSession(
   const facts = capability.read_session_binding({
     chatKey: input.chatKey,
   }) as SessionBindingFacts;
-  const binding = planSessionBinding(
-    input.session,
-    input.nativeGeneration === true,
-    facts,
-  );
-  const storageSession = compactSessionStorage(binding.session);
-  return capability.write_session({
-    ...input,
-    ...binding,
-    ...(storageSession === binding.session ? {} : { storageSession }),
-  });
+  return capability.write_session(prepareSessionWrite(input, facts));
 }
 
 class AgentSessionFailure extends Error {
@@ -201,7 +193,7 @@ function restoreMessageSession(
         : 0;
   const storyEnd =
     typeof extra.storyEnd === "number" ? extra.storyEnd : text.length;
-  const story = isolateStoryEraCommands(text.slice(storyStart, storyEnd)).story;
+  const story = text.slice(storyStart, storyEnd);
   return {
     schemaVersion: 1,
     chatKey: chatKey(context),
@@ -315,11 +307,19 @@ async function runPlanning(
     Number.isSafeInteger(previousSession.nextDrawOffset)
       ? Number(previousSession.nextDrawOffset)
       : 0;
-  const attempts: Record<string, unknown>[] = [];
-  let failure: EraAgentFailedAttempt | undefined;
-  let correction: EraAgentFailedAttempt | undefined;
+  const retry =
+    isRecord(context.candidateRetry) &&
+    context.candidateRetry.stage === "planning"
+      ? context.candidateRetry
+      : null;
+  const attempts: Record<string, unknown>[] = Array.isArray(retry?.attempts)
+    ? [...retry.attempts]
+    : [];
+  let failure: EraAgentFailedAttempt | undefined = retry?.failure as
+    EraAgentFailedAttempt | undefined;
+  let correction: EraAgentFailedAttempt | undefined = failure;
   for (
-    let attempt = 0;
+    let attempt = Number(retry?.nextAttempt ?? 0);
     attempt <= configuration.planning.retryCount;
     attempt += 1
   ) {
@@ -365,14 +365,26 @@ async function runPlanning(
         isRecord(generated) && typeof generated.response === "string"
           ? generated.response
           : "";
-      const plan = parsePlanningOutput(response);
-      const executed = executeAgentFunctionCalls({
-        calls: plan.calls,
-        statData: state.statData,
-        statFunc: state.statFunc,
-        sourceKey,
-        drawOffset,
-      });
+      let plan: EraAgentPlanningOutputV1;
+      let candidateValidationError: string | null = null;
+      try {
+        plan = parsePlanningOutput(response);
+      } catch (error) {
+        const parts = splitAgentStageText(response);
+        plan = {
+          storyPlan: {},
+          calls: [],
+          instructionsBefore: parts.before,
+          instructionsAfter: parts.after,
+        };
+        candidateValidationError = failureMessage(error);
+      }
+      // The calls execute between the surrounding blocks, against their
+      // accumulated state. Generation only supplies the ordered candidate.
+      const executed: ReturnType<typeof executeAgentFunctionCalls> = {
+        results: [],
+        nextDrawOffset: drawOffset,
+      };
       responseValidated = true;
       attempts.push({
         attempt,
@@ -404,9 +416,15 @@ async function runPlanning(
         configuration,
         preState: state,
         plan,
+        planningDraft: [plan.instructionsBefore, plan.instructionsAfter]
+          .filter(Boolean)
+          .join("\n"),
         functionResults: executed.results,
         nextDrawOffset: executed.nextDrawOffset,
         planningAttempts: attempts,
+        candidateStartSession: previousSession,
+        candidateSourceResponse: response,
+        candidateValidationError,
         planReport: formatAgentPlanReport({
           plan,
           functionResults: executed.results,
@@ -477,12 +495,20 @@ async function runSettlement(
       : baseMessage.length > 0 && latest.message.startsWith(baseMessage)
         ? latest.message.slice(baseMessage.length)
         : latest.message;
-  const isolated = isolateStoryEraCommands(cycleSource);
-  const attempts: Record<string, unknown>[] = [];
-  let failure: EraAgentFailedAttempt | undefined;
-  let correction: EraAgentFailedAttempt | undefined;
+  const isolated = { story: cycleSource, audit: "" };
+  const retry =
+    isRecord(context.candidateRetry) &&
+    context.candidateRetry.stage === "settlement"
+      ? context.candidateRetry
+      : null;
+  const attempts: Record<string, unknown>[] = Array.isArray(retry?.attempts)
+    ? [...retry.attempts]
+    : [];
+  let failure: EraAgentFailedAttempt | undefined = retry?.failure as
+    EraAgentFailedAttempt | undefined;
+  let correction: EraAgentFailedAttempt | undefined = failure;
   for (
-    let attempt = 0;
+    let attempt = Number(retry?.nextAttempt ?? 0);
     attempt <= configuration.settlement.retryCount;
     attempt += 1
   ) {
@@ -497,10 +523,10 @@ async function runSettlement(
     let requestId: string | undefined;
     let requestRoute: Record<string, unknown> | undefined;
     const userInput = [
-      "请根据正式故事结算变量。故事中的 ERA 标签已经隔离，不得把它们当成权威操作。",
+      "请根据正式故事结算变量，基于已执行正文操作后的当前状态，仅结算尚需变更的部分。",
       `故事：${isolated.story}`,
-      `故事前变量：${JSON.stringify(statData)}`,
-      `故事前函数：${JSON.stringify(statFunc)}`,
+      `当前变量：${JSON.stringify(statData)}`,
+      `当前函数：${JSON.stringify(statFunc)}`,
       session?.plan ? `故事计划：${JSON.stringify(session.plan)}` : "",
       session?.functionResults
         ? `函数结果：${JSON.stringify(session.functionResults)}`
@@ -533,24 +559,20 @@ async function runSettlement(
         isRecord(generated) && isRecord(generated.route)
           ? generated.route
           : undefined;
-      const parsed = parseSettlementOutput(response);
-      const validated = validateSettlementOperations({
-        operations: parsed.operations,
-        statData,
-        statFunc,
-        messageId: Number(latest.message_id),
-        sourceKey:
-          typeof session?.sourceKey === "string"
-            ? session.sourceKey
-            : `${chatKey(context)}:${String(latest.message_id)}`,
-      });
+      const settlement = inspectSettlementText(response);
+      const operations = parseMessageBlocks({ content: response }).map(
+        (block) =>
+          block.kind === "command"
+            ? block.command
+            : { call: block.call.name, args: block.call.args },
+      );
       responseValidated = true;
       attempts.push({
         attempt,
         requestContext,
         status: "passed",
         response: boundedTrace(response),
-        operations: parsed.operations,
+        operations,
         ...(requestRoute ? { route: requestRoute } : {}),
         preset: profile.preset.source,
         ...(profile.preset.source === "snapshot" && profile.preset.sourceName
@@ -561,15 +583,21 @@ async function runSettlement(
       });
       const planReport =
         typeof session?.planReport === "string" ? session.planReport : "";
-      const message = [
-        baseMessage,
-        planReport,
-        isolated.story,
-        validated.transaction,
-      ]
+      const stageMemory = isRecord(session?.stageMemory)
+        ? session.stageMemory
+        : null;
+      const completedStory =
+        typeof stageMemory?.content === "string"
+          ? stageMemory.content
+          : [baseMessage, session?.planningDraft, planReport, isolated.story]
+              .filter(Boolean)
+              .join("\n");
+      const message = [completedStory, settlement.content]
         .filter(Boolean)
         .join("\n");
-      const storyPrefix = [baseMessage, planReport].filter(Boolean).join("\n");
+      const storyPrefix = [baseMessage, session?.planningDraft, planReport]
+        .filter(Boolean)
+        .join("\n");
       const storyStart = storyPrefix.length + (storyPrefix.length > 0 ? 1 : 0);
       writeSession(capability, {
         chatKey: chatKey(context),
@@ -582,7 +610,7 @@ async function runSettlement(
           baseMessage,
           story: isolated.story,
           settlementAttempts: attempts,
-          transaction: validated.transaction,
+          transaction: settlement.content,
         },
       });
       const candidate: EraAgentFloorCandidateV1 = {
@@ -610,10 +638,16 @@ async function runSettlement(
           baseMessage,
           story: isolated.story,
           settlementAttempts: attempts,
-          transaction: validated.transaction,
+          transaction: settlement.content,
+          candidateStartSession: session,
+          candidateSourceResponse: response,
+          candidateValidationError: settlement.error,
+          candidatePrefix: [completedStory, settlement.prefix]
+            .filter(Boolean)
+            .join("\n"),
         },
         "settlement",
-        { operations: parsed.operations },
+        { content: settlement.content },
         "commit",
         candidate,
       );
@@ -640,7 +674,12 @@ async function runSettlement(
   }
   const planReport =
     typeof session?.planReport === "string" ? session.planReport : "";
-  const message = [baseMessage, planReport, isolated.story]
+  const message = [
+    baseMessage,
+    session?.planningDraft,
+    planReport,
+    isolated.story,
+  ]
     .filter(Boolean)
     .join("\n");
   writeSession(capability, {
@@ -765,7 +804,25 @@ export async function run(
   const request = (
     inputs["era.agent.generation.request"] as { value: GenerationRequest }
   ).value;
-  const output = (generation_outcome: AgentOutcome) => ({ generation_outcome });
+  let stageSession: Record<string, unknown> | null = null;
+  const output = (generation_outcome: AgentOutcome) => ({
+    generation_outcome: {
+      ...generation_outcome,
+      ...(inputs["era.step.request.routed"]
+        ? {
+            stageWorkInput: {
+              step: (inputs["era.step.request.routed"] as { value: unknown })
+                .value,
+              executionState: (
+                inputs["era.batch.execution.state"] as { value: unknown }
+              ).value,
+              request,
+              session: stageSession ?? request.context?.session ?? null,
+            },
+          }
+        : {}),
+    },
+  });
   const capability = runtime.capabilities["era.tavern.agent"];
   if (request.phase === "finish") return output(request.disposition!);
   const rawContext = request.context!;
@@ -781,6 +838,37 @@ export async function run(
     trigger = request.trigger,
     type = trigger.type;
   try {
+    const candidateRetry = isRecord(rawContext.candidateRetry)
+      ? rawContext.candidateRetry
+      : null;
+    if (candidateRetry?.stage === "planning") {
+      const planned = await runPlanning(
+        capability,
+        configuration,
+        rawContext,
+        trigger,
+      );
+      throw new AgentStageBoundary(
+        planned,
+        "planning",
+        {},
+        candidateRetry.next as any,
+      );
+    }
+    if (candidateRetry?.stage === "settlement") {
+      const candidate = await runSettlement(
+        capability,
+        configuration,
+        rawContext,
+        sessionObject(rawContext),
+        request.identity!,
+        Boolean(candidateRetry.requiresInitialPresentation),
+        trigger.eventId,
+      );
+      return output(
+        outcome("execute-legacy", "committed", [], undefined, candidate),
+      );
+    }
     if (type === "era.agent.stage_continue") {
       const session = sessionObject(rawContext);
       const pending =
@@ -854,7 +942,9 @@ export async function run(
               : [],
           }),
         });
-        return output(outcome("execute-legacy", "committed"));
+        // The planning floor is still an in-memory future message. Native
+        // generation must create it before the ordinary save path can write it.
+        return output(outcome("legacy-ignore", "committed"));
       }
       const identity = requestIdentity(request);
       if (pending.next === "manual-story")
@@ -904,9 +994,18 @@ export async function run(
             messageId: identity.messageId,
             swipeId: identity.swipeId,
             mk: identity.mk,
-            content: [resumed.baseMessage, resumed.planReport, story]
-              .filter(Boolean)
-              .join("\n"),
+            content:
+              isRecord(resumed.stageMemory) &&
+              typeof resumed.stageMemory.content === "string"
+                ? resumed.stageMemory.content
+                : [
+                    resumed.baseMessage,
+                    resumed.planningDraft,
+                    resumed.planReport,
+                    story,
+                  ]
+                    .filter(Boolean)
+                    .join("\n"),
             extra: {
               era_agent: { schemaVersion: 1, status: "story-complete" },
             },
@@ -1006,7 +1105,14 @@ export async function run(
           "native-story",
         );
       }
-      return output(outcome("execute-legacy", "committed"));
+      return output(
+        outcome(
+          session.status === "planned" && isRecord(session.stageMemory)
+            ? "legacy-ignore"
+            : "execute-legacy",
+          "committed",
+        ),
+      );
     }
 
     if (type === "message_received") {
@@ -1070,7 +1176,7 @@ export async function run(
             initialPresentation: true,
           },
           "story",
-          { story: isolateStoryEraCommands(story).story },
+          { story },
           "settlement",
         );
       } else if (configuration.planning.enabled) {
@@ -1089,6 +1195,7 @@ export async function run(
           const story = cycleSource;
           const message = [
             baseMessage,
+            session?.planningDraft,
             typeof session?.planReport === "string" ? session.planReport : "",
             story,
           ]
@@ -1151,28 +1258,7 @@ export async function run(
         restoreMessageSession(rawContext, configuration);
       if (session === null)
         throw new TypeError("当前聊天没有可重试的最新 Agent 周期。");
-      const stageAttempts =
-        session[
-          retry.kind === "planning" ? "planningAttempts" : "settlementAttempts"
-        ];
-      const lastAttempt = Array.isArray(stageAttempts)
-        ? stageAttempts.at(-1)
-        : null;
-      const currentRequestId =
-        retry.kind === "story"
-          ? session.storyRequestId
-          : isRecord(lastAttempt)
-            ? lastAttempt.requestId
-            : undefined;
-      if (
-        (retry.requestId !== undefined &&
-          retry.requestId !== currentRequestId) ||
-        (retry.messageId !== undefined &&
-          retry.messageId !== session.messageId) ||
-        (retry.cycleIndex !== undefined &&
-          retry.cycleIndex !== session.cycleIndex) ||
-        (retry.sourceKey !== undefined && retry.sourceKey !== session.sourceKey)
-      )
+      if (!agentRetryMatchesSession(retry, session))
         throw new TypeError(
           "当前报告对应的 Agent 周期已失效，请查看最新楼层。",
         );
@@ -1208,6 +1294,10 @@ export async function run(
           trigger.eventId,
         );
       } else {
+        // A manual settlement replaces the previous settlement suffix. The
+        // completed stage draft includes that suffix; rebuild from the retained
+        // planning/body content, including their applied API records and done.
+        session = { ...session, stageMemory: null };
         candidate = await runSettlement(
           capability,
           configuration,
@@ -1251,18 +1341,19 @@ export async function run(
       };
       const handoff = stageHandoff(boundary);
       try {
+        stageSession = {
+          ...error.session,
+          pendingStage: {
+            completionId: handoff.completionId,
+            next: error.next,
+            identity: boundary.identity,
+            originalMessage: latestMessage(rawContext)?.message ?? "",
+            candidate: error.candidate ?? null,
+          },
+        };
         writeSession(capability, {
           chatKey: chatKey(rawContext),
-          session: {
-            ...error.session,
-            pendingStage: {
-              completionId: handoff.completionId,
-              next: error.next,
-              identity: boundary.identity,
-              originalMessage: latestMessage(rawContext)?.message ?? "",
-              candidate: error.candidate ?? null,
-            },
-          },
+          session: stageSession,
         });
         return output({
           mode: "execute-only",

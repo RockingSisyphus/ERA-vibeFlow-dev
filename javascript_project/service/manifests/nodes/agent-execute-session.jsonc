@@ -12,12 +12,22 @@
         "type": "era.agent.generation.request",
         "cardinality": "exactly_one",
         "display_name": "阶段请求"
+      },
+      {
+        "type": "era.step.request.routed",
+        "cardinality": "exactly_one",
+        "display_name": "实际派发步骤"
+      },
+      {
+        "type": "era.batch.execution.state",
+        "cardinality": "exactly_one",
+        "display_name": "当前执行状态"
       }
     ],
     "provides": [
       {
         "key": "generation_outcome",
-        "type": "era.agent.generation.outcome",
+        "type": "era.agent.generation.raw",
         "display_name": "阶段执行结果"
       }
     ],
@@ -26,6 +36,12 @@
     "input_semantics": {
       "era.agent.generation.request": [
         "输入：阶段请求"
+      ],
+      "era.step.request.routed": [
+        "实际派发步骤"
+      ],
+      "era.batch.execution.state": [
+        "当前执行状态"
       ]
     },
     "output_semantics": {
@@ -53,7 +69,9 @@
     "era.service.agent_generation_session",
     "era.service.agent_request_policy",
     "era.service.agent_session_binding",
-    "era.service.agent_stage_handoff"
+    "era.service.agent_stage_handoff",
+    "era.service.agent_stage_text",
+    "era.service.message_function_calls"
   ],
   "capabilities": [
     {

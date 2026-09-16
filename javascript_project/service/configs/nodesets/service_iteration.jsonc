@@ -72,8 +72,8 @@
       {
         "id": "reduce_collection",
         "type_used": "era.service.reduce_collection",
-        "display_name": "归约事件集并推进 Scope 窗口",
-        "description": "保留 Tavern 事件的既有 FIFO、组合窗口、生成栅栏、dry-run、swipe 和有界收集语义；公共对象 commit 立即形成独立就绪任务，不进入防抖、batch 或 coalesce。仅真实 AI 完成、用户增删改、Swipe/分支、聊天/角色切换、iframe 重建、reload/restart 推进内存窗口；ERA 自己的 MK、无刷新 API 写回、Sidecar 提交和安全压缩不推进。"
+        "display_name": "归约来源顺序与保存到期事件",
+        "description": "普通API立即执行而不等防抖；防抖只控制持久化。接收保存到期事件并形成既有sync路由的flush任务；保留生成high-water、scope窗口及编辑/切聊失效。后到事件不延长既定生成范围。"
       },
       {
         "id": "send_collection_control",

@@ -1,3 +1,4 @@
+import { createCandidateRunner } from './agent-candidate-fixture';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -8,23 +9,19 @@ import {
   executeAgentFunctionCalls,
   extractEraMessageKey,
   formatAgentPlanReport,
-  formatAgentTransaction,
   formatAgentUpdateReport,
   isAgentPlanningFailureMessage,
   isolateStoryEraCommands,
   normalizeAgentConfiguration,
   parsePlanningOutput,
-  parseSettlementOutput,
   sanitizePresetSnapshot,
   stripAgentReportsForPrompt,
-  validateSettlementOperations,
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Service 纯领域函数的差分测试必须读取真实 VibeFlow 源码。
   // @ts-ignore TypeScript 会对 app rootDir 外的 VibeFlow 源码报告 TS6059。
 } from '../../../javascript_project/service/base_lib/agent_generation_session';
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- 节点测试必须调用正式 VibeFlow Node source。
 // @ts-ignore app tsconfig 不声明 Service Node 的跨 root 类型。
-import { run as executeAgentSessionNode } from '../../../javascript_project/service/nodes/agent/execute_generation_session';
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- 节点测试必须经过正式的 V2 准备节点。
 // @ts-ignore app tsconfig 不声明 Service Node 的跨 root 类型。
 import { run as prepareAgentSessionNode } from '../../../javascript_project/service/nodes/agent/prepare_auxiliary_execution_request';
@@ -93,11 +90,13 @@ async function runAgentSessionNode(
     storedSession = value.session;
     return result;
   };
-  let executed = await executeAgentSessionNode(
-    { 'era.agent.generation.request': { value: request.generation_request } },
-    params,
-    executionRuntime as never,
+  const runCandidate = createCandidateRunner(
+    inputs['era.step.request.routed'].value,
+    inputs['era.batch.execution.state'].value,
+    executionRuntime,
+    facts.context,
   );
+  let executed = await runCandidate(request.generation_request);
   // 模拟生产后置通知完成后重新入队；旧算法测试仍验证完整周期结果。
   for (let stage = 0; executed.generation_outcome.stageBoundary && stage < 4; stage++) {
     const session = storedSession as Record<string, unknown>;
@@ -113,11 +112,7 @@ async function runAgentSessionNode(
         retry: { completionId: pending.completionId },
       },
     };
-    executed = await executeAgentSessionNode(
-      { 'era.agent.generation.request': { value: next } },
-      params,
-      executionRuntime as never,
-    );
+    executed = await runCandidate(next);
   }
   return formTransitionNode({ ...inputs, 'era.agent.generation.outcome': { value: executed.generation_outcome } });
 }
@@ -279,7 +274,7 @@ describe('retry failure boundaries', () => {
           finish = resolve;
         }),
     );
-    const generate = vi.fn(async () => ({ response: '{"operations":[]}' }));
+    const generate = vi.fn(async () => ({ response: '' }));
     const running = execute('settlement', generate, vi.fn(), native);
     await vi.waitFor(() => expect(native).toHaveBeenCalledOnce());
     expect(generate).not.toHaveBeenCalled();
@@ -329,7 +324,7 @@ describe('retry failure boundaries', () => {
         stage === 'planning'
           ? '{"storyPlan":{},"calls":[{"function":"missingFunction","args":[]}]}'
           : '{"operations":[{"op":"invalid-operation"}]}';
-      const good = stage === 'planning' ? '{"storyPlan":{},"calls":[]}' : '{"operations":[]}';
+      const good = stage === 'planning' ? '{"storyPlan":{},"calls":[]}' : '';
       const generate = vi
         .fn()
         .mockRejectedValueOnce(new Error('NETWORK_ONE'))
@@ -374,7 +369,7 @@ describe('retry failure boundaries', () => {
   );
 
   it('does not retry a validated settlement when the subsequent Host session write fails', async () => {
-    const generate = vi.fn().mockResolvedValue({ response: '{"operations":[]}' });
+    const generate = vi.fn().mockResolvedValue({ response: '' });
     const result = await execute(
       'settlement',
       generate,
@@ -557,11 +552,7 @@ describe('AgentGenerationSession pure contracts', () => {
       storyPlan: { beat: 'door' },
       calls: [{ function: 'floor', args: [2.9] }],
     });
-    expect(parseSettlementOutput('{"operations":[{"insert":{"time":10}},{"edit":{"time":20}}]}')).toEqual({
-      operations: [{ insert: { time: 10 } }, { edit: { time: 20 } }],
-    });
     expect(() => parsePlanningOutput('{"storyPlan":{},"calls":[{"function":"x-y","args":[]}]}')).toThrow('函数名无效');
-    expect(() => parseSettlementOutput('{"operations":[{"insert":{},"edit":{}}]}')).toThrow('只能包含一种');
   });
 
   it('executes deterministic functions in one ordered random draw stream', () => {
@@ -594,10 +585,10 @@ describe('AgentGenerationSession pure contracts', () => {
 
     const plan = formatAgentPlanReport({ ok: true });
     const update = formatAgentUpdateReport({ settled: true });
-    const transaction = formatAgentTransaction([{ insert: { time: 10 } }]);
+    const transaction = '<VariableInsert>{"time":10}</VariableInsert>';
     const message = `${plan}\nvisible story\n${update}\n${transaction}`;
     expect(message.indexOf('<era_plan>')).toBeLessThan(message.indexOf('visible story'));
-    expect(message.indexOf('<era_update>')).toBeLessThan(message.indexOf('<era_tx'));
+    expect(message.indexOf('<era_update>')).toBeLessThan(message.indexOf('<VariableInsert>'));
     const promptMessage = stripAgentReportsForPrompt(message);
     expect(promptMessage).not.toContain('<era_plan>');
     expect(promptMessage).not.toContain('<era_update>');
@@ -703,18 +694,6 @@ describe('AgentGenerationSession pure contracts', () => {
       expect(results[0]).toMatchObject({ result: 2, drawOffsetStart: 0, drawOffsetEnd: 0 });
       expect(results[2]).not.toHaveProperty('result');
     }
-  });
-
-  it('trial-applies settlement operations through the real command engine', () => {
-    const validated = validateSettlementOperations({
-      operations: [{ insert: { time: 10 } }, { edit: { time: 20 } }],
-      statData: {},
-      statFunc: {},
-      messageId: 3,
-      sourceKey: 'message-mk-3',
-    });
-    expect(validated.finalStat).toEqual({ time: 20 });
-    expect(validated.transaction).toContain('<era_tx s="m">');
   });
 
   it('clears the in-memory session when Tavern reports generation_stopped', async () => {
@@ -1086,7 +1065,7 @@ describe('AgentGenerationSession pure contracts', () => {
   });
 
   it('keeps settlement enabled for an active cycle even after the character turns it off', async () => {
-    const generate = vi.fn(async () => ({ response: '{"operations":[]}' }));
+    const generate = vi.fn(async () => ({ response: '' }));
     const eventId = 'event-frozen-settlement-message-received';
     const result = await runAgentSessionNode(
       {
@@ -1252,7 +1231,8 @@ describe('AgentGenerationSession pure contracts', () => {
     });
     expect(JSON.stringify(generate.mock.calls[1]?.[0])).not.toContain('failedResponse');
     expect(generate.mock.calls[1]?.[0].userInput).not.toContain('ERA_AGENT_PROFILE_MISSING');
-    expect(result.agent_transition).toMatchObject({ mode: 'execute-legacy', status: 'committed' });
+    // Planning has no physical AI floor yet; its continuation must not save a draft to chat.
+    expect(result.agent_transition).toMatchObject({ mode: 'legacy-ignore', status: 'committed' });
   });
 
   it('delegates group chats to the unchanged ERA generation path', async () => {

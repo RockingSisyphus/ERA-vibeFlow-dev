@@ -1,0 +1,182 @@
+{
+  "type_key": "era.agent.candidate_attempt",
+  "display_name": "生成并执行一整次候选",
+  "description": "单次模型候选经过有序块执行和恢复判定；不发送阶段完成通知。",
+  "requires": [
+    {
+      "type": "era.agent.candidate.state",
+      "cardinality": "exactly_one",
+      "display_name": "era.agent.candidate.state"
+    }
+  ],
+  "provides": [
+    {
+      "key": "candidate_state_after",
+      "type": "era.agent.candidate.state.next",
+      "display_name": "candidate_state_after"
+    },
+    {
+      "key": "candidate_done",
+      "type": "era.agent.candidate.done",
+      "display_name": "candidate_done"
+    },
+    {
+      "key": "candidate_outcome",
+      "type": "era.agent.candidate.outcome",
+      "display_name": "candidate_outcome"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "candidate_state",
+        "type": "era.agent.candidate.state",
+        "required": true,
+        "display_name": "候选请求"
+      }
+    ],
+    "max_steps": 12,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.service.terminal",
+        "display_name": "start",
+        "description": "候选内顺序执行，终态返回当前阶段。"
+      },
+      {
+        "id": "unpack_candidate",
+        "type_used": "era.agent.candidate_unpack",
+        "display_name": "unpack_candidate",
+        "description": "候选内顺序执行，终态返回当前阶段。"
+      },
+      {
+        "id": "execute_agent_phase_v2",
+        "type_used": "era.agent.execute_session_v2",
+        "display_name": "生成标签格式结算候选",
+        "description": "结算直接接收Variable/Function六类标签及EraFCall原文，删除operations JSON解析和标签转换；规划storyPlan/calls保持现有协议。原始响应进入报告，候选格式错误沿原整体回退纠错。"
+      },
+      {
+        "id": "prepare_stage_blocks",
+        "type_used": "era.lifecycle.prepare_stage_blocks",
+        "display_name": "标签候选接入共用逐块执行",
+        "description": "结算原文直接进入既有块循环，按位置执行insert、函数调用、edit及后续块；保留候选恢复点、scope、随机、done、保存和历史重算，删除结算JSON前中后适配。"
+      },
+      {
+        "id": "apply_stage_blocks",
+        "type_used": "vibeflow.loop.while",
+        "display_name": "三阶段复用同一个内存块循环",
+        "description": "max_iterations=null；处理块不落盘，结束时得到累计消息及状态。函数API应用后返回，不强制刷盘。",
+        "requires": [
+          {
+            "type": "era.sync.block.step.state",
+            "cardinality": "exactly_one",
+            "display_name": "初始块步进状态"
+          }
+        ],
+        "provides": [
+          {
+            "key": "block_step_state_after",
+            "type": "era.sync.block.step.state.next",
+            "display_name": "块步进后状态"
+          }
+        ],
+        "loop": {
+          "body": "era.sync.block_step",
+          "max_iterations": null,
+          "stop_when": {
+            "from": "block_step_done",
+            "equals": true
+          },
+          "carry": [
+            {
+              "from": "era.sync.block.step.state",
+              "as": "block_step_state",
+              "update": "block_step_state_after"
+            }
+          ],
+          "outputs": [
+            {
+              "from": "block_step_state_after",
+              "as": "block_step_state_after"
+            }
+          ]
+        }
+      },
+      {
+        "id": "finish_stage_blocks",
+        "type_used": "era.lifecycle.finish_stage_blocks",
+        "display_name": "回送已应用阶段状态及草稿",
+        "description": "候选结束判定：可纠错失败恢复整个候选及已发布内存、记录、scope、随机和done，旧上下文失效后通过阶段恢复发起下一次尝试；耗尽保留起点，更早阶段保留；成功才进入后续阶段。"
+      },
+      {
+        "id": "finish_candidate",
+        "type_used": "era.agent.candidate_finish",
+        "display_name": "finish_candidate",
+        "description": "候选内顺序执行，终态返回当前阶段。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.service.terminal",
+        "display_name": "end",
+        "description": "候选内顺序执行，终态返回当前阶段。"
+      }
+    ],
+    "edges": [
+      [
+        "start",
+        "unpack_candidate"
+      ],
+      [
+        "unpack_candidate",
+        "execute_agent_phase_v2"
+      ],
+      [
+        "execute_agent_phase_v2",
+        "prepare_stage_blocks"
+      ],
+      [
+        "prepare_stage_blocks",
+        "apply_stage_blocks"
+      ],
+      [
+        "apply_stage_blocks",
+        "finish_stage_blocks"
+      ],
+      [
+        "finish_stage_blocks",
+        "finish_candidate"
+      ],
+      {
+        "from": "start",
+        "to": "finish_candidate",
+        "transfer": false,
+        "schedule": true
+      },
+      [
+        "finish_candidate",
+        "end"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.agent.candidate.state.next",
+        "cardinality": "exactly_one",
+        "as": "candidate_state_after",
+        "display_name": "候选状态"
+      },
+      {
+        "type": "era.agent.candidate.done",
+        "cardinality": "exactly_one",
+        "as": "candidate_done",
+        "display_name": "候选终态"
+      },
+      {
+        "type": "era.agent.candidate.outcome",
+        "cardinality": "exactly_one",
+        "as": "candidate_outcome",
+        "display_name": "阶段结果"
+      }
+    ]
+  }
+}

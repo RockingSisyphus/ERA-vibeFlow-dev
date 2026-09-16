@@ -14,7 +14,7 @@ export function prepare(inputs: any): any {
     done: work.disposition !== "commit",
     sourceBasis:
       prepared.schemaVersion === 3 ? (prepared.sourceBasis ?? null) : null,
-    lastResult: null,
+    ...(context.scopeWindow ? { scopeWindow: context.scopeWindow } : {}),
   };
   return { block_step_state: state };
 }

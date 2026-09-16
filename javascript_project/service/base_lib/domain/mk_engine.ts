@@ -389,3 +389,15 @@ export function ensureMessageKey(
     },
   };
 }
+
+/** Compact content correspondence for restart recovery; not a security checksum. */
+export function messageContentVersion(text: string): string {
+  let first = 0x811c9dc5;
+  let second = 0x1505;
+  for (let index = 0; index < text.length; index++) {
+    const value = text.charCodeAt(index);
+    first = Math.imul(first ^ value, 0x01000193) >>> 0;
+    second = (Math.imul(second, 33) ^ value) >>> 0;
+  }
+  return `${text.length}:${first.toString(36)}:${second.toString(36)}`;
+}

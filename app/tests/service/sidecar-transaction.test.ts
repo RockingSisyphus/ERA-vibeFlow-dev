@@ -1,3 +1,4 @@
+import { workingCapabilityFixture } from './working-capability-fixture';
 import { describe, expect, it } from 'vitest';
 import { run as apply } from '../../../javascript_project/service/nodes/sidecar/apply_resolution';
 import { run as inspect } from '../../../javascript_project/service/nodes/sidecar/inspect_current';
@@ -68,7 +69,13 @@ function fixture(choice: 'migrate' | 'copy' | 'independent' | 'repair' | null = 
   };
   const context = {
     capabilities: {
+      'era.tavern.agent': {
+        read_session_binding: () => { throw new Error('unexpected candidate recovery'); },
+        write_session: () => { throw new Error('unexpected candidate recovery'); },
+        clear_session: () => { throw new Error('unexpected candidate recovery'); },
+      },
       'era.tavern.sidecar': {
+        ...workingCapabilityFixture(),
         read_current: async () => {
           const value = structuredClone(current());
           afterCurrent?.(++currentReads);

@@ -13,6 +13,7 @@ import { readActiveSidecarRuntimeSnapshot } from './sidecar-runtime-snapshot';
 import { agentExecutionRecords, currentAgentRecordChat } from './agent-execution-records';
 import {
   mountReportViewer,
+  createReportDetails,
   releaseReportApps,
   createStoryViewer,
   createSettlementViewer,
@@ -110,15 +111,11 @@ function createProjectedBlock(
     return hidden;
   }
 
-  const details = hostDocument.createElement('details');
-  details.className = 'era-technical-report';
+  const stage = segment.name === 'era_update' ? 'settlement' : 'planning';
+  const details = createReportDetails(hostDocument, stage, messageId, segment.label ?? 'ERA 技术报告');
   details.dataset.eraProjectionVersion = DISPLAY_PROJECTION_VERSION;
   details.dataset.eraTechnicalBlock = segment.name;
-  const summary = hostDocument.createElement('summary');
-  summary.textContent = segment.label ?? 'ERA 技术报告';
-  const stage = segment.name === 'era_update' ? 'settlement' : 'planning';
-  summary.id = `era-report-summary-${stage}-${messageId}`;
-  details.append(summary, mountReportViewer(hostDocument, segment.text, stage, messageId));
+  details.append(mountReportViewer(hostDocument, segment.text, stage, messageId));
   return details;
 }
 
@@ -222,10 +219,11 @@ function projectDisplayedMessage(messageId: number): void {
   if (isDisplayedMessageBeingEdited(root)) return;
   hydrateReportViewers(root);
   const fingerprint = eraTechnicalDisplaySource(projection);
+  const hasProjectedContent = root.querySelector(`[data-era-projection-version="${DISPLAY_PROJECTION_VERSION}"]`);
   if (
     root.dataset.eraProjectionVersion === DISPLAY_PROJECTION_VERSION &&
     root.dataset.eraProjectionSource === fingerprint &&
-    root.querySelector(`[data-era-projection-version="${DISPLAY_PROJECTION_VERSION}"]`)
+    hasProjectedContent
   ) {
     return;
   }
@@ -237,7 +235,10 @@ function projectDisplayedMessage(messageId: number): void {
   });
   // 重新解析变量只改变 ERA 报告。保留 Tavern Helper 的故事节点与 iframe，
   // 不把查看器更新误变成作者加载脚本的第二次执行。
+  // 宿主重绘会保留 root/dataset，却清空投影子节点。此时必须重建完整投影，
+  // 否则纯技术消息会不断替换报告并由 MutationObserver 再次触发自身。
   if (
+    hasProjectedContent &&
     projectedStories.get(root) === storySource &&
     replaceReportsInPlace(root, projection, messageId, stripEraTechnicalBlocks(rawMessage))
   ) {

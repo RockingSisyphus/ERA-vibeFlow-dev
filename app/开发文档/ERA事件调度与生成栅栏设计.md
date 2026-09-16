@@ -1,12 +1,13 @@
 # ERA 事件调度与生成栅栏设计
 
-本文描述当前 VibeFlow 0.13.2 生产实现。迁移前的 `EventScheduler`/Ticket/Dispatcher
+本文描述当前 VibeFlow Service 的事件调度与内存工作状态实现。迁移前的 `EventScheduler`/Ticket/Dispatcher
 设计已归档到 `历史/ERA事件调度与生成栅栏设计-旧调度器.md`。
 
 ## 一致性目标
 
-每次真实生成开始前，ERA 必须结算该生成事件 high-water sequence 之前的全部已接受
-事件。barrier 等待确定的序号范围，不等待整个队列清空，因此后到 UI/API 事件不会让
+每次真实生成开始前，ERA 必须完成该生成事件 high-water sequence 之前已接受操作的状态应用。
+普通同步在已知范围结束时保存；规划草稿随生成阶段保留在内存，最终随实际 AI 消息保存。
+barrier 等待确定的序号范围，不等待整个队列清空，因此后到 UI/API 事件不会让
 当前生成永久饥饿。
 
 `MESSAGE_SWIPED` 等 detached 事件只负责同步入队；需要等待 ERA 状态的生成事件由 Host
@@ -41,7 +42,7 @@ Service Host 只负责宿主投影、队列、资源生命周期和 Capability �
 - planner 必须让每个来源 sequence 恰好覆盖一次；duplicate、missing 或越界使该批失败，
   服务本身继续运行。
 - 动态步骤由内层 loop 显式执行，单批最多 128 steps。
-- 普通业务失败返回 typed DTO；部分/未知提交、协议或 carry 损坏才升级 fatal。
+- 普通业务和保存失败返回 typed DTO，保留可恢复状态；协议或 carry 损坏才升级 fatal。
 
 ## 生成 barrier
 
@@ -83,9 +84,16 @@ Capability 写入确认
   → 释放执行锁
 ```
 
-公共对象订阅者只由已发布的运行时快照驱动。`ERA.commit()` 每次调用形成一个独立 FIFO
-任务，在消息写入、回读和 Sidecar 提交后才结算；不再产生 `apiWrite`、`writeDone` 或
-`queryResult` 通知。副作用操作不自动重试。
+公共对象订阅者在批次保存完成后收到通知。`ERA.commit()` 每次调用形成一个独立操作请求，
+变量、累计日志、scope 与待保存消息记录实际应用到内存后返回；返回不代表已落盘。
+普通外部请求按 Service FIFO 进入同一块循环，200ms 防抖、最长2000ms合并保存。
+消息内函数通过显式 `ERA.forCall(parameters)` 使用当前调用位置的块循环，避免等待外层
+任务结束；参数校验、记录构造和块应用逻辑仍共用。没有 `apiWrite`、`writeDone` 或
+`queryResult` 通知。已标 done 的函数不重跑，保存恢复重放普通操作记录。
+
+`ERA.get()` 与宏读取已成功应用的内存快照；全局 `ERA.ready()` 等待批次保存边界。
+函数上下文的 `ready()` 返回调用位置的当前状态。宿主只执行 Service 的
+`write_working`、`commit_metadata.workingVersion` 和通知参数，不根据事件名另建变量处理规则。
 
 ## 取消与热重载
 

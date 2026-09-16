@@ -4,11 +4,11 @@ import { run as handoff } from '../../../javascript_project/service/nodes/agent/
 import { normalizeAgentConfiguration } from '../../../javascript_project/service/base_lib/agent_generation_session';
 
 /** 按真实阶段恢复入口推进，明确在两次 Node 执行之间改变宿主事实。 */
-function fixture() {
+function fixture(options: { settlement?: boolean; planningDraft?: string } = {}) {
   const configuration = normalizeAgentConfiguration({
     schemaVersion: '2',
     planning: { enabled: true },
-    settlement: { enabled: true },
+    settlement: { enabled: options.settlement ?? true },
   });
   let session: Record<string, unknown> = {
     chatKey: 'chat',
@@ -19,12 +19,13 @@ function fixture() {
     functionResults: [],
     planReport: '<era_plan>{"plan":{"storyPlan":{"scene":"room"},"calls":[]},"functionResults":[]}</era_plan>',
     baseMessage: '',
+    planningDraft: options.planningDraft ?? '',
   };
   const state = { revision: 1, statData: { hp: 14 }, statFunc: {} };
   const latest = { message_id: 1, swipe_id: 0, role: 'assistant', message: 'story', extra: {} };
   const identity = { chatId: 'chat', messageId: 1, swipeId: 0, mk: 'mk' };
   const generate = vi.fn(async (_request: Record<string, unknown>) => ({
-    response: '{"operations":[{"edit":{"hp":16}}]}',
+    response: '<VariableEdit>{"hp":16}</VariableEdit>',
     requestId: 'settle',
   }));
   const clearSession = vi.fn();
@@ -60,12 +61,21 @@ function fixture() {
     const out = await execute({ 'era.agent.generation.request': { value: request } }, {}, {
       capabilities: { 'era.tavern.agent': capability },
     } as never);
-    return handoff({ 'era.agent.generation.outcome': { value: out.generation_outcome } }).handoff_outcome;
+    return handoff({ 'era.agent.candidate.outcome': { value: out.generation_outcome } }).handoff_outcome;
   };
   return { step, state, latest, generate, identity, clearSession };
 }
 
 describe('actual Agent stage continuation', () => {
+  it('关闭独立结算时，最终正文仍保存已执行的规划操作', async () => {
+    const draft = '<VariableEdit>{"hp":80}</VariableEdit><EraFCall name="old" status="done"/>';
+    const f = fixture({ settlement: false, planningDraft: draft });
+    const story = await f.step();
+    const final = await f.step(story.handoff.completionId);
+    expect(final.candidate.content).toContain(draft);
+    expect(final.candidate.content.indexOf(draft)).toBeLessThan(final.candidate.content.lastIndexOf('story'));
+    expect(f.generate).not.toHaveBeenCalled();
+  });
   it('waits before settlement, rereads variables and preserves callback transactions before AI operations', async () => {
     const f = fixture();
     const story = await f.step();
@@ -74,8 +84,12 @@ describe('actual Agent stage continuation', () => {
     f.state.statData.hp = 15;
     f.latest.message += '<era_tx s="m"><VariableEdit>{"hp":15}</VariableEdit></era_tx>';
     const settlement = await f.step(story.handoff.completionId);
-    expect(settlement.handoff).toMatchObject({ stage: 'settlement', result: { operations: [{ edit: { hp: 16 } }] } });
-    expect(f.generate.mock.calls[0]?.[0].userInput).toContain('故事前变量：{"hp":15}');
+    expect(settlement.handoff).toMatchObject({
+      stage: 'settlement',
+      result: { content: '<VariableEdit>{"hp":16}</VariableEdit>' },
+    });
+    expect(f.generate.mock.calls[0]?.[0].userInput).toContain('当前变量：{"hp":15}');
+    expect(f.generate.mock.calls[0]?.[0].userInput).toContain('请根据正式故事结算变量');
     f.state.statData.hp = 17;
     f.latest.message += '<era_tx s="m"><VariableEdit>{"hp":17}</VariableEdit></era_tx>';
     const final = await f.step(settlement.handoff.completionId);

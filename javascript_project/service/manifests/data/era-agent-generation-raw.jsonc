@@ -1,0 +1,10 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.agent.generation.raw",
+  "display_name": "阶段尚未应用的生成输出",
+  "representation": "json",
+  "schema": {
+    "type": "object",
+    "additionalProperties": true
+  }
+}

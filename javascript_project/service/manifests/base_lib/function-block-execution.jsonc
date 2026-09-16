@@ -1,0 +1,27 @@
+{
+  "kind": "base_lib",
+  "id": "era.service.function_block_execution",
+  "display_name": "函数位置与普通API事务规划",
+  "description": "复用Facade校验、scope与普通era_tx构造，仅决定当前消息插入位置和块推进；无工具或持久化副作用。",
+  "category": "内存生命周期",
+  "version": "1.0.0",
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "source": {
+        "kind": "file",
+        "ref": "base_lib/function_block_execution.ts"
+      }
+    }
+  ],
+  "dependencies": [
+    "era.service.facade_api_engine",
+    "era.service.message_function_calls",
+    "era.service.block_step_state"
+  ],
+  "external_packages": []
+}

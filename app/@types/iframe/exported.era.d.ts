@@ -58,12 +58,15 @@ type EraGenerationEvent = {
 );
 
 interface EraApi {
+  /** 在原生工具action中传入原始参数对象，取得该消息调用位置的API；调用结束后失效。 */
+  forCall(parameters: object): EraApi;
   readonly generation: {
     subscribe(
       listener: (event: EraGenerationEvent) => void | Promise<void>,
       options?: { stages?: readonly EraGenerationStage[] },
     ): () => void;
   };
+  /** 操作已应用到当前内存状态后返回；批量持久化随后完成。 */
   commit(operations: readonly EraCommitOperation[], options?: { scope?: EraCommitScope }): Promise<EraCommitReceipt>;
   get(options?: { force?: boolean; overflow?: 'placeholder' | 'empty' | 'hidden' }): EraState;
   ready(options?: { force?: boolean; overflow?: 'placeholder' | 'empty' | 'hidden' }): Promise<EraState>;

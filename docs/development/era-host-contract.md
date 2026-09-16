@@ -152,15 +152,17 @@ UI 同步预览使用 `packages/era-workbench` 从 Service base_lib 唯一源码
 - UI 公开操作及其成功/失败结果；
 - 消息内 `<EraFCall ... status="done"/>` 的跳过语义与旧 `EraFCallTx` 记录读取。
 
-### 逐块同步与函数调用边界
+### 内存批次与函数调用边界
 
-Service 在历史定位和日志回退后逐块执行。每个成功块通过既有消息/Sidecar 保存链提交累计状态、累计回退日志和临时 `era_block` 记录。楼层完成后的维护提交清除临时记录及游标，最后才进行呈现和通知。纯历史计算共用块应用语义，不产生 Host 副作用。
+Service 在历史定位和日志回退后使用唯一块循环逐块执行，把变量、函数、累计回退日志和待写消息发布到当前聊天的内存工作状态。已知范围结束后，先保存消息记录与 done，再保存对应 Sidecar；普通外部 API 以 200ms 防抖、最长 2000ms 的窗口合并保存。内存版本防止旧保存结果覆盖新状态，来源正文或 Swipe 改变时拒绝旧写入。纯历史计算共用块应用语义，不调用作者工具或写回。
 
-当前清理版本不执行作者注册函数。只有 `status="done"` 决定调用是否跳过；没有 done 的调用返回可恢复 `ERA_FCALL_NOT_IMPLEMENTED`，停止该消息后续块，保留前面成功块，不设置 done。旧 `EraFCallTx` 中的变量操作作为普通操作处理，其 `applied` 属性不表示 done 或已应用进度。
+公共 `commit` 的成功回执表示操作已经应用到内存，调用方随后读取可以看到结果；它不表示 Sidecar 已持久化。普通外部 API 仍按 FIFO 和原作用域处理，记录写到目标消息末尾。全局 `ready` 与状态订阅的完成通知等待批次落盘，不能由中间块提前触发。
 
-公共 API 按原 FIFO 和作用域处理，普通操作写在目标消息末尾。不存在全局位置门面、`era.tavern.functions` Capability 或函数交接事件；原有 Agent 阶段交接保持独立。消息起点快照与当前累计状态分开，恢复依据是已保存状态、日志及文本，内存游标不提供另一份变量真相。
+消息内 `<EraFCall>` 通过原生 ToolManager 调用注册工具。作者在工具 action 内把原始参数对象传给 `ERA.forCall(parameters)`，取得绑定本次调用位置的 API。函数 commit 使用同一参数校验、事务构造与块应用语义，请求由当前块循环依次处理，避免排入等待自身结束的外部任务 FIFO；操作以普通 `era_tx` 写在调用下方。调用完成后上下文失效，不使用全局位置绑定。
 
-完整函数上下文 API 与规划阶段支持按 [消息内函数实施计划](ERA消息内函数调用实施计划.md) 留待下一轮。
+只有 `status="done"` 决定调用是否跳过。函数失败保留此前成功操作并记录诊断，标 done 后继续后块；历史重放普通操作记录。旧 `EraFCallTx` 的普通操作仍可读取，其 `applied` 属性不能代替 done。操作记录可参与普通压缩，没有函数专用的固定位置边界。
+
+规划阶段使用内存未来楼层，正文和结算继续使用同一状态及消息草稿，最终内容写入实际 AI 楼层。阶段边界的取消、重试和外部回调正在进行独立真机验收；本节描述实现契约，不能替代实际验收报告。函数上下文目前仅接受 auto/latest 位置同步，full/rollback 返回明确错误，该边界仍待收口。
 
 ## 验证选择
 
@@ -170,6 +172,6 @@ Service 在历史定位和日志回退后逐块执行。每个成功块通过既
 
 完整消息上下文通过Helper公开`0--1`读取真实消息位置，不用会排除pending Swipe的`lastMessageId`宏确定列表长度。待生成末端Swipe保留真实messageId/swipeId并明确空正文，不读取前一个候选的正文作替身。该投影与提交来源核对共用；Service继续决定生成前回退目标，只回退一次且不提前补写被排除楼层。Agent最近64条提示词历史仍采用排除未生成候选的范围；显式latestMessage读取保持`-1`。详见`reports/era-overswipe-history-range-change-list.md`及保留的expanded审核图；真实验收状态以新独立Artifact为准。
 
-## 逐块保存与订阅通知
+## 内存发布与订阅通知
 
-Service 每次成功保存块后更新已提交状态的即时读取缓存；只有清除本条消息临时进度后的提交才通知状态订阅者。Sidecar commit_metadata 的 notifySubscribers=false 表示只更新缓存，不触发呈现、ready 或作者订阅；默认保持通知行为。该选择由 Service 的块游标决定，Host 不自行判断消息业务阶段。
+`write_working` 更新当前读取快照，不默认触发呈现或订阅。批次完成保存后由 Service 清理临时进度、游标及 dirty 并通知订阅者。`commit_metadata.workingVersion` 指定保存对应的内存版本，`notifySubscribers=false` 抑制中间指针提交通知；Host 只执行这两个显式参数，不推断业务阶段。

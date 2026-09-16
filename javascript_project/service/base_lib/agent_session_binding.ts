@@ -77,3 +77,21 @@ export function compactSessionStorage(value: unknown): unknown {
   }
   return stored;
 }
+
+/** Shared session-write DTO construction; only Nodes perform the capability calls. */
+export function prepareSessionWrite(
+  input: Readonly<Record<string, unknown>>,
+  facts: SessionBindingFacts,
+): Record<string, unknown> {
+  const binding = planSessionBinding(
+    input.session,
+    input.nativeGeneration === true,
+    facts,
+  );
+  const storageSession = compactSessionStorage(binding.session);
+  return {
+    ...input,
+    ...binding,
+    ...(storageSession === binding.session ? {} : { storageSession }),
+  };
+}

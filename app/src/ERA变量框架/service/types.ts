@@ -155,7 +155,15 @@ export interface EraTavernAdapter {
     read(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
   };
   /** Sidecar 宿主机械能力；绑定规则与迁移决策位于 VibeFlow service workflow。 */
+  readonly functions: {
+    begin(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
+    next(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
+    acknowledge(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
+    release(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
+  };
   readonly sidecar: {
+    read_working(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
+    write_working(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
     read_current(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
     read_record(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
     write_record(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;

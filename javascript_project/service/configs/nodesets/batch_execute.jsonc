@@ -45,8 +45,8 @@
       {
         "id": "plan_batch",
         "type_used": "era.service.plan_batch",
-        "display_name": "规划生命周期与公共对象任务",
-        "description": "复用原事件组合和单 FIFO 规划；内部 Agent 阶段恢复作为真实新事件路由回原生成会话，覆盖来源 receipt，不等待用户回调、不新增业务队列。"
+        "display_name": "规划原生命周期及保存到期任务",
+        "description": "保留生成high-water、来源coverage、历史回退和原作用域窗口；保存到期形成只flush已指定工作批次的sync任务，不能额外重放未变化历史。函数API由显式父上下文排入共用块执行入口，不能排在等待它的完整任务后。"
       },
       {
         "id": "validate_coverage",
@@ -104,8 +104,8 @@
       {
         "id": "finalize_batch",
         "type_used": "era.service.finalize_batch",
-        "display_name": "完成批次收尾",
-        "description": "全部规划步骤结束后，构造有序结算、通知、诊断、下一携带状态和致命标记。"
+        "display_name": "分别结算应用回执和保存完成",
+        "description": "API应用回执无需等待后续持久化；同步完成及生成barrier依据对应范围处理/保存事实结算，不以应用成功冒充保存成功。保存失败单独通知并保持可恢复状态；保留每个来源准确一次回执。"
       },
       {
         "id": "publish_batch",

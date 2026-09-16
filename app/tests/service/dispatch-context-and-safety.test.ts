@@ -266,6 +266,28 @@ describe('统一执行前上下文', () => {
     expect(plan.sourceBasis.messages).toEqual(messages);
   });
 
+  it('已确认的补MK更新来源依据，未提交的消息仍保留原依据', () => {
+    const step = syncStep();
+    const plan = preparation.planDispatchPreparation(
+      preparation.canonicalDispatchContext(
+        preparation.classifyDispatch(step, state(step)).seed,
+        strictMessages('用户原文'),
+        { variables: {} },
+        { variables: {} },
+        { characterId: 'test-card', chatId: 'test-chat', groupId: null },
+      ),
+    );
+    expect(plan.messageUpdate).not.toBeNull();
+    const pending = preparation.preserveDispatchPreparation(plan);
+    const uncommitted = preparation.dispatchContextOf(pending);
+    expect(uncommitted.sourceBasis.messages).toEqual(plan.sourceBasis.messages);
+    expect(uncommitted.stagedMessageUpdates).toHaveLength(1);
+    const committed = preparation.dispatchContextOf({ ...pending, messageChanged: true });
+    expect(committed.sourceBasis.messages.at(-1).activeText).toBe(plan.messageUpdate.content);
+    expect(committed.stagedMessageUpdates).toEqual([]);
+    expect(plan.sourceBasis.messages.at(-1).activeText).toBe('用户原文');
+  });
+
   it('零消息只允许同步任务继续准备为空终态', () => {
     const sync = syncStep();
     const syncSeed = preparation.classifyDispatch(sync, state(sync)).seed;

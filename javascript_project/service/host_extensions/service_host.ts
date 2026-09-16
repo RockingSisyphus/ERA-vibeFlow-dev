@@ -154,7 +154,15 @@ export interface EraTavernCapabilityAdapter {
     readonly read: EraHostOperation;
   };
   /** Sidecar 的身份/files/UI 机械能力；绑定与迁移规则必须留在 workflow。 */
+  readonly functions: {
+    readonly begin: EraHostOperation;
+    readonly next: EraAsyncHostOperation;
+    readonly acknowledge: EraHostOperation;
+    readonly release: EraHostOperation;
+  };
   readonly sidecar: {
+    readonly read_working: EraHostOperation;
+    readonly write_working: EraHostOperation;
     readonly read_current: EraAsyncHostOperation;
     readonly read_record: EraAsyncHostOperation;
     readonly write_record: EraAsyncHostOperation;
@@ -557,6 +565,10 @@ class ServiceHostRuntime {
   private readonly receipts = new Map<number, ReceiptRecord>();
   private readonly failureLedger = new Map<number, EraWaitThroughOutcome>();
   private readonly timers = new Map<string, TimerRecord>();
+  private readonly delayedAdmissions = new Map<
+    string,
+    { firstAt: number; handle: unknown }
+  >();
   private readonly watchdogs = new Set<unknown>();
   private readonly processedFrames = new Map<string, string>();
   private readonly activeNotifications = new Set<Promise<void>>();
@@ -608,6 +620,12 @@ class ServiceHostRuntime {
   }
 
   readonly capabilities = {
+    "era.lifecycle.admission": {
+      schedule: (input: Readonly<Record<string, unknown>>) =>
+        this.scheduleAdmission(input),
+      cancel: (input: Readonly<Record<string, unknown>>) =>
+        this.cancelAdmission(String(input.key)),
+    },
     "vibeflow.port": {
       receive: (request: PortRequest, options: PortCallOptions = {}) =>
         this.receive(request, options),
@@ -844,7 +862,33 @@ class ServiceHostRuntime {
       dormant: (input: Readonly<Record<string, unknown>>) =>
         this.settleDormantStartup(input),
     },
+    "era.tavern.functions": {
+      begin: (
+        input: Readonly<Record<string, unknown>>,
+        options: PortCallOptions = {},
+      ) => this.invokeImmediate("functions", "begin", input, options),
+      next: (
+        input: Readonly<Record<string, unknown>>,
+        options: PortCallOptions = {},
+      ) => this.invokeSuspend("functions", "next", input, options),
+      acknowledge: (
+        input: Readonly<Record<string, unknown>>,
+        options: PortCallOptions = {},
+      ) => this.invokeImmediate("functions", "acknowledge", input, options),
+      release: (
+        input: Readonly<Record<string, unknown>>,
+        options: PortCallOptions = {},
+      ) => this.invokeImmediate("functions", "release", input, options),
+    },
     "era.tavern.sidecar": {
+      read_working: (
+        input: Readonly<Record<string, unknown>>,
+        options: PortCallOptions = {},
+      ) => this.invokeImmediate("sidecar", "read_working", input, options),
+      write_working: (
+        input: Readonly<Record<string, unknown>>,
+        options: PortCallOptions = {},
+      ) => this.invokeImmediate("sidecar", "write_working", input, options),
       read_current: (
         input: Readonly<Record<string, unknown>>,
         options: PortCallOptions = {},
@@ -981,7 +1025,8 @@ class ServiceHostRuntime {
       queueEvents: this.queue.length,
       queueBytes: this.queue.bytes,
       pendingReceipts: this.receipts.size,
-      timers: this.timers.size + this.watchdogs.size,
+      timers:
+        this.timers.size + this.delayedAdmissions.size + this.watchdogs.size,
       hostRefs: this.references.size,
       notifications: this.activeNotifications.size,
       portWaiters: this.pendingReceive === null ? 0 : 1,
@@ -1062,6 +1107,12 @@ class ServiceHostRuntime {
       [adapter.identity?.read, "identity.read"],
       [adapter.installation_scope?.read, "installation_scope.read"],
       [adapter.sidecar?.read_current, "sidecar.read_current"],
+      [adapter.sidecar?.read_working, "sidecar.read_working"],
+      [adapter.functions?.begin, "functions.begin"],
+      [adapter.functions?.next, "functions.next"],
+      [adapter.functions?.acknowledge, "functions.acknowledge"],
+      [adapter.functions?.release, "functions.release"],
+      [adapter.sidecar?.write_working, "sidecar.write_working"],
       [adapter.sidecar?.read_record, "sidecar.read_record"],
       [adapter.sidecar?.write_record, "sidecar.write_record"],
       [adapter.sidecar?.commit_metadata, "sidecar.commit_metadata"],
@@ -1168,6 +1219,51 @@ class ServiceHostRuntime {
       waitThrough: () => this.waitThrough(sequence),
     };
     return Object.freeze(accepted);
+  }
+
+  private cancelAdmission(key: string): { status: string } {
+    const pending = this.delayedAdmissions.get(key);
+    if (pending) this.clock().clearTimeout(pending.handle);
+    this.delayedAdmissions.delete(key);
+    return { status: "cancelled" };
+  }
+
+  /** Execute only the delay policy supplied by a workflow, without choosing domain work. */
+  private scheduleAdmission(input: Readonly<Record<string, unknown>>): {
+    status: string;
+    dueAt: number;
+  } {
+    if (
+      typeof input.key !== "string" ||
+      !input.key ||
+      !isRecord(input.event) ||
+      !finiteNumber(input.delayMs) ||
+      input.delayMs < 0 ||
+      !finiteNumber(input.maxDelayMs) ||
+      input.maxDelayMs < input.delayMs
+    ) {
+      throw new TypeError("延迟准入缺少有效事件、键或时间窗口。");
+    }
+    const key = input.key;
+    const clock = this.clock();
+    const firstAt = this.delayedAdmissions.get(key)?.firstAt ?? clock.now();
+    this.cancelAdmission(key);
+    const dueAt = Math.min(
+      clock.now() + input.delayMs,
+      firstAt + input.maxDelayMs,
+    );
+    const event = input.event as unknown as EraInboundEvent;
+    const handle = clock.setTimeout(
+      () => {
+        this.delayedAdmissions.delete(key);
+        const admission = this.admit(event);
+        if (!admission.accepted)
+          this.warn("延迟事件准入失败。", { key, code: admission.code });
+      },
+      Math.max(0, dueAt - clock.now()),
+    );
+    this.delayedAdmissions.set(key, { firstAt, handle });
+    return { status: "scheduled", dueAt };
   }
 
   private admitTimer(token: string): void {
@@ -1894,6 +1990,7 @@ class ServiceHostRuntime {
       this.clock().clearTimeout(timer.handle);
     }
     this.timers.clear();
+    for (const key of this.delayedAdmissions.keys()) this.cancelAdmission(key);
     for (const watchdog of this.watchdogs) {
       this.clock().clearTimeout(watchdog);
     }

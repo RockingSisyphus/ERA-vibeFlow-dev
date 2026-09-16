@@ -1,3 +1,5 @@
+/** 酒馆事件和受限能力适配入口。Service决定变量生命周期，宿主负责事件接纳、来源事实与原生操作。 */
+import { createFunctionCallAdapter } from './function-call-adapter';
 /*
  * 模块职责：作为 Tavern Helper 与 VibeFlow Host Extension 的唯一生产接线层，
  * 只登记一套事件监听、转交回执和执行声明式 Capability。模块边界：
@@ -239,9 +241,15 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
           if (type === INPUT_EVENT.GENERATION_STARTED && args[2] !== true) this.agentHost.nativeGeneration.start();
           // ERA 自己的 MK/API/压缩写回不能制造新业务窗口，也不能重新入队同步。
           if (this.internalMessageWrites.consume(type, args)) return undefined;
-          if (type === INPUT_EVENT.GENERATION_STOPPED) this.agentHost.nativeGeneration.clear('stopped');
+          if (type === INPUT_EVENT.GENERATION_STOPPED) {
+            this.agentHost.nativeGeneration.clear('stopped');
+            this.functions.stop();
+          }
           if (type === INPUT_EVENT.CHAT_CHANGED) this.agentHost.clearSessions();
-          if (WINDOW_LIFECYCLE_EVENTS.has(type)) this.rotateLifecycleWindow();
+          if (WINDOW_LIFECYCLE_EVENTS.has(type)) {
+            this.rotateLifecycleWindow();
+            this.functions.invalidateChanged();
+          }
           const result = this.enqueue(type, eventSource(type), args);
           if (
             !result.accepted ||
@@ -287,6 +295,7 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
       stopped = true;
       this.accepting = false;
       this.agentHost.stop();
+      this.functions.stop();
       releaseListeners();
       if (this.listener === listener) this.listener = null;
     };
@@ -310,6 +319,7 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
   }
 
   stopAccepting(): void {
+    this.functions.stop();
     this.accepting = false;
     this.internalMessageWrites.clear();
     this.agentHost.stop();
@@ -527,4 +537,5 @@ export class TavernEraServiceAdapter implements EraTavernAdapter {
 
   /** Sidecar 的文件/身份/UI 机械接线；所有绑定决策由 workflow 完成。 */
   readonly sidecar = createSidecarAdapter();
+  readonly functions = createFunctionCallAdapter();
 }

@@ -63,6 +63,12 @@
       "operations": [
         "read"
       ]
+    },
+    {
+      "id": "era.tavern.sidecar",
+      "operations": [
+        "read_working"
+      ]
     }
   ]
 }

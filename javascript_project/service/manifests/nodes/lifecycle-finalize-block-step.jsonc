@@ -1,0 +1,57 @@
+{
+  "kind": "node",
+  "type_key": "era.lifecycle.finalize_block_step",
+  "display_name": "冻结本批消息与Sidecar保存候选",
+  "category": "内存生命周期",
+  "description": "清理已完成消息临时进度；固定本次保存边界，done及对应操作记录在同一消息更新中保存。错误只保存仍有效的成功前缀；后到请求属于后续批次。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.sync.block.step.state.next",
+        "cardinality": "exactly_one",
+        "display_name": "era.sync.block.step.state.next"
+      }
+    ],
+    "provides": [
+      {
+        "key": "batch_save_request",
+        "type": "era.tavern.commit.request",
+        "display_name": "batch_save_request"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.sync.block.step.state.next": [
+        "era.sync.block.step.state.next"
+      ]
+    },
+    "output_semantics": {
+      "batch_save_request": [
+        "batch_save_request"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/sync/finalize_block_step.ts",
+        "export": "finalize"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.block_step_state",
+    "era.service.sync_commit_policy"
+  ],
+  "capabilities": []
+}

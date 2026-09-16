@@ -1,0 +1,9 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.agent.candidate.done",
+  "display_name": "era.agent.candidate.done",
+  "representation": "json",
+  "schema": {
+    "type": "boolean"
+  }
+}

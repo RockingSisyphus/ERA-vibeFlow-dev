@@ -8,6 +8,41 @@ import type { AgentReportStage } from './agent-report-view-model';
 import { activeMessageText, messageMk } from './statusbar-message-identity';
 
 const reportApps = new Map<HTMLElement, App>();
+const reportVisibility = new WeakMap<object, { mk: string | null; stages: Map<AgentReportStage, boolean> }>();
+
+/** 宿主重绘只替换DOM；同一消息/MK保留用户展开状态，切换版本则重新默认折叠。 */
+function bindReportVisibility(details: HTMLDetailsElement, stage: AgentReportStage, messageId: number): void {
+  const message = SillyTavern.chat[messageId];
+  if (!message) return;
+  const mk = messageMk(activeMessageText(message) ?? '');
+  let visibility = reportVisibility.get(message);
+  if (!visibility || visibility.mk !== mk) {
+    visibility = { mk, stages: new Map() };
+    reportVisibility.set(message, visibility);
+  }
+  details.open = visibility.stages.get(stage) ?? details.open;
+  const stages = visibility.stages;
+  /** 记录真实toggle结果，避免宿主复制或重建DOM时把用户展开意图丢掉。 */
+  const rememberToggle = () => stages.set(stage, details.open);
+  details.addEventListener('toggle', rememberToggle);
+}
+
+/** 三阶段必须共用显示状态绑定，避免只有规划报告能在宿主重绘后保持展开。 */
+export function createReportDetails(
+  document: Document,
+  stage: AgentReportStage,
+  messageId: number,
+  label: string,
+): HTMLDetailsElement {
+  const details = document.createElement('details');
+  details.className = 'era-technical-report';
+  const summary = document.createElement('summary');
+  summary.textContent = label;
+  summary.id = `era-report-summary-${stage}-${messageId}`;
+  details.append(summary);
+  bindReportVisibility(details, stage, messageId);
+  return details;
+}
 
 /** 必须卸载脱离页面的 Vue 实例，否则旧报告仍会订阅后续请求。 */
 export function releaseReportApps(all = false): void {
@@ -48,6 +83,8 @@ export function hydrateReportViewers(message: HTMLElement): void {
   for (const root of message.querySelectorAll<HTMLElement>('[data-era-report-view]')) {
     if (reportApps.has(root)) continue;
     const props = JSON.parse(decodeURIComponent(root.dataset.eraReportView!));
+    const details = root.closest('details');
+    if (details) bindReportVisibility(details, props.stage, props.messageId);
     const app = createApp(AgentReportViewer, props);
     app.mount(root);
     reportApps.set(root, app);
@@ -70,13 +107,9 @@ export function createStoryViewer(document: Document, messageId: number, fallbac
     ...(request?.requestContext ? { requestContext: request.requestContext } : {}),
     ...(request?.hostConfiguration ? { hostConfiguration: request.hostConfiguration } : {}),
   });
-  const details = document.createElement('details');
-  details.className = 'era-technical-report';
+  const details = createReportDetails(document, 'story', messageId, 'ERA 正文生成记录');
   details.dataset.eraStoryViewer = 'true';
-  const summary = document.createElement('summary');
-  summary.textContent = 'ERA 正文生成记录';
-  summary.id = `era-report-summary-story-${messageId}`;
-  details.append(summary, mountReportViewer(document, report, 'story', messageId));
+  details.append(mountReportViewer(document, report, 'story', messageId));
   return details;
 }
 
@@ -84,13 +117,9 @@ export function createStoryViewer(document: Document, messageId: number, fallbac
 export function createSettlementViewer(document: Document, messageId: number): HTMLElement | null {
   const message = SillyTavern.chat[messageId];
   if (!message?.extra?.era_agent || /<era_update>/iu.test(activeMessageText(message) ?? '')) return null;
-  const details = document.createElement('details');
-  details.className = 'era-technical-report';
+  const details = createReportDetails(document, 'settlement', messageId, 'ERA 变量解析报告');
   details.dataset.eraSettlementViewer = 'true';
-  const summary = document.createElement('summary');
-  summary.textContent = 'ERA 变量解析报告';
-  summary.id = `era-report-summary-settlement-${messageId}`;
-  details.append(summary, mountReportViewer(document, '', 'settlement', messageId));
+  details.append(mountReportViewer(document, '', 'settlement', messageId));
   return details;
 }
 

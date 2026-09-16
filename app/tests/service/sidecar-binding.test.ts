@@ -1,3 +1,4 @@
+import { workingCapabilityFixture } from './working-capability-fixture';
 import { describe, expect, it } from 'vitest';
 import { updateEraMetaData, updateEraStatData } from '../../src/ERA变量框架/utils/era_data';
 
@@ -86,6 +87,7 @@ describe('ERA Sidecar 绑定纯规则', () => {
       {
         capabilities: {
           'era.tavern.sidecar': {
+            ...workingCapabilityFixture(),
             read_current: async () => {
               throw new Error('不应重新读取');
             },
@@ -326,6 +328,7 @@ describe('ERA Sidecar 绑定纯规则', () => {
       {
         capabilities: {
           'era.tavern.sidecar': {
+            ...workingCapabilityFixture(),
             read_current: async () => currentContext(),
             read_record: async () => ({ status: 'found', record: persisted }),
             write_record: async (input: unknown) => {
@@ -397,6 +400,7 @@ describe('ERA Sidecar 绑定纯规则', () => {
       {
         capabilities: {
           'era.tavern.sidecar': {
+            ...workingCapabilityFixture(),
             read_current: async () => conflictCurrent,
             read_record: async () => ({ status: 'found', record: persisted }),
             write_record: async (input: unknown) => {

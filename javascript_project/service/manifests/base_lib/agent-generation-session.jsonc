@@ -8,10 +8,22 @@
   "implementations": [
     {
       "language": "typescript",
-      "targets": ["browser", "node"],
-      "source": {"kind": "file", "ref": "base_lib/agent_generation_session.ts"}
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "source": {
+        "kind": "file",
+        "ref": "base_lib/agent_generation_session.ts"
+      }
     }
   ],
-  "dependencies": ["era.crud.engine"],
-  "external_packages": ["@era/vibeflow-contracts", "@era/vibeflow-expression"]
+  "dependencies": [
+    "era.crud.engine",
+    "era.service.agent_stage_text"
+  ],
+  "external_packages": [
+    "@era/vibeflow-contracts",
+    "@era/vibeflow-expression"
+  ]
 }

@@ -1,3 +1,4 @@
+import { workingCapabilityFixture } from './working-capability-fixture';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -59,10 +60,11 @@ class FakeAdapter implements EraTavernHostAdapter {
   readonly lifecycleOrder: string[] = [];
   sidecarPromptClearCount = 0;
 
-  /** 消息内函数调用能力的桩：真实实现见 service/era-functions-capability。 */
+  /** Native tool transport; these host tests do not execute ERA operations. */
   readonly functions = {
-    invoke: async () => ({ status: 'accepted' as const }),
-    result: async () => ({ status: 'failed' as const, message: 'unused' }),
+    begin: () => ({ status: 'started' }),
+    next: async () => ({ kind: 'done', error: null }),
+    acknowledge: () => ({ status: 'acknowledged' }),
     release: () => ({ released: true }),
   };
 
@@ -140,6 +142,7 @@ class FakeAdapter implements EraTavernHostAdapter {
   };
 
   readonly sidecar = {
+    ...workingCapabilityFixture(),
     read_current: async (input: Readonly<Record<string, unknown>>) => ({ ...input }),
     read_record: async (input: Readonly<Record<string, unknown>>) => ({ ...input }),
     write_record: async (input: Readonly<Record<string, unknown>>) => ({ ...input }),
@@ -675,4 +678,32 @@ describe('ERA 服务 Host Extension 核心', () => {
     });
     await host.stop();
   }, 30_000);
+});
+
+it('工作流延迟准入可防抖，连续请求不超过最长等待，停止时清理', async () => {
+  const { adapter, host } = createFixture();
+  host.start();
+  const scheduler = host.capabilities['era.lifecycle.admission'];
+  const request = {
+    key: 'save',
+    delayMs: 200,
+    maxDelayMs: 2000,
+    event: { type: 'era.facade.sync', source: 'era-api', args: [{ mode: 'auto' }] },
+  };
+  for (let i = 0; i < 20; i++) {
+    const result = scheduler.schedule(request);
+    expect(result.dueAt).toBeLessThanOrEqual(3000);
+    adapter.clock.advance(100);
+  }
+  expect(host.diagnostics.snapshot().accepted).toBe(1);
+  const received = (await host.capabilities['vibeflow.port'].receive({ port: 'era.service.in' })).value;
+  expect(received).toMatchObject({ source: 'era-api', type: 'era.facade.sync' });
+  scheduler.schedule(request);
+  scheduler.cancel({ key: 'save' });
+  adapter.clock.advance(300);
+  expect(host.diagnostics.snapshot().accepted).toBe(1);
+  scheduler.schedule(request);
+  await host.stop();
+  adapter.clock.advance(300);
+  expect(host.diagnostics.snapshot().timers).toBe(0);
 });

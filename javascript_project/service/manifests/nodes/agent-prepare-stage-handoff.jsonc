@@ -9,7 +9,7 @@
   "contract": {
     "requires": [
       {
-        "type": "era.agent.generation.outcome",
+        "type": "era.agent.candidate.outcome",
         "cardinality": "exactly_one",
         "display_name": "阶段执行结果"
       }
@@ -24,8 +24,8 @@
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
-      "era.agent.generation.outcome": [
-        "成功阶段结果或直接结果。"
+      "era.agent.candidate.outcome": [
+        "候选循环最终结果。"
       ]
     },
     "output_semantics": {

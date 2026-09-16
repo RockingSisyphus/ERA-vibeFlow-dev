@@ -1,3 +1,4 @@
+import { workingCapabilityFixture } from './working-capability-fixture';
 import { describe, expect, it, vi } from 'vitest';
 import { run as route } from '../../../javascript_project/service/nodes/api/workbench_route_request_kind';
 import { run as read } from '../../../javascript_project/service/nodes/api/workbench_read_baseline';
@@ -55,6 +56,7 @@ function fixture(patch: Record<string, unknown> = {}, statData: unknown = { hp: 
   const current = { identity: owner, meta: { SidecarId: sidecarId }, stat: null };
   const capabilities = {
     'era.tavern.sidecar': {
+      read_working: workingCapabilityFixture().read_working,
       read_current: vi.fn(async () => structuredClone(current)),
       read_record: vi.fn(async () => ({ status: 'found', record: structuredClone(record) })),
     },
@@ -211,7 +213,7 @@ describe('真实工作台准备节点接回原 Commit', () => {
       expect(result.preparation_route).toBe('failed');
       expect(result.preparation_failure.error.message).toBeTruthy();
       expect(result.prepared_commit_inspected.request.detail.operations).toBeUndefined();
-      expect(Object.keys(sidecar)).toEqual(['read_current', 'read_record']);
+      expect(Object.keys(sidecar)).toEqual(['read_working', 'read_current', 'read_record']);
     },
   );
 });

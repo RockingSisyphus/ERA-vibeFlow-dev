@@ -48,8 +48,8 @@
       {
         "id": "prepare_auxiliary_execution_request",
         "type_used": "era.agent.prepare_auxiliary_execution_request",
-        "display_name": "读取生成事实",
-        "description": "读取生成事实及恢复时最新已提交状态；恢复事件沿原派发入口读取会话，不复用等待前的变量快照。"
+        "display_name": "读取阶段工作状态与当前来源",
+        "description": "阶段恢复读取有效工作状态，不要求Sidecar已落盘；保留原生完成和来源确认。"
       },
       {
         "id": "classify_generation_event",
@@ -61,13 +61,7 @@
         "id": "prepare_generation_phase",
         "type_used": "era.agent.prepare_generation_phase",
         "display_name": "准备阶段请求",
-        "description": "准备单阶段请求；恢复后按阶段读取最新变量、消息和必要最终成果，不从过程报告重建业务请求。"
-      },
-      {
-        "id": "execute_agent_phase_v2",
-        "type_used": "era.agent.execute_session_v2",
-        "display_name": "执行生成阶段",
-        "description": "每次只执行至一个成功阶段边界：规划及函数完成、正文完成、变量操作有效但未执行；返回最终成果和待恢复会话。消息仅组合最终规划、正文及有效事务，不写历次报告。"
+        "description": "候选请求基线：手动重新结算先通过共用历史计算恢复正文结束状态，撤销旧结算后再请求模型；保留正文done和记录。"
       },
       {
         "id": "prepare_stage_handoff",
@@ -78,8 +72,8 @@
       {
         "id": "form_session_transition",
         "type_used": "era.agent.form_session_transition",
-        "display_name": "形成会话转换",
-        "description": "将阶段交接结果转为原任务结果或最终候选；待回调阶段不提交 AI 变量候选，恢复提交仍交给 legacy_sync。"
+        "display_name": "携带已应用阶段状态进入下一阶段",
+        "description": "规划草稿保留操作及done，正文独立结算仍应用指令；最终候选不重放本轮已应用API，进入统一批次保存。"
       },
       {
         "id": "route_agent_transition",
@@ -116,6 +110,53 @@
         "type_used": "era.service.terminal",
         "display_name": "生成会话结束",
         "description": "返回单一任务结果。"
+      },
+      {
+        "id": "seed_candidate",
+        "type_used": "era.agent.candidate_seed",
+        "display_name": "建立候选请求",
+        "description": "准备并执行候选内部循环。"
+      },
+      {
+        "id": "candidate_loop",
+        "type_used": "vibeflow.loop.while",
+        "display_name": "候选整体纠错循环",
+        "description": "候选完整恢复后再请求模型；只有终态进入阶段交接。",
+        "requires": [
+          {
+            "type": "era.agent.candidate.state",
+            "cardinality": "exactly_one",
+            "display_name": "era.agent.candidate.state"
+          }
+        ],
+        "provides": [
+          {
+            "key": "candidate_outcome",
+            "type": "era.agent.candidate.outcome",
+            "display_name": "candidate_outcome"
+          }
+        ],
+        "loop": {
+          "body": "era.agent.candidate_attempt",
+          "max_iterations": null,
+          "stop_when": {
+            "from": "candidate_done",
+            "equals": true
+          },
+          "carry": [
+            {
+              "from": "era.agent.candidate.state",
+              "as": "candidate_state",
+              "update": "candidate_state_after"
+            }
+          ],
+          "outputs": [
+            {
+              "from": "candidate_outcome",
+              "as": "candidate_outcome"
+            }
+          ]
+        }
       }
     ],
     "edges": [
@@ -130,14 +171,6 @@
       [
         "classify_generation_event",
         "prepare_generation_phase"
-      ],
-      [
-        "prepare_generation_phase",
-        "execute_agent_phase_v2"
-      ],
-      [
-        "execute_agent_phase_v2",
-        "prepare_stage_handoff"
       ],
       [
         "prepare_stage_handoff",
@@ -184,6 +217,24 @@
       [
         "build_direct_result",
         "end"
+      ],
+      [
+        "prepare_generation_phase",
+        "seed_candidate"
+      ],
+      {
+        "from": "start",
+        "to": "seed_candidate",
+        "transfer": false,
+        "schedule": true
+      },
+      [
+        "seed_candidate",
+        "candidate_loop"
+      ],
+      [
+        "candidate_loop",
+        "prepare_stage_handoff"
       ]
     ],
     "outputs": [
@@ -194,5 +245,10 @@
         "as": "agentTaskResult"
       }
     ]
-  }
+  },
+  "nodeset_imports": [
+    {
+      "path": "agent_candidate_attempt.jsonc"
+    }
+  ]
 }

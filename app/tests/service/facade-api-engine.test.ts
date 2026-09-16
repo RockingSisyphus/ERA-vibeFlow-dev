@@ -1,4 +1,7 @@
+import { unescapeEraData } from '../../../javascript_project/service/base_lib/domain/snapshot_query';
+import { parseMessageCommands } from '../../../javascript_project/service/base_lib/domain/crud_engine';
 import { describe, expect, it } from 'vitest';
+import { run as appliedReceipt } from '../../../javascript_project/service/nodes/api/return_applied_receipt';
 
 import {
   buildAppend,
@@ -6,7 +9,6 @@ import {
   inspectWindow,
   recheckWindow,
   validateCommit,
-  verifyCommitted,
 } from '../../../javascript_project/service/base_lib/facade_api_engine';
 
 const identity = {
@@ -80,6 +82,52 @@ function statusbarSource(messageId = 0) {
 }
 
 describe('ERA 即时 Scope Facade 纯领域链', () => {
+  it('应用回执携带本轮表达式诊断，不推迟到防抖落盘才报告', () => {
+    const inspected = inspectWindow(request(), execution(), identity, messages());
+    const result = appliedReceipt(
+      {
+        'era.sync.block.step.state.next': {
+          value: {
+            apiContext: buildAppend(buildTransaction((validateCommit(inspected) as any).context)),
+            work: {
+              disposition: 'commit',
+              step: { kind: 'execute', task: request().task },
+              plan: {
+                diagnostics: [{ code: 'ERA_EDIT_TARGET_NOT_NUMERIC', message: 'invalid target (hp)', messageIndex: 1 }],
+              },
+            },
+          },
+        },
+      },
+      {},
+      {
+        capabilities: {
+          'era.tavern.sidecar': { read_working: () => ({ working: null }) },
+          'era.lifecycle.admission': { schedule: () => ({ status: 'scheduled' }) },
+        },
+      },
+    ).facade_commit_result;
+    expect(result.diagnostics).toEqual([
+      { code: 'ERA_EDIT_TARGET_NOT_NUMERIC', message: 'invalid target (hp)（消息索引 1）', sequence: 1 },
+    ]);
+  });
+  it('应用失败保留正式错误DTO，不附加导致服务停止的layer字段', () => {
+    const inspected = inspectWindow(request(), execution(), identity, messages());
+    const failed = { code: 'ERA_TEST_APPLY_FAILED', message: 'original reason', category: 'domain', retryable: false };
+    const result = appliedReceipt(
+      {
+        'era.sync.block.step.state.next': {
+          value: {
+            apiContext: inspected,
+            work: { disposition: 'failed', failure: failed },
+          },
+        },
+      },
+      {},
+      {},
+    ).facade_commit_result;
+    expect(result.settlements[0]).toEqual({ eventId: 'event-1', sequence: 1, status: 'failed', error: failed });
+  });
   it('每次调用只生成一个短 era_tx，保留六类操作的原始顺序', () => {
     const inspected = inspectWindow(
       request('message', [
@@ -177,24 +225,6 @@ describe('ERA 即时 Scope Facade 纯领域链', () => {
     });
   });
 
-  it('保存失败保留原请求上下文和真实诊断，不以消息内存回读冒充落盘', () => {
-    const validated = validateCommit(inspectWindow(request(), execution(), identity, messages())) as any;
-    const candidate = buildAppend(buildTransaction(validated.context));
-    const result = verifyCommitted(
-      {
-        status: 'failed',
-        context: candidate,
-        observed: { status: 'failed', writeState: 'memory-written', message: '原聊天保存未确认' },
-      },
-      messages(),
-    );
-    expect(result).toMatchObject({
-      route: 'failed',
-      context: candidate,
-      error: { code: 'ERA_API_MESSAGE_APPEND_FAILED', message: '原聊天保存未确认' },
-    });
-  });
-
   it('操作必须是非空数组、单键且仅允许六类名称', () => {
     expect(validateCommit(inspectWindow(request('message', []), execution(), identity, messages()))).toMatchObject({
       route: 'failed',
@@ -207,4 +237,12 @@ describe('ERA 即时 Scope Facade 纯领域链', () => {
       validateCommit(inspectWindow(request('message', [{ update: { a: 1 } }]), execution(), identity, messages())),
     ).toMatchObject({ route: 'failed', error: { code: 'ERA_API_COMMIT_INVALID' } });
   });
+});
+
+it('ordinary API records round-trip literal command tags without truncating JSON', () => {
+  const payload = {note: '<VariableEdit>{"hp":0}</VariableEdit>', call: '<EraFCall name="missing"/>', nested: ['<era_data>', '</VariableInsert>']};
+  const result = buildTransaction({scope:'always', operations:[{name:'insert',payload}]});
+  const commands = parseMessageCommands({content:result.transaction});
+  expect(commands).toHaveLength(1);
+  expect(unescapeEraData(commands[0].data)).toEqual([payload]);
 });

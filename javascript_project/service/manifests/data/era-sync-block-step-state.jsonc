@@ -3,7 +3,7 @@
   "type_key": "era.sync.block.step.state",
   "representation": "json",
   "display_name": "ERA·同步·块步进状态",
-  "description": "单块工作项、已确认来源依据与最后真实提交结果。",
+  "description": "当前内存块工作项、原消息依据与调用上下文；完整范围结束后统一保存。",
   "schema": {
     "type": "object",
     "properties": {
@@ -19,18 +19,26 @@
           "null"
         ]
       },
-      "lastResult": {
+      "apiContext": {
+        "type": "object"
+      },
+      "functionFrame": {
         "type": [
           "object",
           "null"
         ]
+      },
+      "scopeWindow": {
+        "type": "object"
+      },
+      "stageOutcome": {
+        "type": "object"
       }
     },
     "required": [
       "work",
       "done",
-      "sourceBasis",
-      "lastResult"
+      "sourceBasis"
     ],
     "additionalProperties": false
   }

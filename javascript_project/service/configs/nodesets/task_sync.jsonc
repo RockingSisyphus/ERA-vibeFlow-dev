@@ -9,7 +9,7 @@
   ],
   "type_key": "era.task.sync",
   "display_name": "ERA 同步任务",
-  "description": "逐块处理普通同步、历史回退和 API 重放；消息写入与 Sidecar 保存统一在块循环内，尾链仅呈现和结算。本轮未完成的消息内工具调用明确失败，既有 Agent 路径保留。",
+  "description": "接续有效工作状态，逐块处理确定范围，最后批量保存消息及Sidecar；API防抖到期同样进入该提交边界。",
   "requires": [
     {
       "type": "era.step.request.routed",
@@ -56,26 +56,26 @@
       {
         "id": "read_sync_context",
         "type_used": "era.tavern.sync_read",
-        "display_name": "读取同步输入与连续处理事实",
-        "description": "读取 Sidecar 指针与当前派发输入；在 Node 边界从批次状态投影连续 MK 和计数，后续规划不携带批次来源、通知或队列状态。"
+        "display_name": "取得当前聊天工作状态",
+        "description": "按聊天身份接续未保存工作；切聊天不覆盖旧dirty批次，返回后核对正文Swipe和Sidecar来源再恢复，失效状态撤销重算；旧候选和迟到请求不能发布到新目标。"
       },
       {
         "id": "sidecar_store_prepare",
         "type_used": "era.sidecar.store",
-        "display_name": "运行 Sidecar 状态存储前置事务",
-        "description": "调用专用 Sidecar 状态节点集：检查身份与唯一聊天指针，读取或迁移 V2 用户文件状态，并规划冲突选择或继续同步。"
+        "display_name": "接续工作状态或首次绑定Sidecar",
+        "description": "有效工作状态存在时直接继续；仅首次加载或恢复时复用Sidecar存储节点集的读取、绑定及迁移分支，不在每个任务重新读取旧文件覆盖dirty状态。"
       },
       {
         "id": "prepare_block_step",
         "type_used": "era.sync.prepare_block_step",
-        "display_name": "准备回退起点与单一执行状态",
-        "description": "只定位历史分歧、准备撤销旧效果和有序楼层范围，不预先执行整楼命令。状态持有楼层起点快照、当前累计值、随机偏移、累计日志及真实提交结果；文本进度与已保存日志共同支持恢复，信息不足返回可恢复失败。"
+        "display_name": "准备内存回退与本次消息范围",
+        "description": "沿用历史定位和回退；保存变量/函数起点、scope和随机偏移。防抖flush只提交指定待保存批次；聊天变更先使旧工作失效，不强写旧文本。"
       },
       {
         "id": "process_message_blocks",
         "type_used": "vibeflow.loop.while",
-        "display_name": "逐块执行并提交全部目标楼层",
-        "description": "每次应用一个块并保存状态、累计日志及进度；空楼、纯回退、删除清空与最后的进度清理由同一提交路径处理。done 调用跳过，无 done 调用以 ERA_FCALL_NOT_IMPLEMENTED 结束本消息且不调用工具；错误不停止永久服务。",
+        "display_name": "共用循环：内存逐块处理目标范围",
+        "description": "max_iterations=null；处理块不落盘，结束时得到累计消息及状态。函数API应用后返回，不强制刷盘。",
         "requires": [
           {
             "type": "era.sync.block.step.state",
@@ -114,9 +114,21 @@
       },
       {
         "id": "finalize_block_step",
-        "type_used": "era.sync.finalize_block_step",
-        "display_name": "汇总实际提交结果（不再提交）",
-        "description": "仅汇总循环内实际保存结果、失败、来源变化与完成事实，输出既有提交结果信封供呈现及回执处理；不以整楼预计算替换累计值，不写消息或 Sidecar。未完成或失败消息不发布完成呈现。"
+        "type_used": "era.lifecycle.finalize_block_step",
+        "display_name": "冻结本批消息与Sidecar保存候选",
+        "description": "清理已完成消息临时进度；固定本次保存边界，done及对应操作记录在同一消息更新中保存。错误只保存仍有效的成功前缀；后到请求属于后续批次。"
+      },
+      {
+        "id": "persist_batch_state",
+        "type_used": "era.tavern.variables_commit",
+        "display_name": "批量保存消息 → Sidecar并确认",
+        "description": "复用原目标校验、消息保存及回读、Sidecar上传及回读；一次提交本批变更，取消每块调用。不变指针不机械重写；保存失败保留待保存数据。"
+      },
+      {
+        "id": "settle_saved_batch",
+        "type_used": "era.lifecycle.settle_saved_batch",
+        "display_name": "结算已保存批次与恢复事实",
+        "description": "保存成功仅清除本批待保存内容，保留后到操作；分别维护内存已应用与已保存事实。失败通过原恢复入口报告，不逆转已返回API成功，不永久停服。"
       },
       {
         "id": "present_finalized_floor",
@@ -182,10 +194,6 @@
         "finalize_block_step"
       ],
       [
-        "finalize_block_step",
-        "present_finalized_floor"
-      ],
-      [
         "present_finalized_floor",
         "build_sync_notification"
       ],
@@ -200,6 +208,18 @@
       [
         "sidecar_binding_applied_result",
         "end"
+      ],
+      [
+        "finalize_block_step",
+        "persist_batch_state"
+      ],
+      [
+        "persist_batch_state",
+        "settle_saved_batch"
+      ],
+      [
+        "settle_saved_batch",
+        "present_finalized_floor"
       ]
     ],
     "outputs": [

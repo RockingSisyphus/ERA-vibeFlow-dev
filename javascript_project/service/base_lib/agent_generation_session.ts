@@ -1,6 +1,6 @@
+import { splitAgentStageText } from "./agent_stage_text.ts";
 import type { JsonValue } from "@era/vibeflow-contracts";
 import { executeExpressionLayer } from "@era/vibeflow-expression/engine";
-import { applyMessageCommands } from "./domain/crud_engine.ts";
 
 export const ERA_AGENT_SCHEMA_VERSION = "2" as const;
 export const ERA_AGENT_MAX_RETRIES = 16;
@@ -151,21 +151,10 @@ export interface EraAgentFunctionCallV1 {
 }
 
 export interface EraAgentPlanningOutputV1 {
+  readonly instructionsBefore?: string;
+  readonly instructionsAfter?: string;
   readonly storyPlan: Readonly<Record<string, JsonValue>>;
   readonly calls: readonly EraAgentFunctionCallV1[];
-}
-
-export interface EraAgentOperationV1 {
-  readonly insert?: Readonly<Record<string, JsonValue>>;
-  readonly edit?: Readonly<Record<string, JsonValue>>;
-  readonly delete?: Readonly<Record<string, JsonValue>>;
-  readonly functionInsert?: Readonly<Record<string, JsonValue>>;
-  readonly functionEdit?: Readonly<Record<string, JsonValue>>;
-  readonly functionDelete?: Readonly<Record<string, JsonValue>>;
-}
-
-export interface EraAgentSettlementOutputV1 {
-  readonly operations: readonly EraAgentOperationV1[];
 }
 
 function isPlaceholder(value: string): boolean {
@@ -179,17 +168,6 @@ function isPlaceholder(value: string): boolean {
     "dialogue_examples",
     "chat_history",
     "user_input",
-  ].includes(value);
-}
-
-function isOperationKey(value: string): boolean {
-  return [
-    "insert",
-    "edit",
-    "delete",
-    "functionInsert",
-    "functionEdit",
-    "functionDelete",
   ].includes(value);
 }
 
@@ -415,7 +393,8 @@ function parseJsonObject(raw: string, label: string): Record<string, unknown> {
 }
 
 export function parsePlanningOutput(raw: string): EraAgentPlanningOutputV1 {
-  const value = parseJsonObject(raw, "规划响应");
+  const separated = splitAgentStageText(raw);
+  const value = parseJsonObject(separated.json, "规划响应");
   if (!isRecord(value.storyPlan) || !Array.isArray(value.calls)) {
     throw new TypeError("规划响应必须包含 storyPlan 对象与 calls 数组。");
   }
@@ -449,34 +428,11 @@ export function parsePlanningOutput(raw: string): EraAgentPlanningOutputV1 {
       : { function: name, args: candidate.args as number[] };
   });
   return {
+    ...(separated.before ? { instructionsBefore: separated.before } : {}),
+    ...(separated.after ? { instructionsAfter: separated.after } : {}),
     storyPlan: cloneJson(value.storyPlan) as Record<string, JsonValue>,
     calls,
   };
-}
-
-export function parseSettlementOutput(raw: string): EraAgentSettlementOutputV1 {
-  const value = parseJsonObject(raw, "变量分析响应");
-  if (!Array.isArray(value.operations))
-    throw new TypeError("变量分析响应必须包含 operations 数组。");
-  if (value.operations.length > 128)
-    throw new RangeError("变量操作不得超过 128 项。");
-  const operations = value.operations.map(
-    (candidate, index): EraAgentOperationV1 => {
-      if (!isRecord(candidate))
-        throw new TypeError(`operations[${index}] 必须是对象。`);
-      const keys = Object.keys(candidate);
-      if (keys.length !== 1 || !isOperationKey(keys[0] ?? "")) {
-        throw new TypeError(
-          `operations[${index}] 必须且只能包含一种 ERA 操作。`,
-        );
-      }
-      const payload = candidate[keys[0] as keyof typeof candidate];
-      if (!isRecord(payload))
-        throw new TypeError(`operations[${index}] 的操作内容必须是对象。`);
-      return cloneJson(candidate) as EraAgentOperationV1;
-    },
-  );
-  return { operations };
 }
 
 function safeReport(value: unknown): string {
@@ -491,28 +447,6 @@ export function formatAgentPlanReport(value: unknown): string {
 
 export function formatAgentUpdateReport(value: unknown): string {
   return `<era_update>${safeReport(value)}</era_update>`;
-}
-
-export function formatAgentTransaction(
-  operations: readonly EraAgentOperationV1[],
-): string {
-  const body = operations
-    .map((operation) => {
-      const [kind, payload] = Object.entries(operation)[0] ?? [];
-      const tags: Record<string, string> = {
-        insert: "VariableInsert",
-        edit: "VariableEdit",
-        delete: "VariableDelete",
-        functionInsert: "FunctionInsert",
-        functionEdit: "FunctionEdit",
-        functionDelete: "FunctionDelete",
-      };
-      const tag = tags[kind ?? ""];
-      if (!tag) throw new TypeError(`不支持的 ERA 操作：${String(kind)}。`);
-      return `<${tag}>${safeReport(payload)}</${tag}>`;
-    })
-    .join("");
-  return `<era_tx s="m">${body}</era_tx>`;
 }
 
 export function stripAgentReportsForPrompt(text: string): string {
@@ -566,7 +500,7 @@ export function builtinStagePrompts(
   const contract =
     stage === "planning"
       ? '只输出严格 JSON：{"storyPlan":对象,"calls":[{"function":字符串,"args":数值数组,"purpose":可选字符串}]}。规划故事并仅列出确有必要的纯数值函数调用，不写正文。'
-      : '只输出严格 JSON：{"operations":[ERA 有序操作]}。根据正式故事与给定状态生成必要的变量或函数操作；没有变化时返回空数组。';
+      : "直接按执行顺序输出 ERA 标签：<VariableInsert>JSON对象</VariableInsert>、<VariableEdit>JSON对象</VariableEdit>、<VariableDelete>JSON对象</VariableDelete>、<FunctionInsert>JSON对象</FunctionInsert>、<FunctionEdit>JSON对象</FunctionEdit>、<FunctionDelete>JSON对象</FunctionDelete>，可在任意操作之间使用 <EraFCall name=\"已注册函数名\" args='JSON对象' />。根据正式故事与当前状态只生成尚需执行的操作；无变化时输出空文本。不要输出 operations JSON、代码围栏或说明文字。";
   return [
     {
       role: "system",
@@ -726,42 +660,27 @@ export function executeAgentFunctionCalls(
   return { results, nextDrawOffset: drawOffset };
 }
 
-export function validateSettlementOperations(
-  input: Readonly<{
-    operations: readonly EraAgentOperationV1[];
-    statData: unknown;
-    statFunc: Readonly<Record<string, unknown>>;
-    messageId: number;
-    sourceKey: string;
-  }>,
-): Readonly<{
-  transaction: string;
-  finalStat: unknown;
-  finalStatFunc: Readonly<Record<string, unknown>>;
-}> {
-  const transaction = formatAgentTransaction(input.operations);
-  const trial = applyMessageCommands({
-    content: transaction,
-    messageId: input.messageId,
-    initialStat: input.statData,
-    initialStatFunc: input.statFunc,
-    meta: {},
-    randomSourceKey: input.sourceKey,
-  });
-  if (
-    trial.commands.length !== input.operations.length ||
-    trial.diagnostics.length > 0
-  ) {
-    const diagnostic = trial.diagnostics[0];
-    throw new TypeError(
-      diagnostic
-        ? `${diagnostic.code}: ${diagnostic.message}`
-        : "变量操作未被 ERA 命令引擎完整接受。",
-    );
-  }
-  return {
-    transaction,
-    finalStat: trial.finalStat,
-    finalStatFunc: trial.finalStatFunc ?? input.statFunc,
-  };
+/** Check the report source before either restoring state or issuing a model request. */
+export function agentRetryMatchesSession(
+  retry: Record<string, unknown>,
+  session: Record<string, unknown>,
+): boolean {
+  const attempts =
+    session[
+      retry.kind === "planning" ? "planningAttempts" : "settlementAttempts"
+    ];
+  const last = Array.isArray(attempts) ? attempts.at(-1) : null;
+  const requestId =
+    retry.kind === "story"
+      ? session.storyRequestId
+      : isRecord(last)
+        ? last.requestId
+        : undefined;
+  return (
+    (retry.requestId === undefined || retry.requestId === requestId) &&
+    (retry.messageId === undefined || retry.messageId === session.messageId) &&
+    (retry.cycleIndex === undefined ||
+      retry.cycleIndex === session.cycleIndex) &&
+    (retry.sourceKey === undefined || retry.sourceKey === session.sourceKey)
+  );
 }

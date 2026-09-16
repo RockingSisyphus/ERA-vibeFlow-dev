@@ -197,6 +197,17 @@ describe('重新生成的宏与生成栅栏', () => {
     vi.restoreAllMocks();
   });
 
+  it('完整同步通过实际 AOT 的保存参数校验并清除内存脏状态', async () => {
+    await vi.waitFor(() => expect(events.count('generation_started')).toBe(1));
+    const request = adapter.enqueue('era.facade.sync', 'era-api', [{ mode: 'full' }]);
+    if (!request.accepted) throw new Error(request.message);
+    const result = await request.done;
+    expect(result.status).toBe('completed');
+    const { readWorkingState } = await import('../../src/ERA变量框架/service/sidecar-runtime-snapshot');
+    expect(readWorkingState({ characterId: 'barrier-card', groupId: null, chatId: 'barrier-chat' })?.dirty).toBe(false);
+    expect(sidecarFiles.size).toBeGreaterThan(0);
+  });
+
   it('设置命令经过独立 Nodeset，在原 FIFO 中结算后仍能处理生成事件', async () => {
     await vi.waitFor(() => expect(events.count('generation_started')).toBe(1));
     await events.only('generation_started')('regenerate', { automatic_trigger: false }, false);

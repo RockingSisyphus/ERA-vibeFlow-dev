@@ -1,0 +1,80 @@
+{
+  "kind": "node",
+  "type_key": "era.lifecycle.finish_stage_blocks",
+  "display_name": "回送已应用阶段状态及草稿",
+  "category": "内存生命周期",
+  "description": "将变量/函数、普通API记录及done传给原阶段交接；后续阶段读内存，完整轮次才保存；取消保留原草稿边界。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.sync.block.step.state.next",
+        "cardinality": "exactly_one",
+        "display_name": "era.sync.block.step.state.next"
+      }
+    ],
+    "provides": [
+      {
+        "key": "applied_generation_outcome",
+        "type": "era.agent.generation.outcome",
+        "display_name": "applied_generation_outcome"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.sync.block.step.state.next": [
+        "era.sync.block.step.state.next"
+      ]
+    },
+    "output_semantics": {
+      "applied_generation_outcome": [
+        "applied_generation_outcome"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/agent/finish_stage_blocks.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.mk_engine",
+    "era.service.agent_session_binding",
+    "era.service.agent_generation_session"
+  ],
+  "capabilities": [
+    {
+      "id": "era.tavern.agent",
+      "operations": [
+        "read_session_binding",
+        "write_session",
+        "clear_session"
+      ]
+    },
+    {
+      "id": "era.tavern.sidecar",
+      "operations": [
+        "read_working",
+        "write_working"
+      ]
+    },
+    {
+      "id": "era.lifecycle.admission",
+      "operations": [
+        "schedule"
+      ]
+    }
+  ]
+}

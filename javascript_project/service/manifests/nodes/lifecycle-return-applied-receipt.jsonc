@@ -1,0 +1,71 @@
+{
+  "kind": "node",
+  "type_key": "era.lifecycle.return_applied_receipt",
+  "display_name": "返回内存应用回执并登记保存时机",
+  "category": "内存生命周期",
+  "description": "工作状态、日志、scope和待保存消息一致后返回；不是入队即成功。当前函数归属父批次；独立API防抖加最长未保存时间，时间到通过既有事件端口请求批次保存。多次不await按序，多次await不强制刷盘。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.sync.block.step.state.next",
+        "cardinality": "exactly_one",
+        "display_name": "era.sync.block.step.state.next"
+      }
+    ],
+    "provides": [
+      {
+        "key": "facade_commit_result",
+        "type": "era.api.commit.result",
+        "display_name": "facade_commit_result"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.sync.block.step.state.next": [
+        "era.sync.block.step.state.next"
+      ]
+    },
+    "output_semantics": {
+      "facade_commit_result": [
+        "facade_commit_result"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/api/return_applied_receipt.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.facade_api_engine",
+    "era.service.block_step_state",
+    "era.service.sync_result_policy"
+  ],
+  "capabilities": [
+    {
+      "id": "era.lifecycle.admission",
+      "operations": [
+        "schedule"
+      ]
+    },
+    {
+      "id": "era.tavern.sidecar",
+      "operations": [
+        "read_working"
+      ]
+    }
+  ]
+}

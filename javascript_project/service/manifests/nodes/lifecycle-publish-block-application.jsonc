@@ -1,0 +1,73 @@
+{
+  "kind": "node",
+  "type_key": "era.lifecycle.publish_block_application",
+  "display_name": "发布内存应用结果与推进位置",
+  "category": "内存生命周期",
+  "description": "把压缩后的工作状态更新到同一执行上下文，保留消息起点快照/随机偏移；同步更新API可读投影，不能覆盖后到操作。仅应用完成，不发布整批保存完成或提前ready。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.command_compaction.result",
+        "cardinality": "exactly_one",
+        "display_name": "era.command_compaction.result"
+      }
+    ],
+    "provides": [
+      {
+        "key": "block_step_state_after",
+        "type": "era.sync.block.step.state.next",
+        "display_name": "block_step_state_after"
+      },
+      {
+        "key": "block_step_done",
+        "type": "era.step.done",
+        "display_name": "block_step_done"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.command_compaction.result": [
+        "era.command_compaction.result"
+      ]
+    },
+    "output_semantics": {
+      "block_step_state_after": [
+        "block_step_state_after"
+      ],
+      "block_step_done": [
+        "block_step_done"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/sync/publish_block_application.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.block_step_state",
+    "era.service.sync_contracts"
+  ],
+  "capabilities": [
+    {
+      "id": "era.tavern.sidecar",
+      "operations": [
+        "read_working",
+        "write_working"
+      ]
+    }
+  ]
+}

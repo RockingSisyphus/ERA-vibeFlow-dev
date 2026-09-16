@@ -8,13 +8,13 @@ export function run(inputs: Readonly<Record<string, unknown>>): any {
   const original = (
     inputs["era.step.request.routed"] as { value: PlannedStepV1 }
   ).value;
-  const { candidate, ...outcome } = (
+  const { candidate, appliedFloor, appliedScopeWindow, ...outcome } = (
     inputs["era.agent.generation.outcome"] as { value: AgentOutcome }
   ).value;
   let step = original,
     result = outcome;
   try {
-    if (candidate) step = withFloorCandidate(original, candidate);
+    if (candidate) step = withFloorCandidate(original, candidate, appliedFloor);
   } catch (error) {
     result = {
       mode: "execute-only",
@@ -30,10 +30,18 @@ export function run(inputs: Readonly<Record<string, unknown>>): any {
       ],
     };
   }
+  const execution = (inputs["era.batch.execution.state"] as { value: any })
+    .value;
   return {
     agent_transition: { schemaVersion: 1, step, ...result },
-    agent_execution_state: (
-      inputs["era.batch.execution.state"] as { value: unknown }
-    ).value,
+    agent_execution_state: appliedScopeWindow
+      ? {
+          ...execution,
+          nextState: {
+            ...execution.nextState,
+            scopeWindow: appliedScopeWindow,
+          },
+        }
+      : execution,
   };
 }

@@ -23,6 +23,9 @@ const preparation = await import(
 const commit = await import(
   /* @vite-ignore */ new URL('../../../javascript_project/service/nodes/sync/commit_sync.ts', import.meta.url).href
 );
+const savedBatch = await import(
+  /* @vite-ignore */ new URL('../../../javascript_project/service/nodes/sync/settle_saved_batch.ts', import.meta.url).href
+);
 const presentation = await import(
   /* @vite-ignore */ new URL(
     '../../../javascript_project/service/nodes/sync/present_finalized_floor.ts',
@@ -118,6 +121,7 @@ function fixture(source = 'tavern', eventType = 'message_swiped', placeholder = 
       }),
     },
     'era.tavern.sidecar': {
+      read_working: () => ({ working: null }),
       read_current: async () => ({ identity, meta: { SidecarId: sidecarId }, stat: null }),
       read_record: async () => ({ status: 'found', record }),
       write_record: async (input: Record<string, any>) => {
@@ -353,6 +357,18 @@ describe('sync source survives asynchronous host interleaving', () => {
       expect(settled.notifications).toEqual([]);
       expect(settled).not.toHaveProperty('stateUpdate');
       expect(settled.settlements[0].status).toBe('completed');
+      const schedule = vi.fn();
+      savedBatch.run({ 'era.tavern.commit.result': { value: outcome } }, {}, {
+        capabilities: {
+          'era.lifecycle.admission': { schedule, cancel: vi.fn() },
+          'era.tavern.sidecar': { read_working: () => ({ working: { dirty: true } }) },
+        },
+      });
+      expect(schedule).toHaveBeenCalledWith(expect.objectContaining({
+        key: 'era-working-save', delayMs: 0,
+        event: { type: 'era.facade.sync', source: 'era-api', args: [{ mode: 'full' }] },
+      }));
+
     },
   );
 
@@ -405,4 +421,13 @@ describe('sync source survives asynchronous host interleaving', () => {
     expect(f.trace).toEqual(['message', 'file']);
     expect(sync_result_policy.buildSyncCommittedResult(outcome)).not.toHaveProperty('stateUpdate');
   });
+});
+
+it('函数执行发现目标失效而尚未形成消息写回时，也进入普通历史恢复', async () => {
+  const work = { disposition: 'failed', plan: null, failure: { code: 'ERA_MESSAGE_WRITE_TARGET_CHANGED', message: 'source-text (#3)', source: 'tavern' } };
+  const committed = await commit.run({ 'era.tavern.commit.request': { value: { mode: 'non-commit', work } } }, {}, { capabilities: {} });
+  const schedule = vi.fn();
+  const settled = savedBatch.run({ 'era.tavern.commit.result': { value: committed.sync_commit_result } }, {}, { capabilities: { 'era.lifecycle.admission': { schedule } } });
+  expect(schedule).toHaveBeenCalledWith(expect.objectContaining({ event: { type: 'era.facade.sync', source: 'era-api', args: [{ mode: 'full' }] } }));
+  expect(settled.completed_sync_result.work.failure).toEqual(work.failure);
 });

@@ -1,9 +1,7 @@
+import { overlayWorkingMessages } from "../../base_lib/working_state.ts";
 import type { EraTaskResultV1 } from "@era/vibeflow-contracts";
 import {
-  type ScopeWindowState,
   adaptSyncResult,
-  buildAppend,
-  buildCommittedResult,
   buildFailureResult,
   buildSkippedResult,
   buildSyncFailure,
@@ -11,11 +9,9 @@ import {
   inspectWindow,
   mergeExclusiveResults,
   planFacadeSync,
-  prepareCommitSync,
-  recheckWindow,
   routeFacadeCommand,
+  recheckWindow,
   validateCommit,
-  verifyCommitted,
 } from "../../base_lib/facade_api_engine.ts";
 import type {
   BatchExecutionStateV1,
@@ -33,6 +29,9 @@ interface Context {
       update_content(
         input: Readonly<Record<string, unknown>>,
       ): Promise<unknown>;
+    };
+    readonly "era.tavern.sidecar": {
+      read_working(input: Readonly<Record<string, unknown>>): any;
     };
     readonly "era.tavern.identity": {
       read(input: Readonly<Record<string, unknown>>): unknown;
@@ -57,11 +56,15 @@ async function readMessages(
   context: Context,
   purpose: string,
 ): Promise<unknown> {
-  return context.capabilities["era.tavern.messages"].read_context({
+  const raw = await context.capabilities["era.tavern.messages"].read_context({
     projection: "era-active-message-v1",
     range: "0--1",
     purpose,
   });
+  return overlayWorkingMessages(
+    raw,
+    context.capabilities["era.tavern.sidecar"].read_working({}).working,
+  );
 }
 
 function identityInput(
@@ -87,24 +90,76 @@ export function routeFacadeNode(inputs: any): any {
   };
 }
 
+function workingRequest(request: any, raw: any, context: Context): any {
+  const working = context.capabilities["era.tavern.sidecar"].read_working(
+    {},
+  ).working;
+  if (!working?.dirty) return request;
+  const dispatch = request.dispatchContext;
+  if (!dispatch || !Array.isArray(raw?.messages)) return request;
+  const pending = raw.messages.find(
+    (message: any) =>
+      message.messageId ===
+      (working.stage?.messageId ?? dispatch.processingMessage?.messageId),
+  );
+  if (!pending) return request;
+  return {
+    ...request,
+    dispatchContext: {
+      ...dispatch,
+      processingMessage: pending,
+      ...(working.stage
+        ? {
+            processingMk: working.stage.mk,
+            floorIdentity: {
+              chatId: working.stage.chatId,
+              messageId: working.stage.messageId,
+              swipeId: working.stage.swipeId,
+              mk: working.stage.mk,
+            },
+          }
+        : {}),
+    },
+  };
+}
+
 export async function readWindowNode(
   inputs: any,
   _params: any,
   context: any,
 ): Promise<any> {
   const request = envelope(inputs, "era.api.request");
-  const identity = context.capabilities["era.tavern.identity"].read(
-    identityInput("era-facade-window", request),
-  );
-  const messages = await readMessages(context, "era-facade-window");
-  return {
-    facade_commit_inspected: inspectWindow(
-      request,
-      envelope(inputs, "era.batch.execution.state") as BatchExecutionStateV1,
-      identity,
-      messages,
-    ),
-  };
+  try {
+    const identity = context.capabilities["era.tavern.identity"].read(
+      identityInput("era-facade-window", request),
+    );
+    const messages = await readMessages(context, "era-facade-window");
+    return {
+      facade_commit_inspected: inspectWindow(
+        workingRequest(request, messages, context),
+        envelope(inputs, "era.batch.execution.state") as BatchExecutionStateV1,
+        identity,
+        messages,
+      ),
+    };
+  } catch (error) {
+    const executionState = envelope(
+      inputs,
+      "era.batch.execution.state",
+    ) as BatchExecutionStateV1;
+    return {
+      facade_commit_inspected: {
+        request,
+        executionState,
+        window: executionState.nextState.scopeWindow,
+        readFailure: {
+          code: "ERA_API_CONTEXT_READ_FAILED",
+          message: error instanceof Error ? error.message : String(error),
+          layer: "tavern",
+        },
+      },
+    };
+  }
 }
 
 export function validateCommitNode(inputs: any): any {
@@ -130,228 +185,43 @@ export async function readTargetNode(
   context: any,
 ): Promise<any> {
   const candidate = envelope(inputs, "era.api.commit.transaction");
-  const messages = await readMessages(context, "era-facade-commit-target");
-  const request = isRecord(candidate) ? candidate.request : null;
-  const identity = context.capabilities["era.tavern.identity"].read(
-    identityInput("era-facade-commit-target", request),
-  );
-  if (!isRecord(candidate)) throw new TypeError("era_tx 上下文损坏。");
-  const refreshed = inspectWindow(
-    candidate.request,
-    candidate.executionState as BatchExecutionStateV1,
-    identity,
-    messages,
-  );
-  return {
-    facade_commit_target: {
-      ...candidate,
-      messages: refreshed.messages,
-      latest: refreshed.latest,
-    },
-  };
-}
-
-export function buildAppendNode(inputs: any): any {
-  return {
-    facade_commit_append_request: buildAppend(
-      envelope(inputs, "era.api.commit.target"),
-    ),
-  };
-}
-
-export function recheckWindowNode(
-  inputs: any,
-  _params: any,
-  context: any,
-): any {
-  const append = envelope(inputs, "era.api.commit.append.request");
-  const request = isRecord(append) ? append.request : null;
-  const current = context.capabilities["era.tavern.identity"].read(
-    identityInput("era-facade-pre-write", request),
-  );
-  const result = recheckWindow(append, current);
-  return {
-    window_recheck_route: result.route,
-    facade_commit_rechecked: result.context,
-    facade_commit_recheck_failure: result,
-  };
-}
-
-export async function commitAppendNode(
-  inputs: any,
-  _params: any,
-  context: any,
-): Promise<any> {
-  // 消息 I/O 失败通过回执返回，不能使服务永久停止。
-  const candidate = envelope(inputs, "era.api.commit.rechecked");
   try {
-    if (!isRecord(candidate) || !isRecord(candidate.capabilityInput)) {
-      throw Object.assign(new TypeError("已复核 commit 缺少消息写入参数。"), {
-        code: "ERA_API_APPEND_CONTEXT_INVALID",
-      });
-    }
-    const capabilityInput = {
-      ...(candidate.capabilityInput as Record<string, unknown>),
-    };
-    const plannedBasis = isRecord(capabilityInput.sourceBasis)
-      ? capabilityInput.sourceBasis
-      : null;
-    if (plannedBasis !== null) {
-      const fresh = await readMessages(context, "era-facade-append");
-      if (
-        !isRecord(fresh) ||
-        !Array.isArray(fresh.messages) ||
-        !Array.isArray(plannedBasis.messages)
-      ) {
-        throw new TypeError("消息写入依据不是有效的消息投影。");
-      }
-      const targetId = capabilityInput.messageId;
-      const original = plannedBasis.messages.find(
-        (message: unknown) =>
-          isRecord(message) && message.messageId === targetId,
-      );
-      const current = fresh.messages.find(
-        (message: unknown) =>
-          isRecord(message) && message.messageId === targetId,
-      );
-      // 只吸收无关楼层的新事实，目标版本始终使用构造写入内容时的依据。
-      if (
-        !isRecord(original) ||
-        !isRecord(current) ||
-        original.activeText !== current.activeText ||
-        (original.swipeIndex ?? 0) !== (current.swipeIndex ?? 0) ||
-        original.role !== current.role
-      ) {
-        throw Object.assign(new Error("API 等待期间目标消息已改变。"), {
-          code: "ERA_MESSAGE_WRITE_TARGET_CHANGED",
-        });
-      }
-      capabilityInput.sourceBasis = {
-        ...plannedBasis,
-        messages: fresh.messages,
+    const messages = await readMessages(context, "era-facade-commit-target");
+    const request = isRecord(candidate) ? candidate.request : null;
+    const identity = context.capabilities["era.tavern.identity"].read(
+      identityInput("era-facade-commit-target", request),
+    );
+    if (!isRecord(candidate)) throw new TypeError("era_tx 上下文损坏。");
+    const checked = recheckWindow(candidate, identity);
+    if (checked.route !== "current")
+      return {
+        facade_commit_target: { ...candidate, readFailure: checked.error },
       };
-    }
-    const observed =
-      await context.capabilities["era.tavern.messages"].update_content(
-        capabilityInput,
-      );
-    const accepted =
-      isRecord(observed) &&
-      (observed.ok === true ||
-        ["committed", "completed", "success"].includes(
-          String(observed.status),
-        ));
+    const refreshed = inspectWindow(
+      workingRequest(candidate.request, messages, context),
+      candidate.executionState as BatchExecutionStateV1,
+      identity,
+      messages,
+    );
     return {
-      facade_commit_append_result: accepted
-        ? { status: "committed", context: candidate, observed }
-        : { status: "failed", context: candidate, observed },
-    };
-  } catch (error) {
-    // AOT 的 Capability 边界会把内层异常包成 `VF_CAPABILITY_FAILED`，真正的原因在 `cause`
-    // （与 `commit_sync.changedSource` 同一处理）。不解开的话，作者与诊断只能看到
-    // 「capability 'era.tavern.messages.update_content' failed」这种无信息量的包装，
-    // 真机 STATUSBAR-EXAMPLE-020 的 `ERA_API_MESSAGE_APPEND_FAILED` 就是这样失去线索的。
-    const unwrapped =
-      error !== null &&
-      typeof error === "object" &&
-      (error as { code?: unknown }).code === "VF_CAPABILITY_FAILED" &&
-      (error as { cause?: unknown }).cause !== undefined
-        ? (error as { cause: unknown }).cause
-        : error;
-    return {
-      facade_commit_append_result: {
-        status: "failed",
-        context: isRecord(candidate) ? candidate : null,
-        observed: {
-          message:
-            unwrapped instanceof Error ? unwrapped.message : String(unwrapped),
-          ...(unwrapped !== null &&
-          typeof unwrapped === "object" &&
-          typeof (unwrapped as { code?: unknown }).code === "string"
-            ? { code: (unwrapped as { code: string }).code }
-            : {}),
-        },
+      facade_commit_target: {
+        ...candidate,
+        messages: refreshed.messages,
+        latest: candidate.latest,
       },
     };
-  }
-}
-
-export async function verifyCommitNode(
-  inputs: any,
-  _params: any,
-  context: any,
-): Promise<any> {
-  const append = envelope(inputs, "era.api.commit.append.result");
-  // 与 `commit_message_append` 同理：回读阶段的读取失败也只能产出 failed 路由。
-  // 抛出会被内核折成 `node 'read_and_verify_committed_message' failed`，同样让整页 ERA 致命停止。
-  let messages: unknown;
-  try {
-    messages = await readMessages(context, "era-facade-post-commit");
   } catch (error) {
-    const unwrapped =
-      error !== null &&
-      typeof error === "object" &&
-      (error as { code?: unknown }).code === "VF_CAPABILITY_FAILED" &&
-      (error as { cause?: unknown }).cause !== undefined
-        ? (error as { cause: unknown }).cause
-        : error;
-    const detail = isRecord(unwrapped) ? unwrapped : {};
     return {
-      commit_readback_route: "failed",
-      facade_commit_verified: null,
-      facade_commit_readback_failure: {
-        route: "failed",
-        context: isRecord(append) ? (append.context ?? append) : append,
-        error: {
-          code:
-            typeof detail.code === "string"
-              ? detail.code
-              : "ERA_API_MESSAGE_READBACK_FAILED",
-          message:
-            unwrapped instanceof Error
-              ? unwrapped.message
-              : "提交后回读失败，未能确认 era_tx 写入。",
+      facade_commit_target: {
+        ...(candidate as object),
+        readFailure: {
+          code: "ERA_API_TARGET_READ_FAILED",
+          message: error instanceof Error ? error.message : String(error),
           layer: "tavern",
         },
       },
     };
   }
-  const result = verifyCommitted(append, messages);
-  return {
-    commit_readback_route: result.route,
-    facade_commit_verified: result.context,
-    facade_commit_readback_failure: result,
-  };
-}
-
-export function prepareCommitSyncNode(inputs: any): any {
-  const prepared = prepareCommitSync(
-    envelope(inputs, "era.api.commit.verified"),
-  );
-  const executionState = prepared.context
-    .executionState as BatchExecutionStateV1;
-  const nextExecutionState: BatchExecutionStateV1 = {
-    ...executionState,
-    nextState: {
-      ...executionState.nextState,
-      // 与下方 `nextState.scopeWindow` 同一口径：窗口形状由门面引擎保证，这里按既有约定断言。
-      scopeWindow: prepared.context.window as ScopeWindowState,
-    },
-  };
-  return {
-    commit_sync_step: prepared.syncStep,
-    facade_commit_sync_context: prepared.context,
-    commit_execution_state: nextExecutionState,
-  };
-}
-
-export function committedReceiptNode(inputs: any): any {
-  return {
-    facade_commit_committed_result: buildCommittedResult(
-      envelope(inputs, "era.task.result") as EraTaskResultV1,
-      envelope(inputs, "era.api.commit.sync_context"),
-    ),
-  };
 }
 
 export function skippedReceiptNode(inputs: any): any {

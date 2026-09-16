@@ -7,29 +7,9 @@
   "host_extensions": [
     {
       "id": "era.tavern.service_host",
-      "status": "implemented",
       "enabled": true,
       "display_name": "ERA 酒馆服务宿主",
-      "description": "保留单一FIFO、receipt、生成barrier、009源依据、010公开保存与读回及011首次呈现。共享消息保存边界分开确认原Swipe候选已保存与当前来源仍有效；复用sourceBasis处理保存期间的Swipe/编辑/聊天变化，不能因当前已选C而误报原B落盘失败。Service决定sourceChanged、部分写入及Sidecar结算，Host不新增队列、锁、重试或私有保存器。获批范围与验证见reports/era-swipe-persistence-separation-change-list.md。 本轮已实现：Host启动在初始化回执等待前登记pagehide；等待返回若已stopping则结算既有stop并返回，禁止晚挂载宏/UI。复用RuntimeController，不改领域workflow。用户已明确要求按分析方案修复四项并定向复测，见reports/era-four-ui-regression-change-list.md。",
-      "category": "宿主接线",
-      "version": "0.1.0",
-      "targets": [
-        "browser"
-      ],
-      "provides": [
-        "vibeflow.port",
-        "era.tavern.agent",
-        "era.tavern.variables",
-        "era.tavern.messages",
-        "era.tavern.worldbook",
-        "era.tavern.regex",
-        "era.tavern.character",
-        "era.tavern.identity",
-        "era.tavern.sidecar",
-        "era.tavern.installation_scope",
-        "era.tavern.startup_gate"
-      ],
-      "dependencies": [],
+      "description": "复用现有Host生命周期及端口，支持同一工作状态的上下文绑定API、函数等待期间的块调度、内存应用回执、独立API保存定时器和保存错误通知；get/宏/旧楼状态栏读取对应工作状态。保留原生工具、目标版本核对及保存回读。Host只搬运/保存运行资源，不复制领域引擎；pagehide/stop清理定时器与pending，强制关闭后按实际聊天重算。工作流及ABI批准范围见reports/era-memory-lifecycle-review-20260913/四类变更清单.md。",
       "config": {
         "ports": {
           "inbound": "era.service.in",

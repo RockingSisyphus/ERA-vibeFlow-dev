@@ -21,6 +21,11 @@
       "snapshot": {
         "type": "object"
       },
+      "workingVersion": {
+        "type": "integer",
+        "minimum": 0,
+        "description": "本次保存对应的内存版本；版本已推进时不得用旧保存结果覆盖读取快照。"
+      },
       "sourceBasis": {
         "type": "object",
         "additionalProperties": false,

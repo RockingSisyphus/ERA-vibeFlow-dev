@@ -51,7 +51,8 @@
   "base_libs": [
     "era.service.sidecar_binding",
     "era.service.sync_commit_policy",
-    "era.service.sync_contracts"
+    "era.service.sync_contracts",
+    "era.service.mk_engine"
   ],
   "capabilities": [
     {
@@ -67,7 +68,9 @@
         "read_record",
         "write_record",
         "commit_metadata",
-        "present_prompt"
+        "present_prompt",
+        "read_working",
+        "write_working"
       ]
     }
   ]

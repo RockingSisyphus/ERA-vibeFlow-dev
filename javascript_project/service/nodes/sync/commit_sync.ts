@@ -1,3 +1,4 @@
+import { messageContentVersion } from "../../base_lib/domain/mk_engine.ts";
 import {
   basisAfterSyncWrites,
   observeWrite,
@@ -87,6 +88,12 @@ function changedSource(
 }
 
 function failureFor(error: unknown, code: string): SyncFailureV1 {
+  if (
+    error !== null &&
+    typeof error === "object" &&
+    (error as { code?: unknown }).code === "VF_CAPABILITY_FAILED"
+  )
+    error = (error as { cause?: unknown }).cause ?? error;
   const cancelled = isCancellation(error);
   return syncFailure(
     cancelled ? `${code}_CANCELLED` : code,
@@ -152,6 +159,9 @@ export async function run(
   }
 
   const request = envelope.request;
+  const initialWorking = context.capabilities[
+    "era.tavern.sidecar"
+  ].read_working({}).working;
   let confirmedMessageWrites = 0;
   if (request.messageWrites.length > 0) {
     let response: unknown;
@@ -245,7 +255,16 @@ export async function run(
   let stateResponse: unknown;
   let sidecarCommitted = false;
   const sourceBasis = basisAfterSyncWrites(request);
+  let saveWorkingVersion = initialWorking?.version;
   try {
+    if (initialWorking) {
+      const rebased = context.capabilities["era.tavern.sidecar"].write_working({
+        ...initialWorking,
+        expectedVersion: initialWorking.version,
+        sourceBasis,
+      }).working;
+      saveWorkingVersion = rebased.version;
+    }
     const current = await context.capabilities[
       "era.tavern.sidecar"
     ].read_current({});
@@ -271,6 +290,9 @@ export async function run(
       throw new TypeError("ERA Sidecar 状态在提交前已变化。");
     const eraMeta = cloneSyncJson(request.meta) as Record<string, unknown>;
     delete eraMeta.SidecarId;
+    eraMeta.MessageContentVersions = sourceBasis.messages.map((message) =>
+      messageContentVersion(message.activeText),
+    );
     const state: SidecarStateV2 = {
       statData: cloneSyncJson(request.stat),
       eraMeta,
@@ -296,8 +318,20 @@ export async function run(
       sidecarId: id,
       snapshot: record,
       sourceBasis,
-      notifySubscribers: request.syncCursor == null,
+      notifySubscribers: initialWorking ? false : request.syncCursor == null,
+      ...(initialWorking ? { workingVersion: saveWorkingVersion } : {}),
     });
+    const latestWorking = context.capabilities[
+      "era.tavern.sidecar"
+    ].read_working({}).working;
+    if (latestWorking && latestWorking.version === saveWorkingVersion) {
+      context.capabilities["era.tavern.sidecar"].write_working({
+        expectedVersion: latestWorking.version,
+        record,
+        dirty: false,
+        notifySubscribers: request.syncCursor == null,
+      });
+    }
   } catch (error) {
     const changed = changedSource(
       request,

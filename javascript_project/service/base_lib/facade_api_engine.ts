@@ -1,6 +1,5 @@
 import {
   cloneEraPortableJsonV1,
-  isEraDispatchContextV2,
   isEraDispatchContextV3,
   isEraTavernMessageContextV2,
   type EraApiTaskV1,
@@ -243,10 +242,16 @@ export function inspectWindow(
   executionState: BatchExecutionStateV1,
   identity: unknown,
   rawMessages: unknown,
+  position?: { readonly messageId: number },
 ) {
   const request = requireRequest(rawRequest);
   const messages = messagesFrom(rawMessages);
-  const targeted = targetAi(messages, request, identity);
+  const positioned = position
+    ? messages.find((message) => message.messageId === position.messageId)
+    : null;
+  const targeted = position
+    ? { message: positioned ?? latestAi(messages), sourceInvalid: !positioned }
+    : targetAi(messages, request, identity);
   const prepared = request.dispatchContext;
   const preparedMessage =
     isEraDispatchContextV3(prepared) &&
@@ -324,6 +329,12 @@ export function validateCommit(inspected: unknown) {
   if (!isRecord(inspected)) throw new TypeError("窗口读取上下文损坏。");
   const request = requireRequest(inspected.request);
   try {
+    if (isRecord(inspected.readFailure))
+      return {
+        route: "failed",
+        context: inspected,
+        error: inspected.readFailure,
+      };
     if (inspected.sourceInvalid === true) {
       return {
         route: "failed",
@@ -390,7 +401,10 @@ export function buildTransaction(validated: unknown) {
         throw new TypeError("已校验操作在事务构造阶段损坏。");
       }
       const tag = operationTag(operation.name as OperationName);
-      return `<${tag}>${JSON.stringify(operation.payload)}</${tag}>`;
+      // JSON strings may contain ERA tags. Escape the delimiter in the shared
+      // API writer so saved records round-trip through the ordinary parser.
+      const payload = JSON.stringify(operation.payload).replaceAll("<", "\\u003c");
+      return `<${tag}>${payload}</${tag}>`;
     })
     .join("");
   return {
@@ -477,130 +491,6 @@ export function recheckWindow(append: unknown, currentIdentity: unknown) {
       };
 }
 
-export function verifyCommitted(appendResult: unknown, rawMessages: unknown) {
-  if (
-    !isRecord(appendResult) ||
-    appendResult.status !== "committed" ||
-    !isRecord(appendResult.context)
-  ) {
-    const append = isRecord(appendResult) ? appendResult : {};
-    const observed = isRecord(append.observed) ? append.observed : {};
-    return {
-      route: "failed",
-      context: append.context ?? appendResult,
-      error: failure(
-        "ERA_API_MESSAGE_APPEND_FAILED",
-        typeof observed.message === "string"
-          ? observed.message
-          : "Tavern 未确认 era_tx 写入。",
-        "tavern",
-      ),
-    };
-  }
-  const context = appendResult.context;
-  try {
-    const messages = messagesFrom(rawMessages);
-    const matches = messages.filter(
-      (message) => message.messageId === context.messageId,
-    );
-    if (
-      matches.length !== 1 ||
-      matches[0]!.activeText !== context.committedContent
-    ) {
-      return {
-        route: "failed",
-        context,
-        error: failure(
-          "ERA_API_MESSAGE_READBACK_MISMATCH",
-          "era_tx 回读文本与写入计划不一致。",
-          "tavern",
-        ),
-      };
-    }
-    const originalDispatch =
-      context.request && isRecord(context.request)
-        ? context.request.dispatchContext
-        : null;
-    if (
-      !isEraDispatchContextV2(originalDispatch) &&
-      !isEraDispatchContextV3(originalDispatch)
-    ) {
-      return {
-        route: "failed",
-        context,
-        error: failure(
-          "ERA_API_DISPATCH_CONTEXT_INVALID",
-          "原始派发上下文损坏。",
-          "domain",
-        ),
-      };
-    }
-    if (
-      !isRecord(context.sourceBasis) ||
-      !isRecord(context.sourceBasis.identity)
-    ) {
-      throw new TypeError("API 写入缺少原始聊天依据。");
-    }
-    const dispatchContext = {
-      ...originalDispatch,
-      messages: cloneEraPortableJsonV1(messages),
-      ...(isEraDispatchContextV3(originalDispatch)
-        ? {
-            sourceBasis: {
-              identity: context.sourceBasis.identity,
-              messages: cloneEraPortableJsonV1(messages),
-            },
-            processingMessage:
-              originalDispatch.processingMessage?.messageId ===
-              context.messageId
-                ? {
-                    ...originalDispatch.processingMessage,
-                    activeText: context.committedContent,
-                  }
-                : originalDispatch.processingMessage,
-            stagedMessageUpdates: [
-              ...originalDispatch.stagedMessageUpdates.filter(
-                (update) => update.messageId !== context.messageId,
-              ),
-              {
-                messageId: Number(context.messageId),
-                content: String(context.committedContent),
-              },
-            ],
-          }
-        : {}),
-    };
-    if (
-      !isEraDispatchContextV2(dispatchContext) &&
-      !isEraDispatchContextV3(dispatchContext)
-    ) {
-      return {
-        route: "failed",
-        context,
-        error: failure(
-          "ERA_API_DISPATCH_CONTEXT_INVALID",
-          "提交后消息无法形成同步上下文。",
-          "domain",
-        ),
-      };
-    }
-    return {
-      route: "sync",
-      context: { ...context, messages, dispatchContext },
-    };
-  } catch (error) {
-    return {
-      route: "failed",
-      context,
-      error: failure(
-        "ERA_API_POST_COMMIT_READ_FAILED",
-        errorMessage(error),
-        "tavern",
-      ),
-    };
-  }
-}
-
 export function prepareCommitSync(verified: unknown) {
   if (
     !isRecord(verified) ||
@@ -626,10 +516,10 @@ export function prepareCommitSync(verified: unknown) {
   };
   return {
     syncStep: {
-      kind: "execute",
+      kind: "execute" as const,
       stepId: `${request.task.id}:state-commit`,
       index: 0,
-      taskRoute: "sync",
+      taskRoute: "sync" as const,
       sourceSequences: request.sources.map((source) => source.event.sequence),
       events: request.sources.map((source) => source.event),
       task,

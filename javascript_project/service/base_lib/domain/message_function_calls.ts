@@ -198,7 +198,7 @@ export function parseEraFunctionCalls(
   const calls: EraFunctionCallSite[] = [];
 
   // 同上：每次调用新建正则，避免 lastIndex 泄漏到下一次工作流调用。
-  const callPattern = /<erafcall\b([^>]*?)\/?>/giu;
+  const callPattern = /<erafcall\b((?:"[^"]*"|'[^']*'|[^'">])*)\/?>/giu;
   let match: RegExpExecArray | null;
   while ((match = callPattern.exec(content)) !== null) {
     const start = match.index;
@@ -335,6 +335,7 @@ export function parseMessageBlocks(
 
   const blocks: EraMessageBlock[] = [];
   for (const command of commands) {
+    if (insideRange(command.start, calls)) continue;
     const region = regionOf(command.start, regions);
     blocks.push({
       kind: "command",
@@ -473,4 +474,20 @@ export function describeEraFunctionCallBlock(
     diagnosticCodes.length > 0 ? ` [${diagnosticCodes.join(",")}]` : "";
   const state = call.processed ? "已处理" : "待处理";
   return `EraFCall{name=${call.name ?? "?"}${anchor} ${state}}${suffix}`;
+}
+
+/** Change only this call's status attribute, retaining author parameters and surrounding text. */
+export function markEraFunctionCallDone(
+  content: string,
+  call: EraFunctionCallSite,
+): string {
+  const raw = content.slice(call.start, call.end);
+  const marked = raw
+    .replace(
+      /([A-Za-z_][\w.-]*)\s*=\s*("[^"]*"|'[^']*')/gu,
+      (attribute, name: string) =>
+        name.toLowerCase() === "status" ? "" : attribute,
+    )
+    .replace(/\/\s*>$/u, ' status="done"/>');
+  return content.slice(0, call.start) + marked + content.slice(call.end);
 }

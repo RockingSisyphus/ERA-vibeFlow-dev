@@ -1,0 +1,70 @@
+{
+  "kind": "node",
+  "type_key": "era.agent.candidate_unpack",
+  "display_name": "候选循环 unpack",
+  "category": "Agent候选",
+  "description": "候选纠错在当前工作流内继续，成功才进入阶段交接。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.agent.candidate.state",
+        "cardinality": "exactly_one",
+        "display_name": "era.agent.candidate.state"
+      }
+    ],
+    "provides": [
+      {
+        "key": "generation_request",
+        "type": "era.agent.generation.request",
+        "display_name": "generation_request"
+      },
+      {
+        "key": "routed_step",
+        "type": "era.step.request.routed",
+        "display_name": "routed_step"
+      },
+      {
+        "key": "execution_state",
+        "type": "era.batch.execution.state",
+        "display_name": "execution_state"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.agent.candidate.state": [
+        "era.agent.candidate.state"
+      ]
+    },
+    "output_semantics": {
+      "generation_request": [
+        "era.agent.generation.request"
+      ],
+      "routed_step": [
+        "era.step.request.routed"
+      ],
+      "execution_state": [
+        "era.batch.execution.state"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/agent/candidate_unpack.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [],
+  "capabilities": []
+}

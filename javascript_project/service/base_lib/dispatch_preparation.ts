@@ -452,10 +452,22 @@ export function dispatchContextOf(
     generationCycleIdentity,
     floorIdentity,
     stagedMessageUpdates:
-      outcome.messageUpdate === null ? [] : [outcome.messageUpdate],
+      outcome.messageUpdate === null || outcome.messageChanged
+        ? []
+        : [outcome.messageUpdate],
     agentFloorCandidate: null,
     ...(outcome.sourceBasis === undefined
       ? {}
-      : { sourceBasis: outcome.sourceBasis }),
+      : {
+          sourceBasis: {
+            ...outcome.sourceBasis,
+            messages: outcome.sourceBasis.messages.map((message) =>
+              outcome.messageChanged &&
+              outcome.messageUpdate?.messageId === message.messageId
+                ? { ...message, activeText: outcome.messageUpdate.content }
+                : message,
+            ),
+          },
+        }),
   };
 }

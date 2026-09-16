@@ -6,7 +6,7 @@
  */
 
 import { currentTavernIdentityMatches, selectedMks } from './public-state';
-import { readActiveSidecarRuntimeSnapshot } from './sidecar-runtime-snapshot';
+import { readActiveSidecarRuntimeSnapshot, readWorkingState } from './sidecar-runtime-snapshot';
 import {
   activeMessageText,
   currentSwipeId,
@@ -84,7 +84,7 @@ export function deriveStatusbarIdentity(
   const snapshot = readActiveSidecarRuntimeSnapshot();
   if (snapshot === null || !currentTavernIdentityMatches(snapshot)) throw new Error('ERA_STATUSBAR_SIDECAR_NOT_READY');
   if (snapshot.identity.groupId !== null) throw new Error('ERA_STATUSBAR_GROUP_UNSUPPORTED');
-  if (selectedMks(snapshot.eraMeta)[messageId] !== mk) throw new Error('ERA_STATUSBAR_SELECTED_MK_NOT_READY');
+  assertSelectedReady(snapshot, messageId, mk);
   if (!root.hasAttribute('data-era-statusbar-root')) throw new Error('ERA_STATUSBAR_ROOT_MISSING');
   return {
     pageEpoch,
@@ -121,4 +121,14 @@ export function verifyStatusbarIdentity(identity: EraStatusbarIdentity): boolean
     currentSwipeId(message) === identity.swipeId &&
     selectedMks(snapshot.eraMeta)[identity.messageId] === identity.mk
   );
+}
+
+/** 状态栏首次就绪必须对应完整消息与保存完成，避免自动脚本抢在后续块之前运行。 */
+function assertSelectedReady(
+  snapshot: NonNullable<ReturnType<typeof readActiveSidecarRuntimeSnapshot>>,
+  messageId: number,
+  mk: string,
+): void {
+  if (readWorkingState(snapshot.identity)?.dirty || selectedMks(snapshot.eraMeta)[messageId] !== mk)
+    throw new Error('ERA_STATUSBAR_SELECTED_MK_NOT_READY');
 }

@@ -8,12 +8,14 @@
 import { applyMessageCommands } from "./crud_engine.ts";
 import {
   parseMessageBlocks,
+  type EraFunctionCallSite,
   hasAppliedBlockRecords,
   unwrapAppliedRecords,
   wrapBlockAsAppliedRecord,
 } from "./message_function_calls.ts";
 import {
   ensureMessageKey,
+  messageContentVersion,
   readMessageKey,
   readMkMessageText,
   type EraMkContentV1,
@@ -432,6 +434,16 @@ export function findSyncDivergence(
   if (forceFullRebuild) {
     return { type: "FULL_RECALC", recalcId: 0, cause: "forced" };
   }
+  const versions = initialMeta.MessageContentVersions;
+  if (Array.isArray(versions)) {
+    const changed = messages.findIndex(
+      (message, index) =>
+        index < versions.length &&
+        versions[index] !== messageContentVersion(readMkMessageText(message)),
+    );
+    if (changed >= 0)
+      return { type: "FULL_RECALC", recalcId: changed, cause: "divergence" };
+  }
   const current = currentSelectedMks(messages);
   const minimum = Math.min(current.length, oldSelectedMks.length);
   let firstMismatch = -1;
@@ -573,7 +585,10 @@ export function prepareEraSync(input: EraSyncInputV1): EraSyncPlanV1 {
     }
     divergence = {
       type: "FULL_RECALC",
-      recalcId: input.targetMessageId,
+      // A new target can follow unprocessed user floors. Keep the applied
+      // prefix contiguous so a later rollback cannot mistake a hole for
+      // the beginning of history.
+      recalcId: Math.min(input.targetMessageId, oldSelectedMks.length),
       cause: "targeted",
     };
   } else {
@@ -735,7 +750,9 @@ export function prepareEraSync(input: EraSyncInputV1): EraSyncPlanV1 {
     diagnostics: [],
     execution: {
       messageIndex: firstRecalcId,
-      endIndex: input.stopAtTarget ? firstRecalcId + 1 : input.messages.length,
+      endIndex: input.stopAtTarget
+        ? (input.targetMessageId ?? firstRecalcId) + 1
+        : input.messages.length,
       blockIndex: 0,
       randomDrawOffset: 0,
       floorStarted: false,
@@ -761,6 +778,7 @@ export interface EraSyncExecutionV1 {
 }
 
 export interface EraSyncBlockResultV1 {
+  readonly pendingCall?: EraFunctionCallSite;
   readonly plan: EraSyncPlanV1;
   readonly done: boolean;
   readonly failure: { readonly code: string; readonly message: string } | null;
@@ -771,6 +789,8 @@ export interface EraSyncBlockResultV1 {
 export function advanceEraSyncBlock(
   plan: EraSyncPlanV1,
   formal = true,
+  suspendCalls = false,
+  pauseBeforeBlock = false,
 ): EraSyncBlockResultV1 {
   if (plan.status === "failed" || !plan.execution)
     return { plan, done: true, failure: null, messageIndex: null };
@@ -807,7 +827,7 @@ export function advanceEraSyncBlock(
           editLogsOf(plan.meta),
           functionEditLogsOf(plan.meta),
         ),
-        messageUpdates: [],
+        messageUpdates: plan.messageUpdates,
         sealedCompactionCandidates: [],
         diagnostics: [
           ...plan.diagnostics,
@@ -845,6 +865,22 @@ export function advanceEraSyncBlock(
     defineOwn(editLogs, ensured.mk, []);
     defineOwn(functionEditLogs, ensured.mk, []);
   }
+  // A stage may perform its JSON calls at this exact position. Establish the
+  // same floor origin and random cursor without consuming the next text block.
+  if (pauseBeforeBlock) {
+    messages[index] = { ...ensured.message, content: { kind: "text", text } };
+    return {
+      plan: {
+        ...plan,
+        messages,
+        execution,
+        meta: metaWith(plan.meta, selected, editLogs, functionEditLogs),
+      },
+      done: false,
+      failure: null,
+      messageIndex: index,
+    };
+  }
   const blocks = parseMessageBlocks({
     content: text,
     traditionalToSimplified: execution.traditionalToSimplified,
@@ -856,6 +892,22 @@ export function advanceEraSyncBlock(
     !block.call.processed &&
     formal
   ) {
+    if (suspendCalls) {
+      messages[index] = { ...ensured.message, content: { kind: "text", text } };
+      selected[index] = ensured.mk;
+      return {
+        plan: {
+          ...plan,
+          messages,
+          execution,
+          meta: metaWith(plan.meta, selected, editLogs, functionEditLogs),
+        },
+        done: false,
+        messageIndex: index,
+        failure: null,
+        pendingCall: block.call,
+      };
+    }
     return {
       plan,
       done: true,
@@ -936,7 +988,11 @@ export function advanceEraSyncBlock(
   if (
     floorDone &&
     messages.slice(index + 1).some((m) => m.role === "assistant") &&
-    !diagnostics.some((d) => d.messageIndex === index) &&
+    !diagnostics.some(
+      (d) =>
+        d.messageIndex === index &&
+        !/^ERA_(?:FCALL|FUNCTION_CALL)_/u.test(d.code),
+    ) &&
     !commandCompactionMarkerIsCurrent(
       commandCompactionMarkersOf(meta)[ensured.mk],
       ensured.mk,
@@ -980,6 +1036,9 @@ export function advanceEraSyncBlock(
       messages,
       diagnostics,
       messageUpdates: [
+        ...plan.messageUpdates.filter(
+          (update) => update.messageId !== ensured.message.messageId,
+        ),
         {
           kind: "update-message-content",
           messageId: ensured.message.messageId,

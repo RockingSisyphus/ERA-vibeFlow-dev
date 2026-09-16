@@ -1,0 +1,78 @@
+{
+  "kind": "node",
+  "type_key": "era.agent.candidate_finish",
+  "display_name": "候选循环 finish",
+  "category": "Agent候选",
+  "description": "候选纠错在当前工作流内继续，成功才进入阶段交接。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.agent.candidate.state",
+        "cardinality": "exactly_one",
+        "display_name": "era.agent.candidate.state"
+      },
+      {
+        "type": "era.agent.generation.outcome",
+        "cardinality": "exactly_one",
+        "display_name": "era.agent.generation.outcome"
+      }
+    ],
+    "provides": [
+      {
+        "key": "candidate_state_after",
+        "type": "era.agent.candidate.state.next",
+        "display_name": "candidate_state_after"
+      },
+      {
+        "key": "candidate_done",
+        "type": "era.agent.candidate.done",
+        "display_name": "candidate_done"
+      },
+      {
+        "key": "candidate_outcome",
+        "type": "era.agent.candidate.outcome",
+        "display_name": "candidate_outcome"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.agent.candidate.state": [
+        "era.agent.candidate.state"
+      ],
+      "era.agent.generation.outcome": [
+        "era.agent.generation.outcome"
+      ]
+    },
+    "output_semantics": {
+      "candidate_state_after": [
+        "era.agent.candidate.state.next"
+      ],
+      "candidate_done": [
+        "era.agent.candidate.done"
+      ],
+      "candidate_outcome": [
+        "era.agent.candidate.outcome"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/agent/candidate_finish.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [],
+  "capabilities": []
+}

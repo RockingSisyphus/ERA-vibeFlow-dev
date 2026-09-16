@@ -1,7 +1,8 @@
 /**
- * @file ERA 唯一公共对象
- * @description 本模块只负责向角色卡作者提供即时 commit、只读状态、订阅、同步和历史读取；不得承载业务事务，后者由 Service workflow 独占。
+ * @file ERA唯一公共对象
+ * @description 负责公开请求、即时状态及订阅投影。依赖Service执行变量操作，不承载业务事务；函数调用以显式上下文选择相同API合同。
  */
+import { functionCallContext } from './function-call-context';
 import {
   generationSubscriptions,
   type EraGenerationListener,
@@ -11,6 +12,7 @@ import {
 import { captureEraLifecycleToken, requestEraService } from './client';
 import {
   readActiveSidecarRuntimeSnapshot,
+  readWorkingState,
   subscribeSidecarRuntimeSnapshot,
   type SidecarRuntimeSnapshot,
 } from './sidecar-runtime-snapshot';
@@ -54,7 +56,7 @@ export interface EraPublicState {
   readonly is_user: false;
 }
 
-/** 单次即时提交的结算结果；Promise 返回前消息与 Sidecar 已完成本次提交。 */
+/** 单次提交的应用回执；Promise 返回前操作已在内存生效，聊天和 Sidecar 可在批次结束后保存。 */
 export interface EraCommitReceipt {
   readonly status: 'committed' | 'skipped';
   readonly scope: EraCommitScope;
@@ -91,6 +93,8 @@ export type EraStatusbarFactory = (
 
 /** 角色卡作者可用的唯一 ERA 公共接口，写入口只有 commit。 */
 export interface EraFacade {
+  /** 获取当前原生工具参数对象对应的消息内执行上下文。 */
+  forCall(parameters: object): EraFacade;
   commit(
     operations: readonly EraCommitOperation[],
     options?: Readonly<{ scope?: EraCommitScope }>,
@@ -156,25 +160,24 @@ function publishPublicState(listener: (state: EraPublicState) => void): void {
   listener(currentState());
 }
 
-/**
- * 构造无兼容分支的 Facade。所有写入都进入 FIFO，浏览器对象本身只负责参数搬运
- * 与当前快照投影，避免重新形成第二套业务引擎。
- */
-export function createEraFacade(createStatusbar: EraStatusbarFactory): EraFacade {
-  let statusbar: EraStatusbarController | null = null;
-  const commit = async (
+export type EraSubmit = (type: string, payload: Readonly<Record<string, unknown>>) => Promise<EraSettlement>;
+
+/** 统一构造内外来源的请求与回执，必须等实际应用成功后才返回committed。 */
+export function createCommit(transport: EraSubmit = submit) {
+  return async (
     operations: readonly EraCommitOperation[],
     options: Readonly<{ scope?: EraCommitScope }> = {},
     sourceContext?: EraStatusbarSource,
   ): Promise<EraCommitReceipt> => {
     const scope = options.scope ?? 'message';
-    const settlement = await submit(ERA_FACADE_EVENT.COMMIT, {
+    const settlement = await transport(ERA_FACADE_EVENT.COMMIT, {
       command: 'commit',
       scope,
       operations: structuredClone(operations),
       windowToken: captureEraLifecycleToken(),
       ...(sourceContext ? { sourceContext: structuredClone(sourceContext) } : {}),
     });
+    if (settlement.status !== 'completed') throw errorForSettlement(settlement);
     const value = record(settlement.value) ? settlement.value : {};
     const snapshot = sourceContext ? readActiveSidecarRuntimeSnapshot() : null;
     return Object.freeze({
@@ -185,17 +188,56 @@ export function createEraFacade(createStatusbar: EraStatusbarFactory): EraFacade
         sourceContext && snapshot ? projectPublicStateAtMessage(snapshot, sourceContext.messageId) : currentState(),
     });
   };
+}
+
+/** 显式调用来源使用同一请求和回执合同；为了避免FIFO死锁，请求交给当前调用位置的块循环。 */
+export function createFunctionFacade(transport: EraSubmit, assertActive: () => void): EraFacade {
+  const facade = getInstalledEraPublicApi();
+  const commit = createCommit(transport);
+  return Object.freeze({
+    ...facade,
+    commit: async (operations: readonly EraCommitOperation[], options?: Readonly<{ scope?: EraCommitScope }>) => {
+      assertActive();
+      return commit(operations, options);
+    },
+    get: (options?: EraGetOptions) => {
+      assertActive();
+      return facade.get(options);
+    },
+    ready: async () => {
+      assertActive();
+      return facade.get();
+    },
+    sync: async () => {
+      assertActive();
+      throw new Error('ERA_FUNCTION_SYNC_UNSUPPORTED：消息内函数禁止重算或回退，请在调用结束后由外部发起。');
+    },
+  });
+}
+
+/**
+ * 构造无兼容分支的 Facade。所有写入都进入 FIFO，浏览器对象本身只负责参数搬运
+ * 与当前快照投影，避免重新形成第二套业务引擎。
+ */
+export function createEraFacade(createStatusbar: EraStatusbarFactory): EraFacade {
+  let statusbar: EraStatusbarController | null = null;
+  const commit = createCommit();
   const facade = {
+    forCall: functionCallContext,
     commit,
     generation: Object.freeze({ subscribe: generationSubscriptions.subscribe.bind(generationSubscriptions) }),
     get: () => currentState(),
     async ready() {
       const immediate = currentState();
-      if (immediate.status === 'ready') return immediate;
+      const saved = () => {
+        const snapshot = readActiveSidecarRuntimeSnapshot();
+        return snapshot !== null && readWorkingState(snapshot.identity)?.dirty !== true;
+      };
+      if (immediate.status === 'ready' && saved()) return immediate;
       return new Promise<EraPublicState>(resolve => {
         /** 等待期间不向作者暴露上一聊天快照，首个匹配身份的发布才结算。 */
         const onState = (state: EraPublicState): void => {
-          if (state.status !== 'ready') return;
+          if (state.status !== 'ready' || !saved()) return;
           stop();
           resolve(state);
         };
@@ -231,6 +273,10 @@ export function installEraPublicApi(createStatusbar: EraStatusbarFactory): () =>
   let active = true;
   const facade = createEraFacade(createStatusbar);
   const guarded: EraFacade = Object.freeze({
+    forCall: (parameters: object) => {
+      if (!active) throw new Error('ERA_APP_SERVICE_UNAVAILABLE');
+      return facade.forCall(parameters);
+    },
     generation: Object.freeze({
       /** 停止后不再接受订阅，避免旧 Facade 把回调挂到新实例。 */
       subscribe: (listener: EraGenerationListener, options?: { stages?: readonly EraGenerationStage[] }) =>

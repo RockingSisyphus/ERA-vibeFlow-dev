@@ -10,6 +10,8 @@ export interface AgentDiagnostic {
   readonly message: string;
 }
 export interface AgentOutcome {
+  readonly appliedScopeWindow?: Readonly<Record<string, unknown>>;
+  readonly appliedFloor?: EraFloorIdentityV1;
   readonly handoff?: StageHandoff;
   readonly stageBoundary?: Parameters<typeof stageHandoff>[0];
   readonly mode: "legacy" | "legacy-ignore" | "execute-legacy" | "execute-only";

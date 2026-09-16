@@ -1,3 +1,4 @@
+/** Service的Sidecar宿主边界：搬运工作状态和持久文件，变量计算与回退规则由Service负责。 */
 /*
  * 模块职责：负责作为 ERA Sidecar 的 Tavern Helper 宿主接线层，读取当前身份和聊天
  * 指针、执行当前用户 files I/O，并在事务成功后发布易失宏快照。模块边界：
@@ -7,7 +8,12 @@
  */
 
 import type { EraCapabilityContext } from './types';
-import { publishSidecarRuntimeSnapshot, type SidecarRuntimeIdentity } from './sidecar-runtime-snapshot';
+import {
+  readWorkingState,
+  storeWorkingState,
+  publishSidecarRuntimeSnapshot,
+  type SidecarRuntimeIdentity,
+} from './sidecar-runtime-snapshot';
 import {
   assertCurrentMessageBasis,
   assertMessageWriteTargets,
@@ -196,15 +202,25 @@ async function commitSidecarPointer(
       () => null,
     );
   }
-  updateVariablesWith(
-    current => {
-      delete current.stat_data;
-      current.ERAMetaData = { SidecarId: id };
-      return current;
-    },
-    { type: 'chat' },
-  );
-  if (isRecord(input.snapshot)) publishValidatedSnapshot(input);
+  const existing = getVariables({ type: 'chat' });
+  if (
+    !isRecord(existing.ERAMetaData) ||
+    existing.ERAMetaData.SidecarId !== id ||
+    Object.prototype.hasOwnProperty.call(existing, 'stat_data')
+  ) {
+    updateVariablesWith(
+      current => {
+        delete current.stat_data;
+        current.ERAMetaData = { SidecarId: id };
+        return current;
+      },
+      { type: 'chat' },
+    );
+  }
+  const working = readWorkingState(runtimeIdentity(currentIdentity()));
+  if (isRecord(input.snapshot) && (input.workingVersion === undefined || working?.version === input.workingVersion)) {
+    publishValidatedSnapshot(input);
+  }
   return { status: 'committed', sidecarId: id, variables: clonePortable(getVariables({ type: 'chat' })) };
 }
 
@@ -223,6 +239,39 @@ function publishSidecarSnapshot(input: Readonly<Record<string, unknown>>, contex
  */
 export function createSidecarAdapter() {
   return {
+    read_working: (_input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown => {
+      throwIfAborted(context.signal);
+      return { working: readWorkingState(runtimeIdentity(currentIdentity())) };
+    },
+    write_working: (input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown => {
+      throwIfAborted(context.signal);
+      if (!isRecord(input.record)) throw new TypeError('工作状态缺少record。');
+      assertExpectedSidecarPointer({ expectedSidecarId: input.record.sidecarId });
+      if (input.sourceBasis != null) assertCurrentMessageBasis(input.sourceBasis);
+      const identity = runtimeIdentity(currentIdentity());
+      const owner = runtimeIdentity(input.record.owner);
+      assertMessageWriteTargets(owner, identity, [], () => null);
+      const current = readWorkingState(identity);
+      if (input.expectedVersion !== undefined && input.expectedVersion !== (current?.version ?? 0)) {
+        throw new Error('ERA_WORKING_STATE_CHANGED');
+      }
+      const state = {
+        identity,
+        version: (current?.version ?? 0) + 1,
+        record: input.record,
+        work: isRecord(input.work) ? input.work : null,
+        sourceBasis: isRecord(input.sourceBasis) ? input.sourceBasis : null,
+        dirty: input.dirty === true,
+        stage: isRecord(input.stage) ? input.stage : null,
+      };
+      storeWorkingState(state);
+      publishValidatedSnapshot({
+        sidecarId: input.record.sidecarId,
+        snapshot: input.record,
+        notifySubscribers: input.notifySubscribers === true,
+      });
+      return { working: state };
+    },
     read_current: readCurrentSidecar,
     read_record: readSidecarFile,
     /**

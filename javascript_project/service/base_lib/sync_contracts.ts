@@ -30,6 +30,7 @@ export interface SyncFailureV1 {
 }
 
 export interface SyncContextV1 {
+  readonly scopeWindow?: Readonly<Record<string, unknown>>;
   readonly schemaVersion: 1;
   readonly step: PlannedStepV1;
   readonly consecutive: SyncConsecutiveFacts;

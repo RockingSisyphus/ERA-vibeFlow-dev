@@ -59,7 +59,8 @@
       "id": "era.tavern.sidecar",
       "operations": [
         "read_current",
-        "read_record"
+        "read_record",
+        "read_working"
       ]
     },
     {

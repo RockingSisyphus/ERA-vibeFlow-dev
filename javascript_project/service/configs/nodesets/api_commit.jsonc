@@ -1,7 +1,7 @@
 {
   "type_key": "era.api.commit",
   "display_name": "ERA 即时 Scope Commit",
-  "description": "一次 commit 独立追加单 scope era_tx，回读后立即复用 Sidecar 同步事务。",
+  "description": "按接收顺序应用到有效工作状态，应用完成返回；独立API批次防抖保存，消息内API归入当前处理。",
   "requires": [
     {
       "type": "era.api.request",
@@ -48,8 +48,8 @@
       {
         "id": "read_window_admission",
         "type_used": "era.api.read_window_admission",
-        "display_name": "读取窗口准入与当前目标",
-        "description": "执行读取窗口准入与当前目标。"
+        "display_name": "读取工作状态与调用来源",
+        "description": "显式调用位置或原状态栏来源决定上下文；按接收顺序，scope在工作状态即时生效，不读取旧文件替代新状态。"
       },
       {
         "id": "route_request_kind",
@@ -60,8 +60,8 @@
       {
         "id": "prepare_workbench_commit",
         "type_used": "era.api.prepare_workbench_commit",
-        "display_name": "准备工作台草稿Commit",
-        "description": "在真实Commit准入之前读取基准、计算变量/函数变更并处理保护，ready接回原Scope校验，failed接回原失败链。"
+        "display_name": "按当前工作状态准备工作台意图",
+        "description": "复用原基准/保护/差异规则，基于当前工作状态，不以已保存revision代替尚未保存的修改。"
       },
       {
         "id": "validate_scope_and_operations",
@@ -78,50 +78,8 @@
       {
         "id": "read_target_messages",
         "type_used": "era.api.read_target_message",
-        "display_name": "求证 Facade 写入目标楼层",
-        "description": "顶层 Facade 选择最新 AI 消息；托管状态栏 Facade 由 Host 重新核对 pageEpoch、instanceId、messageId、Swipe 与 MK 后选择来源楼层，失效时明确失败且不回退。"
-      },
-      {
-        "id": "build_no_refresh_append",
-        "type_used": "era.api.build_no_refresh_append",
-        "display_name": "普通 API 只构造目标末尾追加",
-        "description": "保留公共操作和 scope，删除未接通的函数位置插入分支；保存生成文本所依赖的原目标版本，操作记录仍为普通 era_tx。"
-      },
-      {
-        "id": "recheck_window_before_write",
-        "type_used": "era.api.recheck_window",
-        "display_name": "写入前复核窗口",
-        "description": "执行写入前复核窗口。"
-      },
-      {
-        "id": "commit_message_append",
-        "type_used": "era.api.commit_facade_message",
-        "display_name": "核对原目标后写入（失败可恢复）",
-        "description": "重读允许吸收无关消息新增，但必须保留并核对生成内容对应的原目标正文/Swipe及身份；目标已改变则失败，不刷新依据后覆盖。写入前及写入异常结算失败，不致命停止服务。"
-      },
-      {
-        "id": "read_and_verify_committed_message",
-        "type_used": "era.api.verify_facade_message",
-        "display_name": "回读真实保存结果（失败可恢复）",
-        "description": "回读确认普通事务的真实保存，读回异常返回失败收据并保留恢复入口；不把失败或不确定保存报告成成功。"
-      },
-      {
-        "id": "prepare_immediate_sync_step",
-        "type_used": "era.api.prepare_facade_sync",
-        "display_name": "构造即时同步步骤",
-        "description": "执行构造即时同步步骤。"
-      },
-      {
-        "id": "sync_sidecar_immediately",
-        "type_used": "era.task.sync",
-        "display_name": "立即同步 Sidecar",
-        "description": "执行立即同步 Sidecar。"
-      },
-      {
-        "id": "build_committed_receipt",
-        "type_used": "era.api.build_committed_receipt",
-        "display_name": "返回 committed receipt",
-        "description": "执行返回 committed receipt。"
+        "display_name": "定位函数锚点或普通目标末尾",
+        "description": "显式调用来源定位函数下方；状态栏保留旧楼/Swipe/ready，外置API保留原目标规则。捕获原目标版本，失效不回退到新楼。"
       },
       {
         "id": "build_skipped_receipt",
@@ -140,6 +98,59 @@
         "type_used": "era.api.merge_commit_result",
         "display_name": "合并即时 Commit 结果",
         "description": "执行合并即时 Commit 结果。"
+      },
+      {
+        "id": "prepare_api_blocks",
+        "type_used": "era.lifecycle.prepare_api_blocks",
+        "display_name": "构造待应用的普通era_tx及工作范围",
+        "description": "复用普通事务构造；调用处下方或目标末尾插入待保存消息。当前函数API就地应用，旧楼外部写入按原回退和后续重算规则建立工作范围。应用失败保持真实回执。"
+      },
+      {
+        "id": "apply_api_blocks",
+        "type_used": "vibeflow.loop.while",
+        "display_name": "API复用同一个内存块循环",
+        "description": "max_iterations=null；处理块不落盘，结束时得到累计消息及状态。函数API应用后返回，不强制刷盘。",
+        "requires": [
+          {
+            "type": "era.sync.block.step.state",
+            "cardinality": "exactly_one",
+            "display_name": "初始块步进状态"
+          }
+        ],
+        "provides": [
+          {
+            "key": "block_step_state_after",
+            "type": "era.sync.block.step.state.next",
+            "display_name": "块步进后状态"
+          }
+        ],
+        "loop": {
+          "body": "era.sync.block_step",
+          "max_iterations": null,
+          "stop_when": {
+            "from": "block_step_done",
+            "equals": true
+          },
+          "carry": [
+            {
+              "from": "era.sync.block.step.state",
+              "as": "block_step_state",
+              "update": "block_step_state_after"
+            }
+          ],
+          "outputs": [
+            {
+              "from": "block_step_state_after",
+              "as": "block_step_state_after"
+            }
+          ]
+        }
+      },
+      {
+        "id": "return_applied_receipt",
+        "type_used": "era.lifecycle.return_applied_receipt",
+        "display_name": "返回内存应用回执并登记保存时机",
+        "description": "工作状态、日志、scope和待保存消息一致后返回；不是入队即成功。当前函数归属父批次；独立API防抖加最长未保存时间，时间到通过既有事件端口请求批次保存。多次不await按序，多次await不强制刷盘。"
       },
       {
         "id": "end",
@@ -171,54 +182,6 @@
       [
         "build_single_era_tx",
         "read_target_messages"
-      ],
-      [
-        "read_target_messages",
-        "build_no_refresh_append"
-      ],
-      [
-        "build_no_refresh_append",
-        "recheck_window_before_write"
-      ],
-      {
-        "from": "recheck_window_before_write",
-        "to": "commit_message_append",
-        "when": "window_recheck_route == 'current'"
-      },
-      {
-        "from": "recheck_window_before_write",
-        "to": "build_commit_failure",
-        "when": "window_recheck_route == 'changed'"
-      },
-      [
-        "commit_message_append",
-        "read_and_verify_committed_message"
-      ],
-      {
-        "from": "read_and_verify_committed_message",
-        "to": "prepare_immediate_sync_step",
-        "when": "commit_readback_route == 'sync'"
-      },
-      {
-        "from": "read_and_verify_committed_message",
-        "to": "build_commit_failure",
-        "when": "commit_readback_route == 'failed'"
-      },
-      [
-        "prepare_immediate_sync_step",
-        "sync_sidecar_immediately"
-      ],
-      [
-        "prepare_immediate_sync_step",
-        "build_committed_receipt"
-      ],
-      [
-        "sync_sidecar_immediately",
-        "build_committed_receipt"
-      ],
-      [
-        "build_committed_receipt",
-        "merge_commit_result"
       ],
       [
         "build_skipped_receipt",
@@ -255,7 +218,23 @@
         "from": "prepare_workbench_commit",
         "to": "build_commit_failure",
         "when": "preparation_route == 'failed'"
-      }
+      },
+      [
+        "read_target_messages",
+        "prepare_api_blocks"
+      ],
+      [
+        "prepare_api_blocks",
+        "apply_api_blocks"
+      ],
+      [
+        "apply_api_blocks",
+        "return_applied_receipt"
+      ],
+      [
+        "return_applied_receipt",
+        "merge_commit_result"
+      ]
     ],
     "outputs": [
       {

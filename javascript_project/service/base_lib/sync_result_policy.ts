@@ -226,6 +226,13 @@ export function buildSyncCommittedResult(
     diagnostics,
     ...(outcome.sourceChanged || stateUpdate === undefined
       ? {}
-      : { stateUpdate }),
+      : {
+          stateUpdate: {
+            ...stateUpdate,
+            ...(outcome.blockStepState?.scopeWindow
+              ? { scopeWindow: outcome.blockStepState.scopeWindow as any }
+              : {}),
+          },
+        }),
   };
 }

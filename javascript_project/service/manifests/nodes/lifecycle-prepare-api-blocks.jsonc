@@ -1,0 +1,67 @@
+{
+  "kind": "node",
+  "type_key": "era.lifecycle.prepare_api_blocks",
+  "display_name": "构造待应用的普通era_tx及工作范围",
+  "category": "内存生命周期",
+  "description": "复用普通事务构造；调用处下方或目标末尾插入待保存消息。当前函数API就地应用，旧楼外部写入按原回退和后续重算规则建立工作范围。应用失败保持真实回执。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.api.commit.target",
+        "cardinality": "exactly_one",
+        "display_name": "era.api.commit.target"
+      }
+    ],
+    "provides": [
+      {
+        "key": "block_step_state",
+        "type": "era.sync.block.step.state",
+        "display_name": "block_step_state"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.api.commit.target": [
+        "era.api.commit.target"
+      ]
+    },
+    "output_semantics": {
+      "block_step_state": [
+        "block_step_state"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/api/prepare_api_blocks.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.facade_api_engine",
+    "era.service.sync_planning",
+    "era.service.sync_contracts",
+    "era.service.sidecar_binding",
+    "era.service.block_step_state"
+  ],
+  "capabilities": [
+    {
+      "id": "era.tavern.sidecar",
+      "operations": [
+        "read_working"
+      ]
+    }
+  ]
+}

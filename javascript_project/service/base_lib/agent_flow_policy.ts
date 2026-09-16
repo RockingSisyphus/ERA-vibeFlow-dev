@@ -89,10 +89,23 @@ function canonicalFloorContent(
 export function withFloorCandidate(
   step: PlannedStepV1,
   rawCandidate: EraAgentFloorCandidateV1,
+  appliedFloor?: EraFloorIdentityV1,
 ): PlannedStepV1 {
   if (step.kind !== "execute") return step;
   const dispatchContext = dispatchContextV3(step);
-  const identity = floorIdentity(step);
+  const captured = floorIdentity(step);
+  if (
+    appliedFloor &&
+    (appliedFloor.messageId !== captured.messageId ||
+      appliedFloor.swipeId !== captured.swipeId ||
+      appliedFloor.chatId !== captured.chatId)
+  ) {
+    throw new AgentSessionFailure(
+      "ERA_FLOOR_IDENTITY_MISMATCH",
+      "规划草稿与最终楼层不匹配。",
+    );
+  }
+  const identity = appliedFloor ?? captured;
   if (
     rawCandidate.messageId !== identity.messageId ||
     rawCandidate.swipeId !== identity.swipeId ||
@@ -139,6 +152,8 @@ export function withFloorCandidate(
       processingMessage,
       stagedMessageUpdates,
       agentFloorCandidate: candidate,
+      floorIdentity: identity,
+      processingMk: identity.mk,
     },
   };
 }
@@ -205,6 +220,7 @@ export function collectGenerationFacts(
           messages: host.messages,
           latestMessage: host.latestMessage,
           session: host.session,
+          ...(host.stageBaseline ? { stageBaseline: host.stageBaseline } : {}),
         }
       : null,
     configuration: normalizeAgentConfiguration(
@@ -232,6 +248,10 @@ export function classifyGeneration(facts: GenerationFacts): GenerationDecision {
       ...(value === undefined ? {} : { value }),
     },
   });
+  const baselineFailure = facts.diagnostics.find(
+    (diagnostic) => ["ERA_AGENT_STAGE_BASELINE_FAILED", "ERA_AGENT_RETRY_SOURCE_CHANGED"].includes(diagnostic.code),
+  );
+  if (baselineFailure) return finish("execute-only", "failed", [baselineFailure]);
   if (!facts.context)
     return facts.contextUnavailable
       ? finish("legacy", "no-op", [

@@ -15,7 +15,7 @@
     "contains_global_state": false,
     "summary": {
       "nodes": 9,
-      "nodesets": 18,
+      "nodesets": 19,
       "explicit_edges": 9,
       "data_edges": 0,
       "reported_edges": 9,
@@ -494,6 +494,575 @@
     ]
   },
   "nodesets": {
+    "era.agent.candidate_attempt": {
+      "type_key": "era.agent.candidate_attempt",
+      "source": {
+        "root_id": "era-service",
+        "path": "configs/nodesets/agent_candidate_attempt.jsonc"
+      },
+      "display_name": "生成并执行一整次候选",
+      "description": "单次模型候选经过有序块执行和恢复判定；不发送阶段完成通知。",
+      "status": "implemented",
+      "flow_kind": "predefined",
+      "effect_scope": "none",
+      "reachable_from_workflow": true,
+      "requires": [
+        {
+          "type": "era.agent.candidate.state",
+          "cardinality": "exactly_one",
+          "display_name": "era.agent.candidate.state"
+        }
+      ],
+      "provides": [
+        {
+          "key": "candidate_state_after",
+          "type": "era.agent.candidate.state.next",
+          "display_name": "candidate_state_after"
+        },
+        {
+          "key": "candidate_done",
+          "type": "era.agent.candidate.done",
+          "display_name": "candidate_done"
+        },
+        {
+          "key": "candidate_outcome",
+          "type": "era.agent.candidate.outcome",
+          "display_name": "candidate_outcome"
+        }
+      ],
+      "global_config": {},
+      "body": {
+        "source": {
+          "root_id": "era-service",
+          "path": "configs/nodesets/agent_candidate_attempt.jsonc"
+        },
+        "inputs": [
+          {
+            "key": "candidate_state",
+            "type": "era.agent.candidate.state",
+            "display_name": "候选请求",
+            "required": true
+          }
+        ],
+        "outputs": [
+          {
+            "type": "era.agent.candidate.state.next",
+            "cardinality": "exactly_one",
+            "display_name": "候选状态",
+            "as": "candidate_state_after"
+          },
+          {
+            "type": "era.agent.candidate.done",
+            "cardinality": "exactly_one",
+            "display_name": "候选终态",
+            "as": "candidate_done"
+          },
+          {
+            "type": "era.agent.candidate.outcome",
+            "cardinality": "exactly_one",
+            "display_name": "阶段结果",
+            "as": "candidate_outcome"
+          }
+        ],
+        "max_steps": 12,
+        "entry_mode": "async",
+        "execution_lock": null,
+        "contains_global_state": false,
+        "summary": {
+          "nodes": 8,
+          "nodesets": 19,
+          "explicit_edges": 8,
+          "data_edges": 0,
+          "reported_edges": 8,
+          "contains_global_state": false
+        },
+        "entry_nodes": [
+          "start"
+        ],
+        "terminal_nodes": [
+          "end"
+        ],
+        "god_nodes": [],
+        "nodes": [
+          {
+            "id": "start",
+            "type_used": "era.service.terminal",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/agent_candidate_attempt.jsonc"
+            },
+            "role": {
+              "display_name": "start",
+              "description": "候选内顺序执行，终态返回当前阶段。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "terminal",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [],
+            "provides": [],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "unpack_candidate",
+            "type_used": "era.agent.candidate_unpack",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/agent_candidate_attempt.jsonc"
+            },
+            "role": {
+              "display_name": "unpack_candidate",
+              "description": "候选内顺序执行，终态返回当前阶段。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "process",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.agent.candidate.state",
+                "cardinality": "exactly_one",
+                "display_name": "era.agent.candidate.state"
+              }
+            ],
+            "provides": [
+              {
+                "key": "generation_request",
+                "type": "era.agent.generation.request",
+                "display_name": "generation_request"
+              },
+              {
+                "key": "routed_step",
+                "type": "era.step.request.routed",
+                "display_name": "routed_step"
+              },
+              {
+                "key": "execution_state",
+                "type": "era.batch.execution.state",
+                "display_name": "execution_state"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "execute_agent_phase_v2",
+            "type_used": "era.agent.execute_session_v2",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/agent_candidate_attempt.jsonc"
+            },
+            "role": {
+              "display_name": "生成标签格式结算候选",
+              "description": "结算直接接收Variable/Function六类标签及EraFCall原文，删除operations JSON解析和标签转换；规划storyPlan/calls保持现有协议。原始响应进入报告，候选格式错误沿原整体回退纠错。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "process",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.agent.generation.request",
+                "cardinality": "exactly_one",
+                "display_name": "阶段请求"
+              },
+              {
+                "type": "era.step.request.routed",
+                "cardinality": "exactly_one",
+                "display_name": "实际派发步骤"
+              },
+              {
+                "type": "era.batch.execution.state",
+                "cardinality": "exactly_one",
+                "display_name": "当前执行状态"
+              }
+            ],
+            "provides": [
+              {
+                "key": "generation_outcome",
+                "type": "era.agent.generation.raw",
+                "display_name": "阶段执行结果"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "prepare_stage_blocks",
+            "type_used": "era.lifecycle.prepare_stage_blocks",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/agent_candidate_attempt.jsonc"
+            },
+            "role": {
+              "display_name": "标签候选接入共用逐块执行",
+              "description": "结算原文直接进入既有块循环，按位置执行insert、函数调用、edit及后续块；保留候选恢复点、scope、随机、done、保存和历史重算，删除结算JSON前中后适配。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "process",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.agent.generation.raw",
+                "cardinality": "exactly_one",
+                "display_name": "era.agent.generation.raw"
+              }
+            ],
+            "provides": [
+              {
+                "key": "block_step_state",
+                "type": "era.sync.block.step.state",
+                "display_name": "block_step_state"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "apply_stage_blocks",
+            "type_used": "vibeflow.loop.while",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/agent_candidate_attempt.jsonc"
+            },
+            "role": {
+              "display_name": "三阶段复用同一个内存块循环",
+              "description": "max_iterations=null；处理块不落盘，结束时得到累计消息及状态。函数API应用后返回，不强制刷盘。"
+            },
+            "contract_source": "system_config",
+            "flow_kind": "predefined",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.sync.block.step.state",
+                "cardinality": "exactly_one",
+                "display_name": "初始块步进状态"
+              }
+            ],
+            "provides": [
+              {
+                "key": "block_step_state_after",
+                "type": "era.sync.block.step.state.next",
+                "display_name": "块步进后状态"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": {
+              "body": "era.sync.block_step",
+              "max_iterations": null,
+              "stop_when": {
+                "from": "block_step_done",
+                "equals": true
+              },
+              "carry": [
+                {
+                  "from": "era.sync.block.step.state",
+                  "as": "block_step_state",
+                  "update": "block_step_state_after"
+                }
+              ],
+              "outputs": [
+                {
+                  "from": "block_step_state_after",
+                  "as": "block_step_state_after"
+                }
+              ]
+            },
+            "io": null,
+            "invokes": {
+              "kind": "loop_body",
+              "target": "era.sync.block_step",
+              "target_status": "implemented"
+            },
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "finish_stage_blocks",
+            "type_used": "era.lifecycle.finish_stage_blocks",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/agent_candidate_attempt.jsonc"
+            },
+            "role": {
+              "display_name": "回送已应用阶段状态及草稿",
+              "description": "候选结束判定：可纠错失败恢复整个候选及已发布内存、记录、scope、随机和done，旧上下文失效后通过阶段恢复发起下一次尝试；耗尽保留起点，更早阶段保留；成功才进入后续阶段。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "process",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.sync.block.step.state.next",
+                "cardinality": "exactly_one",
+                "display_name": "era.sync.block.step.state.next"
+              }
+            ],
+            "provides": [
+              {
+                "key": "applied_generation_outcome",
+                "type": "era.agent.generation.outcome",
+                "display_name": "applied_generation_outcome"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "finish_candidate",
+            "type_used": "era.agent.candidate_finish",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/agent_candidate_attempt.jsonc"
+            },
+            "role": {
+              "display_name": "finish_candidate",
+              "description": "候选内顺序执行，终态返回当前阶段。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "process",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.agent.candidate.state",
+                "cardinality": "exactly_one",
+                "display_name": "era.agent.candidate.state"
+              },
+              {
+                "type": "era.agent.generation.outcome",
+                "cardinality": "exactly_one",
+                "display_name": "era.agent.generation.outcome"
+              }
+            ],
+            "provides": [
+              {
+                "key": "candidate_state_after",
+                "type": "era.agent.candidate.state.next",
+                "display_name": "candidate_state_after"
+              },
+              {
+                "key": "candidate_done",
+                "type": "era.agent.candidate.done",
+                "display_name": "candidate_done"
+              },
+              {
+                "key": "candidate_outcome",
+                "type": "era.agent.candidate.outcome",
+                "display_name": "candidate_outcome"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "end",
+            "type_used": "era.service.terminal",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/agent_candidate_attempt.jsonc"
+            },
+            "role": {
+              "display_name": "end",
+              "description": "候选内顺序执行，终态返回当前阶段。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "terminal",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [],
+            "provides": [],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": "start",
+            "to": "unpack_candidate",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "unpack_candidate",
+            "to": "execute_agent_phase_v2",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "execute_agent_phase_v2",
+            "to": "prepare_stage_blocks",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "prepare_stage_blocks",
+            "to": "apply_stage_blocks",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "apply_stage_blocks",
+            "to": "finish_stage_blocks",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "finish_stage_blocks",
+            "to": "finish_candidate",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "start",
+            "to": "finish_candidate",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule"
+            ]
+          },
+          {
+            "from": "finish_candidate",
+            "to": "end",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          }
+        ]
+      }
+    },
     "era.agent.generation_session": {
       "type_key": "era.agent.generation_session",
       "source": {
@@ -558,11 +1127,11 @@
         "execution_lock": null,
         "contains_global_state": false,
         "summary": {
-          "nodes": 13,
-          "nodesets": 18,
-          "explicit_edges": 15,
+          "nodes": 14,
+          "nodesets": 19,
+          "explicit_edges": 17,
           "data_edges": 0,
-          "reported_edges": 15,
+          "reported_edges": 17,
           "contains_global_state": false
         },
         "entry_nodes": [
@@ -614,8 +1183,8 @@
               "path": "configs/nodesets/agent_generation_session.jsonc"
             },
             "role": {
-              "display_name": "读取生成事实",
-              "description": "读取生成事实及恢复时最新已提交状态；恢复事件沿原派发入口读取会话，不复用等待前的变量快照。"
+              "display_name": "读取阶段工作状态与当前来源",
+              "description": "阶段恢复读取有效工作状态，不要求Sidecar已落盘；保留原生完成和来源确认。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -705,7 +1274,7 @@
             },
             "role": {
               "display_name": "准备阶段请求",
-              "description": "准备单阶段请求；恢复后按阶段读取最新变量、消息和必要最终成果，不从过程报告重建业务请求。"
+              "description": "候选请求基线：手动重新结算先通过共用历史计算恢复正文结束状态，撤销旧结算后再请求模型；保留正文done和记录。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -742,51 +1311,6 @@
             }
           },
           {
-            "id": "execute_agent_phase_v2",
-            "type_used": "era.agent.execute_session_v2",
-            "source": {
-              "root_id": "era-service",
-              "path": "configs/nodesets/agent_generation_session.jsonc"
-            },
-            "role": {
-              "display_name": "执行生成阶段",
-              "description": "每次只执行至一个成功阶段边界：规划及函数完成、正文完成、变量操作有效但未执行；返回最终成果和待恢复会话。消息仅组合最终规划、正文及有效事务，不写历次报告。"
-            },
-            "contract_source": "node_type",
-            "flow_kind": "process",
-            "effect_scope": "none",
-            "runtime_dispatch": "unknown",
-            "execution_lock": null,
-            "effective_execution_lock": null,
-            "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
-            "requires": [
-              {
-                "type": "era.agent.generation.request",
-                "cardinality": "exactly_one",
-                "display_name": "阶段请求"
-              }
-            ],
-            "provides": [
-              {
-                "key": "generation_outcome",
-                "type": "era.agent.generation.outcome",
-                "display_name": "阶段执行结果"
-              }
-            ],
-            "join_policy": "safe_any",
-            "async": null,
-            "loop": null,
-            "io": null,
-            "invokes": null,
-            "config": {
-              "call": {},
-              "node_configs": {},
-              "allow_config_override": false
-            }
-          },
-          {
             "id": "prepare_stage_handoff",
             "type_used": "era.agent.prepare_stage_handoff",
             "source": {
@@ -808,7 +1332,7 @@
             "planned_behavior": null,
             "requires": [
               {
-                "type": "era.agent.generation.outcome",
+                "type": "era.agent.candidate.outcome",
                 "cardinality": "exactly_one",
                 "display_name": "阶段执行结果"
               }
@@ -839,8 +1363,8 @@
               "path": "configs/nodesets/agent_generation_session.jsonc"
             },
             "role": {
-              "display_name": "形成会话转换",
-              "description": "将阶段交接结果转为原任务结果或最终候选；待回调阶段不提交 AI 变量候选，恢复提交仍交给 legacy_sync。"
+              "display_name": "携带已应用阶段状态进入下一阶段",
+              "description": "规划草稿保留操作及done，正文独立结算仍应用指令；最终候选不重放本轮已应用API，进入统一批次保存。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -1191,6 +1715,130 @@
               "node_configs": {},
               "allow_config_override": false
             }
+          },
+          {
+            "id": "seed_candidate",
+            "type_used": "era.agent.candidate_seed",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/agent_generation_session.jsonc"
+            },
+            "role": {
+              "display_name": "建立候选请求",
+              "description": "准备并执行候选内部循环。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "process",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.agent.generation.request",
+                "cardinality": "exactly_one",
+                "display_name": "era.agent.generation.request"
+              },
+              {
+                "type": "era.step.request.routed",
+                "cardinality": "exactly_one",
+                "display_name": "era.step.request.routed"
+              },
+              {
+                "type": "era.batch.execution.state",
+                "cardinality": "exactly_one",
+                "display_name": "era.batch.execution.state"
+              }
+            ],
+            "provides": [
+              {
+                "key": "candidate_state",
+                "type": "era.agent.candidate.state",
+                "display_name": "candidate_state"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "candidate_loop",
+            "type_used": "vibeflow.loop.while",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/agent_generation_session.jsonc"
+            },
+            "role": {
+              "display_name": "候选整体纠错循环",
+              "description": "候选完整恢复后再请求模型；只有终态进入阶段交接。"
+            },
+            "contract_source": "system_config",
+            "flow_kind": "predefined",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.agent.candidate.state",
+                "cardinality": "exactly_one",
+                "display_name": "era.agent.candidate.state"
+              }
+            ],
+            "provides": [
+              {
+                "key": "candidate_outcome",
+                "type": "era.agent.candidate.outcome",
+                "display_name": "candidate_outcome"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": {
+              "body": "era.agent.candidate_attempt",
+              "max_iterations": null,
+              "stop_when": {
+                "from": "candidate_done",
+                "equals": true
+              },
+              "carry": [
+                {
+                  "from": "era.agent.candidate.state",
+                  "as": "candidate_state",
+                  "update": "candidate_state_after"
+                }
+              ],
+              "outputs": [
+                {
+                  "from": "candidate_outcome",
+                  "as": "candidate_outcome"
+                }
+              ]
+            },
+            "io": null,
+            "invokes": {
+              "kind": "loop_body",
+              "target": "era.agent.candidate_attempt",
+              "target_status": "implemented"
+            },
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
           }
         ],
         "edges": [
@@ -1217,26 +1865,6 @@
           {
             "from": "classify_generation_event",
             "to": "prepare_generation_phase",
-            "when": "",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "prepare_generation_phase",
-            "to": "execute_agent_phase_v2",
-            "when": "",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "execute_agent_phase_v2",
-            "to": "prepare_stage_handoff",
             "when": "",
             "roles": [
               "mainline",
@@ -1342,6 +1970,45 @@
               "schedule",
               "transfer"
             ]
+          },
+          {
+            "from": "prepare_generation_phase",
+            "to": "seed_candidate",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "start",
+            "to": "seed_candidate",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule"
+            ]
+          },
+          {
+            "from": "seed_candidate",
+            "to": "candidate_loop",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "candidate_loop",
+            "to": "prepare_stage_handoff",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
           }
         ]
       }
@@ -1400,7 +2067,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 5,
-          "nodesets": 18,
+          "nodesets": 19,
           "explicit_edges": 5,
           "data_edges": 0,
           "reported_edges": 5,
@@ -1681,7 +2348,7 @@
         "path": "configs/nodesets/api_commit.jsonc"
       },
       "display_name": "ERA 即时 Scope Commit",
-      "description": "一次 commit 独立追加单 scope era_tx，回读后立即复用 Sidecar 同步事务。",
+      "description": "按接收顺序应用到有效工作状态，应用完成返回；独立API批次防抖保存，消息内API归入当前处理。",
       "status": "implemented",
       "flow_kind": "predefined",
       "effect_scope": "none",
@@ -1738,11 +2405,11 @@
         "execution_lock": null,
         "contains_global_state": false,
         "summary": {
-          "nodes": 18,
-          "nodesets": 18,
-          "explicit_edges": 24,
-          "data_edges": 1,
-          "reported_edges": 24,
+          "nodes": 14,
+          "nodesets": 19,
+          "explicit_edges": 17,
+          "data_edges": 0,
+          "reported_edges": 17,
           "contains_global_state": false
         },
         "entry_nodes": [
@@ -1794,8 +2461,8 @@
               "path": "configs/nodesets/api_commit.jsonc"
             },
             "role": {
-              "display_name": "读取窗口准入与当前目标",
-              "description": "执行读取窗口准入与当前目标。"
+              "display_name": "读取工作状态与调用来源",
+              "description": "显式调用位置或原状态栏来源决定上下文；按接收顺序，scope在工作状态即时生效，不读取旧文件替代新状态。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -1894,8 +2561,8 @@
               "path": "configs/nodesets/api_commit.jsonc"
             },
             "role": {
-              "display_name": "准备工作台草稿Commit",
-              "description": "在真实Commit准入之前读取基准、计算变量/函数变更并处理保护，ready接回原Scope校验，failed接回原失败链。"
+              "display_name": "按当前工作状态准备工作台意图",
+              "description": "复用原基准/保护/差异规则，基于当前工作状态，不以已保存revision代替尚未保存的修改。"
             },
             "contract_source": "nodeset",
             "flow_kind": "predefined",
@@ -2053,8 +2720,8 @@
               "path": "configs/nodesets/api_commit.jsonc"
             },
             "role": {
-              "display_name": "求证 Facade 写入目标楼层",
-              "description": "顶层 Facade 选择最新 AI 消息；托管状态栏 Facade 由 Host 重新核对 pageEpoch、instanceId、messageId、Swipe 与 MK 后选择来源楼层，失效时明确失败且不回退。"
+              "display_name": "定位函数锚点或普通目标末尾",
+              "description": "显式调用来源定位函数下方；状态栏保留旧楼/Swipe/ready，外置API保留原目标规则。捕获原目标版本，失效不回退到新楼。"
             },
             "contract_source": "node_type",
             "flow_kind": "io",
@@ -2077,365 +2744,6 @@
                 "key": "facade_commit_target",
                 "type": "era.api.commit.target",
                 "display_name": "facade_commit_target"
-              }
-            ],
-            "join_policy": "safe_any",
-            "async": null,
-            "loop": null,
-            "io": null,
-            "invokes": null,
-            "config": {
-              "call": {},
-              "node_configs": {},
-              "allow_config_override": false
-            }
-          },
-          {
-            "id": "build_no_refresh_append",
-            "type_used": "era.api.build_no_refresh_append",
-            "source": {
-              "root_id": "era-service",
-              "path": "configs/nodesets/api_commit.jsonc"
-            },
-            "role": {
-              "display_name": "普通 API 只构造目标末尾追加",
-              "description": "保留公共操作和 scope，删除未接通的函数位置插入分支；保存生成文本所依赖的原目标版本，操作记录仍为普通 era_tx。"
-            },
-            "contract_source": "node_type",
-            "flow_kind": "process",
-            "effect_scope": "none",
-            "runtime_dispatch": "unknown",
-            "execution_lock": null,
-            "effective_execution_lock": null,
-            "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
-            "requires": [
-              {
-                "type": "era.api.commit.target",
-                "cardinality": "exactly_one",
-                "display_name": "era.api.commit.target"
-              }
-            ],
-            "provides": [
-              {
-                "key": "facade_commit_append_request",
-                "type": "era.api.commit.append.request",
-                "display_name": "facade_commit_append_request"
-              }
-            ],
-            "join_policy": "safe_any",
-            "async": null,
-            "loop": null,
-            "io": null,
-            "invokes": null,
-            "config": {
-              "call": {},
-              "node_configs": {},
-              "allow_config_override": false
-            }
-          },
-          {
-            "id": "recheck_window_before_write",
-            "type_used": "era.api.recheck_window",
-            "source": {
-              "root_id": "era-service",
-              "path": "configs/nodesets/api_commit.jsonc"
-            },
-            "role": {
-              "display_name": "写入前复核窗口",
-              "description": "执行写入前复核窗口。"
-            },
-            "contract_source": "node_type",
-            "flow_kind": "decision",
-            "effect_scope": "none",
-            "runtime_dispatch": "unknown",
-            "execution_lock": null,
-            "effective_execution_lock": null,
-            "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
-            "requires": [
-              {
-                "type": "era.api.commit.append.request",
-                "cardinality": "exactly_one",
-                "display_name": "era.api.commit.append.request"
-              }
-            ],
-            "provides": [
-              {
-                "key": "window_recheck_route",
-                "type": "era.api.window.recheck.route",
-                "display_name": "window_recheck_route"
-              },
-              {
-                "key": "facade_commit_rechecked",
-                "type": "era.api.commit.rechecked",
-                "display_name": "facade_commit_rechecked"
-              },
-              {
-                "key": "facade_commit_recheck_failure",
-                "type": "era.api.commit.failure_context",
-                "display_name": "facade_commit_failure_context"
-              }
-            ],
-            "join_policy": "safe_any",
-            "async": null,
-            "loop": null,
-            "io": null,
-            "invokes": null,
-            "config": {
-              "call": {},
-              "node_configs": {},
-              "allow_config_override": false
-            }
-          },
-          {
-            "id": "commit_message_append",
-            "type_used": "era.api.commit_facade_message",
-            "source": {
-              "root_id": "era-service",
-              "path": "configs/nodesets/api_commit.jsonc"
-            },
-            "role": {
-              "display_name": "核对原目标后写入（失败可恢复）",
-              "description": "重读允许吸收无关消息新增，但必须保留并核对生成内容对应的原目标正文/Swipe及身份；目标已改变则失败，不刷新依据后覆盖。写入前及写入异常结算失败，不致命停止服务。"
-            },
-            "contract_source": "node_type",
-            "flow_kind": "io",
-            "effect_scope": "none",
-            "runtime_dispatch": "unknown",
-            "execution_lock": null,
-            "effective_execution_lock": null,
-            "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
-            "requires": [
-              {
-                "type": "era.api.commit.rechecked",
-                "cardinality": "exactly_one",
-                "display_name": "era.api.commit.rechecked"
-              }
-            ],
-            "provides": [
-              {
-                "key": "facade_commit_append_result",
-                "type": "era.api.commit.append.result",
-                "display_name": "facade_commit_append_result"
-              }
-            ],
-            "join_policy": "safe_any",
-            "async": null,
-            "loop": null,
-            "io": null,
-            "invokes": null,
-            "config": {
-              "call": {},
-              "node_configs": {},
-              "allow_config_override": false
-            }
-          },
-          {
-            "id": "read_and_verify_committed_message",
-            "type_used": "era.api.verify_facade_message",
-            "source": {
-              "root_id": "era-service",
-              "path": "configs/nodesets/api_commit.jsonc"
-            },
-            "role": {
-              "display_name": "回读真实保存结果（失败可恢复）",
-              "description": "回读确认普通事务的真实保存，读回异常返回失败收据并保留恢复入口；不把失败或不确定保存报告成成功。"
-            },
-            "contract_source": "node_type",
-            "flow_kind": "io",
-            "effect_scope": "none",
-            "runtime_dispatch": "unknown",
-            "execution_lock": null,
-            "effective_execution_lock": null,
-            "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
-            "requires": [
-              {
-                "type": "era.api.commit.append.result",
-                "cardinality": "exactly_one",
-                "display_name": "era.api.commit.append.result"
-              }
-            ],
-            "provides": [
-              {
-                "key": "commit_readback_route",
-                "type": "era.api.commit.readback.route",
-                "display_name": "commit_readback_route"
-              },
-              {
-                "key": "facade_commit_verified",
-                "type": "era.api.commit.verified",
-                "display_name": "facade_commit_verified"
-              },
-              {
-                "key": "facade_commit_readback_failure",
-                "type": "era.api.commit.failure_context",
-                "display_name": "facade_commit_failure_context"
-              }
-            ],
-            "join_policy": "safe_any",
-            "async": null,
-            "loop": null,
-            "io": null,
-            "invokes": null,
-            "config": {
-              "call": {},
-              "node_configs": {},
-              "allow_config_override": false
-            }
-          },
-          {
-            "id": "prepare_immediate_sync_step",
-            "type_used": "era.api.prepare_facade_sync",
-            "source": {
-              "root_id": "era-service",
-              "path": "configs/nodesets/api_commit.jsonc"
-            },
-            "role": {
-              "display_name": "构造即时同步步骤",
-              "description": "执行构造即时同步步骤。"
-            },
-            "contract_source": "node_type",
-            "flow_kind": "process",
-            "effect_scope": "none",
-            "runtime_dispatch": "unknown",
-            "execution_lock": null,
-            "effective_execution_lock": null,
-            "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
-            "requires": [
-              {
-                "type": "era.api.commit.verified",
-                "cardinality": "exactly_one",
-                "display_name": "era.api.commit.verified"
-              }
-            ],
-            "provides": [
-              {
-                "key": "commit_sync_step",
-                "type": "era.step.request.routed",
-                "display_name": "commit_sync_step"
-              },
-              {
-                "key": "facade_commit_sync_context",
-                "type": "era.api.commit.sync_context",
-                "display_name": "facade_commit_sync_context"
-              },
-              {
-                "key": "commit_execution_state",
-                "type": "era.batch.execution.state",
-                "display_name": "commit_execution_state"
-              }
-            ],
-            "join_policy": "safe_any",
-            "async": null,
-            "loop": null,
-            "io": null,
-            "invokes": null,
-            "config": {
-              "call": {},
-              "node_configs": {},
-              "allow_config_override": false
-            }
-          },
-          {
-            "id": "sync_sidecar_immediately",
-            "type_used": "era.task.sync",
-            "source": {
-              "root_id": "era-service",
-              "path": "configs/nodesets/api_commit.jsonc"
-            },
-            "role": {
-              "display_name": "立即同步 Sidecar",
-              "description": "执行立即同步 Sidecar。"
-            },
-            "contract_source": "nodeset",
-            "flow_kind": "predefined",
-            "effect_scope": "none",
-            "runtime_dispatch": "unknown",
-            "execution_lock": null,
-            "effective_execution_lock": null,
-            "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
-            "requires": [
-              {
-                "type": "era.step.request.routed",
-                "cardinality": "exactly_one",
-                "display_name": "已路由步骤"
-              },
-              {
-                "type": "era.batch.execution.state",
-                "cardinality": "exactly_one",
-                "display_name": "当前批次执行状态"
-              }
-            ],
-            "provides": [
-              {
-                "key": "sync_task_result",
-                "type": "era.task.result",
-                "display_name": "同步结果"
-              }
-            ],
-            "join_policy": "safe_any",
-            "async": null,
-            "loop": null,
-            "io": null,
-            "invokes": {
-              "kind": "nodeset",
-              "target": "era.task.sync",
-              "target_status": "implemented"
-            },
-            "config": {
-              "call": {},
-              "node_configs": {},
-              "allow_config_override": false
-            }
-          },
-          {
-            "id": "build_committed_receipt",
-            "type_used": "era.api.build_committed_receipt",
-            "source": {
-              "root_id": "era-service",
-              "path": "configs/nodesets/api_commit.jsonc"
-            },
-            "role": {
-              "display_name": "返回 committed receipt",
-              "description": "执行返回 committed receipt。"
-            },
-            "contract_source": "node_type",
-            "flow_kind": "process",
-            "effect_scope": "none",
-            "runtime_dispatch": "unknown",
-            "execution_lock": null,
-            "effective_execution_lock": null,
-            "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
-            "requires": [
-              {
-                "type": "era.task.result",
-                "cardinality": "exactly_one",
-                "display_name": "era.task.result"
-              },
-              {
-                "type": "era.api.commit.sync_context",
-                "cardinality": "exactly_one",
-                "display_name": "era.api.commit.sync_context"
-              }
-            ],
-            "provides": [
-              {
-                "key": "facade_commit_committed_result",
-                "type": "era.api.commit.result",
-                "display_name": "facade_commit_result"
               }
             ],
             "join_policy": "safe_any",
@@ -2585,6 +2893,165 @@
             }
           },
           {
+            "id": "prepare_api_blocks",
+            "type_used": "era.lifecycle.prepare_api_blocks",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/api_commit.jsonc"
+            },
+            "role": {
+              "display_name": "构造待应用的普通era_tx及工作范围",
+              "description": "复用普通事务构造；调用处下方或目标末尾插入待保存消息。当前函数API就地应用，旧楼外部写入按原回退和后续重算规则建立工作范围。应用失败保持真实回执。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "process",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.api.commit.target",
+                "cardinality": "exactly_one",
+                "display_name": "era.api.commit.target"
+              }
+            ],
+            "provides": [
+              {
+                "key": "block_step_state",
+                "type": "era.sync.block.step.state",
+                "display_name": "block_step_state"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "apply_api_blocks",
+            "type_used": "vibeflow.loop.while",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/api_commit.jsonc"
+            },
+            "role": {
+              "display_name": "API复用同一个内存块循环",
+              "description": "max_iterations=null；处理块不落盘，结束时得到累计消息及状态。函数API应用后返回，不强制刷盘。"
+            },
+            "contract_source": "system_config",
+            "flow_kind": "predefined",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.sync.block.step.state",
+                "cardinality": "exactly_one",
+                "display_name": "初始块步进状态"
+              }
+            ],
+            "provides": [
+              {
+                "key": "block_step_state_after",
+                "type": "era.sync.block.step.state.next",
+                "display_name": "块步进后状态"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": {
+              "body": "era.sync.block_step",
+              "max_iterations": null,
+              "stop_when": {
+                "from": "block_step_done",
+                "equals": true
+              },
+              "carry": [
+                {
+                  "from": "era.sync.block.step.state",
+                  "as": "block_step_state",
+                  "update": "block_step_state_after"
+                }
+              ],
+              "outputs": [
+                {
+                  "from": "block_step_state_after",
+                  "as": "block_step_state_after"
+                }
+              ]
+            },
+            "io": null,
+            "invokes": {
+              "kind": "loop_body",
+              "target": "era.sync.block_step",
+              "target_status": "implemented"
+            },
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "return_applied_receipt",
+            "type_used": "era.lifecycle.return_applied_receipt",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/api_commit.jsonc"
+            },
+            "role": {
+              "display_name": "返回内存应用回执并登记保存时机",
+              "description": "工作状态、日志、scope和待保存消息一致后返回；不是入队即成功。当前函数归属父批次；独立API防抖加最长未保存时间，时间到通过既有事件端口请求批次保存。多次不await按序，多次await不强制刷盘。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "process",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.sync.block.step.state.next",
+                "cardinality": "exactly_one",
+                "display_name": "era.sync.block.step.state.next"
+              }
+            ],
+            "provides": [
+              {
+                "key": "facade_commit_result",
+                "type": "era.api.commit.result",
+                "display_name": "facade_commit_result"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
             "id": "end",
             "type_used": "era.service.terminal",
             "source": {
@@ -2662,115 +3129,6 @@
           {
             "from": "build_single_era_tx",
             "to": "read_target_messages",
-            "when": "",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "read_target_messages",
-            "to": "build_no_refresh_append",
-            "when": "",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "build_no_refresh_append",
-            "to": "recheck_window_before_write",
-            "when": "",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "recheck_window_before_write",
-            "to": "commit_message_append",
-            "when": "window_recheck_route == 'current'",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "recheck_window_before_write",
-            "to": "build_commit_failure",
-            "when": "window_recheck_route == 'changed'",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "commit_message_append",
-            "to": "read_and_verify_committed_message",
-            "when": "",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "read_and_verify_committed_message",
-            "to": "prepare_immediate_sync_step",
-            "when": "commit_readback_route == 'sync'",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "read_and_verify_committed_message",
-            "to": "build_commit_failure",
-            "when": "commit_readback_route == 'failed'",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "prepare_immediate_sync_step",
-            "to": "sync_sidecar_immediately",
-            "when": "",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "prepare_immediate_sync_step",
-            "to": "build_committed_receipt",
-            "when": "",
-            "roles": [
-              "data_bypass",
-              "transfer"
-            ]
-          },
-          {
-            "from": "sync_sidecar_immediately",
-            "to": "build_committed_receipt",
-            "when": "",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "build_committed_receipt",
-            "to": "merge_commit_result",
             "when": "",
             "roles": [
               "mainline",
@@ -2857,6 +3215,46 @@
               "schedule",
               "transfer"
             ]
+          },
+          {
+            "from": "read_target_messages",
+            "to": "prepare_api_blocks",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "prepare_api_blocks",
+            "to": "apply_api_blocks",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "apply_api_blocks",
+            "to": "return_applied_receipt",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "return_applied_receipt",
+            "to": "merge_commit_result",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
           }
         ]
       }
@@ -2937,7 +3335,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 9,
-          "nodesets": 18,
+          "nodesets": 19,
           "explicit_edges": 11,
           "data_edges": 0,
           "reported_edges": 11,
@@ -3548,7 +3946,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 7,
-          "nodesets": 18,
+          "nodesets": 19,
           "explicit_edges": 8,
           "data_edges": 0,
           "reported_edges": 8,
@@ -4031,7 +4429,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 8,
-          "nodesets": 18,
+          "nodesets": 19,
           "explicit_edges": 7,
           "data_edges": 0,
           "reported_edges": 7,
@@ -4543,7 +4941,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 9,
-          "nodesets": 18,
+          "nodesets": 19,
           "explicit_edges": 10,
           "data_edges": 0,
           "reported_edges": 10,
@@ -5127,7 +5525,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 8,
-          "nodesets": 18,
+          "nodesets": 19,
           "explicit_edges": 8,
           "data_edges": 0,
           "reported_edges": 8,
@@ -5182,8 +5580,8 @@
               "path": "configs/nodesets/batch_execute.jsonc"
             },
             "role": {
-              "display_name": "规划生命周期与公共对象任务",
-              "description": "复用原事件组合和单 FIFO 规划；内部 Agent 阶段恢复作为真实新事件路由回原生成会话，覆盖来源 receipt，不等待用户回调、不新增业务队列。"
+              "display_name": "规划原生命周期及保存到期任务",
+              "description": "保留生成high-water、来源coverage、历史回退和原作用域窗口；保存到期形成只flush已指定工作批次的sync任务，不能额外重放未变化历史。函数API由显式父上下文排入共用块执行入口，不能排在等待它的完整任务后。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -5391,8 +5789,8 @@
               "path": "configs/nodesets/batch_execute.jsonc"
             },
             "role": {
-              "display_name": "完成批次收尾",
-              "description": "全部规划步骤结束后，构造有序结算、通知、诊断、下一携带状态和致命标记。"
+              "display_name": "分别结算应用回执和保存完成",
+              "description": "API应用回执无需等待后续持久化；同步完成及生成barrier依据对应范围处理/保存事实结算，不以应用成功冒充保存成功。保存失败单独通知并保持可恢复状态；保留每个来源准确一次回执。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -5649,7 +6047,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 7,
-          "nodesets": 18,
+          "nodesets": 19,
           "explicit_edges": 10,
           "data_edges": 3,
           "reported_edges": 10,
@@ -6123,7 +6521,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 10,
-          "nodesets": 18,
+          "nodesets": 19,
           "explicit_edges": 14,
           "data_edges": 4,
           "reported_edges": 14,
@@ -6315,8 +6713,8 @@
               "path": "configs/nodesets/service_iteration.jsonc"
             },
             "role": {
-              "display_name": "归约事件集并推进 Scope 窗口",
-              "description": "保留 Tavern 事件的既有 FIFO、组合窗口、生成栅栏、dry-run、swipe 和有界收集语义；公共对象 commit 立即形成独立就绪任务，不进入防抖、batch 或 coalesce。仅真实 AI 完成、用户增删改、Swipe/分支、聊天/角色切换、iframe 重建、reload/restart 推进内存窗口；ERA 自己的 MK、无刷新 API 写回、Sidecar 提交和安全压缩不推进。"
+              "display_name": "归约来源顺序与保存到期事件",
+              "description": "普通API立即执行而不等防抖；防抖只控制持久化。接收保存到期事件并形成既有sync路由的flush任务；保留生成high-water、scope窗口及编辑/切聊失效。后到事件不延长既定生成范围。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -6778,7 +7176,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 12,
-          "nodesets": 18,
+          "nodesets": 19,
           "explicit_edges": 18,
           "data_edges": 1,
           "reported_edges": 18,
@@ -7644,7 +8042,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 6,
-          "nodesets": 18,
+          "nodesets": 19,
           "explicit_edges": 7,
           "data_edges": 2,
           "reported_edges": 7,
@@ -8003,7 +8401,7 @@
         "path": "configs/nodesets/message_block_step.jsonc"
       },
       "display_name": "ERA 块步进单次迭代",
-      "description": "单块或楼层维护提交：执行、构造候选、封存压缩、保存、折回。只有保存后的状态可以推进；错误成为任务结果，不抛成永久工作流停止。",
+      "description": "共用内存块执行；累计消息、变量、函数、scope和日志，不在每块中执行聊天/Sidecar保存。",
       "status": "implemented",
       "flow_kind": "predefined",
       "effect_scope": "none",
@@ -8060,11 +8458,11 @@
         "execution_lock": null,
         "contains_global_state": false,
         "summary": {
-          "nodes": 8,
-          "nodesets": 18,
-          "explicit_edges": 7,
+          "nodes": 6,
+          "nodesets": 19,
+          "explicit_edges": 5,
           "data_edges": 0,
-          "reported_edges": 7,
+          "reported_edges": 5,
           "contains_global_state": false
         },
         "entry_nodes": [
@@ -8116,8 +8514,8 @@
               "path": "configs/nodesets/message_block_step.jsonc"
             },
             "role": {
-              "display_name": "应用下一块或准备楼层维护",
-              "description": "复用纯块应用语义，独立携带消息起点变量/函数及连续随机偏移；done 仅按标签判断，旧 EraFCallTx 只作普通记录容器。无 done 调用返回 ERA_FCALL_NOT_IMPLEMENTED，不改 done，不处理后续块。准备楼层完成清进度、纯回退和空聊天所需的维护写入。"
+              "display_name": "共用块执行：指令、函数及位置API",
+              "description": "共用块执行处理阶段有序项，在当前位置验证操作；函数scope和记录沿用普通路径。函数上下文所有sync均明确拒绝；候选内错误上报候选控制，普通作者异常保留前缀标done。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -8161,8 +8559,8 @@
               "path": "configs/nodesets/message_block_step.jsonc"
             },
             "role": {
-              "display_name": "构造单块与日志同步工作项",
-              "description": "从真实累计状态构造当前块的消息/Sidecar候选和完整累计回退日志。仅楼层完成时给出该封存楼层压缩候选；最新楼层不压缩；普通块候选为空。携带状态经工作项传递，禁止另算整楼终值。"
+              "display_name": "累计操作记录及封存候选",
+              "description": "计划待审核：收集本轮消息补丁和累计日志；楼层完成时清内存进度并提供封存压缩候选，不构造每块持久化事务。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -8248,15 +8646,15 @@
             }
           },
           {
-            "id": "build_block_commit",
-            "type_used": "era.sync.build_block_commit",
+            "id": "publish_block_application",
+            "type_used": "era.lifecycle.publish_block_application",
             "source": {
               "root_id": "era-service",
               "path": "configs/nodesets/message_block_step.jsonc"
             },
             "role": {
-              "display_name": "构造唯一提交请求",
-              "description": "将压缩后的单块或楼层维护工作项构造成既有保存请求；依据只吸收本任务已确认的自身写入，不能用新目标依据掩盖旧文本。错误/无需写入使用无提交信封；最后的进度删除和 cursor 清除在此提交路径处理。"
+              "display_name": "发布内存应用结果与推进位置",
+              "description": "把压缩后的工作状态更新到同一执行上下文，保留消息起点快照/随机偏移；同步更新API可读投影，不能覆盖后到操作。仅应用完成，不发布整批保存完成或提前ready。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -8271,109 +8669,19 @@
               {
                 "type": "era.command_compaction.result",
                 "cardinality": "exactly_one",
-                "display_name": "已处理压缩的单块工作项"
+                "display_name": "era.command_compaction.result"
               }
             ],
             "provides": [
               {
-                "key": "block_commit_request",
-                "type": "era.tavern.commit.request",
-                "display_name": "逐块提交请求"
-              }
-            ],
-            "join_policy": "safe_any",
-            "async": null,
-            "loop": null,
-            "io": null,
-            "invokes": null,
-            "config": {
-              "call": {},
-              "node_configs": {},
-              "allow_config_override": false
-            }
-          },
-          {
-            "id": "commit_block_state",
-            "type_used": "era.tavern.variables_commit",
-            "source": {
-              "root_id": "era-service",
-              "path": "configs/nodesets/message_block_step.jsonc"
-            },
-            "role": {
-              "display_name": "提交该块的消息记录与状态",
-              "description": "复用既有提交链写入该块的消息记录与 sidecar 状态（含续做游标）。"
-            },
-            "contract_source": "node_type",
-            "flow_kind": "data_store",
-            "effect_scope": "none",
-            "runtime_dispatch": "unknown",
-            "execution_lock": null,
-            "effective_execution_lock": null,
-            "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
-            "requires": [
-              {
-                "type": "era.tavern.commit.request",
-                "cardinality": "exactly_one",
-                "display_name": "同步提交请求"
-              }
-            ],
-            "provides": [
-              {
-                "key": "sync_commit_result",
-                "type": "era.tavern.commit.result",
-                "display_name": "同步提交结果"
-              }
-            ],
-            "join_policy": "safe_any",
-            "async": null,
-            "loop": null,
-            "io": null,
-            "invokes": null,
-            "config": {
-              "call": {},
-              "node_configs": {},
-              "allow_config_override": false
-            }
-          },
-          {
-            "id": "fold_block_commit",
-            "type_used": "era.sync.fold_block_commit",
-            "source": {
-              "root_id": "era-service",
-              "path": "configs/nodesets/message_block_step.jsonc"
-            },
-            "role": {
-              "display_name": "折回实际保存结果与循环终止状态",
-              "description": "保存成功后推进状态、日志及进度；提交失败保留已成功块并返回任务级失败，来源变化作废原目标。最后完成清进度后才能标楼层完成；继续下一受影响楼层或结束。循环终止事实必须来自提交之后。"
-            },
-            "contract_source": "node_type",
-            "flow_kind": "process",
-            "effect_scope": "none",
-            "runtime_dispatch": "unknown",
-            "execution_lock": null,
-            "effective_execution_lock": null,
-            "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
-            "requires": [
-              {
-                "type": "era.tavern.commit.result",
-                "cardinality": "exactly_one",
-                "display_name": "逐块提交结果"
-              }
-            ],
-            "provides": [
-              {
-                "key": "folded_block_step_state",
+                "key": "block_step_state_after",
                 "type": "era.sync.block.step.state.next",
-                "display_name": "实际保存后的执行状态"
+                "display_name": "block_step_state_after"
               },
               {
                 "key": "block_step_done",
                 "type": "era.step.done",
-                "display_name": "保存后是否结束本次执行"
+                "display_name": "block_step_done"
               }
             ],
             "join_policy": "safe_any",
@@ -8454,7 +8762,7 @@
           },
           {
             "from": "apply_command_compaction",
-            "to": "build_block_commit",
+            "to": "publish_block_application",
             "when": "",
             "roles": [
               "mainline",
@@ -8463,27 +8771,7 @@
             ]
           },
           {
-            "from": "build_block_commit",
-            "to": "commit_block_state",
-            "when": "",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "commit_block_state",
-            "to": "fold_block_commit",
-            "when": "",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "fold_block_commit",
+            "from": "publish_block_application",
             "to": "end",
             "when": "",
             "roles": [
@@ -8560,7 +8848,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 6,
-          "nodesets": 18,
+          "nodesets": 19,
           "explicit_edges": 6,
           "data_edges": 0,
           "reported_edges": 6,
@@ -8983,7 +9271,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 12,
-          "nodesets": 18,
+          "nodesets": 19,
           "explicit_edges": 14,
           "data_edges": 1,
           "reported_edges": 14,
@@ -9746,7 +10034,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 4,
-          "nodesets": 18,
+          "nodesets": 19,
           "explicit_edges": 3,
           "data_edges": 0,
           "reported_edges": 3,
@@ -9977,7 +10265,7 @@
         "path": "configs/nodesets/task_sync.jsonc"
       },
       "display_name": "ERA 同步任务",
-      "description": "逐块处理普通同步、历史回退和 API 重放；消息写入与 Sidecar 保存统一在块循环内，尾链仅呈现和结算。本轮未完成的消息内工具调用明确失败，既有 Agent 路径保留。",
+      "description": "接续有效工作状态，逐块处理确定范围，最后批量保存消息及Sidecar；API防抖到期同样进入该提交边界。",
       "status": "implemented",
       "flow_kind": "predefined",
       "effect_scope": "none",
@@ -10034,11 +10322,11 @@
         "execution_lock": null,
         "contains_global_state": false,
         "summary": {
-          "nodes": 11,
-          "nodesets": 18,
-          "explicit_edges": 12,
+          "nodes": 13,
+          "nodesets": 19,
+          "explicit_edges": 14,
           "data_edges": 0,
-          "reported_edges": 12,
+          "reported_edges": 14,
           "contains_global_state": false
         },
         "entry_nodes": [
@@ -10090,8 +10378,8 @@
               "path": "configs/nodesets/task_sync.jsonc"
             },
             "role": {
-              "display_name": "读取同步输入与连续处理事实",
-              "description": "读取 Sidecar 指针与当前派发输入；在 Node 边界从批次状态投影连续 MK 和计数，后续规划不携带批次来源、通知或队列状态。"
+              "display_name": "取得当前聊天工作状态",
+              "description": "按聊天身份接续未保存工作；切聊天不覆盖旧dirty批次，返回后核对正文Swipe和Sidecar来源再恢复，失效状态撤销重算；旧候选和迟到请求不能发布到新目标。"
             },
             "contract_source": "node_type",
             "flow_kind": "data_store",
@@ -10140,8 +10428,8 @@
               "path": "configs/nodesets/task_sync.jsonc"
             },
             "role": {
-              "display_name": "运行 Sidecar 状态存储前置事务",
-              "description": "调用专用 Sidecar 状态节点集：检查身份与唯一聊天指针，读取或迁移 V2 用户文件状态，并规划冲突选择或继续同步。"
+              "display_name": "接续工作状态或首次绑定Sidecar",
+              "description": "有效工作状态存在时直接继续；仅首次加载或恢复时复用Sidecar存储节点集的读取、绑定及迁移分支，不在每个任务重新读取旧文件覆盖dirty状态。"
             },
             "contract_source": "nodeset",
             "flow_kind": "predefined",
@@ -10194,8 +10482,8 @@
               "path": "configs/nodesets/task_sync.jsonc"
             },
             "role": {
-              "display_name": "准备回退起点与单一执行状态",
-              "description": "只定位历史分歧、准备撤销旧效果和有序楼层范围，不预先执行整楼命令。状态持有楼层起点快照、当前累计值、随机偏移、累计日志及真实提交结果；文本进度与已保存日志共同支持恢复，信息不足返回可恢复失败。"
+              "display_name": "准备内存回退与本次消息范围",
+              "description": "沿用历史定位和回退；保存变量/函数起点、scope和随机偏移。防抖flush只提交指定待保存批次；聊天变更先使旧工作失效，不强写旧文本。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -10239,8 +10527,8 @@
               "path": "configs/nodesets/task_sync.jsonc"
             },
             "role": {
-              "display_name": "逐块执行并提交全部目标楼层",
-              "description": "每次应用一个块并保存状态、累计日志及进度；空楼、纯回退、删除清空与最后的进度清理由同一提交路径处理。done 调用跳过，无 done 调用以 ERA_FCALL_NOT_IMPLEMENTED 结束本消息且不调用工具；错误不停止永久服务。"
+              "display_name": "共用循环：内存逐块处理目标范围",
+              "description": "max_iterations=null；处理块不落盘，结束时得到累计消息及状态。函数API应用后返回，不强制刷盘。"
             },
             "contract_source": "system_config",
             "flow_kind": "predefined",
@@ -10302,14 +10590,14 @@
           },
           {
             "id": "finalize_block_step",
-            "type_used": "era.sync.finalize_block_step",
+            "type_used": "era.lifecycle.finalize_block_step",
             "source": {
               "root_id": "era-service",
               "path": "configs/nodesets/task_sync.jsonc"
             },
             "role": {
-              "display_name": "汇总实际提交结果（不再提交）",
-              "description": "仅汇总循环内实际保存结果、失败、来源变化与完成事实，输出既有提交结果信封供呈现及回执处理；不以整楼预计算替换累计值，不写消息或 Sidecar。未完成或失败消息不发布完成呈现。"
+              "display_name": "冻结本批消息与Sidecar保存候选",
+              "description": "清理已完成消息临时进度；固定本次保存边界，done及对应操作记录在同一消息更新中保存。错误只保存仍有效的成功前缀；后到请求属于后续批次。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -10324,14 +10612,104 @@
               {
                 "type": "era.sync.block.step.state.next",
                 "cardinality": "exactly_one",
-                "display_name": "执行后的状态与实际提交结果"
+                "display_name": "era.sync.block.step.state.next"
+              }
+            ],
+            "provides": [
+              {
+                "key": "batch_save_request",
+                "type": "era.tavern.commit.request",
+                "display_name": "batch_save_request"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "persist_batch_state",
+            "type_used": "era.tavern.variables_commit",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/task_sync.jsonc"
+            },
+            "role": {
+              "display_name": "批量保存消息 → Sidecar并确认",
+              "description": "复用原目标校验、消息保存及回读、Sidecar上传及回读；一次提交本批变更，取消每块调用。不变指针不机械重写；保存失败保留待保存数据。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "data_store",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.tavern.commit.request",
+                "cardinality": "exactly_one",
+                "display_name": "同步提交请求"
+              }
+            ],
+            "provides": [
+              {
+                "key": "sync_commit_result",
+                "type": "era.tavern.commit.result",
+                "display_name": "同步提交结果"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "settle_saved_batch",
+            "type_used": "era.lifecycle.settle_saved_batch",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/task_sync.jsonc"
+            },
+            "role": {
+              "display_name": "结算已保存批次与恢复事实",
+              "description": "保存成功仅清除本批待保存内容，保留后到操作；分别维护内存已应用与已保存事实。失败通过原恢复入口报告，不逆转已返回API成功，不永久停服。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "process",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.tavern.commit.result",
+                "cardinality": "exactly_one",
+                "display_name": "era.tavern.commit.result"
               }
             ],
             "provides": [
               {
                 "key": "completed_sync_result",
                 "type": "era.tavern.commit.result",
-                "display_name": "已发生提交的汇总结果"
+                "display_name": "completed_sync_result"
               }
             ],
             "join_policy": "safe_any",
@@ -10631,16 +11009,6 @@
             ]
           },
           {
-            "from": "finalize_block_step",
-            "to": "present_finalized_floor",
-            "when": "",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
             "from": "present_finalized_floor",
             "to": "build_sync_notification",
             "when": "",
@@ -10673,6 +11041,36 @@
           {
             "from": "sidecar_binding_applied_result",
             "to": "end",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "finalize_block_step",
+            "to": "persist_batch_state",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "persist_batch_state",
+            "to": "settle_saved_batch",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "settle_saved_batch",
+            "to": "present_finalized_floor",
             "when": "",
             "roles": [
               "mainline",
@@ -10737,7 +11135,7 @@
         "contains_global_state": false,
         "summary": {
           "nodes": 4,
-          "nodesets": 18,
+          "nodesets": 19,
           "explicit_edges": 3,
           "data_edges": 0,
           "reported_edges": 3,
@@ -11129,6 +11527,215 @@
         }
       ]
     },
+    "era.agent.candidate_finish": {
+      "display_name": "候选循环 finish",
+      "description": "候选纠错在当前工作流内继续，成功才进入阶段交接。",
+      "category": "Agent候选",
+      "version": "1.0.0",
+      "flow_kind": "process",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.agent.candidate.state",
+            "cardinality": "exactly_one",
+            "display_name": "era.agent.candidate.state"
+          },
+          {
+            "type": "era.agent.generation.outcome",
+            "cardinality": "exactly_one",
+            "display_name": "era.agent.generation.outcome"
+          }
+        ],
+        "provides": [
+          {
+            "key": "candidate_state_after",
+            "type": "era.agent.candidate.state.next",
+            "display_name": "candidate_state_after"
+          },
+          {
+            "key": "candidate_done",
+            "type": "era.agent.candidate.done",
+            "display_name": "candidate_done"
+          },
+          {
+            "key": "candidate_outcome",
+            "type": "era.agent.candidate.outcome",
+            "display_name": "candidate_outcome"
+          }
+        ],
+        "input_semantics": {
+          "era.agent.candidate.state": [
+            "era.agent.candidate.state"
+          ],
+          "era.agent.generation.outcome": [
+            "era.agent.generation.outcome"
+          ]
+        },
+        "output_semantics": {
+          "candidate_state_after": [
+            "era.agent.candidate.state.next"
+          ],
+          "candidate_done": [
+            "era.agent.candidate.done"
+          ],
+          "candidate_outcome": [
+            "era.agent.candidate.outcome"
+          ]
+        },
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser",
+            "node"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/agent/candidate_finish.ts",
+            "export": "run"
+          },
+          "completion": "immediate"
+        }
+      ]
+    },
+    "era.agent.candidate_seed": {
+      "display_name": "候选循环 seed",
+      "description": "候选纠错在当前工作流内继续，成功才进入阶段交接。",
+      "category": "Agent候选",
+      "version": "1.0.0",
+      "flow_kind": "process",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.agent.generation.request",
+            "cardinality": "exactly_one",
+            "display_name": "era.agent.generation.request"
+          },
+          {
+            "type": "era.step.request.routed",
+            "cardinality": "exactly_one",
+            "display_name": "era.step.request.routed"
+          },
+          {
+            "type": "era.batch.execution.state",
+            "cardinality": "exactly_one",
+            "display_name": "era.batch.execution.state"
+          }
+        ],
+        "provides": [
+          {
+            "key": "candidate_state",
+            "type": "era.agent.candidate.state",
+            "display_name": "candidate_state"
+          }
+        ],
+        "input_semantics": {
+          "era.agent.generation.request": [
+            "era.agent.generation.request"
+          ],
+          "era.step.request.routed": [
+            "era.step.request.routed"
+          ],
+          "era.batch.execution.state": [
+            "era.batch.execution.state"
+          ]
+        },
+        "output_semantics": {
+          "candidate_state": [
+            "era.agent.candidate.state"
+          ]
+        },
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser",
+            "node"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/agent/candidate_seed.ts",
+            "export": "run"
+          },
+          "completion": "immediate"
+        }
+      ]
+    },
+    "era.agent.candidate_unpack": {
+      "display_name": "候选循环 unpack",
+      "description": "候选纠错在当前工作流内继续，成功才进入阶段交接。",
+      "category": "Agent候选",
+      "version": "1.0.0",
+      "flow_kind": "process",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.agent.candidate.state",
+            "cardinality": "exactly_one",
+            "display_name": "era.agent.candidate.state"
+          }
+        ],
+        "provides": [
+          {
+            "key": "generation_request",
+            "type": "era.agent.generation.request",
+            "display_name": "generation_request"
+          },
+          {
+            "key": "routed_step",
+            "type": "era.step.request.routed",
+            "display_name": "routed_step"
+          },
+          {
+            "key": "execution_state",
+            "type": "era.batch.execution.state",
+            "display_name": "execution_state"
+          }
+        ],
+        "input_semantics": {
+          "era.agent.candidate.state": [
+            "era.agent.candidate.state"
+          ]
+        },
+        "output_semantics": {
+          "generation_request": [
+            "era.agent.generation.request"
+          ],
+          "routed_step": [
+            "era.step.request.routed"
+          ],
+          "execution_state": [
+            "era.batch.execution.state"
+          ]
+        },
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser",
+            "node"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/agent/candidate_unpack.ts",
+            "export": "run"
+          },
+          "completion": "immediate"
+        }
+      ]
+    },
     "era.agent.classify_generation_event": {
       "display_name": "判定事件与阶段",
       "description": "依据事件、功能开关和现有会话判定规划、正文完成、重试、取消或原任务委托；不执行宿主操作。",
@@ -11192,18 +11799,34 @@
             "type": "era.agent.generation.request",
             "cardinality": "exactly_one",
             "display_name": "阶段请求"
+          },
+          {
+            "type": "era.step.request.routed",
+            "cardinality": "exactly_one",
+            "display_name": "实际派发步骤"
+          },
+          {
+            "type": "era.batch.execution.state",
+            "cardinality": "exactly_one",
+            "display_name": "当前执行状态"
           }
         ],
         "provides": [
           {
             "key": "generation_outcome",
-            "type": "era.agent.generation.outcome",
+            "type": "era.agent.generation.raw",
             "display_name": "阶段执行结果"
           }
         ],
         "input_semantics": {
           "era.agent.generation.request": [
             "输入：阶段请求"
+          ],
+          "era.step.request.routed": [
+            "实际派发步骤"
+          ],
+          "era.batch.execution.state": [
+            "当前执行状态"
           ]
         },
         "output_semantics": {
@@ -11517,7 +12140,7 @@
       "contract": {
         "requires": [
           {
-            "type": "era.agent.generation.outcome",
+            "type": "era.agent.candidate.outcome",
             "cardinality": "exactly_one",
             "display_name": "阶段执行结果"
           }
@@ -11530,8 +12153,8 @@
           }
         ],
         "input_semantics": {
-          "era.agent.generation.outcome": [
-            "成功阶段结果或直接结果。"
+          "era.agent.candidate.outcome": [
+            "候选循环最终结果。"
           ]
         },
         "output_semantics": {
@@ -11744,65 +12367,6 @@
         }
       ]
     },
-    "era.api.build_committed_receipt": {
-      "display_name": "返回 committed receipt",
-      "description": "同步成功后结算唯一 Promise receipt。",
-      "category": "公共 Facade",
-      "version": "1.0.0",
-      "flow_kind": "process",
-      "contract": {
-        "requires": [
-          {
-            "type": "era.task.result",
-            "cardinality": "exactly_one",
-            "display_name": "era.task.result"
-          },
-          {
-            "type": "era.api.commit.sync_context",
-            "cardinality": "exactly_one",
-            "display_name": "era.api.commit.sync_context"
-          }
-        ],
-        "provides": [
-          {
-            "key": "facade_commit_committed_result",
-            "type": "era.api.commit.result",
-            "display_name": "facade_commit_result"
-          }
-        ],
-        "input_semantics": {
-          "era.task.result": [
-            "输入：era.task.result。"
-          ],
-          "era.api.commit.sync_context": [
-            "输入：era.api.commit.sync_context。"
-          ]
-        },
-        "output_semantics": {
-          "facade_commit_committed_result": [
-            "输出：facade_commit_result。"
-          ]
-        },
-        "params_schema": {},
-        "params_defaults": {},
-        "examples": []
-      },
-      "implementations": [
-        {
-          "language": "typescript",
-          "targets": [
-            "browser",
-            "node"
-          ],
-          "source": {
-            "kind": "file",
-            "ref": "nodes/api/facade_committed_receipt.ts",
-            "export": "run"
-          },
-          "completion": "immediate"
-        }
-      ]
-    },
     "era.api.build_facade_sync_failure": {
       "display_name": "构造同步输入失败",
       "description": "非法 sync 模式不触碰宿主。",
@@ -11848,57 +12412,6 @@
           "source": {
             "kind": "file",
             "ref": "nodes/api/facade_sync_failure.ts",
-            "export": "run"
-          },
-          "completion": "immediate"
-        }
-      ]
-    },
-    "era.api.build_no_refresh_append": {
-      "display_name": "普通 API 只构造目标末尾追加",
-      "description": "保留公共操作和 scope，删除未接通的函数位置插入分支；保存生成文本所依赖的原目标版本，操作记录仍为普通 era_tx。",
-      "category": "公共 Facade",
-      "version": "1.0.0",
-      "flow_kind": "process",
-      "contract": {
-        "requires": [
-          {
-            "type": "era.api.commit.target",
-            "cardinality": "exactly_one",
-            "display_name": "era.api.commit.target"
-          }
-        ],
-        "provides": [
-          {
-            "key": "facade_commit_append_request",
-            "type": "era.api.commit.append.request",
-            "display_name": "facade_commit_append_request"
-          }
-        ],
-        "input_semantics": {
-          "era.api.commit.target": [
-            "era.api.commit.target"
-          ]
-        },
-        "output_semantics": {
-          "facade_commit_append_request": [
-            "facade_commit_append_request"
-          ]
-        },
-        "params_schema": {},
-        "params_defaults": {},
-        "examples": []
-      },
-      "implementations": [
-        {
-          "language": "typescript",
-          "targets": [
-            "browser",
-            "node"
-          ],
-          "source": {
-            "kind": "file",
-            "ref": "nodes/api/facade_build_append.ts",
             "export": "run"
           },
           "completion": "immediate"
@@ -12004,56 +12517,6 @@
             "export": "run"
           },
           "completion": "immediate"
-        }
-      ]
-    },
-    "era.api.commit_facade_message": {
-      "display_name": "核对原目标后写入（失败可恢复）",
-      "description": "重读允许吸收无关消息新增，但必须保留并核对生成内容对应的原目标正文/Swipe及身份；目标已改变则失败，不刷新依据后覆盖。写入前及写入异常结算失败，不致命停止服务。",
-      "category": "公共 Facade",
-      "version": "1.0.0",
-      "flow_kind": "io",
-      "contract": {
-        "requires": [
-          {
-            "type": "era.api.commit.rechecked",
-            "cardinality": "exactly_one",
-            "display_name": "era.api.commit.rechecked"
-          }
-        ],
-        "provides": [
-          {
-            "key": "facade_commit_append_result",
-            "type": "era.api.commit.append.result",
-            "display_name": "facade_commit_append_result"
-          }
-        ],
-        "input_semantics": {
-          "era.api.commit.rechecked": [
-            "era.api.commit.rechecked"
-          ]
-        },
-        "output_semantics": {
-          "facade_commit_append_result": [
-            "facade_commit_append_result"
-          ]
-        },
-        "params_schema": {},
-        "params_defaults": {},
-        "examples": []
-      },
-      "implementations": [
-        {
-          "language": "typescript",
-          "targets": [
-            "browser"
-          ],
-          "source": {
-            "kind": "file",
-            "ref": "nodes/api/facade_commit_append.ts",
-            "export": "run"
-          },
-          "completion": "suspend"
         }
       ]
     },
@@ -12293,73 +12756,6 @@
         }
       ]
     },
-    "era.api.prepare_facade_sync": {
-      "display_name": "构造即时同步步骤",
-      "description": "把回读消息接入共享 Sidecar 同步。",
-      "category": "公共 Facade",
-      "version": "1.0.0",
-      "flow_kind": "process",
-      "contract": {
-        "requires": [
-          {
-            "type": "era.api.commit.verified",
-            "cardinality": "exactly_one",
-            "display_name": "era.api.commit.verified"
-          }
-        ],
-        "provides": [
-          {
-            "key": "commit_sync_step",
-            "type": "era.step.request.routed",
-            "display_name": "commit_sync_step"
-          },
-          {
-            "key": "facade_commit_sync_context",
-            "type": "era.api.commit.sync_context",
-            "display_name": "facade_commit_sync_context"
-          },
-          {
-            "key": "commit_execution_state",
-            "type": "era.batch.execution.state",
-            "display_name": "commit_execution_state"
-          }
-        ],
-        "input_semantics": {
-          "era.api.commit.verified": [
-            "输入：era.api.commit.verified。"
-          ]
-        },
-        "output_semantics": {
-          "commit_sync_step": [
-            "输出：commit_sync_step。"
-          ],
-          "facade_commit_sync_context": [
-            "输出：facade_commit_sync_context。"
-          ],
-          "commit_execution_state": [
-            "将 commit 捕获的批次执行状态显式透传给共享同步 Nodeset。"
-          ]
-        },
-        "params_schema": {},
-        "params_defaults": {},
-        "examples": []
-      },
-      "implementations": [
-        {
-          "language": "typescript",
-          "targets": [
-            "browser",
-            "node"
-          ],
-          "source": {
-            "kind": "file",
-            "ref": "nodes/api/facade_prepare_sync.ts",
-            "export": "run"
-          },
-          "completion": "immediate"
-        }
-      ]
-    },
     "era.api.read_target_message": {
       "display_name": "读取最新 AI 消息",
       "description": "写入前重新读取真实目标。",
@@ -12465,72 +12861,6 @@
             "export": "run"
           },
           "completion": "suspend"
-        }
-      ]
-    },
-    "era.api.recheck_window": {
-      "display_name": "写入前复核窗口",
-      "description": "在真正写入前复核身份与生命周期 token。",
-      "category": "公共 Facade",
-      "version": "1.0.0",
-      "flow_kind": "decision",
-      "contract": {
-        "requires": [
-          {
-            "type": "era.api.commit.append.request",
-            "cardinality": "exactly_one",
-            "display_name": "era.api.commit.append.request"
-          }
-        ],
-        "provides": [
-          {
-            "key": "window_recheck_route",
-            "type": "era.api.window.recheck.route",
-            "display_name": "window_recheck_route"
-          },
-          {
-            "key": "facade_commit_rechecked",
-            "type": "era.api.commit.rechecked",
-            "display_name": "facade_commit_rechecked"
-          },
-          {
-            "key": "facade_commit_recheck_failure",
-            "type": "era.api.commit.failure_context",
-            "display_name": "facade_commit_failure_context"
-          }
-        ],
-        "input_semantics": {
-          "era.api.commit.append.request": [
-            "输入：era.api.commit.append.request。"
-          ]
-        },
-        "output_semantics": {
-          "window_recheck_route": [
-            "输出：window_recheck_route。"
-          ],
-          "facade_commit_rechecked": [
-            "输出：facade_commit_rechecked。"
-          ],
-          "facade_commit_recheck_failure": [
-            "输出：facade_commit_failure_context。"
-          ]
-        },
-        "params_schema": {},
-        "params_defaults": {},
-        "examples": []
-      },
-      "implementations": [
-        {
-          "language": "typescript",
-          "targets": [
-            "browser"
-          ],
-          "source": {
-            "kind": "file",
-            "ref": "nodes/api/facade_recheck_window.ts",
-            "export": "run"
-          },
-          "completion": "immediate"
         }
       ]
     },
@@ -12673,72 +13003,6 @@
             "export": "run"
           },
           "completion": "immediate"
-        }
-      ]
-    },
-    "era.api.verify_facade_message": {
-      "display_name": "回读真实保存结果（失败可恢复）",
-      "description": "回读确认普通事务的真实保存，读回异常返回失败收据并保留恢复入口；不把失败或不确定保存报告成成功。",
-      "category": "公共 Facade",
-      "version": "1.0.0",
-      "flow_kind": "io",
-      "contract": {
-        "requires": [
-          {
-            "type": "era.api.commit.append.result",
-            "cardinality": "exactly_one",
-            "display_name": "era.api.commit.append.result"
-          }
-        ],
-        "provides": [
-          {
-            "key": "commit_readback_route",
-            "type": "era.api.commit.readback.route",
-            "display_name": "commit_readback_route"
-          },
-          {
-            "key": "facade_commit_verified",
-            "type": "era.api.commit.verified",
-            "display_name": "facade_commit_verified"
-          },
-          {
-            "key": "facade_commit_readback_failure",
-            "type": "era.api.commit.failure_context",
-            "display_name": "facade_commit_failure_context"
-          }
-        ],
-        "input_semantics": {
-          "era.api.commit.append.result": [
-            "era.api.commit.append.result"
-          ]
-        },
-        "output_semantics": {
-          "commit_readback_route": [
-            "commit_readback_route"
-          ],
-          "facade_commit_verified": [
-            "facade_commit_verified"
-          ],
-          "facade_commit_readback_failure": [
-            "facade_commit_failure_context"
-          ]
-        },
-        "params_schema": {},
-        "params_defaults": {},
-        "examples": []
-      },
-      "implementations": [
-        {
-          "language": "typescript",
-          "targets": [
-            "browser"
-          ],
-          "source": {
-            "kind": "file",
-            "ref": "nodes/api/facade_verify_commit.ts",
-            "export": "run"
-          },
-          "completion": "suspend"
         }
       ]
     },
@@ -14172,6 +14436,371 @@
         }
       ]
     },
+    "era.lifecycle.finalize_block_step": {
+      "display_name": "冻结本批消息与Sidecar保存候选",
+      "description": "清理已完成消息临时进度；固定本次保存边界，done及对应操作记录在同一消息更新中保存。错误只保存仍有效的成功前缀；后到请求属于后续批次。",
+      "category": "内存生命周期",
+      "version": "1.0.0",
+      "flow_kind": "process",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.sync.block.step.state.next",
+            "cardinality": "exactly_one",
+            "display_name": "era.sync.block.step.state.next"
+          }
+        ],
+        "provides": [
+          {
+            "key": "batch_save_request",
+            "type": "era.tavern.commit.request",
+            "display_name": "batch_save_request"
+          }
+        ],
+        "input_semantics": {
+          "era.sync.block.step.state.next": [
+            "era.sync.block.step.state.next"
+          ]
+        },
+        "output_semantics": {
+          "batch_save_request": [
+            "batch_save_request"
+          ]
+        },
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser",
+            "node"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/sync/finalize_block_step.ts",
+            "export": "finalize"
+          },
+          "completion": "immediate"
+        }
+      ]
+    },
+    "era.lifecycle.finish_stage_blocks": {
+      "display_name": "回送已应用阶段状态及草稿",
+      "description": "将变量/函数、普通API记录及done传给原阶段交接；后续阶段读内存，完整轮次才保存；取消保留原草稿边界。",
+      "category": "内存生命周期",
+      "version": "1.0.0",
+      "flow_kind": "process",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.sync.block.step.state.next",
+            "cardinality": "exactly_one",
+            "display_name": "era.sync.block.step.state.next"
+          }
+        ],
+        "provides": [
+          {
+            "key": "applied_generation_outcome",
+            "type": "era.agent.generation.outcome",
+            "display_name": "applied_generation_outcome"
+          }
+        ],
+        "input_semantics": {
+          "era.sync.block.step.state.next": [
+            "era.sync.block.step.state.next"
+          ]
+        },
+        "output_semantics": {
+          "applied_generation_outcome": [
+            "applied_generation_outcome"
+          ]
+        },
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser",
+            "node"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/agent/finish_stage_blocks.ts",
+            "export": "run"
+          },
+          "completion": "immediate"
+        }
+      ]
+    },
+    "era.lifecycle.prepare_api_blocks": {
+      "display_name": "构造待应用的普通era_tx及工作范围",
+      "description": "复用普通事务构造；调用处下方或目标末尾插入待保存消息。当前函数API就地应用，旧楼外部写入按原回退和后续重算规则建立工作范围。应用失败保持真实回执。",
+      "category": "内存生命周期",
+      "version": "1.0.0",
+      "flow_kind": "process",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.api.commit.target",
+            "cardinality": "exactly_one",
+            "display_name": "era.api.commit.target"
+          }
+        ],
+        "provides": [
+          {
+            "key": "block_step_state",
+            "type": "era.sync.block.step.state",
+            "display_name": "block_step_state"
+          }
+        ],
+        "input_semantics": {
+          "era.api.commit.target": [
+            "era.api.commit.target"
+          ]
+        },
+        "output_semantics": {
+          "block_step_state": [
+            "block_step_state"
+          ]
+        },
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser",
+            "node"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/api/prepare_api_blocks.ts",
+            "export": "run"
+          },
+          "completion": "immediate"
+        }
+      ]
+    },
+    "era.lifecycle.prepare_stage_blocks": {
+      "display_name": "将阶段输出适配到共用块状态",
+      "description": "规划无正式楼时绑定草稿；正文与结算保持原文顺序，消息起点快照独立保存；报告引用不当可执行调用。",
+      "category": "内存生命周期",
+      "version": "1.0.0",
+      "flow_kind": "process",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.agent.generation.raw",
+            "cardinality": "exactly_one",
+            "display_name": "era.agent.generation.raw"
+          }
+        ],
+        "provides": [
+          {
+            "key": "block_step_state",
+            "type": "era.sync.block.step.state",
+            "display_name": "block_step_state"
+          }
+        ],
+        "input_semantics": {
+          "era.agent.generation.raw": [
+            "era.agent.generation.raw"
+          ]
+        },
+        "output_semantics": {
+          "block_step_state": [
+            "block_step_state"
+          ]
+        },
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser",
+            "node"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/agent/prepare_stage_blocks.ts",
+            "export": "run"
+          },
+          "completion": "immediate"
+        }
+      ]
+    },
+    "era.lifecycle.publish_block_application": {
+      "display_name": "发布内存应用结果与推进位置",
+      "description": "把压缩后的工作状态更新到同一执行上下文，保留消息起点快照/随机偏移；同步更新API可读投影，不能覆盖后到操作。仅应用完成，不发布整批保存完成或提前ready。",
+      "category": "内存生命周期",
+      "version": "1.0.0",
+      "flow_kind": "process",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.command_compaction.result",
+            "cardinality": "exactly_one",
+            "display_name": "era.command_compaction.result"
+          }
+        ],
+        "provides": [
+          {
+            "key": "block_step_state_after",
+            "type": "era.sync.block.step.state.next",
+            "display_name": "block_step_state_after"
+          },
+          {
+            "key": "block_step_done",
+            "type": "era.step.done",
+            "display_name": "block_step_done"
+          }
+        ],
+        "input_semantics": {
+          "era.command_compaction.result": [
+            "era.command_compaction.result"
+          ]
+        },
+        "output_semantics": {
+          "block_step_state_after": [
+            "block_step_state_after"
+          ],
+          "block_step_done": [
+            "block_step_done"
+          ]
+        },
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser",
+            "node"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/sync/publish_block_application.ts",
+            "export": "run"
+          },
+          "completion": "immediate"
+        }
+      ]
+    },
+    "era.lifecycle.return_applied_receipt": {
+      "display_name": "返回内存应用回执并登记保存时机",
+      "description": "工作状态、日志、scope和待保存消息一致后返回；不是入队即成功。当前函数归属父批次；独立API防抖加最长未保存时间，时间到通过既有事件端口请求批次保存。多次不await按序，多次await不强制刷盘。",
+      "category": "内存生命周期",
+      "version": "1.0.0",
+      "flow_kind": "process",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.sync.block.step.state.next",
+            "cardinality": "exactly_one",
+            "display_name": "era.sync.block.step.state.next"
+          }
+        ],
+        "provides": [
+          {
+            "key": "facade_commit_result",
+            "type": "era.api.commit.result",
+            "display_name": "facade_commit_result"
+          }
+        ],
+        "input_semantics": {
+          "era.sync.block.step.state.next": [
+            "era.sync.block.step.state.next"
+          ]
+        },
+        "output_semantics": {
+          "facade_commit_result": [
+            "facade_commit_result"
+          ]
+        },
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser",
+            "node"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/api/return_applied_receipt.ts",
+            "export": "run"
+          },
+          "completion": "immediate"
+        }
+      ]
+    },
+    "era.lifecycle.settle_saved_batch": {
+      "display_name": "结算已保存批次与恢复事实",
+      "description": "保存成功仅清除本批待保存内容，保留后到操作；分别维护内存已应用与已保存事实。失败通过原恢复入口报告，不逆转已返回API成功，不永久停服。",
+      "category": "内存生命周期",
+      "version": "1.0.0",
+      "flow_kind": "process",
+      "contract": {
+        "requires": [
+          {
+            "type": "era.tavern.commit.result",
+            "cardinality": "exactly_one",
+            "display_name": "era.tavern.commit.result"
+          }
+        ],
+        "provides": [
+          {
+            "key": "completed_sync_result",
+            "type": "era.tavern.commit.result",
+            "display_name": "completed_sync_result"
+          }
+        ],
+        "input_semantics": {
+          "era.tavern.commit.result": [
+            "era.tavern.commit.result"
+          ]
+        },
+        "output_semantics": {
+          "completed_sync_result": [
+            "completed_sync_result"
+          ]
+        },
+        "params_schema": {},
+        "params_defaults": {},
+        "examples": []
+      },
+      "implementations": [
+        {
+          "language": "typescript",
+          "targets": [
+            "browser",
+            "node"
+          ],
+          "source": {
+            "kind": "file",
+            "ref": "nodes/sync/settle_saved_batch.ts",
+            "export": "run"
+          },
+          "completion": "immediate"
+        }
+      ]
+    },
     "era.mk.build_commit": {
       "display_name": "构造消息密钥提交请求",
       "description": "把已路由候选转换为明确的消息文本更新与完整 ERAMetaData 更新请求，不执行宿主操作。",
@@ -15557,7 +16186,7 @@
     },
     "era.sidecar_binding.inspect_current": {
       "display_name": "检查当前 Sidecar 绑定",
-      "description": "围绕原派发身份和指针读取 Sidecar 事实；读取失败进入原同步失败结算。",
+      "description": "核对派发身份及指针；中断候选恢复起点与有效阶段会话，再提供Sidecar事实。",
       "category": "Sidecar 绑定",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -15711,56 +16340,6 @@
         }
       ]
     },
-    "era.sync.build_block_commit": {
-      "display_name": "构造唯一提交请求",
-      "description": "将压缩后的单块或楼层维护工作项构造成既有保存请求；依据只吸收本任务已确认的自身写入，不能用新目标依据掩盖旧文本。错误/无需写入使用无提交信封；最后的进度删除和 cursor 清除在此提交路径处理。",
-      "category": "同步规划",
-      "version": "1.0.0",
-      "flow_kind": "process",
-      "contract": {
-        "requires": [
-          {
-            "type": "era.command_compaction.result",
-            "cardinality": "exactly_one",
-            "display_name": "已处理压缩的单块工作项"
-          }
-        ],
-        "provides": [
-          {
-            "key": "block_commit_request",
-            "type": "era.tavern.commit.request",
-            "display_name": "逐块提交请求"
-          }
-        ],
-        "input_semantics": {
-          "era.command_compaction.result": [
-            "已处理压缩的单块工作项"
-          ]
-        },
-        "output_semantics": {
-          "block_commit_request": [
-            "逐块提交请求"
-          ]
-        },
-        "params_schema": {},
-        "params_defaults": {},
-        "examples": []
-      },
-      "implementations": [
-        {
-          "language": "typescript",
-          "targets": [
-            "browser"
-          ],
-          "source": {
-            "kind": "file",
-            "ref": "nodes/sync/build_block_commit.ts",
-            "export": "run"
-          },
-          "completion": "immediate"
-        }
-      ]
-    },
     "era.sync.build_notification": {
       "display_name": "结算提交结果与批次更新",
       "description": "由 sync_result_policy 根据实际提交与来源结果生成来源回执、诊断和连续处理更新；批次合并仍在原 merge_task_result。",
@@ -15814,7 +16393,7 @@
     },
     "era.sync.drive_message_blocks": {
       "display_name": "应用下一块或准备楼层维护",
-      "description": "复用纯块应用语义，独立携带消息起点变量/函数及连续随机偏移；done 仅按标签判断，旧 EraFCallTx 只作普通记录容器。无 done 调用返回 ERA_FCALL_NOT_IMPLEMENTED，不改 done，不处理后续块。准备楼层完成清进度、纯回退和空聊天所需的维护写入。",
+      "description": "复用纯块应用语义，独立携带消息起点变量/函数及连续随机偏移；done 仅按标签判断，旧 EraFCallTx 只作普通记录容器。未执行调用通过原生工具通道运行，其 API 交回同一块循环应用；成功或作者异常后标 done，服务应用失败时拒绝等待请求并释放调用。准备楼层完成清进度、纯回退和空聊天所需的维护写入。",
       "category": "同步规划",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -15859,116 +16438,7 @@
             "ref": "nodes/sync/drive_message_blocks.ts",
             "export": "run"
           },
-          "completion": "immediate"
-        }
-      ]
-    },
-    "era.sync.finalize_block_step": {
-      "display_name": "汇总实际提交结果（不再提交）",
-      "description": "仅汇总循环内实际保存结果、失败、来源变化与完成事实，输出既有提交结果信封供呈现及回执处理；不以整楼预计算替换累计值，不写消息或 Sidecar。未完成或失败消息不发布完成呈现。",
-      "category": "同步规划",
-      "version": "1.0.0",
-      "flow_kind": "process",
-      "contract": {
-        "requires": [
-          {
-            "type": "era.sync.block.step.state.next",
-            "cardinality": "exactly_one",
-            "display_name": "执行后的状态与实际提交结果"
-          }
-        ],
-        "provides": [
-          {
-            "key": "completed_sync_result",
-            "type": "era.tavern.commit.result",
-            "display_name": "已发生提交的汇总结果"
-          }
-        ],
-        "input_semantics": {
-          "era.sync.block.step.state.next": [
-            "执行后的状态与实际提交结果"
-          ]
-        },
-        "output_semantics": {
-          "completed_sync_result": [
-            "已发生提交的汇总结果"
-          ]
-        },
-        "params_schema": {},
-        "params_defaults": {},
-        "examples": []
-      },
-      "implementations": [
-        {
-          "language": "typescript",
-          "targets": [
-            "browser",
-            "node"
-          ],
-          "source": {
-            "kind": "file",
-            "ref": "nodes/sync/finalize_block_step.ts",
-            "export": "finalize"
-          },
-          "completion": "immediate"
-        }
-      ]
-    },
-    "era.sync.fold_block_commit": {
-      "display_name": "折回实际保存结果与循环终止状态",
-      "description": "保存成功后推进状态、日志及进度；提交失败保留已成功块并返回任务级失败，来源变化作废原目标。最后完成清进度后才能标楼层完成；继续下一受影响楼层或结束。循环终止事实必须来自提交之后。",
-      "category": "同步规划",
-      "version": "1.0.0",
-      "flow_kind": "process",
-      "contract": {
-        "requires": [
-          {
-            "type": "era.tavern.commit.result",
-            "cardinality": "exactly_one",
-            "display_name": "逐块提交结果"
-          }
-        ],
-        "provides": [
-          {
-            "key": "folded_block_step_state",
-            "type": "era.sync.block.step.state.next",
-            "display_name": "实际保存后的执行状态"
-          },
-          {
-            "key": "block_step_done",
-            "type": "era.step.done",
-            "display_name": "保存后是否结束本次执行"
-          }
-        ],
-        "input_semantics": {
-          "era.tavern.commit.result": [
-            "逐块提交结果"
-          ]
-        },
-        "output_semantics": {
-          "folded_block_step_state": [
-            "实际保存后的执行状态"
-          ],
-          "block_step_done": [
-            "保存后是否结束本次执行"
-          ]
-        },
-        "params_schema": {},
-        "params_defaults": {},
-        "examples": []
-      },
-      "implementations": [
-        {
-          "language": "typescript",
-          "targets": [
-            "browser"
-          ],
-          "source": {
-            "kind": "file",
-            "ref": "nodes/sync/fold_block_commit.ts",
-            "export": "run"
-          },
-          "completion": "immediate"
+          "completion": "suspend"
         }
       ]
     },
@@ -17238,6 +17708,91 @@
           }
         }
       },
+      "era.agent.candidate.done": {
+        "kind": "data_schema",
+        "type_key": "era.agent.candidate.done",
+        "representation": "json",
+        "display_name": "era.agent.candidate.done",
+        "description": "",
+        "schema": {
+          "type": "boolean",
+          "$schema": "https://json-schema.org/draft/2020-12/schema"
+        }
+      },
+      "era.agent.candidate.outcome": {
+        "kind": "data_schema",
+        "type_key": "era.agent.candidate.outcome",
+        "representation": "json",
+        "display_name": "候选循环最终结果",
+        "description": "",
+        "schema": {
+          "type": "object",
+          "additionalProperties": true,
+          "$schema": "https://json-schema.org/draft/2020-12/schema"
+        }
+      },
+      "era.agent.candidate.state": {
+        "kind": "data_schema",
+        "type_key": "era.agent.candidate.state",
+        "representation": "json",
+        "display_name": "era.agent.candidate.state",
+        "description": "",
+        "schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "request",
+            "step",
+            "executionState"
+          ],
+          "properties": {
+            "request": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "step": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "executionState": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "$schema": "https://json-schema.org/draft/2020-12/schema"
+        }
+      },
+      "era.agent.candidate.state.next": {
+        "kind": "data_schema",
+        "type_key": "era.agent.candidate.state.next",
+        "representation": "json",
+        "display_name": "era.agent.candidate.state.next",
+        "description": "",
+        "schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "request",
+            "step",
+            "executionState"
+          ],
+          "properties": {
+            "request": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "step": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "executionState": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "$schema": "https://json-schema.org/draft/2020-12/schema"
+        }
+      },
       "era.agent.connection.state": {
         "kind": "data_schema",
         "type_key": "era.agent.connection.state",
@@ -17425,6 +17980,18 @@
         "type_key": "era.agent.generation.outcome",
         "representation": "json",
         "display_name": "生成阶段执行结果",
+        "description": "",
+        "schema": {
+          "type": "object",
+          "additionalProperties": true,
+          "$schema": "https://json-schema.org/draft/2020-12/schema"
+        }
+      },
+      "era.agent.generation.raw": {
+        "kind": "data_schema",
+        "type_key": "era.agent.generation.raw",
+        "representation": "json",
+        "display_name": "阶段尚未应用的生成输出",
         "description": "",
         "schema": {
           "type": "object",
@@ -18242,30 +18809,6 @@
           "$schema": "https://json-schema.org/draft/2020-12/schema"
         }
       },
-      "era.api.commit.append.request": {
-        "kind": "data_schema",
-        "type_key": "era.api.commit.append.request",
-        "representation": "json",
-        "display_name": "无刷新事务追加请求",
-        "description": "携带 refresh none 的单次消息更新。",
-        "schema": {
-          "type": "object",
-          "additionalProperties": true,
-          "$schema": "https://json-schema.org/draft/2020-12/schema"
-        }
-      },
-      "era.api.commit.append.result": {
-        "kind": "data_schema",
-        "type_key": "era.api.commit.append.result",
-        "representation": "json",
-        "display_name": "即时 Commit 消息结果",
-        "description": "Tavern 对单次 era_tx 写入的确认。",
-        "schema": {
-          "type": "object",
-          "additionalProperties": true,
-          "$schema": "https://json-schema.org/draft/2020-12/schema"
-        }
-      },
       "era.api.commit.failure_context": {
         "kind": "data_schema",
         "type_key": "era.api.commit.failure_context",
@@ -18290,51 +18833,12 @@
           "$schema": "https://json-schema.org/draft/2020-12/schema"
         }
       },
-      "era.api.commit.readback.route": {
-        "kind": "data_schema",
-        "type_key": "era.api.commit.readback.route",
-        "representation": "json",
-        "display_name": "Commit 回读路由",
-        "description": "选择 sync 或 failed。",
-        "schema": {
-          "type": "string",
-          "enum": [
-            "sync",
-            "failed"
-          ],
-          "$schema": "https://json-schema.org/draft/2020-12/schema"
-        }
-      },
-      "era.api.commit.rechecked": {
-        "kind": "data_schema",
-        "type_key": "era.api.commit.rechecked",
-        "representation": "json",
-        "display_name": "已复核即时 Commit",
-        "description": "写入前身份与窗口仍匹配的追加请求。",
-        "schema": {
-          "type": "object",
-          "additionalProperties": true,
-          "$schema": "https://json-schema.org/draft/2020-12/schema"
-        }
-      },
       "era.api.commit.result": {
         "kind": "data_schema",
         "type_key": "era.api.commit.result",
         "representation": "json",
         "display_name": "即时 Commit 分支结果",
         "description": "互斥的 committed、skipped 或 failed 结果。",
-        "schema": {
-          "type": "object",
-          "additionalProperties": true,
-          "$schema": "https://json-schema.org/draft/2020-12/schema"
-        }
-      },
-      "era.api.commit.sync_context": {
-        "kind": "data_schema",
-        "type_key": "era.api.commit.sync_context",
-        "representation": "json",
-        "display_name": "即时 Commit 同步上下文",
-        "description": "用于将共享同步结果适配为本次 receipt。",
         "schema": {
           "type": "object",
           "additionalProperties": true,
@@ -18371,18 +18875,6 @@
         "representation": "json",
         "display_name": "已校验即时 Commit",
         "description": "携带 scope 与有序操作的已准入或 skipped 上下文。",
-        "schema": {
-          "type": "object",
-          "additionalProperties": true,
-          "$schema": "https://json-schema.org/draft/2020-12/schema"
-        }
-      },
-      "era.api.commit.verified": {
-        "kind": "data_schema",
-        "type_key": "era.api.commit.verified",
-        "representation": "json",
-        "display_name": "已回读即时 Commit",
-        "description": "消息文本回读匹配且可进入共享同步。",
         "schema": {
           "type": "object",
           "additionalProperties": true,
@@ -37787,7 +38279,7 @@
         "type_key": "era.sync.block.step.pending",
         "representation": "json",
         "display_name": "ERA·同步·块步进状态·待提交",
-        "description": "单块工作项、已确认来源依据与最后真实提交结果。",
+        "description": "当前内存块工作项、原消息依据与调用上下文；完整范围结束后统一保存。",
         "schema": {
           "type": "object",
           "properties": {
@@ -37803,18 +38295,26 @@
                 "null"
               ]
             },
-            "lastResult": {
+            "apiContext": {
+              "type": "object"
+            },
+            "functionFrame": {
               "type": [
                 "object",
                 "null"
               ]
+            },
+            "scopeWindow": {
+              "type": "object"
+            },
+            "stageOutcome": {
+              "type": "object"
             }
           },
           "required": [
             "work",
             "done",
-            "sourceBasis",
-            "lastResult"
+            "sourceBasis"
           ],
           "additionalProperties": false,
           "$schema": "https://json-schema.org/draft/2020-12/schema"
@@ -37825,7 +38325,7 @@
         "type_key": "era.sync.block.step.state",
         "representation": "json",
         "display_name": "ERA·同步·块步进状态",
-        "description": "单块工作项、已确认来源依据与最后真实提交结果。",
+        "description": "当前内存块工作项、原消息依据与调用上下文；完整范围结束后统一保存。",
         "schema": {
           "type": "object",
           "properties": {
@@ -37841,18 +38341,26 @@
                 "null"
               ]
             },
-            "lastResult": {
+            "apiContext": {
+              "type": "object"
+            },
+            "functionFrame": {
               "type": [
                 "object",
                 "null"
               ]
+            },
+            "scopeWindow": {
+              "type": "object"
+            },
+            "stageOutcome": {
+              "type": "object"
             }
           },
           "required": [
             "work",
             "done",
-            "sourceBasis",
-            "lastResult"
+            "sourceBasis"
           ],
           "additionalProperties": false,
           "$schema": "https://json-schema.org/draft/2020-12/schema"
@@ -37863,7 +38371,7 @@
         "type_key": "era.sync.block.step.state.next",
         "representation": "json",
         "display_name": "ERA·同步·块步进状态·下一个",
-        "description": "单块工作项、已确认来源依据与最后真实提交结果。",
+        "description": "当前内存块工作项、原消息依据与调用上下文；完整范围结束后统一保存。",
         "schema": {
           "type": "object",
           "properties": {
@@ -37879,18 +38387,26 @@
                 "null"
               ]
             },
-            "lastResult": {
+            "apiContext": {
+              "type": "object"
+            },
+            "functionFrame": {
               "type": [
                 "object",
                 "null"
               ]
+            },
+            "scopeWindow": {
+              "type": "object"
+            },
+            "stageOutcome": {
+              "type": "object"
             }
           },
           "required": [
             "work",
             "done",
-            "sourceBasis",
-            "lastResult"
+            "sourceBasis"
           ],
           "additionalProperties": false,
           "$schema": "https://json-schema.org/draft/2020-12/schema"
@@ -42308,6 +42824,11 @@
             "snapshot": {
               "type": "object"
             },
+            "workingVersion": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "本次保存对应的内存版本；版本已推进时不得用旧保存结果覆盖读取快照。"
+            },
             "sourceBasis": {
               "type": "object",
               "additionalProperties": false,
@@ -43340,6 +43861,30 @@
           ],
           "$schema": "https://json-schema.org/draft/2020-12/schema"
         }
+      },
+      "era.working.request": {
+        "kind": "data_schema",
+        "type_key": "era.working.request",
+        "representation": "json",
+        "display_name": "ERA内存工作状态request",
+        "description": "Service拥有的工作状态及机械读写事实。",
+        "schema": {
+          "type": "object",
+          "additionalProperties": true,
+          "$schema": "https://json-schema.org/draft/2020-12/schema"
+        }
+      },
+      "era.working.result": {
+        "kind": "data_schema",
+        "type_key": "era.working.result",
+        "representation": "json",
+        "display_name": "ERA内存工作状态result",
+        "description": "Service拥有的工作状态及机械读写事实。",
+        "schema": {
+          "type": "object",
+          "additionalProperties": true,
+          "$schema": "https://json-schema.org/draft/2020-12/schema"
+        }
       }
     },
     "base_lib": {
@@ -43479,7 +44024,8 @@
           }
         ],
         "dependencies": [
-          "era.crud.engine"
+          "era.crud.engine",
+          "era.service.agent_stage_text"
         ],
         "external_packages": [
           "@era/vibeflow-contracts",
@@ -43582,6 +44128,61 @@
           }
         ],
         "dependencies": [],
+        "external_packages": []
+      },
+      "era.service.agent_stage_program": {
+        "kind": "base_lib",
+        "id": "era.service.agent_stage_program",
+        "display_name": "阶段JSON调用位置",
+        "description": "在共用块循环的当前位置执行规划calls并收集候选操作错误。",
+        "category": "Agent阶段",
+        "version": "1.0.0",
+        "implementations": [
+          {
+            "language": "typescript",
+            "targets": [
+              "browser",
+              "node"
+            ],
+            "source": {
+              "kind": "file",
+              "ref": "base_lib/agent_stage_program.ts"
+            },
+            "completion": "immediate"
+          }
+        ],
+        "dependencies": [
+          "era.service.block_step_state",
+          "era.service.sync_engine",
+          "era.service.agent_generation_session",
+          "era.service.sync_contracts"
+        ],
+        "external_packages": []
+      },
+      "era.service.agent_stage_text": {
+        "kind": "base_lib",
+        "id": "era.service.agent_stage_text",
+        "display_name": "阶段结构化报告与执行文本分离",
+        "description": "规划JSON与顶层操作分离；结算直接检查共用块解析覆盖的标签原文，保留有效前缀及具体格式错误位置，不转换JSON操作。",
+        "category": "三阶段生成",
+        "version": "1.0.0",
+        "implementations": [
+          {
+            "language": "typescript",
+            "targets": [
+              "browser",
+              "node"
+            ],
+            "source": {
+              "kind": "file",
+              "ref": "base_lib/agent_stage_text.ts"
+            },
+            "completion": "immediate"
+          }
+        ],
+        "dependencies": [
+          "era.service.message_function_calls"
+        ],
         "external_packages": []
       },
       "era.service.agent_task_result": {
@@ -43801,7 +44402,36 @@
         ],
         "dependencies": [
           "era.service.facade_api_engine",
-          "era.service.types"
+          "era.service.types",
+          "era.service.working_state"
+        ],
+        "external_packages": []
+      },
+      "era.service.function_block_execution": {
+        "kind": "base_lib",
+        "id": "era.service.function_block_execution",
+        "display_name": "函数位置与普通API事务规划",
+        "description": "复用Facade校验、scope与普通era_tx构造，仅决定当前消息插入位置和块推进；无工具或持久化副作用。",
+        "category": "内存生命周期",
+        "version": "1.0.0",
+        "implementations": [
+          {
+            "language": "typescript",
+            "targets": [
+              "browser",
+              "node"
+            ],
+            "source": {
+              "kind": "file",
+              "ref": "base_lib/function_block_execution.ts"
+            },
+            "completion": "immediate"
+          }
+        ],
+        "dependencies": [
+          "era.service.facade_api_engine",
+          "era.service.message_function_calls",
+          "era.service.block_step_state"
         ],
         "external_packages": []
       },
@@ -44154,6 +44784,33 @@
           "@era/vibeflow-contracts"
         ]
       },
+      "era.service.working_state": {
+        "kind": "base_lib",
+        "id": "era.service.working_state",
+        "display_name": "ERA工作状态投影",
+        "description": "Service内存工作状态形状及待保存消息投影，不执行I/O。",
+        "category": "内存生命周期",
+        "version": "1.0.0",
+        "implementations": [
+          {
+            "language": "typescript",
+            "targets": [
+              "browser",
+              "node"
+            ],
+            "source": {
+              "kind": "file",
+              "ref": "base_lib/working_state.ts"
+            },
+            "completion": "immediate"
+          }
+        ],
+        "dependencies": [
+          "era.service.sidecar_binding",
+          "era.service.sync_contracts"
+        ],
+        "external_packages": []
+      },
       "era.snapshot.data_view": {
         "kind": "base_lib",
         "id": "era.snapshot.data_view",
@@ -44386,6 +45043,27 @@
       }
     },
     "capabilities": {
+      "era.lifecycle.admission": {
+        "kind": "capability",
+        "id": "era.lifecycle.admission",
+        "targets": [
+          "browser"
+        ],
+        "display_name": "执行域延迟准入",
+        "description": "按Node提供的事件和防抖窗口机械准入；不选择业务任务或操作变量。",
+        "operations": {
+          "schedule": {
+            "input_type": "era.working.request",
+            "output_type": "era.working.result",
+            "completion": "immediate"
+          },
+          "cancel": {
+            "input_type": "era.working.request",
+            "output_type": "era.working.result",
+            "completion": "immediate"
+          }
+        }
+      },
       "era.tavern.agent": {
         "kind": "capability",
         "id": "era.tavern.agent",
@@ -44533,6 +45211,37 @@
           }
         }
       },
+      "era.tavern.functions": {
+        "kind": "capability",
+        "id": "era.tavern.functions",
+        "targets": [
+          "browser"
+        ],
+        "display_name": "消息内原生工具调用通道",
+        "description": "调用酒馆注册工具，显式绑定参数对象，依次搬运API请求和应用回执；不执行变量规则。",
+        "operations": {
+          "begin": {
+            "input_type": "era.working.request",
+            "output_type": "era.working.result",
+            "completion": "immediate"
+          },
+          "next": {
+            "input_type": "era.working.request",
+            "output_type": "era.working.result",
+            "completion": "suspend"
+          },
+          "acknowledge": {
+            "input_type": "era.working.request",
+            "output_type": "era.working.result",
+            "completion": "immediate"
+          },
+          "release": {
+            "input_type": "era.working.request",
+            "output_type": "era.working.result",
+            "completion": "immediate"
+          }
+        }
+      },
       "era.tavern.identity": {
         "kind": "capability",
         "id": "era.tavern.identity",
@@ -44660,6 +45369,16 @@
             "input_type": "era.tavern.sidecar.clear_prompt.request",
             "output_type": "era.tavern.sidecar.clear_prompt.result",
             "completion": "immediate"
+          },
+          "read_working": {
+            "input_type": "era.working.request",
+            "output_type": "era.working.result",
+            "completion": "immediate"
+          },
+          "write_working": {
+            "input_type": "era.working.request",
+            "output_type": "era.working.result",
+            "completion": "immediate"
           }
         }
       },
@@ -44742,25 +45461,11 @@
         "id": "era.tavern.service_host",
         "status": "implemented",
         "display_name": "ERA 酒馆服务宿主",
-        "category": "宿主接线",
-        "description": "保留单一FIFO、receipt、生成barrier、009源依据、010公开保存与读回及011首次呈现。共享消息保存边界分开确认原Swipe候选已保存与当前来源仍有效；复用sourceBasis处理保存期间的Swipe/编辑/聊天变化，不能因当前已选C而误报原B落盘失败。Service决定sourceChanged、部分写入及Sidecar结算，Host不新增队列、锁、重试或私有保存器。获批范围与验证见reports/era-swipe-persistence-separation-change-list.md。 本轮已实现：Host启动在初始化回执等待前登记pagehide；等待返回若已stopping则结算既有stop并返回，禁止晚挂载宏/UI。复用RuntimeController，不改领域workflow。用户已明确要求按分析方案修复四项并定向复测，见reports/era-four-ui-regression-change-list.md。",
-        "version": "0.1.0",
-        "targets": [
-          "browser"
-        ],
-        "provides": [
-          "vibeflow.port",
-          "era.tavern.agent",
-          "era.tavern.variables",
-          "era.tavern.messages",
-          "era.tavern.worldbook",
-          "era.tavern.regex",
-          "era.tavern.character",
-          "era.tavern.identity",
-          "era.tavern.sidecar",
-          "era.tavern.installation_scope",
-          "era.tavern.startup_gate"
-        ],
+        "category": "",
+        "description": "复用现有Host生命周期及端口，支持同一工作状态的上下文绑定API、函数等待期间的块调度、内存应用回执、独立API保存定时器和保存错误通知；get/宏/旧楼状态栏读取对应工作状态。保留原生工具、目标版本核对及保存回读。Host只搬运/保存运行资源，不复制领域引擎；pagehide/stop清理定时器与pending，强制关闭后按实际聊天重算。工作流及ABI批准范围见reports/era-memory-lifecycle-review-20260913/四类变更清单.md。",
+        "version": "",
+        "targets": [],
+        "provides": [],
         "dependencies": [],
         "config_keys": [
           "barrier_watchdog_ms",
