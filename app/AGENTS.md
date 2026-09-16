@@ -6,11 +6,11 @@ API；若与本节或更深层 `AGENTS.md` 冲突，以本节和更深层规则�
 
 开始修改前：
 
-1. 读取 `开发文档/README.md` 与任务对应的现行设计；历史目录不能作为生产行为依据。
-2. 在 `@types/function/**`、`@types/iframe/**` 找接口签名；接口选择总表见
-   `../docs/development/tavern-runtime.md`。不要自行重写或复制接口定义。
+1. 读取 `../docs/developer/开发总览.md` 与任务对应的现行设计；历史目录不能作为生产行为依据。
+2. 在 `@types/function/**`、`@types/iframe/**` 找接口签名；宿主分工见
+   `../docs/developer/开发总览.md`。不要自行重写或复制接口定义。
 3. 涉及 ERA 业务状态、Service、宏或 UI 时，继续读取 `src/ERA变量框架/AGENTS.md`。
-4. 只有任务明确要求真实酒馆联调时，才按 `开发文档/Codex开发与酒馆实时联调指南.md`
+4. 只有任务明确要求真实酒馆联调时，才按 `../docs/developer/开发总览.md`
    操作浏览器或切换脚本；先检查并保留当前启用状态。
 
 边界：Tavern Helper 高层 API 是宿主读写入口；ERA 的业务决策、回滚和状态提交属于 VibeFlow

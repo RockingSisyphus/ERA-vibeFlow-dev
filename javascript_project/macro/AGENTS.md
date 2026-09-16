@@ -5,8 +5,8 @@
 
 浏览器侧 `registerMacroLike` 适配器位于 `../../app/src/ERA变量框架/macro/`，并只将已提交快照传入
 本工作流。宏 API、生成 barrier 与公开语法边界见
-`../../docs/development/era-host-contract.md` 和
-`../../app/开发文档/ERA事件调度与生成栅栏设计.md`。
+`../../docs/developer/开发总览.md` 和
+`../../docs/author/advanced/显示模式与状态栏.md`。
 
 修改前必须读取本 root 的 `vibeflow_project.jsonc` 和 `ARCHITECTURE.jsonc`，再沿 `source` 修改真实
 配置或节点。任何宏语义改变均为公开 ABI 变化：先维护变更清单并得到批准，之后重新生成 Architecture、

@@ -78,7 +78,6 @@ random(seed, draw)  # 显式 seed 与非负安全整数 draw
 
 操作循环依次选择操作、初始化 AST 帧、求值当前表达式、提交结果。单条 AST 的显式后序帧栈由登记库 `expression_execution.ts` 执行：先求实参、绑定形参、压入函数体，再回传父帧。帧推进不是独立工作流循环，避免为微小运算重复创建调度状态；操作顺序和提交仍由工作流控制。
 
-正式实现审核图：`../../reports/workflow-architecture-analysis-20260910/step2/expression-implemented.svg`。
 
 登记模块分为共享类型、语法与输入、数学与随机原语、函数库编译、表达式执行和符号压缩；算法不依赖 Node 端口。Node 源码负责 envelope 适配。`api/engine.ts` 保留公共 API，其中完整求值调用 AOT，独立解析/编译等 API 直接复用登记库。`pnpm build` 从真实 Config 生成 Node/Browser 模块、ESM 公共入口及声明，`pnpm pack` 自动构建。
 

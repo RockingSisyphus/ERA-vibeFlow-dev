@@ -6,9 +6,9 @@
 
 修改前阅读：
 
-- `../../../开发文档/ERA事件调度与生成栅栏设计.md`；
-- `../../../../docs/testing/ERA前台UI测试需求.md`（功能/视觉验收范围）；
-- `../../../../docs/development/era-host-contract.md`（UI 可用接口和禁止绕过项）。
+- `../../../../docs/developer/开发总览.md`（宿主边界与测试职责）；
+- `../../../../docs/author/advanced/显示模式与状态栏.md`（当前显示行为）；
+- `../../../../docs/developer/文档维护指南.md`（维护来源与验证要求）。
 
 交互范围只覆盖鼠标与触屏主路径。每个新增用户动作必须有 loading/busy、成功、失败和结算后的可观察状态；同一动作不得重入。组件卸载必须注销 listener、移除由本实例创建的 DOM/style，并避免跨 script
 ID 破坏其他 ERA 实例。不要为测试目录暴露 CSS selector；测试可通过角色、文本、ID 和领域观察接口定位。

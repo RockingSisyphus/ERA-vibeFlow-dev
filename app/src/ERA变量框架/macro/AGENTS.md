@@ -6,7 +6,7 @@
 修改前阅读：
 
 - `../../../../javascript_project/macro/AGENTS.md`、`vibeflow_project.jsonc` 和 `ARCHITECTURE.jsonc`；
-- `../../../开发文档/ERA事件调度与生成栅栏设计.md` 的生成 barrier 与提交顺序；
+- `../../../../docs/developer/开发总览.md` 的生成 barrier 与提交顺序；
 - `../../../@types/function/macro_like.d.ts` 的注册签名。
 
 `{{ERA:...}}` 与 `{{ERA-withmeta:...}}`

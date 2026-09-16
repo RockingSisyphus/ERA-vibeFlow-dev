@@ -7,10 +7,10 @@
 Tavern 边界：Service 只依赖受限 Capability/Host Extension 提供的 JSON DTO，不可直接访问 DOM、
 `window`、Tavern Helper 全局函数或浏览器事件。浏览器侧实现位于
 `../../app/src/ERA变量框架/service/`；双方可共享的约束见
-`../../docs/development/era-host-contract.md`。
+`../../docs/developer/开发总览.md`。
 
 涉及生成、重新生成、swipe、编辑或回退时，必须阅读
-`../../app/开发文档/ERA事件调度与生成栅栏设计.md`。业务 planner 决定事件组合、定向同步和回退
+`../../docs/developer/开发总览.md`。业务 planner 决定事件组合、定向同步和回退
 目标；Host 只负责 FIFO、receipt、生命周期与 Capability 执行。不要通过 Host 特例、定时猜测或
 宏侧补偿规避领域建模。
 

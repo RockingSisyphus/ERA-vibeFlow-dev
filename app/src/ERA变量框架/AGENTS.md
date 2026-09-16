@@ -5,8 +5,7 @@ Helper 的事件和高层 API 投影为受限 Host 能力。真实业务规则�
 
 开始前阅读：
 
-- `../../开发文档/ERA事件调度与生成栅栏设计.md`：事件、receipt、barrier、提交与通知顺序。
-- `../../../docs/development/era-host-contract.md`：Service、宏、UI 与 Tavern 之间的职责边界。
+- `../../../docs/developer/开发总览.md`：宏观生命周期及宿主职责；具体顺序沿登记Architecture定位源码。
 - `../../@types/iframe/event.d.ts` 和任务使用的 `../../@types/function/*.d.ts`：宿主接口签名。
 
 通用规则：

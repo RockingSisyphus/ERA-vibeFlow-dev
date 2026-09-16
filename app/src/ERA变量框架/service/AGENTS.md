@@ -5,7 +5,7 @@ receipt 与生命周期资源。领域行为的真实 source 位于
 `../../../../javascript_project/service/**`，修改前必须先读取该 root 的 `AGENTS.md`、 `vibeflow_project.jsonc` 和
 `ARCHITECTURE.jsonc`。
 
-生成相关改动必须同时阅读 `../../../../app/开发文档/ERA事件调度与生成栅栏设计.md`：
+生成相关改动必须同时阅读 `../../../../docs/developer/开发总览.md`：
 
 - `generation_started`
   的 Promise 是生成 barrier，只有相应 high-water 之前的 receipt 都进入终态才可解析；不得用超时自动放行。
