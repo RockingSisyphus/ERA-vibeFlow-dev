@@ -1,8 +1,11 @@
 /** Preserve an application failure even when its successful prefix was saved. */
 export function run(inputs: any, _params: any, context: any): any {
   const result = inputs["era.tavern.commit.result"].value;
-  const work = result.mode === "non-commit" ? result.work : result.blockStepState?.work;
-  const sourceChanged = result.sourceChanged === true || work?.failure?.code === "ERA_MESSAGE_WRITE_TARGET_CHANGED";
+  const work =
+    result.mode === "non-commit" ? result.work : result.blockStepState?.work;
+  const sourceChanged =
+    result.sourceChanged === true ||
+    work?.failure?.code === "ERA_MESSAGE_WRITE_TARGET_CHANGED";
   // A Helper edit may only render the new text, without a separate edit event.
   // The rejected write must therefore hand the changed source back to the
   // ordinary history synchronizer instead of leaving a dirty snapshot pending.
@@ -29,7 +32,8 @@ export function run(inputs: any, _params: any, context: any): any {
   }
   return {
     completed_sync_result:
-      result.status === "committed" && work?.disposition === "failed"
+      (result.status === "committed" || result.status === "no-op") &&
+      work?.disposition === "failed"
         ? {
             ...result,
             status: "failed",

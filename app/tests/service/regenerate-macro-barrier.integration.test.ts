@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import _ from 'lodash';
+import type { EraWaitThroughResult } from '../../src/ERA变量框架/service/types';
 import { TavernEraServiceAdapter } from '../../src/ERA变量框架/service/tavern-adapter';
 import { createWorkflowHost } from '@era/vibeflow-service';
 
@@ -49,9 +50,11 @@ describe('重新生成的宏与生成栅栏', () => {
   let unregisterMacro = (): void => undefined;
   let sidecarFiles: Map<string, unknown>;
   let pendingSwipe = false;
+  let barriers: EraWaitThroughResult[] = [];
 
   beforeEach(async () => {
     pendingSwipe = false;
+    barriers = [];
     executedNodes = [];
     chatVariables = {
       stat_data: { generation_value: '待重生成楼层的变量' },
@@ -170,7 +173,7 @@ describe('重新生成的宏与生成栅栏', () => {
     vi.stubGlobal('refreshOneMessage', async () => undefined);
     vi.stubGlobal('toastr', { error: vi.fn() });
 
-    adapter = new TavernEraServiceAdapter();
+    adapter = new TavernEraServiceAdapter({ onBarrierFailure: result => barriers.push(result) });
     vi.stubGlobal('__ERA_VIBEFLOW_SERVICE_ADAPTER__', adapter);
     host = createWorkflowHost();
     await host.start();
@@ -206,6 +209,66 @@ describe('重新生成的宏与生成栅栏', () => {
     const { readWorkingState } = await import('../../src/ERA变量框架/service/sidecar-runtime-snapshot');
     expect(readWorkingState({ characterId: 'barrier-card', groupId: null, chatId: 'barrier-chat' })?.dirty).toBe(false);
     expect(sidecarFiles.size).toBeGreaterThan(0);
+  });
+
+  it('B已保存后切C再生成D：真实工作流不遗留失败回执且最终状态属于D', async () => {
+    await vi.waitFor(() => expect(events.count('generation_started')).toBe(1));
+    const initial = adapter.enqueue('era.facade.sync', 'era-api', [{ mode: 'full' }]);
+    if (!initial.accepted) throw new Error(initial.message);
+    expect((await initial.done).status).toBe('completed');
+    const last: any = SillyTavern.chat[2];
+    last.swipe_id = 0;
+    last.swipes = [
+      last.mes,
+      '<VariableEdit>{"generation_value":"B"}</VariableEdit>',
+      '<VariableEdit>{"generation_value":"C"}</VariableEdit>',
+    ];
+    vi.stubGlobal('getChatMessages', (range: string | number) =>
+      SillyTavern.chat
+        .filter((message: any) => typeof range !== 'number' || message.message_id === range)
+        .map((message: any) => ({
+          ...clone(message),
+          swipe_id: message.swipe_id ?? 0,
+          swipes: message.swipes ?? [message.mes],
+        })),
+    );
+    const originalSet = setChatMessages;
+    vi.stubGlobal('setChatMessages', async (updates: any[]) => {
+      await originalSet(updates);
+      last.swipes[last.swipe_id] = last.mes;
+    });
+    const saved = Promise.withResolvers<void>();
+    const release = Promise.withResolvers<void>();
+    const originalSave = SillyTavern.saveChat;
+    let intercepted = false;
+    vi.spyOn(SillyTavern, 'saveChat').mockImplementation(async () => {
+      await originalSave();
+      if (last.swipe_id === 1 && !intercepted) {
+        intercepted = true;
+        saved.resolve();
+        await release.promise;
+      }
+    });
+    last.swipe_id = 1;
+    last.mes = last.swipes[1];
+    events.only('message_swiped')(2);
+    await saved.promise;
+    last.swipe_id = 2;
+    last.mes = last.swipes[2];
+    events.only('message_swiped')(2);
+    release.resolve();
+    await events.only('generation_started')('swipe', { automatic_trigger: false }, false);
+    expect(barriers.flatMap(result => result.outcomes).filter(item => item.outcome.status === 'failed')).toEqual([]);
+    last.swipes.push('<VariableEdit>{"generation_value":"D"}</VariableEdit>');
+    last.swipe_id = 3;
+    last.mes = last.swipes[3];
+    events.only('message_received')(2);
+    const finish = adapter.enqueue('era.facade.sync', 'era-api', [{ mode: 'auto' }]);
+    if (!finish.accepted) throw new Error(finish.message);
+    expect((await finish.done).status).toBe('completed');
+    expect((await finish.waitThrough()).outcomes.filter(item => item.outcome.status === 'failed')).toEqual([]);
+    const { readCurrentEraMacroSnapshot } = await import('../../src/ERA变量框架/macro/registration');
+    expect(readCurrentEraMacroSnapshot()?.statWithoutMeta).toMatchObject({ generation_value: 'D' });
   });
 
   it('设置命令经过独立 Nodeset，在原 FIFO 中结算后仍能处理生成事件', async () => {

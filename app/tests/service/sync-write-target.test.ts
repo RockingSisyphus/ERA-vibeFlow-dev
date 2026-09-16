@@ -24,7 +24,8 @@ const commit = await import(
   /* @vite-ignore */ new URL('../../../javascript_project/service/nodes/sync/commit_sync.ts', import.meta.url).href
 );
 const savedBatch = await import(
-  /* @vite-ignore */ new URL('../../../javascript_project/service/nodes/sync/settle_saved_batch.ts', import.meta.url).href
+  /* @vite-ignore */ new URL('../../../javascript_project/service/nodes/sync/settle_saved_batch.ts', import.meta.url)
+    .href
 );
 const presentation = await import(
   /* @vite-ignore */ new URL(
@@ -216,18 +217,75 @@ describe('sync source survives asynchronous host interleaving', () => {
       release.resolve();
       const outcome = await pending;
       expect(outcome).toMatchObject({
-        status: 'failed',
+        status: source === 'tavern' ? 'no-op' : 'failed',
         confirmedMessageWrites: 1,
         sourceChanged: true,
         variablesCommitted: false,
-        failure: { code: 'ERA_SYNC_SOURCE_CHANGED', details: { persistenceConfirmed: true } },
+        failure:
+          source === 'tavern' ? null : { code: 'ERA_SYNC_SOURCE_CHANGED', details: { persistenceConfirmed: true } },
       });
       expect(f.trace).toEqual(['message']);
       expect(f.capabilities['era.tavern.sidecar'].present_prompt).not.toHaveBeenCalled();
       expect(sync_result_policy.buildSyncCommittedResult(outcome)).not.toHaveProperty('stateUpdate');
       expect(f.current.texts[2]).toBe('C');
+      const settled = sync_result_policy.buildSyncCommittedResult(outcome);
+      if (source === 'tavern') {
+        expect(settled.settlements.every((item: { status: string }) => item.status === 'completed')).toBe(true);
+        expect(settled.diagnostics).toEqual([]);
+      }
     },
   );
+
+  it.each(['swallowed-save', 'readback'])('retains real %s failure even after selecting C', async fault => {
+    const f = fixture();
+    f.usePersistence(async () => {
+      f.current.swipe = 2;
+    });
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        if (fault === 'readback') throw new Error('readback unavailable');
+        return { ok: true, json: async () => [{}, { mes: 'C', swipe_id: 2, swipes: ['A', f.original, 'C'] }] };
+      }),
+    );
+    const outcome = await f.run();
+    expect(outcome).toMatchObject({
+      status: 'failed',
+      sourceChanged: true,
+      confirmedMessageWrites: 0,
+      variablesCommitted: false,
+      failure: { code: 'ERA_SYNC_MESSAGE_PERSISTENCE_UNCONFIRMED', details: { persistenceConfirmed: false } },
+    });
+    expect(sync_result_policy.buildSyncCommittedResult(outcome).settlements[0].status).toBe('failed');
+    expect(f.trace).toEqual(['message']);
+    expect(f.current.texts[2]).toBe('C');
+  });
+
+  it('preserves a prior block failure while scheduling replacement of a saved stale batch', () => {
+    const failure = {
+      code: 'ERA_EXPR_REFERENCE_NON_NUMERIC',
+      message: 'bad expression',
+      category: 'domain',
+      retryable: true,
+    };
+    const schedule = vi.fn();
+    const result = savedBatch.run(
+      {
+        'era.tavern.commit.result': {
+          value: {
+            status: 'no-op',
+            sourceChanged: true,
+            failure: null,
+            blockStepState: { work: { disposition: 'failed', failure } },
+          },
+        },
+      },
+      {},
+      { capabilities: { 'era.lifecycle.admission': { schedule } } },
+    ).completed_sync_result;
+    expect(result).toMatchObject({ status: 'failed', failure });
+    expect(schedule).toHaveBeenCalledOnce();
+  });
 
   it('presents a native finalized floor only after message, Sidecar and publication', async () => {
     const f = fixture('tavern', 'message_received');
@@ -358,17 +416,23 @@ describe('sync source survives asynchronous host interleaving', () => {
       expect(settled).not.toHaveProperty('stateUpdate');
       expect(settled.settlements[0].status).toBe('completed');
       const schedule = vi.fn();
-      savedBatch.run({ 'era.tavern.commit.result': { value: outcome } }, {}, {
-        capabilities: {
-          'era.lifecycle.admission': { schedule, cancel: vi.fn() },
-          'era.tavern.sidecar': { read_working: () => ({ working: { dirty: true } }) },
+      savedBatch.run(
+        { 'era.tavern.commit.result': { value: outcome } },
+        {},
+        {
+          capabilities: {
+            'era.lifecycle.admission': { schedule, cancel: vi.fn() },
+            'era.tavern.sidecar': { read_working: () => ({ working: { dirty: true } }) },
+          },
         },
-      });
-      expect(schedule).toHaveBeenCalledWith(expect.objectContaining({
-        key: 'era-working-save', delayMs: 0,
-        event: { type: 'era.facade.sync', source: 'era-api', args: [{ mode: 'full' }] },
-      }));
-
+      );
+      expect(schedule).toHaveBeenCalledWith(
+        expect.objectContaining({
+          key: 'era-working-save',
+          delayMs: 0,
+          event: { type: 'era.facade.sync', source: 'era-api', args: [{ mode: 'full' }] },
+        }),
+      );
     },
   );
 
@@ -393,14 +457,33 @@ describe('sync source survives asynchronous host interleaving', () => {
       f.current.swipe = 2;
     };
     expect(await f.run()).toMatchObject({
-      status: 'failed',
+      status: 'no-op',
       confirmedMessageWrites: 1,
       variablesCommitted: false,
       sourceChanged: true,
+      failure: null,
     });
     expect(f.trace).toEqual(['message']);
     expect(f.current.texts[2]).toBe('C');
     expect(f.current.texts[1]).toBe(f.request.messageWrites[0].content);
+  });
+
+  it('does not attach a false failure when the ordinary branch changes after Sidecar is saved', async () => {
+    const f = fixture();
+    f.hooks.afterFile = () => {
+      f.current.swipe = 2;
+    };
+    const outcome = await f.run();
+    expect(outcome).toMatchObject({
+      status: 'committed',
+      variablesCommitted: true,
+      sourceChanged: true,
+      failure: null,
+    });
+    const settled = sync_result_policy.buildSyncCommittedResult(outcome);
+    expect(settled.diagnostics).toEqual([]);
+    expect(settled).not.toHaveProperty('stateUpdate');
+    expect(f.trace).toEqual(['message', 'file']);
   });
 
   it('reports a committed old branch without publishing or presenting it into a newly selected branch', async () => {
@@ -424,10 +507,24 @@ describe('sync source survives asynchronous host interleaving', () => {
 });
 
 it('函数执行发现目标失效而尚未形成消息写回时，也进入普通历史恢复', async () => {
-  const work = { disposition: 'failed', plan: null, failure: { code: 'ERA_MESSAGE_WRITE_TARGET_CHANGED', message: 'source-text (#3)', source: 'tavern' } };
-  const committed = await commit.run({ 'era.tavern.commit.request': { value: { mode: 'non-commit', work } } }, {}, { capabilities: {} });
+  const work = {
+    disposition: 'failed',
+    plan: null,
+    failure: { code: 'ERA_MESSAGE_WRITE_TARGET_CHANGED', message: 'source-text (#3)', source: 'tavern' },
+  };
+  const committed = await commit.run(
+    { 'era.tavern.commit.request': { value: { mode: 'non-commit', work } } },
+    {},
+    { capabilities: {} },
+  );
   const schedule = vi.fn();
-  const settled = savedBatch.run({ 'era.tavern.commit.result': { value: committed.sync_commit_result } }, {}, { capabilities: { 'era.lifecycle.admission': { schedule } } });
-  expect(schedule).toHaveBeenCalledWith(expect.objectContaining({ event: { type: 'era.facade.sync', source: 'era-api', args: [{ mode: 'full' }] } }));
+  const settled = savedBatch.run(
+    { 'era.tavern.commit.result': { value: committed.sync_commit_result } },
+    {},
+    { capabilities: { 'era.lifecycle.admission': { schedule } } },
+  );
+  expect(schedule).toHaveBeenCalledWith(
+    expect.objectContaining({ event: { type: 'era.facade.sync', source: 'era-api', args: [{ mode: 'full' }] } }),
+  );
   expect(settled.completed_sync_result.work.failure).toEqual(work.failure);
 });

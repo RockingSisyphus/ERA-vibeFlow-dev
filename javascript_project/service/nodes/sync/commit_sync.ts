@@ -45,6 +45,16 @@ function result(
   };
 }
 
+function isOrdinarySync(request: SyncCommitRequestV1): boolean {
+  const task = request.step.kind === "execute" ? request.step.task : null;
+  return (
+    task?.primaryEvent.source === "tavern" &&
+    task.kind === "sync" &&
+    task.reason !== "facade-commit" &&
+    request.agentFloorCandidate === null
+  );
+}
+
 function changedSource(
   request: SyncCommitRequestV1,
   written: number,
@@ -65,23 +75,16 @@ function changedSource(
     (error as { code?: unknown }).code !== "ERA_MESSAGE_WRITE_TARGET_CHANGED"
   )
     return null;
-  const task = request.step.kind === "execute" ? request.step.task : null;
-  const ordinary =
-    task?.primaryEvent.source === "tavern" &&
-    task.kind === "sync" &&
-    task.reason !== "facade-commit" &&
-    request.agentFloorCandidate === null;
+  const ordinary = isOrdinarySync(request);
   return {
     ...result(
       request,
-      sidecarCommitted
-        ? "committed"
-        : ordinary && written === 0
-          ? "no-op"
-          : "failed",
+      sidecarCommitted ? "committed" : ordinary ? "no-op" : "failed",
       written,
       sidecarCommitted,
-      syncFailure("ERA_SYNC_SOURCE_CHANGED", errorMessage(error), "tavern"),
+      ordinary
+        ? null
+        : syncFailure("ERA_SYNC_SOURCE_CHANGED", errorMessage(error), "tavern"),
     ),
     sourceChanged: true,
   };
@@ -199,6 +202,22 @@ export async function run(
     ) {
       const observed = response as Record<string, unknown>;
       const sourceChanged = observed.sourceChanged === true;
+      const persistenceConfirmed = observed.persistenceConfirmed === true;
+      // 只在固定目标的落盘已证实时正常结束过时同步；来源变化不能证明保存成功。
+      if (sourceChanged && persistenceConfirmed && isOrdinarySync(request)) {
+        return {
+          sync_commit_result: {
+            ...result(
+              request,
+              "no-op",
+              request.messageWrites.length,
+              false,
+              null,
+            ),
+            sourceChanged: true,
+          },
+        };
+      }
       if (!sourceChanged)
         await presentRecoverableSidecarFailure(
           context,
@@ -214,7 +233,7 @@ export async function run(
               : 0,
             false,
             syncFailure(
-              sourceChanged
+              sourceChanged && persistenceConfirmed
                 ? "ERA_SYNC_SOURCE_CHANGED"
                 : "ERA_SYNC_MESSAGE_PERSISTENCE_UNCONFIRMED",
               String((response as Record<string, unknown>).message),

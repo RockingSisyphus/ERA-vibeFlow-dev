@@ -122,13 +122,13 @@
         "id": "persist_batch_state",
         "type_used": "era.tavern.variables_commit",
         "display_name": "批量保存消息 → Sidecar并确认",
-        "description": "复用原目标校验、消息保存及回读、Sidecar上传及回读；一次提交本批变更，取消每块调用。不变指针不机械重写；保存失败保留待保存数据。"
+        "description": "保持消息与Sidecar保存校验；普通宿主同步在消息已确认落盘但来源变化时，以no-op正常结束且不提交旧Sidecar。保存或回读未确认仍失败；作者API与Agent候选保持原失败边界。"
       },
       {
         "id": "settle_saved_batch",
         "type_used": "era.lifecycle.settle_saved_batch",
         "display_name": "结算已保存批次与恢复事实",
-        "description": "保存成功仅清除本批待保存内容，保留后到操作；分别维护内存已应用与已保存事实。失败通过原恢复入口报告，不逆转已返回API成功，不永久停服。"
+        "description": "来源变化继续交由原重算入口处理，保证最新回复完成同步；保留后到操作，不能把无失败的旧任务结束误报到生成栅栏，也不能覆盖已有块执行错误。"
       },
       {
         "id": "present_finalized_floor",
