@@ -15,7 +15,7 @@
   "development_profile": "collaborative",
   "kernel": {
     "archive": "kernel/vibeflow-kernel.zip",
-    "sha256": "0f0d5510d26bac174ede1afd1d76fc9121b21382e8cdc0e2218a1c8cffc384c1"
+    "sha256": "a84e1c859dfd48e2bdd31b9255f27a884988abecd81375241e4d5c5dfa18b9c3"
   },
   "roots": [
     {
@@ -30,5 +30,5 @@
     }
   ],
   "schema": "vibeflow.distribution.v2",
-  "version": "0.13.2"
+  "version": "0.14.1"
 }
