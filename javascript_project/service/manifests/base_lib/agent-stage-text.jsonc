@@ -14,7 +14,7 @@
       ],
       "source": {
         "kind": "file",
-        "ref": "base_lib/agent_stage_text.ts"
+        "ref": "base_lib/agent/agent_stage_text.ts"
       }
     }
   ],

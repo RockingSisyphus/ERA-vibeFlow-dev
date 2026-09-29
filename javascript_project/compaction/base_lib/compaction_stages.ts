@@ -97,6 +97,29 @@ export interface CandidateData extends SemanticTrace {
   readonly replacements: readonly (readonly [number, string])[];
   readonly reasons: readonly string[];
 }
+
+function groupedTransaction(
+  transactions: readonly ScopedTransaction[],
+  content: string,
+  index: number,
+): { readonly endIndex: number; readonly text: string; readonly raw: string } {
+  const current = transactions[index]!;
+  let endIndex = index;
+  let text = current.body;
+  let raw = current.raw;
+  if (current.scope === null) return { endIndex, text, raw };
+
+  while (endIndex + 1 < transactions.length) {
+    const next = transactions[endIndex + 1]!;
+    const between = content.slice(transactions[endIndex]!.end, next.start);
+    if (next.scope !== current.scope || between.trim().length > 0) break;
+    text += `${between}${next.body}`;
+    raw += `${between}${next.raw}`;
+    endIndex += 1;
+  }
+  return { endIndex, text, raw };
+}
+
 /** Own scope grouping once; pure prose is retained as a real ordered segment. */
 export function parseLayer(input: unknown): LayerPlan {
   const parsed = parseCommandLayer(input);
@@ -125,22 +148,11 @@ export function parseLayer(input: unknown): LayerPlan {
       scope: null,
       allowRewrite: true,
     });
-    let endIndex = index;
-    let text = current.body;
-    let raw = current.raw;
-    if (current.scope !== null) {
-      while (endIndex + 1 < transactions.length) {
-        const next = transactions[endIndex + 1]!;
-        const between = parsed.request.content.slice(
-          transactions[endIndex]!.end,
-          next.start,
-        );
-        if (next.scope !== current.scope || between.trim().length > 0) break;
-        text += `${between}${next.body}`;
-        raw += `${between}${next.raw}`;
-        endIndex += 1;
-      }
-    }
+    const { endIndex, text, raw } = groupedTransaction(
+      transactions,
+      parsed.request.content,
+      index,
+    );
     segments.push({
       text,
       raw,

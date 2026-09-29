@@ -1,14 +1,18 @@
 import { workingCapabilityFixture } from './working-capability-fixture';
 import { describe, expect, it, vi } from 'vitest';
-import { run as route } from '../../../javascript_project/service/nodes/api/workbench_route_request_kind';
+import {
+  WorkbenchRouteRequestKindNode as route,
+  WorkbenchRejectDraftNode as reject,
+  WorkbenchPublishPreparationNode as publish,
+} from '../../../javascript_project/service/nodes/api/shared_workbench_adapters';
 import { run as read } from '../../../javascript_project/service/nodes/api/workbench_read_baseline';
-import { run as validate } from '../../../javascript_project/service/nodes/api/workbench_validate_draft';
+import {
+  WorkbenchValidateDraftNode as validate,
+  WorkbenchNormalizeOrderedNode as ordered,
+} from '../../../javascript_project/service/nodes/api/shared_workbench_operation_adapters';
 import { run as variables } from '../../../javascript_project/service/nodes/api/workbench_plan_variables';
 import { run as functions } from '../../../javascript_project/service/nodes/api/workbench_plan_functions';
-import { run as ordered } from '../../../javascript_project/service/nodes/api/workbench_normalize_ordered';
 import { run as protect } from '../../../javascript_project/service/nodes/api/workbench_apply_protection';
-import { run as reject } from '../../../javascript_project/service/nodes/api/workbench_reject_draft';
-import { run as publish } from '../../../javascript_project/service/nodes/api/workbench_publish_preparation';
 import {
   buildTransaction,
   inspectWindow,

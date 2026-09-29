@@ -1,5 +1,5 @@
 import type { PlannedStepV1 } from "../../base_lib/service_types.ts";
-import type { SettingsRequest } from "../../base_lib/agent_flow_types.ts";
+import type { SettingsRequest } from "../../base_lib/agent/agent_flow_types.ts";
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }

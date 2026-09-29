@@ -1,4 +1,4 @@
-import { prepareSessionWrite } from "../../base_lib/agent_session_binding.ts";
+import { prepareSessionWrite } from "../../base_lib/agent/agent_session_binding.ts";
 import { interruptedCandidateRecovery } from "../../base_lib/working_state.ts";
 import {
   inspectSidecar,

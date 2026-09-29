@@ -53,8 +53,7 @@
     "era.service.facade_api_engine",
     "era.service.sync_planning",
     "era.service.sync_contracts",
-    "era.service.sidecar_binding",
-    "era.service.block_step_state"
+    "era.service.sidecar_binding"
   ],
   "capabilities": [
     {

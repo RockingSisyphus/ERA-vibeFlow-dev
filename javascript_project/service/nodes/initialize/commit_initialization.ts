@@ -26,9 +26,18 @@ interface Context {
 function isRecord(value: unknown): value is Record<string, unknown> { return value !== null && typeof value === "object" && !Array.isArray(value); }
 function errorMessage(error: unknown): string { return error instanceof Error ? error.message : String(error); }
 function confirmed(value: unknown): boolean {
-  if (!isRecord(value)) return false;
-  if (value.ok === true && Object.prototype.hasOwnProperty.call(value, "value")) return confirmed(value.value);
-  return ["committed", "completed", "created", "exists", "bound", "updated"].includes(String(value.status)) || value.committed === true;
+  const visited = new Set<object>();
+  let current = value;
+  while (isRecord(current)) {
+    if (visited.has(current)) return false;
+    visited.add(current);
+    if (current.ok === true && Object.prototype.hasOwnProperty.call(current, "value")) {
+      current = current.value;
+      continue;
+    }
+    return ["committed", "completed", "created", "exists", "bound", "updated"].includes(String(current.status)) || current.committed === true;
+  }
+  return false;
 }
 function unwrap(value: unknown): unknown {
   let current = value;

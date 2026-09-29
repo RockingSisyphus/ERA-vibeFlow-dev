@@ -93,6 +93,12 @@
         "description": "进入新的公共对象二级路由：一次 ERA.commit 对应一次即时消息与 Sidecar 事务，ERA.sync 复用共享同步；读取和订阅不进入 Service 事件任务。"
       },
       {
+        "id": "adapt_api_task_result",
+        "type_used": "era.service.adapt_api_task_result",
+        "display_name": "接回公共对象任务结果",
+        "description": "保留 API 任务的独立结果类型并接入原步骤合并。"
+      },
+      {
         "id": "task_update_mk",
         "type_used": "era.task.update_mk",
         "display_name": "更新消息密钥任务",
@@ -178,6 +184,10 @@
       ],
       [
         "task_api",
+        "adapt_api_task_result"
+      ],
+      [
+        "adapt_api_task_result",
         "merge_task_result"
       ],
       [

@@ -28,8 +28,19 @@
     ],
     "params_schema": {},
     "params_defaults": {},
-    "input_semantics": {"era.batch.execution.state":["输入：批次执行状态。"]},
-    "output_semantics": {"selected_step":["输出：已选步骤。"],"execution_state_for_merge":["输出：待合并批次状态。"]}
+    "input_semantics": {
+      "era.batch.execution.state": [
+        "输入：批次执行状态。"
+      ]
+    },
+    "output_semantics": {
+      "selected_step": [
+        "输出：已选步骤。"
+      ],
+      "execution_state_for_merge": [
+        "输出：待合并批次状态。"
+      ]
+    }
   },
   "implementations": [
     {
@@ -41,13 +52,14 @@
       "completion": "immediate",
       "source": {
         "kind": "file",
-        "ref": "nodes/step/select_step.ts",
-        "export": "run"
+        "ref": "nodes/iteration/shared_protocol_adapters.ts",
+        "export": "SelectStepNode"
       }
     }
   ],
   "base_libs": [
-    "era.service.protocol"
+    "era.service.service_protocol_collection",
+    "era.service.service_protocol_execution"
   ],
   "capabilities": []
 }

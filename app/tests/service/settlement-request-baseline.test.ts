@@ -1,15 +1,21 @@
 import { run as seedCandidate } from '../../../javascript_project/service/nodes/agent/candidate_seed';
 import { recordFor } from '../../../javascript_project/service/base_lib/sidecar_binding';
-import { sidecarId } from './memory-lifecycle-fixture';
-import { classifyGeneration } from '../../../javascript_project/service/base_lib/agent_flow_policy';
+import { sidecarId, contextWith, identity } from './memory-lifecycle-fixture';
+import { classifyGeneration } from '../../../javascript_project/service/base_lib/agent/agent_flow_policy';
 import { expect, it } from 'vitest';
 import { run } from '../../../javascript_project/service/nodes/agent/prepare_auxiliary_execution_request';
-import { planEraSync } from '../../../javascript_project/service/base_lib/domain/sync_engine';
+import { planEraSync } from '../../../javascript_project/service/base_lib/sync/sync_planning';
 import { readMkMessageText } from '../../../javascript_project/service/base_lib/domain/mk_engine';
-import { contextWith, identity } from './memory-lifecycle-fixture';
 
-it.each([['settlement', 70, false], ['story', 80, false], ['planning', 100, false], ['regenerate', 100, false], ['planning', 40, true]] as const)('%s 请求从保留阶段恢复变量和函数库，不依赖模型历史或既有楼层上下文', async (kind, expected, stale) => {
-  const planning = '<VariableEdit>{"hp":80}</VariableEdit><FunctionInsert>{"candidateFn":{"params":[],"expr":"42"}}</FunctionInsert>';
+it.each([
+  ['settlement', 70, false],
+  ['story', 80, false],
+  ['planning', 100, false],
+  ['regenerate', 100, false],
+  ['planning', 40, true],
+] as const)('%s 请求从保留阶段恢复变量和函数库，不依赖模型历史或既有楼层上下文', async (kind, expected, stale) => {
+  const planning =
+    '<VariableEdit>{"hp":80}</VariableEdit><FunctionInsert>{"candidateFn":{"params":[],"expr":"42"}}</FunctionInsert>';
   const story = '<EraFCall name="body" status="done"/><era_tx s="a"><VariableEdit>{"hp":70}</VariableEdit></era_tx>';
   const settlement = '<era_tx s="a"><VariableEdit>{"hp":40}</VariableEdit></era_tx>';
   const base = planEraSync({
@@ -36,7 +42,9 @@ it.each([['settlement', 70, false], ['story', 80, false], ['planning', 100, fals
   const { step } = contextWith(planning + story + settlement);
   step.taskRoute = 'agent-generation-session';
   step.task.primaryEvent.type = kind === 'regenerate' ? 'generation_started' : 'era.ui.agent_retry';
-  step.task.primaryEvent.args = [{ kind: 'json', value: kind === 'regenerate' ? kind : { kind, ...(stale ? { requestId: 'obsolete' } : {}) } }];
+  step.task.primaryEvent.args = [
+    { kind: 'json', value: kind === 'regenerate' ? kind : { kind, ...(stale ? { requestId: 'obsolete' } : {}) } },
+  ];
   step.dispatchContext.messages = base.messages.map(m => ({
     messageId: m.messageId,
     role: m.role,
@@ -71,11 +79,14 @@ it.each([['settlement', 70, false], ['story', 80, false], ['planning', 100, fals
   expect(original.state.statData).toEqual({ hp: 40 });
   if (stale) {
     expect(result.generation_facts.context).not.toHaveProperty('stageBaseline');
-    expect(classifyGeneration(result.generation_facts).disposition).toMatchObject({status:'failed'});
+    expect(classifyGeneration(result.generation_facts).disposition).toMatchObject({ status: 'failed' });
     return;
   }
-  expect(result.generation_facts.context.state.statFunc).toEqual(kind === 'planning' || kind === 'regenerate' ? {} : { candidateFn: { params: [], expr: '42' } });
-  if (kind === 'regenerate') expect(result.generation_facts.identity.mk).not.toBe((base.meta.SelectedMks as string[])[1]);
+  expect(result.generation_facts.context.state.statFunc).toEqual(
+    kind === 'planning' || kind === 'regenerate' ? {} : { candidateFn: { params: [], expr: '42' } },
+  );
+  if (kind === 'regenerate')
+    expect(result.generation_facts.identity.mk).not.toBe((base.meta.SelectedMks as string[])[1]);
   let working: any = { version: 3, dirty: false, record: recordFor(sidecarId, identity, original.state, null) };
   let savedSession: any;
   const seeded = seedCandidate(

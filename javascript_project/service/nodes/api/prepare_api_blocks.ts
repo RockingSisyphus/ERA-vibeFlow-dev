@@ -2,13 +2,13 @@ import {
   buildAppend,
   prepareCommitSync,
 } from "../../base_lib/facade_api_engine.ts";
-import { planSyncWork } from "../../base_lib/sync_planning.ts";
+import { planSyncWork } from "../../base_lib/sync/sync_planning.ts";
 import {
   consecutiveFacts,
   syncFailure,
-} from "../../base_lib/sync_contracts.ts";
+} from "../../base_lib/sync/sync_contracts.ts";
 import { variablesForState } from "../../base_lib/sidecar_binding.ts";
-import type { EraBlockStepStateV1 } from "../../base_lib/block_step_state.ts";
+import type { EraBlockStepStateV1 } from "../../base_lib/sync/sync_contracts.ts";
 
 /** Build an in-memory message edit and hand it to the ordinary block planner. */
 export function run(inputs: any, _params: any, context: any): any {

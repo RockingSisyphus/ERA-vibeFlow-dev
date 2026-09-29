@@ -1,0 +1,7 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.service.cycle.route",
+  "representation": "json",
+  "display_name": "Service 阶段路由",
+  "schema": {"type": "string", "enum": ["collect", "execute"]}
+}

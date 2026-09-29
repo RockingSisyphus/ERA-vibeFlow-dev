@@ -1,7 +1,6 @@
 /** 只持有阶段等待 Promise；业务续体保存在 Service 会话，恢复由原 FIFO 执行。 */
 import type { EraGenerationCompletion } from './generation-subscriptions';
-import type { EraAdmissionResult, EraPreparedNotification, EraEventSource } from './types';
-import type { EraSettlement } from './types';
+import type { EraAdmissionResult, EraPreparedNotification, EraEventSource, EraSettlement } from './types';
 import { generationSubscriptions } from './generation-subscriptions';
 class GenerationHandoffHost {
   private readonly pending = new Map<

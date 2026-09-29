@@ -1783,7 +1783,7 @@
           ],
           "source": {
             "kind": "file",
-            "ref": "nodes/commit_operation_result.ts",
+            "ref": "nodes/execution/commit_operation_result.ts",
             "export": "run"
           },
           "completion": "immediate"
@@ -1952,7 +1952,7 @@
           ],
           "source": {
             "kind": "file",
-            "ref": "nodes/evaluate_ast.ts",
+            "ref": "nodes/execution/evaluate_ast.ts",
             "export": "run"
           },
           "completion": "immediate"
@@ -2105,7 +2105,7 @@
           ],
           "source": {
             "kind": "file",
-            "ref": "nodes/initialize_ast_frames.ts",
+            "ref": "nodes/execution/initialize_ast_frames.ts",
             "export": "run"
           },
           "completion": "immediate"
@@ -3027,11 +3027,38 @@
         "dependencies": [
           "era.expression.types",
           "era.expression.primitives",
-          "era.expression.functions"
+          "era.expression.execution_core"
         ],
         "external_packages": [
           "mathjs"
         ]
+      },
+      "era.expression.execution_core": {
+        "kind": "base_lib",
+        "id": "era.expression.execution_core",
+        "display_name": "表达式执行核心计算",
+        "description": "引用、函数、微积分和初始序列状态的纯计算。",
+        "category": "表达式领域",
+        "version": "1.0.0",
+        "implementations": [
+          {
+            "language": "typescript",
+            "targets": [
+              "browser",
+              "node"
+            ],
+            "source": {
+              "kind": "file",
+              "ref": "base_lib/expression_execution_core.ts"
+            },
+            "completion": "immediate"
+          }
+        ],
+        "dependencies": [
+          "era.expression.types",
+          "era.expression.primitives"
+        ],
+        "external_packages": []
       },
       "era.expression.functions": {
         "kind": "base_lib",
@@ -3058,6 +3085,36 @@
           "era.expression.types",
           "era.expression.primitives",
           "era.expression.syntax"
+        ],
+        "external_packages": []
+      },
+      "era.expression.operation": {
+        "kind": "base_lib",
+        "id": "era.expression.operation",
+        "display_name": "表达式操作提交",
+        "description": "按操作顺序提交状态与随机游标，并提供独立求值入口。",
+        "category": "表达式领域",
+        "version": "1.0.0",
+        "implementations": [
+          {
+            "language": "typescript",
+            "targets": [
+              "browser",
+              "node"
+            ],
+            "source": {
+              "kind": "file",
+              "ref": "base_lib/expression_operation.ts"
+            },
+            "completion": "immediate"
+          }
+        ],
+        "dependencies": [
+          "era.expression.types",
+          "era.expression.primitives",
+          "era.expression.functions",
+          "era.expression.execution_core",
+          "era.expression.execution"
         ],
         "external_packages": []
       },

@@ -87,15 +87,21 @@
         "description": "创建有界事件、定时器、迭代与连续 MK 状态，并增加仅存在于当前页面实例的单调窗口 token 和未解析准入缓存；stop、pagehide、reload 或重新初始化随服务状态一并清除，不写消息或 Sidecar。"
       },
       {
+        "id": "begin_cycle",
+        "type_used": "era.service.cycle.begin",
+        "display_name": "进入收集阶段",
+        "description": "只包装现有服务状态为内部 collect 阶段；保留原初始化状态所有字段，不接收事件、不提交宿主副作用。"
+      },
+      {
         "id": "service_loop",
         "type_used": "vibeflow.loop.while",
         "display_name": "永久服务循环",
-        "description": "持续接收并处理服务迭代，直至宿主取消异步工作流。",
+        "description": "携带 collect 或 execute 阶段状态；收集时接收入站事件，执行时每轮处理一个步骤，批次结算后才恢复接收。",
         "requires": [
           {
-            "type": "era.service.state",
+            "type": "era.service.cycle.state",
             "cardinality": "exactly_one",
-            "display_name": "服务状态"
+            "display_name": "阶段循环状态"
           }
         ],
         "loop": {
@@ -103,9 +109,9 @@
           "max_iterations": null,
           "carry": [
             {
-              "from": "era.service.state",
-              "as": "service_state",
-              "update": "serviceStateNext"
+              "from": "era.service.cycle.state",
+              "as": "cycle_state",
+              "update": "cycleStateNext"
             }
           ]
         },
@@ -147,6 +153,10 @@
       ],
       [
         "initialize_state",
+        "begin_cycle"
+      ],
+      [
+        "begin_cycle",
         "service_loop"
       ],
       [

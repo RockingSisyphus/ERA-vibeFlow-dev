@@ -43,8 +43,8 @@
       "completion": "immediate",
       "source": {
         "kind": "file",
-        "ref": "nodes/api/workbench_normalize_ordered.ts",
-        "export": "run"
+        "ref": "nodes/api/shared_workbench_operation_adapters.ts",
+        "export": "WorkbenchNormalizeOrderedNode"
       }
     }
   ],

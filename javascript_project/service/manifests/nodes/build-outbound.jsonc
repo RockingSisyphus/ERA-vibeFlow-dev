@@ -33,8 +33,22 @@
     ],
     "params_schema": {},
     "params_defaults": {},
-    "input_semantics": {"era.batch.finalization":["输入：批次收尾结果。"]},
-    "output_semantics": {"batch_result_frame":["输出：批次结果帧。"],"batch_fatal_flag":["输出：批次致命标记。"],"post_batch_state":["输出：批次后状态。"]}
+    "input_semantics": {
+      "era.batch.finalization": [
+        "输入：批次收尾结果。"
+      ]
+    },
+    "output_semantics": {
+      "batch_result_frame": [
+        "输出：批次结果帧。"
+      ],
+      "batch_fatal_flag": [
+        "输出：批次致命标记。"
+      ],
+      "post_batch_state": [
+        "输出：批次后状态。"
+      ]
+    }
   },
   "implementations": [
     {
@@ -46,13 +60,14 @@
       "completion": "immediate",
       "source": {
         "kind": "file",
-        "ref": "nodes/publish/build_outbound.ts",
-        "export": "run"
+        "ref": "nodes/iteration/shared_protocol_adapters.ts",
+        "export": "BuildOutboundNode"
       }
     }
   ],
   "base_libs": [
-    "era.service.protocol"
+    "era.service.service_protocol_collection",
+    "era.service.service_protocol_execution"
   ],
   "capabilities": []
 }

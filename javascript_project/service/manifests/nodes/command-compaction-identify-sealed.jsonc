@@ -1,1 +1,56 @@
-{"kind":"node","type_key":"era.command_compaction.identify_sealed","display_name":"识别已封存楼层","category":"命令压缩集成","description":"选择已有后续 AI 消息的封存候选并清理已删除消息的孤儿 marker。","version":"1.0.0","flow_kind":"process","contract":{"requires":[{"type":"era.expression.command.result","cardinality":"exactly_one","display_name":"表达式命令同步结果"}],"provides":[{"key":"identified","type":"era.command_compaction.identified","display_name":"已识别封存楼层"}],"params_schema":{},"params_defaults":{},"input_semantics":{"era.expression.command.result":["输入：原始同步工作项与封存候选。"]},"output_semantics":{"identified":["输出：有效封存层与已清理 marker 的上下文。"]}},"implementations":[{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/sync/command_compaction_identify.ts","export":"run"}}],"base_libs":["era.service.command_compaction"],"capabilities":[]}
+{
+  "kind": "node",
+  "type_key": "era.command_compaction.identify_sealed",
+  "display_name": "识别已封存楼层",
+  "category": "命令压缩集成",
+  "description": "选择已有后续 AI 消息的封存候选并清理已删除消息的孤儿 marker。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.expression.command.result",
+        "cardinality": "exactly_one",
+        "display_name": "表达式命令同步结果"
+      }
+    ],
+    "provides": [
+      {
+        "key": "identified",
+        "type": "era.command_compaction.identified",
+        "display_name": "已识别封存楼层"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.expression.command.result": [
+        "输入：原始同步工作项与封存候选。"
+      ]
+    },
+    "output_semantics": {
+      "identified": [
+        "输出：有效封存层与已清理 marker 的上下文。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/sync/shared_compaction_adapters.ts",
+        "export": "CommandCompactionIdentifyNode"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.command_compaction"
+  ],
+  "capabilities": []
+}

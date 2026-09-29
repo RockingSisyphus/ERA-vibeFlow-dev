@@ -2,7 +2,7 @@ import { messageContentVersion } from "../../base_lib/domain/mk_engine.ts";
 import {
   basisAfterSyncWrites,
   observeWrite,
-} from "../../base_lib/sync_commit_policy.ts";
+} from "../../base_lib/sync/sync_commit_policy.ts";
 import {
   cloneSyncJson,
   errorMessage,
@@ -12,7 +12,7 @@ import {
   type SyncCommitResultV1,
   type SyncFailureV1,
   type SyncWorkV1,
-} from "../../base_lib/sync_contracts.ts";
+} from "../../base_lib/sync/sync_contracts.ts";
 import {
   inspectSidecar,
   recordFor,

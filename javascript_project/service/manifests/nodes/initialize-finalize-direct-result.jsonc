@@ -8,22 +8,45 @@
   "flow_kind": "process",
   "contract": {
     "requires": [
-      {"type": "era.initialize.direct.result", "cardinality": "exactly_one", "display_name": "专用直接初始化结果"}
+      {
+        "type": "era.initialize.direct.result",
+        "cardinality": "exactly_one",
+        "display_name": "专用直接初始化结果"
+      }
     ],
     "provides": [
-      {"key": "initialize_direct_task_result", "type": "era.task.result", "display_name": "直接初始化任务结果"}
+      {
+        "key": "initialize_direct_task_result",
+        "type": "era.task.result",
+        "display_name": "直接初始化任务结果"
+      }
     ],
     "params_schema": {},
     "params_defaults": {},
-    "input_semantics": {"era.initialize.direct.result": ["输入：仅属于 finish 分支的直接结果。"]},
-    "output_semantics": {"initialize_direct_task_result": ["输出：已结算的直接初始化任务结果。"]}
+    "input_semantics": {
+      "era.initialize.direct.result": [
+        "输入：仅属于 finish 分支的直接结果。"
+      ]
+    },
+    "output_semantics": {
+      "initialize_direct_task_result": [
+        "输出：已结算的直接初始化任务结果。"
+      ]
+    }
   },
   "implementations": [
     {
       "language": "typescript",
-      "targets": ["browser", "node"],
+      "targets": [
+        "browser",
+        "node"
+      ],
       "completion": "immediate",
-      "source": {"kind": "file", "ref": "nodes/initialize/finalize_direct_initialization.ts", "export": "run"}
+      "source": {
+        "kind": "file",
+        "ref": "nodes/initialize/shared_pure_adapters.ts",
+        "export": "FinalizeDirectInitializationNode"
+      }
     }
   ],
   "base_libs": [],

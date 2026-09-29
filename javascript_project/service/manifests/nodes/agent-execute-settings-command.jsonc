@@ -66,10 +66,10 @@
     }
   },
   "base_libs": [
-    "era.service.agent_connection_policy",
+    "era.service.agent_flow_policy",
     "era.service.agent_flow_types",
     "era.service.agent_generation_session",
-    "era.service.agent_request_policy",
-    "era.service.agent_settings_policy"
+    "era.service.agent_settings_policy",
+    "era.service.agent_generation_context"
   ]
 }

@@ -52,8 +52,8 @@
       "completion": "immediate",
       "source": {
         "kind": "file",
-        "ref": "nodes/dispatch/plan_message_preparation.ts",
-        "export": "run"
+        "ref": "nodes/dispatch/shared_dispatch_adapters.ts",
+        "export": "PlanMessagePreparationNode"
       }
     }
   ],

@@ -24,21 +24,28 @@
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
-      "era.batch.execution.state": ["输入：外层批次执行状态。"]
+      "era.batch.execution.state": [
+        "输入：外层批次执行状态。"
+      ]
     },
     "output_semantics": {
-      "initialize_execution_state": ["输出：未经修改的同一批次执行状态。"]
+      "initialize_execution_state": [
+        "输出：未经修改的同一批次执行状态。"
+      ]
     }
   },
   "implementations": [
     {
       "language": "typescript",
-      "targets": ["browser", "node"],
+      "targets": [
+        "browser",
+        "node"
+      ],
       "completion": "immediate",
       "source": {
         "kind": "file",
-        "ref": "nodes/initialize/carry_execution_state.ts",
-        "export": "run"
+        "ref": "nodes/initialize/shared_pure_adapters.ts",
+        "export": "CarryExecutionStateNode"
       }
     }
   ],

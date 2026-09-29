@@ -1,197 +1,176 @@
 {
   "nodeset_imports": [
     {
-      "path": "batch_execute.jsonc"
+      "path": "service_collect_phase.jsonc"
+    },
+    {
+      "path": "service_prepare_batch_phase.jsonc"
+    },
+    {
+      "path": "service_step.jsonc"
+    },
+    {
+      "path": "service_settle_step_phase.jsonc"
     }
   ],
   "type_key": "era.service.iteration",
-  "display_name": "ERA 服务迭代",
-  "description": "接收一个传输事件、更新有界事件集、发送事件集控制，并等待或执行一个批次。",
+  "display_name": "ERA 服务阶段迭代",
+  "description": "外层永久 Loop 的单轮 body。collect 阶段只收集/规划，execute 阶段只执行一个严格 PlannedStep；结算后才再次接收入站事件。",
   "requires": [
     {
-      "type": "era.service.state",
+      "type": "era.service.cycle.state",
       "cardinality": "exactly_one",
-      "display_name": "服务状态"
+      "display_name": "当前阶段状态"
     }
   ],
   "provides": [
     {
-      "key": "service_state_next",
-      "type": "era.service.state.next",
-      "display_name": "下一服务状态"
+      "key": "cycle_state_next",
+      "type": "era.service.cycle.state",
+      "display_name": "下一阶段状态"
     }
   ],
   "pipeline": {
     "entry_mode": "async",
     "inputs": [
       {
-        "key": "service_state",
-        "type": "era.service.state",
-        "display_name": "服务状态",
+        "key": "cycle_state",
+        "type": "era.service.cycle.state",
+        "display_name": "当前阶段状态",
         "required": true
       }
     ],
-    "max_steps": 32,
+    "max_steps": 24,
     "nodes": [
       {
         "id": "start",
         "type_used": "era.service.terminal",
-        "display_name": "迭代启动",
-        "description": "启动一次异步服务迭代。"
+        "display_name": "阶段迭代开始",
+        "description": "开始一个收集或单步执行阶段。"
       },
       {
-        "id": "state_input",
-        "type_used": "era.service.state_input",
-        "display_name": "读取携带状态",
-        "description": "将外层循环携带状态适配给本次迭代，不更改其内容。"
+        "id": "route_phase",
+        "type_used": "era.service.cycle.route",
+        "display_name": "选择当前阶段",
+        "description": "只读取内部 collect/execute 标签，不读取事件，不改变领域状态。"
       },
       {
-        "id": "receive_event",
-        "type_used": "vibeflow.io",
-        "display_name": "接收服务事件",
-        "description": "在宿主提供的入站 Port 上挂起，直至收到一个传输事件。",
-        "provides": [
-          {
-            "key": "transport_event_raw",
-            "type": "era.transport.event.raw",
-            "display_name": "原始传输事件"
-          }
-        ],
-        "io": {
-          "operation": "receive",
-          "port": "era.service.in"
-        },
-        "requires": []
+        "id": "collect_phase",
+        "type_used": "era.service.collect_phase",
+        "display_name": "接收并归约一个事件",
+        "description": "只有 collect 阶段接收入站事件，校验、归约并发送事件集控制。"
       },
       {
-        "id": "validate_transport",
-        "type_used": "era.service.validate_transport",
-        "display_name": "校验传输事件",
-        "description": "领域规划前校验 Schema、字节限制、宿主引用数量和无损参数标签。"
-      },
-      {
-        "id": "reduce_collection",
-        "type_used": "era.service.reduce_collection",
-        "display_name": "归约来源顺序与保存到期事件",
-        "description": "普通API立即执行而不等防抖；防抖只控制持久化。接收保存到期事件并形成既有sync路由的flush任务；保留生成high-water、scope窗口及编辑/切聊失效。后到事件不延长既定生成范围。"
-      },
-      {
-        "id": "send_collection_control",
-        "type_used": "vibeflow.io",
-        "display_name": "发送事件集控制",
-        "description": "分支路由前向宿主提交定时器调度或取消命令。",
-        "requires": [
-          {
-            "type": "era.collection.control",
-            "cardinality": "exactly_one",
-            "display_name": "事件集控制"
-          }
-        ],
-        "io": {
-          "operation": "send",
-          "port": "era.service.out"
-        },
-        "provides": []
-      },
-      {
-        "id": "route_iteration",
+        "id": "route_collection",
         "type_used": "era.service.route_iteration",
-        "display_name": "路由等待或执行",
-        "description": "选择更新后的事件集继续等待输入，或转为可执行批次。"
+        "display_name": "选择等待或规划",
+        "description": "读取归约结果的 wait/execute 路由，不改变事件集。"
       },
       {
-        "id": "wait_state",
-        "type_used": "era.service.wait_state",
+        "id": "carry_wait",
+        "type_used": "era.service.cycle.carry_wait",
         "display_name": "携带等待状态",
-        "description": "原样返回有界事件集状态，供下一次接收迭代使用。"
+        "description": "把归约后的服务状态原样包装为下一轮 collect 阶段。"
       },
       {
-        "id": "execute_batch",
-        "type_used": "era.service.batch_execute",
-        "display_name": "执行已收集批次",
-        "description": "对一个就绪批次依次规划、检查覆盖、执行、收尾、发送并路由致命结果。"
+        "id": "prepare_batch",
+        "type_used": "era.service.prepare_batch_phase",
+        "display_name": "规划并校验就绪批次",
+        "description": "规划严格步骤与来源覆盖；无效覆盖立即结算发布，有效批次进入 execute 阶段。"
+      },
+      {
+        "id": "unpack_execution",
+        "type_used": "era.service.cycle.unpack_execution",
+        "display_name": "验证在途批次状态",
+        "description": "仅 execute 阶段解包；输出通过既有严格批次状态 Schema 校验。"
+      },
+      {
+        "id": "execute_step",
+        "type_used": "era.service.step",
+        "display_name": "执行一个规划步骤",
+        "description": "沿既有任务路由执行恰好一个步骤，并保留索引、结算与失败语义。"
+      },
+      {
+        "id": "settle_step",
+        "type_used": "era.service.settle_step_phase",
+        "display_name": "继续或完成批次",
+        "description": "未到最后一步时携带在途状态；最后一步当轮结算并发布后返回 collect。"
       },
       {
         "id": "end",
         "type_used": "era.service.terminal",
-        "display_name": "迭代结束",
-        "description": "生成下一有界服务状态后结束本次迭代。"
+        "display_name": "阶段迭代结束",
+        "description": "输出唯一下一阶段状态供外层 Loop carry。"
       }
     ],
     "edges": [
       [
         "start",
-        "state_input"
+        "route_phase"
       ],
       {
-        "from": "state_input",
-        "to": "receive_event",
-        "transfer": false
+        "from": "route_phase",
+        "to": "collect_phase",
+        "when": "cycle_route == 'collect'"
       },
       {
-        "from": "state_input",
-        "to": "reduce_collection",
-        "schedule": false
+        "from": "route_phase",
+        "to": "unpack_execution",
+        "when": "cycle_route == 'execute'"
       },
       [
-        "receive_event",
-        "validate_transport"
-      ],
-      [
-        "validate_transport",
-        "reduce_collection"
-      ],
-      [
-        "reduce_collection",
-        "send_collection_control"
+        "collect_phase",
+        "route_collection"
       ],
       {
-        "from": "send_collection_control",
-        "to": "route_iteration",
-        "transfer": false
-      },
-      {
-        "from": "reduce_collection",
-        "to": "route_iteration",
+        "from": "collect_phase",
+        "to": "carry_wait",
         "schedule": false
       },
       {
-        "from": "route_iteration",
-        "to": "wait_state",
+        "from": "collect_phase",
+        "to": "prepare_batch",
+        "schedule": false
+      },
+      {
+        "from": "route_collection",
+        "to": "carry_wait",
         "when": "iteration_route == 'wait'",
         "transfer": false
       },
       {
-        "from": "reduce_collection",
-        "to": "wait_state",
-        "schedule": false
-      },
-      {
-        "from": "route_iteration",
-        "to": "execute_batch",
+        "from": "route_collection",
+        "to": "prepare_batch",
         "when": "iteration_route == 'execute'",
         "transfer": false
       },
-      {
-        "from": "reduce_collection",
-        "to": "execute_batch",
-        "schedule": false
-      },
       [
-        "wait_state",
+        "carry_wait",
         "end"
       ],
       [
-        "execute_batch",
+        "prepare_batch",
+        "end"
+      ],
+      [
+        "unpack_execution",
+        "execute_step"
+      ],
+      [
+        "execute_step",
+        "settle_step"
+      ],
+      [
+        "settle_step",
         "end"
       ]
     ],
     "outputs": [
       {
-        "type": "era.service.state.next",
+        "type": "era.service.cycle.state",
         "cardinality": "exactly_one",
-        "display_name": "下一服务状态",
-        "as": "serviceStateNext"
+        "display_name": "下一阶段状态",
+        "as": "cycleStateNext"
       }
     ]
   }

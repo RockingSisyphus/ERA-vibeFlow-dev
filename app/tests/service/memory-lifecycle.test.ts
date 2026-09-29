@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { contextWith, identity, sidecarId } from './memory-lifecycle-fixture';
 import { run as advance } from '../../../javascript_project/service/nodes/sync/drive_message_blocks';
-import { run as prepareWork } from '../../../javascript_project/service/nodes/sync/prepare_block_work';
-import { run as publish } from '../../../javascript_project/service/nodes/sync/publish_block_application';
+import {
+  PrepareBlockWorkNode as prepareWork,
+  PublishBlockApplicationNode as publish,
+} from '../../../javascript_project/service/nodes/sync/shared_block_state_adapters';
 import { recordFor } from '../../../javascript_project/service/base_lib/sidecar_binding';
-import { applySealedCommandCompactionToWork } from '../../../javascript_project/service/base_lib/command_compaction';
+import { applySealedCommandCompactionToWork } from '../../../javascript_project/service/base_lib/sync/command_compaction';
 import { overlayWorkingMessages } from '../../../javascript_project/service/base_lib/working_state';
 
 import { run as prepareApi } from '../../../javascript_project/service/nodes/api/prepare_api_blocks';

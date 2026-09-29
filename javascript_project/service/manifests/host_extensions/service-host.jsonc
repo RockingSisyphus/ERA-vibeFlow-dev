@@ -16,7 +16,7 @@
       "completion": "immediate",
       "source": {
         "kind": "file",
-        "ref": "host_extensions/service_host.ts",
+        "ref": "host_extensions/service_host_operations.ts",
         "export": "createHostExtension"
       }
     }
@@ -36,7 +36,11 @@
     "era.lifecycle.admission",
     "era.tavern.functions"
   ],
-  "dependencies": [],
+  "dependencies": [
+    "era.tavern.host_types",
+    "era.tavern.host_primitives",
+    "era.tavern.host_settlement"
+  ],
   "external_packages": [
     "@era/vibeflow-contracts"
   ]

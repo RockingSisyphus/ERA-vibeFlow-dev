@@ -20,8 +20,7 @@
   ],
   "dependencies": [
     "era.snapshot.data_view",
-    "era.snapshot.public_state",
-    "era.snapshot.message_identity"
+    "era.snapshot.public_state"
   ],
   "external_packages": []
 }

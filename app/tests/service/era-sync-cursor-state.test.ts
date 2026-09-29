@@ -2,15 +2,15 @@ import { describe, expect, it } from 'vitest';
 
 import {
   createInitialServiceState,
-  mergeTaskResult,
   reduceForProtocolSlice,
-} from '../../../javascript_project/service/base_lib/service_protocol';
-import { buildSyncCommitRequest } from '../../../javascript_project/service/base_lib/sync_commit_policy';
+} from '../../../javascript_project/service/base_lib/service_protocol_collection';
+import { mergeTaskResult } from '../../../javascript_project/service/base_lib/service_protocol_execution';
+import { buildSyncCommitRequest } from '../../../javascript_project/service/base_lib/sync/sync_commit_policy';
 import {
   buildSyncCommittedResult,
   buildSyncNonCommitResult,
   stateUpdateForPlan,
-} from '../../../javascript_project/service/base_lib/sync_result_policy';
+} from '../../../javascript_project/service/base_lib/sync/sync_result_policy';
 
 describe('ERA 服务状态：块游标槽', () => {
   it('初始状态带 null 的 syncCursor 槽', () => {

@@ -1,5 +1,5 @@
-import { buildSyncCommittedResult, buildSyncNonCommitResult } from "../../base_lib/sync_result_policy.ts";
-import { type SyncCommitResultV1, type SyncWorkV1 } from "../../base_lib/sync_contracts.ts";
+import { buildSyncCommittedResult, buildSyncNonCommitResult } from "../../base_lib/sync/sync_result_policy.ts";
+import { type SyncCommitResultV1, type SyncWorkV1 } from "../../base_lib/sync/sync_contracts.ts";
 
 interface Envelope<T> {
   readonly value: T;

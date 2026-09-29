@@ -44,8 +44,8 @@
       "completion": "immediate",
       "source": {
         "kind": "file",
-        "ref": "nodes/sync/command_compaction_compact.ts",
-        "export": "run"
+        "ref": "nodes/sync/shared_compaction_adapters.ts",
+        "export": "CommandCompactionCompactNode"
       }
     }
   ],

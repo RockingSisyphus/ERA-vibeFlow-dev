@@ -50,7 +50,6 @@
     }
   ],
   "base_libs": [
-    "era.service.block_step_state",
     "era.service.sync_contracts",
     "era.service.sync_planning"
   ],

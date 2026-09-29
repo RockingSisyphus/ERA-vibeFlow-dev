@@ -1,0 +1,18 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.service.cycle.state",
+  "representation": "json",
+  "display_name": "Service 内部阶段循环状态",
+  "description": "仅在唯一 Service Loop 内携带阶段标签和当前严格状态。payload 在阶段入口与出口分别按原 Service/Batch Data Schema 验证。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "schemaVersion": {"const": 1},
+      "phase": {"enum": ["collect", "execute"]},
+      "payload": {"type": "object", "additionalProperties": true}
+    },
+    "required": ["schemaVersion", "phase", "payload"],
+    "additionalProperties": false
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.service.cycle.routed",
+  "representation": "json",
+  "display_name": "Service 阶段路由中的状态",
+  "description": "阶段路由后传给唯一分支的原始阶段状态。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "schemaVersion": {
+        "const": 1
+      },
+      "phase": {
+        "enum": [
+          "collect",
+          "execute"
+        ]
+      },
+      "payload": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    "required": [
+      "schemaVersion",
+      "phase",
+      "payload"
+    ],
+    "additionalProperties": false
+  }
+}

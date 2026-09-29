@@ -6,7 +6,7 @@ import {
   parseEraFunctionCalls,
   parseMessageBlocks,
   type EraFunctionCallSite,
-} from '../../../javascript_project/service/base_lib/domain/message_function_calls';
+} from '../../../javascript_project/service/base_lib/domain/commands/message_function_calls';
 
 const CALL_WITH_REGION = [
   '<EraFCall name="dice" id="c1"/>',

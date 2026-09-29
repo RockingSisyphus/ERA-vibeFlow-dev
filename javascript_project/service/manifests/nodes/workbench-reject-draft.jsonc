@@ -43,8 +43,8 @@
       "completion": "immediate",
       "source": {
         "kind": "file",
-        "ref": "nodes/api/workbench_reject_draft.ts",
-        "export": "run"
+        "ref": "nodes/api/shared_workbench_adapters.ts",
+        "export": "WorkbenchRejectDraftNode"
       }
     }
   ],

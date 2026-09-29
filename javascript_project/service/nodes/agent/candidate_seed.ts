@@ -1,4 +1,4 @@
-import { prepareSessionWrite } from "../../base_lib/agent_session_binding.ts";
+import { prepareSessionWrite } from "../../base_lib/agent/agent_session_binding.ts";
 
 /** Install the retained history before a replacement stage model request. */
 export function run(inputs: any, _params: any, runtime: any): any {

@@ -7,19 +7,50 @@
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
-    "requires": [{"type": "era.mk.candidate.routed", "cardinality": "exactly_one", "display_name": "已路由 MK 候选"}],
-    "provides": [{"key": "mk_commit_request", "type": "era.mk.commit.request", "display_name": "MK 提交请求"}],
+    "requires": [
+      {
+        "type": "era.mk.candidate.routed",
+        "cardinality": "exactly_one",
+        "display_name": "已路由 MK 候选"
+      }
+    ],
+    "provides": [
+      {
+        "key": "mk_commit_request",
+        "type": "era.mk.commit.request",
+        "display_name": "MK 提交请求"
+      }
+    ],
     "params_schema": {},
     "params_defaults": {},
-    "input_semantics": {"era.mk.candidate.routed":["输入：已路由 MK 候选。"]},
-    "output_semantics": {"mk_commit_request":["输出：MK 提交请求。"]}
+    "input_semantics": {
+      "era.mk.candidate.routed": [
+        "输入：已路由 MK 候选。"
+      ]
+    },
+    "output_semantics": {
+      "mk_commit_request": [
+        "输出：MK 提交请求。"
+      ]
+    }
   },
-  "implementations": [{
-    "language": "typescript",
-    "targets": ["browser", "node"],
-    "completion": "immediate",
-    "source": {"kind": "file", "ref": "nodes/update_mk/build_mk_commit.ts", "export": "run"}
-  }],
-  "base_libs": ["era.service.types"],
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/update_mk/shared_mk_adapters.ts",
+        "export": "BuildMkCommitNode"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.types"
+  ],
   "capabilities": []
 }

@@ -52,13 +52,15 @@
       "completion": "immediate",
       "source": {
         "kind": "file",
-        "ref": "nodes/api/facade_adapt_sync.ts",
-        "export": "run"
+        "ref": "nodes/api/facade_nodes.ts",
+        "export": "adaptSyncNode"
       }
     }
   ],
   "base_libs": [
-    "era.service.facade_nodes"
+    "era.service.facade_api_engine",
+    "era.service.types",
+    "era.service.working_state"
   ],
   "capabilities": []
 }

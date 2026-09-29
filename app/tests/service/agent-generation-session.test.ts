@@ -18,7 +18,7 @@ import {
   stripAgentReportsForPrompt,
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Service 纯领域函数的差分测试必须读取真实 VibeFlow 源码。
   // @ts-ignore TypeScript 会对 app rootDir 外的 VibeFlow 源码报告 TS6059。
-} from '../../../javascript_project/service/base_lib/agent_generation_session';
+} from '../../../javascript_project/service/base_lib/agent/agent_generation_session';
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- 节点测试必须调用正式 VibeFlow Node source。
 // @ts-ignore app tsconfig 不声明 Service Node 的跨 root 类型。
@@ -28,10 +28,10 @@ import { run as prepareAgentSessionNode } from '../../../javascript_project/serv
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- 节点测试读取真实 Service 编排边界。
 // @ts-ignore app rootDir 外的 Node source。
-import { run as classifyGenerationNode } from '../../../javascript_project/service/nodes/agent/classify_generation_event';
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment -- 节点测试读取真实 Service 编排边界。
-// @ts-ignore app rootDir 外的 Node source。
-import { run as prepareGenerationNode } from '../../../javascript_project/service/nodes/agent/prepare_generation_phase';
+import {
+  ClassifyGenerationEventNode as classifyGenerationNode,
+  PrepareGenerationPhaseNode as prepareGenerationNode,
+} from '../../../javascript_project/service/nodes/agent/shared_agent_flow_adapters';
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- 节点测试读取真实 Service 编排边界。
 // @ts-ignore app rootDir 外的 Node source。
 import { run as formTransitionNode } from '../../../javascript_project/service/nodes/agent/form_session_transition';

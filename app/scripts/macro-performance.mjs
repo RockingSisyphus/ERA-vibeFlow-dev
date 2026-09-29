@@ -1,6 +1,6 @@
-// eslint-disable-next-line import-x/no-nodejs-modules
+
 import { writeFile } from 'node:fs/promises';
-// eslint-disable-next-line import-x/no-nodejs-modules
+
 import { performance } from 'node:perf_hooks';
 
 import _ from 'lodash';

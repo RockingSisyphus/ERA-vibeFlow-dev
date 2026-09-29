@@ -66,7 +66,8 @@
   ],
   "base_libs": [
     "era.service.sidecar_binding",
-    "era.service.working_state"
+    "era.service.working_state",
+    "era.service.sidecar_resolution_projection"
   ],
   "capabilities": [
     {

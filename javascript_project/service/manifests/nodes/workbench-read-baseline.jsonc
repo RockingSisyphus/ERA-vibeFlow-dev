@@ -52,7 +52,7 @@
     "era.workbench.context",
     "era.workbench.operations",
     "era.service.sidecar_binding",
-    "era.snapshot.query"
+    "era.snapshot.history"
   ],
   "capabilities": [
     {

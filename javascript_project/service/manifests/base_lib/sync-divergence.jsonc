@@ -1,0 +1,27 @@
+{
+  "kind": "base_lib",
+  "id": "era.service.sync_divergence",
+  "display_name": "sync-divergence",
+  "description": "ERA sync engine stage source.",
+  "category": "历史同步",
+  "version": "1.0.0",
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "source": {
+        "kind": "file",
+        "ref": "base_lib/domain/sync/sync_divergence.ts"
+      }
+    }
+  ],
+  "dependencies": [
+    "era.service.mk_engine",
+    "era.snapshot.history",
+    "era.service.sync_types"
+  ],
+  "external_packages": []
+}

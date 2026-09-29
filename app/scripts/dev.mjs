@@ -1,4 +1,4 @@
-/* eslint-disable import-x/no-nodejs-modules */
+
 import { spawn } from 'node:child_process';
 
 const pnpmCommand = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';

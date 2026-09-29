@@ -1,4 +1,4 @@
-/* eslint-disable import-x/no-nodejs-modules */
+
 import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { createServer } from 'node:http';

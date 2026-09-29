@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { run as execute } from '../../../javascript_project/service/nodes/agent/execute_generation_session';
 import { run as handoff } from '../../../javascript_project/service/nodes/agent/prepare_stage_handoff';
-import { normalizeAgentConfiguration } from '../../../javascript_project/service/base_lib/agent_generation_session';
+import { normalizeAgentConfiguration } from '../../../javascript_project/service/base_lib/agent/agent_generation_session';
 
 /** 按真实阶段恢复入口推进，明确在两次 Node 执行之间改变宿主事实。 */
 function fixture(options: { settlement?: boolean; planningDraft?: string } = {}) {

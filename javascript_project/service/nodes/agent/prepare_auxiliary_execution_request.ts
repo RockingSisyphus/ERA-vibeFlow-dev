@@ -1,10 +1,10 @@
-import { stableBase36Token } from "../../base_lib/sync_planning.ts";
-import { planEraSync } from "../../base_lib/domain/sync_engine.ts";
-import { normalizeAgentConfiguration, isAgentEnabled, agentRetryMatchesSession } from "../../base_lib/agent_generation_session.ts";
+import { stableBase36Token } from "../../base_lib/sync/sync_planning.ts";
+import { planEraSync } from "../../base_lib/sync/sync_planning.ts";
+import { normalizeAgentConfiguration, isAgentEnabled, agentRetryMatchesSession } from "../../base_lib/agent/agent_generation_session.ts";
 import { parseMessageKeyData } from "../../base_lib/domain/mk_engine.ts";
 import { formatMessageKeyBlock, generateMessageKey } from "../../base_lib/domain/mk_engine.ts";
 import { stripEraDataBlocks } from "../../base_lib/domain/mk_engine.ts";
-import { collectGenerationFacts } from "../../base_lib/agent_flow_policy.ts";
+import { collectGenerationFacts } from "../../base_lib/agent/agent_flow_policy.ts";
 import type { PlannedStepV1 } from "../../base_lib/service_types.ts";
 export async function run(
   inputs: Readonly<Record<string, unknown>>,

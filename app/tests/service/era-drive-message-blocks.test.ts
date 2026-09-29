@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { execute } from './memory-batch-fixture';
 import { contextWith } from './memory-lifecycle-fixture';
-import { planEraSync } from '../../../javascript_project/service/base_lib/domain/sync_engine';
+import { planEraSync } from '../../../javascript_project/service/base_lib/sync/sync_planning';
 
 // The former per-block disk pipeline is replaced by the approved memory publication pipeline.
 // Keep its rollback/expression/history conditions against the actual production nodes.

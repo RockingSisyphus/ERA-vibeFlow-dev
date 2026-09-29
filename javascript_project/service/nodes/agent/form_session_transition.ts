@@ -1,8 +1,8 @@
 import {
   withFloorCandidate,
   AgentSessionFailure,
-} from "../../base_lib/agent_flow_policy.ts";
-import type { AgentOutcome } from "../../base_lib/agent_flow_types.ts";
+} from "../../base_lib/agent/agent_flow_policy.ts";
+import type { AgentOutcome } from "../../base_lib/agent/agent_flow_types.ts";
 import type { PlannedStepV1 } from "../../base_lib/service_types.ts";
 export function run(inputs: Readonly<Record<string, unknown>>): any {
   const original = (

@@ -21,7 +21,7 @@
   "dependencies": [
     "era.expression.types",
     "era.expression.primitives",
-    "era.expression.functions"
+    "era.expression.execution_core"
   ],
   "external_packages": [
     "mathjs"

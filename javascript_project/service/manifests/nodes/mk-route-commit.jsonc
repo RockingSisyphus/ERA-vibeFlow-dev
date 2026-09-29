@@ -7,22 +7,56 @@
   "version": "1.0.0",
   "flow_kind": "decision",
   "contract": {
-    "requires": [{"type": "era.mk.candidate", "cardinality": "exactly_one", "display_name": "MK 候选"}],
+    "requires": [
+      {
+        "type": "era.mk.candidate",
+        "cardinality": "exactly_one",
+        "display_name": "MK 候选"
+      }
+    ],
     "provides": [
-      {"key": "mk_commit_route", "type": "era.mk.route", "display_name": "MK 提交路由"},
-      {"key": "routed_mk_candidate", "type": "era.mk.candidate.routed", "display_name": "已路由 MK 候选"}
+      {
+        "key": "mk_commit_route",
+        "type": "era.mk.route",
+        "display_name": "MK 提交路由"
+      },
+      {
+        "key": "routed_mk_candidate",
+        "type": "era.mk.candidate.routed",
+        "display_name": "已路由 MK 候选"
+      }
     ],
     "params_schema": {},
     "params_defaults": {},
-    "input_semantics": {"era.mk.candidate":["输入：MK 候选。"]},
-    "output_semantics": {"mk_commit_route":["输出：MK 提交路由。"],"routed_mk_candidate":["输出：已路由 MK 候选。"]}
+    "input_semantics": {
+      "era.mk.candidate": [
+        "输入：MK 候选。"
+      ]
+    },
+    "output_semantics": {
+      "mk_commit_route": [
+        "输出：MK 提交路由。"
+      ],
+      "routed_mk_candidate": [
+        "输出：已路由 MK 候选。"
+      ]
+    }
   },
-  "implementations": [{
-    "language": "typescript",
-    "targets": ["browser", "node"],
-    "completion": "immediate",
-    "source": {"kind": "file", "ref": "nodes/update_mk/route_mk_commit.ts", "export": "run"}
-  }],
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/initialize/shared_pure_adapters.ts",
+        "export": "RouteMkCommitNode"
+      }
+    }
+  ],
   "base_libs": [],
   "capabilities": []
 }

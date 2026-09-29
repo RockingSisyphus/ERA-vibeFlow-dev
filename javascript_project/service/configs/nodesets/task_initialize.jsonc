@@ -1,9 +1,5 @@
 {
-  "nodeset_imports": [
-    {
-      "path": "startup_sync.jsonc"
-    }
-  ],
+  "nodeset_imports": [],
   "type_key": "era.task.initialize",
   "display_name": "ERA 初始化任务",
   "description": "规划并提交幂等设置、世界书、状态栏正则和角色主开场白示例资源；启动操作随后复用共享同步事务。",
@@ -42,7 +38,7 @@
         "required": true
       }
     ],
-    "max_steps": 20,
+    "max_steps": 21,
     "nodes": [
       {
         "id": "start",
@@ -99,10 +95,16 @@
         "description": "将启动同步与资源直接结算分成不同数据类型，防止直接结果提前结束应继续进入 Sidecar 的启动同步。"
       },
       {
-        "id": "startup_sync",
-        "type_used": "era.task.startup_sync",
-        "display_name": "执行启动历史同步",
-        "description": "启动设置确认后，复用共享同步事务提交历史状态。"
+        "id": "adapt_startup_step",
+        "type_used": "era.initialize.adapt_startup_sync_step",
+        "display_name": "适配启动同步步骤",
+        "description": "把初始化专用步骤转为共享同步 routed step。"
+      },
+      {
+        "id": "run_shared_sync",
+        "type_used": "era.task.sync",
+        "display_name": "运行共享同步",
+        "description": "沿原启动分支调用唯一共享同步事务。"
       },
       {
         "id": "finalize_direct_result",
@@ -158,12 +160,12 @@
       ],
       {
         "from": "route_completion",
-        "to": "startup_sync",
+        "to": "adapt_startup_step",
         "when": "initialize_completion_route == 'sync'"
       },
       {
         "from": "carry_execution_state",
-        "to": "startup_sync",
+        "to": "adapt_startup_step",
         "schedule": false
       },
       {
@@ -172,7 +174,11 @@
         "when": "initialize_completion_route == 'finish'"
       },
       [
-        "startup_sync",
+        "adapt_startup_step",
+        "run_shared_sync"
+      ],
+      [
+        "run_shared_sync",
         "end"
       ],
       [

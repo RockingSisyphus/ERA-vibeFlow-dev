@@ -1,3 +1,4 @@
+import { findSyncDivergence } from '../../../javascript_project/service/base_lib/domain/sync/sync_divergence_detection';
 /**
  * 被中断楼层（带逐块提交凭据）在引擎侧的三处接线。
  *
@@ -12,18 +13,17 @@ import {
   applyMessageCommands,
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- 产品测试直接验证 VibeFlow 纯领域源码。
   // @ts-ignore TypeScript 会对 app rootDir 外的 VibeFlow 源码报告 TS6059。
-} from '../../../javascript_project/service/base_lib/domain/crud_engine';
+} from '../../../javascript_project/service/base_lib/domain/commands/crud_engine';
 import {
-  findSyncDivergence,
   planEraSync,
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- 产品测试直接验证 VibeFlow 纯领域源码。
   // @ts-ignore TypeScript 会对 app rootDir 外的 VibeFlow 源码报告 TS6059。
-} from '../../../javascript_project/service/base_lib/domain/sync_engine';
+} from '../../../javascript_project/service/base_lib/sync/sync_planning';
 import {
   wrapBlockAsAppliedRecord,
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- 产品测试直接验证 VibeFlow 纯领域源码。
   // @ts-ignore TypeScript 会对 app rootDir 外的 VibeFlow 源码报告 TS6059。
-} from '../../../javascript_project/service/base_lib/domain/message_function_calls';
+} from '../../../javascript_project/service/base_lib/domain/commands/message_function_calls';
 import type { EraMkMessageV1 } from '../../../javascript_project/service/base_lib/domain/mk_engine';
 
 const BLOCKS = [

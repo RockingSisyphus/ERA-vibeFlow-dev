@@ -1,0 +1,54 @@
+{
+  "kind": "node",
+  "type_key": "era.service.adapt_api_task_result",
+  "display_name": "接回公共对象任务结果",
+  "category": "公共 Facade",
+  "description": "把已完成的 API 任务结果接回统一步骤合并入口。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.api.task.result",
+        "cardinality": "exactly_one",
+        "display_name": "公共对象任务结果"
+      }
+    ],
+    "provides": [
+      {
+        "key": "api_task_result_common",
+        "type": "era.task.result",
+        "display_name": "统一步骤任务结果"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.api.task.result": [
+        "已完成 API 任务结果。"
+      ]
+    },
+    "output_semantics": {
+      "api_task_result_common": [
+        "与其他 Service 任务同形的结果。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/initialize/shared_pure_adapters.ts",
+        "export": "AdaptApiTaskResultNode"
+      }
+    }
+  ],
+  "base_libs": [],
+  "capabilities": []
+}

@@ -24,8 +24,8 @@
       "completion": "immediate",
       "source": {
         "kind": "file",
-        "ref": "nodes/lifecycle/terminal.ts",
-        "export": "run"
+        "ref": "nodes/initialize/shared_pure_adapters.ts",
+        "export": "TerminalNode"
       }
     }
   ],

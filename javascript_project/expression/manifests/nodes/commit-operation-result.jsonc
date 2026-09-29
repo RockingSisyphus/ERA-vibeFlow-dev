@@ -68,14 +68,14 @@
       "completion": "immediate",
       "source": {
         "kind": "file",
-        "ref": "nodes/commit_operation_result.ts",
+        "ref": "nodes/execution/commit_operation_result.ts",
         "export": "run"
       }
     }
   ],
   "base_libs": [
-    "era.expression.execution",
-    "era.expression.types"
+    "era.expression.types",
+    "era.expression.operation"
   ],
   "capabilities": []
 }

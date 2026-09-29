@@ -1,4 +1,4 @@
-/* eslint-disable import-x/no-nodejs-modules */
+
 import { createServer } from 'node:http';
 
 const host = '127.0.0.1';

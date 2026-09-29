@@ -40,6 +40,7 @@ function createAdapter() {
   const warnings = [];
   let chatVariables = { stat_data: {}, ERAMetaData: { SelectedMks: [], EditLogs: {} } };
   let scriptVariables = {};
+  let working = null;
   const sidecarRecords = new Map();
   const sidecarCurrent = {
     identity: { characterId: 'probe-card', groupId: null, chatId: 'probe-chat' },
@@ -170,6 +171,14 @@ function createAdapter() {
         stop_native_generation: () => ({ status: 'stopped' }),
       },
       sidecar: {
+        read_working: () => ({ working: structuredClone(working) }),
+        write_working: input => {
+          if (input.expectedVersion !== undefined && input.expectedVersion !== (working?.version ?? 0)) {
+            throw new Error('ERA_WORKING_STATE_CHANGED');
+          }
+          working = { ...structuredClone(input), version: (working?.version ?? 0) + 1 };
+          return { working: structuredClone(working) };
+        },
         read_current: async () => structuredClone(sidecarCurrent),
         read_record: async input => {
           const record = sidecarRecords.get(input.sidecarId);
@@ -189,6 +198,12 @@ function createAdapter() {
         present_prompt: () => ({ status: 'presented' }),
         clear_prompt: () => ({ status: 'cleared' }),
       },
+      functions: {
+        begin: () => ({ status: 'started' }),
+        next: async () => ({ kind: 'done', error: null }),
+        acknowledge: () => ({ status: 'acknowledged' }),
+        release: () => ({ released: true }),
+      },
       warn(message, details) {
         warnings.push({ message, details });
       },
@@ -205,7 +220,7 @@ function createAdapter() {
         warnings: warnings.length,
         message: messages.at(-1)?.message ?? '',
         sidecarRecords: sidecarRecords.size,
-        workbenchRecord: structuredClone(sidecarRecords.get('era_chat_probe-12345678') ?? null),
+        workbenchRecord: structuredClone(working?.record ?? sidecarRecords.get('era_chat_probe-12345678') ?? null),
       };
     },
   };
@@ -254,6 +269,30 @@ async function probeGeneratedHost(workflow) {
       `workflow allow 未登记 Tavern 监听器：${JSON.stringify(stopped)}，trace=${JSON.stringify(traceEvents.slice(-30))}`,
     );
   }
+
+  const startupAdmission = fake.emit({
+    type: 'app_ready',
+    source: 'tavern',
+    args: [],
+    occurredAt: 999,
+  });
+  const startupObservation = await Promise.race([
+    startupAdmission.done.then(outcome => ({ kind: 'outcome', outcome })),
+    workflowStopped,
+  ]);
+  if (startupObservation.kind === 'stopped') {
+    throw new Error(`启动初始化导致 workflow 停止：${String(startupObservation.error)}；trace=${JSON.stringify(traceEvents.slice(-30))}`);
+  }
+  const startupOutcome = startupObservation.outcome;
+  assert(startupOutcome.status === 'completed', `启动初始化未结算：${JSON.stringify(startupOutcome)}；trace=${JSON.stringify(traceEvents.slice(-30))}`);
+  const resourcesAdmission = fake.emit({
+    type: 'era.ui.initialize_resources',
+    source: 'ui',
+    args: [{ mode: 'traditional' }],
+    occurredAt: 1_000,
+  });
+  const resourcesOutcome = await resourcesAdmission.done;
+  assert(resourcesOutcome?.status === 'completed', `资源初始化未结算：${JSON.stringify({ admission: resourcesAdmission, outcome: resourcesOutcome, trace: traceEvents.slice(-20) })}`);
 
   const outcomes = [];
   const readCurrent = fake.adapter.sidecar.read_current;
@@ -307,10 +346,10 @@ async function probeGeneratedHost(workflow) {
   assert(afterStop.removals === 1, 'host.stop() 必须只注销一次监听器。');
   assert(
     outcomes.every((outcome, index) => outcome.status === (index === 7 || index === 9 ? 'failed' : 'completed')),
-    '真实同步与 Facade 事件必须完整结算，Sidecar 失败后下一任务仍须完成。',
+    `真实同步与 Facade 事件必须完整结算，Sidecar 失败后下一任务仍须完成：${JSON.stringify(outcomes)}`,
   );
   assert(afterStop.message.includes('<era_tx s="a">'), 'ERA.commit 必须写入独立 always 事务。');
-  assert(!afterStop.message.includes('999'), '陈旧草稿失败后不能把拟写入值追加到消息。');
+  assert(!afterStop.message.includes('"__workbenchProbe":999'), '陈旧草稿失败后不能把拟写入值追加到消息。');
   assert(afterStop.workbenchRecord.state.statData.__workbenchProbe === 3, '工作台三个出口与失败后公共提交必须产生真实最终状态。');
   assert(afterStop.workbenchRecord.state.statFunc.workbenchProbe.expr === 'x+1', '函数草稿必须进入最终 Sidecar。');
   for (const node of ['plan_variables', 'plan_functions', 'normalize_ordered', 'reject_draft', 'publish_preparation']) assert(traceEvents.some(event => JSON.stringify(event).includes(node)), `真实 AOT 未执行工作台节点 ${node}`);
@@ -318,7 +357,7 @@ async function probeGeneratedHost(workflow) {
   assert(executionCode === 'VF_ABORTED', `永久 workflow 停止码异常：${String(executionCode)}`);
   assert(stopMs <= 1_000, `Host 停止耗时 ${stopMs}ms，超过 1 秒。`);
 
-  return { beforeCreate, afterCreate, afterStart, afterActivation, afterStop, outcomes, executionCode, stopMs };
+  return { beforeCreate, afterCreate, afterStart, afterActivation, afterStop, startupOutcome, resourcesOutcome, outcomes, executionCode, stopMs };
 }
 
 async function probeWorkflowFrames(workflow) {
@@ -370,6 +409,7 @@ async function probeWorkflowFrames(workflow) {
   };
 
   let executionCode = null;
+  let executionError = null;
   try {
     await workflow.runWorkflowAsync(
       {},
@@ -387,11 +427,14 @@ async function probeWorkflowFrames(workflow) {
           'era.tavern.agent': directAdapter.agent,
           'era.tavern.startup_gate': { activate: () => ({ activated: true }), dormant: () => ({ activated: false }) },
           'era.tavern.sidecar': directAdapter.sidecar,
+          'era.tavern.functions': directAdapter.functions,
+          'era.lifecycle.admission': { schedule: () => ({ status: 'scheduled' }), cancel: () => ({ status: 'cancelled' }) },
         },
       },
     );
   } catch (error) {
     executionCode = error && typeof error === 'object' && 'code' in error ? error.code : null;
+    executionError = String(error);
   } finally {
     clearTimeout(watchdog);
   }
@@ -402,7 +445,7 @@ async function probeWorkflowFrames(workflow) {
   assert(
     JSON.stringify(kinds) ===
       JSON.stringify(['collection-control', 'batch-result', 'collection-control', 'batch-result']),
-    `帧顺序异常：${JSON.stringify(kinds)}，执行码：${String(executionCode)}`,
+    `帧顺序异常：${JSON.stringify(kinds)}，执行码：${String(executionCode)}，错误：${executionError}`,
   );
   assert(new Set(frameIds).size === frameIds.length, 'frameId 必须全部唯一。');
   assert(

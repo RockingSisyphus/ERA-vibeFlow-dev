@@ -1,20 +1,20 @@
-import { configurationWithPendingConnections } from "../../base_lib/agent_settings_policy.ts";
+import { configurationWithPendingConnections } from "../../base_lib/agent/agent_settings_policy.ts";
 import {
   connectionId,
   planConnectionSave,
   planConnectionDelete,
   planConnectionClear,
   type ConnectionState,
-} from "../../base_lib/agent_connection_policy.ts";
+} from "../../base_lib/agent/agent_flow_policy.ts";
 import {
   agentPresetName,
   captureAgentPresetSnapshot,
-} from "../../base_lib/agent_request_policy.ts";
-import { normalizeAgentConfiguration } from "../../base_lib/agent_generation_session.ts";
+} from "../../base_lib/agent/agent_generation_context.ts";
+import { normalizeAgentConfiguration } from "../../base_lib/agent/agent_generation_session.ts";
 import type {
   SettingsRequest,
   AgentOutcome,
-} from "../../base_lib/agent_flow_types.ts";
+} from "../../base_lib/agent/agent_flow_types.ts";
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }

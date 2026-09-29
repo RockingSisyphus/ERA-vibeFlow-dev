@@ -1,0 +1,7 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.service.cycle.completion_route",
+  "representation": "json",
+  "display_name": "Service 单步完成路由",
+  "schema": {"type": "string", "enum": ["continue", "finish"]}
+}

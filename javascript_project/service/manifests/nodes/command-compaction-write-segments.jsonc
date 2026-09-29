@@ -1,1 +1,56 @@
-{"kind":"node","type_key":"era.command_compaction.write_segments","display_name":"回填单一 Scope 事务","category":"命令压缩集成","description":"仅回填已通过生产重放的文本、消息更新及变量函数日志。","version":"1.0.0","flow_kind":"process","contract":{"requires":[{"type":"era.command_compaction.replayed","cardinality":"exactly_one","display_name":"Service 重放结果"}],"provides":[{"key":"written","type":"era.command_compaction.written","display_name":"已回填压缩结果"}],"params_schema":{},"params_defaults":{},"input_semantics":{"era.command_compaction.replayed":["输入：已由生产语义验证的候选。"]},"output_semantics":{"written":["输出：已回填消息和日志的上下文。"]}},"implementations":[{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/sync/command_compaction_write.ts","export":"run"}}],"base_libs":["era.service.command_compaction"],"capabilities":[]}
+{
+  "kind": "node",
+  "type_key": "era.command_compaction.write_segments",
+  "display_name": "回填单一 Scope 事务",
+  "category": "命令压缩集成",
+  "description": "仅回填已通过生产重放的文本、消息更新及变量函数日志。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.command_compaction.replayed",
+        "cardinality": "exactly_one",
+        "display_name": "Service 重放结果"
+      }
+    ],
+    "provides": [
+      {
+        "key": "written",
+        "type": "era.command_compaction.written",
+        "display_name": "已回填压缩结果"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.command_compaction.replayed": [
+        "输入：已由生产语义验证的候选。"
+      ]
+    },
+    "output_semantics": {
+      "written": [
+        "输出：已回填消息和日志的上下文。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/sync/shared_compaction_adapters.ts",
+        "export": "CommandCompactionWriteNode"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.command_compaction"
+  ],
+  "capabilities": []
+}

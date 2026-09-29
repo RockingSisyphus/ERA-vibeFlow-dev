@@ -1,12 +1,12 @@
-import { parseMessageBlocks } from "../../base_lib/domain/message_function_calls.ts";
+import { parseMessageBlocks } from "../../base_lib/domain/commands/message_function_calls.ts";
 import {
   planSyncWork,
   stableBase36Token,
-} from "../../base_lib/sync_planning.ts";
+} from "../../base_lib/sync/sync_planning.ts";
 import {
   consecutiveFacts,
   syncFailure,
-} from "../../base_lib/sync_contracts.ts";
+} from "../../base_lib/sync/sync_contracts.ts";
 import { variablesForState } from "../../base_lib/sidecar_binding.ts";
 import {
   formatMessageKeyBlock,

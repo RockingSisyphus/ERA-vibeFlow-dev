@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { planEraSync } from '../../../javascript_project/service/base_lib/domain/sync_engine';
+import { planEraSync } from '../../../javascript_project/service/base_lib/sync/sync_planning';
 import {
   messageContentVersion,
   readMkMessageText,

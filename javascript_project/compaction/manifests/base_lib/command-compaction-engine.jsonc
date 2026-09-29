@@ -18,7 +18,9 @@
       }
     }
   ],
-  "dependencies": [],
+  "dependencies": [
+    "era.command_compaction.interpreter"
+  ],
   "external_packages": [
     "@era/vibeflow-expression"
   ]

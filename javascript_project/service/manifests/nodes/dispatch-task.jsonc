@@ -28,8 +28,19 @@
     ],
     "params_schema": {},
     "params_defaults": {},
-    "input_semantics": {"era.step.request":["输入：已选步骤。"]},
-    "output_semantics": {"routed_step":["输出：已路由步骤。"],"task_route":["输出：任务路由。"]}
+    "input_semantics": {
+      "era.step.request": [
+        "输入：已选步骤。"
+      ]
+    },
+    "output_semantics": {
+      "routed_step": [
+        "输出：已路由步骤。"
+      ],
+      "task_route": [
+        "输出：任务路由。"
+      ]
+    }
   },
   "implementations": [
     {
@@ -41,13 +52,14 @@
       "completion": "immediate",
       "source": {
         "kind": "file",
-        "ref": "nodes/step/dispatch_task.ts",
-        "export": "run"
+        "ref": "nodes/iteration/shared_protocol_adapters.ts",
+        "export": "DispatchTaskNode"
       }
     }
   ],
   "base_libs": [
-    "era.service.protocol"
+    "era.service.service_protocol_collection",
+    "era.service.service_protocol_execution"
   ],
   "capabilities": []
 }

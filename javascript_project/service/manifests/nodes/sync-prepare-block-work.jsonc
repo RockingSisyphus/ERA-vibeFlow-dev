@@ -44,13 +44,12 @@
       "completion": "immediate",
       "source": {
         "kind": "file",
-        "ref": "nodes/sync/prepare_block_work.ts",
-        "export": "run"
+        "ref": "nodes/sync/shared_block_state_adapters.ts",
+        "export": "PrepareBlockWorkNode"
       }
     }
   ],
   "base_libs": [
-    "era.service.block_step_state",
     "era.service.sync_contracts"
   ],
   "capabilities": []

@@ -23,8 +23,16 @@
     ],
     "params_schema": {},
     "params_defaults": {},
-    "input_semantics": {"era.service.state.post_batch":["输入：批次后状态。"]},
-    "output_semantics": {"continued_state_next":["输出：继续服务状态。"]}
+    "input_semantics": {
+      "era.service.state.post_batch": [
+        "输入：批次后状态。"
+      ]
+    },
+    "output_semantics": {
+      "continued_state_next": [
+        "输出：继续服务状态。"
+      ]
+    }
   },
   "implementations": [
     {
@@ -36,13 +44,14 @@
       "completion": "immediate",
       "source": {
         "kind": "file",
-        "ref": "nodes/publish/continue_state.ts",
-        "export": "run"
+        "ref": "nodes/iteration/shared_protocol_adapters.ts",
+        "export": "ContinueStateNode"
       }
     }
   ],
   "base_libs": [
-    "era.service.protocol"
+    "era.service.service_protocol_collection",
+    "era.service.service_protocol_execution"
   ],
   "capabilities": []
 }

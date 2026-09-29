@@ -14,12 +14,12 @@
       ],
       "source": {
         "kind": "file",
-        "ref": "base_lib/agent_flow_types.ts"
+        "ref": "base_lib/agent/agent_flow_types.ts"
       }
     }
   ],
   "dependencies": [
-    "era.service.agent_generation_session",
+    "era.service.agent_configuration",
     "era.service.types",
     "era.service.agent_stage_handoff"
   ],

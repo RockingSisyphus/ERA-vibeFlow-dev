@@ -14,15 +14,17 @@
       ],
       "source": {
         "kind": "file",
-        "ref": "base_lib/sync_planning.ts"
+        "ref": "base_lib/sync/sync_planning.ts"
       }
     }
   ],
   "dependencies": [
     "era.service.mk_engine",
     "era.service.sync_contracts",
-    "era.service.sync_engine",
-    "era.service.types"
+    "era.service.types",
+    "era.service.sync_types",
+    "era.service.sync_block",
+    "era.service.sync_prepare"
   ],
   "external_packages": []
 }

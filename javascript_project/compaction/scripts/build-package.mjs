@@ -98,9 +98,14 @@ try {
     path.join(declarations, "base_lib/command_compaction_engine.d.ts"),
     "utf8",
   );
+  await copyFile(
+    path.join(declarations, "base_lib/command_compaction_interpreter.d.ts"),
+    path.join(output, "command_compaction_interpreter.d.ts"),
+  );
   await writeFile(
     path.join(output, "engine.d.ts"),
-    types +
+    'import type { CommandCompactionResponse } from "./command_compaction_interpreter.ts";\n' +
+      types +
       "\nexport declare function compactCommandLayer(input: unknown): CommandCompactionResponse;\n",
   );
 } finally {

@@ -14,14 +14,14 @@
       ],
       "source": {
         "kind": "file",
-        "ref": "base_lib/function_block_execution.ts"
+        "ref": "base_lib/sync/function_block_execution.ts"
       }
     }
   ],
   "dependencies": [
     "era.service.facade_api_engine",
     "era.service.message_function_calls",
-    "era.service.block_step_state"
+    "era.service.sync_contracts"
   ],
   "external_packages": []
 }

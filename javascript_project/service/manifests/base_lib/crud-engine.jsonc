@@ -8,13 +8,21 @@
   "implementations": [
     {
       "language": "typescript",
-      "targets": ["browser", "node"],
+      "targets": [
+        "browser",
+        "node"
+      ],
       "source": {
         "kind": "file",
-        "ref": "base_lib/domain/crud_engine.ts"
+        "ref": "base_lib/domain/commands/crud_engine.ts"
       }
     }
   ],
-  "dependencies": ["era.snapshot.query"],
-  "external_packages": ["opencc-js", "@era/vibeflow-expression"]
+  "dependencies": [
+    "era.crud.parser",
+    "era.crud.mutations"
+  ],
+  "external_packages": [
+    "@era/vibeflow-expression"
+  ]
 }

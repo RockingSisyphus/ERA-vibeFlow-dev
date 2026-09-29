@@ -117,8 +117,18 @@ interface ProtocolModule {
   finalizeBatch(state: ExecutionState): { readonly nextState: ServiceState };
 }
 
-const protocolUrl = new URL('../../../javascript_project/service/base_lib/service_protocol.ts', import.meta.url).href;
-const protocol = (await import(/* @vite-ignore */ protocolUrl)) as ProtocolModule;
+const collectionUrl = new URL(
+  '../../../javascript_project/service/base_lib/service_protocol_collection.ts',
+  import.meta.url,
+).href;
+const executionUrl = new URL(
+  '../../../javascript_project/service/base_lib/service_protocol_execution.ts',
+  import.meta.url,
+).href;
+const protocol = {
+  ...(await import(/* @vite-ignore */ collectionUrl)),
+  ...(await import(/* @vite-ignore */ executionUrl)),
+} as ProtocolModule;
 
 function json(value: unknown): TransportArg {
   return { kind: 'json', value };

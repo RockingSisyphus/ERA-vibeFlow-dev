@@ -3,10 +3,12 @@ import { contextWith, identity, sidecarId } from './memory-lifecycle-fixture';
 import { recordFor } from '../../../javascript_project/service/base_lib/sidecar_binding';
 import { run as prepare } from '../../../javascript_project/service/nodes/agent/prepare_stage_blocks';
 import { run as advance } from '../../../javascript_project/service/nodes/sync/drive_message_blocks';
-import { run as prepareWork } from '../../../javascript_project/service/nodes/sync/prepare_block_work';
-import { run as publish } from '../../../javascript_project/service/nodes/sync/publish_block_application';
+import {
+  PrepareBlockWorkNode as prepareWork,
+  PublishBlockApplicationNode as publish,
+} from '../../../javascript_project/service/nodes/sync/shared_block_state_adapters';
 import { run as finish } from '../../../javascript_project/service/nodes/agent/finish_stage_blocks';
-import { parsePlanningOutput } from '../../../javascript_project/service/base_lib/agent_generation_session';
+import { parsePlanningOutput } from '../../../javascript_project/service/base_lib/agent/agent_generation_session';
 
 const edit = (value: unknown) => `<VariableEdit>${JSON.stringify({ hp: value })}</VariableEdit>`;
 async function execute(stage: string, text: string, extra: any = {}) {

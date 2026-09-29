@@ -18,7 +18,11 @@
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {},
-    "output_semantics": {"service_state_initial":["输出：初始服务状态。"]}
+    "output_semantics": {
+      "service_state_initial": [
+        "输出：初始服务状态。"
+      ]
+    }
   },
   "implementations": [
     {
@@ -30,13 +34,14 @@
       "completion": "immediate",
       "source": {
         "kind": "file",
-        "ref": "nodes/lifecycle/initialize_state.ts",
-        "export": "run"
+        "ref": "nodes/iteration/shared_protocol_adapters.ts",
+        "export": "InitializeStateNode"
       }
     }
   ],
   "base_libs": [
-    "era.service.protocol"
+    "era.service.service_protocol_collection",
+    "era.service.service_protocol_execution"
   ],
   "capabilities": []
 }

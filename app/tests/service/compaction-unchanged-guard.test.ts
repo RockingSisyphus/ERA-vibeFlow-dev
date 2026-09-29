@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { writeSingleScopeSegments } from '../../../javascript_project/service/base_lib/command_compaction';
+import { writeSingleScopeSegments } from '../../../javascript_project/service/base_lib/sync/command_compaction';
 
-const ORIGINAL = '<VariableEdit>{"era_demo":{"player":{"hp":13}}}</VariableEdit><FunctionInsert>{"f":{"params":["x"],"expr":"x+1"}}</FunctionInsert>探索记录 1';
+const ORIGINAL =
+  '<VariableEdit>{"era_demo":{"player":{"hp":13}}}</VariableEdit><FunctionInsert>{"f":{"params":["x"],"expr":"x+1"}}</FunctionInsert>探索记录 1';
 // 压缩引擎的 renderTag 产物：语义相同但被美化重排（多行）。
-const RERENDERED = '<VariableEdit>\n{"era_demo":{"player":{"hp":13}}}\n</VariableEdit><FunctionInsert>\n{"f":{"params":["x"],"expr":"x+1"}}\n</FunctionInsert>探索记录 1';
+const RERENDERED =
+  '<VariableEdit>\n{"era_demo":{"player":{"hp":13}}}\n</VariableEdit><FunctionInsert>\n{"f":{"params":["x"],"expr":"x+1"}}\n</FunctionInsert>探索记录 1';
 
 // 真机证据逐字复制：`st-run-20260911T18572962-bea9ca9f83c3` 的 `COMBINED-AUTHOR-001`
 // 第 2 楼在 `author-initial`（原文）与 `author-synced`（full 同步后）两处观测到的文本。
@@ -74,9 +76,7 @@ describe('封存压缩写入：unchanged 层不得重写消息文本', () => {
     // 这一条锁的是真机失败证据本身：`COMBINED-AUTHOR-001/002`（6+8 条断言失败）与
     // `COMBINED-HISTORY-002/003`（2+1 条）在同一签名下全灭——full 同步把作者的
     // 单行 `<VariableEdit>` 美化成多行，破坏了「这些话的文本不得变化」的绑定断言。
-    const written = writeSingleScopeSegments(
-      contextWith('compacted', REAL_RERENDERED, REAL_ORIGINAL),
-    ) as unknown as {
+    const written = writeSingleScopeSegments(contextWith('compacted', REAL_RERENDERED, REAL_ORIGINAL)) as unknown as {
       messages: { content: { text: string } }[];
       messageUpdates: unknown[];
     };

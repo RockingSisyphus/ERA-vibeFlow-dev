@@ -1,8 +1,10 @@
 const sync_commit_policy = await import(
-  /* @vite-ignore */ new URL('../../../javascript_project/service/base_lib/sync_commit_policy.ts', import.meta.url).href
+  /* @vite-ignore */ new URL('../../../javascript_project/service/base_lib/sync/sync_commit_policy.ts', import.meta.url)
+    .href
 );
 const sync_contracts = await import(
-  /* @vite-ignore */ new URL('../../../javascript_project/service/base_lib/sync_contracts.ts', import.meta.url).href
+  /* @vite-ignore */ new URL('../../../javascript_project/service/base_lib/sync/sync_contracts.ts', import.meta.url)
+    .href
 );
 import { describe, expect, it, vi } from 'vitest';
 
@@ -12,17 +14,18 @@ type JsonRecord = Record<string, any>;
 
 const preparationUrl = new URL('../../../javascript_project/service/base_lib/dispatch_preparation.ts', import.meta.url)
   .href;
-const transactionUrl = new URL('../../../javascript_project/service/base_lib/sync_planning.ts', import.meta.url).href;
+const transactionUrl = new URL('../../../javascript_project/service/base_lib/sync/sync_planning.ts', import.meta.url)
+  .href;
 const commitUrl = new URL('../../../javascript_project/service/nodes/dispatch/commit_preparation.ts', import.meta.url)
   .href;
 const planMessagePreparationUrl = new URL(
-  '../../../javascript_project/service/nodes/dispatch/plan_message_preparation.ts',
+  '../../../javascript_project/service/nodes/dispatch/shared_dispatch_adapters.ts',
   import.meta.url,
 ).href;
 const readUrl = new URL('../../../javascript_project/service/nodes/dispatch/read_canonical_context.ts', import.meta.url)
   .href;
 const finalizeUrl = new URL(
-  '../../../javascript_project/service/nodes/dispatch/finalize_dispatch_context.ts',
+  '../../../javascript_project/service/nodes/dispatch/shared_dispatch_adapters.ts',
   import.meta.url,
 ).href;
 
@@ -162,7 +165,7 @@ describe('统一执行前上下文', () => {
     const step = { ...updateMkStep(), taskRoute: 'agent-generation-session' };
     const classified = preparation.classifyDispatch(step, state(step));
     expect(classified.seed.dispatchClass).toBe('update-mk');
-    const finalized = finalizeNode.run({
+    const finalized = finalizeNode.FinalizeDispatchContextNode({
       'era.dispatch.preparation.outcome': {
         value: preparation.buildNoHostOutcome(classified.seed),
       },
@@ -637,7 +640,10 @@ describe('严格 DTO、安全对象与 API 状态策略', () => {
     expect(plan.processingMk).toMatch(/^era_mk_1001_/);
     expect(plan.metaUpdate.SelectedMks).toEqual(['mk-0', 'mk-a']);
     expect(plan.variableWriteRequired).toBe(false);
-    const routed = planMessagePreparationNode.run({ 'era.dispatch.canonical_context': { value: canonical } }, {});
+    const routed = planMessagePreparationNode.PlanMessagePreparationNode(
+      { 'era.dispatch.canonical_context': { value: canonical } },
+      {},
+    );
     expect(routed).toMatchObject({ precommit_route: 'no-op' });
     const dispatchContext = preparation.dispatchContextOf(preparation.preserveDispatchPreparation(plan));
     const routedStep = { ...step, dispatchContext };
@@ -766,7 +772,8 @@ describe('同步阶段输入归属', () => {
       /* @vite-ignore */ new URL('../../../javascript_project/service/nodes/sync/read_sync_context.ts', import.meta.url)
         .href
     );
-    const { prepareSyncPlanningInput } = await import('../../../javascript_project/service/base_lib/sync_planning');
+    const { prepareSyncPlanningInput } =
+      await import('../../../javascript_project/service/base_lib/sync/sync_planning');
     const step = { ...syncStep(), dispatchContext: { status: 'ready', messages: [] } };
     const batch = state(step);
     const stored = { SidecarId: 'fixture' };

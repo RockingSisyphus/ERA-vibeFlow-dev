@@ -1,5 +1,5 @@
 import type { SidecarRecordV1 } from "./sidecar_binding.ts";
-import type { SyncWorkV1 } from "./sync_contracts.ts";
+import type { SyncWorkV1 } from "./sync/sync_contracts.ts";
 
 export interface WorkingState {
   readonly version: number;

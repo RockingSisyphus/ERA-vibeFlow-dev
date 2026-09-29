@@ -33,7 +33,7 @@ async function entrypoints(temp) {
   await symlink(path.join(compactionRoot, "node_modules"), path.join(temp, "node_modules"), "dir");
   const esbuild = path.join(compactionRoot, "node_modules/.bin/esbuild");
   const direct = path.join(temp, "engine.mjs");
-  command(esbuild, ["base_lib/command_compaction_engine.ts", "--bundle", "--platform=node", "--format=esm", `--outfile=${direct}`], { cwd: compactionRoot });
+  command(esbuild, ["api/engine.ts", "--bundle", "--platform=node", "--format=esm", `--outfile=${direct}`], { cwd: compactionRoot });
   for (const target of ["node", "browser"]) command("python", ["run.py", "build", "--config", "javascript_project/compaction/configs/era.command_compaction.jsonc", "--target", target, "--profile", "esm-module", "--out-dir", path.join(temp, target)]);
   for (const target of ["node", "browser"]) command(esbuild, [
     path.join(temp, target, "workflow.js"),

@@ -2,8 +2,8 @@ import {
   buildCommittedResult,
   buildFailureResult,
 } from "../../base_lib/facade_api_engine.ts";
-import type { EraBlockStepStateV1 } from "../../base_lib/block_step_state.ts";
-import { diagnosticsForPlan } from "../../base_lib/sync_result_policy.ts";
+import type { EraBlockStepStateV1 } from "../../base_lib/sync/sync_contracts.ts";
+import { diagnosticsForPlan } from "../../base_lib/sync/sync_result_policy.ts";
 
 /** Completion acknowledges application; saving and its notification happen separately. */
 export function run(inputs: any, _params: any, context: any): any {

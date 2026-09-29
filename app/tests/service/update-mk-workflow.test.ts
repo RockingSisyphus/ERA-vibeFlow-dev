@@ -13,6 +13,16 @@ type JsonRecord = Record<string, any>;
 const nodeRoot = new URL('../../../javascript_project/service/nodes/update_mk/', import.meta.url);
 
 async function loadNode(file: string): Promise<NodeModule> {
+  const shared: Record<string, readonly [string, string]> = {
+    'route_mk_commit.ts': ['../initialize/shared_pure_adapters.ts', 'RouteMkCommitNode'],
+    'preserve_mk.ts': ['shared_mk_adapters.ts', 'PreserveMkNode'],
+    'build_mk_commit.ts': ['shared_mk_adapters.ts', 'BuildMkCommitNode'],
+  };
+  if (shared[file]) {
+    const [source, name] = shared[file];
+    const module = await import(/* @vite-ignore */ new URL(source, nodeRoot).href);
+    return { run: module[name] };
+  }
   return (await import(/* @vite-ignore */ new URL(file, nodeRoot).href)) as NodeModule;
 }
 

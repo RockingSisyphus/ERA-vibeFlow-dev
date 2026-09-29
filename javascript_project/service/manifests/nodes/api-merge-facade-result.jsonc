@@ -17,7 +17,7 @@
     "provides": [
       {
         "key": "api_task_result",
-        "type": "era.task.result",
+        "type": "era.api.task.result",
         "display_name": "api_task_result"
       }
     ],
@@ -44,13 +44,15 @@
       "completion": "immediate",
       "source": {
         "kind": "file",
-        "ref": "nodes/api/facade_merge_result.ts",
-        "export": "run"
+        "ref": "nodes/api/facade_nodes.ts",
+        "export": "mergeFacadeNode"
       }
     }
   ],
   "base_libs": [
-    "era.service.facade_nodes"
+    "era.service.facade_api_engine",
+    "era.service.types",
+    "era.service.working_state"
   ],
   "capabilities": []
 }

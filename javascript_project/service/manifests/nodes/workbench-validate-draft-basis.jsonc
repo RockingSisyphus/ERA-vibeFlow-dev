@@ -51,8 +51,8 @@
       "completion": "immediate",
       "source": {
         "kind": "file",
-        "ref": "nodes/api/workbench_validate_draft.ts",
-        "export": "run"
+        "ref": "nodes/api/shared_workbench_operation_adapters.ts",
+        "export": "WorkbenchValidateDraftNode"
       }
     }
   ],

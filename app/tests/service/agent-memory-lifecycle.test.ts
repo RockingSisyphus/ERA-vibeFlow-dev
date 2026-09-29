@@ -3,13 +3,15 @@ import { contextWith, identity, sidecarId } from './memory-lifecycle-fixture';
 import { recordFor } from '../../../javascript_project/service/base_lib/sidecar_binding';
 import { run as prepareStage } from '../../../javascript_project/service/nodes/agent/prepare_stage_blocks';
 import { run as advance } from '../../../javascript_project/service/nodes/sync/drive_message_blocks';
-import { run as prepareWork } from '../../../javascript_project/service/nodes/sync/prepare_block_work';
-import { run as publish } from '../../../javascript_project/service/nodes/sync/publish_block_application';
+import {
+  PrepareBlockWorkNode as prepareWork,
+  PublishBlockApplicationNode as publish,
+} from '../../../javascript_project/service/nodes/sync/shared_block_state_adapters';
 import { run as finishStage } from '../../../javascript_project/service/nodes/agent/finish_stage_blocks';
 import {
   parsePlanningOutput,
   formatAgentPlanReport,
-} from '../../../javascript_project/service/base_lib/agent_generation_session';
+} from '../../../javascript_project/service/base_lib/agent/agent_generation_session';
 import { overlayWorkingMessages } from '../../../javascript_project/service/base_lib/working_state';
 import { run as formTransition } from '../../../javascript_project/service/nodes/agent/form_session_transition';
 import { isEraDispatchContextV3 } from '../../../packages/era-contracts/index.js';

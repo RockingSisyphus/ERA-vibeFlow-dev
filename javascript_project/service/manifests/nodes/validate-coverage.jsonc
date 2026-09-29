@@ -28,8 +28,19 @@
     ],
     "params_schema": {},
     "params_defaults": {},
-    "input_semantics": {"era.batch.plan":["输入：批次计划。"]},
-    "output_semantics": {"coverage_route":["输出：覆盖校验路由。"],"execution_state":["输出：初始执行状态。"]}
+    "input_semantics": {
+      "era.batch.plan": [
+        "输入：批次计划。"
+      ]
+    },
+    "output_semantics": {
+      "coverage_route": [
+        "输出：覆盖校验路由。"
+      ],
+      "execution_state": [
+        "输出：初始执行状态。"
+      ]
+    }
   },
   "implementations": [
     {
@@ -41,13 +52,14 @@
       "completion": "immediate",
       "source": {
         "kind": "file",
-        "ref": "nodes/batch/validate_coverage.ts",
-        "export": "run"
+        "ref": "nodes/iteration/shared_protocol_adapters.ts",
+        "export": "ValidateCoverageNode"
       }
     }
   ],
   "base_libs": [
-    "era.service.protocol"
+    "era.service.service_protocol_collection",
+    "era.service.service_protocol_execution"
   ],
   "capabilities": []
 }

@@ -1,5 +1,5 @@
 import { createCandidateRunner } from './agent-candidate-fixture';
-import { normalizeAgentConfiguration } from '../../../javascript_project/service/base_lib/agent_generation_session';
+import { normalizeAgentConfiguration } from '../../../javascript_project/service/base_lib/agent/agent_generation_session';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { runInNewContext } from 'node:vm';
 import { contextWith, identity, sidecarId } from './memory-lifecycle-fixture';
@@ -12,10 +12,12 @@ import {
 } from '../../src/ERA变量框架/service/sidecar-runtime-snapshot';
 import { prepare } from '../../../javascript_project/service/nodes/sync/prepare_block_step';
 import { run as advance } from '../../../javascript_project/service/nodes/sync/drive_message_blocks';
-import { run as prepareWork } from '../../../javascript_project/service/nodes/sync/prepare_block_work';
-import { run as publish } from '../../../javascript_project/service/nodes/sync/publish_block_application';
+import {
+  PrepareBlockWorkNode as prepareWork,
+  PublishBlockApplicationNode as publish,
+} from '../../../javascript_project/service/nodes/sync/shared_block_state_adapters';
 import { recordFor } from '../../../javascript_project/service/base_lib/sidecar_binding';
-import { planEraSync } from '../../../javascript_project/service/base_lib/domain/sync_engine';
+import { planEraSync } from '../../../javascript_project/service/base_lib/sync/sync_planning';
 
 const cleanup: (() => void)[] = [];
 afterEach(() => {

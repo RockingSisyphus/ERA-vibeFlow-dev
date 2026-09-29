@@ -13,8 +13,8 @@
       "completion": "immediate",
       "source": {
         "kind": "file",
-        "ref": "nodes/agent/prepare_generation_phase.ts",
-        "export": "run"
+        "ref": "nodes/agent/shared_agent_flow_adapters.ts",
+        "export": "PrepareGenerationPhaseNode"
       }
     }
   ],

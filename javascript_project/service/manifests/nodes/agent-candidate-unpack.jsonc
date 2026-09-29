@@ -60,8 +60,8 @@
       "completion": "immediate",
       "source": {
         "kind": "file",
-        "ref": "nodes/agent/candidate_unpack.ts",
-        "export": "run"
+        "ref": "nodes/initialize/shared_pure_adapters.ts",
+        "export": "CandidateUnpackNode"
       }
     }
   ],

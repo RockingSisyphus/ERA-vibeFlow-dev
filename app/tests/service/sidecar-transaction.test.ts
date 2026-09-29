@@ -70,9 +70,15 @@ function fixture(choice: 'migrate' | 'copy' | 'independent' | 'repair' | null = 
   const context = {
     capabilities: {
       'era.tavern.agent': {
-        read_session_binding: () => { throw new Error('unexpected candidate recovery'); },
-        write_session: () => { throw new Error('unexpected candidate recovery'); },
-        clear_session: () => { throw new Error('unexpected candidate recovery'); },
+        read_session_binding: () => {
+          throw new Error('unexpected candidate recovery');
+        },
+        write_session: () => {
+          throw new Error('unexpected candidate recovery');
+        },
+        clear_session: () => {
+          throw new Error('unexpected candidate recovery');
+        },
       },
       'era.tavern.sidecar': {
         ...workingCapabilityFixture(),

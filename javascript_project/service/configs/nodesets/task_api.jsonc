@@ -2,9 +2,6 @@
   "nodeset_imports": [
     {
       "path": "api_commit.jsonc"
-    },
-    {
-      "path": "api_sync.jsonc"
     }
   ],
   "type_key": "era.task.api",
@@ -25,7 +22,7 @@
   "provides": [
     {
       "key": "api_task_result",
-      "type": "era.task.result",
+      "type": "era.api.task.result",
       "display_name": "api_task_result"
     }
   ],
@@ -45,7 +42,7 @@
         "display_name": "execution_state"
       }
     ],
-    "max_steps": 10,
+    "max_steps": 16,
     "nodes": [
       {
         "id": "start",
@@ -66,10 +63,34 @@
         "description": "执行执行即时 ERA.commit。"
       },
       {
-        "id": "sync",
-        "type_used": "era.api.sync",
-        "display_name": "执行 ERA.sync",
-        "description": "执行执行 ERA.sync。"
+        "id": "sync_validate_and_build_sync_step",
+        "type_used": "era.api.plan_facade_sync",
+        "display_name": "校验并构造同步步骤",
+        "description": "执行校验并构造同步步骤。"
+      },
+      {
+        "id": "sync_run_shared_sync",
+        "type_used": "era.task.sync",
+        "display_name": "运行共享同步事务",
+        "description": "执行运行共享同步事务。"
+      },
+      {
+        "id": "sync_adapt_sync_receipt",
+        "type_used": "era.api.adapt_facade_sync",
+        "display_name": "适配 ERA.sync receipt",
+        "description": "执行适配 ERA.sync receipt。"
+      },
+      {
+        "id": "sync_build_sync_failure",
+        "type_used": "era.api.build_facade_sync_failure",
+        "display_name": "构造同步输入失败",
+        "description": "执行构造同步输入失败。"
+      },
+      {
+        "id": "sync_merge_sync_result",
+        "type_used": "era.api.merge_sync_result",
+        "display_name": "合并公共对象同步结果",
+        "description": "执行合并公共对象同步结果。"
       },
       {
         "id": "merge_facade_result",
@@ -96,7 +117,7 @@
       },
       {
         "from": "route_facade_command",
-        "to": "sync",
+        "to": "sync_validate_and_build_sync_step",
         "when": "facade_route == 'sync'"
       },
       [
@@ -104,17 +125,45 @@
         "merge_facade_result"
       ],
       [
-        "sync",
+        "sync_merge_sync_result",
         "merge_facade_result"
       ],
       [
         "merge_facade_result",
         "end"
+      ],
+      {
+        "from": "sync_validate_and_build_sync_step",
+        "to": "sync_run_shared_sync",
+        "when": "facade_sync_route == 'sync'"
+      },
+      {
+        "from": "sync_validate_and_build_sync_step",
+        "to": "sync_adapt_sync_receipt",
+        "when": "facade_sync_route == 'sync'",
+        "schedule": false
+      },
+      {
+        "from": "sync_validate_and_build_sync_step",
+        "to": "sync_build_sync_failure",
+        "when": "facade_sync_route == 'failed'"
+      },
+      [
+        "sync_run_shared_sync",
+        "sync_adapt_sync_receipt"
+      ],
+      [
+        "sync_adapt_sync_receipt",
+        "sync_merge_sync_result"
+      ],
+      [
+        "sync_build_sync_failure",
+        "sync_merge_sync_result"
       ]
     ],
     "outputs": [
       {
-        "type": "era.task.result",
+        "type": "era.api.task.result",
         "cardinality": "exactly_one",
         "as": "apiTaskResult",
         "display_name": "apiTaskResult"

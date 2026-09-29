@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { AgentExecutionRecords } from '../../src/ERA变量框架/service/agent-execution-records';
-import { compactSessionStorage } from '../../../javascript_project/service/base_lib/agent_session_binding';
+import { compactSessionStorage } from '../../../javascript_project/service/base_lib/agent/agent_session_binding';
 
 describe('page-only Agent prompt records', () => {
   it('moves a bounded planning record to its first real floor without retaining the pending index', () => {

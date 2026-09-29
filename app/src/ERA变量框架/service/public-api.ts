@@ -114,6 +114,13 @@ export interface EraFacade {
 
 let installedFacade: EraFacade | null = null;
 
+/** 只回收本实例发布到宿主页面的入口；较新的热重载实例由自身管理。 */
+function clearOwnedGlobalFacade(owner: EraFacade): boolean {
+  const host = typeof window === 'undefined' ? globalThis : (window.top ?? window);
+  const globals = host as unknown as Record<string, unknown>;
+  return globals['ERA'] !== owner || Reflect.deleteProperty(globals, 'ERA');
+}
+
 /** ERA 自身 UI 直接读取同一 bundle 内已经安装的 Facade，不反向依赖跨脚本全局出口。 */
 export function getInstalledEraPublicApi(): EraFacade {
   if (installedFacade === null) throw new Error('ERA_APP_SERVICE_UNAVAILABLE');
@@ -301,8 +308,10 @@ export function installEraPublicApi(createStatusbar: EraStatusbarFactory): () =>
   initializeGlobal('ERA', guarded);
   return () => {
     active = false;
+    const globalReleased = clearOwnedGlobalFacade(guarded);
     generationSubscriptions.clear();
     if (installedFacade === guarded) installedFacade = null;
     (facade.statusbar as EraStatusbarController).stop();
+    if (!globalReleased) throw new Error('ERA_GLOBAL_RELEASE_FAILED');
   };
 }

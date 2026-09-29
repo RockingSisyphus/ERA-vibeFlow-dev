@@ -8,8 +8,6 @@ import {
   executeSnapshotQuery,
   findLatestNewValue,
   parseEditLog,
-  projectFloorSnapshot,
-  projectFloorSnapshots,
   removeMetaFields,
   rollbackStatToMK,
   unescapeEraData,
@@ -20,6 +18,10 @@ import {
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- 该差分测试必须直接读取冻结的跨 root 纯函数源码。
   // @ts-ignore TypeScript 会对 app rootDir 外的 VibeFlow 源码报告 TS6059。
 } from '../../../javascript_project/service/base_lib/domain/snapshot_query';
+import {
+  projectFloorSnapshot,
+  projectFloorSnapshots,
+} from '../../../javascript_project/service/base_lib/domain/floor_snapshot';
 
 interface Fixture {
   readonly variables: EraSnapshotVariables;

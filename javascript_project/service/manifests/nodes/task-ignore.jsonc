@@ -23,21 +23,35 @@
     ],
     "params_schema": {},
     "params_defaults": {},
-    "input_semantics": {"era.step.request.routed":["输入：已路由忽略步骤。"]},
-    "output_semantics": {"ignore_task_result":["输出：忽略步骤结果。"]}
+    "input_semantics": {
+      "era.step.request.routed": [
+        "输入：已路由忽略步骤。"
+      ]
+    },
+    "output_semantics": {
+      "ignore_task_result": [
+        "输出：忽略步骤结果。"
+      ]
+    }
   },
   "implementations": [
     {
       "language": "typescript",
-      "targets": ["browser", "node"],
+      "targets": [
+        "browser",
+        "node"
+      ],
       "completion": "immediate",
       "source": {
         "kind": "file",
-        "ref": "nodes/step/task_ignore.ts",
-        "export": "run"
+        "ref": "nodes/iteration/shared_protocol_adapters.ts",
+        "export": "TaskIgnoreNode"
       }
     }
   ],
-  "base_libs": ["era.service.protocol"],
+  "base_libs": [
+    "era.service.service_protocol_collection",
+    "era.service.service_protocol_execution"
+  ],
   "capabilities": []
 }

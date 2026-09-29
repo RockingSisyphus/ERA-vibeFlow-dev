@@ -14,13 +14,13 @@
       ],
       "source": {
         "kind": "file",
-        "ref": "base_lib/agent_flow_policy.ts"
+        "ref": "base_lib/agent/agent_flow_policy.ts"
       }
     }
   ],
   "dependencies": [
     "era.service.agent_flow_types",
-    "era.service.agent_generation_session",
+    "era.service.agent_configuration",
     "era.service.mk_engine",
     "era.service.types"
   ],

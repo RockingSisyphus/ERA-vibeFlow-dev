@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { planEraSync } from '../../../javascript_project/service/base_lib/domain/sync_engine';
+import { planEraSync } from '../../../javascript_project/service/base_lib/sync/sync_planning';
 
 /**
  * 真机 SIDECAR-BIND-014 的形态（探针实测）：楼层文本留着「已应用」记录，侧车里也已提交了该楼层

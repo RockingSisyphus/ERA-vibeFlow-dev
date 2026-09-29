@@ -16,7 +16,7 @@ import {
   type EraCrudResult,
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- 差分测试必须直接读取跨 root 的 VibeFlow 纯函数源码。
   // @ts-ignore TypeScript 会对 app rootDir 外的 VibeFlow 源码报告 TS6059。
-} from '../../../javascript_project/service/base_lib/domain/crud_engine';
+} from '../../../javascript_project/service/base_lib/domain/commands/crud_engine';
 
 interface LegacyCrudResult {
   readonly finalStat: unknown;

@@ -59,8 +59,8 @@
       "completion": "immediate",
       "source": {
         "kind": "file",
-        "ref": "nodes/api/workbench_publish_preparation.ts",
-        "export": "run"
+        "ref": "nodes/api/shared_workbench_adapters.ts",
+        "export": "WorkbenchPublishPreparationNode"
       }
     }
   ],

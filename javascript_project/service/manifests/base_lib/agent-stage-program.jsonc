@@ -14,15 +14,14 @@
       ],
       "source": {
         "kind": "file",
-        "ref": "base_lib/agent_stage_program.ts"
+        "ref": "base_lib/agent/agent_stage_program.ts"
       }
     }
   ],
   "dependencies": [
-    "era.service.block_step_state",
-    "era.service.sync_engine",
-    "era.service.agent_generation_session",
-    "era.service.sync_contracts"
+    "era.service.sync_contracts",
+    "era.service.sync_block",
+    "era.service.agent_function_calls"
   ],
   "external_packages": []
 }

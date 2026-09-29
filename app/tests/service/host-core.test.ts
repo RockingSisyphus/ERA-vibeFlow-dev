@@ -10,7 +10,7 @@ import {
   type EraTavernHostAdapter,
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Host 差分测试必须直接读取跨 root 的扩展源码。
   // @ts-ignore TypeScript 会对 app rootDir 外的 VibeFlow 源码报告 TS6059。
-} from '../../../javascript_project/service/host_extensions/service_host';
+} from '../../../javascript_project/service/host_extensions/service_host_operations';
 
 class FakeClock implements EraTavernClock {
   private nowValue = 1_000;

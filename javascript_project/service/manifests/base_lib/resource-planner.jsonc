@@ -8,13 +8,19 @@
   "implementations": [
     {
       "language": "typescript",
-      "targets": ["browser", "node"],
+      "targets": [
+        "browser",
+        "node"
+      ],
       "source": {
         "kind": "file",
         "ref": "base_lib/domain/resource_planner.ts"
       }
     }
   ],
-  "dependencies": [],
+  "dependencies": [
+    "era.service.resource_contracts",
+    "era.service.resource_setup"
+  ],
   "external_packages": []
 }

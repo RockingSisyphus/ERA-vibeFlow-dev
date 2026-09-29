@@ -5,7 +5,12 @@ import { createFunctionCallAdapter } from './function-call-adapter';
  * 只登记一套事件监听、转交回执和执行声明式 Capability。模块边界：
  * 不得实现领域路由、合并、CRUD、同步、回滚或资源选择，这些规则依赖 AOT workflow。
  */
-import { generationHandoffs, generationAdmission, cancelGenerationWaitForEvent } from './generation-handoff-host';
+import {
+  generationHandoffs,
+  generationAdmission,
+  cancelGenerationWaitForEvent,
+  dispatchGenerationHandoff,
+} from './generation-handoff-host';
 
 import { INPUT_EVENT, LISTENED_EVENT_TYPES, getEventDefinition, shouldCloseCollectionWindow } from '../events/catalog';
 import { Logger } from '../utils/log';
@@ -27,7 +32,6 @@ import { readInstallationScopeFacts } from './installation-scope';
 import { projectMessage } from './message-projection';
 import { AgentTavernHost } from './agent-tavern-host';
 import { EraInternalMessageWrites } from './era-internal-message-writes';
-import { dispatchGenerationHandoff } from './generation-handoff-host';
 import { TavernListeners } from './tavern-listeners';
 import { observeAgentReceipt } from './agent-session-observation';
 import {

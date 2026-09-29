@@ -1,12 +1,80 @@
 {
-  "kind":"node",
-  "type_key":"era.agent.adapt_legacy_step",
-  "display_name":"恢复原领域任务路由",
-  "category":"故事生成会话",
-  "description":"移除 Agent 外层路由并恢复 task.kind，使默认模式与 Agent 后置同步直接调用既有 Nodeset。",
-  "version":"1.0.0",
-  "flow_kind":"decision",
-  "contract":{"requires":[{"type":"era.agent.session.transition","cardinality":"exactly_one","display_name":"Agent 转换"},{"type":"era.batch.execution.state","cardinality":"exactly_one","display_name":"当前批次执行状态"}],"provides":[{"key":"legacy_routed_step","type":"era.step.request.routed","display_name":"原领域步骤"},{"key":"legacy_task_route","type":"era.task.route","display_name":"原领域路由"},{"key":"legacy_execution_state","type":"era.batch.execution.state","display_name":"原领域批次状态"}],"params_schema":{},"params_defaults":{},"input_semantics":{"era.agent.session.transition":["输入：保留包装步骤的转换。"],"era.batch.execution.state":["输入：保持原任务提交顺序的批次状态。"]},"output_semantics":{"legacy_routed_step":["输出：taskRoute 恢复为 task.kind。"],"legacy_task_route":["输出：原任务路由。"],"legacy_execution_state":["输出：未经修改的当前批次执行状态。"]}},
-  "implementations":[{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/agent/adapt_legacy_step.ts","export":"run"}}],
-  "base_libs":["era.service.types"],"capabilities":[]
+  "kind": "node",
+  "type_key": "era.agent.adapt_legacy_step",
+  "display_name": "恢复原领域任务路由",
+  "category": "故事生成会话",
+  "description": "移除 Agent 外层路由并恢复 task.kind，使默认模式与 Agent 后置同步直接调用既有 Nodeset。",
+  "version": "1.0.0",
+  "flow_kind": "decision",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.agent.session.transition",
+        "cardinality": "exactly_one",
+        "display_name": "Agent 转换"
+      },
+      {
+        "type": "era.batch.execution.state",
+        "cardinality": "exactly_one",
+        "display_name": "当前批次执行状态"
+      }
+    ],
+    "provides": [
+      {
+        "key": "legacy_routed_step",
+        "type": "era.step.request.routed",
+        "display_name": "原领域步骤"
+      },
+      {
+        "key": "legacy_task_route",
+        "type": "era.task.route",
+        "display_name": "原领域路由"
+      },
+      {
+        "key": "legacy_execution_state",
+        "type": "era.batch.execution.state",
+        "display_name": "原领域批次状态"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.agent.session.transition": [
+        "输入：保留包装步骤的转换。"
+      ],
+      "era.batch.execution.state": [
+        "输入：保持原任务提交顺序的批次状态。"
+      ]
+    },
+    "output_semantics": {
+      "legacy_routed_step": [
+        "输出：taskRoute 恢复为 task.kind。"
+      ],
+      "legacy_task_route": [
+        "输出：原任务路由。"
+      ],
+      "legacy_execution_state": [
+        "输出：未经修改的当前批次执行状态。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/update_mk/shared_mk_adapters.ts",
+        "export": "AdaptLegacyStepNode"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.types"
+  ],
+  "capabilities": []
 }

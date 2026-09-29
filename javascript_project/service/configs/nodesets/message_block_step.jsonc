@@ -1,9 +1,4 @@
 {
-  "nodeset_imports": [
-    {
-      "path": "command_compaction.jsonc"
-    }
-  ],
   "type_key": "era.sync.block_step",
   "display_name": "ERA 块步进单次迭代",
   "description": "共用内存块执行；累计消息、变量、函数、scope和日志，不在每块中执行聊天/Sidecar保存。",
@@ -54,19 +49,19 @@
         "id": "prepare_block_work",
         "type_used": "era.sync.prepare_block_work",
         "display_name": "累计操作记录及封存候选",
-        "description": "计划待审核：收集本轮消息补丁和累计日志；楼层完成时清内存进度并提供封存压缩候选，不构造每块持久化事务。"
+        "description": "收集本轮消息补丁和累计日志；楼层完成时清内存进度并提供封存压缩候选，不构造每块持久化事务。"
       },
       {
         "id": "apply_command_compaction",
-        "type_used": "era.command_compaction.apply_sealed_layers",
-        "display_name": "保留同 Scope 封存压缩",
-        "description": "沿既有展开节点运行纯压缩和重放校验，候选仅来自已完成封存楼层；允许普通操作相对 done 调用移位，不执行工具，不在此写宿主。"
+        "type_used": "era.command_compaction.apply_sealed_layers_flat",
+        "display_name": "Service 封存压缩组合",
+        "description": "在原位置依次识别、调用 Compaction AOT、以 Service CRUD 复放、回填并更新 marker；不新增宿主写入。"
       },
       {
         "id": "publish_block_application",
         "type_used": "era.lifecycle.publish_block_application",
         "display_name": "发布内存应用结果与推进位置",
-        "description": "把压缩后的工作状态更新到同一执行上下文，保留消息起点快照/随机偏移；同步更新API可读投影，不能覆盖后到操作。仅应用完成，不发布整批保存完成或提前ready。"
+        "description": "发布内存应用结果与推进位置；普通酒馆历史同步若在提交前发现目标 Swipe 已变化且没有写入，将旧分支作为可恢复空操作结算并安排当前历史重算。函数/API、已写入及其他错误保持失败。"
       },
       {
         "id": "end",

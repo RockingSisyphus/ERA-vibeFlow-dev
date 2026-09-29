@@ -1,8 +1,8 @@
-import type { EraBlockStepStateV1 } from "../../base_lib/block_step_state.ts";
+import type { EraBlockStepStateV1 } from "../../base_lib/sync/sync_contracts.ts";
 import {
   buildSyncCommitRequest,
   validateSyncCommitEnvelope,
-} from "../../base_lib/sync_commit_policy.ts";
+} from "../../base_lib/sync/sync_commit_policy.ts";
 
 /** Freeze accumulated message changes once, including a successful prefix on failure. */
 export function finalize(inputs: any): any {

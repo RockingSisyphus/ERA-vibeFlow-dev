@@ -1,5 +1,5 @@
-import { stageHandoff } from "../../base_lib/agent_stage_handoff.ts";
-import type { AgentOutcome } from "../../base_lib/agent_flow_types.ts";
+import { stageHandoff } from "../../base_lib/agent/agent_stage_handoff.ts";
+import type { AgentOutcome } from "../../base_lib/agent/agent_flow_types.ts";
 export function run(inputs: Readonly<Record<string, unknown>>): any {
   const outcome = (
     inputs["era.agent.candidate.outcome"] as { value: AgentOutcome }

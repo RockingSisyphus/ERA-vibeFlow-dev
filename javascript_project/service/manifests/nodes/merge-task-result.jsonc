@@ -33,8 +33,22 @@
     ],
     "params_schema": {},
     "params_defaults": {},
-    "input_semantics": {"era.task.result":["输入：任务结果。"],"era.batch.execution.state":["输入：当前批次执行状态。"]},
-    "output_semantics": {"execution_state_next":["输出：下一执行状态。"],"step_done":["输出：全部步骤已消费。"]}
+    "input_semantics": {
+      "era.task.result": [
+        "输入：任务结果。"
+      ],
+      "era.batch.execution.state": [
+        "输入：当前批次执行状态。"
+      ]
+    },
+    "output_semantics": {
+      "execution_state_next": [
+        "输出：下一执行状态。"
+      ],
+      "step_done": [
+        "输出：全部步骤已消费。"
+      ]
+    }
   },
   "implementations": [
     {
@@ -46,13 +60,14 @@
       "completion": "immediate",
       "source": {
         "kind": "file",
-        "ref": "nodes/step/merge_task_result.ts",
-        "export": "run"
+        "ref": "nodes/iteration/shared_protocol_adapters.ts",
+        "export": "MergeTaskResultNode"
       }
     }
   ],
   "base_libs": [
-    "era.service.protocol"
+    "era.service.service_protocol_collection",
+    "era.service.service_protocol_execution"
   ],
   "capabilities": []
 }

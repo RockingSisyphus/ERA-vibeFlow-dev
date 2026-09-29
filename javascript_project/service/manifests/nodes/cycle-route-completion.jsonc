@@ -1,0 +1,73 @@
+{
+  "kind": "node",
+  "type_key": "era.service.cycle.route_completion",
+  "display_name": "选择继续或结算",
+  "category": "服务阶段循环",
+  "description": "选择继续或结算；保持原 Service 领域状态及执行顺序。",
+  "version": "1.0.0",
+  "flow_kind": "decision",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.step.done",
+        "cardinality": "exactly_one",
+        "display_name": "输入状态"
+      },
+      {
+        "type": "era.batch.execution.state.next",
+        "cardinality": "exactly_one",
+        "display_name": "步骤后状态"
+      }
+    ],
+    "provides": [
+      {
+        "key": "completion_route",
+        "type": "era.service.cycle.completion_route",
+        "display_name": "阶段结果"
+      },
+      {
+        "key": "routed_execution_state",
+        "type": "era.batch.execution.state",
+        "display_name": "路由中的批次状态"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.step.done": [
+        "读取并保留输入值。"
+      ],
+      "era.batch.execution.state.next": [
+        "步骤后的严格批次状态。"
+      ]
+    },
+    "output_semantics": {
+      "completion_route": [
+        "供同一 Service 工作流的下一阶段使用。"
+      ],
+      "routed_execution_state": [
+        "原样交给唯一一个继续或结算分支。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/iteration/shared_protocol_adapters.ts",
+        "export": "RouteCompletionCycleNode"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.service_protocol_collection",
+    "era.service.service_protocol_execution"
+  ],
+  "capabilities": []
+}

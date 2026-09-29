@@ -1,6 +1,6 @@
-// eslint-disable-next-line import-x/no-nodejs-modules
+
 import { createHash } from 'node:crypto';
-// eslint-disable-next-line import-x/no-nodejs-modules
+
 import { readFile, writeFile } from 'node:fs/promises';
 
 const generatedRoot = new URL('../../generated/era-macro/', import.meta.url);

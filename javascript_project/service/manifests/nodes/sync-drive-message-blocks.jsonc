@@ -50,9 +50,8 @@
     }
   ],
   "base_libs": [
-    "era.service.block_step_state",
     "era.service.sync_contracts",
-    "era.service.sync_engine",
+    "era.service.sync_block",
     "era.service.function_block_execution",
     "era.service.agent_stage_program"
   ],

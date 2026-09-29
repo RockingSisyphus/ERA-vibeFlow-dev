@@ -1961,6 +1961,34 @@
             "completion": "immediate"
           }
         ],
+        "dependencies": [
+          "era.command_compaction.interpreter"
+        ],
+        "external_packages": [
+          "@era/vibeflow-expression"
+        ]
+      },
+      "era.command_compaction.interpreter": {
+        "kind": "base_lib",
+        "id": "era.command_compaction.interpreter",
+        "display_name": "命令层解析与原语执行",
+        "description": "六类命令的解析、状态操作与函数库更新原语。",
+        "category": "ERA 命令压缩",
+        "version": "1.0.0",
+        "implementations": [
+          {
+            "language": "typescript",
+            "targets": [
+              "browser",
+              "node"
+            ],
+            "source": {
+              "kind": "file",
+              "ref": "base_lib/command_compaction_interpreter.ts"
+            },
+            "completion": "immediate"
+          }
+        ],
         "dependencies": [],
         "external_packages": [
           "@era/vibeflow-expression"

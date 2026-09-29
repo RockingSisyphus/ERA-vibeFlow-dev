@@ -1,11 +1,14 @@
 const sync_commit_policy = await import(
-  /* @vite-ignore */ new URL('../../../javascript_project/service/base_lib/sync_commit_policy.ts', import.meta.url).href
+  /* @vite-ignore */ new URL('../../../javascript_project/service/base_lib/sync/sync_commit_policy.ts', import.meta.url)
+    .href
 );
 const sync_result_policy = await import(
-  /* @vite-ignore */ new URL('../../../javascript_project/service/base_lib/sync_result_policy.ts', import.meta.url).href
+  /* @vite-ignore */ new URL('../../../javascript_project/service/base_lib/sync/sync_result_policy.ts', import.meta.url)
+    .href
 );
 const sync_contracts = await import(
-  /* @vite-ignore */ new URL('../../../javascript_project/service/base_lib/sync_contracts.ts', import.meta.url).href
+  /* @vite-ignore */ new URL('../../../javascript_project/service/base_lib/sync/sync_contracts.ts', import.meta.url)
+    .href
 );
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -14,7 +17,7 @@ import { assertCurrentMessageBasis } from '../../src/ERA变量框架/service/mes
 import { prepareMessagePersistence } from '../../src/ERA变量框架/service/message-persistence';
 
 const transaction = await import(
-  /* @vite-ignore */ new URL('../../../javascript_project/service/base_lib/sync_planning.ts', import.meta.url).href
+  /* @vite-ignore */ new URL('../../../javascript_project/service/base_lib/sync/sync_planning.ts', import.meta.url).href
 );
 const preparation = await import(
   /* @vite-ignore */ new URL('../../../javascript_project/service/base_lib/dispatch_preparation.ts', import.meta.url)

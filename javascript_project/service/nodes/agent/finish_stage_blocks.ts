@@ -1,6 +1,6 @@
-import { formatAgentPlanReport } from "../../base_lib/agent_generation_session.ts";
+import { formatAgentPlanReport } from "../../base_lib/agent/agent_generation_session.ts";
 import { stripEraDataBlocks } from "../../base_lib/domain/mk_engine.ts";
-import { prepareSessionWrite } from "../../base_lib/agent_session_binding.ts";
+import { prepareSessionWrite } from "../../base_lib/agent/agent_session_binding.ts";
 
 /** Store the applied draft/stage text in the existing Agent session, without saving chat or Sidecar. */
 export function run(inputs: any, _params: any, runtime: any): any {

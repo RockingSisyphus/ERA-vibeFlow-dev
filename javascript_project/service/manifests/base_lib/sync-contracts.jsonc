@@ -14,12 +14,12 @@
       ],
       "source": {
         "kind": "file",
-        "ref": "base_lib/sync_contracts.ts"
+        "ref": "base_lib/sync/sync_contracts.ts"
       }
     }
   ],
   "dependencies": [
-    "era.service.sync_engine",
+    "era.service.sync_types",
     "era.service.types"
   ],
   "external_packages": []

@@ -3,11 +3,11 @@ import {
   connectionId,
   planConnectionSave,
   type ConnectionState,
-} from '../../../javascript_project/service/base_lib/agent_connection_policy';
+} from '../../../javascript_project/service/base_lib/agent/agent_flow_policy';
 import {
   buildAgentRequestPolicy,
   captureAgentPresetSnapshot,
-} from '../../../javascript_project/service/base_lib/agent_request_policy';
+} from '../../../javascript_project/service/base_lib/agent/agent_generation_context';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AgentTavernHost } from '../../src/ERA变量框架/service/agent-tavern-host';

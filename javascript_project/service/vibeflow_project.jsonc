@@ -24,7 +24,8 @@
       "mathjs",
       "@stdlib/math-base-special-gamma",
       "lodash"
-    ]
+    ],
+    "nodeset_max_depth": 5
   },
   "quality_enabled": true,
   "architecture": {

@@ -1,12 +1,16 @@
 import { contextWith } from './memory-lifecycle-fixture';
 import { run as generate } from '../../../javascript_project/service/nodes/agent/execute_generation_session';
 import { run as seed } from '../../../javascript_project/service/nodes/agent/candidate_seed';
-import { run as unpack } from '../../../javascript_project/service/nodes/agent/candidate_unpack';
-import { run as finishCandidate } from '../../../javascript_project/service/nodes/agent/candidate_finish';
+import {
+  CandidateUnpackNode as unpack,
+  CandidateFinishNode as finishCandidate,
+} from '../../../javascript_project/service/nodes/initialize/shared_pure_adapters';
 import { run as prepare } from '../../../javascript_project/service/nodes/agent/prepare_stage_blocks';
 import { run as advance } from '../../../javascript_project/service/nodes/sync/drive_message_blocks';
-import { run as prepareWork } from '../../../javascript_project/service/nodes/sync/prepare_block_work';
-import { run as publish } from '../../../javascript_project/service/nodes/sync/publish_block_application';
+import {
+  PrepareBlockWorkNode as prepareWork,
+  PublishBlockApplicationNode as publish,
+} from '../../../javascript_project/service/nodes/sync/shared_block_state_adapters';
 import { run as finish } from '../../../javascript_project/service/nodes/agent/finish_stage_blocks';
 import { recordFor } from '../../../javascript_project/service/base_lib/sidecar_binding';
 

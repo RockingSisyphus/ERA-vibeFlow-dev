@@ -37,9 +37,8 @@ export {
   createAstFrameState,
   astFrameRoute,
   advanceAstFrame,
-  runOperationStep,
-  commitOperationResult,
 } from "../base_lib/expression_execution.ts";
+export { runOperationStep, commitOperationResult, evaluateAst } from "../base_lib/expression_operation.ts";
 export { deterministicRandomUnit } from "../base_lib/expression_primitives.ts";
 export {
   simplify,

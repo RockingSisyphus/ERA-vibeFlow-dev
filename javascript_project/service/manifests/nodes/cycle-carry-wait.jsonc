@@ -1,0 +1,57 @@
+{
+  "kind": "node",
+  "type_key": "era.service.cycle.carry_wait",
+  "display_name": "携带等待状态",
+  "category": "服务阶段循环",
+  "description": "携带等待状态；保持原 Service 领域状态及执行顺序。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.collection.reduction",
+        "cardinality": "exactly_one",
+        "display_name": "输入状态"
+      }
+    ],
+    "provides": [
+      {
+        "key": "wait_cycle_state",
+        "type": "era.service.cycle.state",
+        "display_name": "阶段结果"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.collection.reduction": [
+        "读取并保留输入值。"
+      ]
+    },
+    "output_semantics": {
+      "wait_cycle_state": [
+        "供同一 Service 工作流的下一阶段使用。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/iteration/shared_protocol_adapters.ts",
+        "export": "CarryWaitCycleNode"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.service_protocol_collection",
+    "era.service.service_protocol_execution"
+  ],
+  "capabilities": []
+}

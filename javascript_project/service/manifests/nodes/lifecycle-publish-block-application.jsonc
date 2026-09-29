@@ -52,13 +52,12 @@
       "completion": "immediate",
       "source": {
         "kind": "file",
-        "ref": "nodes/sync/publish_block_application.ts",
-        "export": "run"
+        "ref": "nodes/sync/shared_block_state_adapters.ts",
+        "export": "PublishBlockApplicationNode"
       }
     }
   ],
   "base_libs": [
-    "era.service.block_step_state",
     "era.service.sync_contracts"
   ],
   "capabilities": [

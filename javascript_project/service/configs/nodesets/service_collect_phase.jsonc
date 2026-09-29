@@ -1,0 +1,145 @@
+{
+  "type_key": "era.service.collect_phase",
+  "display_name": "ERA 事件收集阶段",
+  "description": "只在 collect 阶段接收一个 Host FIFO 事件；保留 validate、reduce、send control 的真实顺序。",
+  "requires": [
+    {
+      "type": "era.service.cycle.routed",
+      "cardinality": "exactly_one",
+      "display_name": "收集阶段状态"
+    }
+  ],
+  "provides": [
+    {
+      "key": "collection_reduction",
+      "type": "era.collection.reduction",
+      "display_name": "事件集归约结果"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "cycle_state",
+        "type": "era.service.cycle.routed",
+        "display_name": "收集阶段状态",
+        "required": true
+      }
+    ],
+    "max_steps": 16,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.service.terminal",
+        "display_name": "收集阶段开始",
+        "description": "进入收集阶段，不处理在途批次。"
+      },
+      {
+        "id": "unpack_service_state",
+        "type_used": "era.service.cycle.unpack_collect",
+        "display_name": "验证服务状态",
+        "description": "只解包 collect 阶段载体；输出继续符合原严格 Service State Schema。"
+      },
+      {
+        "id": "receive_event",
+        "type_used": "vibeflow.io",
+        "display_name": "接收服务事件",
+        "description": "只在 collect 阶段从原入站 Port 接收一个传输事件。",
+        "requires": [],
+        "provides": [
+          {
+            "key": "transport_event_raw",
+            "type": "era.transport.event.raw",
+            "display_name": "原始传输事件"
+          }
+        ],
+        "io": {
+          "operation": "receive",
+          "port": "era.service.in"
+        }
+      },
+      {
+        "id": "validate_transport",
+        "type_used": "era.service.validate_transport",
+        "display_name": "校验传输事件",
+        "description": "保留原 Schema、字节和宿主引用校验。"
+      },
+      {
+        "id": "reduce_collection",
+        "type_used": "era.service.reduce_collection",
+        "display_name": "归约有界事件集",
+        "description": "保留时间窗口、序号、高水位和控制命令语义。"
+      },
+      {
+        "id": "send_collection_control",
+        "type_used": "vibeflow.io",
+        "display_name": "发送事件集控制",
+        "description": "路由等待或规划前，向原出站 Port 提交定时器控制。",
+        "requires": [
+          {
+            "type": "era.collection.control",
+            "cardinality": "exactly_one",
+            "display_name": "事件集控制"
+          }
+        ],
+        "provides": [],
+        "io": {
+          "operation": "send",
+          "port": "era.service.out"
+        }
+      },
+      {
+        "id": "end",
+        "type_used": "era.service.terminal",
+        "display_name": "收集阶段结束",
+        "description": "返回原 CollectionReduction，不执行任何批次任务。"
+      }
+    ],
+    "edges": [
+      [
+        "start",
+        "unpack_service_state"
+      ],
+      {
+        "from": "unpack_service_state",
+        "to": "receive_event",
+        "transfer": false
+      },
+      {
+        "from": "unpack_service_state",
+        "to": "reduce_collection",
+        "schedule": false
+      },
+      [
+        "receive_event",
+        "validate_transport"
+      ],
+      [
+        "validate_transport",
+        "reduce_collection"
+      ],
+      [
+        "reduce_collection",
+        "send_collection_control"
+      ],
+      {
+        "from": "send_collection_control",
+        "to": "end",
+        "transfer": false
+      },
+      {
+        "from": "reduce_collection",
+        "to": "end",
+        "schedule": false
+      }
+    ],
+    "outputs": [
+      {
+        "type": "era.collection.reduction",
+        "cardinality": "exactly_one",
+        "display_name": "事件集归约结果",
+        "as": "collectionReduction"
+      }
+    ]
+  }
+}

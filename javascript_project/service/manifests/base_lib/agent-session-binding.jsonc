@@ -14,7 +14,7 @@
       ],
       "source": {
         "kind": "file",
-        "ref": "base_lib/agent_session_binding.ts"
+        "ref": "base_lib/agent/agent_session_binding.ts"
       }
     }
   ],

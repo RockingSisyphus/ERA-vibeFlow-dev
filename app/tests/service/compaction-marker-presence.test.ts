@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { withCommandCompactionMarkers } from '../../../javascript_project/service/base_lib/domain/command_compaction_marker';
+import { withCommandCompactionMarkers } from '../../../javascript_project/service/base_lib/domain/commands/command_compaction_marker';
 
 describe('封存压缩标记：没有标记时不得改动 meta', () => {
   it('空标记集不新增 CommandCompaction 键', () => {

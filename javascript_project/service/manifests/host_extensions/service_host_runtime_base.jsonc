@@ -1,0 +1,32 @@
+{
+  "kind": "host_extension",
+  "id": "era.tavern.host_runtime_base",
+  "display_name": "ERA Service Host 支持模块",
+  "description": "宿主基础设施、准入、回执和操作分层；唯一主工厂管理运行状态。",
+  "version": "0.1.0",
+  "targets": [
+    "browser"
+  ],
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "host_extensions/service_host_runtime_base.ts",
+        "export": "createHostExtension"
+      }
+    }
+  ],
+  "provides": [],
+  "dependencies": [
+    "era.tavern.host_types",
+    "era.tavern.host_primitives"
+  ],
+  "external_packages": [
+    "@era/vibeflow-contracts"
+  ]
+}

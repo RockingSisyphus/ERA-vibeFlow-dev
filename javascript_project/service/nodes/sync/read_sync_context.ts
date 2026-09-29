@@ -5,7 +5,7 @@ import {
   isCancellation,
   syncFailure,
   type SyncContextV1,
-} from "../../base_lib/sync_contracts.ts";
+} from "../../base_lib/sync/sync_contracts.ts";
 
 interface Envelope<T> {
   readonly value: T;

@@ -53,8 +53,7 @@
     "era.service.sync_planning",
     "era.service.agent_generation_session",
     "era.service.types",
-    "era.service.mk_engine",
-    "era.service.sync_engine"
+    "era.service.mk_engine"
   ],
   "capabilities": [
     {

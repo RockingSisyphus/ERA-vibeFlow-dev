@@ -1,1 +1,52 @@
-{"kind":"node","type_key":"era.sidecar_binding.publish_choice_prompt","display_name":"发布 Sidecar 选择弹窗","category":"Sidecar 绑定","description":"只显示 workflow 已作出的阻塞结论。","version":"1.0.0","flow_kind":"process","contract":{"requires":[{"type":"era.sidecar.binding.resolution","cardinality":"exactly_one","display_name":"Sidecar 绑定决议"}],"provides":[],"params_schema":{},"params_defaults":{},"input_semantics":{"era.sidecar.binding.resolution":["输入：确认需要用户选择的 Sidecar 决议。"]},"output_semantics":{}},"implementations":[{"language":"typescript","targets":["browser"],"completion":"immediate","source":{"kind":"file","ref":"nodes/sidecar/publish_choice_prompt.ts","export":"run"}}],"base_libs":["era.service.sidecar_binding"],"capabilities":[{"id":"era.tavern.sidecar","operations":["present_prompt"]}]}
+{
+  "kind": "node",
+  "type_key": "era.sidecar_binding.publish_choice_prompt",
+  "display_name": "发布 Sidecar 选择弹窗",
+  "category": "Sidecar 绑定",
+  "description": "只显示 workflow 已作出的阻塞结论。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.sidecar.binding.resolution",
+        "cardinality": "exactly_one",
+        "display_name": "Sidecar 绑定决议"
+      }
+    ],
+    "provides": [],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.sidecar.binding.resolution": [
+        "输入：确认需要用户选择的 Sidecar 决议。"
+      ]
+    },
+    "output_semantics": {}
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/sidecar/shared_choice_adapters.ts",
+        "export": "PublishChoicePromptNode"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.sidecar_binding"
+  ],
+  "capabilities": [
+    {
+      "id": "era.tavern.sidecar",
+      "operations": [
+        "present_prompt"
+      ]
+    }
+  ]
+}

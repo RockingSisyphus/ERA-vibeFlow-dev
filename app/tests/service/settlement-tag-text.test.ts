@@ -1,8 +1,8 @@
 import { expect, it } from 'vitest';
-import { inspectSettlementText } from '../../../javascript_project/service/base_lib/agent_stage_text';
+import { inspectSettlementText } from '../../../javascript_project/service/base_lib/agent/agent_stage_text';
 
 it('标签载荷中的转义与调用文本保持原文，不当成顶层调用执行', () => {
-  const text = `<VariableInsert>{"text":"<EraFCall name=\"quoted\"/>"}</VariableInsert>`.replace(
+  const text = `<VariableInsert>{"text":"<EraFCall name="quoted"/>"}</VariableInsert>`.replace(
     'name="quoted"',
     'name=\\"quoted\\"',
   );

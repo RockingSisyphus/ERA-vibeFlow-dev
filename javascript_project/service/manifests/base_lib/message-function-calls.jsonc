@@ -14,12 +14,12 @@
       ],
       "source": {
         "kind": "file",
-        "ref": "base_lib/domain/message_function_calls.ts"
+        "ref": "base_lib/domain/commands/message_function_calls.ts"
       }
     }
   ],
   "dependencies": [
-    "era.crud.engine"
+    "era.crud.parser"
   ],
   "external_packages": []
 }

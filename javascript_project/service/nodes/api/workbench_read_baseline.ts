@@ -1,4 +1,4 @@
-import { unescapeEraData } from "../../base_lib/domain/snapshot_query.ts";
+import { unescapeEraData } from "../../base_lib/domain/snapshot_history.ts";
 import {
   inspectSidecar,
   sidecarIdFromVariables,

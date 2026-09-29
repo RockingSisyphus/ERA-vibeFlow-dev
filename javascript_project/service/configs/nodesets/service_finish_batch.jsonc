@@ -1,0 +1,94 @@
+{
+  "nodeset_imports": [
+    {
+      "path": "batch_publish.jsonc"
+    }
+  ],
+  "type_key": "era.service.finish_batch",
+  "display_name": "ERA 批次结算与发布",
+  "description": "复用原 finalizeBatch 和发布 Nodeset；最后一步或覆盖失败的当轮发出唯一结果帧，fatal 仍在发送后抛出。",
+  "requires": [
+    {
+      "type": "era.batch.execution.state.after",
+      "cardinality": "exactly_one",
+      "display_name": "待结算批次状态"
+    }
+  ],
+  "provides": [
+    {
+      "key": "finished_cycle_state",
+      "type": "era.service.cycle.state",
+      "display_name": "收集阶段状态"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "execution_state_after",
+        "type": "era.batch.execution.state.after",
+        "display_name": "待结算批次状态",
+        "required": true
+      }
+    ],
+    "max_steps": 8,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.service.terminal",
+        "display_name": "批次收尾开始",
+        "description": "开始唯一一次批次结算。"
+      },
+      {
+        "id": "finalize_batch",
+        "type_used": "era.service.finalize_batch",
+        "display_name": "结算全部来源",
+        "description": "复用现有逐来源准确一次结算、诊断与服务迭代计数。"
+      },
+      {
+        "id": "publish_batch",
+        "type_used": "era.service.batch_publish",
+        "display_name": "发送批次结果",
+        "description": "保留先发送回执帧、再处理致命错误的现有出站路径。"
+      },
+      {
+        "id": "resume_collection",
+        "type_used": "era.service.cycle.resume_collect",
+        "display_name": "恢复收集阶段",
+        "description": "仅包装已发布的原服务状态；下轮才再次接收入站事件。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.service.terminal",
+        "display_name": "批次收尾结束",
+        "description": "返回 collect 阶段；fatal 路径不会正常返回。"
+      }
+    ],
+    "edges": [
+      [
+        "start",
+        "finalize_batch"
+      ],
+      [
+        "finalize_batch",
+        "publish_batch"
+      ],
+      [
+        "publish_batch",
+        "resume_collection"
+      ],
+      [
+        "resume_collection",
+        "end"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.service.cycle.state",
+        "cardinality": "exactly_one",
+        "display_name": "收集阶段状态",
+        "as": "cycleStateNext"
+      }
+    ]
+  }
+}

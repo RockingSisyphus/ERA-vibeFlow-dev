@@ -78,7 +78,7 @@ export default [
     },
   },
   {
-    files: ['scripts/era-quality/**/*.ts'],
+    files: ['scripts/**/*.{js,mjs,ts}', 'tests/**/*.{js,mjs,ts}'],
     languageOptions: {
       globals: {
         ...globals.node,

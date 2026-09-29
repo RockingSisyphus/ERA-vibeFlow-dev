@@ -1,4 +1,72 @@
-{"kind":"node","type_key":"era.initialize.build_result","display_name":"规划初始化完成方式","category":"初始化事务","description":"将直接初始化结果与启动同步结果分离，避免直接结果抢先结束启动同步。","version":"1.1.0","flow_kind":"decision","contract":{"requires":[{"type":"era.initialize.commit.result","cardinality":"exactly_one","display_name":"资源提交结果"}],"provides":[{"key":"initialize_completion_route","type":"era.initialize.completion.route","display_name":"初始化完成路由"},{"key":"startup_sync_step","type":"era.initialize.startup.sync.step","display_name":"专用启动同步步骤"},{"key":"initialize_direct_result","type":"era.initialize.direct.result","display_name":"专用直接初始化结果"}],"params_schema":{},"params_defaults":{},
-    "input_semantics": {"era.initialize.commit.result":["输入：资源提交结果。"]},
-    "output_semantics": {"initialize_completion_route":["输出：初始化完成路由。"],"startup_sync_step":["输出：启动同步步骤。"],"initialize_direct_result":["输出：直接初始化结果。"]}
-  },"implementations":[{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/initialize/finalize_initialization.ts","export":"run"}}],"base_libs":["era.service.initialization_transaction"],"capabilities":[]}
+{
+  "kind": "node",
+  "type_key": "era.initialize.build_result",
+  "display_name": "规划初始化完成方式",
+  "category": "初始化事务",
+  "description": "将直接初始化结果与启动同步结果分离，避免直接结果抢先结束启动同步。",
+  "version": "1.1.0",
+  "flow_kind": "decision",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.initialize.commit.result",
+        "cardinality": "exactly_one",
+        "display_name": "资源提交结果"
+      }
+    ],
+    "provides": [
+      {
+        "key": "initialize_completion_route",
+        "type": "era.initialize.completion.route",
+        "display_name": "初始化完成路由"
+      },
+      {
+        "key": "startup_sync_step",
+        "type": "era.initialize.startup.sync.step",
+        "display_name": "专用启动同步步骤"
+      },
+      {
+        "key": "initialize_direct_result",
+        "type": "era.initialize.direct.result",
+        "display_name": "专用直接初始化结果"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.initialize.commit.result": [
+        "输入：资源提交结果。"
+      ]
+    },
+    "output_semantics": {
+      "initialize_completion_route": [
+        "输出：初始化完成路由。"
+      ],
+      "startup_sync_step": [
+        "输出：启动同步步骤。"
+      ],
+      "initialize_direct_result": [
+        "输出：直接初始化结果。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/initialize/shared_initialization_adapters.ts",
+        "export": "FinalizeInitializationNode"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.initialization_transaction"
+  ],
+  "capabilities": []
+}

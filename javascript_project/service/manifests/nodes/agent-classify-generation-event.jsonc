@@ -13,8 +13,8 @@
       "completion": "immediate",
       "source": {
         "kind": "file",
-        "ref": "nodes/agent/classify_generation_event.ts",
-        "export": "run"
+        "ref": "nodes/agent/shared_agent_flow_adapters.ts",
+        "export": "ClassifyGenerationEventNode"
       }
     }
   ],

@@ -2,10 +2,10 @@ import {
   applyStageCalls,
   consumeStagePrefix,
   rejectStageOperation,
-} from "../../base_lib/agent_stage_program.ts";
-import { advanceEraSyncBlock } from "../../base_lib/domain/sync_engine.ts";
-import { syncFailure } from "../../base_lib/sync_contracts.ts";
-import type { EraBlockStepStateV1 } from "../../base_lib/block_step_state.ts";
+} from "../../base_lib/agent/agent_stage_program.ts";
+import { advanceEraSyncBlock } from "../../base_lib/domain/sync/sync_block.ts";
+import { syncFailure } from "../../base_lib/sync/sync_contracts.ts";
+import type { EraBlockStepStateV1 } from "../../base_lib/sync/sync_contracts.ts";
 import {
   callAnchor,
   currentFunctionBlock,
@@ -13,7 +13,7 @@ import {
   finishFunction,
   prepareFunctionApi,
   functionApiSettlement,
-} from "../../base_lib/function_block_execution.ts";
+} from "../../base_lib/sync/function_block_execution.ts";
 
 /** One block owner: function waits yield requests back to this same loop. */
 export async function run(

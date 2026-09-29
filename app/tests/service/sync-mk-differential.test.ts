@@ -98,9 +98,22 @@ interface SyncModule {
 }
 
 const mkUrl = new URL('../../../javascript_project/service/base_lib/domain/mk_engine.ts', import.meta.url).href;
-const syncUrl = new URL('../../../javascript_project/service/base_lib/domain/sync_engine.ts', import.meta.url).href;
+const syncPlanningUrl = new URL('../../../javascript_project/service/base_lib/sync/sync_planning.ts', import.meta.url)
+  .href;
+const syncDivergenceUrl = new URL(
+  '../../../javascript_project/service/base_lib/domain/sync/sync_divergence.ts',
+  import.meta.url,
+).href;
+const syncDetectionUrl = new URL(
+  '../../../javascript_project/service/base_lib/domain/sync/sync_divergence_detection.ts',
+  import.meta.url,
+).href;
 const mkEngine = (await import(/* @vite-ignore */ mkUrl)) as MkModule;
-const syncEngine = (await import(/* @vite-ignore */ syncUrl)) as SyncModule;
+const syncEngine = {
+  ...(await import(/* @vite-ignore */ syncPlanningUrl)),
+  ...(await import(/* @vite-ignore */ syncDivergenceUrl)),
+  ...(await import(/* @vite-ignore */ syncDetectionUrl)),
+} as SyncModule;
 
 function candidateBlock(mk: string, role: string): string {
   const messageType = role === 'user' ? 'user' : 'assistant';

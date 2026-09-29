@@ -33,8 +33,22 @@
     ],
     "params_schema": {},
     "params_defaults": {},
-    "input_semantics": {"era.service.state.current":["输入：当前服务状态。"],"era.transport.event":["输入：已校验传输事件。"]},
-    "output_semantics": {"collection_reduction":["输出：事件集归约结果。"],"collection_control":["输出：事件集控制。"]}
+    "input_semantics": {
+      "era.service.state.current": [
+        "输入：当前服务状态。"
+      ],
+      "era.transport.event": [
+        "输入：已校验传输事件。"
+      ]
+    },
+    "output_semantics": {
+      "collection_reduction": [
+        "输出：事件集归约结果。"
+      ],
+      "collection_control": [
+        "输出：事件集控制。"
+      ]
+    }
   },
   "implementations": [
     {
@@ -46,13 +60,14 @@
       "completion": "immediate",
       "source": {
         "kind": "file",
-        "ref": "nodes/iteration/reduce_collection.ts",
-        "export": "run"
+        "ref": "nodes/iteration/shared_protocol_adapters.ts",
+        "export": "ReduceCollectionNode"
       }
     }
   ],
   "base_libs": [
-    "era.service.protocol"
+    "era.service.service_protocol_collection",
+    "era.service.service_protocol_execution"
   ],
   "capabilities": []
 }

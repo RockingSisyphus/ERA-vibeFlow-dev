@@ -23,8 +23,16 @@
     ],
     "params_schema": {},
     "params_defaults": {},
-    "input_semantics": {"era.transport.event.raw":["输入：原始传输事件。"]},
-    "output_semantics": {"transport_event":["输出：已校验传输事件。"]}
+    "input_semantics": {
+      "era.transport.event.raw": [
+        "输入：原始传输事件。"
+      ]
+    },
+    "output_semantics": {
+      "transport_event": [
+        "输出：已校验传输事件。"
+      ]
+    }
   },
   "implementations": [
     {
@@ -36,13 +44,14 @@
       "completion": "immediate",
       "source": {
         "kind": "file",
-        "ref": "nodes/iteration/validate_transport.ts",
-        "export": "run"
+        "ref": "nodes/iteration/shared_protocol_adapters.ts",
+        "export": "ValidateTransportNode"
       }
     }
   ],
   "base_libs": [
-    "era.service.protocol"
+    "era.service.service_protocol_collection",
+    "era.service.service_protocol_execution"
   ],
   "capabilities": []
 }

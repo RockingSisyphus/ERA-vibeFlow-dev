@@ -23,8 +23,16 @@
     ],
     "params_schema": {},
     "params_defaults": {},
-    "input_semantics": {"era.batch.fatal":["输入：批次致命标记。"]},
-    "output_semantics": {"fatal_route":["输出：致命结果路由。"]}
+    "input_semantics": {
+      "era.batch.fatal": [
+        "输入：批次致命标记。"
+      ]
+    },
+    "output_semantics": {
+      "fatal_route": [
+        "输出：致命结果路由。"
+      ]
+    }
   },
   "implementations": [
     {
@@ -36,8 +44,8 @@
       "completion": "immediate",
       "source": {
         "kind": "file",
-        "ref": "nodes/publish/route_fatal.ts",
-        "export": "run"
+        "ref": "nodes/initialize/shared_pure_adapters.ts",
+        "export": "RouteFatalNode"
       }
     }
   ],

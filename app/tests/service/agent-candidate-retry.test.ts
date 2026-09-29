@@ -1,7 +1,7 @@
 import { expect, it, vi } from 'vitest';
 import { createCandidateRunner } from './agent-candidate-fixture';
 import { contextWith, identity } from './memory-lifecycle-fixture';
-import { normalizeAgentConfiguration } from '../../../javascript_project/service/base_lib/agent_generation_session';
+import { normalizeAgentConfiguration } from '../../../javascript_project/service/base_lib/agent/agent_generation_session';
 
 const edit = (value: unknown) => `<VariableEdit>${JSON.stringify({ hp: value })}</VariableEdit>`;
 async function runCandidates(stage: 'planning' | 'settlement', responses: string[]) {

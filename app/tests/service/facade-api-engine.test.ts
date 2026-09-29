@@ -1,5 +1,5 @@
 import { unescapeEraData } from '../../../javascript_project/service/base_lib/domain/snapshot_query';
-import { parseMessageCommands } from '../../../javascript_project/service/base_lib/domain/crud_engine';
+import { parseMessageCommands } from '../../../javascript_project/service/base_lib/domain/commands/crud_engine';
 import { describe, expect, it } from 'vitest';
 import { run as appliedReceipt } from '../../../javascript_project/service/nodes/api/return_applied_receipt';
 
@@ -240,9 +240,13 @@ describe('ERA 即时 Scope Facade 纯领域链', () => {
 });
 
 it('ordinary API records round-trip literal command tags without truncating JSON', () => {
-  const payload = {note: '<VariableEdit>{"hp":0}</VariableEdit>', call: '<EraFCall name="missing"/>', nested: ['<era_data>', '</VariableInsert>']};
-  const result = buildTransaction({scope:'always', operations:[{name:'insert',payload}]});
-  const commands = parseMessageCommands({content:result.transaction});
+  const payload = {
+    note: '<VariableEdit>{"hp":0}</VariableEdit>',
+    call: '<EraFCall name="missing"/>',
+    nested: ['<era_data>', '</VariableInsert>'],
+  };
+  const result = buildTransaction({ scope: 'always', operations: [{ name: 'insert', payload }] });
+  const commands = parseMessageCommands({ content: result.transaction });
   expect(commands).toHaveLength(1);
   expect(unescapeEraData(commands[0].data)).toEqual([payload]);
 });

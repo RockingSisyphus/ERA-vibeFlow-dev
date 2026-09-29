@@ -1,6 +1,5 @@
 /// <reference types="node" />
 
-// eslint-disable-next-line import-x/no-nodejs-modules
 import { readFileSync } from 'node:fs';
 
 import { describe, expect, it } from 'vitest';

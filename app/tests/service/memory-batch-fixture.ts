@@ -2,13 +2,15 @@ import { expect } from 'vitest';
 import { contextWith, identity, sidecarId } from './memory-lifecycle-fixture';
 import { run as advance } from '../../../javascript_project/service/nodes/sync/drive_message_blocks';
 import { prepare } from '../../../javascript_project/service/nodes/sync/prepare_block_step';
-import { run as prepareWork } from '../../../javascript_project/service/nodes/sync/prepare_block_work';
-import { run as publish } from '../../../javascript_project/service/nodes/sync/publish_block_application';
+import {
+  PrepareBlockWorkNode as prepareWork,
+  PublishBlockApplicationNode as publish,
+} from '../../../javascript_project/service/nodes/sync/shared_block_state_adapters';
 import { finalize } from '../../../javascript_project/service/nodes/sync/finalize_block_step';
 import { run as save } from '../../../javascript_project/service/nodes/sync/commit_sync';
 import { run as settle } from '../../../javascript_project/service/nodes/sync/settle_saved_batch';
 import { recordFor } from '../../../javascript_project/service/base_lib/sidecar_binding';
-import { applySealedCommandCompactionToWork } from '../../../javascript_project/service/base_lib/command_compaction';
+import { applySealedCommandCompactionToWork } from '../../../javascript_project/service/base_lib/sync/command_compaction';
 
 export async function execute(text: string, options: { failSave?: boolean; context?: any } = {}) {
   const context = options.context ?? contextWith(text);

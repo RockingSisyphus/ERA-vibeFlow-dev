@@ -44,8 +44,8 @@
       "completion": "immediate",
       "source": {
         "kind": "file",
-        "ref": "nodes/dispatch/build_no_host_context.ts",
-        "export": "run"
+        "ref": "nodes/dispatch/shared_dispatch_adapters.ts",
+        "export": "BuildNoHostContextNode"
       }
     }
   ],

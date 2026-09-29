@@ -1,0 +1,120 @@
+{
+  "nodeset_imports": [
+    {
+      "path": "service_finish_batch.jsonc"
+    }
+  ],
+  "type_key": "era.service.prepare_batch_phase",
+  "display_name": "ERA 就绪批次规划阶段",
+  "description": "只处理 execute 归约结果；保留原规划及覆盖校验，失败时立即结算发布，成功时转为执行阶段。",
+  "requires": [
+    {
+      "type": "era.collection.reduction",
+      "cardinality": "exactly_one",
+      "display_name": "就绪事件集"
+    }
+  ],
+  "provides": [
+    {
+      "key": "prepared_cycle_state",
+      "type": "era.service.cycle.state",
+      "display_name": "下一阶段状态"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "collection_reduction",
+        "type": "era.collection.reduction",
+        "display_name": "就绪事件集",
+        "required": true
+      }
+    ],
+    "max_steps": 12,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.service.terminal",
+        "display_name": "规划阶段开始",
+        "description": "仅接收就绪且非空的归约结果。"
+      },
+      {
+        "id": "plan_batch",
+        "type_used": "era.service.plan_batch",
+        "display_name": "规划原生命周期步骤",
+        "description": "复用严格事件计划及来源顺序。"
+      },
+      {
+        "id": "validate_coverage",
+        "type_used": "era.service.validate_coverage",
+        "display_name": "验证来源覆盖",
+        "description": "保持重复、缺失、批次外来源与 128 步上限的原错误规则。"
+      },
+      {
+        "id": "coverage_failure",
+        "type_used": "era.service.coverage_failure",
+        "display_name": "构造覆盖失败批次",
+        "description": "每个来源恰好生成一条失败结算。"
+      },
+      {
+        "id": "begin_execution",
+        "type_used": "era.service.cycle.begin_execution",
+        "display_name": "携带已校验批次",
+        "description": "只包装现有严格 BatchExecutionState，下一轮执行第一个步骤。"
+      },
+      {
+        "id": "finish_invalid_batch",
+        "type_used": "era.service.finish_batch",
+        "display_name": "发布覆盖失败批次",
+        "description": "无效计划不执行任何领域任务，原位结算并发布。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.service.terminal",
+        "display_name": "规划阶段结束",
+        "description": "输出唯一下一阶段状态。"
+      }
+    ],
+    "edges": [
+      [
+        "start",
+        "plan_batch"
+      ],
+      [
+        "plan_batch",
+        "validate_coverage"
+      ],
+      {
+        "from": "validate_coverage",
+        "to": "begin_execution",
+        "when": "coverage_route == 'execute'"
+      },
+      {
+        "from": "validate_coverage",
+        "to": "coverage_failure",
+        "when": "coverage_route == 'invalid'"
+      },
+      [
+        "coverage_failure",
+        "finish_invalid_batch"
+      ],
+      [
+        "begin_execution",
+        "end"
+      ],
+      [
+        "finish_invalid_batch",
+        "end"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.service.cycle.state",
+        "cardinality": "exactly_one",
+        "display_name": "下一阶段状态",
+        "as": "cycleStateNext"
+      }
+    ]
+  }
+}

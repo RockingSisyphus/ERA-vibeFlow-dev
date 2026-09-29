@@ -1,4 +1,64 @@
-{"kind":"node","type_key":"era.initialize.plan","display_name":"规划初始化资源","category":"初始化规划","description":"调用纯规划器形成设置、世界书、正则与占位符动作。","version":"1.0.0","flow_kind":"decision","contract":{"requires":[{"type":"era.initialize.context","cardinality":"exactly_one","display_name":"初始化上下文"}],"provides":[{"key":"initialization_route","type":"era.initialize.route","display_name":"初始化路由"},{"key":"initialization_plan","type":"era.initialize.plan","display_name":"初始化计划"}],"params_schema":{},"params_defaults":{},
-    "input_semantics": {"era.initialize.context":["输入：初始化上下文。"]},
-    "output_semantics": {"initialization_route":["输出：初始化路由。"],"initialization_plan":["输出：初始化计划。"]}
-  },"implementations":[{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/initialize/plan_initialization.ts","export":"run"}}],"base_libs":["era.service.initialization_transaction"],"capabilities":[]}
+{
+  "kind": "node",
+  "type_key": "era.initialize.plan",
+  "display_name": "规划初始化资源",
+  "category": "初始化规划",
+  "description": "调用纯规划器形成设置、世界书、正则与占位符动作。",
+  "version": "1.0.0",
+  "flow_kind": "decision",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.initialize.context",
+        "cardinality": "exactly_one",
+        "display_name": "初始化上下文"
+      }
+    ],
+    "provides": [
+      {
+        "key": "initialization_route",
+        "type": "era.initialize.route",
+        "display_name": "初始化路由"
+      },
+      {
+        "key": "initialization_plan",
+        "type": "era.initialize.plan",
+        "display_name": "初始化计划"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.initialize.context": [
+        "输入：初始化上下文。"
+      ]
+    },
+    "output_semantics": {
+      "initialization_route": [
+        "输出：初始化路由。"
+      ],
+      "initialization_plan": [
+        "输出：初始化计划。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/initialize/shared_initialization_adapters.ts",
+        "export": "PlanInitializationNode"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.initialization_transaction"
+  ],
+  "capabilities": []
+}

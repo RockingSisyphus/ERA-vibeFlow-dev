@@ -1,0 +1,116 @@
+{
+  "type_key": "era.service.settle_step_phase",
+  "display_name": "ERA 单步结果阶段",
+  "description": "步骤未完成时携带同一批次继续；最后一步当轮复用原结算与发布，随后返回收集阶段。",
+  "requires": [
+    {
+      "type": "era.batch.execution.state.next",
+      "cardinality": "exactly_one",
+      "display_name": "步骤后批次状态"
+    },
+    {
+      "type": "era.step.done",
+      "cardinality": "exactly_one",
+      "display_name": "步骤完成标志"
+    }
+  ],
+  "provides": [
+    {
+      "key": "settled_cycle_state",
+      "type": "era.service.cycle.state",
+      "display_name": "下一阶段状态"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "execution_state_next",
+        "type": "era.batch.execution.state.next",
+        "display_name": "步骤后批次状态",
+        "required": true
+      },
+      {
+        "key": "step_done",
+        "type": "era.step.done",
+        "display_name": "步骤完成标志",
+        "required": true
+      }
+    ],
+    "max_steps": 10,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.service.terminal",
+        "display_name": "单步后处理开始",
+        "description": "读取一个已完成步骤的批次状态与完成标志。"
+      },
+      {
+        "id": "route_completion",
+        "type_used": "era.service.cycle.route_completion",
+        "display_name": "路由继续或收尾",
+        "description": "根据原 stepDone 选择下一步骤或当轮结算，不重新计算完成条件。"
+      },
+      {
+        "id": "carry_execution",
+        "type_used": "era.service.cycle.carry_execution",
+        "display_name": "继续同一批次",
+        "description": "未完成时携带更新后的步骤索引、结算、诊断及游标；不接收入站事件。"
+      },
+      {
+        "id": "promote_done_state",
+        "type_used": "era.service.cycle.promote_done",
+        "display_name": "确认待结算状态",
+        "description": "只转换既有批次状态类型；保留所有值并确认步骤索引已达到计划末尾。"
+      },
+      {
+        "id": "finish_batch",
+        "type_used": "era.service.finish_batch",
+        "display_name": "结算并发布批次",
+        "description": "最后一步当轮完成结算、发送结果帧并恢复收集阶段。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.service.terminal",
+        "display_name": "单步后处理结束",
+        "description": "输出唯一下一阶段状态。"
+      }
+    ],
+    "edges": [
+      [
+        "start",
+        "route_completion"
+      ],
+      {
+        "from": "route_completion",
+        "to": "carry_execution",
+        "when": "completion_route == 'continue'"
+      },
+      {
+        "from": "route_completion",
+        "to": "promote_done_state",
+        "when": "completion_route == 'finish'"
+      },
+      [
+        "promote_done_state",
+        "finish_batch"
+      ],
+      [
+        "carry_execution",
+        "end"
+      ],
+      [
+        "finish_batch",
+        "end"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.service.cycle.state",
+        "cardinality": "exactly_one",
+        "display_name": "下一阶段状态",
+        "as": "cycleStateNext"
+      }
+    ]
+  }
+}

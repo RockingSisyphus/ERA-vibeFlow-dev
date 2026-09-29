@@ -1,9 +1,9 @@
-import { planSyncWork } from "../../base_lib/sync_planning.ts";
+import { planSyncWork } from "../../base_lib/sync/sync_planning.ts";
 import {
   dispatchContext,
   type SyncContextV1,
-} from "../../base_lib/sync_contracts.ts";
-import type { EraBlockStepStateV1 } from "../../base_lib/block_step_state.ts";
+} from "../../base_lib/sync/sync_contracts.ts";
+import type { EraBlockStepStateV1 } from "../../base_lib/sync/sync_contracts.ts";
 /** 只准备历史回退及待处理区间，不提前应用任何消息操作。 */
 export function prepare(inputs: any): any {
   const context = inputs["era.sync.context"].value as SyncContextV1;

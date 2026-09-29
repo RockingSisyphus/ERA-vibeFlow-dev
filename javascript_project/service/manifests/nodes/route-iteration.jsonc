@@ -23,8 +23,16 @@
     ],
     "params_schema": {},
     "params_defaults": {},
-    "input_semantics": {"era.collection.reduction":["输入：事件集归约结果。"]},
-    "output_semantics": {"iteration_route":["输出：迭代路由。"]}
+    "input_semantics": {
+      "era.collection.reduction": [
+        "输入：事件集归约结果。"
+      ]
+    },
+    "output_semantics": {
+      "iteration_route": [
+        "输出：迭代路由。"
+      ]
+    }
   },
   "implementations": [
     {
@@ -36,13 +44,14 @@
       "completion": "immediate",
       "source": {
         "kind": "file",
-        "ref": "nodes/iteration/route_iteration.ts",
-        "export": "run"
+        "ref": "nodes/iteration/shared_protocol_adapters.ts",
+        "export": "RouteIterationNode"
       }
     }
   ],
   "base_libs": [
-    "era.service.protocol"
+    "era.service.service_protocol_collection",
+    "era.service.service_protocol_execution"
   ],
   "capabilities": []
 }

@@ -4,12 +4,12 @@ import {
   applySealedCommandCompaction,
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- 产品测试直接验证 VibeFlow 纯编排源码。
   // @ts-ignore TypeScript 会对 app rootDir 外的 VibeFlow 源码报告 TS6059。
-} from '../../../javascript_project/service/base_lib/command_compaction';
+} from '../../../javascript_project/service/base_lib/sync/command_compaction';
 import {
   planEraSync,
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- 产品测试直接验证 VibeFlow 纯领域源码。
   // @ts-ignore TypeScript 会对 app rootDir 外的 VibeFlow 源码报告 TS6059。
-} from '../../../javascript_project/service/base_lib/domain/sync_engine';
+} from '../../../javascript_project/service/base_lib/sync/sync_planning';
 
 function mkBlock(mk: string): string {
   return `<era_data>{"era-message-key"="${mk}","era-message-type"="assistant"}</era_data>`;
@@ -33,10 +33,7 @@ const REAL_FLOOR = `${REAL_BODY}\n${mkBlock('era_mk_1789165770160_c1pzo0d9')}`;
 
 function rawPlan() {
   return planEraSync({
-    messages: [
-      message(0, 'era_mk_1789165770160_c1pzo0d9', REAL_BODY),
-      message(1, 'era_mk_latest', '探索记录 2'),
-    ],
+    messages: [message(0, 'era_mk_1789165770160_c1pzo0d9', REAL_BODY), message(1, 'era_mk_latest', '探索记录 2')],
     stat: { era_demo: { player: { hp: 12 } } },
     statFunc: {},
     meta: { SelectedMks: [], EditLogs: {}, FunctionEditLogs: {} },
@@ -58,7 +55,7 @@ describe('封存压缩：真机 COMBINED-AUTHOR 楼层的整段文本不得被�
     expect(text).toBe(REAL_FLOOR);
     // 2) 也就不该产生任何针对该楼层的写回工作项。
     const updates = plan.messageUpdates as readonly { messageId?: number }[];
-    expect(updates.filter((item) => item.messageId === 0)).toHaveLength(0);
+    expect(updates.filter(item => item.messageId === 0)).toHaveLength(0);
 
     // 3) 状态仍按原文结算，并且用压缩后的 messages 重放得到同一状态。
     expect(plan.stat).toEqual({ era_demo: { player: { hp: 13 } } });

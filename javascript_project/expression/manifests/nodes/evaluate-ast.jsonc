@@ -44,14 +44,14 @@
       "completion": "immediate",
       "source": {
         "kind": "file",
-        "ref": "nodes/evaluate_ast.ts",
+        "ref": "nodes/execution/evaluate_ast.ts",
         "export": "run"
       }
     }
   ],
   "base_libs": [
-    "era.expression.execution",
-    "era.expression.types"
+    "era.expression.types",
+    "era.expression.operation"
   ],
   "capabilities": []
 }

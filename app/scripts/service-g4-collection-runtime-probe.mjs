@@ -54,6 +54,7 @@ function timer(sequence, dueAt, token) {
 
 function createTavernCapabilities() {
   let chatVariables = { stat_data: {}, ERAMetaData: { SelectedMks: [], EditLogs: {} } };
+  let working = null;
   let mainGreeting = 'G4 窗口探针消息';
   const messages = [{ message_id: 0, role: 'assistant', is_user: false, message: mainGreeting }];
   return {
@@ -150,6 +151,14 @@ function createTavernCapabilities() {
       const records = new Map();
       const current = { identity: { characterId: 'g4-card', groupId: null, chatId: 'g4-chat' }, meta: {}, stat: {} };
       return {
+        read_working: () => ({ working: structuredClone(working) }),
+        write_working: input => {
+          if (input.expectedVersion !== undefined && input.expectedVersion !== (working?.version ?? 0)) {
+            throw new Error('ERA_WORKING_STATE_CHANGED');
+          }
+          working = { ...structuredClone(input), version: (working?.version ?? 0) + 1 };
+          return { working: structuredClone(working) };
+        },
         read_current: async () => structuredClone(current),
         read_record: async input => {
           const record = records.get(input.sidecarId);
@@ -170,6 +179,13 @@ function createTavernCapabilities() {
         clear_prompt: () => ({ status: 'cleared' }),
       };
     })(),
+    'era.tavern.functions': {
+      begin: () => ({ status: 'started' }),
+      next: async () => ({ kind: 'done', error: null }),
+      acknowledge: () => ({ status: 'acknowledged' }),
+      release: () => ({ released: true }),
+    },
+    'era.lifecycle.admission': { schedule: () => ({ status: 'scheduled' }), cancel: () => ({ status: 'cancelled' }) },
   };
 }
 

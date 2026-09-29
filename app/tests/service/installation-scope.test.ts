@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest';
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- 同一 AOT workflow 的纯启动规则。
 // @ts-ignore service root is intentionally outside app tsconfig rootDir.
-import { classify } from '../../../javascript_project/service/nodes/lifecycle/classify_installation_scope';
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment -- 同一 AOT workflow 的纯启动规则。
-// @ts-ignore service root is intentionally outside app tsconfig rootDir.
-import { decide } from '../../../javascript_project/service/nodes/lifecycle/decide_startup_policy';
+import {
+  ClassifyInstallationScope_classify as classify,
+  DecideStartupPolicy_decide as decide,
+} from '../../../javascript_project/service/nodes/initialize/shared_pure_adapters';
 
 describe('ERA 安装作用域启动策略', () => {
   it('仅唯一且已启用的角色卡脚本被允许完整启动', () => {
