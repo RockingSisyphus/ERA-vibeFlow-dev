@@ -1,0 +1,62 @@
+{
+  "kind": "node",
+  "type_key": "era.sync.mark_completed_command",
+  "display_name": "合并变量日志并标记正文指令已应用",
+  "category": "核心执行",
+  "description": "把当前指令块的变量/函数结果、历史日志、诊断和随机位置合入本楼层工作计划，再按原正文起止范围加应用记录。标记表示本块已在内存执行，实际消息尚未保存；原普通消息容错成果与 Agent 诊断都完整保留。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.sync.position.state",
+        "cardinality": "exactly_one",
+        "display_name": "当前消息位置、原块状态、正文范围和作者函数上下文"
+      }
+    ],
+    "provides": [
+      {
+        "key": "mark_completed_command_position_state",
+        "type": "era.sync.position.state",
+        "display_name": "本位置处理后的私有状态；尚未发布到宿主"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.sync.position.state": [
+        "输入：当前消息位置、原块状态、正文范围和作者函数上下文。"
+      ]
+    },
+    "output_semantics": {
+      "mark_completed_command_position_state": [
+        "输出：本位置处理后的私有状态；尚未发布到宿主。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/sync/core_position_nodes.ts",
+        "export": "MarkCompletedCommandNode"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.command.operation_expressions",
+    "era.command.operation_state",
+    "era.service.agent_stage_program",
+    "era.service.function_block_execution",
+    "era.service.sync_contracts",
+    "era.service.sync_divergence",
+    "era.sync.position_source"
+  ],
+  "capabilities": []
+}

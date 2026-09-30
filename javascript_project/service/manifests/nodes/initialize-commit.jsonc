@@ -49,8 +49,8 @@
     }
   ],
   "base_libs": [
-    "era.service.initialization_transaction",
-    "era.service.greeting_refresh_policy"
+    "era.service.greeting_refresh_policy",
+    "era.service.initialization_transaction"
   ],
   "capabilities": [
     {

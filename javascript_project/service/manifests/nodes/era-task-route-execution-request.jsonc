@@ -1,0 +1,88 @@
+{
+  "kind": "node",
+  "type_key": "era.task.route_execution_request",
+  "display_name": "准备返回后选择直属核心",
+  "category": "核心执行",
+  "description": "读取准备结果中的请求种类，取出 commit 参数、同步步骤或候选状态并交给同级核心。把原步骤、事件来源和批次保存在独立接续通道，结果返回时据此适配。直接结果无需核心执行，但也只在统一结算后推进索引。",
+  "version": "1.0.0",
+  "flow_kind": "decision",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.task.prepared",
+        "cardinality": "exactly_one",
+        "display_name": "准备结果：执行请求与原任务接续上下文"
+      }
+    ],
+    "provides": [
+      {
+        "key": "route_execution_request_execution_route",
+        "type": "era.task.execution.route",
+        "display_name": "本轮执行 commit、sync、candidate 或直接返回"
+      },
+      {
+        "key": "route_execution_request_execution_request",
+        "type": "era.task.execution.request",
+        "display_name": "同一在途任务的待执行请求"
+      },
+      {
+        "key": "route_execution_request_continuation",
+        "type": "era.task.continuation.context",
+        "display_name": "本次请求所属的原步骤、来源、批次和回执适配依据"
+      },
+      {
+        "key": "route_execution_request_execution_step",
+        "type": "era.step.request.routed",
+        "display_name": "原步骤、事件来源与已准备消息依据"
+      },
+      {
+        "key": "route_execution_request_execution_batch",
+        "type": "era.batch.execution.state",
+        "display_name": "当前在途批次，索引尚未推进"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.task.prepared": [
+        "输入：准备结果：执行请求与原任务接续上下文。"
+      ]
+    },
+    "output_semantics": {
+      "route_execution_request_execution_route": [
+        "输出：本轮执行 commit、sync、candidate 或直接返回。"
+      ],
+      "route_execution_request_execution_request": [
+        "输出：同一在途任务的待执行请求。"
+      ],
+      "route_execution_request_continuation": [
+        "输出：本次请求所属的原步骤、来源、批次和回执适配依据。"
+      ],
+      "route_execution_request_execution_step": [
+        "输出：原步骤、事件来源与已准备消息依据。"
+      ],
+      "route_execution_request_execution_batch": [
+        "输出：当前在途批次，索引尚未推进。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/iteration/task_execution_routes.ts",
+        "export": "routeExecutionRequest"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.task_continuation"
+  ],
+  "capabilities": []
+}

@@ -22,5 +22,7 @@
     "era.service.sync_types",
     "era.service.types"
   ],
-  "external_packages": []
+  "external_packages": [
+    "@era/vibeflow-contracts"
+  ]
 }

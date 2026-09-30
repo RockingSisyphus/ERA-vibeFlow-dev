@@ -22,5 +22,7 @@
     "era.service.event_planner",
     "era.service.types"
   ],
-  "external_packages": []
+  "external_packages": [
+    "@era/vibeflow-contracts"
+  ]
 }

@@ -58,6 +58,7 @@
   ],
   "base_libs": [
     "era.service.facade_api_engine",
+    "era.service.task_continuation",
     "era.service.types",
     "era.service.working_state"
   ],

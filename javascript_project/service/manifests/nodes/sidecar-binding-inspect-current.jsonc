@@ -57,9 +57,9 @@
     }
   ],
   "base_libs": [
+    "era.service.agent_session_binding",
     "era.service.sidecar_binding",
-    "era.service.working_state",
-    "era.service.agent_session_binding"
+    "era.service.working_state"
   ],
   "capabilities": [
     {

@@ -2,18 +2,18 @@ import { describe, expect, it } from 'vitest';
 import { contextWith, identity, sidecarId } from './memory-lifecycle-fixture';
 import { recordFor } from '../../../javascript_project/service/base_lib/sidecar_binding';
 import { run as prepareStage } from '../../../javascript_project/service/nodes/agent/prepare_stage_blocks';
-import { run as advance } from '../../../javascript_project/service/nodes/sync/drive_message_blocks';
+import { run as advance } from './message-block-fixture';
 import {
   PrepareBlockWorkNode as prepareWork,
   PublishBlockApplicationNode as publish,
 } from '../../../javascript_project/service/nodes/sync/shared_block_state_adapters';
-import { run as finishStage } from '../../../javascript_project/service/nodes/agent/finish_stage_blocks';
+import { FinishStageBlocksNode as finishStage } from '../../../javascript_project/service/nodes/agent/finish_stage_blocks.ts';
 import {
   parsePlanningOutput,
   formatAgentPlanReport,
 } from '../../../javascript_project/service/base_lib/agent/agent_generation_session';
 import { overlayWorkingMessages } from '../../../javascript_project/service/base_lib/working_state';
-import { run as formTransition } from '../../../javascript_project/service/nodes/agent/form_session_transition';
+import { FormSessionTransitionNode as formTransition } from '../../../javascript_project/service/nodes/agent/finish_stage_blocks.ts';
 import { isEraDispatchContextV3 } from '../../../packages/era-contracts/index.js';
 
 const edit = (value: unknown) => `<VariableEdit>${JSON.stringify({ hp: value })}</VariableEdit>`;

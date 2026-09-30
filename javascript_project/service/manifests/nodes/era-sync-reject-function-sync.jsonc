@@ -1,0 +1,71 @@
+{
+  "kind": "node",
+  "type_key": "era.sync.reject_function_sync",
+  "display_name": "向函数返回禁止重算或回滚的原错误",
+  "category": "核心执行",
+  "description": "对作者函数内部的 sync 或回滚请求返回 ERA_FUNCTION_SYNC_UNSUPPORTED，解释须在调用结束后由外部发起。函数可按原行为捕获此错误后继续；不偷偷执行重算、不等待当前函数自身结束的外部队列。 宿主调用异常以原错误进入统一函数清理分支，不直接抛出破坏来源结算。",
+  "version": "1.0.0",
+  "flow_kind": "decision",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.sync.author.state",
+        "cardinality": "exactly_one",
+        "display_name": "当前消息位置、原块状态、正文范围和作者函数上下文"
+      }
+    ],
+    "provides": [
+      {
+        "key": "reject_function_sync_position_state",
+        "type": "era.sync.author.state",
+        "display_name": "本位置处理后的私有状态；尚未发布到宿主"
+      },
+      {
+        "key": "reject_function_sync_function_effect_route",
+        "type": "era.sync.function.effect.route",
+        "display_name": "宿主动作完成或真实异常"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.sync.author.state": [
+        "输入：当前消息位置、原块状态、正文范围和作者函数上下文。"
+      ]
+    },
+    "output_semantics": {
+      "reject_function_sync_position_state": [
+        "输出：本位置处理后的私有状态；尚未发布到宿主。"
+      ],
+      "reject_function_sync_function_effect_route": [
+        "输出：宿主动作完成或真实异常。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/sync/core_author_nodes.ts",
+        "export": "RejectFunctionSyncNode"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.sync.position_author"
+  ],
+  "capabilities": [
+    {
+      "id": "era.tavern.functions",
+      "operations": [
+        "acknowledge"
+      ]
+    }
+  ]
+}

@@ -17,6 +17,7 @@ async function loadNode(file: string): Promise<NodeModule> {
     'route_mk_commit.ts': ['../initialize/shared_pure_adapters.ts', 'RouteMkCommitNode'],
     'preserve_mk.ts': ['shared_mk_adapters.ts', 'PreserveMkNode'],
     'build_mk_commit.ts': ['shared_mk_adapters.ts', 'BuildMkCommitNode'],
+    'build_mk_result.ts': ['shared_mk_adapters.ts', 'BuildMkResultNode'],
   };
   if (shared[file]) {
     const [source, name] = shared[file];

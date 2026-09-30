@@ -5,7 +5,19 @@
   "description": "规范化消息和变量读取包裹结构，保留原深度限制与错误语义。",
   "category": "消息密钥宿主边界",
   "version": "1.0.0",
-  "implementations": [{"language":"typescript","targets":["browser","node"],"source":{"kind":"file","ref":"base_lib/domain/mk_read_normalization.ts"}}],
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "source": {
+        "kind": "file",
+        "ref": "base_lib/domain/mk_read_normalization.ts"
+      }
+    }
+  ],
   "dependencies": [],
   "external_packages": []
 }

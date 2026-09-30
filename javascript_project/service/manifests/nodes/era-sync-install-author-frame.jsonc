@@ -1,0 +1,62 @@
+{
+  "kind": "node",
+  "type_key": "era.sync.install_author_frame",
+  "display_name": "建立作者函数帧并放入正文锚点",
+  "category": "核心执行",
+  "description": "为当前未处理作者调用建立包含楼层、调用位置和已插入块数的帧，在调用后放入临时锚点。下一轮才开始作者函数；此时尚未调用作者代码，不消耗当前原正文块，也不把函数的未来 commit 重新入队。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.sync.position.state",
+        "cardinality": "exactly_one",
+        "display_name": "当前消息位置、原块状态、正文范围和作者函数上下文"
+      }
+    ],
+    "provides": [
+      {
+        "key": "install_author_frame_position_state",
+        "type": "era.sync.position.state",
+        "display_name": "本位置处理后的私有状态；尚未发布到宿主"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.sync.position.state": [
+        "输入：当前消息位置、原块状态、正文范围和作者函数上下文。"
+      ]
+    },
+    "output_semantics": {
+      "install_author_frame_position_state": [
+        "输出：本位置处理后的私有状态；尚未发布到宿主。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/sync/core_position_nodes.ts",
+        "export": "InstallAuthorFrameNode"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.command.operation_expressions",
+    "era.command.operation_state",
+    "era.service.agent_stage_program",
+    "era.service.function_block_execution",
+    "era.service.sync_contracts",
+    "era.service.sync_divergence",
+    "era.sync.position_source"
+  ],
+  "capabilities": []
+}

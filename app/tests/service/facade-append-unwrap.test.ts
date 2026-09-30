@@ -6,7 +6,7 @@ import {
   readTargetNode,
   validateCommitNode,
   commitFailureNode,
-} from '../../../javascript_project/service/nodes/api/facade_nodes';
+} from '../../../javascript_project/service/nodes/api/facade_nodes.ts';
 import {
   buildTransaction,
   inspectWindow,

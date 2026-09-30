@@ -20,6 +20,7 @@
   ],
   "dependencies": [],
   "external_packages": [
-    "opencc-js"
+    "opencc-js",
+    "@era/vibeflow-contracts"
   ]
 }

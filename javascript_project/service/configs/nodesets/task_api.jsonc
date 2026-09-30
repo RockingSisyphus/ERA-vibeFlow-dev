@@ -1,6 +1,5 @@
 {
   "type_key": "era.task.api",
-  "status": "planned",
   "display_name": "ERA 公共 API 请求准备",
   "description": "区分 commit 与 sync，保留有序操作、Scope、目标和原调用来源。commit 原样形成执行请求，sync 先做原有模式及目标校验，失败直接形成回执。准备完成后返回同级 Service 调用，不在本节点集中嵌套执行核心；最终 API 回执要等待真实执行结果。",
   "requires": [
@@ -22,7 +21,7 @@
   ],
   "provides": [
     {
-      "key": "prepared_task",
+      "key": "era_task_api_prepared_task",
       "type": "era.task.prepared",
       "display_name": "准备完成；仍须在本轮执行并结算的请求"
     }
@@ -58,6 +57,12 @@
         "description": "标记这段流程的入口或出口，业务数据由声明的通道传递；本节点不修改变量、不调用作者函数，也不保存酒馆。"
       },
       {
+        "id": "carry_preparation_context",
+        "type_used": "era.task.carry_preparation_context",
+        "display_name": "保留准备阶段的原任务来源",
+        "description": "将原任务的来源、步骤和批次接续依据原样传到准备阶段的各个结果分支。中间节点只输出自己的资源或 API 结果，因此这里显式保留后续执行与回执需要的原任务；不修改变量、不推进批次索引，也不重新入队。"
+      },
+      {
         "id": "route_facade_command",
         "type_used": "era.api.route_facade_command",
         "display_name": "区分提交与同步请求",
@@ -66,34 +71,8 @@
       {
         "id": "prepare_commit_request",
         "type_used": "era.api.prepare_commit_continuation",
-        "status": "planned",
-        "flow_kind": "process",
         "display_name": "返回原位提交请求",
-        "description": "将公共 ERA.commit 的请求和当前批次交还本轮 Service，保留操作顺序、调用窗口、Scope 与目标依据。这里不应用变量或提前发送回执；共享 commit 流程完成后才按原 API 格式返回结果。",
-        "requires": [
-          {
-            "type": "era.api.request",
-            "cardinality": "exactly_one",
-            "display_name": "待执行公共提交请求"
-          },
-          {
-            "type": "era.batch.execution.state",
-            "cardinality": "exactly_one",
-            "display_name": "当前在途批次，索引尚未推进"
-          },
-          {
-            "type": "era.task.continuation.context",
-            "cardinality": "exactly_one",
-            "display_name": "本次请求所属的原步骤、来源、批次和回执适配依据"
-          }
-        ],
-        "provides": [
-          {
-            "key": "prepared_task",
-            "type": "era.task.prepared",
-            "display_name": "准备完成；仍须在本轮执行并结算的请求"
-          }
-        ]
+        "description": "将公共 ERA.commit 的请求和当前批次交还本轮 Service，保留操作顺序、调用窗口、Scope 与目标依据。这里不应用变量或提前发送回执；共享 commit 流程完成后才按原 API 格式返回结果。"
       },
       {
         "id": "sync_validate_and_build_sync_step",
@@ -104,39 +83,8 @@
       {
         "id": "prepare_sync_request",
         "type_used": "era.api.prepare_sync_continuation",
-        "status": "planned",
-        "flow_kind": "process",
         "display_name": "返回校验后的共享同步请求",
-        "description": "接收 ERA.sync 已校验的共享同步步骤，附上原始 API 请求和回执上下文，再交给 Service 直属同步调用。校验通过不等于已重算或已保存；结果返回时仍须使用原 API 专用结果通道，不能拿内部同步结果提前结算外层任务。",
-        "requires": [
-          {
-            "type": "era.step.request.routed",
-            "cardinality": "exactly_one",
-            "display_name": "原步骤、事件来源与已准备消息依据"
-          },
-          {
-            "type": "era.batch.execution.state",
-            "cardinality": "exactly_one",
-            "display_name": "当前在途批次，索引尚未推进"
-          },
-          {
-            "type": "era.api.sync.context",
-            "cardinality": "exactly_one",
-            "display_name": "原 API 同步回执上下文"
-          },
-          {
-            "type": "era.task.continuation.context",
-            "cardinality": "exactly_one",
-            "display_name": "本次请求所属的原步骤、来源、批次和回执适配依据"
-          }
-        ],
-        "provides": [
-          {
-            "key": "prepared_task",
-            "type": "era.task.prepared",
-            "display_name": "准备完成；仍须在本轮执行并结算的请求"
-          }
-        ]
+        "description": "接收 ERA.sync 已校验的共享同步步骤，附上原始 API 请求和回执上下文，再交给 Service 直属同步调用。校验通过不等于已重算或已保存；结果返回时仍须使用原 API 专用结果通道，不能拿内部同步结果提前结算外层任务。"
       },
       {
         "id": "sync_build_sync_failure",
@@ -147,29 +95,8 @@
       {
         "id": "prepare_input_failure",
         "type_used": "era.api.prepare_failed_continuation",
-        "status": "planned",
-        "flow_kind": "process",
         "display_name": "返回输入失败及原调用来源",
-        "description": "把校验失败的公共同步回执连同原来源放入直接结果分支，不运行历史同步。保留原错误类别与诊断，由外层 API 收尾适配为同样的失败回执，不把请求准备当成成功应用。",
-        "requires": [
-          {
-            "type": "era.api.sync.result",
-            "cardinality": "exactly_one",
-            "display_name": "真实输入失败回执"
-          },
-          {
-            "type": "era.task.continuation.context",
-            "cardinality": "exactly_one",
-            "display_name": "本次请求所属的原步骤、来源、批次和回执适配依据"
-          }
-        ],
-        "provides": [
-          {
-            "key": "prepared_task",
-            "type": "era.task.prepared",
-            "display_name": "准备完成；仍须在本轮执行并结算的请求"
-          }
-        ]
+        "description": "把校验失败的公共同步回执连同原来源放入直接结果分支，不运行历史同步。保留原错误类别与诊断，由外层 API 收尾适配为同样的失败回执，不把请求准备当成成功应用。"
       },
       {
         "id": "end",
@@ -179,6 +106,10 @@
       }
     ],
     "edges": [
+      [
+        "start",
+        "carry_preparation_context"
+      ],
       [
         "start",
         "route_facade_command"
@@ -218,14 +149,29 @@
       [
         "prepare_input_failure",
         "end"
-      ]
+      ],
+      {
+        "from": "carry_preparation_context",
+        "to": "prepare_commit_request",
+        "schedule": false
+      },
+      {
+        "from": "carry_preparation_context",
+        "to": "prepare_sync_request",
+        "schedule": false
+      },
+      {
+        "from": "carry_preparation_context",
+        "to": "prepare_input_failure",
+        "schedule": false
+      }
     ],
     "outputs": [
       {
         "type": "era.task.prepared",
         "cardinality": "exactly_one",
         "display_name": "准备完成；仍须在本轮执行并结算的请求",
-        "as": "prepared_task"
+        "as": "era_task_api_prepared_task"
       }
     ]
   }

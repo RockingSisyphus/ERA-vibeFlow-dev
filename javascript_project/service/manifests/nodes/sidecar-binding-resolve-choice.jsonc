@@ -57,6 +57,8 @@
     }
   ],
   "base_libs": [
-    "era.service.sidecar_binding"
+    "era.service.sidecar_binding",
+    "era.service.sync_contracts",
+    "era.service.sync_result_policy"
   ]
 }

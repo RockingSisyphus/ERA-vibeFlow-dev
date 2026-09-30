@@ -1,0 +1,84 @@
+{
+  "kind": "node",
+  "type_key": "era.agent.prepare_legacy_continuation",
+  "display_name": "返回后续共享同步或标识请求",
+  "category": "核心执行",
+  "description": "将候选已应用的楼层、作用域窗口及原任务转换成后续请求。需要保存与普通历史同步的结果交给直属共享同步，需要消息标识结算的结果交给 MK 任务；不重复执行候选内的 API，不把该请求放入外部 FIFO。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.step.request.routed",
+        "cardinality": "exactly_one",
+        "display_name": "原步骤、事件来源与已准备消息依据"
+      },
+      {
+        "type": "era.batch.execution.state",
+        "cardinality": "exactly_one",
+        "display_name": "当前在途批次，索引尚未推进"
+      },
+      {
+        "type": "era.task.route",
+        "cardinality": "exactly_one",
+        "display_name": "既有同步或消息标识分支"
+      },
+      {
+        "type": "era.task.continuation.context",
+        "cardinality": "exactly_one",
+        "display_name": "本次请求所属的原步骤、来源、批次和回执适配依据"
+      }
+    ],
+    "provides": [
+      {
+        "key": "prepare_legacy_continuation_prepared_task",
+        "type": "era.task.prepared",
+        "display_name": "准备完成；仍须在本轮执行并结算的请求"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.step.request.routed": [
+        "输入：原步骤、事件来源与已准备消息依据。"
+      ],
+      "era.batch.execution.state": [
+        "输入：当前在途批次，索引尚未推进。"
+      ],
+      "era.task.route": [
+        "输入：既有同步或消息标识分支。"
+      ],
+      "era.task.continuation.context": [
+        "输入：本次请求所属的原步骤、来源、批次和回执适配依据。"
+      ]
+    },
+    "output_semantics": {
+      "prepare_legacy_continuation_prepared_task": [
+        "输出：准备完成；仍须在本轮执行并结算的请求。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/agent/shared_agent_flow_adapters.ts",
+        "export": "prepareLegacyContinuation"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.agent_flow_policy",
+    "era.service.agent_flow_types",
+    "era.service.agent_task_result",
+    "era.service.task_continuation",
+    "era.service.types"
+  ],
+  "capabilities": []
+}

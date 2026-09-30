@@ -44,8 +44,8 @@
       "completion": "immediate",
       "source": {
         "kind": "file",
-        "ref": "nodes/sidecar/build_blocked_result.ts",
-        "export": "run"
+        "ref": "nodes/sidecar/shared_choice_adapters.ts",
+        "export": "BuildBlockedResultNode"
       }
     }
   ],

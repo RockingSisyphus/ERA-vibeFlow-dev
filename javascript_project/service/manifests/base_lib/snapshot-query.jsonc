@@ -18,6 +18,8 @@
       }
     }
   ],
-  "dependencies": ["era.snapshot.history"],
+  "dependencies": [
+    "era.snapshot.history"
+  ],
   "external_packages": []
 }

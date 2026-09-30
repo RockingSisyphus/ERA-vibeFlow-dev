@@ -1,0 +1,62 @@
+{
+  "kind": "node",
+  "type_key": "era.sync.finalize_floor",
+  "display_name": "只有没有下一块时才收拢楼层正文",
+  "category": "核心执行",
+  "description": "当前楼层所有正文块和作者调用完成后，移除临时应用记录，固定本楼层最终正文、变量/函数状态和日志，更新消息标识事实。仅到楼层末尾才将它记为完整重算楼层；处理中间块不能在这里提前封存。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.sync.position.state",
+        "cardinality": "exactly_one",
+        "display_name": "当前消息位置、原块状态、正文范围和作者函数上下文"
+      }
+    ],
+    "provides": [
+      {
+        "key": "finalize_floor_position_state",
+        "type": "era.sync.position.state",
+        "display_name": "本位置处理后的私有状态；尚未发布到宿主"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.sync.position.state": [
+        "输入：当前消息位置、原块状态、正文范围和作者函数上下文。"
+      ]
+    },
+    "output_semantics": {
+      "finalize_floor_position_state": [
+        "输出：本位置处理后的私有状态；尚未发布到宿主。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/sync/core_position_nodes.ts",
+        "export": "FinalizeFloorNode"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.command.operation_expressions",
+    "era.command.operation_state",
+    "era.service.agent_stage_program",
+    "era.service.function_block_execution",
+    "era.service.sync_contracts",
+    "era.service.sync_divergence",
+    "era.sync.position_source"
+  ],
+  "capabilities": []
+}

@@ -1,0 +1,92 @@
+{
+  "kind": "node",
+  "type_key": "era.agent.unpack_finish_context",
+  "display_name": "取出候选终态及原步骤",
+  "category": "核心执行",
+  "description": "从候选终态和接续上下文取出原生成步骤、批次及已应用阶段结果，供旧阶段交接逻辑使用。这里不重建候选、不重新读取用户目标，也不改变步骤索引。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.agent.candidate.outcome",
+        "cardinality": "exactly_one",
+        "display_name": "候选循环唯一终态结果"
+      },
+      {
+        "type": "era.task.continuation.context",
+        "cardinality": "exactly_one",
+        "display_name": "本次请求所属的原步骤、来源、批次和回执适配依据"
+      }
+    ],
+    "provides": [
+      {
+        "key": "unpack_finish_context_finish_step",
+        "type": "era.step.request.routed",
+        "display_name": "原步骤、事件来源与已准备消息依据"
+      },
+      {
+        "key": "unpack_finish_context_finish_batch",
+        "type": "era.batch.execution.state",
+        "display_name": "当前在途批次，索引尚未推进"
+      },
+      {
+        "key": "unpack_finish_context_candidate_outcome",
+        "type": "era.agent.candidate.outcome",
+        "display_name": "仍待阶段交接的候选终态"
+      },
+      {
+        "key": "unpack_finish_context_finish_context",
+        "type": "era.task.continuation.context",
+        "display_name": "本次请求所属的原步骤、来源、批次和回执适配依据"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.agent.candidate.outcome": [
+        "输入：候选循环唯一终态结果。"
+      ],
+      "era.task.continuation.context": [
+        "输入：本次请求所属的原步骤、来源、批次和回执适配依据。"
+      ]
+    },
+    "output_semantics": {
+      "unpack_finish_context_finish_step": [
+        "输出：原步骤、事件来源与已准备消息依据。"
+      ],
+      "unpack_finish_context_finish_batch": [
+        "输出：当前在途批次，索引尚未推进。"
+      ],
+      "unpack_finish_context_candidate_outcome": [
+        "输出：仍待阶段交接的候选终态。"
+      ],
+      "unpack_finish_context_finish_context": [
+        "输出：本次请求所属的原步骤、来源、批次和回执适配依据。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/agent/shared_agent_flow_adapters.ts",
+        "export": "unpackFinishContext"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.agent_flow_policy",
+    "era.service.agent_flow_types",
+    "era.service.agent_task_result",
+    "era.service.task_continuation",
+    "era.service.types"
+  ],
+  "capabilities": []
+}

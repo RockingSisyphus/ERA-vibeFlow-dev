@@ -1,0 +1,58 @@
+{
+  "kind": "node",
+  "type_key": "era.command.append_operation_log",
+  "display_name": "合并原子变量记录与诊断",
+  "category": "核心执行",
+  "description": "将刚完成的新增、修改或删除记录合入本块私有日志，保留字段顺序、旧/新值以及公式诊断；没有实际变更的保护跳过不伪造日志。记录只供本块结束和历史回退使用，此处不写消息、Sidecar 或 API 回执。 候选函数 meta 的局部路径记录留在其私有动作中，不混入变量日志。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.command.operation.state",
+        "cardinality": "exactly_one",
+        "display_name": "当前操作栈、变量/函数工作值、历史快照、随机位置与累计日志"
+      }
+    ],
+    "provides": [
+      {
+        "key": "append_operation_log_operation_state",
+        "type": "era.command.operation.state",
+        "display_name": "本次微操作后的私有工作状态；块尚未完成"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.command.operation.state": [
+        "输入：当前操作栈、变量/函数工作值、历史快照、随机位置与累计日志。"
+      ]
+    },
+    "output_semantics": {
+      "append_operation_log_operation_state": [
+        "输出：本次微操作后的私有工作状态；块尚未完成。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/sync/core_operation_nodes.ts",
+        "export": "AppendOperationLogNode"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.command.operation_expressions",
+    "era.command.operation_functions",
+    "era.command.operation_traversal"
+  ],
+  "capabilities": []
+}

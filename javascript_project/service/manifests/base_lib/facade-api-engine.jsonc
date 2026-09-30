@@ -22,5 +22,7 @@
     "era.service.types",
     "era.service.facade_api_context"
   ],
-  "external_packages": []
+  "external_packages": [
+    "@era/vibeflow-contracts"
+  ]
 }

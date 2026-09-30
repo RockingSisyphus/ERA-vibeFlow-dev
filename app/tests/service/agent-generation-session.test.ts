@@ -1,12 +1,14 @@
+import {
+  AgentFunctionCallFailure,
+  executeAgentFunctionCalls,
+} from '../../../javascript_project/service/base_lib/domain/commands/operation_fold.ts';
 import { createCandidateRunner } from './agent-candidate-fixture';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
-  AgentFunctionCallFailure,
   buildAgentRetryFeedback,
   agentRequestContext,
   countAgentCycles,
-  executeAgentFunctionCalls,
   extractEraMessageKey,
   formatAgentPlanReport,
   formatAgentUpdateReport,
@@ -31,10 +33,10 @@ import { run as prepareAgentSessionNode } from '../../../javascript_project/serv
 import {
   ClassifyGenerationEventNode as classifyGenerationNode,
   PrepareGenerationPhaseNode as prepareGenerationNode,
-} from '../../../javascript_project/service/nodes/agent/shared_agent_flow_adapters';
+} from '../../../javascript_project/service/nodes/agent/shared_agent_flow_adapters.ts';
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- 节点测试读取真实 Service 编排边界。
 // @ts-ignore app rootDir 外的 Node source。
-import { run as formTransitionNode } from '../../../javascript_project/service/nodes/agent/form_session_transition';
+import { FormSessionTransitionNode as formTransitionNode } from '../../../javascript_project/service/nodes/agent/finish_stage_blocks.ts';
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- 节点测试读取真实 Service 编排边界。
 // @ts-ignore app rootDir 外的 Node source。
 import { run as prepareSettingsNode } from '../../../javascript_project/service/nodes/agent/prepare_settings_request';
@@ -43,7 +45,7 @@ import { run as prepareSettingsNode } from '../../../javascript_project/service/
 import { run as executeSettingsNode } from '../../../javascript_project/service/nodes/agent/execute_settings_command';
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- 节点测试读取真实 Service 编排边界。
 // @ts-ignore app rootDir 外的 Node source。
-import { run as buildSettingsNode } from '../../../javascript_project/service/nodes/agent/build_settings_result';
+import { BuildSettingsResultNode as buildSettingsNode } from '../../../javascript_project/service/nodes/agent/shared_agent_flow_adapters.ts';
 async function runAgentSessionNode(
   inputs: {
     'era.step.request.routed': { value: unknown };

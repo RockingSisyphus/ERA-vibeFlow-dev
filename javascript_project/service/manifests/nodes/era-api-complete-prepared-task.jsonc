@@ -1,0 +1,59 @@
+{
+  "kind": "node",
+  "type_key": "era.api.complete_prepared_task",
+  "display_name": "恢复原 API 回执与专用通道",
+  "category": "核心执行",
+  "description": "以 commit、共享 sync 或输入失败的实际结论生成公共 API 专用任务结果，保持原 status、值、诊断、通知与来源结算。只恢复原回执格式，不再次验证操作或重算历史，避免内部同步结果与外层 API 结果冲突。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.task.execution.result",
+        "cardinality": "exactly_one",
+        "display_name": "实际执行结果及原任务接续上下文"
+      }
+    ],
+    "provides": [
+      {
+        "key": "complete_prepared_task_api_task_result",
+        "type": "era.api.task.result",
+        "display_name": "原公共 API 格式的外层结果"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.task.execution.result": [
+        "输入：实际执行结果及原任务接续上下文。"
+      ]
+    },
+    "output_semantics": {
+      "complete_prepared_task_api_task_result": [
+        "输出：原公共 API 格式的外层结果。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/api/facade_nodes.ts",
+        "export": "completePreparedTask"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.facade_api_engine",
+    "era.service.task_continuation",
+    "era.service.types",
+    "era.service.working_state"
+  ],
+  "capabilities": []
+}

@@ -65,7 +65,8 @@ it.each([false, true])('返回候选中断的聊天先恢复起点，正文被�
 });
 
 it('取消后保留早期已完成阶段的待写记录，后续同步按原版本保存', async () => {
-  const { run: finish } = await import('../../../javascript_project/service/nodes/agent/finish_stage_blocks');
+  const { FinishStageBlocksNode: finish } =
+    await import('../../../javascript_project/service/nodes/agent/finish_stage_blocks');
   const fixture = workingCapabilityFixture();
   fixture.write_working({
     record: recordFor(sidecarId, identity, { statData: { hp: 70 }, statFunc: {}, eraMeta: {} }, null),
@@ -141,7 +142,8 @@ it('恢复点读取期间切聊天，不提交旧聊天的变量或阶段会话'
 });
 
 it('规划完成但AI楼层尚未创建时取消，丢弃未来文本并由历史日志撤销其效果', async () => {
-  const { run: finish } = await import('../../../javascript_project/service/nodes/agent/finish_stage_blocks');
+  const { FinishStageBlocksNode: finish } =
+    await import('../../../javascript_project/service/nodes/agent/finish_stage_blocks');
   const { planEraSync } = await import('../../../javascript_project/service/base_lib/sync/sync_planning');
   const { overlayWorkingMessages } = await import('../../../javascript_project/service/base_lib/working_state');
   const messages = [

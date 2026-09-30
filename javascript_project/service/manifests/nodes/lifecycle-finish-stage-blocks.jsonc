@@ -45,14 +45,18 @@
       "source": {
         "kind": "file",
         "ref": "nodes/agent/finish_stage_blocks.ts",
-        "export": "run"
+        "export": "FinishStageBlocksNode"
       }
     }
   ],
   "base_libs": [
-    "era.service.mk_engine",
+    "era.service.agent_flow_policy",
+    "era.service.agent_flow_types",
+    "era.service.agent_generation_session",
     "era.service.agent_session_binding",
-    "era.service.agent_generation_session"
+    "era.service.agent_stage_handoff",
+    "era.service.mk_engine",
+    "era.service.types"
   ],
   "capabilities": [
     {

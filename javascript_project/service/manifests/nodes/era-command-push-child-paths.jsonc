@@ -1,0 +1,58 @@
+{
+  "kind": "node",
+  "type_key": "era.command.push_child_paths",
+  "display_name": "保存父位置并逐字段深入",
+  "category": "核心执行",
+  "description": "在待处理栈中保存父对象的位置、字段顺序和下一个字段索引，再进入当前子项，继承本次操作种类及模板上下文。后续字段在轮到它时重新读取更新后的状态；不复制第二套 CRUD，不为每个对象再增加 Nodeset 层级。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.command.operation.state",
+        "cardinality": "exactly_one",
+        "display_name": "当前操作栈、变量/函数工作值、历史快照、随机位置与累计日志"
+      }
+    ],
+    "provides": [
+      {
+        "key": "push_child_paths_operation_state",
+        "type": "era.command.operation.state",
+        "display_name": "本次微操作后的私有工作状态；块尚未完成"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.command.operation.state": [
+        "输入：当前操作栈、变量/函数工作值、历史快照、随机位置与累计日志。"
+      ]
+    },
+    "output_semantics": {
+      "push_child_paths_operation_state": [
+        "输出：本次微操作后的私有工作状态；块尚未完成。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/sync/core_operation_nodes.ts",
+        "export": "PushChildPathsNode"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.command.operation_expressions",
+    "era.command.operation_functions",
+    "era.command.operation_traversal"
+  ],
+  "capabilities": []
+}

@@ -1,0 +1,64 @@
+{
+  "kind": "node",
+  "type_key": "era.task.accept_sync_result",
+  "display_name": "接回同步或标识的真实执行结果",
+  "category": "核心执行",
+  "description": "把共享同步或生成标识结算的实际任务结果与原任务上下文合并。普通同步、初始化、API sync 和生成收尾保留各自结果适配依据；内部同步返回还不能直接推进外层任务索引。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.task.result",
+        "cardinality": "exactly_one",
+        "display_name": "共享同步或标识任务真实结果"
+      },
+      {
+        "type": "era.task.continuation.context",
+        "cardinality": "exactly_one",
+        "display_name": "本次请求所属的原步骤、来源、批次和回执适配依据"
+      }
+    ],
+    "provides": [
+      {
+        "key": "accept_sync_result_executed_task",
+        "type": "era.task.execution.result",
+        "display_name": "实际执行结果及原任务接续上下文"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.task.result": [
+        "输入：共享同步或标识任务真实结果。"
+      ],
+      "era.task.continuation.context": [
+        "输入：本次请求所属的原步骤、来源、批次和回执适配依据。"
+      ]
+    },
+    "output_semantics": {
+      "accept_sync_result_executed_task": [
+        "输出：实际执行结果及原任务接续上下文。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/iteration/task_execution_routes.ts",
+        "export": "acceptSyncResult"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.task_continuation"
+  ],
+  "capabilities": []
+}

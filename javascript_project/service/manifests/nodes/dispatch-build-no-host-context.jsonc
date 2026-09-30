@@ -50,7 +50,8 @@
     }
   ],
   "base_libs": [
-    "era.service.dispatch_preparation"
+    "era.service.dispatch_preparation",
+    "era.service.types"
   ],
   "capabilities": []
 }

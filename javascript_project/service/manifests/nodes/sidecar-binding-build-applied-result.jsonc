@@ -44,13 +44,15 @@
       "completion": "immediate",
       "source": {
         "kind": "file",
-        "ref": "nodes/sidecar/build_applied_result.ts",
-        "export": "run"
+        "ref": "nodes/sidecar/shared_choice_adapters.ts",
+        "export": "BuildAppliedResultNode"
       }
     }
   ],
   "base_libs": [
-    "era.service.sync_contracts"
+    "era.service.sidecar_binding",
+    "era.service.sync_contracts",
+    "era.service.sync_result_policy"
   ],
   "capabilities": []
 }

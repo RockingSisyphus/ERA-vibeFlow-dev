@@ -51,9 +51,9 @@
   ],
   "base_libs": [
     "era.service.facade_api_engine",
-    "era.service.sync_planning",
+    "era.service.sidecar_binding",
     "era.service.sync_contracts",
-    "era.service.sidecar_binding"
+    "era.service.sync_work_preparation"
   ],
   "capabilities": [
     {

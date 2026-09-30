@@ -1,0 +1,66 @@
+{
+  "kind": "node",
+  "type_key": "era.command.check_function_metadata",
+  "display_name": "核对函数保护元数据及本项结论",
+  "category": "核心执行",
+  "description": "检查准备后的定义是否使用函数实体支持的元数据。函数是平面实体，不支持 unInsertAble 或 necessary=children；此类错误拒绝整组候选，已有保护导致的合法跳过只跳过当前项。通过的动作才进入候选库，保持原错误类别与保护行为。",
+  "version": "1.0.0",
+  "flow_kind": "decision",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.command.operation.state",
+        "cardinality": "exactly_one",
+        "display_name": "当前操作栈、变量/函数工作值、历史快照、随机位置与累计日志"
+      }
+    ],
+    "provides": [
+      {
+        "key": "check_function_metadata_operation_state",
+        "type": "era.command.operation.state",
+        "display_name": "本次微操作后的私有工作状态；块尚未完成"
+      },
+      {
+        "key": "check_function_metadata_function_item_route",
+        "type": "era.command.function.item.route",
+        "display_name": "收集本项、合法跳过或拒绝整组"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.command.operation.state": [
+        "输入：当前操作栈、变量/函数工作值、历史快照、随机位置与累计日志。"
+      ]
+    },
+    "output_semantics": {
+      "check_function_metadata_operation_state": [
+        "输出：本次微操作后的私有工作状态；块尚未完成。"
+      ],
+      "check_function_metadata_function_item_route": [
+        "输出：收集本项、合法跳过或拒绝整组。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/sync/core_operation_nodes.ts",
+        "export": "CheckFunctionMetadataNode"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.command.operation_expressions",
+    "era.command.operation_functions",
+    "era.command.operation_traversal"
+  ],
+  "capabilities": []
+}

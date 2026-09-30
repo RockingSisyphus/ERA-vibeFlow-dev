@@ -1,0 +1,56 @@
+{
+  "kind": "node",
+  "type_key": "era.task.complete_prepared_task",
+  "display_name": "形成原普通任务的最终结果",
+  "category": "核心执行",
+  "description": "把初始化、普通同步或生成片段的实际执行结论转回原普通任务结果，保留资源处理、阶段交接、取消与来源。这里只完成外层结果适配；步骤索引、整批回执和致命错误发布仍由统一结算完成。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.task.execution.result",
+        "cardinality": "exactly_one",
+        "display_name": "实际执行结果及原任务接续上下文"
+      }
+    ],
+    "provides": [
+      {
+        "key": "complete_prepared_task_completed_task",
+        "type": "era.task.result",
+        "display_name": "原步骤唯一最终结果"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.task.execution.result": [
+        "输入：实际执行结果及原任务接续上下文。"
+      ]
+    },
+    "output_semantics": {
+      "complete_prepared_task_completed_task": [
+        "输出：原步骤唯一最终结果。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/iteration/task_execution_routes.ts",
+        "export": "completePreparedTask"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.task_continuation"
+  ],
+  "capabilities": []
+}

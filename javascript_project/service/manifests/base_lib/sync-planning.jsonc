@@ -19,12 +19,10 @@
     }
   ],
   "dependencies": [
-    "era.service.mk_engine",
-    "era.service.sync_contracts",
-    "era.service.types",
-    "era.service.sync_types",
+    "era.service.sync_work_preparation",
     "era.service.sync_block",
-    "era.service.sync_prepare"
+    "era.service.sync_prepare",
+    "era.service.sync_contracts"
   ],
   "external_packages": []
 }

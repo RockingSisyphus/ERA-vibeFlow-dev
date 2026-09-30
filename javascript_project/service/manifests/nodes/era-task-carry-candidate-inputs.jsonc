@@ -1,0 +1,72 @@
+{
+  "kind": "node",
+  "type_key": "era.task.carry_candidate_inputs",
+  "display_name": "保留候选准备的原步骤与批次",
+  "category": "核心执行",
+  "description": "从同一个在途任务的接续依据中取出原生成步骤、批次和来源，分别送到候选起点与准备结果。候选准备的中间节点只传生成事实，这里保证安装候选基线时仍使用原任务的作用域和批次；不请求模型、不保存消息，也不推进步骤索引。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.task.continuation.context",
+        "cardinality": "exactly_one",
+        "display_name": "原任务来源、步骤和当前批次的接续依据"
+      }
+    ],
+    "provides": [
+      {
+        "key": "carry_candidate_inputs_context",
+        "type": "era.task.continuation.context",
+        "display_name": "原任务来源、步骤和当前批次的接续依据"
+      },
+      {
+        "key": "carry_candidate_inputs_step",
+        "type": "era.step.request.routed",
+        "display_name": "原生成步骤及其目标依据"
+      },
+      {
+        "key": "carry_candidate_inputs_batch",
+        "type": "era.batch.execution.state",
+        "display_name": "索引尚未推进的同一批次"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.task.continuation.context": [
+        "由外层任务入口产生，属于当前唯一在途步骤。"
+      ]
+    },
+    "output_semantics": {
+      "carry_candidate_inputs_context": [
+        "原任务来源、步骤和当前批次的接续依据；仅传递原事实，不代表业务已执行。"
+      ],
+      "carry_candidate_inputs_step": [
+        "原生成步骤及其目标依据；仅传递原事实，不代表业务已执行。"
+      ],
+      "carry_candidate_inputs_batch": [
+        "索引尚未推进的同一批次；仅传递原事实，不代表业务已执行。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/iteration/task_execution_routes.ts",
+        "export": "carryCandidateInputs"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.task_continuation"
+  ],
+  "capabilities": []
+}

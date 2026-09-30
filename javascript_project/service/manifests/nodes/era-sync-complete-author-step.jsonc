@@ -1,0 +1,56 @@
+{
+  "kind": "node",
+  "type_key": "era.sync.complete_author_step",
+  "display_name": "交回本次作者函数处理后的唯一位置",
+  "category": "核心执行",
+  "description": "一次函数启动、等待、请求准备、确认或异常清理已经完成后，将最后的位置工作状态交回消息块循环。需要应用 commit 时保留请求供外层同位置执行，函数尚在运行时保留等待帧；这里只交还一次局部结果，不宣称整次函数、楼层或保存已完成。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.sync.author.state",
+        "cardinality": "exactly_one",
+        "display_name": "本次作者函数处理的最后工作状态"
+      }
+    ],
+    "provides": [
+      {
+        "key": "complete_author_step_position_state",
+        "type": "era.sync.position.state",
+        "display_name": "交回消息块循环的唯一位置状态"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.sync.author.state": [
+        "来自本次选中的结束分支，保留成功前缀、等待帧或失败事实。"
+      ]
+    },
+    "output_semantics": {
+      "complete_author_step_position_state": [
+        "外层在原位置接续；不能将前面的中间工作状态同时当作最终结果。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/sync/core_author_nodes.ts",
+        "export": "CompleteAuthorStepNode"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.sync.position_author"
+  ],
+  "capabilities": []
+}

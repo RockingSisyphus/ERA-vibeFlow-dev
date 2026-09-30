@@ -49,10 +49,10 @@
     }
   ],
   "base_libs": [
-    "era.workbench.context",
-    "era.workbench.operations",
     "era.service.sidecar_binding",
-    "era.snapshot.history"
+    "era.snapshot.history",
+    "era.workbench.context",
+    "era.workbench.operations"
   ],
   "capabilities": [
     {

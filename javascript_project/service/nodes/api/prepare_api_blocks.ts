@@ -2,7 +2,7 @@ import {
   buildAppend,
   prepareCommitSync,
 } from "../../base_lib/facade_api_engine.ts";
-import { planSyncWork } from "../../base_lib/sync/sync_planning.ts";
+import { planSyncWork } from "../../base_lib/sync/sync_work_preparation.ts";
 import {
   consecutiveFacts,
   syncFailure,
@@ -39,27 +39,24 @@ export function run(inputs: any, _params: any, context: any): any {
   const working = context.capabilities["era.tavern.sidecar"].read_working(
     {},
   ).working;
-  const work = planSyncWork(
-    {
-      step: prepared.syncStep,
-      consecutive: consecutiveFacts(target.executionState),
-      status: working && !target.readFailure ? "ready" : "failed",
-      messagesRaw: { messages },
-      variablesRaw: working
-        ? variablesForState(working.record.state, working.record.sidecarId)
-        : null,
-      failure:
-        target.readFailure ??
-        (working
-          ? null
-          : syncFailure(
-              "ERA_WORKING_STATE_MISSING",
-              "当前聊天变量尚未就绪。",
-              "domain",
-            )),
-    },
-    true,
-  );
+  const work = planSyncWork({
+    step: prepared.syncStep,
+    consecutive: consecutiveFacts(target.executionState),
+    status: working && !target.readFailure ? "ready" : "failed",
+    messagesRaw: { messages },
+    variablesRaw: working
+      ? variablesForState(working.record.state, working.record.sidecarId)
+      : null,
+    failure:
+      target.readFailure ??
+      (working
+        ? null
+        : syncFailure(
+            "ERA_WORKING_STATE_MISSING",
+            "当前聊天变量尚未就绪。",
+            "domain",
+          )),
+  });
   // Pending writes from earlier commits belong to this same save batch.
   const previous = working?.work?.plan;
   const merged =

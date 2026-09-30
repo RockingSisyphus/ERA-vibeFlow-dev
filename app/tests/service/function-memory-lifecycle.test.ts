@@ -11,7 +11,7 @@ import {
   clearSidecarRuntimeSnapshot,
 } from '../../src/ERA变量框架/service/sidecar-runtime-snapshot';
 import { prepare } from '../../../javascript_project/service/nodes/sync/prepare_block_step';
-import { run as advance } from '../../../javascript_project/service/nodes/sync/drive_message_blocks';
+import { run as advance } from './message-block-fixture';
 import {
   PrepareBlockWorkNode as prepareWork,
   PublishBlockApplicationNode as publish,

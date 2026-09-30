@@ -1,0 +1,30 @@
+{
+  "kind": "base_lib",
+  "id": "era.command.operation_expressions",
+  "display_name": "公式请求与接续",
+  "description": "公式请求与接续；调用既有 Expression root，区分单值公式、整库校验和阶段调用，按原失败语义保留随机消费及诊断。",
+  "category": "核心执行",
+  "version": "1.0.0",
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "source": {
+        "kind": "file",
+        "ref": "base_lib/domain/commands/operation_expressions.ts"
+      }
+    }
+  ],
+  "dependencies": [
+    "era.command.operation_state",
+    "era.crud.mutations",
+    "era.crud.parser",
+    "era.service.agent_flow_types"
+  ],
+  "external_packages": [
+    "@era/vibeflow-expression"
+  ]
+}

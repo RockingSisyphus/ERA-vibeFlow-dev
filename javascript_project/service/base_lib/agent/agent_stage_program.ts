@@ -1,6 +1,4 @@
 import type { EraBlockStepStateV1 } from "../sync/sync_contracts.ts";
-import { advanceEraSyncBlock } from "../domain/sync/sync_block.ts";
-import { AgentFunctionCallFailure, executeAgentFunctionCalls } from "./agent_function_calls.ts";
 import { syncFailure } from "../sync/sync_contracts.ts";
 
 function inputOf(state: EraBlockStepStateV1): any {
@@ -22,21 +20,8 @@ function withProgram(
 /** Counts source blocks, not the API records inserted while executing a call. */
 export function consumeStagePrefix(
   state: EraBlockStepStateV1,
+  sourceMessageId?: number,
 ): EraBlockStepStateV1 {
-  const input = inputOf(state);
-  const program = input?.program;
-  const plan = state.work.plan;
-  const execution = plan && plan.status !== "failed" ? plan.execution : null;
-  if (!program || program.completed || program.remaining <= 0 || !plan || !execution ||
-      plan.messages[execution.messageIndex]?.messageId !== input.stageFloor.messageId)
-    return state;
-  return withProgram(state, { ...program, remaining: program.remaining - 1 });
-}
-
-/** Execute the JSON calls at their position using the common floor origin/cursor. */
-export function applyStageCalls(
-  state: EraBlockStepStateV1,
-): EraBlockStepStateV1 | null {
   const input = inputOf(state);
   const program = input?.program;
   const plan = state.work.plan;
@@ -44,48 +29,14 @@ export function applyStageCalls(
   if (
     !program ||
     program.completed ||
-    program.remaining !== 0 ||
+    program.remaining <= 0 ||
     !plan ||
-    !execution ||
-    plan.messages[execution.messageIndex]?.messageId !==
+    (sourceMessageId ??
+      (execution ? plan.messages[execution.messageIndex]?.messageId : null)) !==
       input.stageFloor.messageId
   )
-    return null;
-  const prepared = advanceEraSyncBlock(plan, true, true, true).plan;
-  try {
-    if (program.validationError) throw new Error(program.validationError);
-    const executed = executeAgentFunctionCalls({
-      calls: program.calls,
-      statData: prepared.stat,
-      statFunc: prepared.statFunc,
-      sourceKey: input.session.sourceKey ?? input.stageFloor.mk,
-      drawOffset: input.session.nextDrawOffset ?? 0,
-    });
-    return withProgram(
-      { ...state, work: { ...state.work, plan: prepared } },
-      {
-        ...program,
-        completed: true,
-        results: executed.results,
-        nextDrawOffset: executed.nextDrawOffset,
-      },
-    );
-  } catch (error) {
-    return withProgram({
-      ...state,
-      done: true,
-      work: {
-        ...state.work,
-        plan: prepared,
-        disposition: "failed",
-        failure: syncFailure(
-          "ERA_AGENT_CALLS_FAILED",
-          error instanceof Error ? error.message : String(error),
-          "domain",
-        ),
-      },
-    }, { ...program, ...(error instanceof AgentFunctionCallFailure ? { errorResults: error.functionResults } : {}) });
-  }
+    return state;
+  return withProgram(state, { ...program, remaining: program.remaining - 1 });
 }
 
 /** Stage candidates reject operation diagnostics; ordinary messages retain their policy. */

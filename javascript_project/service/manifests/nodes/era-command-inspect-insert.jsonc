@@ -1,0 +1,66 @@
+{
+  "kind": "node",
+  "type_key": "era.command.inspect_insert",
+  "display_name": "检查新增路径与插入保护",
+  "category": "核心执行",
+  "description": "读取当前路径是否已存在、父对象和 unInsertAble（禁止新增）保护。已有对象按原顺序进入子字段，缺失路径准备整体插入；all 阻止普通子树插入，self 阻止新增直属键，合法 meta 维护仍按原规则处理。输出进入子树、应用新增或跳过的明确分支，尚未改变变量。",
+  "version": "1.0.0",
+  "flow_kind": "decision",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.command.operation.state",
+        "cardinality": "exactly_one",
+        "display_name": "当前操作栈、变量/函数工作值、历史快照、随机位置与累计日志"
+      }
+    ],
+    "provides": [
+      {
+        "key": "inspect_insert_operation_state",
+        "type": "era.command.operation.state",
+        "display_name": "本次微操作后的私有工作状态；块尚未完成"
+      },
+      {
+        "key": "inspect_insert_insert_route",
+        "type": "era.command.insert.route",
+        "display_name": "进入子对象、应用新增或跳过"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.command.operation.state": [
+        "输入：当前操作栈、变量/函数工作值、历史快照、随机位置与累计日志。"
+      ]
+    },
+    "output_semantics": {
+      "inspect_insert_operation_state": [
+        "输出：本次微操作后的私有工作状态；块尚未完成。"
+      ],
+      "inspect_insert_insert_route": [
+        "输出：进入子对象、应用新增或跳过。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/sync/core_operation_nodes.ts",
+        "export": "InspectInsertNode"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.command.operation_expressions",
+    "era.command.operation_functions",
+    "era.command.operation_traversal"
+  ],
+  "capabilities": []
+}

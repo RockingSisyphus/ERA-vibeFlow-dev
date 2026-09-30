@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { contextWith, identity, sidecarId } from './memory-lifecycle-fixture';
-import { run as advance } from '../../../javascript_project/service/nodes/sync/drive_message_blocks';
+import { run as advance } from './message-block-fixture';
 import {
   PrepareBlockWorkNode as prepareWork,
   PublishBlockApplicationNode as publish,

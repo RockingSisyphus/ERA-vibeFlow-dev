@@ -1,0 +1,58 @@
+{
+  "kind": "node",
+  "type_key": "era.command.record_operation_diagnostic",
+  "display_name": "保留公式或局部操作诊断",
+  "category": "核心执行",
+  "description": "保留本路径的原错误代码、位置和信息，未成功的值不替换目标。修改公式的随机位置按原返回值接续；普通消息继续原有容错与成功前缀，是否拒绝 Agent 整候选由外层块结果规则决定。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.command.operation.state",
+        "cardinality": "exactly_one",
+        "display_name": "当前操作栈、变量/函数工作值、历史快照、随机位置与累计日志"
+      }
+    ],
+    "provides": [
+      {
+        "key": "record_operation_diagnostic_operation_state",
+        "type": "era.command.operation.state",
+        "display_name": "本次微操作后的私有工作状态；块尚未完成"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.command.operation.state": [
+        "输入：当前操作栈、变量/函数工作值、历史快照、随机位置与累计日志。"
+      ]
+    },
+    "output_semantics": {
+      "record_operation_diagnostic_operation_state": [
+        "输出：本次微操作后的私有工作状态；块尚未完成。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/sync/core_operation_nodes.ts",
+        "export": "RecordOperationDiagnosticNode"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.command.operation_expressions",
+    "era.command.operation_functions",
+    "era.command.operation_traversal"
+  ],
+  "capabilities": []
+}

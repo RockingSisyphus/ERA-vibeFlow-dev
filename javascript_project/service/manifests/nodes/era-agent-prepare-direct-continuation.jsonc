@@ -1,0 +1,68 @@
+{
+  "kind": "node",
+  "type_key": "era.agent.prepare_direct_continuation",
+  "display_name": "返回当前阶段片段的真实结果",
+  "category": "核心执行",
+  "description": "把阶段交接、取消或失败结果连同原生成来源交还 Service。交接仍遵循原完成标识与页面回调顺序，回执只代表当前片段完成；不在当前在途任务中等待回调向同一队列提交请求。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.task.result",
+        "cardinality": "exactly_one",
+        "display_name": "阶段直接结果"
+      },
+      {
+        "type": "era.task.continuation.context",
+        "cardinality": "exactly_one",
+        "display_name": "本次请求所属的原步骤、来源、批次和回执适配依据"
+      }
+    ],
+    "provides": [
+      {
+        "key": "prepare_direct_continuation_prepared_task",
+        "type": "era.task.prepared",
+        "display_name": "准备完成；仍须在本轮执行并结算的请求"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.task.result": [
+        "输入：阶段直接结果。"
+      ],
+      "era.task.continuation.context": [
+        "输入：本次请求所属的原步骤、来源、批次和回执适配依据。"
+      ]
+    },
+    "output_semantics": {
+      "prepare_direct_continuation_prepared_task": [
+        "输出：准备完成；仍须在本轮执行并结算的请求。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/agent/shared_agent_flow_adapters.ts",
+        "export": "prepareDirectContinuation"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.agent_flow_policy",
+    "era.service.agent_flow_types",
+    "era.service.agent_task_result",
+    "era.service.task_continuation",
+    "era.service.types"
+  ],
+  "capabilities": []
+}

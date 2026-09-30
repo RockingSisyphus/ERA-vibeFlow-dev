@@ -1,0 +1,78 @@
+{
+  "kind": "node",
+  "type_key": "era.sync.accept_operation_result",
+  "display_name": "接回完整块内结果并区分来源",
+  "category": "核心执行",
+  "description": "操作循环完整结束后，接回当前值、函数库、日志、诊断及随机进度。正文指令结果交给正文标记与块游标；阶段函数表结果交给原阶段调用表，失败保留候选结论。微操作中途的状态不会作为这里的完整结果，也不立即保存。",
+  "version": "1.0.0",
+  "flow_kind": "decision",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.command.operation.result",
+        "cardinality": "exactly_one",
+        "display_name": "完整操作范围结果"
+      },
+      {
+        "type": "era.sync.position.state",
+        "cardinality": "exactly_one",
+        "display_name": "当前消息位置、原块状态、正文范围和作者函数上下文"
+      }
+    ],
+    "provides": [
+      {
+        "key": "accept_operation_result_position_state",
+        "type": "era.sync.position.state",
+        "display_name": "本位置处理后的私有状态；尚未发布到宿主"
+      },
+      {
+        "key": "accept_operation_result_operation_origin_route",
+        "type": "era.sync.operation.origin.route",
+        "display_name": "正文指令结果或阶段函数表结果"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.command.operation.result": [
+        "输入：完整操作范围结果。"
+      ],
+      "era.sync.position.state": [
+        "输入：当前消息位置、原块状态、正文范围和作者函数上下文。"
+      ]
+    },
+    "output_semantics": {
+      "accept_operation_result_position_state": [
+        "输出：本位置处理后的私有状态；尚未发布到宿主。"
+      ],
+      "accept_operation_result_operation_origin_route": [
+        "输出：正文指令结果或阶段函数表结果。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/sync/core_position_nodes.ts",
+        "export": "AcceptOperationResultNode"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.command.operation_expressions",
+    "era.command.operation_state",
+    "era.service.agent_stage_program",
+    "era.service.function_block_execution",
+    "era.service.sync_contracts",
+    "era.service.sync_divergence",
+    "era.sync.position_source"
+  ],
+  "capabilities": []
+}

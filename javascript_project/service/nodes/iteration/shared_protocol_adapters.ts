@@ -1,6 +1,27 @@
 // Adapters with identical declared base libraries share this source.
-import { planProtocolBatch, type CollectionReductionV1, reduceForProtocolSlice, type EraServiceStateV1, type EraTransportEventV1, validateTransportEvent, createInitialServiceState, type BatchPlanV1, type BatchFinalizationV1, type PlannedStepV1, type BatchExecutionStateV1, type TaskResultV1 } from "../../base_lib/service_protocol_collection.ts";
-import { failCoverage, finalizeBatch, createExecutionState, buildBatchResult, mergeTaskResult, selectCurrentStep, createProtocolIgnoreResult } from "../../base_lib/service_protocol_execution.ts";
+import {
+  planProtocolBatch,
+  type CollectionReductionV1,
+  reduceForProtocolSlice,
+  type EraServiceStateV1,
+  type EraTransportEventV1,
+  validateTransportEvent,
+  createInitialServiceState,
+  type BatchPlanV1,
+  type BatchFinalizationV1,
+  type PlannedStepV1,
+  type BatchExecutionStateV1,
+  type TaskResultV1,
+} from "../../base_lib/service_protocol_collection.ts";
+import {
+  failCoverage,
+  finalizeBatch,
+  createExecutionState,
+  buildBatchResult,
+  mergeTaskResult,
+  selectCurrentStep,
+  createProtocolIgnoreResult,
+} from "../../base_lib/service_protocol_execution.ts";
 
 type CyclePhase = "collect" | "execute";
 interface CycleState {
@@ -15,9 +36,12 @@ function wrapCycle(phase: CyclePhase, payload: object): CycleState {
 }
 
 function readCycle(inputs: CycleInput, phase?: CyclePhase): CycleState {
-  const value = (inputs["era.service.cycle.state"] ?? inputs["era.service.cycle.routed"])?.value;
+  const value = (
+    inputs["era.service.cycle.state"] ?? inputs["era.service.cycle.routed"]
+  )?.value;
   if (
-    value === null || typeof value !== "object" ||
+    value === null ||
+    typeof value !== "object" ||
     (value as CycleState).schemaVersion !== 1 ||
     ((value as CycleState).phase !== "collect" &&
       (value as CycleState).phase !== "execute") ||
@@ -31,7 +55,12 @@ function readCycle(inputs: CycleInput, phase?: CyclePhase): CycleState {
 }
 
 export function BeginCycleNode(inputs: CycleInput): any {
-  return { cycle_state_initial: wrapCycle("collect", inputs["era.service.state"].value as EraServiceStateV1) };
+  return {
+    cycle_state_initial: wrapCycle(
+      "collect",
+      inputs["era.service.state"].value as EraServiceStateV1,
+    ),
+  };
 }
 
 export function RouteCycleNode(inputs: CycleInput): any {
@@ -40,39 +69,65 @@ export function RouteCycleNode(inputs: CycleInput): any {
 }
 
 export function UnpackCollectCycleNode(inputs: CycleInput): any {
-  return { service_state_current: readCycle(inputs, "collect").payload as EraServiceStateV1 };
+  return {
+    service_state_current: readCycle(inputs, "collect")
+      .payload as EraServiceStateV1,
+  };
 }
 
 export function CarryWaitCycleNode(inputs: CycleInput): any {
-  const reduction = inputs["era.collection.reduction"].value as CollectionReductionV1;
+  const reduction = inputs["era.collection.reduction"]
+    .value as CollectionReductionV1;
   return { wait_cycle_state: wrapCycle("collect", reduction.nextState) };
 }
 
 export function BeginExecutionCycleNode(inputs: CycleInput): any {
-  return { prepared_cycle_state: wrapCycle("execute", inputs["era.batch.execution.state"].value as BatchExecutionStateV1) };
+  return {
+    prepared_cycle_state: wrapCycle(
+      "execute",
+      inputs["era.batch.execution.state"].value as BatchExecutionStateV1,
+    ),
+  };
 }
 
 export function UnpackExecutionCycleNode(inputs: CycleInput): any {
-  return { execution_state: readCycle(inputs, "execute").payload as BatchExecutionStateV1 };
+  return {
+    execution_state: readCycle(inputs, "execute")
+      .payload as BatchExecutionStateV1,
+  };
 }
 
 export function RouteCompletionCycleNode(inputs: CycleInput): any {
   return {
-    completion_route: inputs["era.step.done"].value === true ? "finish" : "continue",
+    completion_route:
+      inputs["era.step.done"].value === true ? "finish" : "continue",
     routed_execution_state: inputs["era.batch.execution.state.next"].value,
   };
 }
 
 export function CarryExecutionCycleNode(inputs: CycleInput): any {
-  return { settled_cycle_state: wrapCycle("execute", inputs["era.batch.execution.state"].value as BatchExecutionStateV1) };
+  return {
+    settled_cycle_state: wrapCycle(
+      "execute",
+      inputs["era.batch.execution.state"].value as BatchExecutionStateV1,
+    ),
+  };
 }
 
 export function PromoteDoneCycleNode(inputs: CycleInput): any {
-  return { execution_state_after: inputs["era.batch.execution.state"].value as BatchExecutionStateV1 };
+  return {
+    execution_state_after: inputs["era.batch.execution.state"]
+      .value as BatchExecutionStateV1,
+  };
 }
 
 export function ResumeCollectCycleNode(inputs: CycleInput): any {
-  return { finished_cycle_state: wrapCycle("collect", inputs["era.service.state.next"].value as EraServiceStateV1) };
+  return {
+    finished_cycle_state: wrapCycle(
+      "collect",
+      inputs["era.service.state.next"].value as EraServiceStateV1,
+    ),
+  };
 }
 
 // Original node: nodes/batch/coverage_failure.ts
@@ -80,9 +135,11 @@ interface CoverageFailure_Envelope<T> {
   readonly value: T;
 }
 
-export function CoverageFailureNode(inputs: Readonly<{
-  "era.batch.execution.state": CoverageFailure_Envelope<unknown>;
-}>): any {
+export function CoverageFailureNode(
+  inputs: Readonly<{
+    "era.batch.execution.state": CoverageFailure_Envelope<unknown>;
+  }>,
+): any {
   return {
     coverage_failure_state: failCoverage(
       inputs["era.batch.execution.state"].value as BatchExecutionStateV1,
@@ -95,9 +152,11 @@ interface FinalizeBatch_Envelope<T> {
   readonly value: T;
 }
 
-export function FinalizeBatchNode(inputs: Readonly<{
-  "era.batch.execution.state.after": FinalizeBatch_Envelope<unknown>;
-}>): any {
+export function FinalizeBatchNode(
+  inputs: Readonly<{
+    "era.batch.execution.state.after": FinalizeBatch_Envelope<unknown>;
+  }>,
+): any {
   return {
     batch_finalization: finalizeBatch(
       inputs["era.batch.execution.state.after"].value as BatchExecutionStateV1,
@@ -110,9 +169,11 @@ interface PlanBatch_Envelope<T> {
   readonly value: T;
 }
 
-export function PlanBatchNode(inputs: Readonly<{
-  "era.collection.reduction": PlanBatch_Envelope<unknown>;
-}>): any {
+export function PlanBatchNode(
+  inputs: Readonly<{
+    "era.collection.reduction": PlanBatch_Envelope<unknown>;
+  }>,
+): any {
   return {
     batch_plan: planProtocolBatch(
       inputs["era.collection.reduction"].value as CollectionReductionV1,
@@ -125,9 +186,11 @@ interface ValidateCoverage_Envelope<T> {
   readonly value: T;
 }
 
-export function ValidateCoverageNode(inputs: Readonly<{
-  "era.batch.plan": ValidateCoverage_Envelope<unknown>;
-}>): any {
+export function ValidateCoverageNode(
+  inputs: Readonly<{
+    "era.batch.plan": ValidateCoverage_Envelope<unknown>;
+  }>,
+): any {
   const result = createExecutionState(
     inputs["era.batch.plan"].value as BatchPlanV1,
   );
@@ -169,10 +232,13 @@ interface RouteIteration_Envelope<T> {
   readonly value: T;
 }
 
-export function RouteIterationNode(inputs: Readonly<{
-  "era.collection.reduction": RouteIteration_Envelope<unknown>;
-}>): any {
-  const reduction = inputs["era.collection.reduction"].value as CollectionReductionV1;
+export function RouteIterationNode(
+  inputs: Readonly<{
+    "era.collection.reduction": RouteIteration_Envelope<unknown>;
+  }>,
+): any {
+  const reduction = inputs["era.collection.reduction"]
+    .value as CollectionReductionV1;
   return { iteration_route: reduction.route };
 }
 
@@ -186,7 +252,9 @@ interface ValidateTransport_Params {
 }
 
 export function ValidateTransportNode(
-  inputs: Readonly<{ "era.transport.event.raw": ValidateTransport_Envelope<unknown> }>,
+  inputs: Readonly<{
+    "era.transport.event.raw": ValidateTransport_Envelope<unknown>;
+  }>,
   params: ValidateTransport_Params,
 ): any {
   return {
@@ -207,9 +275,11 @@ interface BuildOutbound_Envelope<T> {
   readonly value: T;
 }
 
-export function BuildOutboundNode(inputs: Readonly<{
-  "era.batch.finalization": BuildOutbound_Envelope<unknown>;
-}>): any {
+export function BuildOutboundNode(
+  inputs: Readonly<{
+    "era.batch.finalization": BuildOutbound_Envelope<unknown>;
+  }>,
+): any {
   const result = buildBatchResult(
     inputs["era.batch.finalization"].value as BatchFinalizationV1,
   );
@@ -225,12 +295,14 @@ interface ContinueState_Envelope<T> {
   readonly value: T;
 }
 
-export function ContinueStateNode(inputs: Readonly<{
-  "era.service.state.post_batch": ContinueState_Envelope<unknown>;
-}>): any {
+export function ContinueStateNode(
+  inputs: Readonly<{
+    "era.service.state.post_batch": ContinueState_Envelope<unknown>;
+  }>,
+): any {
   return {
-    continued_state_next:
-      inputs["era.service.state.post_batch"].value as EraServiceStateV1,
+    continued_state_next: inputs["era.service.state.post_batch"]
+      .value as EraServiceStateV1,
   };
 }
 
@@ -239,9 +311,11 @@ interface RaiseFatal_Envelope<T> {
   readonly value: T;
 }
 
-export function RaiseFatalNode(_inputs: Readonly<{
-  "era.service.state.post_batch": RaiseFatal_Envelope<unknown>;
-}>): { readonly fatal_state_next: EraServiceStateV1 } {
+export function RaiseFatalNode(
+  _inputs: Readonly<{
+    "era.service.state.post_batch": RaiseFatal_Envelope<unknown>;
+  }>,
+): { readonly fatal_state_next: EraServiceStateV1 } {
   throw new Error("ERA_SERVICE_FATAL_AFTER_BATCH_RESULT");
 }
 
@@ -250,17 +324,22 @@ interface DispatchTask_Envelope<T> {
   readonly value: T;
 }
 
-export function DispatchTaskNode(inputs: Readonly<{
-  "era.step.request.routed": DispatchTask_Envelope<unknown>;
-  "era.task.route": DispatchTask_Envelope<unknown>;
-  "era.batch.execution.state": DispatchTask_Envelope<unknown>;
-}>): any {
+export function DispatchTaskNode(
+  inputs: Readonly<{
+    "era.step.request.routed": DispatchTask_Envelope<unknown>;
+    "era.task.route": DispatchTask_Envelope<unknown>;
+    "era.batch.execution.state": DispatchTask_Envelope<unknown>;
+  }>,
+): any {
   const route = inputs["era.task.route"].value;
   if (
-    route !== "sync" && route !== "update-mk" &&
-    route !== "agent-settings" && route !== "ignore"
+    route !== "update-mk" &&
+    route !== "agent-settings" &&
+    route !== "ignore"
   ) {
-    throw new TypeError("简单任务节点只接受已准备的 sync、update-mk、agent-settings 或 ignore 路由。");
+    throw new TypeError(
+      "简单任务节点只接受已准备的 update-mk、agent-settings 或 ignore 路由。",
+    );
   }
   return {
     simple_task_route: route,
@@ -274,10 +353,12 @@ interface MergeTaskResult_Envelope<T> {
   readonly value: T;
 }
 
-export function MergeTaskResultNode(inputs: Readonly<{
-  "era.batch.execution.state": MergeTaskResult_Envelope<unknown>;
-  "era.task.result": MergeTaskResult_Envelope<unknown>;
-}>): any {
+export function MergeTaskResultNode(
+  inputs: Readonly<{
+    "era.batch.execution.state": MergeTaskResult_Envelope<unknown>;
+    "era.task.result": MergeTaskResult_Envelope<unknown>;
+  }>,
+): any {
   const result = mergeTaskResult(
     inputs["era.batch.execution.state"].value as BatchExecutionStateV1,
     inputs["era.task.result"].value as TaskResultV1,
@@ -293,10 +374,13 @@ interface SelectStep_Envelope<T> {
   readonly value: T;
 }
 
-export function SelectStepNode(inputs: Readonly<{
-  "era.batch.execution.state": SelectStep_Envelope<unknown>;
-}>): any {
-  const state = inputs["era.batch.execution.state"].value as BatchExecutionStateV1;
+export function SelectStepNode(
+  inputs: Readonly<{
+    "era.batch.execution.state": SelectStep_Envelope<unknown>;
+  }>,
+): any {
+  const state = inputs["era.batch.execution.state"]
+    .value as BatchExecutionStateV1;
   return {
     selected_step: selectCurrentStep(state),
     prepared_execution_state: state,

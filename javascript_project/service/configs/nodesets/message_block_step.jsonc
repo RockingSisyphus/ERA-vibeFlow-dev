@@ -1,6 +1,5 @@
 {
   "type_key": "era.sync.block_step",
-  "status": "planned",
   "display_name": "消息块：正文位置、作者函数、指令循环与楼层边界",
   "description": "按当前位置推进普通同步、API commit 或 Agent 候选的共同消息计划。先区分结束与作者函数帧，再建立楼层快照/MK/随机位置，识别指令、作者调用或楼层结束；指令和阶段 JSON 调用进入同一个第四层操作循环。作者函数在原位置启动、等待、就地应用 commit 并回执，禁止内部重算。块结束更新正文和计数，楼层结束才形成封存候选；随后按原次序压缩、发布内存结果，实际保存仍由任务尾部完成。 作者函数等待与请求准备单独在第四层展开；应用请求回到本层，不增加第五层。",
   "requires": [
@@ -26,7 +25,7 @@
     "entry_mode": "async",
     "inputs": [
       {
-        "key": "input_0",
+        "key": "block_step_state",
         "type": "era.sync.block.step.state",
         "display_name": "块步进状态",
         "required": true
@@ -43,29 +42,8 @@
       {
         "id": "route_block_lifecycle",
         "type_used": "era.sync.route_block_lifecycle",
-        "status": "planned",
-        "flow_kind": "decision",
         "display_name": "先区分终结、函数帧与普通正文位置",
-        "description": "读取块计划是否结束、失败或取消，以及作者函数帧处于启动、等待还是应用 commit 的阶段。终态先清理函数请求；等待帧先处理回执再等下一事件；应用帧只推进它插入的块，其他情况读取原正文位置。这个判断不执行 CRUD，也不吞掉失败。",
-        "requires": [
-          {
-            "type": "era.sync.block.step.state",
-            "cardinality": "exactly_one",
-            "display_name": "外层循环携带的完整块状态"
-          }
-        ],
-        "provides": [
-          {
-            "key": "position_state",
-            "type": "era.sync.position.state",
-            "display_name": "本位置处理后的私有状态；尚未发布到宿主"
-          },
-          {
-            "key": "block_lifecycle_route",
-            "type": "era.sync.position.lifecycle.route",
-            "display_name": "终结清理、启动函数、等待函数或正文推进"
-          }
-        ]
+        "description": "读取块计划是否结束、失败或取消，以及作者函数帧处于启动、等待还是应用 commit 的阶段。终态先清理函数请求；等待帧先处理回执再等下一事件；应用帧只推进它插入的块，其他情况读取原正文位置。这个判断不执行 CRUD，也不吞掉失败。"
       },
       {
         "id": "author_function_step",
@@ -76,159 +54,38 @@
       {
         "id": "prepare_floor_origin",
         "type_used": "era.sync.prepare_floor_origin",
-        "status": "planned",
-        "flow_kind": "decision",
         "display_name": "建立当前楼层标识、起点快照和随机位置",
-        "description": "检查消息范围与当前消息的 ERA 标识 MK；无效或缺种子时按原诊断跳过该楼层。首次进入有效楼层时解除旧应用标记，保存此楼层开始前的变量/函数快照、清空本楼层重算日志并把随机偏移归零；已开始楼层继续现有位置，不重置前面块的成果。",
-        "requires": [
-          {
-            "type": "era.sync.position.state",
-            "cardinality": "exactly_one",
-            "display_name": "当前消息位置、原块状态、正文范围和作者函数上下文"
-          }
-        ],
-        "provides": [
-          {
-            "key": "position_state",
-            "type": "era.sync.position.state",
-            "display_name": "本位置处理后的私有状态；尚未发布到宿主"
-          },
-          {
-            "key": "floor_origin_route",
-            "type": "era.sync.floor.origin.route",
-            "display_name": "有效当前位置或无效楼层"
-          }
-        ]
+        "description": "检查消息范围与当前消息的 ERA 标识 MK；无效或缺种子时按原诊断跳过该楼层。首次进入有效楼层时解除旧应用标记，保存此楼层开始前的变量/函数快照、清空本楼层重算日志并把随机偏移归零；已开始楼层继续现有位置，不重置前面块的成果。"
       },
       {
         "id": "advance_invalid_floor",
         "type_used": "era.sync.advance_invalid_floor",
-        "status": "planned",
-        "flow_kind": "process",
         "display_name": "跳过无效楼层并保留原诊断",
-        "description": "当前消息无法得到有效 MK 时，记录缺种子或消息无效的原诊断，清除该楼层对应标识并推进到下一楼层。保留之前已确认的变量与日志，不为无效楼层生成封存压缩候选；到范围末尾才标记结束。",
-        "requires": [
-          {
-            "type": "era.sync.position.state",
-            "cardinality": "exactly_one",
-            "display_name": "当前消息位置、原块状态、正文范围和作者函数上下文"
-          }
-        ],
-        "provides": [
-          {
-            "key": "position_state",
-            "type": "era.sync.position.state",
-            "display_name": "本位置处理后的私有状态；尚未发布到宿主"
-          }
-        ]
+        "description": "当前消息无法得到有效 MK 时，记录缺种子或消息无效的原诊断，清除该楼层对应标识并推进到下一楼层。保留之前已确认的变量与日志，不为无效楼层生成封存压缩候选；到范围末尾才标记结束。"
       },
       {
         "id": "route_stage_position",
         "type_used": "era.sync.route_stage_position",
-        "status": "planned",
-        "flow_kind": "decision",
         "display_name": "判断阶段 JSON 调用是否轮到当前正文位置",
-        "description": "仅当当前楼层属于 Agent 阶段、需要重放的原始正文前缀已经逐块处理完、剩余块数为零，且本阶段调用表尚未完成时，计算规划或结算阶段 JSON 中的函数调用清单。没有作者函数帧才允许这条分支；其他情况继续识别正文块，不能提前消耗下一块或重复阶段函数。",
-        "requires": [
-          {
-            "type": "era.sync.position.state",
-            "cardinality": "exactly_one",
-            "display_name": "当前消息位置、原块状态、正文范围和作者函数上下文"
-          }
-        ],
-        "provides": [
-          {
-            "key": "position_state",
-            "type": "era.sync.position.state",
-            "display_name": "本位置处理后的私有状态；尚未发布到宿主"
-          },
-          {
-            "key": "stage_position_route",
-            "type": "era.sync.stage.position.route",
-            "display_name": "阶段函数表或下一正文块"
-          }
-        ]
+        "description": "仅当当前楼层属于 Agent 阶段、需要重放的原始正文前缀已经逐块处理完、剩余块数为零，且本阶段调用表尚未完成时，计算规划或结算阶段 JSON 中的函数调用清单。没有作者函数帧才允许这条分支；其他情况继续识别正文块，不能提前消耗下一块或重复阶段函数。"
       },
       {
         "id": "seed_stage_operations",
         "type_used": "era.sync.seed_stage_operations",
-        "status": "planned",
-        "flow_kind": "process",
         "display_name": "先检查整张阶段调用表，再准备顺序求值",
-        "description": "在本阶段指定位置先核对调用表已有验证错误和全部函数名是否可用，再准备有序操作状态。使用当前生成会话自己的稳定随机来源和已使用随机次数，不混用正文消息标识 MK 的随机序列；表格式或未知函数失败时保留原整表失败边界，不先计算前面的合法项。",
-        "requires": [
-          {
-            "type": "era.sync.position.state",
-            "cardinality": "exactly_one",
-            "display_name": "当前消息位置、原块状态、正文范围和作者函数上下文"
-          }
-        ],
-        "provides": [
-          {
-            "key": "operation_state",
-            "type": "era.command.operation.state",
-            "display_name": "阶段函数表私有操作初态"
-          },
-          {
-            "key": "position_state",
-            "type": "era.sync.position.state",
-            "display_name": "本位置处理后的私有状态；尚未发布到宿主"
-          }
-        ]
+        "description": "在本阶段指定位置先核对调用表已有验证错误和全部函数名是否可用，再准备有序操作状态。使用当前生成会话自己的稳定随机来源和已使用随机次数，不混用正文消息标识 MK 的随机序列；表格式或未知函数失败时保留原整表失败边界，不先计算前面的合法项。"
       },
       {
         "id": "classify_source_block",
         "type_used": "era.sync.classify_source_block",
-        "status": "planned",
-        "flow_kind": "decision",
         "display_name": "按正文位置识别指令、作者调用或楼层末尾",
-        "description": "从当前正文解析出有序指令和 EraFCall（正文里的作者 JavaScript 函数调用标签），按块索引取一个位置。指令进入变量/函数操作循环；未处理且非嵌套的作者调用建立执行帧；已处理/嵌套调用按原规则跳过或标记；没有下一块才进入楼层结束，不按标签类型重新排序。",
-        "requires": [
-          {
-            "type": "era.sync.position.state",
-            "cardinality": "exactly_one",
-            "display_name": "当前消息位置、原块状态、正文范围和作者函数上下文"
-          }
-        ],
-        "provides": [
-          {
-            "key": "position_state",
-            "type": "era.sync.position.state",
-            "display_name": "本位置处理后的私有状态；尚未发布到宿主"
-          },
-          {
-            "key": "source_block_route",
-            "type": "era.sync.source.block.route",
-            "display_name": "指令、待执行作者调用、已处理/嵌套调用或楼层结束"
-          }
-        ]
+        "description": "从当前正文解析出有序指令和 EraFCall（正文里的作者 JavaScript 函数调用标签），按块索引取一个位置。指令进入变量/函数操作循环；未处理且非嵌套的作者调用建立执行帧；已处理/嵌套调用按原规则跳过或标记；没有下一块才进入楼层结束，不按标签类型重新排序。"
       },
       {
         "id": "seed_command_operations",
         "type_used": "era.sync.seed_command_operations",
-        "status": "planned",
-        "flow_kind": "process",
         "display_name": "为这一正文指令块建立操作栈",
-        "description": "仅提取当前块的六类有序变量/函数操作，携带当前变量、函数库、楼层起点快照、前序日志和消息 ERA 标识 MK 所确定的稳定随机来源和已使用的随机次数。建立数组根项与字段栈供第四层循环使用，不提前应用整块、不复制 CRUD 实现，也不把别的正文块混进这一范围。",
-        "requires": [
-          {
-            "type": "era.sync.position.state",
-            "cardinality": "exactly_one",
-            "display_name": "当前消息位置、原块状态、正文范围和作者函数上下文"
-          }
-        ],
-        "provides": [
-          {
-            "key": "operation_state",
-            "type": "era.command.operation.state",
-            "display_name": "当前正文指令块操作初态"
-          },
-          {
-            "key": "position_state",
-            "type": "era.sync.position.state",
-            "display_name": "本位置处理后的私有状态；尚未发布到宿主"
-          }
-        ]
+        "description": "仅提取当前块的六类有序变量/函数操作，携带当前变量、函数库、楼层起点快照、前序日志和消息 ERA 标识 MK 所确定的稳定随机来源和已使用的随机次数。建立数组根项与字段栈供第四层循环使用，不提前应用整块、不复制 CRUD 实现，也不把别的正文块混进这一范围。"
       },
       {
         "id": "operation_loop",
@@ -274,210 +131,56 @@
       {
         "id": "accept_operation_result",
         "type_used": "era.sync.accept_operation_result",
-        "status": "planned",
-        "flow_kind": "decision",
         "display_name": "接回完整块内结果并区分来源",
-        "description": "操作循环完整结束后，接回当前值、函数库、日志、诊断及随机进度。正文指令结果交给正文标记与块游标；阶段函数表结果交给原阶段调用表，失败保留候选结论。微操作中途的状态不会作为这里的完整结果，也不立即保存。",
-        "requires": [
-          {
-            "type": "era.command.operation.result",
-            "cardinality": "exactly_one",
-            "display_name": "完整操作范围结果"
-          },
-          {
-            "type": "era.sync.position.state",
-            "cardinality": "exactly_one",
-            "display_name": "当前消息位置、原块状态、正文范围和作者函数上下文"
-          }
-        ],
-        "provides": [
-          {
-            "key": "position_state",
-            "type": "era.sync.position.state",
-            "display_name": "本位置处理后的私有状态；尚未发布到宿主"
-          },
-          {
-            "key": "operation_origin_route",
-            "type": "era.sync.operation.origin.route",
-            "display_name": "正文指令结果或阶段函数表结果"
-          }
-        ]
+        "description": "操作循环完整结束后，接回当前值、函数库、日志、诊断及随机进度。正文指令结果交给正文标记与块游标；阶段函数表结果交给原阶段调用表，失败保留候选结论。微操作中途的状态不会作为这里的完整结果，也不立即保存。"
       },
       {
         "id": "mark_completed_command",
         "type_used": "era.sync.mark_completed_command",
-        "status": "planned",
-        "flow_kind": "process",
         "display_name": "合并变量日志并标记正文指令已应用",
-        "description": "把当前指令块的变量/函数结果、历史日志、诊断和随机位置合入本楼层工作计划，再按原正文起止范围加应用记录。标记表示本块已在内存执行，实际消息尚未保存；原普通消息容错成果与 Agent 诊断都完整保留。",
-        "requires": [
-          {
-            "type": "era.sync.position.state",
-            "cardinality": "exactly_one",
-            "display_name": "当前消息位置、原块状态、正文范围和作者函数上下文"
-          }
-        ],
-        "provides": [
-          {
-            "key": "position_state",
-            "type": "era.sync.position.state",
-            "display_name": "本位置处理后的私有状态；尚未发布到宿主"
-          }
-        ]
+        "description": "把当前指令块的变量/函数结果、历史日志、诊断和随机位置合入本楼层工作计划，再按原正文起止范围加应用记录。标记表示本块已在内存执行，实际消息尚未保存；原普通消息容错成果与 Agent 诊断都完整保留。"
       },
       {
         "id": "accept_stage_call_table",
         "type_used": "era.sync.accept_stage_call_table",
-        "status": "planned",
-        "flow_kind": "process",
         "display_name": "回送阶段调用表与会话随机结果",
-        "description": "整张阶段 JSON 函数表成功时，记录完整结果表及会话随机下一位置，标记这张表已完成但不移动下一个原正文块。表失败保持原 ERA_AGENT_CALLS_FAILED 及错误结果，由整候选恢复处理，不误用正文容错。",
-        "requires": [
-          {
-            "type": "era.sync.position.state",
-            "cardinality": "exactly_one",
-            "display_name": "当前消息位置、原块状态、正文范围和作者函数上下文"
-          }
-        ],
-        "provides": [
-          {
-            "key": "position_state",
-            "type": "era.sync.position.state",
-            "display_name": "本位置处理后的私有状态；尚未发布到宿主"
-          }
-        ]
+        "description": "整张阶段 JSON 函数表成功时，记录完整结果表及会话随机下一位置，标记这张表已完成但不移动下一个原正文块。表失败保持原 ERA_AGENT_CALLS_FAILED 及错误结果，由整候选恢复处理，不误用正文容错。"
       },
       {
         "id": "install_author_frame",
         "type_used": "era.sync.install_author_frame",
-        "status": "planned",
-        "flow_kind": "process",
         "display_name": "建立作者函数帧并放入正文锚点",
-        "description": "为当前未处理作者调用建立包含楼层、调用位置和已插入块数的帧，在调用后放入临时锚点。下一轮才开始作者函数；此时尚未调用作者代码，不消耗当前原正文块，也不把函数的未来 commit 重新入队。",
-        "requires": [
-          {
-            "type": "era.sync.position.state",
-            "cardinality": "exactly_one",
-            "display_name": "当前消息位置、原块状态、正文范围和作者函数上下文"
-          }
-        ],
-        "provides": [
-          {
-            "key": "position_state",
-            "type": "era.sync.position.state",
-            "display_name": "本位置处理后的私有状态；尚未发布到宿主"
-          }
-        ]
+        "description": "为当前未处理作者调用建立包含楼层、调用位置和已插入块数的帧，在调用后放入临时锚点。下一轮才开始作者函数；此时尚未调用作者代码，不消耗当前原正文块，也不把函数的未来 commit 重新入队。"
       },
       {
         "id": "mark_skipped_call",
         "type_used": "era.sync.mark_skipped_call",
-        "status": "planned",
-        "flow_kind": "process",
         "display_name": "按原规则跳过已处理或嵌套调用",
-        "description": "对已处理的非嵌套 EraFCall 保留原完成标记语义，嵌套调用按原规则不启动宿主函数。这里只处理当前位置的正文标记，随后推进一个原块，不新增调用、变量写入或 API 回执。",
-        "requires": [
-          {
-            "type": "era.sync.position.state",
-            "cardinality": "exactly_one",
-            "display_name": "当前消息位置、原块状态、正文范围和作者函数上下文"
-          }
-        ],
-        "provides": [
-          {
-            "key": "position_state",
-            "type": "era.sync.position.state",
-            "display_name": "本位置处理后的私有状态；尚未发布到宿主"
-          }
-        ]
+        "description": "对已处理的非嵌套 EraFCall 保留原完成标记语义，嵌套调用按原规则不启动宿主函数。这里只处理当前位置的正文标记，随后推进一个原块，不新增调用、变量写入或 API 回执。"
       },
       {
         "id": "finalize_floor",
         "type_used": "era.sync.finalize_floor",
-        "status": "planned",
-        "flow_kind": "process",
         "display_name": "只有没有下一块时才收拢楼层正文",
-        "description": "当前楼层所有正文块和作者调用完成后，移除临时应用记录，固定本楼层最终正文、变量/函数状态和日志，更新消息标识事实。仅到楼层末尾才将它记为完整重算楼层；处理中间块不能在这里提前封存。",
-        "requires": [
-          {
-            "type": "era.sync.position.state",
-            "cardinality": "exactly_one",
-            "display_name": "当前消息位置、原块状态、正文范围和作者函数上下文"
-          }
-        ],
-        "provides": [
-          {
-            "key": "position_state",
-            "type": "era.sync.position.state",
-            "display_name": "本位置处理后的私有状态；尚未发布到宿主"
-          }
-        ]
+        "description": "当前楼层所有正文块和作者调用完成后，移除临时应用记录，固定本楼层最终正文、变量/函数状态和日志，更新消息标识事实。仅到楼层末尾才将它记为完整重算楼层；处理中间块不能在这里提前封存。"
       },
       {
         "id": "prepare_sealed_candidate",
         "type_used": "era.sync.prepare_sealed_candidate",
-        "status": "planned",
-        "flow_kind": "process",
         "display_name": "按原条件形成已完成楼层的压缩候选",
-        "description": "在完整楼层结束后，检查后面是否仍有 AI 消息、当前楼层是否有阻止压缩的非作者调用诊断，以及封存标记是否已经匹配。只有符合原条件才携带楼层起点/终点变量和函数、MK、前序元数据与最终正文形成压缩候选；不压缩当前未完成楼层，也不直接替换或保存历史。",
-        "requires": [
-          {
-            "type": "era.sync.position.state",
-            "cardinality": "exactly_one",
-            "display_name": "当前消息位置、原块状态、正文范围和作者函数上下文"
-          }
-        ],
-        "provides": [
-          {
-            "key": "position_state",
-            "type": "era.sync.position.state",
-            "display_name": "本位置处理后的私有状态；尚未发布到宿主"
-          }
-        ]
+        "description": "在完整楼层结束后，检查后面是否仍有 AI 消息、当前楼层是否有阻止压缩的非作者调用诊断，以及封存标记是否已经匹配。只有符合原条件才携带楼层起点/终点变量和函数、MK、前序元数据与最终正文形成压缩候选；不压缩当前未完成楼层，也不直接替换或保存历史。"
       },
       {
         "id": "advance_source_position",
         "type_used": "era.sync.advance_source_position",
-        "status": "planned",
-        "flow_kind": "process",
         "display_name": "推进一个已处理块或已完成楼层",
-        "description": "正常块完成时仅将本楼层块索引加一，楼层结束时才移到下一楼层并清除 floorStarted。保持累计消息修改同楼层合并、已重算索引只在楼层结束登记，以及随机位置的原连续性；作者调用插入块仍按其独立 remaining 计数。",
-        "requires": [
-          {
-            "type": "era.sync.position.state",
-            "cardinality": "exactly_one",
-            "display_name": "当前消息位置、原块状态、正文范围和作者函数上下文"
-          }
-        ],
-        "provides": [
-          {
-            "key": "position_state",
-            "type": "era.sync.position.state",
-            "display_name": "本位置处理后的私有状态；尚未发布到宿主"
-          }
-        ]
+        "description": "正常块完成时仅将本楼层块索引加一，楼层结束时才移到下一楼层并清除 floorStarted。保持累计消息修改同楼层合并、已重算索引只在楼层结束登记，以及随机位置的原连续性；作者调用插入块仍按其独立 remaining 计数。"
       },
       {
         "id": "finish_position_step",
         "type_used": "era.sync.finish_position_step",
-        "status": "planned",
-        "flow_kind": "process",
         "display_name": "接续前缀、函数块数及候选错误策略",
-        "description": "将本位置的完整结果转回原块循环状态。只对实际消耗的原正文块更新 Agent 前缀计数，对函数 commit 插入块减少其 remaining；普通消息保留成功前缀，规划/结算候选的新非作者诊断按原规则拒绝整候选。等待、建帧和阶段表不会误推进正文。",
-        "requires": [
-          {
-            "type": "era.sync.position.state",
-            "cardinality": "exactly_one",
-            "display_name": "当前消息位置、原块状态、正文范围和作者函数上下文"
-          }
-        ],
-        "provides": [
-          {
-            "key": "block_step_pending",
-            "type": "era.sync.block.step.pending",
-            "display_name": "本次位置推进的原格式完整结果"
-          }
-        ]
+        "description": "将本位置的完整结果转回原块循环状态。只对实际消耗的原正文块更新 Agent 前缀计数，对函数 commit 插入块减少其 remaining；普通消息保留成功前缀，规划/结算候选的新非作者诊断按原规则拒绝整候选。等待、建帧和阶段表不会误推进正文。"
       },
       {
         "id": "prepare_block_work",
@@ -512,27 +215,17 @@
       {
         "from": "route_block_lifecycle",
         "to": "author_function_step",
-        "when": "block_lifecycle_route == 'terminal'"
-      },
-      {
-        "from": "route_block_lifecycle",
-        "to": "author_function_step",
-        "when": "block_lifecycle_route == 'function-start'"
-      },
-      {
-        "from": "route_block_lifecycle",
-        "to": "author_function_step",
-        "when": "block_lifecycle_route == 'function-wait'"
+        "when": "route_block_lifecycle_block_lifecycle_route != 'source'"
       },
       {
         "from": "route_block_lifecycle",
         "to": "prepare_floor_origin",
-        "when": "block_lifecycle_route == 'source'"
+        "when": "route_block_lifecycle_block_lifecycle_route == 'source'"
       },
       {
         "from": "prepare_floor_origin",
         "to": "advance_invalid_floor",
-        "when": "floor_origin_route == 'invalid'"
+        "when": "prepare_floor_origin_floor_origin_route == 'invalid'"
       },
       [
         "advance_invalid_floor",
@@ -541,37 +234,37 @@
       {
         "from": "prepare_floor_origin",
         "to": "route_stage_position",
-        "when": "floor_origin_route == 'ready'"
+        "when": "prepare_floor_origin_floor_origin_route == 'ready'"
       },
       {
         "from": "route_stage_position",
         "to": "seed_stage_operations",
-        "when": "stage_position_route == 'calls'"
+        "when": "route_stage_position_stage_position_route == 'calls'"
       },
       {
         "from": "route_stage_position",
         "to": "classify_source_block",
-        "when": "stage_position_route == 'source'"
+        "when": "route_stage_position_stage_position_route == 'source'"
       },
       {
         "from": "classify_source_block",
         "to": "seed_command_operations",
-        "when": "source_block_route == 'command'"
+        "when": "classify_source_block_source_block_route == 'command'"
       },
       {
         "from": "classify_source_block",
         "to": "install_author_frame",
-        "when": "source_block_route == 'author-call'"
+        "when": "classify_source_block_source_block_route == 'author-call'"
       },
       {
         "from": "classify_source_block",
         "to": "mark_skipped_call",
-        "when": "source_block_route == 'skip'"
+        "when": "classify_source_block_source_block_route == 'skip'"
       },
       {
         "from": "classify_source_block",
         "to": "finalize_floor",
-        "when": "source_block_route == 'floor-end'"
+        "when": "classify_source_block_source_block_route == 'floor-end'"
       },
       [
         "seed_command_operations",
@@ -598,12 +291,12 @@
       {
         "from": "accept_operation_result",
         "to": "mark_completed_command",
-        "when": "operation_origin_route == 'command'"
+        "when": "accept_operation_result_operation_origin_route == 'command'"
       },
       {
         "from": "accept_operation_result",
         "to": "accept_stage_call_table",
-        "when": "operation_origin_route == 'stage-calls'"
+        "when": "accept_operation_result_operation_origin_route == 'stage-calls'"
       },
       [
         "mark_completed_command",

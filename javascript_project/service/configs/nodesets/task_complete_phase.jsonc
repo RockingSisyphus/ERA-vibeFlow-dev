@@ -1,6 +1,5 @@
 {
   "type_key": "era.task.complete_phase",
-  "status": "planned",
   "display_name": "恢复原任务回执，保留公共 API 专用结果",
   "description": "从核心真实结果与原任务接续上下文，选择普通结果或 API 专用结果。API 先按原 commit/sync 回执适配，再转成外层任务结果；普通初始化/同步/生成片段直接适配。这里只恢复结果格式和来源，不应用变量、不发起同步；批次索引由随后统一结算推进。",
   "requires": [
@@ -38,51 +37,14 @@
       {
         "id": "route_completion_origin",
         "type_used": "era.task.route_completion_origin",
-        "status": "planned",
-        "flow_kind": "decision",
         "display_name": "区分公共 API 与普通任务收尾",
-        "description": "根据接续上下文中的原任务类型选择结果通道。公共 API 必须先生成专用 API 结果，其他来源生成普通任务结果；两种出口互斥，统一步骤结算只接收最终外层结果。",
-        "requires": [
-          {
-            "type": "era.task.execution.result",
-            "cardinality": "exactly_one",
-            "display_name": "实际执行结果及原任务接续上下文"
-          }
-        ],
-        "provides": [
-          {
-            "key": "completion_origin",
-            "type": "era.task.completion.route",
-            "display_name": "公共 API 或普通任务出口"
-          },
-          {
-            "key": "executed_task",
-            "type": "era.task.execution.result",
-            "display_name": "实际执行结果及原任务接续上下文"
-          }
-        ]
+        "description": "根据接续上下文中的原任务类型选择结果通道。公共 API 必须先生成专用 API 结果，其他来源生成普通任务结果；两种出口互斥，统一步骤结算只接收最终外层结果。"
       },
       {
         "id": "complete_api_task",
         "type_used": "era.api.complete_prepared_task",
-        "status": "planned",
-        "flow_kind": "process",
         "display_name": "恢复原 API 回执与专用通道",
-        "description": "以 commit、共享 sync 或输入失败的实际结论生成公共 API 专用任务结果，保持原 status、值、诊断、通知与来源结算。只恢复原回执格式，不再次验证操作或重算历史，避免内部同步结果与外层 API 结果冲突。",
-        "requires": [
-          {
-            "type": "era.task.execution.result",
-            "cardinality": "exactly_one",
-            "display_name": "实际执行结果及原任务接续上下文"
-          }
-        ],
-        "provides": [
-          {
-            "key": "api_task_result",
-            "type": "era.api.task.result",
-            "display_name": "原公共 API 格式的外层结果"
-          }
-        ]
+        "description": "以 commit、共享 sync 或输入失败的实际结论生成公共 API 专用任务结果，保持原 status、值、诊断、通知与来源结算。只恢复原回执格式，不再次验证操作或重算历史，避免内部同步结果与外层 API 结果冲突。"
       },
       {
         "id": "adapt_api_task_result",
@@ -93,24 +55,8 @@
       {
         "id": "complete_plain_task",
         "type_used": "era.task.complete_prepared_task",
-        "status": "planned",
-        "flow_kind": "process",
         "display_name": "形成原普通任务的最终结果",
-        "description": "把初始化、普通同步或生成片段的实际执行结论转回原普通任务结果，保留资源处理、阶段交接、取消与来源。这里只完成外层结果适配；步骤索引、整批回执和致命错误发布仍由统一结算完成。",
-        "requires": [
-          {
-            "type": "era.task.execution.result",
-            "cardinality": "exactly_one",
-            "display_name": "实际执行结果及原任务接续上下文"
-          }
-        ],
-        "provides": [
-          {
-            "key": "completed_task",
-            "type": "era.task.result",
-            "display_name": "原步骤唯一最终结果"
-          }
-        ]
+        "description": "把初始化、普通同步或生成片段的实际执行结论转回原普通任务结果，保留资源处理、阶段交接、取消与来源。这里只完成外层结果适配；步骤索引、整批回执和致命错误发布仍由统一结算完成。"
       },
       {
         "id": "end",
@@ -127,12 +73,12 @@
       {
         "from": "route_completion_origin",
         "to": "complete_api_task",
-        "when": "completion_origin == 'api'"
+        "when": "route_completion_origin_completion_origin == 'api'"
       },
       {
         "from": "route_completion_origin",
         "to": "complete_plain_task",
-        "when": "completion_origin == 'ordinary'"
+        "when": "route_completion_origin_completion_origin == 'ordinary'"
       },
       [
         "complete_api_task",

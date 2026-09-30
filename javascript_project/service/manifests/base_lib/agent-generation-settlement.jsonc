@@ -26,5 +26,7 @@
     "era.service.agent_report_text",
     "era.service.agent_generation_context"
   ],
-  "external_packages": []
+  "external_packages": [
+    "@era/vibeflow-contracts"
+  ]
 }

@@ -1,9 +1,21 @@
 import { formatAgentPlanReport } from "../../base_lib/agent/agent_generation_session.ts";
 import { stripEraDataBlocks } from "../../base_lib/domain/mk_engine.ts";
 import { prepareSessionWrite } from "../../base_lib/agent/agent_session_binding.ts";
+import { stageHandoff } from "../../base_lib/agent/agent_stage_handoff.ts";
+import { type AgentOutcome } from "../../base_lib/agent/agent_flow_types.ts";
+import {
+  withFloorCandidate,
+  AgentSessionFailure,
+} from "../../base_lib/agent/agent_flow_policy.ts";
+import { type PlannedStepV1 } from "../../base_lib/service_types.ts";
 
+/** 本模块中的各导出分别由独立 Node descriptor 调用，执行分支仍由正式 Config 决定。原实现：nodes/agent/finish_stage_blocks.ts。 */
 /** Store the applied draft/stage text in the existing Agent session, without saving chat or Sidecar. */
-export function run(inputs: any, _params: any, runtime: any): any {
+export function FinishStageBlocksNode(
+  inputs: any,
+  _params: any,
+  runtime: any,
+): any {
   const state = inputs["era.sync.block.step.state.next"].value;
   const { stageWorkInput: input, ...outcome } = state.stageOutcome;
   const session = input.session ?? {};
@@ -12,11 +24,23 @@ export function run(inputs: any, _params: any, runtime: any): any {
     const sidecar = runtime.capabilities["era.tavern.sidecar"];
     const working = sidecar.read_working({}).working;
     if (working?.stage) {
-      const actual = input.step?.dispatchContext?.sourceBasis?.messages ?? working.sourceBasis?.messages ?? [];
-      if (!actual.some((message: any) => message.messageId === working.stage.messageId)) {
+      const actual =
+        input.step?.dispatchContext?.sourceBasis?.messages ??
+        working.sourceBasis?.messages ??
+        [];
+      if (
+        !actual.some(
+          (message: any) => message.messageId === working.stage.messageId,
+        )
+      ) {
         // A completed plan can still belong to a future AI floor. Keep the
         // rollback logs, but remove its draft overlay before replaying actual history.
-        sidecar.write_working({ ...working, expectedVersion: working.version, work: null, stage: null });
+        sidecar.write_working({
+          ...working,
+          expectedVersion: working.version,
+          work: null,
+          stage: null,
+        });
       }
       // Earlier completed stages are already in the working text/state. A
       // cancellation must not discard them and replay the old persisted text.
@@ -102,7 +126,9 @@ export function run(inputs: any, _params: any, runtime: any): any {
         ...last,
         status: "failed",
         diagnostic: failure.message,
-        ...(input.program?.errorResults ? { functionResults: input.program.errorResults } : {}),
+        ...(input.program?.errorResults
+          ? { functionResults: input.program.errorResults }
+          : {}),
       };
       return {
         applied_generation_outcome: {
@@ -170,11 +196,16 @@ export function run(inputs: any, _params: any, runtime: any): any {
       updated.planningAttempts = (session.planningAttempts ?? []).map(
         (attempt: any, index: number, all: any[]) =>
           index === all.length - 1
-            ? { ...attempt, functionResults: input.program.results.map((result: any) => ({
-                ...result, status: "passed",
-                ...(session.plan.calls[result.index]?.purpose !== undefined
-                  ? { purpose: session.plan.calls[result.index].purpose } : {}),
-              })) }
+            ? {
+                ...attempt,
+                functionResults: input.program.results.map((result: any) => ({
+                  ...result,
+                  status: "passed",
+                  ...(session.plan.calls[result.index]?.purpose !== undefined
+                    ? { purpose: session.plan.calls[result.index].purpose }
+                    : {}),
+                })),
+              }
             : attempt,
       );
     }
@@ -201,8 +232,13 @@ export function run(inputs: any, _params: any, runtime: any): any {
   const sidecar = runtime.capabilities["era.tavern.sidecar"];
   const completedWorking = sidecar.read_working({}).working;
   if (completedWorking?.stage?.candidateRecovery) {
-    const { candidateRecovery: _recovery, ...completedStage } = completedWorking.stage;
-    sidecar.write_working({ ...completedWorking, expectedVersion: completedWorking.version, stage: completedStage });
+    const { candidateRecovery: _recovery, ...completedStage } =
+      completedWorking.stage;
+    sidecar.write_working({
+      ...completedWorking,
+      expectedVersion: completedWorking.version,
+      stage: completedStage,
+    });
   }
   return {
     applied_generation_outcome: {
@@ -230,5 +266,69 @@ export function run(inputs: any, _params: any, runtime: any): any {
             }
           : {}),
     },
+  };
+}
+
+/** 本模块中的各导出分别由独立 Node descriptor 调用，执行分支仍由正式 Config 决定。原实现：nodes/agent/prepare_stage_handoff.ts。 */
+export function PrepareStageHandoffNode(
+  inputs: Readonly<Record<string, unknown>>,
+): any {
+  const outcome = (
+    inputs["era.agent.candidate.outcome"] as { value: AgentOutcome }
+  ).value;
+  if (!outcome.stageBoundary) return { handoff_outcome: outcome };
+  const { stageBoundary, ...rest } = outcome;
+  const handoff = stageHandoff(stageBoundary);
+  return {
+    handoff_outcome: {
+      ...rest,
+      handoff,
+      value: { status: "stage-pending", completionId: handoff.completionId },
+    },
+  };
+}
+
+/** 本模块中的各导出分别由独立 Node descriptor 调用，执行分支仍由正式 Config 决定。原实现：nodes/agent/form_session_transition.ts。 */
+export function FormSessionTransitionNode(
+  inputs: Readonly<Record<string, unknown>>,
+): any {
+  const original = (
+    inputs["era.step.request.routed"] as { value: PlannedStepV1 }
+  ).value;
+  const { candidate, appliedFloor, appliedScopeWindow, ...outcome } = (
+    inputs["era.agent.generation.outcome"] as { value: AgentOutcome }
+  ).value;
+  let step = original,
+    result = outcome;
+  try {
+    if (candidate) step = withFloorCandidate(original, candidate, appliedFloor);
+  } catch (error) {
+    result = {
+      mode: "execute-only",
+      status: "failed",
+      diagnostics: [
+        {
+          code:
+            error instanceof AgentSessionFailure
+              ? error.code
+              : "ERA_AGENT_SESSION_FAILED",
+          message: error instanceof Error ? error.message : String(error),
+        },
+      ],
+    };
+  }
+  const execution = (inputs["era.batch.execution.state"] as { value: any })
+    .value;
+  return {
+    agent_transition: { schemaVersion: 1, step, ...result },
+    agent_execution_state: appliedScopeWindow
+      ? {
+          ...execution,
+          nextState: {
+            ...execution.nextState,
+            scopeWindow: appliedScopeWindow,
+          },
+        }
+      : execution,
   };
 }

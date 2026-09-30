@@ -2,7 +2,7 @@ import { parseMessageBlocks } from "../../base_lib/domain/commands/message_funct
 import {
   planSyncWork,
   stableBase36Token,
-} from "../../base_lib/sync/sync_planning.ts";
+} from "../../base_lib/sync/sync_work_preparation.ts";
 import {
   consecutiveFacts,
   syncFailure,
@@ -152,20 +152,17 @@ export function run(inputs: any, _params: any, runtime: any): any {
       ],
     },
   };
-  const work = planSyncWork(
-    {
-      step,
-      status: "ready",
-      messagesRaw: { messages },
-      failure: null,
-      variablesRaw: variablesForState(
-        working.record.state,
-        working.record.sidecarId,
-      ),
-      consecutive: consecutiveFacts(input.executionState),
-    },
-    true,
-  );
+  const work = planSyncWork({
+    step,
+    status: "ready",
+    messagesRaw: { messages },
+    failure: null,
+    variablesRaw: variablesForState(
+      working.record.state,
+      working.record.sidecarId,
+    ),
+    consecutive: consecutiveFacts(input.executionState),
+  });
   return {
     block_step_state: {
       ...base,

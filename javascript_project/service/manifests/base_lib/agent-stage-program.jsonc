@@ -19,9 +19,7 @@
     }
   ],
   "dependencies": [
-    "era.service.sync_contracts",
-    "era.service.sync_block",
-    "era.service.agent_function_calls"
+    "era.service.sync_contracts"
   ],
   "external_packages": []
 }

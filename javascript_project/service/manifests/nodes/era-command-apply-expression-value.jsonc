@@ -1,0 +1,58 @@
+{
+  "kind": "node",
+  "type_key": "era.command.apply_expression_value",
+  "display_name": "应用公式结果并记录原旧值",
+  "category": "核心执行",
+  "description": "把已确认有限的公式结果写入本路径工作值，使用与直接修改相同的历史旧值规则生成日志，并接续 Expression 返回的随机位置。只完成这一字段，后面的字段继续从当前工作状态求值；不把此结果当成整个块或候选成功。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.command.operation.state",
+        "cardinality": "exactly_one",
+        "display_name": "当前操作栈、变量/函数工作值、历史快照、随机位置与累计日志"
+      }
+    ],
+    "provides": [
+      {
+        "key": "apply_expression_value_operation_state",
+        "type": "era.command.operation.state",
+        "display_name": "本次微操作后的私有工作状态；块尚未完成"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.command.operation.state": [
+        "输入：当前操作栈、变量/函数工作值、历史快照、随机位置与累计日志。"
+      ]
+    },
+    "output_semantics": {
+      "apply_expression_value_operation_state": [
+        "输出：本次微操作后的私有工作状态；块尚未完成。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/sync/core_operation_nodes.ts",
+        "export": "ApplyExpressionValueNode"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.command.operation_expressions",
+    "era.command.operation_functions",
+    "era.command.operation_traversal"
+  ],
+  "capabilities": []
+}

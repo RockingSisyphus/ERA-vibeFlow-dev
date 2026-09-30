@@ -67,44 +67,8 @@
       {
         "id": "route_simple_task",
         "type_used": "era.tasks.dispatch",
-        "status": "planned",
-        "flow_kind": "decision",
         "display_name": "选择标识、设置或忽略任务",
-        "description": "只将已经准备好的消息标识、Agent 设置和忽略任务派往相应分支。普通同步已由外层直接调用，不经过本包装；返回结果不会提前推进索引，仍由统一结算完成。",
-        "requires": [
-          {
-            "type": "era.step.request.routed",
-            "cardinality": "exactly_one",
-            "display_name": "已准备路由步骤"
-          },
-          {
-            "type": "era.task.route",
-            "cardinality": "exactly_one",
-            "display_name": "已准备任务路由"
-          },
-          {
-            "type": "era.batch.execution.state",
-            "cardinality": "exactly_one",
-            "display_name": "当前批次执行状态"
-          }
-        ],
-        "provides": [
-          {
-            "key": "simple_task_route",
-            "type": "era.task.route",
-            "display_name": "仅消息标识、设置或忽略分支"
-          },
-          {
-            "key": "routed_step_for_task",
-            "type": "era.step.request.routed",
-            "display_name": "原步骤、事件来源与已准备消息依据"
-          },
-          {
-            "key": "execution_state_for_task",
-            "type": "era.batch.execution.state",
-            "display_name": "当前在途批次，索引尚未推进"
-          }
-        ]
+        "description": "只将已经准备好的消息标识、Agent 设置和忽略任务派往相应分支。普通同步已由外层直接调用，不经过本包装；返回结果不会提前推进索引，仍由统一结算完成。"
       },
       {
         "id": "task_update_mk",
@@ -172,6 +136,5 @@
         "as": "simpleTaskResult"
       }
     ]
-  },
-  "status": "planned"
+  }
 }

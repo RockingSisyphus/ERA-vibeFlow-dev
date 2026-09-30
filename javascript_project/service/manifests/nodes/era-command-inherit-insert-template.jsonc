@@ -1,0 +1,58 @@
+{
+  "kind": "node",
+  "type_key": "era.command.inherit_insert_template",
+  "display_name": "合并继承模板与本地默认值",
+  "category": "核心执行",
+  "description": "为即将插入的路径取得沿父级继承的模板，再合并父对象本地 $template 和当前明确内容，本地及显式值按原优先级覆盖。数组按原整体替换规则，模板不追溯改已有对象；将结果和值复制到新增动作，不提前写入其他字段。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.command.operation.state",
+        "cardinality": "exactly_one",
+        "display_name": "当前操作栈、变量/函数工作值、历史快照、随机位置与累计日志"
+      }
+    ],
+    "provides": [
+      {
+        "key": "inherit_insert_template_operation_state",
+        "type": "era.command.operation.state",
+        "display_name": "本次微操作后的私有工作状态；块尚未完成"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.command.operation.state": [
+        "输入：当前操作栈、变量/函数工作值、历史快照、随机位置与累计日志。"
+      ]
+    },
+    "output_semantics": {
+      "inherit_insert_template_operation_state": [
+        "输出：本次微操作后的私有工作状态；块尚未完成。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/sync/core_operation_nodes.ts",
+        "export": "InheritInsertTemplateNode"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.command.operation_expressions",
+    "era.command.operation_functions",
+    "era.command.operation_traversal"
+  ],
+  "capabilities": []
+}

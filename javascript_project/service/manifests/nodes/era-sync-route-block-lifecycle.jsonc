@@ -1,0 +1,70 @@
+{
+  "kind": "node",
+  "type_key": "era.sync.route_block_lifecycle",
+  "display_name": "先区分终结、函数帧与普通正文位置",
+  "category": "核心执行",
+  "description": "读取块计划是否结束、失败或取消，以及作者函数帧处于启动、等待还是应用 commit 的阶段。终态先清理函数请求；等待帧先处理回执再等下一事件；应用帧只推进它插入的块，其他情况读取原正文位置。这个判断不执行 CRUD，也不吞掉失败。",
+  "version": "1.0.0",
+  "flow_kind": "decision",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.sync.block.step.state",
+        "cardinality": "exactly_one",
+        "display_name": "外层循环携带的完整块状态"
+      }
+    ],
+    "provides": [
+      {
+        "key": "route_block_lifecycle_position_state",
+        "type": "era.sync.position.state",
+        "display_name": "本位置处理后的私有状态；尚未发布到宿主"
+      },
+      {
+        "key": "route_block_lifecycle_block_lifecycle_route",
+        "type": "era.sync.position.lifecycle.route",
+        "display_name": "终结清理、启动函数、等待函数或正文推进"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.sync.block.step.state": [
+        "输入：外层循环携带的完整块状态。"
+      ]
+    },
+    "output_semantics": {
+      "route_block_lifecycle_position_state": [
+        "输出：本位置处理后的私有状态；尚未发布到宿主。"
+      ],
+      "route_block_lifecycle_block_lifecycle_route": [
+        "输出：终结清理、启动函数、等待函数或正文推进。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/sync/core_position_nodes.ts",
+        "export": "RouteBlockLifecycleNode"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.command.operation_expressions",
+    "era.command.operation_state",
+    "era.service.agent_stage_program",
+    "era.service.function_block_execution",
+    "era.service.sync_contracts",
+    "era.service.sync_divergence",
+    "era.sync.position_source"
+  ],
+  "capabilities": []
+}

@@ -7,17 +7,52 @@
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
-    "requires": [{ "type": "era.expression.command.result", "cardinality": "exactly_one", "display_name": "表达式命令同步结果" }],
-    "provides": [{ "key": "command_compaction_result", "type": "era.command_compaction.result", "display_name": "已处理封存压缩的同步结果" }],
+    "requires": [
+      {
+        "type": "era.expression.command.result",
+        "cardinality": "exactly_one",
+        "display_name": "表达式命令同步结果"
+      }
+    ],
+    "provides": [
+      {
+        "key": "command_compaction_result",
+        "type": "era.command_compaction.result",
+        "display_name": "已处理封存压缩的同步结果"
+      }
+    ],
     "params_schema": {},
     "params_defaults": {},
-    "input_semantics": { "era.expression.command.result": ["原始同步工作项与封存候选。"] },
-    "output_semantics": { "command_compaction_result": ["返回既有 Sidecar 提交链的同步工作项。"] }
+    "input_semantics": {
+      "era.expression.command.result": [
+        "原始同步工作项与封存候选。"
+      ]
+    },
+    "output_semantics": {
+      "command_compaction_result": [
+        "返回既有 Sidecar 提交链的同步工作项。"
+      ]
+    }
   },
-  "implementations": [{
-    "language": "typescript", "targets": ["browser", "node"], "completion": "immediate",
-    "source": { "kind": "file", "ref": "nodes/sync/command_compaction_apply.ts", "export": "run" }
-  }],
-  "base_libs": ["era.service.command_compaction", "era.service.sync_contracts"],
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/sync/shared_compaction_adapters.ts",
+        "export": "CommandCompactionApplyNode"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.crud.engine",
+    "era.service.command_compaction",
+    "era.service.sync_contracts"
+  ],
   "capabilities": []
 }

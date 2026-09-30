@@ -20,8 +20,6 @@
   ],
   "dependencies": [
     "era.service.agent_configuration",
-    "era.service.agent_function_calls",
-    "era.crud.engine",
     "era.service.agent_stage_text",
     "era.service.agent_report_text"
   ],

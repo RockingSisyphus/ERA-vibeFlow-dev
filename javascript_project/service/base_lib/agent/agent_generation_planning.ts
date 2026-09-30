@@ -1,9 +1,37 @@
 /** Agent planning stage: same request and side-effect order as the original Node. */
 import { splitAgentStageText } from "./agent_stage_text.ts";
-import { AgentFunctionCallFailure, executeAgentFunctionCalls, parsePlanningOutput } from "./agent_generation_session.ts";
-import { buildAgentRetryFeedback, agentRequestContext, type EraAgentFailedAttempt, attemptProfile, type EraAgentConfigurationV2, type EraAgentPlanningOutputV1 } from "./agent_configuration.ts";
-import { extractEraMessageKey, formatAgentPlanReport } from "./agent_report_text.ts";
-import { AgentSessionFailure, isRecord, failureMessage, throwHostGenerationFailure, chatKey, stateContext, latestMessage, lastUserText, sessionObject, boundedTrace, stageRequest, sessionExecution, type AgentCapability } from "./agent_generation_context.ts";
+import { parsePlanningOutput } from "./agent_generation_session.ts";
+import {
+  AgentFunctionCallFailure,
+  type EraAgentExecutedCallV1,
+} from "./agent_flow_types.ts";
+import {
+  buildAgentRetryFeedback,
+  agentRequestContext,
+  type EraAgentFailedAttempt,
+  attemptProfile,
+  type EraAgentConfigurationV2,
+  type EraAgentPlanningOutputV1,
+} from "./agent_configuration.ts";
+import {
+  extractEraMessageKey,
+  formatAgentPlanReport,
+} from "./agent_report_text.ts";
+import {
+  AgentSessionFailure,
+  isRecord,
+  failureMessage,
+  throwHostGenerationFailure,
+  chatKey,
+  stateContext,
+  latestMessage,
+  lastUserText,
+  sessionObject,
+  boundedTrace,
+  stageRequest,
+  sessionExecution,
+  type AgentCapability,
+} from "./agent_generation_context.ts";
 import type { GenerationTrigger } from "./agent_flow_types.ts";
 
 export async function runPlanning(
@@ -108,7 +136,10 @@ export async function runPlanning(
       }
       // The calls execute between the surrounding blocks, against their
       // accumulated state. Generation only supplies the ordered candidate.
-      const executed: ReturnType<typeof executeAgentFunctionCalls> = {
+      const executed: {
+        results: readonly EraAgentExecutedCallV1[];
+        nextDrawOffset: number;
+      } = {
         results: [],
         nextDrawOffset: drawOffset,
       };

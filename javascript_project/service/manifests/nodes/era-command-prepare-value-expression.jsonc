@@ -1,0 +1,58 @@
+{
+  "kind": "node",
+  "type_key": "era.command.prepare_value_expression",
+  "display_name": "为当前路径构造公式请求",
+  "category": "核心执行",
+  "description": "把当前已更新的变量和函数库、消息楼层起点的变量/函数快照分开装入请求，带上消息 ERA 标识 MK 所确定的稳定随机来源和已使用的随机次数，使同一消息的重算继续原序列。只求这一个路径的 $expr，支持当前值与历史快照各自的含义；请求不包含宿主写入，也不提前改变目标。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.command.operation.state",
+        "cardinality": "exactly_one",
+        "display_name": "当前操作栈、变量/函数工作值、历史快照、随机位置与累计日志"
+      }
+    ],
+    "provides": [
+      {
+        "key": "prepare_value_expression_expression_request",
+        "type": "era.command.expression.request",
+        "display_name": "含当前/快照函数库、随机游标及用途的表达式请求"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.command.operation.state": [
+        "输入：当前操作栈、变量/函数工作值、历史快照、随机位置与累计日志。"
+      ]
+    },
+    "output_semantics": {
+      "prepare_value_expression_expression_request": [
+        "输出：含当前/快照函数库、随机游标及用途的表达式请求。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/sync/core_operation_nodes.ts",
+        "export": "PrepareValueExpressionNode"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.command.operation_expressions",
+    "era.command.operation_functions",
+    "era.command.operation_traversal"
+  ],
+  "capabilities": []
+}

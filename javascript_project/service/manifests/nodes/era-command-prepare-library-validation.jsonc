@@ -1,0 +1,58 @@
+{
+  "kind": "node",
+  "type_key": "era.command.prepare_library_validation",
+  "display_name": "构造完整函数库的统一校验请求",
+  "category": "核心执行",
+  "description": "所有同组定义已收齐后，以完整候选函数库构造一次 Expression 请求，operations 为空，由原 Expression root 检查语法、纯函数限制和调用关系。前面定义可引用后面定义；不能把这一步拆为每个函数各自提交。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.command.operation.state",
+        "cardinality": "exactly_one",
+        "display_name": "当前操作栈、变量/函数工作值、历史快照、随机位置与累计日志"
+      }
+    ],
+    "provides": [
+      {
+        "key": "prepare_library_validation_expression_request",
+        "type": "era.command.expression.request",
+        "display_name": "含当前/快照函数库、随机游标及用途的表达式请求"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.command.operation.state": [
+        "输入：当前操作栈、变量/函数工作值、历史快照、随机位置与累计日志。"
+      ]
+    },
+    "output_semantics": {
+      "prepare_library_validation_expression_request": [
+        "输出：含当前/快照函数库、随机游标及用途的表达式请求。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/sync/core_operation_nodes.ts",
+        "export": "PrepareLibraryValidationNode"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.command.operation_expressions",
+    "era.command.operation_functions",
+    "era.command.operation_traversal"
+  ],
+  "capabilities": []
+}

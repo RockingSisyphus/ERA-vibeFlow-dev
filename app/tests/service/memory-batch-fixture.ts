@@ -1,6 +1,6 @@
 import { expect } from 'vitest';
 import { contextWith, identity, sidecarId } from './memory-lifecycle-fixture';
-import { run as advance } from '../../../javascript_project/service/nodes/sync/drive_message_blocks';
+import { run as advance } from './message-block-fixture';
 import { prepare } from '../../../javascript_project/service/nodes/sync/prepare_block_step';
 import {
   PrepareBlockWorkNode as prepareWork,

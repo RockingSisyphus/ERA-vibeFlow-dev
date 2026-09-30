@@ -66,15 +66,15 @@
   ],
   "base_libs": [
     "era.service.agent_flow_types",
+    "era.service.agent_generation_context",
+    "era.service.agent_generation_continue",
+    "era.service.agent_generation_planning",
     "era.service.agent_generation_session",
+    "era.service.agent_generation_settlement",
     "era.service.agent_session_binding",
     "era.service.agent_stage_handoff",
     "era.service.agent_stage_text",
-    "era.service.message_function_calls",
-    "era.service.agent_generation_context",
-    "era.service.agent_generation_planning",
-    "era.service.agent_generation_settlement",
-    "era.service.agent_generation_continue"
+    "era.service.message_function_calls"
   ],
   "capabilities": [
     {

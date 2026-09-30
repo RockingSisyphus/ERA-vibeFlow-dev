@@ -50,8 +50,8 @@
     }
   ],
   "base_libs": [
-    "era.service.sync_contracts",
-    "era.service.sync_commit_policy"
+    "era.service.sync_commit_policy",
+    "era.service.sync_contracts"
   ],
   "capabilities": []
 }

@@ -44,14 +44,17 @@
       "completion": "immediate",
       "source": {
         "kind": "file",
-        "ref": "nodes/agent/build_agent_result.ts",
-        "export": "run"
+        "ref": "nodes/agent/shared_agent_flow_adapters.ts",
+        "export": "BuildAgentResultNode"
       }
     }
   ],
   "base_libs": [
+    "era.service.agent_flow_policy",
     "era.service.agent_flow_types",
-    "era.service.agent_task_result"
+    "era.service.agent_task_result",
+    "era.service.task_continuation",
+    "era.service.types"
   ],
   "capabilities": []
 }

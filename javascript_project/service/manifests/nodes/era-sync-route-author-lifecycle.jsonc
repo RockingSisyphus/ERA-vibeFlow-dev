@@ -1,0 +1,64 @@
+{
+  "kind": "node",
+  "type_key": "era.sync.route_author_lifecycle",
+  "display_name": "选择本轮函数帧动作",
+  "category": "核心执行",
+  "description": "接收块层已经选择的作者函数分支，只处理父任务终结、调用刚建立的启动，或一次等待及回执。函数 commit 的应用阶段不进入此包装，由外层消息块循环执行；因此不会把变量操作循环包进第五层。",
+  "version": "1.0.0",
+  "flow_kind": "decision",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.sync.position.state",
+        "cardinality": "exactly_one",
+        "display_name": "作者函数的原正文位置、当前帧和父任务实际结论"
+      }
+    ],
+    "provides": [
+      {
+        "key": "route_author_lifecycle_position_state",
+        "type": "era.sync.author.state",
+        "display_name": "一次启动/等待/请求准备后的当前位置"
+      },
+      {
+        "key": "route_author_lifecycle_author_lifecycle_route",
+        "type": "era.sync.author.lifecycle.route",
+        "display_name": "终结清理、函数启动或等待下一事件"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.sync.position.state": [
+        "输入：作者函数的原正文位置、当前帧和父任务实际结论。"
+      ]
+    },
+    "output_semantics": {
+      "route_author_lifecycle_position_state": [
+        "输出：一次启动/等待/请求准备后的当前位置。"
+      ],
+      "route_author_lifecycle_author_lifecycle_route": [
+        "输出：终结清理、函数启动或等待下一事件。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/sync/core_author_nodes.ts",
+        "export": "RouteAuthorLifecycleNode"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.sync.position_author"
+  ],
+  "capabilities": []
+}

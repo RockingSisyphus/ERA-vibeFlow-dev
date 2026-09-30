@@ -1,0 +1,68 @@
+{
+  "kind": "node",
+  "type_key": "era.agent.prepare_candidate_continuation",
+  "display_name": "返回候选状态与原生成任务",
+  "category": "核心执行",
+  "description": "候选基线已经按原规则安装到内存后，将候选请求、原生成步骤和批次一起交给本轮 Service 的候选循环。请求模型之前的恢复次序不变；交还同级执行不是重新入队，也不允许其他事件插到这次尝试中间。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.agent.candidate.state",
+        "cardinality": "exactly_one",
+        "display_name": "已建立恢复基线的候选初态"
+      },
+      {
+        "type": "era.task.continuation.context",
+        "cardinality": "exactly_one",
+        "display_name": "本次请求所属的原步骤、来源、批次和回执适配依据"
+      }
+    ],
+    "provides": [
+      {
+        "key": "prepare_candidate_continuation_prepared_task",
+        "type": "era.task.prepared",
+        "display_name": "准备完成；仍须在本轮执行并结算的请求"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.agent.candidate.state": [
+        "输入：已建立恢复基线的候选初态。"
+      ],
+      "era.task.continuation.context": [
+        "输入：本次请求所属的原步骤、来源、批次和回执适配依据。"
+      ]
+    },
+    "output_semantics": {
+      "prepare_candidate_continuation_prepared_task": [
+        "输出：准备完成；仍须在本轮执行并结算的请求。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/agent/shared_agent_flow_adapters.ts",
+        "export": "prepareCandidateContinuation"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.agent_flow_policy",
+    "era.service.agent_flow_types",
+    "era.service.agent_task_result",
+    "era.service.task_continuation",
+    "era.service.types"
+  ],
+  "capabilities": []
+}

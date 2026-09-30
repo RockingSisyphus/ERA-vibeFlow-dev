@@ -1,6 +1,5 @@
 {
   "type_key": "era.agent.generation_session",
-  "status": "planned",
   "display_name": "准备生成会话与候选起点",
   "description": "读取生成事件、配置、会话和历史，确定规划、正文或结算阶段，再在请求模型前恢复并安装候选基线。输出候选状态和原任务接续上下文，随后由同一轮 Service 直接运行候选循环；这里没有候选执行或阶段成功通知。",
   "requires": [
@@ -22,7 +21,7 @@
   ],
   "provides": [
     {
-      "key": "prepared_task",
+      "key": "era_agent_generation_session_prepared_task",
       "type": "era.task.prepared",
       "display_name": "准备完成；仍须在本轮执行并结算的请求"
     }
@@ -58,6 +57,12 @@
         "description": "标记这段流程的入口或出口，业务数据由声明的通道传递；本节点不修改变量、不调用作者函数，也不保存酒馆。"
       },
       {
+        "id": "carry_candidate_inputs",
+        "type_used": "era.task.carry_candidate_inputs",
+        "display_name": "保留候选准备的原步骤与批次",
+        "description": "从同一个在途任务的接续依据中取出原生成步骤、批次和来源，分别送到候选起点与准备结果。候选准备的中间节点只传生成事实，这里保证安装候选基线时仍使用原任务的作用域和批次；不请求模型、不保存消息，也不推进步骤索引。"
+      },
+      {
         "id": "prepare_auxiliary_execution_request",
         "type_used": "era.agent.prepare_auxiliary_execution_request",
         "display_name": "读取阶段工作状态与当前来源",
@@ -84,29 +89,8 @@
       {
         "id": "prepare_candidate_continuation",
         "type_used": "era.agent.prepare_candidate_continuation",
-        "status": "planned",
-        "flow_kind": "process",
         "display_name": "返回候选状态与原生成任务",
-        "description": "候选基线已经按原规则安装到内存后，将候选请求、原生成步骤和批次一起交给本轮 Service 的候选循环。请求模型之前的恢复次序不变；交还同级执行不是重新入队，也不允许其他事件插到这次尝试中间。",
-        "requires": [
-          {
-            "type": "era.agent.candidate.state",
-            "cardinality": "exactly_one",
-            "display_name": "已建立恢复基线的候选初态"
-          },
-          {
-            "type": "era.task.continuation.context",
-            "cardinality": "exactly_one",
-            "display_name": "本次请求所属的原步骤、来源、批次和回执适配依据"
-          }
-        ],
-        "provides": [
-          {
-            "key": "prepared_task",
-            "type": "era.task.prepared",
-            "display_name": "准备完成；仍须在本轮执行并结算的请求"
-          }
-        ]
+        "description": "候选基线已经按原规则安装到内存后，将候选请求、原生成步骤和批次一起交给本轮 Service 的候选循环。请求模型之前的恢复次序不变；交还同级执行不是重新入队，也不允许其他事件插到这次尝试中间。"
       },
       {
         "id": "end",
@@ -116,6 +100,10 @@
       }
     ],
     "edges": [
+      [
+        "start",
+        "carry_candidate_inputs"
+      ],
       [
         "start",
         "prepare_auxiliary_execution_request"
@@ -132,11 +120,6 @@
         "prepare_generation_phase",
         "seed_candidate"
       ],
-      {
-        "from": "start",
-        "to": "seed_candidate",
-        "schedule": false
-      },
       [
         "seed_candidate",
         "prepare_candidate_continuation"
@@ -144,14 +127,24 @@
       [
         "prepare_candidate_continuation",
         "end"
-      ]
+      ],
+      {
+        "from": "carry_candidate_inputs",
+        "to": "seed_candidate",
+        "schedule": false
+      },
+      {
+        "from": "carry_candidate_inputs",
+        "to": "prepare_candidate_continuation",
+        "schedule": false
+      }
     ],
     "outputs": [
       {
         "type": "era.task.prepared",
         "cardinality": "exactly_one",
         "display_name": "准备完成；仍须在本轮执行并结算的请求",
-        "as": "prepared_task"
+        "as": "era_agent_generation_session_prepared_task"
       }
     ]
   }

@@ -1,5 +1,5 @@
 import { overlayWorkingMessages } from "../../base_lib/working_state.ts";
-import type { EraTaskResultV1 } from "@era/vibeflow-contracts";
+import { type EraTaskResultV1 } from "@era/vibeflow-contracts";
 import {
   adaptSyncResult,
   buildFailureResult,
@@ -13,12 +13,18 @@ import {
   recheckWindow,
   validateCommit,
 } from "../../base_lib/facade_api_engine.ts";
-import type {
-  BatchExecutionStateV1,
-  PlannedStepV1,
+import {
+  type BatchExecutionStateV1,
+  type PlannedStepV1,
 } from "../../base_lib/service_types.ts";
+import {
+  prepared,
+  type NodeInputs,
+  type ExecutedTask,
+} from "../../base_lib/task_continuation.ts";
 
-interface Envelope<T> {
+/** 本模块中的各导出分别由独立 Node descriptor 调用，执行分支仍由正式 Config 决定。原实现：nodes/api/facade_nodes.ts。 */
+interface facadenodesEnvelope<T> {
   readonly value: T;
 }
 
@@ -44,7 +50,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function envelope(
-  inputs: Readonly<Record<string, Envelope<unknown>>>,
+  inputs: Readonly<Record<string, facadenodesEnvelope<unknown>>>,
   key: string,
 ): unknown {
   const value = inputs[key]?.value;
@@ -300,5 +306,52 @@ export function mergeFacadeNode(inputs: any): any {
     api_task_result: mergeExclusiveResults(
       values.filter(Boolean) as EraTaskResultV1[],
     ),
+  };
+}
+
+/** 本模块中的各导出分别由独立 Node descriptor 调用，执行分支仍由正式 Config 决定。原实现：nodes/api/task_continuation.ts。 */
+export function prepareCommitContinuation(inputs: NodeInputs): any {
+  return {
+    prepare_commit_continuation_prepared_task: prepared(
+      "commit",
+      {
+        request: inputs["era.api.request"].value,
+        executionState: inputs["era.batch.execution.state"].value,
+      },
+      inputs["era.task.continuation.context"].value,
+    ),
+  };
+}
+export function prepareSyncContinuation(inputs: NodeInputs): any {
+  return {
+    prepare_sync_continuation_prepared_task: prepared(
+      "sync",
+      {
+        step: inputs["era.step.request.routed"].value,
+        executionState: inputs["era.batch.execution.state"].value,
+      },
+      {
+        ...inputs["era.task.continuation.context"].value,
+        apiContext: inputs["era.api.sync.context"].value,
+      },
+    ),
+  };
+}
+export function prepareFailedContinuation(inputs: NodeInputs): any {
+  return {
+    prepare_failed_continuation_prepared_task: prepared(
+      "direct",
+      inputs["era.api.sync.result"].value,
+      inputs["era.task.continuation.context"].value,
+    ),
+  };
+}
+export function completePreparedTask(inputs: NodeInputs): any {
+  const executed = inputs["era.task.execution.result"].value as ExecutedTask;
+  return {
+    complete_prepared_task_api_task_result:
+      executed.kind === "sync"
+        ? adaptSyncResult(executed.value, executed.continuation.apiContext)
+        : executed.value,
   };
 }

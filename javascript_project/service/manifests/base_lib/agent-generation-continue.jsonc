@@ -25,5 +25,7 @@
     "era.service.agent_configuration",
     "era.service.agent_flow_types"
   ],
-  "external_packages": []
+  "external_packages": [
+    "@era/vibeflow-contracts"
+  ]
 }

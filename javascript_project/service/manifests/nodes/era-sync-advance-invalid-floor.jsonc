@@ -1,0 +1,62 @@
+{
+  "kind": "node",
+  "type_key": "era.sync.advance_invalid_floor",
+  "display_name": "跳过无效楼层并保留原诊断",
+  "category": "核心执行",
+  "description": "当前消息无法得到有效 MK 时，记录缺种子或消息无效的原诊断，清除该楼层对应标识并推进到下一楼层。保留之前已确认的变量与日志，不为无效楼层生成封存压缩候选；到范围末尾才标记结束。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.sync.position.state",
+        "cardinality": "exactly_one",
+        "display_name": "当前消息位置、原块状态、正文范围和作者函数上下文"
+      }
+    ],
+    "provides": [
+      {
+        "key": "advance_invalid_floor_position_state",
+        "type": "era.sync.position.state",
+        "display_name": "本位置处理后的私有状态；尚未发布到宿主"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.sync.position.state": [
+        "输入：当前消息位置、原块状态、正文范围和作者函数上下文。"
+      ]
+    },
+    "output_semantics": {
+      "advance_invalid_floor_position_state": [
+        "输出：本位置处理后的私有状态；尚未发布到宿主。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/sync/core_position_nodes.ts",
+        "export": "AdvanceInvalidFloorNode"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.command.operation_expressions",
+    "era.command.operation_state",
+    "era.service.agent_stage_program",
+    "era.service.function_block_execution",
+    "era.service.sync_contracts",
+    "era.service.sync_divergence",
+    "era.sync.position_source"
+  ],
+  "capabilities": []
+}

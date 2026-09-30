@@ -1,0 +1,66 @@
+{
+  "kind": "node",
+  "type_key": "era.command.settle_operation",
+  "display_name": "推进操作游标并携带有序工作状态",
+  "category": "核心执行",
+  "description": "根据本项结果推进字段、数组根或函数组游标，退出完成子树后回到父位置；保留当前变量/函数、消息起点快照、随机位置、候选组及累计日志。局部异常按原根项容错范围跳过剩余项，已确认前缀不被新恢复规则抹掉。输出下一轮状态，尚不发布块级结果。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.command.operation.state",
+        "cardinality": "exactly_one",
+        "display_name": "当前操作栈、变量/函数工作值、历史快照、随机位置与累计日志"
+      }
+    ],
+    "provides": [
+      {
+        "key": "settle_operation_operation_state_after",
+        "type": "era.command.operation.state.next",
+        "display_name": "供下一轮继续的操作状态"
+      },
+      {
+        "key": "settle_operation_operation_done",
+        "type": "era.command.operation.done",
+        "display_name": "整个当前块的操作是否结束"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.command.operation.state": [
+        "输入：当前操作栈、变量/函数工作值、历史快照、随机位置与累计日志。"
+      ]
+    },
+    "output_semantics": {
+      "settle_operation_operation_state_after": [
+        "输出：供下一轮继续的操作状态。"
+      ],
+      "settle_operation_operation_done": [
+        "输出：整个当前块的操作是否结束。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/sync/core_operation_nodes.ts",
+        "export": "SettleOperationNode"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.command.operation_expressions",
+    "era.command.operation_functions",
+    "era.command.operation_traversal"
+  ],
+  "capabilities": []
+}

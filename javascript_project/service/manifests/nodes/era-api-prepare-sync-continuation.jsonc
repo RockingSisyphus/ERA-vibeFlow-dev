@@ -1,0 +1,83 @@
+{
+  "kind": "node",
+  "type_key": "era.api.prepare_sync_continuation",
+  "display_name": "返回校验后的共享同步请求",
+  "category": "核心执行",
+  "description": "接收 ERA.sync 已校验的共享同步步骤，附上原始 API 请求和回执上下文，再交给 Service 直属同步调用。校验通过不等于已重算或已保存；结果返回时仍须使用原 API 专用结果通道，不能拿内部同步结果提前结算外层任务。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.step.request.routed",
+        "cardinality": "exactly_one",
+        "display_name": "原步骤、事件来源与已准备消息依据"
+      },
+      {
+        "type": "era.batch.execution.state",
+        "cardinality": "exactly_one",
+        "display_name": "当前在途批次，索引尚未推进"
+      },
+      {
+        "type": "era.api.sync.context",
+        "cardinality": "exactly_one",
+        "display_name": "原 API 同步回执上下文"
+      },
+      {
+        "type": "era.task.continuation.context",
+        "cardinality": "exactly_one",
+        "display_name": "本次请求所属的原步骤、来源、批次和回执适配依据"
+      }
+    ],
+    "provides": [
+      {
+        "key": "prepare_sync_continuation_prepared_task",
+        "type": "era.task.prepared",
+        "display_name": "准备完成；仍须在本轮执行并结算的请求"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.step.request.routed": [
+        "输入：原步骤、事件来源与已准备消息依据。"
+      ],
+      "era.batch.execution.state": [
+        "输入：当前在途批次，索引尚未推进。"
+      ],
+      "era.api.sync.context": [
+        "输入：原 API 同步回执上下文。"
+      ],
+      "era.task.continuation.context": [
+        "输入：本次请求所属的原步骤、来源、批次和回执适配依据。"
+      ]
+    },
+    "output_semantics": {
+      "prepare_sync_continuation_prepared_task": [
+        "输出：准备完成；仍须在本轮执行并结算的请求。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/api/facade_nodes.ts",
+        "export": "prepareSyncContinuation"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.facade_api_engine",
+    "era.service.task_continuation",
+    "era.service.types",
+    "era.service.working_state"
+  ],
+  "capabilities": []
+}

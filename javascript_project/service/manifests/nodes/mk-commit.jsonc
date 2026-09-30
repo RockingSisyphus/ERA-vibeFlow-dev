@@ -7,22 +7,66 @@
   "version": "1.0.0",
   "flow_kind": "data_store",
   "contract": {
-    "requires": [{"type": "era.mk.commit.request", "cardinality": "exactly_one", "display_name": "MK 提交请求"}],
-    "provides": [{"key": "mk_commit_outcome", "type": "era.mk.commit.result", "display_name": "MK 提交结果"}],
+    "requires": [
+      {
+        "type": "era.mk.commit.request",
+        "cardinality": "exactly_one",
+        "display_name": "MK 提交请求"
+      }
+    ],
+    "provides": [
+      {
+        "key": "mk_commit_outcome",
+        "type": "era.mk.commit.result",
+        "display_name": "MK 提交结果"
+      }
+    ],
     "params_schema": {},
     "params_defaults": {},
-    "input_semantics": {"era.mk.commit.request":["输入：MK 提交请求。"]},
-    "output_semantics": {"mk_commit_outcome":["输出：MK 提交结果。"]}
+    "input_semantics": {
+      "era.mk.commit.request": [
+        "输入：MK 提交请求。"
+      ]
+    },
+    "output_semantics": {
+      "mk_commit_outcome": [
+        "输出：MK 提交结果。"
+      ]
+    }
   },
-  "implementations": [{
-    "language": "typescript",
-    "targets": ["browser"],
-    "completion": "suspend",
-    "source": {"kind": "file", "ref": "nodes/update_mk/commit_mk.ts", "export": "run"}
-  }],
-  "base_libs": ["era.service.types", "era.service.sidecar_binding"],
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser"
+      ],
+      "completion": "suspend",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/update_mk/commit_mk.ts",
+        "export": "run"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.sidecar_binding",
+    "era.service.types"
+  ],
   "capabilities": [
-    {"id": "era.tavern.messages", "operations": ["update_content"]},
-    {"id": "era.tavern.sidecar", "operations": ["read_current", "read_record", "write_record", "commit_metadata"]}
+    {
+      "id": "era.tavern.messages",
+      "operations": [
+        "update_content"
+      ]
+    },
+    {
+      "id": "era.tavern.sidecar",
+      "operations": [
+        "read_current",
+        "read_record",
+        "write_record",
+        "commit_metadata"
+      ]
+    }
   ]
 }

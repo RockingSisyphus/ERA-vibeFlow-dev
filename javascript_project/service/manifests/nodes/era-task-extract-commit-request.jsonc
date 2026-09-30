@@ -1,0 +1,56 @@
+{
+  "kind": "node",
+  "type_key": "era.task.extract_commit_request",
+  "display_name": "取出已经选中的提交请求",
+  "category": "核心执行",
+  "description": "仅在已选择 commit 的分支执行，从当前在途任务的准备结果取出真实 API 请求。这里不校验或应用操作；后续共享提交流程继续执行原 Scope、窗口和目标检查。没有选中的其他分支不会产生占位请求。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.task.execution.request",
+        "cardinality": "exactly_one",
+        "display_name": "本在途任务已经选中的执行请求"
+      }
+    ],
+    "provides": [
+      {
+        "key": "extract_commit_request_result",
+        "type": "era.api.request",
+        "display_name": "仅本提交分支有效的原 API 请求"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.task.execution.request": [
+        "来自任务准备与路由的真实请求；当前分支才读取相应 payload。"
+      ]
+    },
+    "output_semantics": {
+      "extract_commit_request_result": [
+        "仅本提交分支有效的原 API 请求，交给同级真实执行；不是已经完成的业务结果。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/iteration/task_execution_routes.ts",
+        "export": "extractCommitRequest"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.task_continuation"
+  ],
+  "capabilities": []
+}

@@ -1,0 +1,70 @@
+{
+  "kind": "node",
+  "type_key": "era.sync.seed_stage_operations",
+  "display_name": "先检查整张阶段调用表，再准备顺序求值",
+  "category": "核心执行",
+  "description": "在本阶段指定位置先核对调用表已有验证错误和全部函数名是否可用，再准备有序操作状态。使用当前生成会话自己的稳定随机来源和已使用随机次数，不混用正文消息标识 MK 的随机序列；表格式或未知函数失败时保留原整表失败边界，不先计算前面的合法项。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.sync.position.state",
+        "cardinality": "exactly_one",
+        "display_name": "当前消息位置、原块状态、正文范围和作者函数上下文"
+      }
+    ],
+    "provides": [
+      {
+        "key": "seed_stage_operations_operation_state",
+        "type": "era.command.operation.state",
+        "display_name": "阶段函数表私有操作初态"
+      },
+      {
+        "key": "seed_stage_operations_position_state",
+        "type": "era.sync.position.state",
+        "display_name": "本位置处理后的私有状态；尚未发布到宿主"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.sync.position.state": [
+        "输入：当前消息位置、原块状态、正文范围和作者函数上下文。"
+      ]
+    },
+    "output_semantics": {
+      "seed_stage_operations_operation_state": [
+        "输出：阶段函数表私有操作初态。"
+      ],
+      "seed_stage_operations_position_state": [
+        "输出：本位置处理后的私有状态；尚未发布到宿主。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/sync/core_position_nodes.ts",
+        "export": "SeedStageOperationsNode"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.command.operation_expressions",
+    "era.command.operation_state",
+    "era.service.agent_stage_program",
+    "era.service.function_block_execution",
+    "era.service.sync_contracts",
+    "era.service.sync_divergence",
+    "era.sync.position_source"
+  ],
+  "capabilities": []
+}

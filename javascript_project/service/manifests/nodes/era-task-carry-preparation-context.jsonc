@@ -1,0 +1,56 @@
+{
+  "kind": "node",
+  "type_key": "era.task.carry_preparation_context",
+  "display_name": "保留准备阶段的原任务来源",
+  "category": "核心执行",
+  "description": "将原任务的来源、步骤和批次接续依据原样传到准备阶段的各个结果分支。中间节点只输出自己的资源或 API 结果，因此这里显式保留后续执行与回执需要的原任务；不修改变量、不推进批次索引，也不重新入队。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.task.continuation.context",
+        "cardinality": "exactly_one",
+        "display_name": "原任务来源、步骤和当前批次的接续依据"
+      }
+    ],
+    "provides": [
+      {
+        "key": "carry_preparation_context_result",
+        "type": "era.task.continuation.context",
+        "display_name": "原任务来源、步骤和当前批次的接续依据"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.task.continuation.context": [
+        "由外层任务入口产生，属于当前唯一在途步骤。"
+      ]
+    },
+    "output_semantics": {
+      "carry_preparation_context_result": [
+        "原任务来源、步骤和当前批次的接续依据；仅传递原事实，不代表业务已执行。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/iteration/task_execution_routes.ts",
+        "export": "carryPreparationContext"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.task_continuation"
+  ],
+  "capabilities": []
+}

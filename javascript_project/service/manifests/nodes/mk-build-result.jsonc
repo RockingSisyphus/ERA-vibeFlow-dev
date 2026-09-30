@@ -7,19 +7,50 @@
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
-    "requires": [{"type": "era.mk.commit.result", "cardinality": "exactly_one", "display_name": "MK 结果"}],
-    "provides": [{"key": "update_mk_task_result", "type": "era.task.result", "display_name": "MK 更新结果"}],
+    "requires": [
+      {
+        "type": "era.mk.commit.result",
+        "cardinality": "exactly_one",
+        "display_name": "MK 结果"
+      }
+    ],
+    "provides": [
+      {
+        "key": "update_mk_task_result",
+        "type": "era.task.result",
+        "display_name": "MK 更新结果"
+      }
+    ],
     "params_schema": {},
     "params_defaults": {},
-    "input_semantics": {"era.mk.commit.result":["输入：MK 结果。"]},
-    "output_semantics": {"update_mk_task_result":["输出：MK 更新结果。"]}
+    "input_semantics": {
+      "era.mk.commit.result": [
+        "输入：MK 结果。"
+      ]
+    },
+    "output_semantics": {
+      "update_mk_task_result": [
+        "输出：MK 更新结果。"
+      ]
+    }
   },
-  "implementations": [{
-    "language": "typescript",
-    "targets": ["browser", "node"],
-    "completion": "immediate",
-    "source": {"kind": "file", "ref": "nodes/update_mk/build_mk_result.ts", "export": "run"}
-  }],
-  "base_libs": ["era.service.types"],
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/update_mk/shared_mk_adapters.ts",
+        "export": "BuildMkResultNode"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.types"
+  ],
   "capabilities": []
 }

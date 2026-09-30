@@ -1,0 +1,45 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.sync.author.state",
+  "representation": "json",
+  "display_name": "作者函数处理中的位置工作状态",
+  "description": "作者函数启动、等待、请求分类和确认过程中的私有位置状态；与交回消息块循环的最终位置分开，只有本次处理结束时才交还。",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "state": {
+        "type": "object"
+      },
+      "position": {
+        "type": [
+          "object",
+          "null"
+        ]
+      },
+      "incomingFunctionEvent": {
+        "type": [
+          "object",
+          "null"
+        ]
+      },
+      "failure": {
+        "type": [
+          "object",
+          "null"
+        ]
+      },
+      "consumedSource": {
+        "type": "boolean"
+      },
+      "diagnosticsBefore": {
+        "type": "integer"
+      }
+    },
+    "required": [
+      "state",
+      "consumedSource",
+      "diagnosticsBefore"
+    ],
+    "additionalProperties": false
+  }
+}

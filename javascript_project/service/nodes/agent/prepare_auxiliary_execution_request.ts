@@ -1,8 +1,15 @@
-import { stableBase36Token } from "../../base_lib/sync/sync_planning.ts";
-import { planEraSync } from "../../base_lib/sync/sync_planning.ts";
-import { normalizeAgentConfiguration, isAgentEnabled, agentRetryMatchesSession } from "../../base_lib/agent/agent_generation_session.ts";
+import { stableBase36Token } from "../../base_lib/sync/sync_work_preparation.ts";
+import { planEraSync } from "../../base_lib/domain/sync/sync_block.ts";
+import {
+  normalizeAgentConfiguration,
+  isAgentEnabled,
+  agentRetryMatchesSession,
+} from "../../base_lib/agent/agent_generation_session.ts";
 import { parseMessageKeyData } from "../../base_lib/domain/mk_engine.ts";
-import { formatMessageKeyBlock, generateMessageKey } from "../../base_lib/domain/mk_engine.ts";
+import {
+  formatMessageKeyBlock,
+  generateMessageKey,
+} from "../../base_lib/domain/mk_engine.ts";
 import { stripEraDataBlocks } from "../../base_lib/domain/mk_engine.ts";
 import { collectGenerationFacts } from "../../base_lib/agent/agent_flow_policy.ts";
 import type { PlannedStepV1 } from "../../base_lib/service_types.ts";
@@ -79,61 +86,127 @@ export async function run(
   // engine. Native regeneration may arrive before dispatch owns an AI floor.
   const event = step.kind === "execute" ? step.task.primaryEvent : null;
   const arg = event?.args[0];
-  const value = arg?.kind === "json" ? arg.value as any : null;
+  const value = arg?.kind === "json" ? (arg.value as any) : null;
   const current = hostContext as any;
-  const dispatch = step.kind === "execute" ? step.dispatchContext as any : null;
-  const native = event?.type === "generation_started" &&
+  const dispatch =
+    step.kind === "execute" ? (step.dispatchContext as any) : null;
+  const native =
+    event?.type === "generation_started" &&
     ["regenerate", "swipe", "continue"].includes(value) &&
     !(event.args[2]?.kind === "json" && event.args[2].value === true) &&
     isAgentEnabled(normalizeAgentConfiguration(current?.configuration));
-  const retryStage = event?.type === "era.ui.agent_retry" &&
-    ["planning", "story", "settlement"].includes(value?.kind) ? value.kind : null;
+  const retryStage =
+    event?.type === "era.ui.agent_retry" &&
+    ["planning", "story", "settlement"].includes(value?.kind)
+      ? value.kind
+      : null;
   let floor = dispatch?.floorIdentity ?? null;
   if (native && !floor) {
     const last = dispatch.messages.at(-1);
-    const mk = last?.role === "assistant" ? parseMessageKeyData(last.activeText)?.mk : null;
+    const mk =
+      last?.role === "assistant"
+        ? parseMessageKeyData(last.activeText)?.mk
+        : null;
     if (mk) {
-      floor = { chatId: dispatch.sourceBasis.identity.chatId,
-        messageId: last.messageId, swipeId: last.swipeIndex ?? 0, mk };
-      step = { ...step, dispatchContext: { ...dispatch, floorIdentity: floor } } as PlannedStepV1;
+      floor = {
+        chatId: dispatch.sourceBasis.identity.chatId,
+        messageId: last.messageId,
+        swipeId: last.swipeIndex ?? 0,
+        mk,
+      };
+      step = {
+        ...step,
+        dispatchContext: { ...dispatch, floorIdentity: floor },
+      } as PlannedStepV1;
     }
   }
   if (native && value !== "continue" && floor) {
-    floor = { ...floor, mk: generateMessageKey({ timestamp: event!.occurredAt,
-      token: stableBase36Token(`${event!.eventId}:replacement:${floor.messageId}`) }) };
-    step = { ...step, dispatchContext: { ...dispatch, floorIdentity: floor } } as PlannedStepV1;
+    floor = {
+      ...floor,
+      mk: generateMessageKey({
+        timestamp: event!.occurredAt,
+        token: stableBase36Token(
+          `${event!.eventId}:replacement:${floor.messageId}`,
+        ),
+      }),
+    };
+    step = {
+      ...step,
+      dispatchContext: { ...dispatch, floorIdentity: floor },
+    } as PlannedStepV1;
   }
   if (retryStage || (native && value !== "continue")) {
     const retained = current?.session;
     if (retryStage && retained && !agentRetryMatchesSession(value, retained)) {
-      diagnostics.push({code:"ERA_AGENT_RETRY_SOURCE_CHANGED", message:"当前报告对应的 Agent 周期已失效，请查看最新楼层。"});
+      diagnostics.push({
+        code: "ERA_AGENT_RETRY_SOURCE_CHANGED",
+        message: "当前报告对应的 Agent 周期已失效，请查看最新楼层。",
+      });
     } else if (current?.state && (native || (retained && floor))) {
-      const content = floor ? [
-        retryStage ? retained.baseMessage : "",
-        retryStage && retryStage !== "planning" ? retained.planningDraft : "",
-        retryStage && retryStage !== "planning" ? retained.planReport : "",
-        retryStage === "settlement" ? retained.story : "",
-        formatMessageKeyBlock(floor.mk, "assistant"),
-      ].filter(Boolean).join("\n") : null;
+      const content = floor
+        ? [
+            retryStage ? retained.baseMessage : "",
+            retryStage && retryStage !== "planning"
+              ? retained.planningDraft
+              : "",
+            retryStage && retryStage !== "planning" ? retained.planReport : "",
+            retryStage === "settlement" ? retained.story : "",
+            formatMessageKeyBlock(floor.mk, "assistant"),
+          ]
+            .filter(Boolean)
+            .join("\n")
+        : null;
       const plan = planEraSync({
         messages: dispatch.messages.map((message: any) => ({
-          messageId: message.messageId, role: message.role,
-          content: { kind: "text", text: message.messageId === floor?.messageId ? content : message.activeText },
+          messageId: message.messageId,
+          role: message.role,
+          content: {
+            kind: "text",
+            text:
+              message.messageId === floor?.messageId
+                ? content
+                : message.activeText,
+          },
         })),
-        stat: current.state.statData, statFunc: current.state.statFunc,
-        meta: current.state.eraMeta ?? {}, reason: "manual",
-        ...(floor ? { targetMessageId: floor.messageId, stopAtTarget: true } : {}),
-        processingMk: null, consecutiveState: null,
+        stat: current.state.statData,
+        statFunc: current.state.statFunc,
+        meta: current.state.eraMeta ?? {},
+        reason: "manual",
+        ...(floor
+          ? { targetMessageId: floor.messageId, stopAtTarget: true }
+          : {}),
+        processingMk: null,
+        consecutiveState: null,
       });
       if (!plan.committed) {
-        diagnostics.push({ code: "ERA_AGENT_STAGE_BASELINE_FAILED",
-          message: "无法根据消息与日志恢复待生成阶段的起点。" });
+        diagnostics.push({
+          code: "ERA_AGENT_STAGE_BASELINE_FAILED",
+          message: "无法根据消息与日志恢复待生成阶段的起点。",
+        });
       } else {
-        hostContext = { ...current,
-          state: { ...current.state, statData: plan.stat, statFunc: plan.statFunc, eraMeta: plan.meta },
-          session: retained ? { ...retained, status: "unsettled", transaction: "", pendingStage: null,
-            stageMemory: floor ? { ...floor, content } : null } : null,
-          stageBaseline: { plan, content, floor, phase: retryStage === "settlement" ? "story" : "planning" },
+        hostContext = {
+          ...current,
+          state: {
+            ...current.state,
+            statData: plan.stat,
+            statFunc: plan.statFunc,
+            eraMeta: plan.meta,
+          },
+          session: retained
+            ? {
+                ...retained,
+                status: "unsettled",
+                transaction: "",
+                pendingStage: null,
+                stageMemory: floor ? { ...floor, content } : null,
+              }
+            : null,
+          stageBaseline: {
+            plan,
+            content,
+            floor,
+            phase: retryStage === "settlement" ? "story" : "planning",
+          },
         };
       }
     }

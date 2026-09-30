@@ -1,0 +1,28 @@
+{
+  "kind": "base_lib",
+  "id": "era.command.operation_traversal",
+  "display_name": "有序路径操作",
+  "description": "有序路径操作；逐项判断插入模板、修改保护、表达式形状与删除保护，子项按原字段顺序深入，日志只进入工作副本。",
+  "category": "核心执行",
+  "version": "1.0.0",
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "source": {
+        "kind": "file",
+        "ref": "base_lib/domain/commands/operation_traversal.ts"
+      }
+    }
+  ],
+  "dependencies": [
+    "era.command.operation_state",
+    "era.crud.mutations",
+    "era.snapshot.history",
+    "era.crud.parser"
+  ],
+  "external_packages": []
+}

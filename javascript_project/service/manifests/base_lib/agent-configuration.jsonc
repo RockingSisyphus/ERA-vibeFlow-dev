@@ -19,5 +19,7 @@
     }
   ],
   "dependencies": [],
-  "external_packages": []
+  "external_packages": [
+    "@era/vibeflow-contracts"
+  ]
 }

@@ -346,3 +346,12 @@ export interface EraBlockStepStateV1 {
   readonly scopeWindow?: Readonly<Record<string, unknown>>;
   readonly apiContext?: Readonly<Record<string, unknown>>;
 }
+
+export interface PositionState {
+  state: EraBlockStepStateV1;
+  position: any;
+  incomingFunctionEvent?: any;
+  failure?: any;
+  consumedSource: boolean;
+  diagnosticsBefore: number;
+}

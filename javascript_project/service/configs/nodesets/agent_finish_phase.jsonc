@@ -1,6 +1,5 @@
 {
   "type_key": "era.agent.finish_phase",
-  "status": "planned",
   "display_name": "候选终态后的阶段交接与接续准备",
   "description": "候选循环达到终态后才形成阶段完成标识并转换会话。接续候选实际应用的作用域窗口，决定返回直接结果，还是同级调用共享同步或 MK 结算。保持原回调及恢复事件机制，不重复应用候选，不跨 Service 迭代挂起本次任务。",
   "requires": [
@@ -17,7 +16,7 @@
   ],
   "provides": [
     {
-      "key": "prepared_task",
+      "key": "era_agent_finish_phase_prepared_task",
       "type": "era.task.prepared",
       "display_name": "准备完成；仍须在本轮执行并结算的请求"
     }
@@ -47,46 +46,16 @@
         "description": "标记这段流程的入口或出口，业务数据由声明的通道传递；本节点不修改变量、不调用作者函数，也不保存酒馆。"
       },
       {
+        "id": "carry_preparation_context",
+        "type_used": "era.task.carry_preparation_context",
+        "display_name": "保留原生成任务的接续依据",
+        "description": "保留原生成任务的来源、步骤和批次接续依据，单独交给阶段收尾结果。阶段交接会形成新的共享同步步骤；此通道只保留原任务来源，不把原步骤与新步骤同时送入同一个执行入口。"
+      },
+      {
         "id": "unpack_finish_context",
         "type_used": "era.agent.unpack_finish_context",
-        "status": "planned",
-        "flow_kind": "process",
         "display_name": "取出候选终态及原步骤",
-        "description": "从候选终态和接续上下文取出原生成步骤、批次及已应用阶段结果，供旧阶段交接逻辑使用。这里不重建候选、不重新读取用户目标，也不改变步骤索引。",
-        "requires": [
-          {
-            "type": "era.agent.candidate.outcome",
-            "cardinality": "exactly_one",
-            "display_name": "候选循环唯一终态结果"
-          },
-          {
-            "type": "era.task.continuation.context",
-            "cardinality": "exactly_one",
-            "display_name": "本次请求所属的原步骤、来源、批次和回执适配依据"
-          }
-        ],
-        "provides": [
-          {
-            "key": "finish_step",
-            "type": "era.step.request.routed",
-            "display_name": "原步骤、事件来源与已准备消息依据"
-          },
-          {
-            "key": "finish_batch",
-            "type": "era.batch.execution.state",
-            "display_name": "当前在途批次，索引尚未推进"
-          },
-          {
-            "key": "candidate_outcome",
-            "type": "era.agent.candidate.outcome",
-            "display_name": "仍待阶段交接的候选终态"
-          },
-          {
-            "key": "finish_context",
-            "type": "era.task.continuation.context",
-            "display_name": "本次请求所属的原步骤、来源、批次和回执适配依据"
-          }
-        ]
+        "description": "从候选终态和接续上下文取出原生成步骤、批次及已应用阶段结果，供旧阶段交接逻辑使用。这里不重建候选、不重新读取用户目标，也不改变步骤索引。"
       },
       {
         "id": "prepare_stage_handoff",
@@ -121,66 +90,14 @@
       {
         "id": "return_legacy_continuation",
         "type_used": "era.agent.prepare_legacy_continuation",
-        "status": "planned",
-        "flow_kind": "process",
         "display_name": "返回后续共享同步或标识请求",
-        "description": "将候选已应用的楼层、作用域窗口及原任务转换成后续请求。需要保存与普通历史同步的结果交给直属共享同步，需要消息标识结算的结果交给 MK 任务；不重复执行候选内的 API，不把该请求放入外部 FIFO。",
-        "requires": [
-          {
-            "type": "era.step.request.routed",
-            "cardinality": "exactly_one",
-            "display_name": "原步骤、事件来源与已准备消息依据"
-          },
-          {
-            "type": "era.batch.execution.state",
-            "cardinality": "exactly_one",
-            "display_name": "当前在途批次，索引尚未推进"
-          },
-          {
-            "type": "era.task.route",
-            "cardinality": "exactly_one",
-            "display_name": "既有同步或消息标识分支"
-          },
-          {
-            "type": "era.task.continuation.context",
-            "cardinality": "exactly_one",
-            "display_name": "本次请求所属的原步骤、来源、批次和回执适配依据"
-          }
-        ],
-        "provides": [
-          {
-            "key": "prepared_task",
-            "type": "era.task.prepared",
-            "display_name": "准备完成；仍须在本轮执行并结算的请求"
-          }
-        ]
+        "description": "将候选已应用的楼层、作用域窗口及原任务转换成后续请求。需要保存与普通历史同步的结果交给直属共享同步，需要消息标识结算的结果交给 MK 任务；不重复执行候选内的 API，不把该请求放入外部 FIFO。"
       },
       {
         "id": "return_direct_continuation",
         "type_used": "era.agent.prepare_direct_continuation",
-        "status": "planned",
-        "flow_kind": "process",
         "display_name": "返回当前阶段片段的真实结果",
-        "description": "把阶段交接、取消或失败结果连同原生成来源交还 Service。交接仍遵循原完成标识与页面回调顺序，回执只代表当前片段完成；不在当前在途任务中等待回调向同一队列提交请求。",
-        "requires": [
-          {
-            "type": "era.task.result",
-            "cardinality": "exactly_one",
-            "display_name": "阶段直接结果"
-          },
-          {
-            "type": "era.task.continuation.context",
-            "cardinality": "exactly_one",
-            "display_name": "本次请求所属的原步骤、来源、批次和回执适配依据"
-          }
-        ],
-        "provides": [
-          {
-            "key": "prepared_task",
-            "type": "era.task.prepared",
-            "display_name": "准备完成；仍须在本轮执行并结算的请求"
-          }
-        ]
+        "description": "把阶段交接、取消或失败结果连同原生成来源交还 Service。交接仍遵循原完成标识与页面回调顺序，回执只代表当前片段完成；不在当前在途任务中等待回调向同一队列提交请求。"
       },
       {
         "id": "end",
@@ -190,6 +107,10 @@
       }
     ],
     "edges": [
+      [
+        "start",
+        "carry_preparation_context"
+      ],
       [
         "start",
         "unpack_finish_context"
@@ -221,18 +142,12 @@
         "to": "build_direct_result",
         "when": "agent_route == 'direct'"
       },
+      [
+        "adapt_legacy_step",
+        "return_legacy_continuation"
+      ],
       {
-        "from": "adapt_legacy_step",
-        "to": "return_legacy_continuation",
-        "when": "legacy_task_route == 'sync'"
-      },
-      {
-        "from": "adapt_legacy_step",
-        "to": "return_legacy_continuation",
-        "when": "legacy_task_route == 'update-mk'"
-      },
-      {
-        "from": "unpack_finish_context",
+        "from": "carry_preparation_context",
         "to": "return_legacy_continuation",
         "schedule": false
       },
@@ -241,7 +156,7 @@
         "return_direct_continuation"
       ],
       {
-        "from": "unpack_finish_context",
+        "from": "carry_preparation_context",
         "to": "return_direct_continuation",
         "schedule": false
       },
@@ -259,7 +174,7 @@
         "type": "era.task.prepared",
         "cardinality": "exactly_one",
         "display_name": "准备完成；仍须在本轮执行并结算的请求",
-        "as": "prepared_task"
+        "as": "era_agent_finish_phase_prepared_task"
       }
     ]
   }

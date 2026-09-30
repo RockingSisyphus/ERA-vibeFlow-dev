@@ -19,11 +19,12 @@
     }
   ],
   "dependencies": [
-    "era.crud.engine",
     "era.service.command_compaction_marker",
     "era.service.mk_engine",
     "era.service.sync_contracts",
-    "era.service.sync_types"
+    "era.service.sync_types",
+    "era.command.operation_state",
+    "era.command.operation_fold"
   ],
   "external_packages": [
     "@era/vibeflow-command-compaction"

@@ -1,0 +1,64 @@
+{
+  "kind": "node",
+  "type_key": "era.sync.route_function_event",
+  "display_name": "区分函数 commit、禁止请求与结束",
+  "category": "核心执行",
+  "description": "读取刚收到的作者函数事件：正常或未捕获错误的结束走调用收尾；commit 走原位 Scope/目标校验；函数内 sync 和回滚返回原不支持错误。捕获与未捕获错误仍由原函数事件结果区分，不重新排到外部 FIFO。",
+  "version": "1.0.0",
+  "flow_kind": "decision",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.sync.author.state",
+        "cardinality": "exactly_one",
+        "display_name": "当前消息位置、原块状态、正文范围和作者函数上下文"
+      }
+    ],
+    "provides": [
+      {
+        "key": "route_function_event_position_state",
+        "type": "era.sync.author.state",
+        "display_name": "本位置处理后的私有状态；尚未发布到宿主"
+      },
+      {
+        "key": "route_function_event_function_event_route",
+        "type": "era.sync.function.event.route",
+        "display_name": "结束、原位提交、拒绝请求或宿主失败"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.sync.author.state": [
+        "输入：当前消息位置、原块状态、正文范围和作者函数上下文。"
+      ]
+    },
+    "output_semantics": {
+      "route_function_event_position_state": [
+        "输出：本位置处理后的私有状态；尚未发布到宿主。"
+      ],
+      "route_function_event_function_event_route": [
+        "输出：结束、原位提交、拒绝请求或宿主失败。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/sync/core_author_nodes.ts",
+        "export": "RouteFunctionEventNode"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.sync.position_author"
+  ],
+  "capabilities": []
+}
