@@ -6,5 +6,6 @@
   "schema": {
     "type": "object",
     "additionalProperties": true
-  }
+  },
+  "description": "汇集生成事件、来源及当前会话状态供阶段判断。"
 }

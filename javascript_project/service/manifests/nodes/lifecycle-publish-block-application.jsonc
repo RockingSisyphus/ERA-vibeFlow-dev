@@ -11,34 +11,34 @@
       {
         "type": "era.command_compaction.result",
         "cardinality": "exactly_one",
-        "display_name": "era.command_compaction.result"
+        "display_name": "指令压缩结果"
       }
     ],
     "provides": [
       {
         "key": "block_step_state_after",
         "type": "era.sync.block.step.state.next",
-        "display_name": "block_step_state_after"
+        "display_name": "更新后的块状态"
       },
       {
         "key": "block_step_done",
         "type": "era.step.done",
-        "display_name": "block_step_done"
+        "display_name": "块执行结束标记"
       }
     ],
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
       "era.command_compaction.result": [
-        "era.command_compaction.result"
+        "本轮块处理及压缩后的结果。"
       ]
     },
     "output_semantics": {
       "block_step_state_after": [
-        "block_step_state_after"
+        "把新消息、日志与随机偏移写回内存工作状态。"
       ],
       "block_step_done": [
-        "block_step_done"
+        "标明本轮是否已处理完目标块。"
       ]
     }
   },

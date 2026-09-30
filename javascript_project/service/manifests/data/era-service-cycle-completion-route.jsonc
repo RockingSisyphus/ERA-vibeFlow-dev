@@ -2,6 +2,13 @@
   "kind": "data_schema",
   "type_key": "era.service.cycle.completion_route",
   "representation": "json",
-  "display_name": "Service 单步完成路由",
-  "schema": {"type": "string", "enum": ["continue", "finish"]}
+  "display_name": "单步完成分支",
+  "schema": {
+    "type": "string",
+    "enum": [
+      "continue",
+      "finish"
+    ]
+  },
+  "description": "区分继续执行下一步骤与结束当前批次。"
 }

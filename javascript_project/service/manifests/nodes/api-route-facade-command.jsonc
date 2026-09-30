@@ -1,9 +1,9 @@
 {
   "kind": "node",
   "type_key": "era.api.route_facade_command",
-  "display_name": "路由 Facade 命令",
+  "display_name": "区分提交与同步请求",
   "category": "公共 Facade",
-  "description": "只接受 commit 与 sync 内部命令。",
+  "description": "只接受内部 commit 和 sync 命令，并把批次状态交给对应分支。",
   "version": "1.0.0",
   "flow_kind": "decision",
   "contract": {
@@ -11,50 +11,50 @@
       {
         "type": "era.step.request.routed",
         "cardinality": "exactly_one",
-        "display_name": "era.step.request.routed"
+        "display_name": "已准备的任务步骤"
       },
       {
         "type": "era.batch.execution.state",
         "cardinality": "exactly_one",
-        "display_name": "era.batch.execution.state"
+        "display_name": "当前批次状态"
       }
     ],
     "provides": [
       {
         "key": "facade_request",
         "type": "era.api.request",
-        "display_name": "facade_request"
+        "display_name": "公共对象请求"
       },
       {
         "key": "facade_route",
         "type": "era.api.route",
-        "display_name": "facade_route"
+        "display_name": "公共对象命令分支"
       },
       {
         "key": "facade_execution_state",
         "type": "era.batch.execution.state",
-        "display_name": "facade_execution_state"
+        "display_name": "公共对象批次状态"
       }
     ],
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
       "era.step.request.routed": [
-        "输入：era.step.request.routed。"
+        "统一准备后的公共对象任务步骤。"
       ],
       "era.batch.execution.state": [
-        "输入：era.batch.execution.state。"
+        "该任务所属的批次状态。"
       ]
     },
     "output_semantics": {
       "facade_request": [
-        "输出：facade_request。"
+        "从步骤中取出的公共对象请求。"
       ],
       "facade_route": [
-        "输出：facade_route。"
+        "选择提交或同步分支。"
       ],
       "facade_execution_state": [
-        "输出：facade_execution_state。"
+        "原批次状态供选定分支继续使用。"
       ]
     }
   },

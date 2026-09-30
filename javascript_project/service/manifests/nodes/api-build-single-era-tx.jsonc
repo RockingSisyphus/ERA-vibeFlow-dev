@@ -11,26 +11,26 @@
       {
         "type": "era.api.commit.validated",
         "cardinality": "exactly_one",
-        "display_name": "era.api.commit.validated"
+        "display_name": "已校验的提交请求"
       }
     ],
     "provides": [
       {
         "key": "facade_commit_transaction",
         "type": "era.api.commit.transaction",
-        "display_name": "facade_commit_transaction"
+        "display_name": "待提交事务"
       }
     ],
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
       "era.api.commit.validated": [
-        "输入：era.api.commit.validated。"
+        "已通过窗口、范围和操作校验的提交请求。"
       ]
     },
     "output_semantics": {
       "facade_commit_transaction": [
-        "输出：facade_commit_transaction。"
+        "按原操作顺序生成单次待应用事务。"
       ]
     }
   },

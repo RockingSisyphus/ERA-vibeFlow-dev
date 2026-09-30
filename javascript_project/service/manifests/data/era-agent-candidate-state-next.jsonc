@@ -1,7 +1,7 @@
 {
   "kind": "data_schema",
   "type_key": "era.agent.candidate.state.next",
-  "display_name": "era.agent.candidate.state.next",
+  "display_name": "更新后的候选状态",
   "representation": "json",
   "schema": {
     "type": "object",
@@ -25,5 +25,6 @@
         "additionalProperties": true
       }
     }
-  }
+  },
+  "description": "保留步骤与批次状态，并在需要重试时替换生成请求。"
 }

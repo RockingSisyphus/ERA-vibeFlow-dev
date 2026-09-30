@@ -24,7 +24,7 @@
   ],
   "type_key": "era.service.iteration",
   "display_name": "ERA 服务阶段迭代",
-  "description": "外层永久 Loop 的单轮 body：collect 阶段归约一个事件；execute 阶段选择并准备一个步骤，直属路由复杂任务，统一合并后继续或结算。",
+  "description": "永久服务循环的一轮：收集阶段接收并归约一个事件；执行阶段选择一个步骤，准备上下文并运行对应任务，然后合并结果或结束批次。",
   "requires": [
     {
       "type": "era.service.cycle.state",
@@ -67,7 +67,7 @@
         "id": "collect_cycle_phase",
         "type_used": "era.service.collect_cycle_phase",
         "display_name": "收集、等待或规划批次",
-        "description": "原位收束事件归约及就绪批次规划；覆盖失败仍当轮结算并发布。"
+        "description": "接收一个事件，决定继续等待还是规划批次；来源覆盖校验失败时，当轮发送失败结果。"
       },
       {
         "id": "unpack_execution",
@@ -79,7 +79,7 @@
         "id": "prepare_dispatch_context",
         "type_used": "era.dispatch.prepare_context",
         "display_name": "选择步骤并准备派发上下文",
-        "description": "先选择唯一 PlannedStep，再执行原消息准备并生成复杂任务或简单任务族路由。"
+        "description": "按批次索引选出唯一计划步骤，准备消息上下文，再选择初始化、API、生成或简单任务。"
       },
       {
         "id": "task_initialize",
@@ -91,7 +91,7 @@
         "id": "task_api",
         "type_used": "era.task.api",
         "display_name": "执行 ERA 公共对象任务",
-        "description": "进入新的公共对象二级路由：一次 ERA.commit 对应一次即时消息与 Sidecar 事务，ERA.sync 复用共享同步；读取和订阅不进入 Service 事件任务。"
+        "description": "将 ERA.commit 交给即时提交事务，将 ERA.sync 交给共享同步；读取和订阅不作为服务事件执行。"
       },
       {
         "id": "adapt_api_task_result",
@@ -103,7 +103,7 @@
         "id": "task_agent_generation_session",
         "type_used": "era.agent.generation_session",
         "display_name": "执行三阶段故事生成会话",
-        "description": "在原 FIFO、生成栅栏和取消域内处理生成生命周期与重试；设置命令已分到相邻 Nodeset。"
+        "description": "按事件顺序处理生成阶段、候选重试和取消，并保留生成期间的任务隔离。"
       },
       {
         "id": "execute_simple_task",
@@ -115,7 +115,7 @@
         "id": "settle_step",
         "type_used": "era.service.settle_step_phase",
         "display_name": "合并任务结果并继续或完成批次",
-        "description": "对恰好一个任务结果推进索引；最后一步当轮结算并发布。"
+        "description": "合并本步骤的唯一结果并推进索引；若已到最后一步，当轮发送批次结果。"
       },
       {
         "id": "end",

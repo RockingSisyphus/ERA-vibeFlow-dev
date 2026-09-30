@@ -11,26 +11,26 @@
       {
         "type": "era.api.commit.failure_context",
         "cardinality": "exactly_one",
-        "display_name": "era.api.commit.failure_context"
+        "display_name": "提交失败上下文"
       }
     ],
     "provides": [
       {
         "key": "facade_commit_failed_result",
         "type": "era.api.commit.result",
-        "display_name": "facade_commit_result"
+        "display_name": "即时提交结果"
       }
     ],
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
       "era.api.commit.failure_context": [
-        "输入：era.api.commit.failure_context。"
+        "输入、窗口或目标校验失败的原因。"
       ]
     },
     "output_semantics": {
       "facade_commit_failed_result": [
-        "输出：facade_commit_result。"
+        "为本次 ERA.commit 返回失败回执，不提交消息。"
       ]
     }
   },

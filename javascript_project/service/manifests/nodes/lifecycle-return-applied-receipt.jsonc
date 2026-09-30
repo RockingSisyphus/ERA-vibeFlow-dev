@@ -11,26 +11,26 @@
       {
         "type": "era.sync.block.step.state.next",
         "cardinality": "exactly_one",
-        "display_name": "era.sync.block.step.state.next"
+        "display_name": "块执行后状态"
       }
     ],
     "provides": [
       {
         "key": "facade_commit_result",
         "type": "era.api.commit.result",
-        "display_name": "facade_commit_result"
+        "display_name": "即时提交结果"
       }
     ],
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
       "era.sync.block.step.state.next": [
-        "era.sync.block.step.state.next"
+        "ERA.commit 在内存中逐块应用后的工作状态。"
       ]
     },
     "output_semantics": {
       "facade_commit_result": [
-        "facade_commit_result"
+        "返回内存应用回执，并登记后续批次保存时机。"
       ]
     }
   },

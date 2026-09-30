@@ -1,9 +1,9 @@
 {
   "kind": "node",
   "type_key": "era.api.build_skipped_receipt",
-  "display_name": "返回 skipped receipt",
+  "display_name": "返回跳过回执",
   "category": "公共 Facade",
-  "description": "历史 scope 已结算时不写消息、不发布状态。",
+  "description": "历史作用域已结算时返回跳过回执，不写消息或发布状态。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
@@ -11,26 +11,26 @@
       {
         "type": "era.api.commit.validated",
         "cardinality": "exactly_one",
-        "display_name": "era.api.commit.validated"
+        "display_name": "已校验的提交请求"
       }
     ],
     "provides": [
       {
         "key": "facade_commit_skipped_result",
         "type": "era.api.commit.result",
-        "display_name": "facade_commit_result"
+        "display_name": "即时提交结果"
       }
     ],
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
       "era.api.commit.validated": [
-        "输入：era.api.commit.validated。"
+        "已校验且判断为无需再次应用的提交请求。"
       ]
     },
     "output_semantics": {
       "facade_commit_skipped_result": [
-        "输出：facade_commit_result。"
+        "返回跳过回执，不写消息或状态。"
       ]
     }
   },

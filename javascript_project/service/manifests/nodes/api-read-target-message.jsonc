@@ -1,9 +1,9 @@
 {
   "kind": "node",
   "type_key": "era.api.read_target_message",
-  "display_name": "读取最新 AI 消息",
+  "display_name": "复查消息写入目标",
   "category": "公共 Facade",
-  "description": "写入前重新读取真实目标。",
+  "description": "提交前重新读取真实消息目标，避免把操作写入已经变化的位置。",
   "version": "1.0.0",
   "flow_kind": "io",
   "contract": {
@@ -11,26 +11,26 @@
       {
         "type": "era.api.commit.transaction",
         "cardinality": "exactly_one",
-        "display_name": "era.api.commit.transaction"
+        "display_name": "待提交事务"
       }
     ],
     "provides": [
       {
         "key": "facade_commit_target",
         "type": "era.api.commit.target",
-        "display_name": "facade_commit_target"
+        "display_name": "已定位的提交目标"
       }
     ],
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
       "era.api.commit.transaction": [
-        "输入：era.api.commit.transaction。"
+        "已构造事务及其目标依据。"
       ]
     },
     "output_semantics": {
       "facade_commit_target": [
-        "输出：facade_commit_target。"
+        "写入前重新读取并确认的目标消息。"
       ]
     }
   },

@@ -2,7 +2,7 @@
   "kind": "data_schema",
   "type_key": "era.workbench.preparation_result",
   "representation": "json",
-  "description": "现有Commit中工作台准备的内部DTO；字段合同见本批变更清单。",
+  "description": "保存准备成功的提交上下文，或失败原因。",
   "schema": {
     "type": "object",
     "properties": {
@@ -27,5 +27,6 @@
       "failure"
     ],
     "additionalProperties": false
-  }
+  },
+  "display_name": "工作台准备结果"
 }

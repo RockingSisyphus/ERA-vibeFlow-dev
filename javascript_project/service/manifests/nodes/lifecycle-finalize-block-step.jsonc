@@ -11,26 +11,26 @@
       {
         "type": "era.sync.block.step.state.next",
         "cardinality": "exactly_one",
-        "display_name": "era.sync.block.step.state.next"
+        "display_name": "块执行后状态"
       }
     ],
     "provides": [
       {
         "key": "batch_save_request",
         "type": "era.tavern.commit.request",
-        "display_name": "batch_save_request"
+        "display_name": "批次保存请求"
       }
     ],
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
       "era.sync.block.step.state.next": [
-        "era.sync.block.step.state.next"
+        "全部目标块处理后的消息和工作状态。"
       ]
     },
     "output_semantics": {
       "batch_save_request": [
-        "batch_save_request"
+        "冻结本批待保存消息、Sidecar 状态和成功前缀。"
       ]
     }
   },

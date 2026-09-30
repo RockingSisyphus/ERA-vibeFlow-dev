@@ -2,7 +2,7 @@
   "kind": "data_schema",
   "type_key": "era.workbench.baseline",
   "representation": "json",
-  "description": "现有Commit中工作台准备的内部DTO；字段合同见本批变更清单。",
+  "description": "保存当前 Sidecar 记录、聊天身份及读取失败事实，供草稿校验使用。",
   "schema": {
     "type": "object",
     "properties": {
@@ -39,5 +39,6 @@
       "error"
     ],
     "additionalProperties": false
-  }
+  },
+  "display_name": "工作台当前基准"
 }

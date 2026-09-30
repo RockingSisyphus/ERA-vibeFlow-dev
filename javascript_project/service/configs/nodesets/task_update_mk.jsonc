@@ -38,7 +38,7 @@
         "id": "consume_prepared_mk_context",
         "type_used": "era.mk.consume_prepared",
         "display_name": "确认统一 MK 准备结果",
-        "description": "读取已准备步骤内的 EraDispatchContextV2，确认 processing MK、占位符与 affected 刷新均已完成或明确无操作，不再调用 Tavern Capability。"
+        "description": "检查派发准备阶段的消息密钥、占位符和写入确认结果；本节点不再读取或写入酒馆消息。"
       },
       {
         "id": "build_mk_result",

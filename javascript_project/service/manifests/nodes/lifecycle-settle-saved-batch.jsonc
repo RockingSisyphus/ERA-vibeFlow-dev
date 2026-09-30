@@ -11,26 +11,26 @@
       {
         "type": "era.tavern.commit.result",
         "cardinality": "exactly_one",
-        "display_name": "era.tavern.commit.result"
+        "display_name": "酒馆保存结果"
       }
     ],
     "provides": [
       {
         "key": "completed_sync_result",
         "type": "era.tavern.commit.result",
-        "display_name": "completed_sync_result"
+        "display_name": "已结算的保存结果"
       }
     ],
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
       "era.tavern.commit.result": [
-        "era.tavern.commit.result"
+        "本批消息与 Sidecar 保存的实际回执。"
       ]
     },
     "output_semantics": {
       "completed_sync_result": [
-        "completed_sync_result"
+        "清除本批已保存内容并保留后到操作后的同步结果。"
       ]
     }
   },

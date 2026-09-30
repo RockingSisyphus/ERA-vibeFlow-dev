@@ -126,14 +126,14 @@
           {
             "type": "era.agent.candidate.state",
             "cardinality": "exactly_one",
-            "display_name": "era.agent.candidate.state"
+            "display_name": "当前候选状态"
           }
         ],
         "provides": [
           {
             "key": "candidate_outcome",
             "type": "era.agent.candidate.outcome",
-            "display_name": "candidate_outcome"
+            "display_name": "候选执行结果"
           }
         ],
         "loop": {

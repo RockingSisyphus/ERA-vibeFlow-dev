@@ -11,19 +11,19 @@
     {
       "type": "era.step.request.routed",
       "cardinality": "exactly_one",
-      "display_name": "era.step.request.routed"
+      "display_name": "已准备的任务步骤"
     },
     {
       "type": "era.batch.execution.state",
       "cardinality": "exactly_one",
-      "display_name": "era.batch.execution.state"
+      "display_name": "当前批次状态"
     }
   ],
   "provides": [
     {
       "key": "api_task_result",
       "type": "era.api.task.result",
-      "display_name": "api_task_result"
+      "display_name": "公共对象任务结果"
     }
   ],
   "pipeline": {
@@ -33,13 +33,13 @@
         "key": "routed_step",
         "type": "era.step.request.routed",
         "required": true,
-        "display_name": "routed_step"
+        "display_name": "已准备的任务步骤"
       },
       {
         "key": "execution_state",
         "type": "era.batch.execution.state",
         "required": true,
-        "display_name": "execution_state"
+        "display_name": "当前批次状态"
       }
     ],
     "max_steps": 16,
@@ -48,61 +48,61 @@
         "id": "start",
         "type_used": "era.service.terminal",
         "display_name": "公共对象任务开始",
-        "description": "执行公共对象任务开始。"
+        "description": "接收已准备的 API 步骤和当前批次状态。"
       },
       {
         "id": "route_facade_command",
         "type_used": "era.api.route_facade_command",
-        "display_name": "路由 commit 与 sync",
-        "description": "执行路由 commit 与 sync。"
+        "display_name": "区分提交与同步请求",
+        "description": "读取步骤中的公共对象命令，将提交交给即时事务，将同步交给共享同步流程。"
       },
       {
         "id": "commit",
         "type_used": "era.api.commit",
         "display_name": "执行即时 ERA.commit",
-        "description": "执行执行即时 ERA.commit。"
+        "description": "按当前工作状态执行 ERA.commit，并返回提交结果。"
       },
       {
         "id": "sync_validate_and_build_sync_step",
         "type_used": "era.api.plan_facade_sync",
         "display_name": "校验并构造同步步骤",
-        "description": "执行校验并构造同步步骤。"
+        "description": "校验 ERA.sync 的模式和目标，生成可执行的共享同步步骤或明确的失败结果。"
       },
       {
         "id": "sync_run_shared_sync",
         "type_used": "era.task.sync",
         "display_name": "运行共享同步事务",
-        "description": "执行运行共享同步事务。"
+        "description": "用已校验的步骤执行与普通任务共用的同步及保存流程。"
       },
       {
         "id": "sync_adapt_sync_receipt",
         "type_used": "era.api.adapt_facade_sync",
-        "display_name": "适配 ERA.sync receipt",
-        "description": "执行适配 ERA.sync receipt。"
+        "display_name": "构造 ERA.sync 回执",
+        "description": "把共享同步的任务结果转换为公共对象调用的回执。"
       },
       {
         "id": "sync_build_sync_failure",
         "type_used": "era.api.build_facade_sync_failure",
         "display_name": "构造同步输入失败",
-        "description": "执行构造同步输入失败。"
+        "description": "同步输入无效时返回失败回执，不进入共享同步流程。"
       },
       {
         "id": "sync_merge_sync_result",
         "type_used": "era.api.merge_sync_result",
         "display_name": "合并公共对象同步结果",
-        "description": "执行合并公共对象同步结果。"
+        "description": "汇合成功同步与输入失败两条路径，输出统一的同步结果。"
       },
       {
         "id": "merge_facade_result",
         "type_used": "era.api.merge_facade_result",
         "display_name": "合并公共对象任务结果",
-        "description": "执行合并公共对象任务结果。"
+        "description": "汇合提交与同步结果，形成一个供批次结算使用的任务结果。"
       },
       {
         "id": "end",
         "type_used": "era.service.terminal",
         "display_name": "公共对象任务结束",
-        "description": "执行公共对象任务结束。"
+        "description": "将唯一公共对象任务结果交还服务迭代。"
       }
     ],
     "edges": [

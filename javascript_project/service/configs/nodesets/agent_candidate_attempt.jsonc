@@ -6,24 +6,24 @@
     {
       "type": "era.agent.candidate.state",
       "cardinality": "exactly_one",
-      "display_name": "era.agent.candidate.state"
+      "display_name": "当前候选状态"
     }
   ],
   "provides": [
     {
       "key": "candidate_state_after",
       "type": "era.agent.candidate.state.next",
-      "display_name": "candidate_state_after"
+      "display_name": "更新后的候选状态"
     },
     {
       "key": "candidate_done",
       "type": "era.agent.candidate.done",
-      "display_name": "candidate_done"
+      "display_name": "候选结束标记"
     },
     {
       "key": "candidate_outcome",
       "type": "era.agent.candidate.outcome",
-      "display_name": "candidate_outcome"
+      "display_name": "候选执行结果"
     }
   ],
   "pipeline": {
@@ -41,32 +41,32 @@
       {
         "id": "start",
         "type_used": "era.service.terminal",
-        "display_name": "start",
-        "description": "候选内顺序执行，终态返回当前阶段。"
+        "display_name": "候选尝试开始",
+        "description": "接收本次候选的请求、步骤和批次状态。"
       },
       {
         "id": "unpack_candidate",
         "type_used": "era.agent.candidate_unpack",
-        "display_name": "unpack_candidate",
-        "description": "候选内顺序执行，终态返回当前阶段。"
+        "display_name": "取出候选执行输入",
+        "description": "从候选状态取出生成请求、已准备步骤和批次状态，交给本次候选执行。"
       },
       {
         "id": "execute_agent_phase_v2",
         "type_used": "era.agent.execute_session_v2",
         "display_name": "生成标签格式结算候选",
-        "description": "结算直接接收Variable/Function六类标签及EraFCall原文，删除operations JSON解析和标签转换；规划storyPlan/calls保持现有协议。原始响应进入报告，候选格式错误沿原整体回退纠错。"
+        "description": "读取模型输出中的变量、函数和函数调用标签，形成候选操作；格式错误时按整次候选恢复规则处理。"
       },
       {
         "id": "prepare_stage_blocks",
         "type_used": "era.lifecycle.prepare_stage_blocks",
         "display_name": "标签候选接入共用逐块执行",
-        "description": "结算原文直接进入既有块循环，按位置执行insert、函数调用、edit及后续块；保留候选恢复点、scope、随机、done、保存和历史重算，删除结算JSON前中后适配。"
+        "description": "把模型输出按原位置送入共用块执行流程，依次处理变量操作、函数调用和后续内容，并保留候选恢复点。"
       },
       {
         "id": "apply_stage_blocks",
         "type_used": "vibeflow.loop.while",
         "display_name": "三阶段复用同一个内存块循环",
-        "description": "max_iterations=null；处理块不落盘，结束时得到累计消息及状态。函数API应用后返回，不强制刷盘。",
+        "description": "逐块更新内存工作状态，结束后交还累计消息和变量；保存由后续批次统一处理。",
         "requires": [
           {
             "type": "era.sync.block.step.state",
@@ -112,14 +112,14 @@
       {
         "id": "finish_candidate",
         "type_used": "era.agent.candidate_finish",
-        "display_name": "finish_candidate",
-        "description": "候选内顺序执行，终态返回当前阶段。"
+        "display_name": "判断是否重试候选",
+        "description": "有重试请求时更新候选状态并继续循环；否则输出本次候选的最终结果。"
       },
       {
         "id": "end",
         "type_used": "era.service.terminal",
-        "display_name": "end",
-        "description": "候选内顺序执行，终态返回当前阶段。"
+        "display_name": "候选尝试结束",
+        "description": "把更新后的候选状态、结束标记和结果交还候选循环。"
       }
     ],
     "edges": [

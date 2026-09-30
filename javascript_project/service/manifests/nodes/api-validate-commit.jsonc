@@ -11,42 +11,42 @@
       {
         "type": "era.api.commit.inspected",
         "cardinality": "exactly_one",
-        "display_name": "era.api.commit.inspected"
+        "display_name": "已读取的提交请求"
       }
     ],
     "provides": [
       {
         "key": "commit_admission_route",
         "type": "era.api.commit.admission.route",
-        "display_name": "commit_admission_route"
+        "display_name": "提交准入分支"
       },
       {
         "key": "facade_commit_validated",
         "type": "era.api.commit.validated",
-        "display_name": "facade_commit_validated"
+        "display_name": "已校验的提交请求"
       },
       {
         "key": "facade_commit_validation_failure",
         "type": "era.api.commit.failure_context",
-        "display_name": "facade_commit_failure_context"
+        "display_name": "提交校验失败原因"
       }
     ],
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
       "era.api.commit.inspected": [
-        "输入：era.api.commit.inspected。"
+        "已读取目标和窗口事实的提交请求。"
       ]
     },
     "output_semantics": {
       "commit_admission_route": [
-        "输出：commit_admission_route。"
+        "选择提交、跳过或失败分支。"
       ],
       "facade_commit_validated": [
-        "输出：facade_commit_validated。"
+        "保留已通过校验的范围与有序操作。"
       ],
       "facade_commit_validation_failure": [
-        "输出：facade_commit_failure_context。"
+        "保留窗口、范围或操作校验的失败原因。"
       ]
     }
   },

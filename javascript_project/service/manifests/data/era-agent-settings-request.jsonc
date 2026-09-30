@@ -6,5 +6,6 @@
   "schema": {
     "type": "object",
     "additionalProperties": true
-  }
+  },
+  "description": "保存已识别的设置命令及执行所需上下文。"
 }

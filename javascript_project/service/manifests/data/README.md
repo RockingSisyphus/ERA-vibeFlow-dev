@@ -1,5 +1,6 @@
-# 计划中的数据 Schema
+# Service 数据 Schema
 
-G1 为每种 workflow、nodeset、Port 与 Capability 类型登记一个 JSON Schema
-descriptor。虽然业务生产者和消费者仍处于 planned 状态，这些 Schema 已是可执行
-契约。运行时 DTO 的版本字段不得写入 ERA 持久化数据。
+本目录登记 Service 节点之间、端口和宿主能力使用的 JSON 数据类型。类型键供程序和
+工作流引用，中文名称与说明供审核图阅读；实际字段以各文件的 `schema` 为准。
+未被当前工作流引用的历史预留类型不代表已接入功能。运行时 DTO 的版本字段不得
+写入 ERA 持久化数据。

@@ -3,7 +3,7 @@
   "type_key": "era.step.request.routed",
   "representation": "json",
   "display_name": "ERA 已路由步骤请求",
-  "description": "携带 EraDispatchContextV2、可更新消息快照与不可变处理身份的已准备动态步骤。",
+  "description": "保存已选步骤、可更新的消息快照和不可变的处理身份；派发上下文兼容当前 V3 与仍在使用的 V2。",
   "schema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "oneOf": [

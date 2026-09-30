@@ -3,7 +3,7 @@
   "type_key": "era.mk.consume_prepared",
   "display_name": "确认统一 MK 准备结果",
   "category": "消息密钥",
-  "description": "消费已准备步骤中的 EraDispatchContextV2，不再读取或写入 Tavern。",
+  "description": "检查已准备步骤中的消息密钥和写入确认结果，不再读取或写入酒馆消息。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

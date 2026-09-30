@@ -11,26 +11,26 @@
       {
         "type": "era.api.facade.result",
         "cardinality": "all",
-        "display_name": "era.api.facade.result"
+        "display_name": "公共对象调用结果"
       }
     ],
     "provides": [
       {
         "key": "api_task_result",
         "type": "era.api.task.result",
-        "display_name": "api_task_result"
+        "display_name": "公共对象任务结果"
       }
     ],
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
       "era.api.facade.result": [
-        "输入：era.api.facade.result。"
+        "提交或同步分支产出的公共对象结果。"
       ]
     },
     "output_semantics": {
       "api_task_result": [
-        "互斥 Facade 分支的唯一标准任务结果。"
+        "把唯一公共对象结果转成批次结算使用的任务结果。"
       ]
     }
   },

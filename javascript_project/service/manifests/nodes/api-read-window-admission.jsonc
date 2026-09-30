@@ -11,34 +11,34 @@
       {
         "type": "era.api.request",
         "cardinality": "exactly_one",
-        "display_name": "era.api.request"
+        "display_name": "公共对象请求"
       },
       {
         "type": "era.batch.execution.state",
         "cardinality": "exactly_one",
-        "display_name": "era.batch.execution.state"
+        "display_name": "当前批次状态"
       }
     ],
     "provides": [
       {
         "key": "facade_commit_inspected",
         "type": "era.api.commit.inspected",
-        "display_name": "facade_commit_inspected"
+        "display_name": "已读取的提交请求"
       }
     ],
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
       "era.api.request": [
-        "输入：era.api.request。"
+        "待提交的操作与调用来源。"
       ],
       "era.batch.execution.state": [
-        "输入：era.batch.execution.state。"
+        "当前批次中的工作状态和窗口事实。"
       ]
     },
     "output_semantics": {
       "facade_commit_inspected": [
-        "输出：facade_commit_inspected。"
+        "附上真实消息、聊天身份与窗口准入事实的提交请求。"
       ]
     }
   },

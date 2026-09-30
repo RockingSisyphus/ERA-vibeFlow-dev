@@ -6,5 +6,6 @@
   "schema": {
     "type": "object",
     "additionalProperties": true
-  }
+  },
+  "description": "记录配置、预设、连接或模型列表命令的处理结果。"
 }

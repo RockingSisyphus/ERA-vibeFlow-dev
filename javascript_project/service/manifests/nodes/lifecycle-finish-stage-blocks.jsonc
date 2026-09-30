@@ -11,26 +11,26 @@
       {
         "type": "era.sync.block.step.state.next",
         "cardinality": "exactly_one",
-        "display_name": "era.sync.block.step.state.next"
+        "display_name": "块执行后状态"
       }
     ],
     "provides": [
       {
         "key": "applied_generation_outcome",
         "type": "era.agent.generation.outcome",
-        "display_name": "applied_generation_outcome"
+        "display_name": "已应用的生成结果"
       }
     ],
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
       "era.sync.block.step.state.next": [
-        "era.sync.block.step.state.next"
+        "候选阶段逐块应用后的工作状态。"
       ]
     },
     "output_semantics": {
       "applied_generation_outcome": [
-        "applied_generation_outcome"
+        "携带已应用结果和恢复事实，供下一阶段或重试使用。"
       ]
     }
   },

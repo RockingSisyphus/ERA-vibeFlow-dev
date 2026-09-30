@@ -1,1 +1,10 @@
-{"kind":"data_schema","type_key":"era.tavern.character.single_floor.result","representation":"json","schema":{"type":"object"}}
+{
+  "kind": "data_schema",
+  "type_key": "era.tavern.character.single_floor.result",
+  "representation": "json",
+  "schema": {
+    "type": "object"
+  },
+  "display_name": "角色卡单层显示设置结果",
+  "description": "返回本次单层显示设置的宿主处理结果。"
+}

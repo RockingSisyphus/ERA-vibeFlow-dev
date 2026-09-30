@@ -11,26 +11,26 @@
       {
         "type": "era.api.sync.result",
         "cardinality": "all",
-        "display_name": "era.api.sync.result"
+        "display_name": "公共对象同步结果"
       }
     ],
     "provides": [
       {
         "key": "sync_result",
         "type": "era.api.facade.result",
-        "display_name": "sync_result"
+        "display_name": "同步结果"
       }
     ],
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
       "era.api.sync.result": [
-        "输入：era.api.sync.result。"
+        "成功同步或输入失败分支的结果。"
       ]
     },
     "output_semantics": {
       "sync_result": [
-        "输出：sync_result。"
+        "确认恰好一个同步分支产出结果。"
       ]
     }
   },

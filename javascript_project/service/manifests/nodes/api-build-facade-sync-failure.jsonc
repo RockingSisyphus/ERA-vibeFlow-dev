@@ -11,26 +11,26 @@
       {
         "type": "era.api.sync.context",
         "cardinality": "exactly_one",
-        "display_name": "era.api.sync.context"
+        "display_name": "同步请求上下文"
       }
     ],
     "provides": [
       {
         "key": "facade_sync_failed_result",
         "type": "era.api.sync.result",
-        "display_name": "facade_sync_result"
+        "display_name": "公共对象同步结果"
       }
     ],
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
       "era.api.sync.context": [
-        "输入：era.api.sync.context。"
+        "无效同步请求及其失败原因。"
       ]
     },
     "output_semantics": {
       "facade_sync_failed_result": [
-        "输出：facade_sync_result。"
+        "为本次 ERA.sync 返回失败回执，不调用宿主。"
       ]
     }
   },

@@ -11,26 +11,26 @@
       {
         "type": "era.api.commit.result",
         "cardinality": "all",
-        "display_name": "era.api.commit.result"
+        "display_name": "即时提交结果"
       }
     ],
     "provides": [
       {
         "key": "commit_result",
         "type": "era.api.facade.result",
-        "display_name": "commit_result"
+        "display_name": "提交结果"
       }
     ],
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
       "era.api.commit.result": [
-        "输入：era.api.commit.result。"
+        "即时提交各互斥分支产生的结果。"
       ]
     },
     "output_semantics": {
       "commit_result": [
-        "输出：commit_result。"
+        "确认恰好一个分支产出结果后交给公共对象任务。"
       ]
     }
   },

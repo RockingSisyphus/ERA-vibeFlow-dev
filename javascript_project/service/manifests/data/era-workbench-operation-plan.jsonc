@@ -2,7 +2,7 @@
   "kind": "data_schema",
   "type_key": "era.workbench.operation_plan",
   "representation": "json",
-  "description": "现有Commit中工作台准备的内部DTO；字段合同见本批变更清单。",
+  "description": "保存按草稿差异生成的有序操作和实际变更。",
   "schema": {
     "type": "object",
     "properties": {
@@ -67,5 +67,6 @@
       "error"
     ],
     "additionalProperties": false
-  }
+  },
+  "display_name": "工作台操作计划"
 }

@@ -2,12 +2,13 @@
   "kind": "data_schema",
   "type_key": "era.workbench.request_kind",
   "representation": "json",
-  "description": "现有Commit中工作台准备的内部DTO；字段合同见本批变更清单。",
+  "description": "区分普通有序操作请求与内部草稿提交请求。",
   "schema": {
     "type": "string",
     "enum": [
       "operations",
       "draft"
     ]
-  }
+  },
+  "display_name": "工作台请求类型"
 }

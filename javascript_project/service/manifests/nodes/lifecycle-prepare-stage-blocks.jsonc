@@ -11,26 +11,26 @@
       {
         "type": "era.agent.generation.raw",
         "cardinality": "exactly_one",
-        "display_name": "era.agent.generation.raw"
+        "display_name": "未应用的生成输出"
       }
     ],
     "provides": [
       {
         "key": "block_step_state",
         "type": "era.sync.block.step.state",
-        "display_name": "block_step_state"
+        "display_name": "待执行块状态"
       }
     ],
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
       "era.agent.generation.raw": [
-        "era.agent.generation.raw"
+        "尚未应用的模型阶段输出。"
       ]
     },
     "output_semantics": {
       "block_step_state": [
-        "block_step_state"
+        "将阶段输出按原顺序装入共用块执行状态。"
       ]
     }
   },

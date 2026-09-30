@@ -1,9 +1,9 @@
 {
   "kind": "node",
   "type_key": "era.api.adapt_facade_sync",
-  "display_name": "适配 ERA.sync receipt",
+  "display_name": "构造 ERA.sync 回执",
   "category": "公共 Facade",
-  "description": "共享同步成功后结算本次 Promise。",
+  "description": "把共享同步任务的结果转换为本次 ERA.sync 调用的回执。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
@@ -11,34 +11,34 @@
       {
         "type": "era.task.result",
         "cardinality": "exactly_one",
-        "display_name": "era.task.result"
+        "display_name": "任务结果"
       },
       {
         "type": "era.api.sync.context",
         "cardinality": "exactly_one",
-        "display_name": "era.api.sync.context"
+        "display_name": "同步请求上下文"
       }
     ],
     "provides": [
       {
         "key": "facade_sync_committed_result",
         "type": "era.api.sync.result",
-        "display_name": "facade_sync_result"
+        "display_name": "公共对象同步结果"
       }
     ],
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
       "era.task.result": [
-        "输入：era.task.result。"
+        "共享同步流程产生的任务结果。"
       ],
       "era.api.sync.context": [
-        "输入：era.api.sync.context。"
+        "原同步调用的模式与回执上下文。"
       ]
     },
     "output_semantics": {
       "facade_sync_committed_result": [
-        "输出：facade_sync_result。"
+        "把任务结果转换为本次 ERA.sync 的调用回执。"
       ]
     }
   },

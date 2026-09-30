@@ -1,10 +1,11 @@
 {
   "kind": "data_schema",
   "type_key": "era.agent.generation.raw",
-  "display_name": "阶段尚未应用的生成输出",
+  "display_name": "尚未应用的生成输出",
   "representation": "json",
   "schema": {
     "type": "object",
     "additionalProperties": true
-  }
+  },
+  "description": "保留模型原文，待共用块执行流程按位置应用。"
 }

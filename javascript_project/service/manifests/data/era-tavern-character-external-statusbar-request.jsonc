@@ -1,1 +1,10 @@
-{"kind":"data_schema","type_key":"era.tavern.character.external_statusbar.request","representation":"json","schema":{"type":"object"}}
+{
+  "kind": "data_schema",
+  "type_key": "era.tavern.character.external_statusbar.request",
+  "representation": "json",
+  "schema": {
+    "type": "object"
+  },
+  "display_name": "角色卡外置状态栏请求",
+  "description": "向酒馆宿主请求读取或设置角色卡外置状态栏。"
+}

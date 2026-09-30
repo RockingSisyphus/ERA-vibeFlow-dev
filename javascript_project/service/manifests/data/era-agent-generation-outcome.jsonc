@@ -6,5 +6,6 @@
   "schema": {
     "type": "object",
     "additionalProperties": true
-  }
+  },
+  "description": "记录一次生成阶段的执行结果与后续阶段所需事实。"
 }

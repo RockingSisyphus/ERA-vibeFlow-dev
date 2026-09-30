@@ -11,34 +11,34 @@
       {
         "type": "era.api.commit.inspected",
         "cardinality": "exactly_one",
-        "display_name": "era.api.commit.inspected"
+        "display_name": "已读取的提交请求"
       }
     ],
     "provides": [
       {
         "key": "commit_inspected",
         "type": "era.api.commit.inspected",
-        "display_name": "era.api.commit.inspected"
+        "display_name": "已读取的提交请求"
       },
       {
         "key": "workbench_request_kind",
         "type": "era.workbench.request_kind",
-        "display_name": "era.workbench.request_kind"
+        "display_name": "工作台请求类型"
       }
     ],
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
       "era.api.commit.inspected": [
-        "era.api.commit.inspected"
+        "已读取的普通提交或内部工作台请求。"
       ]
     },
     "output_semantics": {
       "commit_inspected": [
-        "era.api.commit.inspected"
+        "保留原请求与窗口事实供后续分支使用。"
       ],
       "workbench_request_kind": [
-        "era.workbench.request_kind"
+        "区分普通有序操作与工作台草稿。"
       ]
     }
   },

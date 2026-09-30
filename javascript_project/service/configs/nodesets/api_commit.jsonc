@@ -1,24 +1,24 @@
 {
   "type_key": "era.api.commit",
-  "display_name": "ERA 即时 Scope Commit",
-  "description": "按接收顺序应用到有效工作状态，应用完成返回；独立API批次防抖保存，消息内API归入当前处理。",
+  "display_name": "ERA 即时提交事务",
+  "description": "按请求顺序把操作应用到当前工作状态，再返回内存应用回执。独立 API 稍后按保存窗口落盘；消息处理中的 API 归入当前批次。",
   "requires": [
     {
       "type": "era.api.request",
       "cardinality": "exactly_one",
-      "display_name": "era.api.request"
+      "display_name": "公共对象请求"
     },
     {
       "type": "era.batch.execution.state",
       "cardinality": "exactly_one",
-      "display_name": "era.batch.execution.state"
+      "display_name": "当前批次状态"
     }
   ],
   "provides": [
     {
       "key": "commit_result",
       "type": "era.api.facade.result",
-      "display_name": "commit_result"
+      "display_name": "提交结果"
     }
   ],
   "pipeline": {
@@ -28,13 +28,13 @@
         "key": "facade_request",
         "type": "era.api.request",
         "required": true,
-        "display_name": "facade_request"
+        "display_name": "公共对象请求"
       },
       {
         "key": "execution_state",
         "type": "era.batch.execution.state",
         "required": true,
-        "display_name": "execution_state"
+        "display_name": "当前批次状态"
       }
     ],
     "max_steps": 24,
@@ -43,7 +43,7 @@
         "id": "start",
         "type_used": "era.service.terminal",
         "display_name": "即时 Commit 开始",
-        "description": "执行即时 Commit 开始。"
+        "description": "接收提交请求和当前批次状态。"
       },
       {
         "id": "read_window_admission",
@@ -67,13 +67,13 @@
         "id": "validate_scope_and_operations",
         "type_used": "era.api.validate_commit",
         "display_name": "校验 Scope 与有序操作",
-        "description": "执行校验 Scope 与有序操作。"
+        "description": "检查调用窗口、作用域和操作顺序，决定提交、跳过或返回失败。"
       },
       {
         "id": "build_single_era_tx",
         "type_used": "era.api.build_single_era_tx",
         "display_name": "生成单次 era_tx",
-        "description": "执行生成单次 era_tx。"
+        "description": "把已校验的操作组成一次待应用事务，保持原有顺序。"
       },
       {
         "id": "read_target_messages",
@@ -84,20 +84,20 @@
       {
         "id": "build_skipped_receipt",
         "type_used": "era.api.build_skipped_receipt",
-        "display_name": "返回 skipped receipt",
-        "description": "执行返回 skipped receipt。"
+        "display_name": "返回跳过回执",
+        "description": "已结算的历史作用域无需重做，直接返回跳过回执。"
       },
       {
         "id": "build_commit_failure",
         "type_used": "era.api.build_commit_failure",
         "display_name": "构造 Commit 失败",
-        "description": "执行构造 Commit 失败。"
+        "description": "输入、窗口或消息目标无效时，返回对应失败回执。"
       },
       {
         "id": "merge_commit_result",
         "type_used": "era.api.merge_commit_result",
         "display_name": "合并即时 Commit 结果",
-        "description": "执行合并即时 Commit 结果。"
+        "description": "汇合提交、跳过和失败分支，要求恰好一个分支给出结果。"
       },
       {
         "id": "prepare_api_blocks",
@@ -156,7 +156,7 @@
         "id": "end",
         "type_used": "era.service.terminal",
         "display_name": "即时 Commit 结束",
-        "description": "执行即时 Commit 结束。"
+        "description": "把本次提交回执交还公共对象任务。"
       }
     ],
     "edges": [

@@ -1,7 +1,7 @@
 {
   "kind": "data_schema",
   "type_key": "era.agent.candidate.state",
-  "display_name": "era.agent.candidate.state",
+  "display_name": "当前候选状态",
   "representation": "json",
   "schema": {
     "type": "object",
@@ -25,5 +25,6 @@
         "additionalProperties": true
       }
     }
-  }
+  },
+  "description": "保存本次候选的生成请求、已准备步骤和所属批次状态。"
 }

@@ -11,26 +11,26 @@
       {
         "type": "era.workbench.draft",
         "cardinality": "exactly_one",
-        "display_name": "era.workbench.draft"
+        "display_name": "工作台编辑草稿"
       }
     ],
     "provides": [
       {
         "key": "rejected_preparation_result",
         "type": "era.workbench.preparation_result",
-        "display_name": "era.workbench.preparation_result"
+        "display_name": "工作台准备结果"
       }
     ],
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
       "era.workbench.draft": [
-        "era.workbench.draft"
+        "基准或草稿校验发现的错误。"
       ]
     },
     "output_semantics": {
       "rejected_preparation_result": [
-        "era.workbench.preparation_result"
+        "保留错误并返回失败准备结果，不产生提交操作。"
       ]
     }
   },

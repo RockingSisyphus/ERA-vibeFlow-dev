@@ -11,42 +11,42 @@
       {
         "type": "era.workbench.preparation_result",
         "cardinality": "exactly_one",
-        "display_name": "era.workbench.preparation_result"
+        "display_name": "工作台准备结果"
       }
     ],
     "provides": [
       {
         "key": "prepared_commit_inspected",
         "type": "era.api.commit.inspected",
-        "display_name": "era.api.commit.inspected"
+        "display_name": "已读取的提交请求"
       },
       {
         "key": "preparation_route",
         "type": "era.workbench.preparation_route",
-        "display_name": "era.workbench.preparation_route"
+        "display_name": "工作台准备分支"
       },
       {
         "key": "preparation_failure",
         "type": "era.api.commit.failure_context",
-        "display_name": "era.api.commit.failure_context"
+        "display_name": "提交失败上下文"
       }
     ],
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
       "era.workbench.preparation_result": [
-        "era.workbench.preparation_result"
+        "工作台草稿校验和操作规划的结果。"
       ]
     },
     "output_semantics": {
       "prepared_commit_inspected": [
-        "era.api.commit.inspected"
+        "准备成功时交给通用提交校验的有序操作。"
       ],
       "preparation_route": [
-        "era.workbench.preparation_route"
+        "选择继续提交或返回准备失败。"
       ],
       "preparation_failure": [
-        "era.api.commit.failure_context"
+        "准备失败时保留具体错误供回执使用。"
       ]
     }
   },

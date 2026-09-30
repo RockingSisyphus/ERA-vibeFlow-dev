@@ -11,34 +11,34 @@
       {
         "type": "era.workbench.baseline",
         "cardinality": "exactly_one",
-        "display_name": "era.workbench.baseline"
+        "display_name": "工作台当前基准"
       }
     ],
     "provides": [
       {
         "key": "draft",
         "type": "era.workbench.draft",
-        "display_name": "era.workbench.draft"
+        "display_name": "工作台编辑草稿"
       },
       {
         "key": "draft_kind",
         "type": "era.workbench.kind",
-        "display_name": "era.workbench.kind"
+        "display_name": "工作台编辑类型"
       }
     ],
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
       "era.workbench.baseline": [
-        "era.workbench.baseline"
+        "从当前 Sidecar 读取的基准与身份。"
       ]
     },
     "output_semantics": {
       "draft": [
-        "era.workbench.draft"
+        "核对窗口、目标值和保护后整理的编辑草稿。"
       ],
       "draft_kind": [
-        "era.workbench.kind"
+        "区分变量、函数、有序操作或失败。"
       ]
     }
   },

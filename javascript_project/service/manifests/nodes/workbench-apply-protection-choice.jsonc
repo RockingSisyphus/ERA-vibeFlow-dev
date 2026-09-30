@@ -11,26 +11,26 @@
       {
         "type": "era.workbench.operation_plan",
         "cardinality": "exactly_one",
-        "display_name": "era.workbench.operation_plan"
+        "display_name": "工作台操作计划"
       }
     ],
     "provides": [
       {
         "key": "protected_preparation_result",
         "type": "era.workbench.preparation_result",
-        "display_name": "era.workbench.preparation_result"
+        "display_name": "工作台准备结果"
       }
     ],
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
       "era.workbench.operation_plan": [
-        "era.workbench.operation_plan"
+        "变量、函数或显式操作及其实际变更。"
       ]
     },
     "output_semantics": {
       "protected_preparation_result": [
-        "era.workbench.preparation_result"
+        "按确认的保护选择生成待提交操作或明确失败。"
       ]
     }
   },

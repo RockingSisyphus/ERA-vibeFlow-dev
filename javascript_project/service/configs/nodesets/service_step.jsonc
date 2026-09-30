@@ -65,13 +65,13 @@
         "id": "start",
         "type_used": "era.service.terminal",
         "display_name": "步骤启动",
-        "description": "启动一次有界动态步骤迭代。"
+        "description": "接收一个已经完成上下文准备的简单任务。"
       },
       {
         "id": "route_simple_task",
         "type_used": "era.tasks.dispatch",
         "display_name": "选择已准备的简单任务",
-        "description": "仅接受统一准备后明确分类的 sync、update-mk、agent-settings 或 ignore，并原样转交已准备步骤与批次状态。"
+        "description": "只接收已准备好的普通同步、消息密钥、Agent 设置或忽略步骤，并将步骤与批次状态交给对应分支。"
       },
       {
         "id": "task_sync",
@@ -83,7 +83,7 @@
         "id": "task_update_mk",
         "type_used": "era.task.update_mk",
         "display_name": "更新消息密钥任务",
-        "description": "确保当前消息拥有稳定 MK，并按逻辑提交边界更新消息文本与 SelectedMks。"
+        "description": "接收派发准备阶段已确认的消息密钥和占位符写入结果，只构造任务回执，不重复写消息。"
       },
       {
         "id": "task_agent_settings",
@@ -101,7 +101,7 @@
         "id": "end",
         "type_used": "era.service.terminal",
         "display_name": "步骤结束",
-        "description": "更新执行状态后结束本次步骤迭代。"
+        "description": "交还唯一任务结果，由外层统一合并并推进批次索引。"
       }
     ],
     "edges": [

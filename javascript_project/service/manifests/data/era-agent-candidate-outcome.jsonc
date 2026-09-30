@@ -6,5 +6,6 @@
   "schema": {
     "type": "object",
     "additionalProperties": true
-  }
+  },
+  "description": "候选完成后交给生成会话的结果；内部重试请求不向外传播。"
 }

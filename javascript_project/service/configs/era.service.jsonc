@@ -9,7 +9,7 @@
       "id": "era.tavern.service_host",
       "enabled": true,
       "display_name": "ERA 酒馆服务宿主",
-      "description": "复用现有Host生命周期及端口，支持同一工作状态的上下文绑定API、函数等待期间的块调度、内存应用回执、独立API保存定时器和保存错误通知；get/宏/旧楼状态栏读取对应工作状态。保留原生工具、目标版本核对及保存回读。Host只搬运/保存运行资源，不复制领域引擎；pagehide/stop清理定时器与pending，强制关闭后按实际聊天重算。工作流及ABI批准范围见reports/era-memory-lifecycle-review-20260913/四类变更清单.md。",
+      "description": "酒馆宿主接收事件并按顺序交给 Service，提供受限的读写能力、回执和保存定时器。变量与生成规则仍由 Service 决定；宿主负责核对写入目标和保存结果。页面离开或服务停止时清理定时器与未完成请求，重新启动后按实际聊天恢复。",
       "config": {
         "ports": {
           "inbound": "era.service.in",
@@ -60,7 +60,7 @@
         "id": "classify_installation_scope",
         "type_used": "era.installation.scope.classify",
         "display_name": "分类安装作用域",
-        "description": "纯 workflow 规则根据启用祖先文件夹和当前脚本 ID 分类 character、global、preset、ambiguous 或 unknown。"
+        "description": "根据脚本所在的启用目录和当前脚本 ID，判断它属于角色卡、全局、预设，或无法明确归类。"
       },
       {
         "id": "decide_startup_policy",

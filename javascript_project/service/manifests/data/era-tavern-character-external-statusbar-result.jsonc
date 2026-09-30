@@ -1,1 +1,10 @@
-{"kind":"data_schema","type_key":"era.tavern.character.external_statusbar.result","representation":"json","schema":{"type":"object"}}
+{
+  "kind": "data_schema",
+  "type_key": "era.tavern.character.external_statusbar.result",
+  "representation": "json",
+  "schema": {
+    "type": "object"
+  },
+  "display_name": "角色卡外置状态栏结果",
+  "description": "返回酒馆宿主处理外置状态栏请求的结果。"
+}

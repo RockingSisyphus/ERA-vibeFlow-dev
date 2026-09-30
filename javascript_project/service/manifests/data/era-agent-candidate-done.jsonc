@@ -1,9 +1,10 @@
 {
   "kind": "data_schema",
   "type_key": "era.agent.candidate.done",
-  "display_name": "era.agent.candidate.done",
+  "display_name": "候选结束标记",
   "representation": "json",
   "schema": {
     "type": "boolean"
-  }
+  },
+  "description": "为真时结束候选重试循环；为假时使用更新后的请求再试一次。"
 }

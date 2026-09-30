@@ -2,6 +2,13 @@
   "kind": "data_schema",
   "type_key": "era.service.cycle.route",
   "representation": "json",
-  "display_name": "Service 阶段路由",
-  "schema": {"type": "string", "enum": ["collect", "execute"]}
+  "display_name": "服务阶段分支",
+  "schema": {
+    "type": "string",
+    "enum": [
+      "collect",
+      "execute"
+    ]
+  },
+  "description": "区分等待并收集事件与执行已规划批次。"
 }

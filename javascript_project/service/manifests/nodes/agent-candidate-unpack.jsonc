@@ -1,9 +1,9 @@
 {
   "kind": "node",
   "type_key": "era.agent.candidate_unpack",
-  "display_name": "候选循环 unpack",
+  "display_name": "取出候选执行输入",
   "category": "Agent候选",
-  "description": "候选纠错在当前工作流内继续，成功才进入阶段交接。",
+  "description": "从当前候选状态取出生成请求、已准备步骤和批次状态。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
@@ -11,42 +11,42 @@
       {
         "type": "era.agent.candidate.state",
         "cardinality": "exactly_one",
-        "display_name": "era.agent.candidate.state"
+        "display_name": "当前候选状态"
       }
     ],
     "provides": [
       {
         "key": "generation_request",
         "type": "era.agent.generation.request",
-        "display_name": "generation_request"
+        "display_name": "生成请求"
       },
       {
         "key": "routed_step",
         "type": "era.step.request.routed",
-        "display_name": "routed_step"
+        "display_name": "已准备的任务步骤"
       },
       {
         "key": "execution_state",
         "type": "era.batch.execution.state",
-        "display_name": "execution_state"
+        "display_name": "当前批次状态"
       }
     ],
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
       "era.agent.candidate.state": [
-        "era.agent.candidate.state"
+        "包含生成请求、已准备步骤和批次状态的候选状态。"
       ]
     },
     "output_semantics": {
       "generation_request": [
-        "era.agent.generation.request"
+        "取出本次候选的模型请求。"
       ],
       "routed_step": [
-        "era.step.request.routed"
+        "取出本次候选对应的已准备步骤。"
       ],
       "execution_state": [
-        "era.batch.execution.state"
+        "取出本次候选所属的批次状态。"
       ]
     }
   },
