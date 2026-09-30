@@ -3,7 +3,7 @@
   "type_key": "era.macro.build_snapshot",
   "display_name": "构建宏快照",
   "category": "宏处理",
-  "description": "反转义已存状态并生成含元数据及移除美元前缀字段的两种不可变视图。",
+  "description": "接收调用方选定的含元数据与不含元数据视图；若传入已存状态，则先反转义再移除美元前缀字段。状态缺失时保留缺失标记，供后续保留宏原文。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

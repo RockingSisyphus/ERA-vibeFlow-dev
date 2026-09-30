@@ -47,7 +47,7 @@
         "id": "scan_occurrences",
         "type_used": "era.macro.scan_occurrences",
         "display_name": "扫描普通宏或延迟标记内的宏",
-        "description": "原位置扫描普通宏；延迟模式记录编码标记原始跨度及解码文本的内部宏匹配，出站提示中的普通裸宏保持原样。复用同一正则与路径语法，不新增工作流。"
+        "description": "按模式扫描普通宏或延迟标记，记录原文位置及延迟标记的解码结果。提示模式只处理延迟标记，普通裸宏保持原样；内部宏由后续解析节点处理。"
       },
       {
         "id": "resolve_occurrences",

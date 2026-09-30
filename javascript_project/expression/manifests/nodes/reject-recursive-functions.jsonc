@@ -3,7 +3,7 @@
   "type_key": "era.expression.reject_recursive_functions",
   "display_name": "拒绝递归函数环",
   "category": "表达式工作流",
-  "description": "以 DFS 检测直接与间接函数递归。",
+  "description": "通过深度优先遍历（DFS）检查函数是否直接或间接调用自身，并记录循环调用链。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

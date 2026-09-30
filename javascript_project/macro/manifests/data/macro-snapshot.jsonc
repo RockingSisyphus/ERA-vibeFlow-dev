@@ -3,7 +3,7 @@
   "type_key": "era.macro.snapshot",
   "representation": "json",
   "display_name": "宏快照",
-  "description": "包含已反转义的含元数据与不含元数据视图，或显式缺失标记的带标签不可变快照。",
+  "description": "替换所用的含元数据与不含元数据视图及处理模式，或状态缺失标记。已存状态经反转义生成视图；调用方显式提供的视图直接沿用。",
   "schema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "oneOf": [

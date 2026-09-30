@@ -196,7 +196,7 @@
         },
         "role": {
           "display_name": "接收已选视图或构建原宏快照",
-          "description": "原present/missing保持原反转义和缺失行为；新增调用方视图直接携带显式statWithMeta/statWithoutMeta，不二次反转义，不丢失自定义无元字段视图。"
+          "description": "已存状态先反转义并生成两种视图，缺失状态保留缺失标记；调用方选定的含元数据和不含元数据视图直接沿用。"
         },
         "contract_source": "node_type",
         "flow_kind": "process",
@@ -569,7 +569,7 @@
             },
             "role": {
               "display_name": "扫描普通宏或延迟标记内的宏",
-              "description": "原位置扫描普通宏；延迟模式记录编码标记原始跨度及解码文本的内部宏匹配，出站提示中的普通裸宏保持原样。复用同一正则与路径语法，不新增工作流。"
+              "description": "按模式扫描普通宏或延迟标记，记录原文位置及延迟标记的解码结果。提示模式只处理延迟标记，普通裸宏保持原样；内部宏由后续解析节点处理。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -888,7 +888,7 @@
     },
     "era.macro.build_snapshot": {
       "display_name": "构建宏快照",
-      "description": "反转义已存状态并生成含元数据及移除美元前缀字段的两种不可变视图。",
+      "description": "接收调用方选定的含元数据与不含元数据视图；若传入已存状态，则先反转义再移除美元前缀字段。状态缺失时保留缺失标记，供后续保留宏原文。",
       "category": "宏处理",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -1108,7 +1108,7 @@
     },
     "era.macro.quick_check": {
       "display_name": "检测 ERA 宏",
-      "description": "检测输入是否包含 ERA 宏并无损转发公开输入。",
+      "description": "按调用模式准备文本并检测可替换标记：原始模式检测普通 ERA 宏，延迟和提示模式检测延迟标记；提示先清除严格配对的技术块，无快照提示只清除技术块。状态输入原样传递。",
       "category": "宏处理",
       "version": "1.0.0",
       "flow_kind": "decision",
@@ -1234,7 +1234,7 @@
     },
     "era.macro.scan_occurrences": {
       "display_name": "扫描宏匹配项",
-      "description": "使用每次调用新建的正则按顺序扫描全部宏并记录 UTF-16 位置。",
+      "description": "按模式扫描普通宏或延迟标记，记录原文中的 UTF-16 起止位置；延迟标记同时记录解码结果，供后续解析内部宏。",
       "category": "宏处理",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -1330,7 +1330,7 @@
         "type_key": "era.macro.contains",
         "representation": "json",
         "display_name": "是否包含 ERA 宏",
-        "description": "传入片段包含 ERA 或 ERA-withmeta 宏候选时为 true。",
+        "description": "当前模式下存在可替换标记时为 true：原始模式检测普通宏，延迟和提示模式检测延迟标记；无快照提示恒为 false。",
         "schema": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
           "type": "boolean"
@@ -1341,7 +1341,7 @@
         "type_key": "era.macro.occurrence_plan",
         "representation": "json",
         "display_name": "宏匹配计划",
-        "description": "包含原始字符串、不可变快照，以及由新建全局正则按序发现的 ERA 宏匹配项。",
+        "description": "替换计划包含本次待处理文本、所选快照，以及按原文顺序记录的普通宏或延迟标记位置；延迟标记附带解码结果。",
         "schema": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
           "type": "object",
@@ -1587,7 +1587,7 @@
         "type_key": "era.macro.snapshot",
         "representation": "json",
         "display_name": "宏快照",
-        "description": "包含已反转义的含元数据与不含元数据视图，或显式缺失标记的带标签不可变快照。",
+        "description": "替换所用的含元数据与不含元数据视图及处理模式，或状态缺失标记。已存状态经反转义生成视图；调用方显式提供的视图直接沿用。",
         "schema": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
           "oneOf": [
@@ -1639,7 +1639,7 @@
         "type_key": "era.macro.stored_stat",
         "representation": "json",
         "display_name": "已存 ERA 状态",
-        "description": "区分 JSON 状态存在与状态不可用的带标签公开输入。 本批计划扩展view（调用方已选两种视图，raw/lazy/prompt）及projection-only（无快照提示只去技术块）；原present/missing形状保持不变。",
+        "description": "宏处理的公开状态输入：present 表示已存 JSON 状态，missing 表示状态缺失；view 携带调用方选定的两种视图和原始、延迟或提示处理模式；projection-only 表示无快照提示，仅清除技术块。",
         "schema": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
           "oneOf": [
@@ -1713,7 +1713,7 @@
         "type_key": "era.macro.stored_stat.checked",
         "representation": "json",
         "display_name": "已检查的 ERA 状态",
-        "description": "经过快速检测边界后无损转发的带标签已存状态输入。 本批计划扩展view（调用方已选两种视图，raw/lazy/prompt）及projection-only（无快照提示只去技术块）；原present/missing形状保持不变。",
+        "description": "快速检测节点原样传递的状态输入，保留已存状态、缺失标记、调用方视图或无快照提示模式，供后续选择替换方式。",
         "schema": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
           "oneOf": [

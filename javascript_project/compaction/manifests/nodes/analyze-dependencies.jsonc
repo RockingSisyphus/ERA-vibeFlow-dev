@@ -2,7 +2,7 @@
   "kind": "node",
   "type_key": "era.command_compaction.analyze_dependencies",
   "display_name": "分析依赖与局部屏障",
-  "description": "实际计算现有 candidateFor 使用的变量/函数依赖、随机闭包和可重写区域；不再仅传递 trace。",
+  "description": "分析变量与函数依赖，追踪随机调用及其间接影响，划定可安全重写的区域，供候选生成节点使用。",
   "category": "ERA 命令压缩",
   "version": "1.1.0",
   "flow_kind": "process",

@@ -3,7 +3,7 @@
   "type_key": "era.macro.quick_check",
   "display_name": "检测 ERA 宏",
   "category": "宏处理",
-  "description": "检测输入是否包含 ERA 宏并无损转发公开输入。",
+  "description": "按调用模式准备文本并检测可替换标记：原始模式检测普通 ERA 宏，延迟和提示模式检测延迟标记；提示先清除严格配对的技术块，无快照提示只清除技术块。状态输入原样传递。",
   "version": "1.0.0",
   "flow_kind": "decision",
   "contract": {

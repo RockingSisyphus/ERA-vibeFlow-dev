@@ -3,7 +3,7 @@
   "type_key": "era.command_compaction.segment.done",
   "representation": "json",
   "display_name": "全部分段处理完成",
-  "description": "cursor 已处理完所有分段的循环终止值。",
+  "description": "表示当前游标是否已处理完所有分段，供循环判断是否结束。",
   "schema": {
     "type": "boolean"
   }

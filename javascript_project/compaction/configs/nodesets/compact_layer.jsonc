@@ -3,7 +3,7 @@
   "status": "implemented",
   "flow_kind": "process",
   "display_name": "ERA 命令层安全压缩",
-  "description": "按真实顺序分段压缩，统一作用域所有权；最终输出已确认结果，公共同步入口将调用本工作流。",
+  "description": "按原文顺序逐段压缩，并按作用域组织事务；重放确认结果等价后输出压缩文本，供公共同步入口使用。",
   "requires": [
     {
       "type": "era.command_compaction.request",
@@ -52,7 +52,7 @@
         "id": "segment_loop",
         "type_used": "vibeflow.loop.while",
         "display_name": "按原文顺序处理分段",
-        "description": "显式运行分段体，前段结果供后段使用，直至 cursor 到达分段末尾。",
+        "description": "按原文顺序处理各段，把前段结果传给后段，直到游标到达分段末尾。",
         "requires": [
           {
             "type": "era.command_compaction.segment.state",

@@ -190,7 +190,7 @@
         "path": "configs/nodesets/compact_layer.jsonc"
       },
       "display_name": "ERA 命令层安全压缩",
-      "description": "按真实顺序分段压缩，统一作用域所有权；最终输出已确认结果，公共同步入口将调用本工作流。",
+      "description": "按原文顺序逐段压缩，并按作用域组织事务；重放确认结果等价后输出压缩文本，供公共同步入口使用。",
       "status": "implemented",
       "flow_kind": "process",
       "effect_scope": "none",
@@ -383,7 +383,7 @@
             },
             "role": {
               "display_name": "按原文顺序处理分段",
-              "description": "显式运行分段体，前段结果供后段使用，直至 cursor 到达分段末尾。"
+              "description": "按原文顺序处理各段，把前段结果传给后段，直到游标到达分段末尾。"
             },
             "contract_source": "system_config",
             "flow_kind": "predefined",
@@ -638,7 +638,7 @@
         "path": "configs/nodesets/segment_step.jsonc"
       },
       "display_name": "顺序压缩一个真实文本段",
-      "description": "原 compact_layer 内的实际循环体；保持原文顺序和跨段状态，不是独立工作流。",
+      "description": "处理一个正文段或同作用域事务组：重放原文、分析依赖、生成并验证候选，再把结束状态传给下一段。",
       "status": "implemented",
       "flow_kind": "predefined",
       "effect_scope": "none",
@@ -752,7 +752,7 @@
             },
             "role": {
               "display_name": "准备当前段与起点",
-              "description": "依照 cursor 取正文段或同 scope 事务组；带入前段 statData/statFunc/drawOffset。无段时保留原状态并结束，不制造文本变更。"
+              "description": "按当前游标选取正文段或同作用域事务组，带入前段的变量、函数和随机游标。没有剩余段时保留状态并结束。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -847,7 +847,7 @@
             },
             "role": {
               "display_name": "分析依赖与局部屏障",
-              "description": "实际计算现有 candidateFor 使用的变量/函数依赖、随机闭包和可重写区域；不再仅传递 trace。"
+              "description": "分析变量与函数依赖，追踪随机调用及其间接影响，划定可安全重写的区域，供候选生成节点使用。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -982,7 +982,7 @@
             },
             "role": {
               "display_name": "继承状态并推进分段",
-              "description": "继承原段的结束状态与随机游标，累计文本/诊断/理由/计数并推进 cursor；不重新执行压缩算法。"
+              "description": "沿用原段重放后的变量、函数和随机游标，累计输出文本、诊断、保留理由及计数，再推进到下一段。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -1149,7 +1149,7 @@
   "node_types": {
     "era.command_compaction.advance_segment": {
       "display_name": "继承状态并推进分段",
-      "description": "继承原段的结束状态与随机游标，累计文本/诊断/理由/计数并推进 cursor；不重新执行压缩算法。",
+      "description": "沿用原段重放后的变量、函数和随机游标，累计输出文本、诊断、保留理由及计数，再推进到下一段。",
       "category": "ERA 命令压缩",
       "version": "1.1.0",
       "flow_kind": "process",
@@ -1216,7 +1216,7 @@
     },
     "era.command_compaction.analyze_dependencies": {
       "display_name": "分析依赖与局部屏障",
-      "description": "实际计算现有 candidateFor 使用的变量/函数依赖、随机闭包和可重写区域；不再仅传递 trace。",
+      "description": "分析变量与函数依赖，追踪随机调用及其间接影响，划定可安全重写的区域，供候选生成节点使用。",
       "category": "ERA 命令压缩",
       "version": "1.1.0",
       "flow_kind": "process",
@@ -1522,7 +1522,7 @@
     },
     "era.command_compaction.select_segment": {
       "display_name": "准备当前段与起点",
-      "description": "依照 cursor 取正文段或同 scope 事务组；带入前段 statData/statFunc/drawOffset。无段时保留原状态并结束，不制造文本变更。",
+      "description": "按当前游标选取正文段或同作用域事务组，带入前段的变量、函数和随机游标。没有剩余段时保留状态并结束。",
       "category": "ERA 命令压缩",
       "version": "1.1.0",
       "flow_kind": "process",
@@ -1792,7 +1792,7 @@
         "type_key": "era.command_compaction.segment.done",
         "representation": "json",
         "display_name": "全部分段处理完成",
-        "description": "cursor 已处理完所有分段的循环终止值。",
+        "description": "表示当前游标是否已处理完所有分段，供循环判断是否结束。",
         "schema": {
           "type": "boolean",
           "$schema": "https://json-schema.org/draft/2020-12/schema"
@@ -1854,7 +1854,7 @@
         "kind": "data_schema",
         "type_key": "era.command_compaction.segment.state.before",
         "representation": "json",
-        "display_name": "按顺序继承的分段压缩状态",
+        "display_name": "本段起始压缩状态",
         "description": "本段执行前状态，仅供段结束时推进游标；与循环下一状态分离。",
         "schema": {
           "type": "object",
@@ -1944,7 +1944,7 @@
         "kind": "base_lib",
         "id": "era.command_compaction.engine",
         "display_name": "ERA 命令层安全压缩引擎",
-        "description": "六类指令解析、语义重放、依赖事实与候选重写算法；完整流程由原 Config 编排，算法不访问宿主。",
+        "description": "提供六类指令解析、语义重放、依赖分析和候选重写算法，由命令压缩 Config 编排；算法不访问宿主。",
         "category": "ERA 命令压缩",
         "version": "1.0.0",
         "implementations": [

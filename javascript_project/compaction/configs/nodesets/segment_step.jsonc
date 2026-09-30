@@ -2,7 +2,7 @@
   "type_key": "era.command_compaction.segment_step",
   "status": "implemented",
   "display_name": "顺序压缩一个真实文本段",
-  "description": "原 compact_layer 内的实际循环体；保持原文顺序和跨段状态，不是独立工作流。",
+  "description": "处理一个正文段或同作用域事务组：重放原文、分析依赖、生成并验证候选，再把结束状态传给下一段。",
   "requires": [
     {
       "type": "era.command_compaction.segment.state",
@@ -44,7 +44,7 @@
         "id": "select_segment",
         "type_used": "era.command_compaction.select_segment",
         "display_name": "准备当前段与起点",
-        "description": "依照 cursor 取正文段或同 scope 事务组；带入前段 statData/statFunc/drawOffset。无段时保留原状态并结束，不制造文本变更。"
+        "description": "按当前游标选取正文段或同作用域事务组，带入前段的变量、函数和随机游标。没有剩余段时保留状态并结束。"
       },
       {
         "id": "execute",
@@ -56,7 +56,7 @@
         "id": "analyze_dependencies",
         "type_used": "era.command_compaction.analyze_dependencies",
         "display_name": "分析依赖与局部屏障",
-        "description": "实际计算现有 candidateFor 使用的变量/函数依赖、随机闭包和可重写区域；不再仅传递 trace。"
+        "description": "分析变量与函数依赖，追踪随机调用及其间接影响，划定可安全重写的区域，供候选生成节点使用。"
       },
       {
         "id": "rewrite",
@@ -74,7 +74,7 @@
         "id": "advance_segment",
         "type_used": "era.command_compaction.advance_segment",
         "display_name": "继承状态并推进分段",
-        "description": "继承原段的结束状态与随机游标，累计文本/诊断/理由/计数并推进 cursor；不重新执行压缩算法。"
+        "description": "沿用原段重放后的变量、函数和随机游标，累计输出文本、诊断、保留理由及计数，再推进到下一段。"
       },
       {
         "id": "end",

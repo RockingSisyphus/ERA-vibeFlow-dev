@@ -68,19 +68,19 @@
         "id": "validate_function_purity",
         "type_used": "era.expression.validate_function_purity",
         "display_name": "验证函数纯度与参数",
-        "description": "确认函数体只读取其形参，调用已知函数且参数数正确；拒绝状态路径、@path、自由变量和内建名称覆盖。"
+        "description": "确认函数体只读取其形参，调用已知函数且参数数量正确；拒绝状态路径、@path、自由变量和内建名称覆盖。"
       },
       {
         "id": "build_function_call_graph",
         "type_used": "era.expression.build_function_call_graph",
         "display_name": "建立函数调用图",
-        "description": "把经过纯度确认的自定义函数调用边组装为可审计的有向图，支持前向定义和任意深度嵌套。"
+        "description": "把通过纯度检查的自定义函数之间的调用关系整理为有向图，支持先调用后定义及嵌套调用，供后续检测递归。"
       },
       {
         "id": "reject_recursive_functions",
         "type_used": "era.expression.reject_recursive_functions",
         "display_name": "拒绝递归函数环",
-        "description": "以 DFS/SCC 检测 f→f、f→g→f 等直接和间接递归，保留可定位调用链诊断。"
+        "description": "通过深度优先遍历（DFS）检测函数直接或间接调用自身的循环，并记录导致循环的调用链。"
       },
       {
         "id": "compile_callable_functions",

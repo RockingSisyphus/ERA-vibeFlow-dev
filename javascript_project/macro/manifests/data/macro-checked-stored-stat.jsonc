@@ -3,7 +3,7 @@
   "type_key": "era.macro.stored_stat.checked",
   "representation": "json",
   "display_name": "已检查的 ERA 状态",
-  "description": "经过快速检测边界后无损转发的带标签已存状态输入。 本批计划扩展view（调用方已选两种视图，raw/lazy/prompt）及projection-only（无快照提示只去技术块）；原present/missing形状保持不变。",
+  "description": "快速检测节点原样传递的状态输入，保留已存状态、缺失标记、调用方视图或无快照提示模式，供后续选择替换方式。",
   "schema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "oneOf": [

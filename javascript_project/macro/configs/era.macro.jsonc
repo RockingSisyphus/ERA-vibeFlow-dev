@@ -49,7 +49,7 @@
         "id": "build_snapshot",
         "type_used": "era.macro.build_snapshot",
         "display_name": "接收已选视图或构建原宏快照",
-        "description": "原present/missing保持原反转义和缺失行为；新增调用方视图直接携带显式statWithMeta/statWithoutMeta，不二次反转义，不丢失自定义无元字段视图。"
+        "description": "已存状态先反转义并生成两种视图，缺失状态保留缺失标记；调用方选定的含元数据和不含元数据视图直接沿用。"
       },
       {
         "id": "replace_all",

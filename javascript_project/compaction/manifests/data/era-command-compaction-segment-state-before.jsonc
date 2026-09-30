@@ -2,7 +2,7 @@
   "kind": "data_schema",
   "type_key": "era.command_compaction.segment.state.before",
   "representation": "json",
-  "display_name": "按顺序继承的分段压缩状态",
+  "display_name": "本段起始压缩状态",
   "description": "本段执行前状态，仅供段结束时推进游标；与循环下一状态分离。",
   "schema": {
     "type": "object",

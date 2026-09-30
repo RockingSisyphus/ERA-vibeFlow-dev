@@ -3,7 +3,7 @@
   "type_key": "era.macro.stored_stat",
   "representation": "json",
   "display_name": "已存 ERA 状态",
-  "description": "区分 JSON 状态存在与状态不可用的带标签公开输入。 本批计划扩展view（调用方已选两种视图，raw/lazy/prompt）及projection-only（无快照提示只去技术块）；原present/missing形状保持不变。",
+  "description": "宏处理的公开状态输入：present 表示已存 JSON 状态，missing 表示状态缺失；view 携带调用方选定的两种视图和原始、延迟或提示处理模式；projection-only 表示无快照提示，仅清除技术块。",
   "schema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "oneOf": [

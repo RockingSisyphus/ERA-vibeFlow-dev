@@ -3,7 +3,7 @@
   "type_key": "era.macro.occurrence_plan",
   "representation": "json",
   "display_name": "宏匹配计划",
-  "description": "包含原始字符串、不可变快照，以及由新建全局正则按序发现的 ERA 宏匹配项。",
+  "description": "替换计划包含本次待处理文本、所选快照，以及按原文顺序记录的普通宏或延迟标记位置；延迟标记附带解码结果。",
   "schema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
