@@ -3,7 +3,7 @@
   "type_key": "era.tavern.variables_commit",
   "display_name": "提交消息与 Sidecar 并确认读回",
   "category": "同步宿主边界",
-  "description": "保持原唯一提交顺序和 Capability 调用；sync_commit_policy 负责候选、来源依据和读回判定。记录消息写入数、Sidecar 状态与来源变化，交给结果模块结算。",
+  "description": "执行共享同步的保存边界：先批量更新并确认目标消息，随后写 Sidecar 状态文件、回读核对版本，再更新聊天绑定的快照。仅内存写入或未确认保存不能当作成功。若普通历史同步的原目标已改变，停止旧分支并交还重算；API 和模型候选保持明确失败。文件失败保留已确认的消息事实并提示修复，写入结果未知则报告致命状态。",
   "version": "1.0.0",
   "flow_kind": "data_store",
   "contract": {

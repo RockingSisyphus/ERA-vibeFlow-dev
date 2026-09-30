@@ -2,7 +2,7 @@
   "kind": "node",
   "type_key": "era.agent.prepare_stage_handoff",
   "display_name": "形成阶段交接与恢复凭据",
-  "description": "纯业务策略为成功阶段构造唯一 completionId、最终结果及恢复意图；不在 FIFO 中等待回调。无交接时保留原阶段结果。页面等待结束后必须经原 Service 派发链核对并恢复。",
+  "description": "对于已经成功达到阶段边界的候选，生成唯一完成标识、阶段结果及下一步恢复意图，供页面依次执行订阅回调后再请求恢复。没有阶段交接的结果原样传递。这里不在当前任务队列里等待回调，否则回调请求同一队列可能互相等待；交接也不表示整个生成已结束。",
   "category": "故事生成会话",
   "version": "1.0.0",
   "flow_kind": "process",

@@ -3,7 +3,7 @@
   "type_key": "era.command_compaction.compact_segments",
   "display_name": "调用 Compaction 同步工作流",
   "category": "命令压缩集成",
-  "description": "原 compactCommandLayer API 委托已生成的同步 runWorkflow；每个封存楼层调用一次，由 Compaction 内部顺序处理各段。保留原返回格式与 Service 后续复放。",
+  "description": "逐个把待封存段送入独立命令压缩工作流，生成保持作用域与操作顺序的较短候选文本。结果仍需用 Service 实际执行规则重放确认；不合适的段保留原文。此处只处理计算结果，不向酒馆提交消息。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

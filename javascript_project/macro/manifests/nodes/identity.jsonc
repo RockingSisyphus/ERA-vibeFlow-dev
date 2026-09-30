@@ -3,7 +3,7 @@
   "type_key": "era.macro.identity",
   "display_name": "保留非宏文本",
   "category": "宏处理",
-  "description": "未发现 ERA 宏时原样输出输入字符串。",
+  "description": "当快速检查没有发现当前模式允许替换的宏时，直接返回已经准备好的文本，跳过快照和逐项替换。这里不是重新返回最初输入：提示文本可能已在准备阶段去掉技术块，这些处理会保留。不会猜测宏值或读取聊天变量。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

@@ -3,7 +3,7 @@
   "type_key": "era.service.route_iteration",
   "display_name": "路由等待或执行",
   "category": "服务迭代",
-  "description": "按事件集归约结果选择继续等待或执行批次。",
+  "description": "读取事件整理后的决定，把流程分到“继续等待”或“准备执行批次”。这里不重新判断窗口时间、不改变事件集合，只把已确定的分支传给工作流，保证实际执行采用同一次事件整理的结论。",
   "version": "1.0.0",
   "flow_kind": "decision",
   "contract": {

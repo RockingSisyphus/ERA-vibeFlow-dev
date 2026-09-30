@@ -3,7 +3,7 @@
   "type_key": "era.initialize.carry_execution_state",
   "display_name": "携带初始化批次状态",
   "category": "初始化事务",
-  "description": "无损转发初始化任务所属的批次执行状态。",
+  "description": "保留触发初始化的完整批次状态，供资源准备后可能发生的启动同步使用。资源初始化和历史同步是同一批次的连续步骤，因此不能丢失原始事件来源和消息处理进度；本节点只传递数据，不做初始化或保存。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

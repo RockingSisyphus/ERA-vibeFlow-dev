@@ -1,7 +1,7 @@
 {
   "type_key": "era.expression.execute_era_commands",
   "display_name": "含表达式的同步规划",
-  "description": "Service 规划库组织真实消息重放；完整求值经发布包执行 Expression 同步 AOT。随机 sourceKey 与 drawOffset 的算法所有者位于实际求值链。",
+  "description": "把 Service 已规划的历史、变量起点和处理范围交给共用计算链，其中表达式由独立 Expression 同步工作流求值，形成可以继续执行的同步工作项。随机来源和执行偏移在真实计算链中传递；这个节点集没有酒馆读写，不以计算成功代替后续消息或状态保存。",
   "requires": [
     {
       "type": "era.expression.command.request",
@@ -32,19 +32,19 @@
         "id": "start",
         "type_used": "era.service.terminal",
         "display_name": "表达式命令开始",
-        "description": "进入不含宿主 I/O 的跨 root 计算边界。"
+        "description": "这是“含表达式的同步规划”的入口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
       },
       {
         "id": "execute",
         "type_used": "era.expression.execute_era_commands.bridge",
         "display_name": "计算历史同步计划",
-        "description": "消费收窄的 SyncPlanningInput，调用登记 sync_planning 的 planSyncWork；其真实重放链进入 Expression 同步 AOT，返回规划工作项，不读写宿主。"
+        "description": "接收 Service 已限定好消息范围、变量起点和执行原因的计算输入，调用历史同步规划器；其中的表达式计算由独立 Expression 工作流完成，形成后续可执行的工作项。随机来源与偏移沿实际求值链传递。这个边界只做计算，不直接读取或保存酒馆内容。"
       },
       {
         "id": "end",
         "type_used": "era.service.terminal",
         "display_name": "表达式命令结束",
-        "description": "返回纯同步工作项。"
+        "description": "这是“含表达式的同步规划”的出口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
       }
     ],
     "edges": [

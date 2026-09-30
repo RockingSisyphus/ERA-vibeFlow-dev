@@ -3,7 +3,7 @@
   "type_key": "era.expression.initialize_random_sequence_state",
   "display_name": "初始化顺序状态与随机游标",
   "category": "表达式工作流",
-  "description": "冻结层起始状态并创建操作游标、随机上下文和已消耗槽位计数。",
+  "description": "建立有序求值的起始状态：保留本层开始时的变量快照，装入已编译函数库和解析操作，建立操作索引及从请求偏移开始的随机进度，预留自动随机位置。可选快照函数库单独编译，供快照表达式使用。尚未执行任何操作，冻结起点用于之后重放和压缩证明。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

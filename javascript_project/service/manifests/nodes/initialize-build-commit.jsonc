@@ -3,7 +3,7 @@
   "type_key": "era.initialize.build_commit",
   "display_name": "构造初始化提交",
   "category": "初始化事务",
-  "description": "把资源变更固定为有序、幂等的 Capability 动作列表。",
+  "description": "把初始化计划整理成宿主可执行的资源提交请求，保持设置、世界书、正则和开场白等动作的既定顺序。这里仅形成请求，没有任何资源已经因此写入；下一节点执行后返回的确认结果才代表实际修改。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

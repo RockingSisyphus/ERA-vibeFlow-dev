@@ -1,7 +1,7 @@
 {
   "type_key": "era.api.prepare_workbench_commit",
   "display_name": "工作台草稿提交准备",
-  "description": "现有era.api.commit内的工作台专用准备分支；读取当前权威基准并将用户编辑意图转成原Commit操作，不拥有消息/Sidecar写事务。",
+  "description": "把变量工作台编辑草稿转成公共 commit 可执行的有序操作：读取当前基准，核对聊天、目标原值和保护条件，规划变量或函数差异，再按用户明确选择处理保护。过期草稿或不允许的操作返回失败。这里仅准备请求，不拥有消息或状态文件写事务，成功后仍走公共提交校验。",
   "requires": [
     {
       "type": "era.api.commit.inspected",
@@ -42,55 +42,55 @@
         "id": "start",
         "type_used": "era.service.terminal",
         "display_name": "开始工作台准备",
-        "description": "复用 Service 既有显式起点，调度已收到窗口事实的基准读取节点。"
+        "description": "这是“工作台草稿提交准备”的入口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
       },
       {
         "id": "read_baseline",
         "type_used": "era.workbench.read_baseline",
         "display_name": "读取当前Sidecar基准",
-        "description": "仅使用已有era.tavern.sidecar.read_current/read_record读取身份、绑定指针及Sidecar V3记录；调用已有纯检查核对owner/就绪状态，不迁移、不创建绑定、不写文件。读取失败形成失败事实。"
+        "description": "为工作台草稿读取当前聊天身份、状态文件绑定和变量或函数的基准，优先采用可用的当前工作状态，检查其归属及就绪情况。读取结果是后续比较草稿是否过期的依据；这里不迁移数据、不新建绑定，也不保存用户编辑，读取失败会形成准备失败。"
       },
       {
         "id": "validate_draft_basis",
         "type_used": "era.workbench.validate_draft_basis",
         "display_name": "校验编辑基准并区分变量和函数",
-        "description": "检查内部工作台请求、窗口/Sidecar身份、目标原值与原保护事实；切聊或目标/保护改变明确失败。区分变量草稿、函数库草稿、显式有序操作。结构化上下文保留当前基准与用户选择。"
+        "description": "检查工作台草稿属于当前聊天和状态文件，并核对用户打开编辑器时的目标原值是否仍然相同。新增目标须仍不存在，单项编辑只核对该目标，整库编辑核对全库；无关兄弟项更新不自动使单项草稿失效。还检查编辑模式和必需字段，失败则要求重新加载，成功后分到变量、函数或有序操作准备。"
       },
       {
         "id": "plan_variables",
         "type_used": "era.workbench.plan_variables",
         "display_name": "计算变量草稿真实增删改",
-        "description": "实际调用base_lib中的变量差异、Insert/Delete/Expression规划；对象类型替换及$template生成真实有序Delete/Insert，返回路径数组和每项变更kind。无宿主操作。"
+        "description": "把变量工作台中用户想要的最终值与当前基准比较，转换为实际有顺序的插入、删除或表达式操作，并记录每项变化的路径和类别。替换对象类型或模板时生成所需删除再插入动作，不把用户意图简单写成整库覆盖。只生成计划，仍需保护检查及公共提交流程确认。"
       },
       {
         "id": "plan_functions",
         "type_used": "era.workbench.plan_functions",
         "display_name": "计算函数库真实增删改",
-        "description": "实际调用函数库差异规划；保留Insert/Edit/Delete顺序、函数名和原定义。引用校验复用表达式层。无宿主操作。"
+        "description": "把函数库草稿与当前函数定义比较，生成按顺序执行的新增、编辑或删除操作，保留函数名、原定义及变化类别，供保护检查和提交使用。函数引用等约束沿共用表达式处理链校验；这里不写状态文件，也不直接运行作者函数。"
       },
       {
         "id": "normalize_ordered",
         "type_used": "era.workbench.normalize_ordered",
         "display_name": "校验显式有序操作",
-        "description": "保留工作台已有高级有序操作模式，只接受原允许的变量Insert/Edit/Delete，不自动替用户解除保护；不重排用户给出的操作。"
+        "description": "处理工作台的高级有序操作模式，校验允许的变量插入、编辑和删除操作，并保持用户给出的顺序。不会自行重排或解除保护；格式无效时带出准备失败，合格列表随后仍进入统一保护检查和 API 提交，而不是从工作台直接执行。"
       },
       {
         "id": "apply_protection_choice",
         "type_used": "era.workbench.apply_protection_choice",
         "display_name": "按实际变更处理保护并生成提交参数",
-        "description": "从实际changes计算祖先/目标保护，核对预览事实及明确选择；统一普通/批量语义。只为仍存在且允许恢复的保护生成解锁/操作/恢复序列；禁止necessary临时恢复。输出已准备inspected或明确失败，不调用Host。"
+        "description": "根据实际准备的变化重新计算目标及祖先上的 ERA 保护条件，与用户预览时看到的保护逐项比较，防止提交期间保护已变。需要解锁时必须采用用户明确的选择，生成允许的解锁、操作及恢复顺序；不能临时恢复的必要保护不会被伪造恢复。无变化、条件不一致或缺少选择都返回失败，不在此写数据。"
       },
       {
         "id": "reject_draft",
         "type_used": "era.workbench.reject_draft",
         "display_name": "返回基准或输入失败",
-        "description": "保留校验阶段的真实错误，构造failed准备结果；不产生操作，不向消息和Sidecar写入。"
+        "description": "把草稿校验阶段已经发现的错误转成提交准备失败，保留具体原因和原调用上下文。不会生成任何变量操作，也不向消息或状态文件写入；后续沿公共 API 的失败回执分支返回，让用户知道编辑为什么没有被应用。"
       },
       {
         "id": "publish_preparation",
         "type_used": "era.workbench.publish_preparation",
         "display_name": "接回现有Commit准入或失败分支",
-        "description": "拆出ready/failed路由、带有有序operations的原inspected上下文及原era.api.commit.failure_context，使后续继续使用现有Scope/窗口校验或Commit失败构造。"
+        "description": "将工作台准备结果拆为分支标签、带有有序操作的提交上下文及失败上下文。准备成功后仍要经过公共 API 的作用域与窗口校验，准备失败则进入统一失败回执。这个节点只连接草稿准备和原提交事务，不把“已经生成操作”当成提交成功。"
       }
     ],
     "edges": [

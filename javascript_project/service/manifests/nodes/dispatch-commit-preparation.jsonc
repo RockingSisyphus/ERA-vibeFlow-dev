@@ -3,7 +3,7 @@
   "type_key": "era.dispatch.commit_preparation",
   "display_name": "提交 MK 与占位符准备",
   "category": "任务派发",
-  "description": "以 affected 刷新提交当前激活文本；仅 update-mk 任务提交完整 ERAMetaData，状态任务把 SelectedMks 留给同步事务提交；部分或未知提交立即致命失败。",
+  "description": "执行纯消息标识任务所需的提前写入：先更新目标正文并刷新受影响消息，确认成功后再保存 ERA 元数据到聊天状态文件。若无需对应变更就跳过。普通写入失败返回失败；若正文已变但元数据未能完成，或宿主无法确认写入结果，则报致命错误，避免继续使用不确定的标识关系。",
   "version": "1.0.0",
   "flow_kind": "data_store",
   "contract": {

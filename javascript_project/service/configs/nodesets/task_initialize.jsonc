@@ -2,7 +2,7 @@
   "nodeset_imports": [],
   "type_key": "era.task.initialize",
   "display_name": "ERA 初始化任务",
-  "description": "规划并提交幂等设置、世界书、状态栏正则和角色主开场白示例资源；启动操作随后复用共享同步事务。",
+  "description": "读取现有角色和聊天资源，按传统或外置模式规划并应用必要的 ERA 设置、世界书、正则及主开场白，遵守作者资源不覆盖条件。普通资源操作直接返回结果；启动初始化成功或无需变更时，再进入共享历史同步，使变量状态与当前消息一致。整个任务保留原来源，不另建初始化变量引擎。",
   "requires": [
     {
       "type": "era.step.request.routed",
@@ -44,79 +44,79 @@
         "id": "start",
         "type_used": "era.service.terminal",
         "display_name": "初始化启动",
-        "description": "启动一次初始化任务。"
+        "description": "这是“ERA 初始化任务”的入口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
       },
       {
         "id": "read_host_resources",
         "type_used": "era.tavern.initialization_read",
         "display_name": "读取双模式初始化与现有外置配置",
-        "description": "读取现有身份、设置、世界书、正则、主开场白及角色卡外置配置；传递 traditional/external 内部选择，无参数沿用 traditional。仅采集事实，不在 Host 决定覆盖或初始化规则。"
+        "description": "读取当前角色和聊天身份、ERA 设置、世界书、状态栏正则、角色主开场白及外置配置，整理为初始化所需事实。传统模式和外置模式的选择一并传给规划器；未指定时采用传统模式。这里不决定覆盖哪些资源，也不保存角色卡，读取失败会随上下文交给后续结算。"
       },
       {
         "id": "carry_execution_state",
         "type_used": "era.initialize.carry_execution_state",
         "display_name": "携带批次执行状态",
-        "description": "无损携带外层批次执行状态，供条件启动的共享同步事务使用。"
+        "description": "保留触发初始化的完整批次状态，供资源准备后可能发生的启动同步使用。资源初始化和历史同步是同一批次的连续步骤，因此不能丢失原始事件来源和消息处理进度；本节点只传递数据，不做初始化或保存。"
       },
       {
         "id": "plan_resources",
         "type_used": "era.initialize.plan",
         "display_name": "规划双模式资源与完整围栏边界",
-        "description": "复用双模式、单一标记及不覆盖规则。传统默认正则替换片段携带前后行边界，使紧邻正文/技术块的占位符也形成HTML块；不修改原消息或作者DOM，不覆盖已保存作者正则。外置模板仍为普通HTML，不加入围栏。其余变量/函数/世界书/开场白及外置初始化合同不变。见reports/era-statusbar-presentation-change-list.md。"
+        "description": "比较现有设置和角色资源，规划需要补齐的 ERA 世界书、正则、示例变量或函数及开场白。传统与外置模式按各自规则处理，已经保存的作者资源遵守不覆盖条件；传统默认占位符替换保留 HTML 所需行边界。输出有序变更计划和“有变更/无需变更”分支，不直接修改酒馆。"
       },
       {
         "id": "preserve_resources",
         "type_used": "era.initialize.no_change",
         "display_name": "保留现有资源",
-        "description": "无动作或读取失败时保留计划并进入统一提交边界。"
+        "description": "在资源计划没有写入动作时，把同一计划传到统一提交入口，保留“无需变更”或读取失败的真实原因。不会凭没有动作就认定初始化成功，也不会新建替代资源；后续提交结果节点会据此决定返回或继续启动同步。"
       },
       {
         "id": "compute_resource_changes",
         "type_used": "era.initialize.compute",
         "display_name": "确认资源变更",
-        "description": "保留纯规划器生成的声明式设置与资源变更。"
+        "description": "把纯规划器已经生成的资源变更计划送到构造提交请求的环节。此节点目前不再次推导资源差异，只保留有序动作及依据；计算职责已经由资源规划器承担，避免对同一设置重复判断。"
       },
       {
         "id": "build_resource_commit",
         "type_used": "era.initialize.build_commit",
         "display_name": "构造资源提交",
-        "description": "形成有序 Capability 动作列表，不执行宿主写入。"
+        "description": "把初始化计划整理成宿主可执行的资源提交请求，保持设置、世界书、正则和开场白等动作的既定顺序。这里仅形成请求，没有任何资源已经因此写入；下一节点执行后返回的确认结果才代表实际修改。"
       },
       {
         "id": "commit_host_resources",
         "type_used": "era.tavern.initialization_commit",
         "display_name": "提交初始化资源并决议首楼刷新",
-        "description": "在原 update-main-greeting 动作处保持先保存角色卡，再即时读取当前首楼事实，由 Service 规划保留/新建/更新，Host 执行既有重绘和保存；其余资源顺序、提交计数和错误语义不变。"
+        "description": "通过受限宿主接口顺序应用初始化资源计划，并记录哪些动作已确认完成。更新角色主开场白时先保存角色卡，再读取当前首楼事实，按 Service 的规则保留、创建或更新聊天首楼，最后执行相应保存和重绘。不会用早先读取的首楼覆盖用户新操作，失败或部分提交按实际结果返回。"
       },
       {
         "id": "route_completion",
         "type_used": "era.initialize.build_result",
         "display_name": "选择初始化完成方式",
-        "description": "将启动同步与资源直接结算分成不同数据类型，防止直接结果提前结束应继续进入 Sidecar 的启动同步。"
+        "description": "检查资源提交结果是否需要继续历史同步：只有启动初始化且资源已完成或本就无需变更时，构造一个共享同步步骤；其他初始化操作或失败走直接结果分支。两种结果用独立数据通道传递，避免提前返回导致该做的聊天变量同步被跳过。"
       },
       {
         "id": "adapt_startup_step",
         "type_used": "era.initialize.adapt_startup_sync_step",
         "display_name": "适配启动同步步骤",
-        "description": "把初始化专用步骤转为共享同步 routed step。"
+        "description": "把初始化产生的启动同步请求和保留的批次状态交给通用同步流程。请求继续携带原事件来源和消息上下文，不另建初始化专用变量引擎；它只适配输入，后续共享同步负责读取状态、应用历史及保存。"
       },
       {
         "id": "run_shared_sync",
         "type_used": "era.task.sync",
         "display_name": "运行共享同步",
-        "description": "沿原启动分支调用唯一共享同步事务。"
+        "description": "把当前聊天的真实消息历史与 ERA 变量、函数和日志保持一致：读取并校验状态文件绑定，优先沿用有效未保存的内存状态，规划回退及处理范围，逐块应用指令和函数，必要时压缩封存文本，最后批量保存消息及状态文件。保存后再刷新显示和返回结果；切换聊天或候选回复不会使旧任务覆盖新目标。"
       },
       {
         "id": "finalize_direct_result",
         "type_used": "era.initialize.finalize_direct_result",
         "display_name": "结算非启动初始化",
-        "description": "仅在 finish 分支将专用的直接初始化结果转为任务结果。"
+        "description": "仅在初始化不需要继续共享同步的分支，把资源处理结论转成交给 Service 的任务结果。保留实际完成动作、无变更或失败诊断，不把资源初始化包装成聊天同步；随后由统一步骤结算推进批次。"
       },
       {
         "id": "end",
         "type_used": "era.service.terminal",
         "display_name": "初始化结束",
-        "description": "结束一次初始化任务。"
+        "description": "这是“ERA 初始化任务”的出口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
       }
     ],
     "edges": [

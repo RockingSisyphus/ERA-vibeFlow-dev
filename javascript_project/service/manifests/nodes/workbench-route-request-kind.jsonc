@@ -3,7 +3,7 @@
   "type_key": "era.workbench.route_request_kind",
   "display_name": "区分普通Commit与工作台编辑意图",
   "category": "工作台提交",
-  "description": "公共ERA.commit保持原operations请求；仅内部工作台command=workbench-commit进入草稿准备。沿现有era.facade.commit事件/FIFO传递，事件目录与公共API不新增命令。",
+  "description": "判断当前提交是否来自变量工作台：普通 ERA.commit 已经带有操作列表，直接继续准入校验；工作台提交带的是用户编辑草稿，需要先转换为操作。两种请求共用同一个提交入口和后续安全检查，避免工作台自行绕过作用域或消息目标校验。",
   "version": "1.0.0",
   "flow_kind": "decision",
   "contract": {

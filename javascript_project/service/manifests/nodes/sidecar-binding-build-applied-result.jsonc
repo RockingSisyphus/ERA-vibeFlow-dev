@@ -3,7 +3,7 @@
   "type_key": "era.sidecar_binding.build_applied_result",
   "display_name": "结算已完成的 Sidecar 绑定",
   "category": "Sidecar 绑定",
-  "description": "根据 Sidecar 分支结果生成任务回执；保持原路由条件与行为。",
+  "description": "状态文件修复已通过独立文件事务完成时，向本任务每个来源返回已完成结算，并标记无需再做普通同步。这里不重算历史或再次保存，避免把修复后仅存在于当前变量状态的 API 修改按旧聊天正文重放掉。此出口只表示修复分支无需额外动作，不能代替所有历史同步的结果。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

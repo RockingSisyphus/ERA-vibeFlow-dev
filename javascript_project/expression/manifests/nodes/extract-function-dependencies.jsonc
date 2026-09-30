@@ -3,7 +3,7 @@
   "type_key": "era.expression.extract_function_dependencies",
   "display_name": "提取函数体调用",
   "category": "表达式工作流",
-  "description": "从函数 AST 提取自定义函数调用边。",
+  "description": "遍历各函数的语法树，列出它调用了哪些已定义的自定义函数，去重并排序，形成后续检查递归所需的依赖表。内建函数不加入这份自定义依赖表，其名称和参数约束由纯度检查负责。这里不执行函数，也不因为提取到调用关系就认定其有效。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

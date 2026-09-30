@@ -3,7 +3,7 @@
   "type_key": "era.installation.scope.decide",
   "display_name": "决定启动策略",
   "category": "服务生命周期",
-  "description": "角色卡脚本允许；全局、预设和重复安装休眠；未知兼容启动并警告。",
+  "description": "根据脚本的安装位置决定本次 ERA 是否进入完整服务：角色卡内部的脚本继续启动；明确位于全局、预设，或同一脚本 ID 同时属于多个位置的实例只显示提示后结束，避免这些位置重复接管聊天。若宿主无法提供位置，则允许兼容启动并要求警告。这里输出策略，不负责停止其他实例，也不修改聊天。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

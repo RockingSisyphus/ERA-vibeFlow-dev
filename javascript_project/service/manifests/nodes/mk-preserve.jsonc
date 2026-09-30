@@ -3,7 +3,7 @@
   "type_key": "era.mk.no_change",
   "display_name": "保留消息密钥状态",
   "category": "消息密钥结果",
-  "description": "不调用任何宿主写入；把已一致候选转换为 no-op，或保留读取与推导阶段的普通失败。",
+  "description": "当消息标识候选无需写入或已经失败时，输出无变更或失败结论，保留原标识与错误。不会为了形成回执再写一次正文，也不修改变量历史；后续结果节点可据此明确区分“原本已正确”和“无法准备”。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

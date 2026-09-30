@@ -3,7 +3,7 @@
   "type_key": "era.api.build_facade_sync_failure",
   "display_name": "构造同步输入失败",
   "category": "公共 Facade",
-  "description": "非法 sync 模式不触碰宿主。",
+  "description": "当公共同步请求的模式、目标或其他输入无法通过校验时，直接生成相应的失败回执。此分支没有执行共享同步，所以不会声称历史已重算，也不会读写目标消息来尝试补救；错误按原调用来源返回。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

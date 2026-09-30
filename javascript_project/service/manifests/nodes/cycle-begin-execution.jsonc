@@ -3,7 +3,7 @@
   "type_key": "era.service.cycle.begin_execution",
   "display_name": "进入单步执行阶段",
   "category": "服务阶段循环",
-  "description": "进入单步执行阶段；保持原 Service 领域状态及执行顺序。",
+  "description": "把经过覆盖检查的批次状态标记为执行阶段，保留任务列表、当前索引和所有事件来源。下一轮开始执行第一个步骤，而不是再接收一批新事件；这里只切换阶段，不提前执行任务。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

@@ -3,7 +3,7 @@
   "type_key": "era.service.validate_transport",
   "display_name": "校验传输事件",
   "category": "服务迭代",
-  "description": "严格校验事件字段、tagged 参数、序号、来源、字节和宿主引用限制。",
+  "description": "检查刚从宿主收到的事件是否符合 ERA 的传输格式，包括必需字段、参数封装、体积限制及允许的宿主引用。合格后输出内部可用的事件；不合格时保留相应错误，不把损坏数据当成正常聊天操作继续规划。这一步只验证事件本身，不执行它代表的业务。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

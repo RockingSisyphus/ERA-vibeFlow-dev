@@ -3,7 +3,7 @@
   "type_key": "era.service.cycle.promote_done",
   "display_name": "转交完成的批次状态",
   "category": "服务阶段循环",
-  "description": "转交完成的批次状态；保持原 Service 领域状态及执行顺序。",
+  "description": "把已完成全部步骤的批次状态送到批次结算通道，保留所有值。这个节点只是转换数据出口，不再推进索引、不额外执行任务；完成条件由之前的任务合并和分支判断提供。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

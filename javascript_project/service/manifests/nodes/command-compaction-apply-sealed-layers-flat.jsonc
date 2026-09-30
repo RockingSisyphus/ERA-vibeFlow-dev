@@ -3,7 +3,7 @@
   "type_key": "era.command_compaction.apply_sealed_layers_flat",
   "display_name": "Service 封存压缩组合",
   "category": "命令压缩集成",
-  "description": "在 Service 原位组合封存识别、Compaction AOT、生产 CRUD 重放、回填和 marker 更新。",
+  "description": "在消息层完成后，寻找可以封存的 ERA 操作文本，按原顺序交给独立命令压缩工作流，得到更短的候选指令；再用 Service 实际的增删改规则重放确认，回填通过确认的文本并更新封存标记。压缩须保持变量、函数和随机行为，无法确认则保留原文；这里不保存酒馆或状态文件。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

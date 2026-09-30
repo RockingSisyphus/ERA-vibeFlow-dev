@@ -3,7 +3,7 @@
   "type_key": "era.agent.prepare_auxiliary_execution_request",
   "display_name": "读取生成事实",
   "category": "故事生成会话",
-  "description": "沿原宿主读取位置取得生成事实与配置，不把批次状态放入领域算法请求。",
+  "description": "为本次生成读取 Agent 配置、会话和当前变量事实，并优先接续尚未保存的阶段正文。重新生成、切换回复或用户重试某阶段时，按历史日志恢复该阶段应有的起点，保留已经完成的前置内容；旧报告与当前会话不符时记录失效诊断。输出生成事实，不在这里请求模型或保存消息。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

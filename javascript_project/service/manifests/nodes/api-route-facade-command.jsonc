@@ -3,7 +3,7 @@
   "type_key": "era.api.route_facade_command",
   "display_name": "区分提交与同步请求",
   "category": "公共 Facade",
-  "description": "只接受内部 commit 和 sync 命令，并把批次状态交给对应分支。",
+  "description": "读取公共 ERA 对象提交给 Service 的命令，把 commit（按顺序应用操作）交给提交事务，把 sync（按历史重新计算）交给共享同步流程，同时携带调用来源和批次状态。公共读取或订阅不属于此事件执行分支。这里仅选择工作流，不确认操作已经生效。",
   "version": "1.0.0",
   "flow_kind": "decision",
   "contract": {

@@ -3,7 +3,7 @@
   "type_key": "era.workbench.plan_variables",
   "display_name": "计算变量草稿真实增删改",
   "category": "工作台提交",
-  "description": "实际调用base_lib中的变量差异、Insert/Delete/Expression规划；对象类型替换及$template生成真实有序Delete/Insert，返回路径数组和每项变更kind。无宿主操作。",
+  "description": "把变量工作台中用户想要的最终值与当前基准比较，转换为实际有顺序的插入、删除或表达式操作，并记录每项变化的路径和类别。替换对象类型或模板时生成所需删除再插入动作，不把用户意图简单写成整库覆盖。只生成计划，仍需保护检查及公共提交流程确认。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

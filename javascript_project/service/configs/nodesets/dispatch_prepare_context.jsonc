@@ -1,7 +1,7 @@
 {
   "type_key": "era.dispatch.prepare_context",
   "display_name": "ERA 选择并准备任务上下文",
-  "description": "从当前严格批次状态选择唯一 PlannedStep，再沿原统一准备链形成已路由任务上下文和外层任务族路由。",
+  "description": "为批次中的一个任务统一准备执行依据：先按索引取出步骤，判断是否需要聊天事实，再读取真实消息、候选回复和身份，规划消息标识及占位符，最后确定任务分支。普通同步只暂存消息变更，纯标识任务才可能提前提交。输出已准备任务供后续直接执行；失败保留到任务回执，避免各任务各自读出不一致的目标。",
   "requires": [
     {
       "type": "era.batch.execution.state",
@@ -47,61 +47,61 @@
         "id": "start",
         "type_used": "era.service.terminal",
         "display_name": "统一准备启动",
-        "description": "启动一次任务执行前的共享上下文准备。"
+        "description": "这是“ERA 选择并准备任务上下文”的入口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
       },
       {
         "id": "select_step",
         "type_used": "era.service.select_step",
         "display_name": "选择当前步骤",
-        "description": "按索引选择当前 PlannedStep，不执行或移除后续步骤。"
+        "description": "依据批次的当前索引取出这一次应执行的任务，连同完整批次状态一起传下去。不会跳过、删除或提前运行后续任务；一个任务完成并被统一合并后，索引才会推进，因此同批次的 API 和聊天操作保持既定顺序。"
       },
       {
         "id": "classify_context",
         "type_used": "era.dispatch.classify_context",
         "display_name": "分类生命周期与公共对象上下文",
-        "description": "验证 PlannedStep，保留 initialize、sync、update-mk 与 ignore；将直接公共对象 commit/sync 归为 api。Commit 的 Scope 准入和消息目标仍留在专用 workflow。"
+        "description": "检查所选步骤需要哪一种上下文：初始化、同步和消息标识任务按各自要求准备聊天事实；无需宿主数据的任务及忽略项走无读取分支；公共 ERA 提交和同步调用归入 API 任务。这里决定准备范围，具体的作用域准入和消息写入目标仍由 API 内部校验。"
       },
       {
         "id": "build_no_host_context",
         "type_used": "era.dispatch.build_no_host_context",
         "display_name": "构造无宿主上下文",
-        "description": "为 context:none 和 ignore 任务构造无消息写入的派发结果，不调用任何 Tavern Capability。"
+        "description": "为不需要聊天事实的步骤构造派发上下文，例如明确忽略的事件。保留任务、事件来源和无宿主需求的结论，让后续仍能返回准确回执；不读取消息、变量或状态文件，也不制造消息写入。"
       },
       {
         "id": "read_canonical_context",
         "type_used": "era.dispatch.read_canonical_context",
         "display_name": "读取严格酒馆上下文",
-        "description": "读取包含待生成Swipe的真实全量消息位置，不以lastMessageId宏裁掉末楼；来源依据与实际写入核对使用一致的范围，业务回退仍由Service决定。"
+        "description": "读取当前聊天身份和所有消息的实际楼号、当前 Swipe（同一消息的候选回复）及正文。需要消息标识时还读取状态文件指针、已有 ERA 元数据和占位符设置。全量读取会保留准备生成的新末楼或空候选，避免把旧回复当成新目标；读取失败输出明确失败上下文，供后续停止写入。"
       },
       {
         "id": "stage_message_preparation",
         "type_used": "era.dispatch.plan_message_preparation",
         "display_name": "暂存楼层 MK、占位符与消息更新",
-        "description": "保留待生成末端Swipe的真实楼号和索引，明确空正文不等于旧候选正文；生成前回退不提前补写待生成楼，普通状态任务继续仅暂存，空聊天与API写入边界保持。"
+        "description": "根据聊天事实判断任务将处理哪条消息，以及是否要补充 ERA 消息标识（MK）和状态栏占位符。空的待生成候选仍是独立目标，不用旧候选正文替代。普通变量同步只暂存计划，稍后与变量结果一起保存；仅纯消息标识任务可进入预提交分支。这里规划变更，不直接写酒馆。"
       },
       {
         "id": "preserve_prepared_context",
         "type_used": "era.dispatch.preserve_prepared_context",
         "display_name": "保留已准备上下文",
-        "description": "在消息文本和 ERAMetaData 已匹配时形成无写入准备结果，保持所有未知元数据和 SelectedMks 的 null 位置。"
+        "description": "当消息准备不需要提前写入时，把计划转成可派发的准备结果，保留正文、消息标识、元数据及失败信息。对于普通同步，尚待修改的正文继续作为暂存内容交给后续任务；“此处没有写入”不表示后续无需保存，也不会丢弃未知元数据。"
       },
       {
         "id": "commit_preparation",
         "type_used": "era.dispatch.commit_preparation",
         "display_name": "提交 MK 与占位符准备",
-        "description": "先以 affected 刷新确认当前文本写入；仅 update-mk 任务在此提交完整 ERAMetaData，状态任务的 SelectedMks 由后续同步事务随变量结果一次性提交；部分写入或结果未知立即标为 fatal。"
+        "description": "执行纯消息标识任务所需的提前写入：先更新目标正文并刷新受影响消息，确认成功后再保存 ERA 元数据到聊天状态文件。若无需对应变更就跳过。普通写入失败返回失败；若正文已变但元数据未能完成，或宿主无法确认写入结果，则报致命错误，避免继续使用不确定的标识关系。"
       },
       {
         "id": "finalize_dispatch_context",
         "type_used": "era.dispatch.finalize_context",
         "display_name": "生成稳定楼层派发上下文 V3",
-        "description": "保留原上下文准备；仅将 era.ui.agent_configuration 分派到 agent-settings，生成事件仍进入 agent-generation-session。PlannedStep 的公开 taskRoute 不变。"
+        "description": "把读取、暂存或预提交后的结果装进所选任务，附上已准备的消息上下文，并选定实际执行分支：初始化、公共 API、生成会话，或简单任务。Agent 配置事件进入设置分支，不启动模型生成。这个节点只整理派发信息，保留准备失败供实际任务返回，不再次读写消息。"
       },
       {
         "id": "end",
         "type_used": "era.service.terminal",
         "display_name": "统一准备结束",
-        "description": "结束任务执行前的共享上下文准备。"
+        "description": "这是“ERA 选择并准备任务上下文”的出口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
       }
     ],
     "edges": [

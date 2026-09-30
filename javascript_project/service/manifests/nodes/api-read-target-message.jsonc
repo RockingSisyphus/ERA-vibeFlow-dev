@@ -3,7 +3,7 @@
   "type_key": "era.api.read_target_message",
   "display_name": "复查消息写入目标",
   "category": "公共 Facade",
-  "description": "提交前重新读取真实消息目标，避免把操作写入已经变化的位置。",
+  "description": "在准备实际提交前再次读取聊天和目标消息，并复核调用窗口是否仍属于原聊天与候选回复。作者函数把记录定位到调用位置下方，状态栏和外部 API 保留各自捕获的目标。读取视图纳入未保存的内存正文；目标失效则返回失败，不自动转而写入最新一楼。",
   "version": "1.0.0",
   "flow_kind": "io",
   "contract": {

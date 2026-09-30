@@ -3,7 +3,7 @@
   "type_key": "era.api.build_single_era_tx",
   "display_name": "生成单次 era_tx",
   "category": "公共 Facade",
-  "description": "按原操作顺序生成一个且仅一个短 scope wrapper。",
+  "description": "把已通过准入检查的操作按原顺序组成一个 ERA 事务文本，连同作用域、调用身份和批次状态送到目标定位环节。不会合并重排操作，也不会在构造文本时执行它们；同一事务随后交给共享消息块引擎处理，保证公共 API 与消息指令采用相同规则。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

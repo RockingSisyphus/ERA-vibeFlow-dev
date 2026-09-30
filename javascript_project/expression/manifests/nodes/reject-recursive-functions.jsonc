@@ -3,7 +3,7 @@
   "type_key": "era.expression.reject_recursive_functions",
   "display_name": "拒绝递归函数环",
   "category": "表达式工作流",
-  "description": "通过深度优先遍历（DFS）检查函数是否直接或间接调用自身，并记录循环调用链。",
+  "description": "沿自定义函数调用关系作深度优先遍历，识别直接调用自身或绕经其他函数返回自身的循环，并记录完整循环链。输出调用图及新增诊断，不当场执行函数；后续编译结合诊断判定函数库是否可用，因此节点名字中的“拒绝”不是静默删除错误函数。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

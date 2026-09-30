@@ -3,7 +3,7 @@
   "type_key": "era.macro.terminal",
   "display_name": "宏流程终端",
   "category": "宏处理",
-  "description": "以纯函数方式标记 ERA 宏工作流或节点集的开始与结束。",
+  "description": "本工作流的结构起点或终点标记，执行时返回空结果，不计算表达式、不替换文本，也不读写酒馆。它只明确流程的入口或出口，业务输入与结果通过已声明的数据通道传递；最终结果由实际处理节点产生。",
   "version": "1.0.0",
   "flow_kind": "terminal",
   "contract": {

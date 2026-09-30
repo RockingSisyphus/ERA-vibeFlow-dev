@@ -3,7 +3,7 @@
   "type_key": "era.agent.candidate_unpack",
   "display_name": "取出候选执行输入",
   "category": "Agent候选",
-  "description": "从当前候选状态取出生成请求、已准备步骤和批次状态。",
+  "description": "从一次候选尝试的状态中取出当前生成请求、所属任务及批次上下文，交给模型执行和共用块处理流程。发生重试时取的是更新后的请求，原事件来源仍保留；这里仅解包，不改变候选恢复点，也不把上一轮结果当作本轮成功。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

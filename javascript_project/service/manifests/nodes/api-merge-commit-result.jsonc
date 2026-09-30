@@ -3,7 +3,7 @@
   "type_key": "era.api.merge_commit_result",
   "display_name": "合并即时 Commit 结果",
   "category": "公共 Facade",
-  "description": "要求三条互斥分支恰好产生一个结果。",
+  "description": "汇合提交已应用、作用域跳过和提交失败三条互斥分支，要求实际恰有一个有效结果，再输出统一 commit 结果。不会选取最乐观的一条或再次应用操作；若出现多个结果或没有结果会暴露流程问题，避免公共调用得到含糊回执。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

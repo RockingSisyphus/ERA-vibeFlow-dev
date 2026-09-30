@@ -3,7 +3,7 @@
   "type_key": "era.api.build_skipped_receipt",
   "display_name": "返回跳过回执",
   "category": "公共 Facade",
-  "description": "历史作用域已结算时返回跳过回执，不写消息或发布状态。",
+  "description": "为已经结算过、无需重复执行的作用域生成跳过回执，保留调用者和来源信息。跳过表示本次没有再次应用操作，不等同于新提交成功；不会新增事务文本或再次修改变量，避免重绘状态栏等重复调用产生重复效果。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

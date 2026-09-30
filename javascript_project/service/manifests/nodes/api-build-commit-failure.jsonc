@@ -3,7 +3,7 @@
   "type_key": "era.api.build_commit_failure",
   "display_name": "构造 Commit 失败",
   "category": "公共 Facade",
-  "description": "把输入、窗口或消息失败结算到本次调用。",
+  "description": "把提交准入、工作台准备或目标读取形成的错误转换成公共调用可收到的失败回执，包括原因和对应来源。这里不重试、不生成替代操作，也不把失败请求写进新目标消息；作用是让调用方明确知道其 commit 没有按要求完成。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

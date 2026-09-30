@@ -3,7 +3,7 @@
   "type_key": "era.service.cycle.unpack_collect",
   "display_name": "解包收集状态",
   "category": "服务阶段循环",
-  "description": "解包收集状态；保持原 Service 领域状态及执行顺序。",
+  "description": "确认当前确实处于收集阶段，然后从循环载体中取出事件集合、序号和定时器等服务状态，供接收和整理新事件使用。它不接收事件、不清空集合；若把执行阶段的状态交到这里，会报错，避免混淆两种阶段的数据。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

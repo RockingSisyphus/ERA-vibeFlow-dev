@@ -3,7 +3,7 @@
   "type_key": "era.service.merge_task_result",
   "display_name": "合并步骤结果",
   "category": "步骤执行",
-  "description": "合并任务结算、通知、诊断及可选连续处理 stateUpdate，推进索引并报告步骤是否全部消费。",
+  "description": "把当前任务的结果合入批次：累计各事件的结算、诊断和通知，接续消息处理进度，再把步骤索引推进一位。输出更新后的状态及是否已完成全部步骤；它不会重新执行任务或立即读入新事件。此处统一汇合，确保不同任务分支采用同一种批次推进规则。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

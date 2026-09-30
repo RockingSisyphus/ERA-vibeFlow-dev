@@ -3,7 +3,7 @@
   "type_key": "era.workbench.read_baseline",
   "display_name": "读取当前Sidecar基准",
   "category": "工作台提交",
-  "description": "仅使用已有era.tavern.sidecar.read_current/read_record读取身份、绑定指针及Sidecar V3记录；调用已有纯检查核对owner/就绪状态，不迁移、不创建绑定、不写文件。读取失败形成失败事实。",
+  "description": "为工作台草稿读取当前聊天身份、状态文件绑定和变量或函数的基准，优先采用可用的当前工作状态，检查其归属及就绪情况。读取结果是后续比较草稿是否过期的依据；这里不迁移数据、不新建绑定，也不保存用户编辑，读取失败会形成准备失败。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

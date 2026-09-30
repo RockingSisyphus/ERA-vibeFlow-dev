@@ -3,7 +3,7 @@
   "type_key": "era.agent.route_transition",
   "display_name": "路由 Agent 阶段结果",
   "category": "故事生成会话",
-  "description": "将完整 Agent 阶段模式折叠为委托原任务与直接结算两条互斥工作流分支。",
+  "description": "依据会话转换的模式选择出口：还需要普通消息同步或消息标识结算的结果走共享任务链；只需返回阶段结果、取消或失败的结果走直接回执。模式已由会话逻辑决定，节点不重新判断模型内容，也不更改批次状态。",
   "version": "1.0.0",
   "flow_kind": "decision",
   "contract": {

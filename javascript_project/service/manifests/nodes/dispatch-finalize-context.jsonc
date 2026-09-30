@@ -3,7 +3,7 @@
   "type_key": "era.dispatch.finalize_context",
   "display_name": "生成稳定楼层派发上下文 V3",
   "category": "任务派发",
-  "description": "保留原上下文准备；Agent 设置使用专用路由，外层按已准备路由选择复杂任务或简单任务。PlannedStep 的公开 taskRoute 不变。",
+  "description": "把读取、暂存或预提交后的结果装进所选任务，附上已准备的消息上下文，并选定实际执行分支：初始化、公共 API、生成会话，或简单任务。Agent 配置事件进入设置分支，不启动模型生成。这个节点只整理派发信息，保留准备失败供实际任务返回，不再次读写消息。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

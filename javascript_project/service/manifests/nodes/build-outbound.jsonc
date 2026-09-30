@@ -3,7 +3,7 @@
   "type_key": "era.service.build_outbound",
   "display_name": "构造批次结果帧",
   "category": "批次发布",
-  "description": "构造确定性幂等 batch-result 帧、致命标记和批次后携带状态。",
+  "description": "把已结算批次组织成一个出站结果帧，包括各事件回执、业务通知、诊断和是否必须终止服务的标记，同时得到后续服务状态。相同批次使用稳定标识，便于宿主识别重复结果。这里只构造帧；工作流必须先发送该帧，再处理致命错误。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

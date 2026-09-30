@@ -3,7 +3,7 @@
   "type_key": "era.sidecar_binding.inspect_current",
   "display_name": "检查当前 Sidecar 绑定",
   "category": "Sidecar 绑定",
-  "description": "核对派发身份及指针；中断候选恢复起点与有效阶段会话，再提供Sidecar事实。",
+  "description": "检查当前聊天绑定的是哪一个 Sidecar（独立保存 ERA 变量、函数和日志的状态文件），核对读取前后的聊天身份和文件指针。存在同一绑定的有效内存状态时优先沿用，避免已应用但未保存的操作被旧文件覆盖；必要时恢复被打断的模型候选起点。来源变化或读取失败转为失败事实，不把新聊天与旧消息混在一起。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

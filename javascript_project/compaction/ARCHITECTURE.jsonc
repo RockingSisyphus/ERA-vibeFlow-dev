@@ -52,7 +52,7 @@
         },
         "role": {
           "display_name": "命令层压缩启动",
-          "description": "启动独立、无宿主副作用的 ERA 命令层压缩。"
+          "description": "这是“era.command_compaction”的入口标记。本工作流的结构起点或终点标记，执行时返回空结果，不计算表达式、不替换文本，也不读写酒馆。它只明确流程的入口或出口，业务输入与结果通过已声明的数据通道传递；最终结果由实际处理节点产生。"
         },
         "contract_source": "node_type",
         "flow_kind": "terminal",
@@ -85,7 +85,7 @@
         },
         "role": {
           "display_name": "执行命令层安全压缩",
-          "description": "调用独立 Nodeset 解析六类真实 ERA 标签、保留重放不变量并输出可验证的候选。"
+          "description": "把消息中的 ERA 操作文本在保持行为的前提下缩短：解析标签及作用域，按原顺序分段，逐段重放原操作、分析依赖、生成并确认候选，最后对完整消息再次重放比较。不能确认的部分或整层保留原文并说明原因。返回计算状态和候选文本，不访问酒馆或保存文件，调用方仍可用实际 Service 规则再确认。"
         },
         "contract_source": "nodeset",
         "flow_kind": "predefined",
@@ -134,7 +134,7 @@
         },
         "role": {
           "display_name": "命令层压缩结束",
-          "description": "结束纯压缩工作流并返回规范结果。"
+          "description": "这是“era.command_compaction”的出口标记。本工作流的结构起点或终点标记，执行时返回空结果，不计算表达式、不替换文本，也不读写酒馆。它只明确流程的入口或出口，业务输入与结果通过已声明的数据通道传递；最终结果由实际处理节点产生。"
         },
         "contract_source": "node_type",
         "flow_kind": "terminal",
@@ -190,7 +190,7 @@
         "path": "configs/nodesets/compact_layer.jsonc"
       },
       "display_name": "ERA 命令层安全压缩",
-      "description": "按原文顺序逐段压缩，并按作用域组织事务；重放确认结果等价后输出压缩文本，供公共同步入口使用。",
+      "description": "把消息中的 ERA 操作文本在保持行为的前提下缩短：解析标签及作用域，按原顺序分段，逐段重放原操作、分析依赖、生成并确认候选，最后对完整消息再次重放比较。不能确认的部分或整层保留原文并说明原因。返回计算状态和候选文本，不访问酒馆或保存文件，调用方仍可用实际 Service 规则再确认。",
       "status": "implemented",
       "flow_kind": "process",
       "effect_scope": "none",
@@ -260,7 +260,7 @@
             },
             "role": {
               "display_name": "压缩开始",
-              "description": "压缩开始，不执行算法或宿主操作。"
+              "description": "这是“ERA 命令层安全压缩”的入口标记。本工作流的结构起点或终点标记，执行时返回空结果，不计算表达式、不替换文本，也不读写酒馆。它只明确流程的入口或出口，业务输入与结果通过已声明的数据通道传递；最终结果由实际处理节点产生。"
             },
             "contract_source": "node_type",
             "flow_kind": "terminal",
@@ -293,7 +293,7 @@
             },
             "role": {
               "display_name": "解析整层与作用域段",
-              "description": "保留原六类命令解析，按原文区分正文、未知 scope 和相邻同 scope 事务；只在此处划分组。"
+              "description": "读取待压缩消息中的 ERA 变量及函数操作标签，解析其 JSON 和原文位置，再按正文与事务边界分段。只有相邻、同作用域且中间无非空正文的事务可以组成一组；未知作用域保持原样。这里决定处理顺序及可重写范围，不应用操作或删掉正文。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -338,7 +338,7 @@
             },
             "role": {
               "display_name": "建立顺序压缩状态",
-              "description": "以请求起始 statData/statFunc/drawOffset 初始化分段游标、累计文本和计数，不执行候选重写。"
+              "description": "以请求给出的初始变量、函数库和随机偏移建立分段状态，游标从第一段开始，输出文本、诊断和统计暂为空。每段执行后会把结束状态传给下一段；这个节点只是准备起点，不提前重放指令或生成压缩候选。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -383,7 +383,7 @@
             },
             "role": {
               "display_name": "按原文顺序处理分段",
-              "description": "按原文顺序处理各段，把前段结果传给后段，直到游标到达分段末尾。"
+              "description": "按原文顺序循环处理正文段及同作用域事务组，每段的真实结束变量、函数和随机偏移成为下一段起点，累计已经确认的候选或原文。处理完全部段才退出，随后仍需整层重放确认；不会把每段分别当成独立初始状态进行压缩。"
             },
             "contract_source": "system_config",
             "flow_kind": "predefined",
@@ -452,7 +452,7 @@
             },
             "role": {
               "display_name": "确认整层候选",
-              "description": "保留原整层复放确认：最终状态、函数库、随机游标及诊断一致；失败保留原文；不重新调用 compactCommandLayer。"
+              "description": "分段结束后再确认完整消息层：从同一起点重放原文与拼接候选，比较最终变量、函数、随机偏移及诊断代码和路径；不一致则整层保留原文。无作用域分组时沿用单段验证结果，不重复启动压缩算法。输出已确认文本和真实计算结果，防止单段安全但组合后改变行为。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -497,7 +497,7 @@
             },
             "role": {
               "display_name": "输出已确认结果",
-              "description": "仅整理最终 status/content/stat/diagnostics/reasons/parsedCommands/drawOffset；无第二套压缩编排。"
+              "description": "将整层验证已经形成的结果直接交给公开输出，包括压缩状态、内容、最终变量和函数、诊断、保留理由、解析命令及随机偏移。当前节点只是接口转接，不另做一次压缩或“美化”失败状态，也不将候选保存到聊天。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -542,7 +542,7 @@
             },
             "role": {
               "display_name": "压缩结束",
-              "description": "压缩结束，不执行算法或宿主操作。"
+              "description": "这是“ERA 命令层安全压缩”的出口标记。本工作流的结构起点或终点标记，执行时返回空结果，不计算表达式、不替换文本，也不读写酒馆。它只明确流程的入口或出口，业务输入与结果通过已声明的数据通道传递；最终结果由实际处理节点产生。"
             },
             "contract_source": "node_type",
             "flow_kind": "terminal",
@@ -638,7 +638,7 @@
         "path": "configs/nodesets/segment_step.jsonc"
       },
       "display_name": "顺序压缩一个真实文本段",
-      "description": "处理一个正文段或同作用域事务组：重放原文、分析依赖、生成并验证候选，再把结束状态传给下一段。",
+      "description": "处理一个正文段或相邻同作用域事务组，以前段结束后的变量、函数和随机进度为起点。先重放原操作取得基准，再分析依赖、生成安全候选并从同一起点验证，最后按允许重写条件采用候选或保留原文，推进分段游标。不会跨作用域乱合并，也不把计算状态写入酒馆。",
       "status": "implemented",
       "flow_kind": "predefined",
       "effect_scope": "none",
@@ -719,7 +719,7 @@
             },
             "role": {
               "display_name": "分段开始",
-              "description": "分段开始，不执行算法或宿主操作。"
+              "description": "这是“顺序压缩一个真实文本段”的入口标记。本工作流的结构起点或终点标记，执行时返回空结果，不计算表达式、不替换文本，也不读写酒馆。它只明确流程的入口或出口，业务输入与结果通过已声明的数据通道传递；最终结果由实际处理节点产生。"
             },
             "contract_source": "node_type",
             "flow_kind": "terminal",
@@ -752,7 +752,7 @@
             },
             "role": {
               "display_name": "准备当前段与起点",
-              "description": "按当前游标选取正文段或同作用域事务组，带入前段的变量、函数和随机游标。没有剩余段时保留状态并结束。"
+              "description": "按游标取出当前正文段或同作用域事务组，将前段结束后的变量、函数和随机偏移作为它的执行起点，保留整份分段状态供结果合并。无事务包装的原请求保持其原快照默认规则。这里准备当前段输入，不跳段、不改原文，也不抽取随机数。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -802,7 +802,7 @@
             },
             "role": {
               "display_name": "重放当前段原语义",
-              "description": "复用六类命令解释，记录该段原结果和随机游标；携带作用域与是否允许重写的信息。"
+              "description": "用真实 ERA 命令规则重放当前段的原始操作，得到原本应产生的变量、函数、随机进度和诊断，并保留命令位置等轨迹。这份结果是后续压缩候选必须匹配的基准，不是已经写入酒馆的状态；整个工作流只在请求内计算。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -847,7 +847,7 @@
             },
             "role": {
               "display_name": "分析依赖与局部屏障",
-              "description": "分析变量与函数依赖，追踪随机调用及其间接影响，划定可安全重写的区域，供候选生成节点使用。"
+              "description": "读取原段执行轨迹，分析哪些变量或函数依赖其他值，哪些路径受到直接或间接随机调用影响，以及哪里是不能跨越的重写边界。输出依赖事实供候选生成使用，不改正文、不再执行一遍操作；目的是让文本简化有具体语义依据。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -892,7 +892,7 @@
             },
             "role": {
               "display_name": "生成段候选",
-              "description": "只消费依赖分析结果形成替换，保留单事务不合并及不可重写段原文策略。"
+              "description": "依据变量、函数和随机依赖分析，为能证明安全的区域生成较短的替换文本，保留原命令与位置作为验证依据。这里只提出候选，没有候选或不安全部分继续保留原文；单事务及不同作用域不能被随意合并，分段合并时还会再次核对允许重写的条件。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -937,7 +937,7 @@
             },
             "role": {
               "display_name": "确认段候选",
-              "description": "按原起点复放候选；保持原结果、诊断和随机游标语义，输出已确认文本与保留原文理由。"
+              "description": "从与原段相同的起点重放候选，确认最终变量、函数及相关诊断和随机语义仍等价。标签 JSON 无效返回无效，没有安全替换或候选验证失败返回原文及原因；通过后才输出已确认候选。计算结果不会在这里保存，稍后还要按分段作用域回填。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -982,7 +982,7 @@
             },
             "role": {
               "display_name": "继承状态并推进分段",
-              "description": "沿用原段重放后的变量、函数和随机游标，累计输出文本、诊断、保留理由及计数，再推进到下一段。"
+              "description": "把当前段结果接回整层：只有该段含命令、允许重写、内容确实发生变化且没有诊断时才采用候选，否则保留原段。继承原语义得到的变量、函数和随机偏移，累计文本、理由和统计，再推进游标及结束标志；后段因此从真实前段结果开始计算。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -1037,7 +1037,7 @@
             },
             "role": {
               "display_name": "分段结束",
-              "description": "分段结束，不执行算法或宿主操作。"
+              "description": "这是“顺序压缩一个真实文本段”的出口标记。本工作流的结构起点或终点标记，执行时返回空结果，不计算表达式、不替换文本，也不读写酒馆。它只明确流程的入口或出口，业务输入与结果通过已声明的数据通道传递；最终结果由实际处理节点产生。"
             },
             "contract_source": "node_type",
             "flow_kind": "terminal",
@@ -1149,7 +1149,7 @@
   "node_types": {
     "era.command_compaction.advance_segment": {
       "display_name": "继承状态并推进分段",
-      "description": "沿用原段重放后的变量、函数和随机游标，累计输出文本、诊断、保留理由及计数，再推进到下一段。",
+      "description": "把当前段结果接回整层：只有该段含命令、允许重写、内容确实发生变化且没有诊断时才采用候选，否则保留原段。继承原语义得到的变量、函数和随机偏移，累计文本、理由和统计，再推进游标及结束标志；后段因此从真实前段结果开始计算。",
       "category": "ERA 命令压缩",
       "version": "1.1.0",
       "flow_kind": "process",
@@ -1216,7 +1216,7 @@
     },
     "era.command_compaction.analyze_dependencies": {
       "display_name": "分析依赖与局部屏障",
-      "description": "分析变量与函数依赖，追踪随机调用及其间接影响，划定可安全重写的区域，供候选生成节点使用。",
+      "description": "读取原段执行轨迹，分析哪些变量或函数依赖其他值，哪些路径受到直接或间接随机调用影响，以及哪里是不能跨越的重写边界。输出依赖事实供候选生成使用，不改正文、不再执行一遍操作；目的是让文本简化有具体语义依据。",
       "category": "ERA 命令压缩",
       "version": "1.1.0",
       "flow_kind": "process",
@@ -1267,7 +1267,7 @@
     },
     "era.command_compaction.execute_original_semantics": {
       "display_name": "重放当前段原语义",
-      "description": "复用六类命令解释，记录该段原结果和随机游标；携带作用域与是否允许重写的信息。",
+      "description": "用真实 ERA 命令规则重放当前段的原始操作，得到原本应产生的变量、函数、随机进度和诊断，并保留命令位置等轨迹。这份结果是后续压缩候选必须匹配的基准，不是已经写入酒馆的状态；整个工作流只在请求内计算。",
       "category": "ERA 命令压缩",
       "version": "1.1.0",
       "flow_kind": "process",
@@ -1318,7 +1318,7 @@
     },
     "era.command_compaction.initialize_segments": {
       "display_name": "建立顺序压缩状态",
-      "description": "以请求起始 statData/statFunc/drawOffset 初始化分段游标、累计文本和计数，不执行候选重写。",
+      "description": "以请求给出的初始变量、函数库和随机偏移建立分段状态，游标从第一段开始，输出文本、诊断和统计暂为空。每段执行后会把结束状态传给下一段；这个节点只是准备起点，不提前重放指令或生成压缩候选。",
       "category": "ERA 命令压缩",
       "version": "1.1.0",
       "flow_kind": "process",
@@ -1369,7 +1369,7 @@
     },
     "era.command_compaction.parse_command_blocks": {
       "display_name": "解析整层与作用域段",
-      "description": "保留原六类命令解析，按原文区分正文、未知 scope 和相邻同 scope 事务；只在此处划分组。",
+      "description": "读取待压缩消息中的 ERA 变量及函数操作标签，解析其 JSON 和原文位置，再按正文与事务边界分段。只有相邻、同作用域且中间无非空正文的事务可以组成一组；未知作用域保持原样。这里决定处理顺序及可重写范围，不应用操作或删掉正文。",
       "category": "ERA 命令压缩",
       "version": "1.1.0",
       "flow_kind": "process",
@@ -1420,7 +1420,7 @@
     },
     "era.command_compaction.render_compaction_result": {
       "display_name": "输出已确认结果",
-      "description": "仅整理最终 status/content/stat/diagnostics/reasons/parsedCommands/drawOffset；无第二套压缩编排。",
+      "description": "将整层验证已经形成的结果直接交给公开输出，包括压缩状态、内容、最终变量和函数、诊断、保留理由、解析命令及随机偏移。当前节点只是接口转接，不另做一次压缩或“美化”失败状态，也不将候选保存到聊天。",
       "category": "ERA 命令压缩",
       "version": "1.1.0",
       "flow_kind": "process",
@@ -1471,7 +1471,7 @@
     },
     "era.command_compaction.rewrite_safe_regions": {
       "display_name": "生成段候选",
-      "description": "只消费依赖分析结果形成替换，保留单事务不合并及不可重写段原文策略。",
+      "description": "依据变量、函数和随机依赖分析，为能证明安全的区域生成较短的替换文本，保留原命令与位置作为验证依据。这里只提出候选，没有候选或不安全部分继续保留原文；单事务及不同作用域不能被随意合并，分段合并时还会再次核对允许重写的条件。",
       "category": "ERA 命令压缩",
       "version": "1.1.0",
       "flow_kind": "process",
@@ -1522,7 +1522,7 @@
     },
     "era.command_compaction.select_segment": {
       "display_name": "准备当前段与起点",
-      "description": "按当前游标选取正文段或同作用域事务组，带入前段的变量、函数和随机游标。没有剩余段时保留状态并结束。",
+      "description": "按游标取出当前正文段或同作用域事务组，将前段结束后的变量、函数和随机偏移作为它的执行起点，保留整份分段状态供结果合并。无事务包装的原请求保持其原快照默认规则。这里准备当前段输入，不跳段、不改原文，也不抽取随机数。",
       "category": "ERA 命令压缩",
       "version": "1.1.0",
       "flow_kind": "process",
@@ -1581,7 +1581,7 @@
     },
     "era.command_compaction.terminal": {
       "display_name": "命令压缩终端",
-      "description": "无副作用的流程起止节点。",
+      "description": "本工作流的结构起点或终点标记，执行时返回空结果，不计算表达式、不替换文本，也不读写酒馆。它只明确流程的入口或出口，业务输入与结果通过已声明的数据通道传递；最终结果由实际处理节点产生。",
       "category": "ERA 命令压缩",
       "version": "1.0.0",
       "flow_kind": "terminal",
@@ -1612,7 +1612,7 @@
     },
     "era.command_compaction.verify_layer": {
       "display_name": "确认整层候选",
-      "description": "保留原整层复放确认：最终状态、函数库、随机游标及诊断一致；失败保留原文；不重新调用 compactCommandLayer。",
+      "description": "分段结束后再确认完整消息层：从同一起点重放原文与拼接候选，比较最终变量、函数、随机偏移及诊断代码和路径；不一致则整层保留原文。无作用域分组时沿用单段验证结果，不重复启动压缩算法。输出已确认文本和真实计算结果，防止单段安全但组合后改变行为。",
       "category": "ERA 命令压缩",
       "version": "1.1.0",
       "flow_kind": "process",
@@ -1663,7 +1663,7 @@
     },
     "era.command_compaction.verify_replay_equivalence": {
       "display_name": "确认段候选",
-      "description": "按原起点复放候选；保持原结果、诊断和随机游标语义，输出已确认文本与保留原文理由。",
+      "description": "从与原段相同的起点重放候选，确认最终变量、函数及相关诊断和随机语义仍等价。标签 JSON 无效返回无效，没有安全替换或候选验证失败返回原文及原因；通过后才输出已确认候选。计算结果不会在这里保存，稍后还要按分段作用域回填。",
       "category": "ERA 命令压缩",
       "version": "1.1.0",
       "flow_kind": "process",

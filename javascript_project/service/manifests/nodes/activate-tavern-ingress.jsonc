@@ -3,7 +3,7 @@
   "type_key": "era.installation.scope.activate_ingress",
   "display_name": "登记 Tavern 事件入口",
   "category": "服务生命周期",
-  "description": "仅 allow 分支让 Host 机械登记既有 Tavern ingress。",
+  "description": "把已允许启动的决定交给浏览器宿主，启用 ERA 接收聊天事件的入口及相关显示控制。宿主负责登记角色卡单层显示开关，在开启时只保留目标 AI 消息的显示窗口，切换聊天时重新建立显示关系。这个节点只是启用宿主设施；变量计算、回滚和保存仍由后续 Service 任务处理。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

@@ -3,7 +3,7 @@
   "type_key": "era.service.finalize_batch",
   "display_name": "完成批次收尾",
   "category": "批次执行",
-  "description": "按来源序号规范化结算并确保恰好一次覆盖，构造下一状态与致命标记。",
+  "description": "在全部步骤结束或计划被拒绝后，核对每个原始事件都恰好获得一次结算，汇总批次诊断，并更新服务批次计数。把任务层结果整理为可发布的批次结论；不会重新执行失败任务，也不负责酒馆文件写入。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

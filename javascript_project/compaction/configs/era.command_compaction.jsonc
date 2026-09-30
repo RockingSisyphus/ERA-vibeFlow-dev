@@ -22,19 +22,19 @@
         "id": "start",
         "type_used": "era.command_compaction.terminal",
         "display_name": "命令层压缩启动",
-        "description": "启动独立、无宿主副作用的 ERA 命令层压缩。"
+        "description": "这是“era.command_compaction”的入口标记。本工作流的结构起点或终点标记，执行时返回空结果，不计算表达式、不替换文本，也不读写酒馆。它只明确流程的入口或出口，业务输入与结果通过已声明的数据通道传递；最终结果由实际处理节点产生。"
       },
       {
         "id": "compact_layer",
         "type_used": "era.command_compaction.compact_layer",
         "display_name": "执行命令层安全压缩",
-        "description": "调用独立 Nodeset 解析六类真实 ERA 标签、保留重放不变量并输出可验证的候选。"
+        "description": "把消息中的 ERA 操作文本在保持行为的前提下缩短：解析标签及作用域，按原顺序分段，逐段重放原操作、分析依赖、生成并确认候选，最后对完整消息再次重放比较。不能确认的部分或整层保留原文并说明原因。返回计算状态和候选文本，不访问酒馆或保存文件，调用方仍可用实际 Service 规则再确认。"
       },
       {
         "id": "end",
         "type_used": "era.command_compaction.terminal",
         "display_name": "命令层压缩结束",
-        "description": "结束纯压缩工作流并返回规范结果。"
+        "description": "这是“era.command_compaction”的出口标记。本工作流的结构起点或终点标记，执行时返回空结果，不计算表达式、不替换文本，也不读写酒馆。它只明确流程的入口或出口，业务输入与结果通过已声明的数据通道传递；最终结果由实际处理节点产生。"
       }
     ],
     "edges": [

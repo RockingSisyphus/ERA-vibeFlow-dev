@@ -1,7 +1,7 @@
 {
   "type_key": "era.sync.block_step",
   "display_name": "ERA 块步进单次迭代",
-  "description": "共用内存块执行；累计消息、变量、函数、scope和日志，不在每块中执行聊天/Sidecar保存。",
+  "description": "共用消息块循环的一次推进：在当前位置应用指令或等待作者函数，整理工作项，必要时压缩已封存消息层，再发布到当前聊天的内存工作状态。累计变量、函数、日志、作用域和正文传给下一块，结束标志决定循环是否继续；每一块都不单独落盘，最终保存由任务尾部统一执行。",
   "requires": [
     {
       "type": "era.sync.block.step.state",
@@ -37,37 +37,37 @@
         "id": "start",
         "type_used": "era.service.terminal",
         "display_name": "块迭代开始",
-        "description": "进入单块推进边界。"
+        "description": "这是“ERA 块步进单次迭代”的入口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
       },
       {
         "id": "advance_message_block",
         "type_used": "era.sync.drive_message_blocks",
         "display_name": "共用块执行：指令、函数及位置API",
-        "description": "共用块执行处理阶段有序项，在当前位置验证操作；函数scope和记录沿用普通路径。函数上下文所有sync均明确拒绝；候选内错误上报候选控制，普通作者异常保留前缀标done。"
+        "description": "推进当前消息中的一个执行位置，按正文顺序应用变量指令、函数定义或作者函数调用。遇到作者函数时暂停块推进，等待该函数提交操作并就地应用，再返回回执后继续；函数内部不允许发起重算或回滚。更新仅进入内存工作状态，尚未保存。模型候选中的错误交给候选恢复，普通作者错误则保留可确认的成功前缀。"
       },
       {
         "id": "prepare_block_work",
         "type_used": "era.sync.prepare_block_work",
         "display_name": "累计操作记录及封存候选",
-        "description": "收集本轮消息补丁和累计日志；楼层完成时清内存进度并提供封存压缩候选，不构造每块持久化事务。"
+        "description": "把这一轮块推进后得到的工作项及块位置整理成压缩节点的输入，保留累计正文、变量、函数、日志和失败信息。当前实现只是携带已有结果，不在这里重新执行指令或清除进度；是否有已完成、可压缩的消息层由压缩应用器判断。"
       },
       {
         "id": "apply_command_compaction",
         "type_used": "era.command_compaction.apply_sealed_layers_flat",
         "display_name": "Service 封存压缩组合",
-        "description": "在原位置依次识别、调用 Compaction AOT、以 Service CRUD 复放、回填并更新 marker；不新增宿主写入。"
+        "description": "在消息层完成后，寻找可以封存的 ERA 操作文本，按原顺序交给独立命令压缩工作流，得到更短的候选指令；再用 Service 实际的增删改规则重放确认，回填通过确认的文本并更新封存标记。压缩须保持变量、函数和随机行为，无法确认则保留原文；这里不保存酒馆或状态文件。"
       },
       {
         "id": "publish_block_application",
         "type_used": "era.lifecycle.publish_block_application",
         "display_name": "发布内存应用结果与推进位置",
-        "description": "发布内存应用结果与推进位置；普通酒馆历史同步若在提交前发现目标 Swipe 已变化且没有写入，将旧分支作为可恢复空操作结算并安排当前历史重算。函数/API、已写入及其他错误保持失败。"
+        "description": "把已推进和压缩的结果发布为当前聊天的内存工作状态，连同日志、作用域和待保存正文供接下来的块或 API 读取，标记尚未落盘。若普通历史同步处理的旧 Swipe 已被用户切走且没有发生写入，则放弃旧分支，交给后续重新同步当前历史；作者函数、API 或模型候选失败仍按失败处理，不冒充成功。"
       },
       {
         "id": "end",
         "type_used": "era.service.terminal",
         "display_name": "块迭代结束",
-        "description": "返回下一个块步进状态与是否结束本次块驱动。"
+        "description": "这是“ERA 块步进单次迭代”的出口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
       }
     ],
     "edges": [

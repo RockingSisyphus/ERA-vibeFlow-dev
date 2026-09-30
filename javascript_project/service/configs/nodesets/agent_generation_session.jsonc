@@ -1,7 +1,7 @@
 {
   "type_key": "era.agent.generation_session",
   "display_name": "ERA 三阶段故事生成会话",
-  "description": "只处理生成生命周期、规划、正文衔接、结算与重试。先判定阶段，再准备必要请求、执行阶段、形成会话转换，复用原唯一同步边界。",
+  "description": "在有序 Service 任务中处理 Agent 的规划、正文及结算阶段：识别事件和来源，恢复必要基线，请求并应用模型候选，遇到可纠错失败按整次候选恢复后重试。阶段成功后通过完成标识与页面回调交接，再由新的恢复事件继续；需最终消息同步的结果走共用链，取消或失效来源如实结算，不重复应用候选内 API。",
   "requires": [
     {
       "type": "era.step.request.routed",
@@ -43,85 +43,85 @@
         "id": "start",
         "type_used": "era.service.terminal",
         "display_name": "生成会话开始",
-        "description": "进入一个 FIFO 内的生成阶段。"
+        "description": "这是“ERA 三阶段故事生成会话”的入口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
       },
       {
         "id": "prepare_auxiliary_execution_request",
         "type_used": "era.agent.prepare_auxiliary_execution_request",
         "display_name": "读取阶段工作状态与当前来源",
-        "description": "阶段恢复读取有效工作状态，不要求Sidecar已落盘；保留原生完成和来源确认。"
+        "description": "为本次生成读取 Agent 配置、会话和当前变量事实，并优先接续尚未保存的阶段正文。重新生成、切换回复或用户重试某阶段时，按历史日志恢复该阶段应有的起点，保留已经完成的前置内容；旧报告与当前会话不符时记录失效诊断。输出生成事实，不在这里请求模型或保存消息。"
       },
       {
         "id": "classify_generation_event",
         "type_used": "era.agent.classify_generation_event",
         "display_name": "判定事件与阶段",
-        "description": "判定正常生成、手动重试及内部阶段恢复；核对 executionId、completionId 和当前聊天/Swipe 来源，过期恢复终止。"
+        "description": "结合生成事件和当前会话事实，区分首次生成、继续生成、用户手动重试与内部阶段恢复，确定应处理规划、正文还是结算阶段。核对执行标识、完成标识以及聊天和候选回复来源；过期恢复不能接到新会话上。这里只作阶段决策，不调用模型。"
       },
       {
         "id": "prepare_generation_phase",
         "type_used": "era.agent.prepare_generation_phase",
         "display_name": "准备阶段请求",
-        "description": "候选请求基线：手动重新结算先通过共用历史计算恢复正文结束状态，撤销旧结算后再请求模型；保留正文done和记录。"
+        "description": "把阶段决策整理成一次生成请求，带上所需配置、历史、变量起点及会话信息。阶段重试采用前面按历史恢复的基线，不把旧阶段效果再算一遍；无效来源或不应执行的事件保留对应结论。这里准备候选执行的输入，还没有得到新的模型输出。"
       },
       {
         "id": "prepare_stage_handoff",
         "type_used": "era.agent.prepare_stage_handoff",
         "display_name": "形成阶段交接与恢复凭据",
-        "description": "纯业务策略为成功阶段构造唯一 completionId、最终结果及恢复意图；不在 FIFO 中等待回调。无交接时保留原阶段结果。页面等待结束后必须经原 Service 派发链核对并恢复。"
+        "description": "对于已经成功达到阶段边界的候选，生成唯一完成标识、阶段结果及下一步恢复意图，供页面依次执行订阅回调后再请求恢复。没有阶段交接的结果原样传递。这里不在当前任务队列里等待回调，否则回调请求同一队列可能互相等待；交接也不表示整个生成已结束。"
       },
       {
         "id": "form_session_transition",
         "type_used": "era.agent.form_session_transition",
         "display_name": "携带已应用阶段状态进入下一阶段",
-        "description": "规划草稿保留操作及done，正文独立结算仍应用指令；最终候选不重放本轮已应用API，进入统一批次保存。"
+        "description": "把候选最终结果转换成会话下一步：需要保存或沿普通消息同步完成的结果，携带对应楼层候选；只需阶段交接的结果直接结束当前片段。同时接续候选实际应用后的作用域窗口，不重复执行本轮 API。若候选无法对应原楼层，返回失败而不是写到新的消息。"
       },
       {
         "id": "route_agent_transition",
         "type_used": "era.agent.route_transition",
         "display_name": "路由阶段结果",
-        "description": "决定直接结算还是恢复原任务。"
+        "description": "依据会话转换的模式选择出口：还需要普通消息同步或消息标识结算的结果走共享任务链；只需返回阶段结果、取消或失败的结果走直接回执。模式已由会话逻辑决定，节点不重新判断模型内容，也不更改批次状态。"
       },
       {
         "id": "adapt_legacy_step",
         "type_used": "era.agent.adapt_legacy_step",
         "display_name": "把最终楼层候选交给唯一同步事务",
-        "description": "把默认模式或 Agent 最终楼层候选恢复为原 sync/update-mk 路由；故事完成、结算成功、结算耗尽和 UI 手动重试都携带同一个楼层 MK 进入同步，不存在第二条消息提交路径。"
+        "description": "把生成会话需要继续普通处理的结果转换成共享同步或消息标识任务，保持原楼层的 ERA 消息标识和来源。默认生成模式、最终正文及结算结果由同一消息处理链接续，而不是开另一条提交路径；这里只适配步骤，实际计算和保存由共享任务完成。"
       },
       {
         "id": "legacy_sync",
         "type_used": "era.task.sync",
         "display_name": "复用原同步任务",
-        "description": "故事组合后或默认模式下执行既有 Sidecar、表达式、压缩和历史同步。"
+        "description": "把当前聊天的真实消息历史与 ERA 变量、函数和日志保持一致：读取并校验状态文件绑定，优先沿用有效未保存的内存状态，规划回退及处理范围，逐块应用指令和函数，必要时压缩封存文本，最后批量保存消息及状态文件。保存后再刷新显示和返回结果；切换聊天或候选回复不会使旧任务覆盖新目标。"
       },
       {
         "id": "legacy_update_mk",
         "type_used": "era.task.update_mk",
         "display_name": "复用原 MK 任务",
-        "description": "规划注入后保持既有 message_sent MK 语义。"
+        "description": "为 ERA 消息标识任务返回结算。消息标识 MK 用于将消息与历史状态对应；它及占位符的读取、准备和必要写入已在统一派发中完成，本节点集仅核对并返回实际结果。不会再次改消息或重算变量，也不推进连续同步进度。"
       },
       {
         "id": "build_direct_result",
         "type_used": "era.agent.build_result",
         "display_name": "构造直接结果",
-        "description": "输出阶段交接标识和后置通知，使当前 FIFO 片段完成；通知后页面按序等待订阅回调，再提交内部恢复事件。片段 receipt 不代表整次生成已完成。"
+        "description": "将会话直接结束分支整理成任务回执，附带阶段完成标识、诊断和之后需要发送的通知。页面收到通知后按顺序等待订阅回调，再提交内部恢复事件；因此这份回执只代表当前队列片段完成，不能把它解释为规划、正文和结算全部结束。"
       },
       {
         "id": "end",
         "type_used": "era.service.terminal",
         "display_name": "生成会话结束",
-        "description": "返回单一任务结果。"
+        "description": "这是“ERA 三阶段故事生成会话”的出口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
       },
       {
         "id": "seed_candidate",
         "type_used": "era.agent.candidate_seed",
         "display_name": "建立候选请求",
-        "description": "准备并执行候选内部循环。"
+        "description": "为候选重试循环建立初始请求、任务和批次状态。若本次是在替换一个已有阶段，还要先把按历史计算的保留前缀、变量、函数和会话基线安装到当前内存工作状态，撤销旧阶段效果后才能请求新模型候选。基线安装失败转为失败终态，不继续生成；这些更新仅在内存，尚未保存消息或状态文件。"
       },
       {
         "id": "candidate_loop",
         "type_used": "vibeflow.loop.while",
         "display_name": "候选整体纠错循环",
-        "description": "候选完整恢复后再请求模型；只有终态进入阶段交接。",
+        "description": "循环执行当前模型候选尝试。每次尝试要完成正文块应用和结果检查；可纠错失败先恢复整次候选起点再使用新的重试请求，终态才退出并进入阶段交接。循环本身不发送成功通知，也不能用最后一个块的结果代替整候选结论。",
         "requires": [
           {
             "type": "era.agent.candidate.state",

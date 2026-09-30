@@ -3,7 +3,7 @@
   "type_key": "era.service.cycle.carry_execution",
   "display_name": "携带下一步骤状态",
   "category": "服务阶段循环",
-  "description": "携带下一步骤状态；保持原 Service 领域状态及执行顺序。",
+  "description": "当批次还有剩余步骤时，把更新后的索引、累计结算、诊断和消息处理进度重新包装为执行阶段，供下一轮继续。不会在批次中途接收入站事件，也不会清空已完成任务的结果。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

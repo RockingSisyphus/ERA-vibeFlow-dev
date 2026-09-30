@@ -3,7 +3,7 @@
   "type_key": "era.expression.validate_request",
   "display_name": "验证表达式请求",
   "category": "表达式工作流",
-  "description": "规范化初始状态、函数库与有序操作。",
+  "description": "检查表达式求值请求中的初始变量、函数定义和有序操作是否符合允许的格式，数值必须有限；同时检查可选随机来源标识及非负安全整数偏移。将有效输入标准化，并保留无效输入诊断供后续统一返回。只读取请求内数据，不读取聊天、时间或系统随机数。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

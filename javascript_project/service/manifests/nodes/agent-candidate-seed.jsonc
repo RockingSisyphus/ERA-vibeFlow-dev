@@ -3,7 +3,7 @@
   "type_key": "era.agent.candidate_seed",
   "display_name": "建立候选状态",
   "category": "Agent候选",
-  "description": "把本阶段的生成请求、已准备步骤和批次状态合成可重试的候选状态。",
+  "description": "为候选重试循环建立初始请求、任务和批次状态。若本次是在替换一个已有阶段，还要先把按历史计算的保留前缀、变量、函数和会话基线安装到当前内存工作状态，撤销旧阶段效果后才能请求新模型候选。基线安装失败转为失败终态，不继续生成；这些更新仅在内存，尚未保存消息或状态文件。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

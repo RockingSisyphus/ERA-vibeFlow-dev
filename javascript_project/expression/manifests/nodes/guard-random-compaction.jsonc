@@ -1,9 +1,9 @@
 {
   "kind": "node",
   "type_key": "era.expression.guard_random_compaction",
-  "display_name": "保护自动随机压缩边界",
+  "display_name": "传递随机依赖筛选结果",
   "category": "表达式工作流",
-  "description": "保留纯引擎已剔除自动随机及其依赖路径后的局部符号候选。",
+  "description": "原样传递符号推导器已经筛选过的候选及诊断，明确从“推导结果”进入“规范化候选”的数据边界。自动随机调用及其依赖路径的排除由前面的真实推导算法完成，本节点不再分析或抽取随机数；只有能按原随机语义重放的候选才继续使用。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

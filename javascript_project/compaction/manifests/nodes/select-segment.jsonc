@@ -2,7 +2,7 @@
   "kind": "node",
   "type_key": "era.command_compaction.select_segment",
   "display_name": "准备当前段与起点",
-  "description": "按当前游标选取正文段或同作用域事务组，带入前段的变量、函数和随机游标。没有剩余段时保留状态并结束。",
+  "description": "按游标取出当前正文段或同作用域事务组，将前段结束后的变量、函数和随机偏移作为它的执行起点，保留整份分段状态供结果合并。无事务包装的原请求保持其原快照默认规则。这里准备当前段输入，不跳段、不改原文，也不抽取随机数。",
   "category": "ERA 命令压缩",
   "version": "1.1.0",
   "flow_kind": "process",

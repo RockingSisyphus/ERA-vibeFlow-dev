@@ -2,7 +2,7 @@
   "kind": "node",
   "type_key": "era.command_compaction.rewrite_safe_regions",
   "display_name": "生成段候选",
-  "description": "只消费依赖分析结果形成替换，保留单事务不合并及不可重写段原文策略。",
+  "description": "依据变量、函数和随机依赖分析，为能证明安全的区域生成较短的替换文本，保留原命令与位置作为验证依据。这里只提出候选，没有候选或不安全部分继续保留原文；单事务及不同作用域不能被随意合并，分段合并时还会再次核对允许重写的条件。",
   "category": "ERA 命令压缩",
   "version": "1.1.0",
   "flow_kind": "process",

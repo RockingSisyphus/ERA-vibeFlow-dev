@@ -2,7 +2,7 @@
   "type_key": "era.expression.operation_step",
   "flow_kind": "process",
   "display_name": "执行一条表达式操作",
-  "description": "从顺序状态取出一条操作，以显式 AST 调用帧栈求值其表达式，再将结果写入当前状态并推进游标。",
+  "description": "执行有序表达式循环中的一项：按游标选定目标和语法树，建立显式求值帧，计算数值及函数嵌套调用，成功且结果有限时更新目标，否则保留未应用前状态并记录诊断。把更新后的变量、随机进度和下一游标传回循环，不接管函数库编译或整层压缩。",
   "requires": [
     {
       "type": "era.expression.sequence.state",
@@ -43,37 +43,37 @@
         "id": "start",
         "type_used": "era.expression.terminal",
         "display_name": "操作步骤启动",
-        "description": "开始当前游标的一条表达式操作。"
+        "description": "这是“执行一条表达式操作”的入口标记。本工作流的结构起点或终点标记，执行时返回空结果，不计算表达式、不替换文本，也不读写酒馆。它只明确流程的入口或出口，业务输入与结果通过已声明的数据通道传递；最终结果由实际处理节点产生。"
       },
       {
         "id": "select_next_operation",
         "type_used": "era.expression.select_next_operation",
         "display_name": "选择下一操作",
-        "description": "读取游标并保留目标路径、原始 AST 和当时的当前变量状态。"
+        "description": "依据当前操作索引取出下一项的目标路径和语法树，连同这一时刻已更新的变量及随机进度传给求值。不会跳过或重排操作，也不写入目标值；意义是让每项表达式使用前面操作已经产生的状态，而不是每次都从整层起点计算。"
       },
       {
         "id": "initialize_ast_frames",
         "type_used": "era.expression.initialize_ast_frames",
         "display_name": "初始化 AST 调用帧栈",
-        "description": "为当前表达式建立显式后序求值栈；不使用 JavaScript 递归，因此函数体可嵌套调用其他函数。"
+        "description": "为当前表达式建立显式求值帧，记录接下来要计算的子表达式、参数和函数调用。函数嵌套通过帧栈推进，不依赖 JavaScript 的递归调用栈；函数库无效或没有可用语法树时采用内部安全占位，原错误仍保留到结果判断，不因占位而把操作判成功。"
       },
       {
         "id": "evaluate_ast",
         "type_used": "era.expression.evaluate_ast",
         "display_name": "求值当前表达式",
-        "description": "消费初始化的 AST 帧状态，在登记的表达式执行库内推进显式帧栈直到完成；输出数值与诊断。只求值当前操作，不接管操作顺序、函数编译、状态提交或符号压缩。"
+        "description": "推进当前表达式的求值帧，依次计算运算符、函数参数及嵌套调用，使用当前变量和既定随机上下文，直到得到数值或诊断。它只求这一项，不移动操作索引、不写目标变量，也不处理整层压缩；完成结果交给下一节点决定是否应用。"
       },
       {
         "id": "commit_operation_result",
         "type_used": "era.expression.commit_operation_result",
         "display_name": "提交当前操作结果",
-        "description": "仅在有限数值结果成功时写入目标路径、推进游标并生成累计结果；失败操作保留前状态及定位诊断。"
+        "description": "检查当前表达式结果是否成功且为有限数值，合格时将其写入本次纯计算状态的目标路径，累计随机消耗和结果，再推进操作索引。失败则保留未应用该操作前的变量状态及定位诊断。这里更新的是请求内的计算状态，不是酒馆变量；循环完成后统一返回最终状态。"
       },
       {
         "id": "end",
         "type_used": "era.expression.terminal",
         "display_name": "操作步骤结束",
-        "description": "输出更新后的顺序状态、结束标记和累计结果。"
+        "description": "这是“执行一条表达式操作”的出口标记。本工作流的结构起点或终点标记，执行时返回空结果，不计算表达式、不替换文本，也不读写酒馆。它只明确流程的入口或出口，业务输入与结果通过已声明的数据通道传递；最终结果由实际处理节点产生。"
       }
     ],
     "edges": [

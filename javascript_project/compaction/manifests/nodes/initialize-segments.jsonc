@@ -2,7 +2,7 @@
   "kind": "node",
   "type_key": "era.command_compaction.initialize_segments",
   "display_name": "建立顺序压缩状态",
-  "description": "以请求起始 statData/statFunc/drawOffset 初始化分段游标、累计文本和计数，不执行候选重写。",
+  "description": "以请求给出的初始变量、函数库和随机偏移建立分段状态，游标从第一段开始，输出文本、诊断和统计暂为空。每段执行后会把结束状态传给下一段；这个节点只是准备起点，不提前重放指令或生成压缩候选。",
   "category": "ERA 命令压缩",
   "version": "1.1.0",
   "flow_kind": "process",

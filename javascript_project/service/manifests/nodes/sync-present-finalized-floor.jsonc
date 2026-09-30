@@ -3,7 +3,7 @@
   "type_key": "era.sync.present_finalized_floor",
   "display_name": "呈现已提交的最终楼层",
   "category": "同步事务",
-  "description": "消息及 Sidecar 提交成功且来源一致时，消费首次呈现意图刷新指定楼层；返回现有呈现诊断，不改变提交结果。",
+  "description": "在本次工作项带有首次显示意图时，要求酒馆刷新指定消息，使已完成内容和状态栏显示出来。保存分支只在消息与状态文件确认成功、来源仍一致时刷新；无提交分支按其已有显示意图处理。刷新失败只附加显示诊断，不撤销已经保存的业务结果，也不再次执行变量指令。",
   "version": "1.0.0",
   "flow_kind": "data_store",
   "contract": {

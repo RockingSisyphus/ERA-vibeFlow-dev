@@ -3,7 +3,7 @@
   "type_key": "era.agent.candidate_finish",
   "display_name": "判断候选是否重试",
   "category": "Agent候选",
-  "description": "有重试请求时更新候选状态；否则结束候选循环，并把结果交给生成会话。",
+  "description": "读取候选执行结果是否附有重试请求：有则将该请求放入候选循环状态，标记尚未结束；没有则输出终态结果并结束候选循环。这里只决定是否继续尝试，不再次调用模型，也不发送阶段完成通知；通知必须等候选已达到终态后形成。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

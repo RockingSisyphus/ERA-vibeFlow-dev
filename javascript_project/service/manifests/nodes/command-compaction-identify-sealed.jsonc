@@ -3,7 +3,7 @@
   "type_key": "era.command_compaction.identify_sealed",
   "display_name": "识别已封存楼层",
   "category": "命令压缩集成",
-  "description": "选择已有后续 AI 消息的封存候选并清理已删除消息的孤儿 marker。",
+  "description": "从已经完成指令应用的工作项中识别可封存压缩的消息层，保留每层原文本、消息标识和计算起点，形成候选集合。没有可封存层则原样传递；识别只决定哪些层可以考虑压缩，不提前重写正文或保存。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

@@ -3,7 +3,7 @@
   "type_key": "era.sidecar_binding.build_blocked_result",
   "display_name": "结算等待 Sidecar 选择的任务",
   "category": "Sidecar 绑定",
-  "description": "读取已判定的 Sidecar 等待结果，复用登记契约及结果策略生成无写入回执。",
+  "description": "当状态文件冲突或修复问题还在等待用户处理时，为原同步任务构造无写入的结果，保留等待原因及每个事件的回执。不会把“暂时不能继续”当成变量已同步，也不会擅自创建新绑定；这是状态选择分支与 Service 批次结算之间的出口。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

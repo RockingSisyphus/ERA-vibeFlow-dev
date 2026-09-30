@@ -3,7 +3,7 @@
   "type_key": "era.service.cycle.resume_collect",
   "display_name": "恢复事件收集阶段",
   "category": "服务阶段循环",
-  "description": "恢复事件收集阶段；保持原 Service 领域状态及执行顺序。",
+  "description": "把批次结束后可继续运行的服务状态包装回收集阶段，交给长期循环的下一轮。先前任务已经结算和发布；本节点自身不接收事件、不执行保存，只明确下一轮可以恢复接收新请求。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

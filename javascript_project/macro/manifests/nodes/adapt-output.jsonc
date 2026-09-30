@@ -3,7 +3,7 @@
   "type_key": "era.macro.adapt_output",
   "display_name": "适配替换输出",
   "category": "宏处理",
-  "description": "将内部重建字符串无损适配为节点集替换候选。",
+  "description": "将替换节点集内部生成的完整字符串交到统一的替换候选通道，不再次扫描或格式化。它只连接内部结果与外部接口，保留所有字符，不访问宿主；主工作流随后可把这一候选与无需替换分支汇合。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

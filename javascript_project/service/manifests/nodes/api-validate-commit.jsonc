@@ -3,7 +3,7 @@
   "type_key": "era.api.validate_commit",
   "display_name": "校验 Scope 与有序操作",
   "category": "公共 Facade",
-  "description": "校验窗口 token、scope、操作并决定 commit、skipped 或 failed。",
+  "description": "校验提交操作的格式和顺序，并结合调用来源、当前消息窗口及作用域判断是否可以应用。默认 message 规则在同一获准消息窗口可多次提交，后续窗口若发现消息已有记录则跳过；branch 按活动分支记录判断，always 每次允许的请求均执行，不按操作内容去重。窗口过期或输入不合规返回失败；此处只做准入，变量还未应用。",
   "version": "1.0.0",
   "flow_kind": "decision",
   "contract": {

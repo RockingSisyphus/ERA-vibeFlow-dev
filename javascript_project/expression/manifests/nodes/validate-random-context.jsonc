@@ -1,9 +1,9 @@
 {
   "kind": "node",
   "type_key": "era.expression.validate_random_context",
-  "display_name": "验证可重放随机上下文",
+  "display_name": "传递已校验的随机上下文",
   "category": "表达式工作流",
-  "description": "确认可选 sourceKey 与非负安全整数 drawOffset 已由请求规范器验证。",
+  "description": "把请求标准化阶段已经检查过的随机上下文连同请求原样传到函数和操作处理链。随机来源标识用于稳定重放，偏移表示此前已消耗的位置；当前节点不另做一次校验、不抽取随机数，也不保存游标。随机输入是否合法由入口标准化负责，避免把数据转接误写成独立验证。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

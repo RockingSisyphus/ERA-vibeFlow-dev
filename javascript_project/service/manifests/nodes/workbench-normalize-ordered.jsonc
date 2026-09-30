@@ -3,7 +3,7 @@
   "type_key": "era.workbench.normalize_ordered",
   "display_name": "校验显式有序操作",
   "category": "工作台提交",
-  "description": "保留工作台已有高级有序操作模式，只接受原允许的变量Insert/Edit/Delete，不自动替用户解除保护；不重排用户给出的操作。",
+  "description": "处理工作台的高级有序操作模式，校验允许的变量插入、编辑和删除操作，并保持用户给出的顺序。不会自行重排或解除保护；格式无效时带出准备失败，合格列表随后仍进入统一保护检查和 API 提交，而不是从工作台直接执行。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

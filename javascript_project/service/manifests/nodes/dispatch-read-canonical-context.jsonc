@@ -3,7 +3,7 @@
   "type_key": "era.dispatch.read_canonical_context",
   "display_name": "读取严格酒馆上下文",
   "category": "任务派发",
-  "description": "通过严格消息投影读取当前激活文本，并按准备要求补读聊天元数据和脚本占位符设置。",
+  "description": "读取当前聊天身份和所有消息的实际楼号、当前 Swipe（同一消息的候选回复）及正文。需要消息标识时还读取状态文件指针、已有 ERA 元数据和占位符设置。全量读取会保留准备生成的新末楼或空候选，避免把旧回复当成新目标；读取失败输出明确失败上下文，供后续停止写入。",
   "version": "1.0.0",
   "flow_kind": "data_store",
   "contract": {

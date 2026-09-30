@@ -3,7 +3,7 @@
   "type_key": "era.mk.build_result",
   "display_name": "构造消息密钥任务结果",
   "category": "消息密钥结果",
-  "description": "对 step.sources 逐一且仅一次结算，隔离普通失败与 fatal，不额外发布业务事件，并保持连续 MK 状态不变。",
+  "description": "依据消息标识准备和提交的真实结果，向任务对应的每个原事件生成一次回执，保留无变更、失败或致命原因。这个节点只完成消息标识任务的结算，不再次写正文，也不把标识更新冒充变量同步或推进连续计算进度。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

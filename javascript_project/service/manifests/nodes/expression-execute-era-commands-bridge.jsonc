@@ -3,7 +3,7 @@
   "type_key": "era.expression.execute_era_commands.bridge",
   "display_name": "计算历史同步计划",
   "category": "表达式集成",
-  "description": "消费收窄的 SyncPlanningInput，调用登记 sync_planning 的 planSyncWork；其真实重放链进入 Expression 同步 AOT，返回规划工作项，不读写宿主。",
+  "description": "接收 Service 已限定好消息范围、变量起点和执行原因的计算输入，调用历史同步规划器；其中的表达式计算由独立 Expression 工作流完成，形成后续可执行的工作项。随机来源与偏移沿实际求值链传递。这个边界只做计算，不直接读取或保存酒馆内容。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

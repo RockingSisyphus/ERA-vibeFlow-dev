@@ -3,7 +3,7 @@
   "type_key": "era.mk.build_commit",
   "display_name": "构造消息密钥提交请求",
   "category": "消息密钥纯计算",
-  "description": "把已路由候选转换为明确的消息文本更新与完整 ERAMetaData 更新请求，不执行宿主操作。",
+  "description": "检查消息标识候选确实有效且需要写入，再把目标正文、元数据和变更标志组织为提交请求。缺少标识、正文或元数据等必要信息会报错；仅构造请求，不表示目标消息已经保存。这份登记实现供需要独立标识提交的调用使用。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

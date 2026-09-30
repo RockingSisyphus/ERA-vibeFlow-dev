@@ -3,7 +3,7 @@
   "type_key": "era.api.read_window_admission",
   "display_name": "读取窗口准入与目标",
   "category": "公共 Facade",
-  "description": "读取真实消息、身份与内存窗口准入。",
+  "description": "读取 API 调用所对应的聊天身份、消息及当前作用域窗口，优先把尚未保存的内存正文覆盖到读取视图中。作者函数的显式调用位置与状态栏来源分别保留，供后续判断请求是否仍有效、该窗口是否获准写入。窗口是本次消息处理的上下文，不是保存防抖时间。读取失败输出失败事实；这个节点不应用操作，也不以旧文件替代当前工作状态。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

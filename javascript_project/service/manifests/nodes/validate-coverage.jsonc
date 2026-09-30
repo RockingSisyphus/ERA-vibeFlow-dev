@@ -3,7 +3,7 @@
   "type_key": "era.service.validate_coverage",
   "display_name": "验证来源覆盖",
   "category": "批次执行",
-  "description": "验证每个批次来源序号恰好覆盖一次，并识别重复、缺失或越界来源。",
+  "description": "检查批次计划是否覆盖全部原始事件：不能漏掉来源、重复处理同一来源，或混入本批次之外的来源；步骤数也不能超过 128。成功时建立从第一个步骤开始的批次状态，失败时走整批失败结算，防止部分事件悄悄丢失或被执行两次。",
   "version": "1.0.0",
   "flow_kind": "decision",
   "contract": {

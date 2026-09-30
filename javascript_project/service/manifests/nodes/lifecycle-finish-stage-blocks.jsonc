@@ -3,7 +3,7 @@
   "type_key": "era.lifecycle.finish_stage_blocks",
   "display_name": "回送已应用阶段状态及草稿",
   "category": "内存生命周期",
-  "description": "将变量/函数、普通API记录及done传给原阶段交接；后续阶段读内存，完整轮次才保存；取消保留原草稿边界。",
+  "description": "检查模型候选的全部块应用结果，并把成功阶段正文和变量进度记入当前会话。可纠错错误需要恢复整次候选的内存变量、正文、日志、作用域和随机进度，再准备下一次尝试；不是只撤销最后一个块。重试耗尽保留本候选起点，更早已完成阶段仍保留。取消也不会无故抹掉早前成功内容。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

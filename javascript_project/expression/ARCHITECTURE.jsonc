@@ -52,7 +52,7 @@
         },
         "role": {
           "display_name": "表达式计算启动",
-          "description": "启动独立、无宿主副作用的函数表达式层计算。"
+          "description": "这是“era.expression”的入口标记。本工作流的结构起点或终点标记，执行时返回空结果，不计算表达式、不替换文本，也不读写酒馆。它只明确流程的入口或出口，业务输入与结果通过已声明的数据通道传递；最终结果由实际处理节点产生。"
         },
         "contract_source": "node_type",
         "flow_kind": "terminal",
@@ -85,7 +85,7 @@
         },
         "role": {
           "display_name": "执行表达式层",
-          "description": "验证函数库与操作，按顺序执行已实现的同步求值流程，并形成结果和符号压缩候选。"
+          "description": "对一层有序变量表达式作纯计算：标准化输入，解析并校验函数库，拒绝自由变量及递归调用，再按顺序求每个操作，使后项读取前项的新值。随机来源和偏移明确传递；完成后推导能安全重放的较短表达式。返回最终变量、诊断及压缩候选，不将其保存到聊天，也不运行任意作者 JavaScript。"
         },
         "contract_source": "nodeset",
         "flow_kind": "predefined",
@@ -134,7 +134,7 @@
         },
         "role": {
           "display_name": "表达式计算结束",
-          "description": "输出最终数值状态、诊断和规范化压缩表达式。"
+          "description": "这是“era.expression”的出口标记。本工作流的结构起点或终点标记，执行时返回空结果，不计算表达式、不替换文本，也不读写酒馆。它只明确流程的入口或出口，业务输入与结果通过已声明的数据通道传递；最终结果由实际处理节点产生。"
         },
         "contract_source": "node_type",
         "flow_kind": "terminal",
@@ -190,7 +190,7 @@
         "path": "configs/nodesets/execute_layer.jsonc"
       },
       "display_name": "ERA 函数表达式层执行",
-      "description": "独立处理函数表达式的受限语法、纯函数库、任意嵌套调用、可重放随机序列、顺序变量状态与消息层压缩；随机身份只来自显式 sourceKey，不访问 Tavern、Sidecar、ERA API 或浏览器全局状态。",
+      "description": "对一层有序变量表达式作纯计算：标准化输入，解析并校验函数库，拒绝自由变量及递归调用，再按顺序求每个操作，使后项读取前项的新值。随机来源和偏移明确传递；完成后推导能安全重放的较短表达式。返回最终变量、诊断及压缩候选，不将其保存到聊天，也不运行任意作者 JavaScript。",
       "status": "implemented",
       "flow_kind": "process",
       "effect_scope": "none",
@@ -260,7 +260,7 @@
             },
             "role": {
               "display_name": "表达式层启动",
-              "description": "开始一次纯表达式层求值。"
+              "description": "这是“ERA 函数表达式层执行”的入口标记。本工作流的结构起点或终点标记，执行时返回空结果，不计算表达式、不替换文本，也不读写酒馆。它只明确流程的入口或出口，业务输入与结果通过已声明的数据通道传递；最终结果由实际处理节点产生。"
             },
             "contract_source": "node_type",
             "flow_kind": "terminal",
@@ -293,7 +293,7 @@
             },
             "role": {
               "display_name": "验证表达式请求",
-              "description": "验证有限数值初始状态、函数库 JSON 形状与有序操作输入，不读取外部状态。"
+              "description": "检查表达式求值请求中的初始变量、函数定义和有序操作是否符合允许的格式，数值必须有限；同时检查可选随机来源标识及非负安全整数偏移。将有效输入标准化，并保留无效输入诊断供后续统一返回。只读取请求内数据，不读取聊天、时间或系统随机数。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -337,8 +337,8 @@
               "path": "configs/nodesets/execute_layer.jsonc"
             },
             "role": {
-              "display_name": "验证可重放随机上下文",
-              "description": "验证可选 sourceKey 与非负安全整数 drawOffset；不读取变量目标路径、系统时间、Math.random 或持久化游标。"
+              "display_name": "传递已校验的随机上下文",
+              "description": "把请求标准化阶段已经检查过的随机上下文连同请求原样传到函数和操作处理链。随机来源标识用于稳定重放，偏移表示此前已消耗的位置；当前节点不另做一次校验、不抽取随机数，也不保存游标。随机输入是否合法由入口标准化负责，避免把数据转接误写成独立验证。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -383,7 +383,7 @@
             },
             "role": {
               "display_name": "解析函数定义 AST",
-              "description": "使用 ERA 自有 token 流和 Pratt parser 解析每个 JSON 函数体，保留函数调用与参数位置。"
+              "description": "逐个读取 JSON 函数定义的名称、形参和表达式，用 ERA 自有语法解析器生成语法树，记录调用与参数位置。重复形参、非法名称或表达式无法解析时附带定位诊断。语法树描述计算结构，尚不执行函数，也不会把表达式作为任意 JavaScript 代码运行。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -428,7 +428,7 @@
             },
             "role": {
               "display_name": "提取函数体调用",
-              "description": "遍历全部函数 AST，精确列出函数体内对内建函数与其他自定义函数的调用边。"
+              "description": "遍历各函数的语法树，列出它调用了哪些已定义的自定义函数，去重并排序，形成后续检查递归所需的依赖表。内建函数不加入这份自定义依赖表，其名称和参数约束由纯度检查负责。这里不执行函数，也不因为提取到调用关系就认定其有效。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -473,7 +473,7 @@
             },
             "role": {
               "display_name": "验证函数纯度与参数",
-              "description": "确认函数体只读取其形参，调用已知函数且参数数量正确；拒绝状态路径、@path、自由变量和内建名称覆盖。"
+              "description": "检查每个自定义函数只使用自己的形参，调用的内建或自定义函数确实存在且参数数量正确，不允许偷偷读取状态路径、自由变量或覆盖内建名称。输出诊断供编译阶段决定能否执行；这样同一组参数应有明确结果，不依赖函数定义以外的隐含变量。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -523,7 +523,7 @@
             },
             "role": {
               "display_name": "建立函数调用图",
-              "description": "把通过纯度检查的自定义函数之间的调用关系整理为有向图，支持先调用后定义及嵌套调用，供后续检测递归。"
+              "description": "把自定义函数依赖表和已有检查诊断整理成调用图，供递归检测使用。例如甲调用乙、乙调用丙会形成连续关系，函数先调用后定义仍可对应。这里不再次解析函数或求值，也不在组装图时抹掉先前诊断。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -573,7 +573,7 @@
             },
             "role": {
               "display_name": "拒绝递归函数环",
-              "description": "通过深度优先遍历（DFS）检测函数直接或间接调用自身的循环，并记录导致循环的调用链。"
+              "description": "沿自定义函数调用关系作深度优先遍历，识别直接调用自身或绕经其他函数返回自身的循环，并记录完整循环链。输出调用图及新增诊断，不当场执行函数；后续编译结合诊断判定函数库是否可用，因此节点名字中的“拒绝”不是静默删除错误函数。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -618,7 +618,7 @@
             },
             "role": {
               "display_name": "编译可调用函数库",
-              "description": "冻结 AST、形参表和无环调用计划；运行时通过显式调用帧绑定参数而不做字符串替换。"
+              "description": "将解析好的函数体语法树、形参表和所有校验诊断组织成运行时可调用的函数库，标明是否有效。求值时按明确调用帧绑定参数，不通过字符串替换拼接函数体；存在格式、纯度或递归问题时不把库当作可执行。这里只准备调用结构，不调用作者函数或修改变量。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -668,7 +668,7 @@
             },
             "role": {
               "display_name": "解析顺序操作",
-              "description": "解析路径与用户表达式，禁止用户输入 @path，并完整保留操作出现顺序。"
+              "description": "按输入原顺序解析每个变量操作的目标路径和表达式，记录对应语法树及定位诊断。用户表达式不能使用内部压缩表示的 @path，避免混淆当前值和层起始快照。这里只解释操作结构，不更新变量；后续循环按顺序执行，后一项才能读取前一项的新结果。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -713,7 +713,7 @@
             },
             "role": {
               "display_name": "初始化顺序状态与随机游标",
-              "description": "冻结本消息层起始状态，以 drawOffset 为起点预留自动随机槽位，并创建变量操作游标、随机游标、已编译函数库和待执行 AST。"
+              "description": "建立有序求值的起始状态：保留本层开始时的变量快照，装入已编译函数库和解析操作，建立操作索引及从请求偏移开始的随机进度，预留自动随机位置。可选快照函数库单独编译，供快照表达式使用。尚未执行任何操作，冻结起点用于之后重放和压缩证明。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -768,7 +768,7 @@
             },
             "role": {
               "display_name": "逐条执行表达式操作",
-              "description": "以显式 carry 状态逐条执行操作；每条操作都通过 AST 帧栈处理任意层函数嵌套，后续操作读取已更新的当前状态。"
+              "description": "按原输入顺序逐项求表达式，循环携带当前变量、操作索引、函数库和随机进度。每项通过显式语法树帧栈处理嵌套调用，成功结果供后项读取，失败诊断保留。全部完成后返回整层计算结果；这里没有酒馆写入。"
             },
             "contract_source": "system_config",
             "flow_kind": "predefined",
@@ -837,7 +837,7 @@
             },
             "role": {
               "display_name": "推导消息层符号变化",
-              "description": "以冻结的层起始状态建立 @path 环境，按已完成的顺序操作推导每个变量的最终表达式。"
+              "description": "根据已完成的有序操作，把每个变化变量的最终计算推导成引用层起始快照的表达式，而不是简单把最终数值写死。内部 @path 表示起点某变量，便于重放。含自动随机调用或受其影响的路径在推导中排除不安全压缩，保留需要按原顺序执行的部分；这里只形成候选。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -886,8 +886,8 @@
               "path": "configs/nodesets/execute_layer.jsonc"
             },
             "role": {
-              "display_name": "保护自动随机压缩边界",
-              "description": "保留 random()、random(seed) 及其间接函数调用的原始顺序，禁止折叠为常数或跨越合并；完全显式 random(seed, draw) 仍按普通确定性调用证明。"
+              "display_name": "传递随机依赖筛选结果",
+              "description": "原样传递符号推导器已经筛选过的候选及诊断，明确从“推导结果”进入“规范化候选”的数据边界。自动随机调用及其依赖路径的排除由前面的真实推导算法完成，本节点不再分析或抽取随机数；只有能按原随机语义重放的候选才继续使用。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -932,7 +932,7 @@
             },
             "role": {
               "display_name": "规范化压缩表达式",
-              "description": "局部常数折叠、零一消除和最少括号打印；每个变化路径产生最多一个 $expr 候选。"
+              "description": "把安全的符号候选做局部常数折叠、零和一等简化，并按所需括号打印为较短表达式，每个变化路径最多产生一个候选。连同有序执行所得最终变量、诊断和随机消耗一起返回；不安全路径不强行压缩。这里是纯计算出口，是否用于消息重写还须由调用方验证。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -987,7 +987,7 @@
             },
             "role": {
               "display_name": "表达式层结束",
-              "description": "输出最终状态、诊断和规范化压缩候选。"
+              "description": "这是“ERA 函数表达式层执行”的出口标记。本工作流的结构起点或终点标记，执行时返回空结果，不计算表达式、不替换文本，也不读写酒馆。它只明确流程的入口或出口，业务输入与结果通过已声明的数据通道传递；最终结果由实际处理节点产生。"
             },
             "contract_source": "node_type",
             "flow_kind": "terminal",
@@ -1246,7 +1246,7 @@
         "path": "configs/nodesets/operation_step.jsonc"
       },
       "display_name": "执行一条表达式操作",
-      "description": "从顺序状态取出一条操作，以显式 AST 调用帧栈求值其表达式，再将结果写入当前状态并推进游标。",
+      "description": "执行有序表达式循环中的一项：按游标选定目标和语法树，建立显式求值帧，计算数值及函数嵌套调用，成功且结果有限时更新目标，否则保留未应用前状态并记录诊断。把更新后的变量、随机进度和下一游标传回循环，不接管函数库编译或整层压缩。",
       "status": "implemented",
       "flow_kind": "process",
       "effect_scope": "none",
@@ -1338,7 +1338,7 @@
             },
             "role": {
               "display_name": "操作步骤启动",
-              "description": "开始当前游标的一条表达式操作。"
+              "description": "这是“执行一条表达式操作”的入口标记。本工作流的结构起点或终点标记，执行时返回空结果，不计算表达式、不替换文本，也不读写酒馆。它只明确流程的入口或出口，业务输入与结果通过已声明的数据通道传递；最终结果由实际处理节点产生。"
             },
             "contract_source": "node_type",
             "flow_kind": "terminal",
@@ -1371,7 +1371,7 @@
             },
             "role": {
               "display_name": "选择下一操作",
-              "description": "读取游标并保留目标路径、原始 AST 和当时的当前变量状态。"
+              "description": "依据当前操作索引取出下一项的目标路径和语法树，连同这一时刻已更新的变量及随机进度传给求值。不会跳过或重排操作，也不写入目标值；意义是让每项表达式使用前面操作已经产生的状态，而不是每次都从整层起点计算。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -1416,7 +1416,7 @@
             },
             "role": {
               "display_name": "初始化 AST 调用帧栈",
-              "description": "为当前表达式建立显式后序求值栈；不使用 JavaScript 递归，因此函数体可嵌套调用其他函数。"
+              "description": "为当前表达式建立显式求值帧，记录接下来要计算的子表达式、参数和函数调用。函数嵌套通过帧栈推进，不依赖 JavaScript 的递归调用栈；函数库无效或没有可用语法树时采用内部安全占位，原错误仍保留到结果判断，不因占位而把操作判成功。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -1461,7 +1461,7 @@
             },
             "role": {
               "display_name": "求值当前表达式",
-              "description": "消费初始化的 AST 帧状态，在登记的表达式执行库内推进显式帧栈直到完成；输出数值与诊断。只求值当前操作，不接管操作顺序、函数编译、状态提交或符号压缩。"
+              "description": "推进当前表达式的求值帧，依次计算运算符、函数参数及嵌套调用，使用当前变量和既定随机上下文，直到得到数值或诊断。它只求这一项，不移动操作索引、不写目标变量，也不处理整层压缩；完成结果交给下一节点决定是否应用。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -1506,7 +1506,7 @@
             },
             "role": {
               "display_name": "提交当前操作结果",
-              "description": "仅在有限数值结果成功时写入目标路径、推进游标并生成累计结果；失败操作保留前状态及定位诊断。"
+              "description": "检查当前表达式结果是否成功且为有限数值，合格时将其写入本次纯计算状态的目标路径，累计随机消耗和结果，再推进操作索引。失败则保留未应用该操作前的变量状态及定位诊断。这里更新的是请求内的计算状态，不是酒馆变量；循环完成后统一返回最终状态。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -1566,7 +1566,7 @@
             },
             "role": {
               "display_name": "操作步骤结束",
-              "description": "输出更新后的顺序状态、结束标记和累计结果。"
+              "description": "这是“执行一条表达式操作”的出口标记。本工作流的结构起点或终点标记，执行时返回空结果，不计算表达式、不替换文本，也不读写酒馆。它只明确流程的入口或出口，业务输入与结果通过已声明的数据通道传递；最终结果由实际处理节点产生。"
             },
             "contract_source": "node_type",
             "flow_kind": "terminal",
@@ -1658,7 +1658,7 @@
   "node_types": {
     "era.expression.build_function_call_graph": {
       "display_name": "建立函数调用图",
-      "description": "建立支持前向声明和嵌套调用的有向图。",
+      "description": "把自定义函数依赖表和已有检查诊断整理成调用图，供递归检测使用。例如甲调用乙、乙调用丙会形成连续关系，函数先调用后定义仍可对应。这里不再次解析函数或求值，也不在组装图时抹掉先前诊断。",
       "category": "表达式工作流",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -1717,7 +1717,7 @@
     },
     "era.expression.commit_operation_result": {
       "display_name": "提交表达式操作结果",
-      "description": "在当前帧成功后更新当前状态、游标和累计结果。",
+      "description": "检查当前表达式结果是否成功且为有限数值，合格时将其写入本次纯计算状态的目标路径，累计随机消耗和结果，再推进操作索引。失败则保留未应用该操作前的变量状态及定位诊断。这里更新的是请求内的计算状态，不是酒馆变量；循环完成后统一返回最终状态。",
       "category": "表达式循环",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -1792,7 +1792,7 @@
     },
     "era.expression.compile_callable_functions": {
       "display_name": "编译可调用函数库",
-      "description": "冻结无环函数 AST 与形参表，运行时不做字符串替换。",
+      "description": "将解析好的函数体语法树、形参表和所有校验诊断组织成运行时可调用的函数库，标明是否有效。求值时按明确调用帧绑定参数，不通过字符串替换拼接函数体；存在格式、纯度或递归问题时不把库当作可执行。这里只准备调用结构，不调用作者函数或修改变量。",
       "category": "表达式工作流",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -1851,7 +1851,7 @@
     },
     "era.expression.derive_symbolic_layer": {
       "display_name": "推导消息层符号变化",
-      "description": "用层起始 @path 和顺序操作推导每条变化路径的最终 AST。",
+      "description": "根据已完成的有序操作，把每个变化变量的最终计算推导成引用层起始快照的表达式，而不是简单把最终数值写死。内部 @path 表示起点某变量，便于重放。含自动随机调用或受其影响的路径在推导中排除不安全压缩，保留需要按原顺序执行的部分；这里只形成候选。",
       "category": "表达式压缩",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -1910,7 +1910,7 @@
     },
     "era.expression.evaluate_ast": {
       "display_name": "求值当前表达式",
-      "description": "消费初始化的 AST 帧状态，在登记的表达式执行库内推进显式帧栈直到完成；输出数值与诊断。只求值当前操作，不接管操作顺序、函数编译、状态提交或符号压缩。",
+      "description": "推进当前表达式的求值帧，依次计算运算符、函数参数及嵌套调用，使用当前变量和既定随机上下文，直到得到数值或诊断。它只求这一项，不移动操作索引、不写目标变量，也不处理整层压缩；完成结果交给下一节点决定是否应用。",
       "category": "表达式执行",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -1961,7 +1961,7 @@
     },
     "era.expression.extract_function_dependencies": {
       "display_name": "提取函数体调用",
-      "description": "从函数 AST 提取自定义函数调用边。",
+      "description": "遍历各函数的语法树，列出它调用了哪些已定义的自定义函数，去重并排序，形成后续检查递归所需的依赖表。内建函数不加入这份自定义依赖表，其名称和参数约束由纯度检查负责。这里不执行函数，也不因为提取到调用关系就认定其有效。",
       "category": "表达式工作流",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -2011,8 +2011,8 @@
       ]
     },
     "era.expression.guard_random_compaction": {
-      "display_name": "保护自动随机压缩边界",
-      "description": "保留纯引擎已剔除自动随机及其依赖路径后的局部符号候选。",
+      "display_name": "传递随机依赖筛选结果",
+      "description": "原样传递符号推导器已经筛选过的候选及诊断，明确从“推导结果”进入“规范化候选”的数据边界。自动随机调用及其依赖路径的排除由前面的真实推导算法完成，本节点不再分析或抽取随机数；只有能按原随机语义重放的候选才继续使用。",
       "category": "表达式工作流",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -2063,7 +2063,7 @@
     },
     "era.expression.initialize_ast_frames": {
       "display_name": "初始化 AST 调用帧栈",
-      "description": "为一条操作建立显式后序求值栈。",
+      "description": "为当前表达式建立显式求值帧，记录接下来要计算的子表达式、参数和函数调用。函数嵌套通过帧栈推进，不依赖 JavaScript 的递归调用栈；函数库无效或没有可用语法树时采用内部安全占位，原错误仍保留到结果判断，不因占位而把操作判成功。",
       "category": "表达式循环",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -2114,7 +2114,7 @@
     },
     "era.expression.initialize_random_sequence_state": {
       "display_name": "初始化顺序状态与随机游标",
-      "description": "冻结层起始状态并创建操作游标、随机上下文和已消耗槽位计数。",
+      "description": "建立有序求值的起始状态：保留本层开始时的变量快照，装入已编译函数库和解析操作，建立操作索引及从请求偏移开始的随机进度，预留自动随机位置。可选快照函数库单独编译，供快照表达式使用。尚未执行任何操作，冻结起点用于之后重放和压缩证明。",
       "category": "表达式工作流",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -2181,7 +2181,7 @@
     },
     "era.expression.initialize_sequence_state": {
       "display_name": "初始化顺序状态",
-      "description": "创建层起始快照、当前状态、函数库和操作游标。",
+      "description": "建立有序求值的起始状态：保留本层开始时的变量快照，装入已编译函数库和解析操作，建立操作索引及从请求偏移开始的随机进度，预留自动随机位置。可选快照函数库单独编译，供快照表达式使用。尚未执行任何操作，冻结起点用于之后重放和压缩证明。",
       "category": "表达式工作流",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -2248,7 +2248,7 @@
     },
     "era.expression.normalize_compaction": {
       "display_name": "规范化压缩表达式",
-      "description": "局部常数折叠并打印每路径至多一个可重放 $expr。",
+      "description": "把安全的符号候选做局部常数折叠、零和一等简化，并按所需括号打印为较短表达式，每个变化路径最多产生一个候选。连同有序执行所得最终变量、诊断和随机消耗一起返回；不安全路径不强行压缩。这里是纯计算出口，是否用于消息重写还须由调用方验证。",
       "category": "表达式压缩",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -2315,7 +2315,7 @@
     },
     "era.expression.parse_function_definitions": {
       "display_name": "解析函数定义 AST",
-      "description": "以自有 token 与 Pratt parser 解析函数体。",
+      "description": "逐个读取 JSON 函数定义的名称、形参和表达式，用 ERA 自有语法解析器生成语法树，记录调用与参数位置。重复形参、非法名称或表达式无法解析时附带定位诊断。语法树描述计算结构，尚不执行函数，也不会把表达式作为任意 JavaScript 代码运行。",
       "category": "表达式工作流",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -2366,7 +2366,7 @@
     },
     "era.expression.parse_operations": {
       "display_name": "解析顺序操作",
-      "description": "解析路径和用户表达式并拒绝原始 @path。",
+      "description": "按输入原顺序解析每个变量操作的目标路径和表达式，记录对应语法树及定位诊断。用户表达式不能使用内部压缩表示的 @path，避免混淆当前值和层起始快照。这里只解释操作结构，不更新变量；后续循环按顺序执行，后一项才能读取前一项的新结果。",
       "category": "表达式工作流",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -2417,7 +2417,7 @@
     },
     "era.expression.reject_recursive_functions": {
       "display_name": "拒绝递归函数环",
-      "description": "通过深度优先遍历（DFS）检查函数是否直接或间接调用自身，并记录循环调用链。",
+      "description": "沿自定义函数调用关系作深度优先遍历，识别直接调用自身或绕经其他函数返回自身的循环，并记录完整循环链。输出调用图及新增诊断，不当场执行函数；后续编译结合诊断判定函数库是否可用，因此节点名字中的“拒绝”不是静默删除错误函数。",
       "category": "表达式工作流",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -2468,7 +2468,7 @@
     },
     "era.expression.select_next_operation": {
       "display_name": "选择下一操作",
-      "description": "从显式游标提取当前操作及其顺序状态。",
+      "description": "依据当前操作索引取出下一项的目标路径和语法树，连同这一时刻已更新的变量及随机进度传给求值。不会跳过或重排操作，也不写入目标值；意义是让每项表达式使用前面操作已经产生的状态，而不是每次都从整层起点计算。",
       "category": "表达式循环",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -2519,7 +2519,7 @@
     },
     "era.expression.terminal": {
       "display_name": "表达式终端",
-      "description": "无副作用的流程起止节点。",
+      "description": "本工作流的结构起点或终点标记，执行时返回空结果，不计算表达式、不替换文本，也不读写酒馆。它只明确流程的入口或出口，业务输入与结果通过已声明的数据通道传递；最终结果由实际处理节点产生。",
       "category": "表达式工作流",
       "version": "1.0.0",
       "flow_kind": "terminal",
@@ -2550,7 +2550,7 @@
     },
     "era.expression.validate_function_purity": {
       "display_name": "验证函数纯度与参数",
-      "description": "拒绝函数体内状态读取、未知调用、参数不匹配和内建覆盖。",
+      "description": "检查每个自定义函数只使用自己的形参，调用的内建或自定义函数确实存在且参数数量正确，不允许偷偷读取状态路径、自由变量或覆盖内建名称。输出诊断供编译阶段决定能否执行；这样同一组参数应有明确结果，不依赖函数定义以外的隐含变量。",
       "category": "表达式工作流",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -2608,8 +2608,8 @@
       ]
     },
     "era.expression.validate_random_context": {
-      "display_name": "验证可重放随机上下文",
-      "description": "确认可选 sourceKey 与非负安全整数 drawOffset 已由请求规范器验证。",
+      "display_name": "传递已校验的随机上下文",
+      "description": "把请求标准化阶段已经检查过的随机上下文连同请求原样传到函数和操作处理链。随机来源标识用于稳定重放，偏移表示此前已消耗的位置；当前节点不另做一次校验、不抽取随机数，也不保存游标。随机输入是否合法由入口标准化负责，避免把数据转接误写成独立验证。",
       "category": "表达式工作流",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -2660,7 +2660,7 @@
     },
     "era.expression.validate_request": {
       "display_name": "验证表达式请求",
-      "description": "规范化初始状态、函数库与有序操作。",
+      "description": "检查表达式求值请求中的初始变量、函数定义和有序操作是否符合允许的格式，数值必须有限；同时检查可选随机来源标识及非负安全整数偏移。将有效输入标准化，并保留无效输入诊断供后续统一返回。只读取请求内数据，不读取聊天、时间或系统随机数。",
       "category": "表达式工作流",
       "version": "1.0.0",
       "flow_kind": "process",

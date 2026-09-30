@@ -3,7 +3,7 @@
   "type_key": "era.command_compaction.update_markers",
   "display_name": "更新压缩调度 Marker",
   "category": "命令压缩集成",
-  "description": "记录 MK、文本指纹和结果状态并返回既有 Sidecar 提交工作项。",
+  "description": "依据已确认并回填的压缩结果更新封存标记和相关统计，再将完整工作项交还消息同步链。标记用来描述哪些消息层已处理，不能代替重放验证；本节点不额外执行指令或宿主保存。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

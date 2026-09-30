@@ -3,7 +3,7 @@
   "type_key": "era.dispatch.classify_context",
   "display_name": "分类任务与上下文",
   "category": "任务派发",
-  "description": "验证规划步骤与批次状态，形成显式任务来源和上下文准备路由。",
+  "description": "检查所选步骤需要哪一种上下文：初始化、同步和消息标识任务按各自要求准备聊天事实；无需宿主数据的任务及忽略项走无读取分支；公共 ERA 提交和同步调用归入 API 任务。这里决定准备范围，具体的作用域准入和消息写入目标仍由 API 内部校验。",
   "version": "1.0.0",
   "flow_kind": "decision",
   "contract": {

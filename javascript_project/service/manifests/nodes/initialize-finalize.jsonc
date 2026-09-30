@@ -3,7 +3,7 @@
   "type_key": "era.initialize.build_result",
   "display_name": "规划初始化完成方式",
   "category": "初始化事务",
-  "description": "将直接初始化结果与启动同步结果分离，避免直接结果抢先结束启动同步。",
+  "description": "检查资源提交结果是否需要继续历史同步：只有启动初始化且资源已完成或本就无需变更时，构造一个共享同步步骤；其他初始化操作或失败走直接结果分支。两种结果用独立数据通道传递，避免提前返回导致该做的聊天变量同步被跳过。",
   "version": "1.1.0",
   "flow_kind": "decision",
   "contract": {

@@ -3,7 +3,7 @@
   "type_key": "era.expression.normalize_compaction",
   "display_name": "规范化压缩表达式",
   "category": "表达式压缩",
-  "description": "局部常数折叠并打印每路径至多一个可重放 $expr。",
+  "description": "把安全的符号候选做局部常数折叠、零和一等简化，并按所需括号打印为较短表达式，每个变化路径最多产生一个候选。连同有序执行所得最终变量、诊断和随机消耗一起返回；不安全路径不强行压缩。这里是纯计算出口，是否用于消息重写还须由调用方验证。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

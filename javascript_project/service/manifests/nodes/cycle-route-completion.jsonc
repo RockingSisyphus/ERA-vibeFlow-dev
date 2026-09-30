@@ -3,7 +3,7 @@
   "type_key": "era.service.cycle.route_completion",
   "display_name": "选择继续或结算",
   "category": "服务阶段循环",
-  "description": "选择继续或结算；保持原 Service 领域状态及执行顺序。",
+  "description": "读取任务合并给出的完成标志，决定带着更新后的状态执行下一个步骤，还是当轮结束批次。这里不重新计算步骤数或更改结果，只将同一次合并的结论用于分支选择，避免最后一步执行后多等一轮。",
   "version": "1.0.0",
   "flow_kind": "decision",
   "contract": {

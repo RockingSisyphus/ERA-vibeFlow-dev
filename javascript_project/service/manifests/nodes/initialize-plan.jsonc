@@ -3,7 +3,7 @@
   "type_key": "era.initialize.plan",
   "display_name": "规划初始化资源",
   "category": "初始化规划",
-  "description": "调用纯规划器形成设置、世界书、正则与占位符动作。",
+  "description": "比较现有设置和角色资源，规划需要补齐的 ERA 世界书、正则、示例变量或函数及开场白。传统与外置模式按各自规则处理，已经保存的作者资源遵守不覆盖条件；传统默认占位符替换保留 HTML 所需行边界。输出有序变更计划和“有变更/无需变更”分支，不直接修改酒馆。",
   "version": "1.0.0",
   "flow_kind": "decision",
   "contract": {

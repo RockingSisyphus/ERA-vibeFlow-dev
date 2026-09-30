@@ -9,7 +9,7 @@
   ],
   "type_key": "era.service.collect_cycle_phase",
   "display_name": "ERA 收集与就绪批次阶段",
-  "description": "只在 collect 阶段接收和归约一个事件；按原控制路由等待或规划就绪批次。",
+  "description": "完成收集阶段的一轮：接收并验证一个事件，更新待处理集合，发送定时器控制；条件未满足则继续收集，批次就绪则规划任务并核对来源覆盖。计划不合法时立即为全部来源发布失败，否则切换执行阶段。这里不提前跑有效批次中的具体任务。",
   "requires": [
     {
       "type": "era.service.cycle.routed",
@@ -40,37 +40,37 @@
         "id": "start",
         "type_used": "era.service.terminal",
         "display_name": "收集轮次开始",
-        "description": "开始一次收集、等待或批次规划。"
+        "description": "这是“ERA 收集与就绪批次阶段”的入口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
       },
       {
         "id": "collect_phase",
         "type_used": "era.service.collect_phase",
         "display_name": "接收并归约一个事件",
-        "description": "只有 collect 阶段接收入站事件，校验、归约并发送事件集控制。"
+        "description": "服务只在没有执行在途批次时从宿主有序事件入口接收一个事件，验证传输格式，再更新收集窗口和定时器。输出整理结果及定时器控制，不执行事件代表的变量或生成任务；等待与执行分支将在外层决定，确保事件接收和批次处理的边界明确。"
       },
       {
         "id": "route_collection",
         "type_used": "era.service.route_iteration",
         "display_name": "选择等待或规划",
-        "description": "读取归约结果的 wait/execute 路由，不改变事件集。"
+        "description": "读取事件整理后的决定，把流程分到“继续等待”或“准备执行批次”。这里不重新判断窗口时间、不改变事件集合，只把已确定的分支传给工作流，保证实际执行采用同一次事件整理的结论。"
       },
       {
         "id": "carry_wait",
         "type_used": "era.service.cycle.carry_wait",
         "display_name": "携带等待状态",
-        "description": "把归约后的服务状态原样包装为下一轮 collect 阶段。"
+        "description": "当事件尚未达到执行条件时，把更新后的事件集合、定时器和序号包装回收集阶段，留给下一轮继续接收。已经收到的事件不会被丢弃或重新执行；这个节点只是保存本轮的收集进度，不向酒馆写入内容。"
       },
       {
         "id": "prepare_batch",
         "type_used": "era.service.prepare_batch_phase",
         "display_name": "规划并校验就绪批次",
-        "description": "规划严格步骤与来源覆盖；无效覆盖立即结算发布，有效批次进入 execute 阶段。"
+        "description": "把就绪事件集合规划成有顺序的任务，核对来源无漏项、无重复、无批次外事件且步骤不超过 128。通过后进入执行阶段，留待下一轮执行第一个任务；失败则不执行领域任务，直接结算并发布失败帧。这样任务规划问题不会造成来源调用失去结果。"
       },
       {
         "id": "end",
         "type_used": "era.service.terminal",
         "display_name": "收集轮次结束",
-        "description": "输出唯一下一阶段状态。"
+        "description": "这是“ERA 收集与就绪批次阶段”的出口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
       }
     ],
     "edges": [

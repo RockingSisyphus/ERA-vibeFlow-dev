@@ -3,7 +3,7 @@
   "type_key": "era.dispatch.build_no_host_context",
   "display_name": "构造无宿主上下文",
   "category": "任务派发",
-  "description": "为 context:none 和 ignore 步骤形成不访问 Tavern 的准备结果。",
+  "description": "为不需要聊天事实的步骤构造派发上下文，例如明确忽略的事件。保留任务、事件来源和无宿主需求的结论，让后续仍能返回准确回执；不读取消息、变量或状态文件，也不制造消息写入。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

@@ -3,7 +3,7 @@
   "type_key": "era.sidecar_binding.apply_resolution",
   "display_name": "执行 Sidecar 绑定事务",
   "category": "Sidecar 绑定",
-  "description": "核对原聊天、消息与绑定，确认恢复消息持久化后提交并回读 Sidecar；失败保留实际写入事实。",
+  "description": "执行已经确定的状态文件决议，例如创建绑定、迁移旧状态或应用用户选择。需要恢复消息时按当前有效正文构造更新，先确认消息保存，再写状态文件和聊天指针；全过程复核原聊天、绑定和文件版本。切换聊天或保存失败后记录实际已完成的写入并返回失败，不把旧状态写到新聊天，也不自动重复事务。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

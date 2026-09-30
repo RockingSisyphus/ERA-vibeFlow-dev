@@ -3,7 +3,7 @@
   "type_key": "era.task.ignore",
   "display_name": "结算忽略步骤",
   "category": "步骤执行",
-  "description": "按规划器保留的原因把 ignore 步骤来源结算为 ignored/no-op，不执行任何领域或宿主副作用。",
+  "description": "处理规划器明确标为忽略的步骤，向其包含的每个原始事件返回被忽略的原因。不会假装执行过同步、生成或保存；任务类型不正确时会报错。这样无需业务操作的事件仍有可追踪的结果，不会使等待回执的调用方悬空。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

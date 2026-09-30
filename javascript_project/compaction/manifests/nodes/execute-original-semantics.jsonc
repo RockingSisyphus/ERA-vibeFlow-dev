@@ -2,7 +2,7 @@
   "kind": "node",
   "type_key": "era.command_compaction.execute_original_semantics",
   "display_name": "重放当前段原语义",
-  "description": "复用六类命令解释，记录该段原结果和随机游标；携带作用域与是否允许重写的信息。",
+  "description": "用真实 ERA 命令规则重放当前段的原始操作，得到原本应产生的变量、函数、随机进度和诊断，并保留命令位置等轨迹。这份结果是后续压缩候选必须匹配的基准，不是已经写入酒馆的状态；整个工作流只在请求内计算。",
   "category": "ERA 命令压缩",
   "version": "1.1.0",
   "flow_kind": "process",

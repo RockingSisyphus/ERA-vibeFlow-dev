@@ -3,7 +3,7 @@
   "type_key": "era.service.plan_batch",
   "display_name": "规划领域事件批次",
   "category": "批次执行",
-  "description": "使用 ERA 纯事件规划器直接生成严格有界 execute/ignore PlannedStep，完整保留 task、sources、reason 与全部来源事件。",
+  "description": "把已经就绪的一组聊天或 API 事件翻译成有顺序的任务步骤，例如初始化、消息同步、消息标识更新、生成阶段或明确忽略。每一步保留它对应的原始事件来源，使多个事件即使合并为一个任务也能分别收到处理结果。这里只编排任务，不执行计算或保存。",
   "version": "1.1.0",
   "flow_kind": "process",
   "contract": {

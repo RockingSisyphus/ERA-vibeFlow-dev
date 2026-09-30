@@ -3,7 +3,7 @@
   "type_key": "era.dispatch.plan_message_preparation",
   "display_name": "规划 MK 与占位符",
   "category": "任务派发",
-  "description": "幂等准备最新消息 MK 和启用的非用户消息占位符；状态任务只暂存消息更新并交由同步事务原子提交，纯 update-mk 任务才进入预提交链。",
+  "description": "根据聊天事实判断任务将处理哪条消息，以及是否要补充 ERA 消息标识（MK）和状态栏占位符。空的待生成候选仍是独立目标，不用旧候选正文替代。普通变量同步只暂存计划，稍后与变量结果一起保存；仅纯消息标识任务可进入预提交分支。这里规划变更，不直接写酒馆。",
   "version": "1.0.0",
   "flow_kind": "decision",
   "contract": {

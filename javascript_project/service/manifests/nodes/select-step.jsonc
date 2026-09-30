@@ -3,7 +3,7 @@
   "type_key": "era.service.select_step",
   "display_name": "选择当前步骤",
   "category": "步骤执行",
-  "description": "按有界索引选择当前 PlannedStep，并将未改写的批次执行状态交给准备链。",
+  "description": "依据批次的当前索引取出这一次应执行的任务，连同完整批次状态一起传下去。不会跳过、删除或提前运行后续任务；一个任务完成并被统一合并后，索引才会推进，因此同批次的 API 和聊天操作保持既定顺序。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

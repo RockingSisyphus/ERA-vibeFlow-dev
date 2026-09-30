@@ -2,7 +2,7 @@
   "kind": "node",
   "type_key": "era.command_compaction.verify_layer",
   "display_name": "确认整层候选",
-  "description": "保留原整层复放确认：最终状态、函数库、随机游标及诊断一致；失败保留原文；不重新调用 compactCommandLayer。",
+  "description": "分段结束后再确认完整消息层：从同一起点重放原文与拼接候选，比较最终变量、函数、随机偏移及诊断代码和路径；不一致则整层保留原文。无作用域分组时沿用单段验证结果，不重复启动压缩算法。输出已确认文本和真实计算结果，防止单段安全但组合后改变行为。",
   "category": "ERA 命令压缩",
   "version": "1.1.0",
   "flow_kind": "process",

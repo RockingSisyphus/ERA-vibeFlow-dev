@@ -3,7 +3,7 @@
   "type_key": "era.api.merge_facade_result",
   "display_name": "合并公共对象任务结果",
   "category": "公共 Facade",
-  "description": "commit 或 sync 恰好产生一个现有任务结果。",
+  "description": "接收 commit 或 sync 分支给出的唯一结果，转为公共 API 任务的统一出口，同时保留原调用来源、结算和通知。公共 API 内部可能包含同步子任务，但这里只有外层任务结果才交还 Service，避免内部结果提前推进批次。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

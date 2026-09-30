@@ -3,7 +3,7 @@
   "type_key": "era.service.cycle.begin",
   "display_name": "进入收集阶段",
   "category": "服务阶段循环",
-  "description": "进入收集阶段；保持原 Service 领域状态及执行顺序。",
+  "description": "把初始服务状态标记为“收集事件”阶段，交给长期运行的服务循环。此时尚无批次需要执行，因此第一轮应等待聊天或 API 事件；本节点只增加阶段标签，保留原状态，不读取酒馆或修改变量。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

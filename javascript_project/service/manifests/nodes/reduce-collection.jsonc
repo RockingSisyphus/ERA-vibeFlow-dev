@@ -3,7 +3,7 @@
   "type_key": "era.service.reduce_collection",
   "display_name": "归约事件集",
   "category": "服务迭代",
-  "description": "按候选基线归约 100/500/1500ms 收集窗口、生成边界、dry-run、组合、绝对截止定时器、迟到 token 和 128 条/2MiB 有界事件集。",
+  "description": "把一个新事件放入当前收集窗口，依据事件序号、窗口期限和容量限制更新待处理集合，决定继续等待还是立即执行一批事件。同步输出应启动或取消的定时器控制。它负责事件何时形成批次，而不是计算变量；事件的业务操作将在批次规划和任务执行中完成。",
   "version": "1.1.0",
   "flow_kind": "process",
   "contract": {

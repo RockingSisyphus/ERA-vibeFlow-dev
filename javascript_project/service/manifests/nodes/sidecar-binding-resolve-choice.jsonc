@@ -3,7 +3,7 @@
   "type_key": "era.sidecar_binding.resolve_choice",
   "display_name": "规划 Sidecar 绑定选择",
   "category": "Sidecar 绑定",
-  "description": "纯规则规划绑定选择；失败上下文继续原失败结算，不生成选择提示。",
+  "description": "根据聊天与状态文件的关系决定接下来怎么办：首次使用可创建，旧格式可迁移，匹配的绑定可继续，所属聊天冲突或损坏则等待用户明确选择或修复。先前读取已经失败时直接保留失败，不再弹出新选择或安排写入。这里只形成决议，不自行创建文件。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

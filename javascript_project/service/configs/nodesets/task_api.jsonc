@@ -6,7 +6,7 @@
   ],
   "type_key": "era.task.api",
   "display_name": "ERA 公共对象任务",
-  "description": "把唯一公共 Facade 的 commit 或 sync 命令路由到实际事务。",
+  "description": "处理公共 ERA 对象的两种写入类请求：commit 将有序操作应用到当前内存工作状态并返回回执，sync 则把校验后的请求交给共享历史同步和保存。输入不合法时返回明确失败，各分支保持原调用来源。读取和订阅不作为此任务执行；结果统一交还批次结算。",
   "requires": [
     {
       "type": "era.step.request.routed",
@@ -48,61 +48,61 @@
         "id": "start",
         "type_used": "era.service.terminal",
         "display_name": "公共对象任务开始",
-        "description": "接收已准备的 API 步骤和当前批次状态。"
+        "description": "这是“ERA 公共对象任务”的入口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
       },
       {
         "id": "route_facade_command",
         "type_used": "era.api.route_facade_command",
         "display_name": "区分提交与同步请求",
-        "description": "读取步骤中的公共对象命令，将提交交给即时事务，将同步交给共享同步流程。"
+        "description": "读取公共 ERA 对象提交给 Service 的命令，把 commit（按顺序应用操作）交给提交事务，把 sync（按历史重新计算）交给共享同步流程，同时携带调用来源和批次状态。公共读取或订阅不属于此事件执行分支。这里仅选择工作流，不确认操作已经生效。"
       },
       {
         "id": "commit",
         "type_used": "era.api.commit",
         "display_name": "执行即时 ERA.commit",
-        "description": "按当前工作状态执行 ERA.commit，并返回提交结果。"
+        "description": "按公共提交的作用域、调用窗口和目标进行准入检查，工作台草稿先转换为操作，随后把有效操作组成事务并通过共用消息块引擎在内存应用。已经执行的历史作用域可跳过，无效请求失败。成功回执代表内存应用已完成；作者函数随父批次保存，独立 API 按防抖窗口稍后保存，不把入队或回执等同于落盘。"
       },
       {
         "id": "sync_validate_and_build_sync_step",
         "type_used": "era.api.plan_facade_sync",
         "display_name": "校验并构造同步步骤",
-        "description": "校验 ERA.sync 的模式和目标，生成可执行的共享同步步骤或明确的失败结果。"
+        "description": "校验公共 ERA.sync 请求的模式和目标，把有效请求转换为共享同步任务，附带原始调用来源和批次状态。请求无效则输出失败分支，不运行历史重算；有效也只表示计划可执行，实际回退、指令应用和保存由通用同步工作流完成。"
       },
       {
         "id": "sync_run_shared_sync",
         "type_used": "era.task.sync",
         "display_name": "运行共享同步事务",
-        "description": "用已校验的步骤执行与普通任务共用的同步及保存流程。"
+        "description": "把当前聊天的真实消息历史与 ERA 变量、函数和日志保持一致：读取并校验状态文件绑定，优先沿用有效未保存的内存状态，规划回退及处理范围，逐块应用指令和函数，必要时压缩封存文本，最后批量保存消息及状态文件。保存后再刷新显示和返回结果；切换聊天或候选回复不会使旧任务覆盖新目标。"
       },
       {
         "id": "sync_adapt_sync_receipt",
         "type_used": "era.api.adapt_facade_sync",
         "display_name": "构造 ERA.sync 回执",
-        "description": "把共享同步的任务结果转换为公共对象调用的回执。"
+        "description": "把共享同步任务的真实结果转换成 ERA.sync 调用方使用的回执，保留成功、无变更、失败以及诊断，不再次计算历史或保存。它使外部 API 能获得与普通聊天同步相同的业务结论，而不是另实现一套同步规则。"
       },
       {
         "id": "sync_build_sync_failure",
         "type_used": "era.api.build_facade_sync_failure",
         "display_name": "构造同步输入失败",
-        "description": "同步输入无效时返回失败回执，不进入共享同步流程。"
+        "description": "当公共同步请求的模式、目标或其他输入无法通过校验时，直接生成相应的失败回执。此分支没有执行共享同步，所以不会声称历史已重算，也不会读写目标消息来尝试补救；错误按原调用来源返回。"
       },
       {
         "id": "sync_merge_sync_result",
         "type_used": "era.api.merge_sync_result",
         "display_name": "合并公共对象同步结果",
-        "description": "汇合成功同步与输入失败两条路径，输出统一的同步结果。"
+        "description": "把公共同步的“已经运行共享同步”与“输入校验失败”两个互斥分支合为唯一结果，核对恰有一份回执。不重新执行同步或改写成功失败状态；输出供外层公共 API 任务统一结算。"
       },
       {
         "id": "merge_facade_result",
         "type_used": "era.api.merge_facade_result",
         "display_name": "合并公共对象任务结果",
-        "description": "汇合提交与同步结果，形成一个供批次结算使用的任务结果。"
+        "description": "接收 commit 或 sync 分支给出的唯一结果，转为公共 API 任务的统一出口，同时保留原调用来源、结算和通知。公共 API 内部可能包含同步子任务，但这里只有外层任务结果才交还 Service，避免内部结果提前推进批次。"
       },
       {
         "id": "end",
         "type_used": "era.service.terminal",
         "display_name": "公共对象任务结束",
-        "description": "将唯一公共对象任务结果交还服务迭代。"
+        "description": "这是“ERA 公共对象任务”的出口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
       }
     ],
     "edges": [

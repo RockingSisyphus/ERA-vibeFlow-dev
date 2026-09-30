@@ -3,7 +3,7 @@
   "type_key": "era.expression.build_function_call_graph",
   "display_name": "建立函数调用图",
   "category": "表达式工作流",
-  "description": "建立支持前向声明和嵌套调用的有向图。",
+  "description": "把自定义函数依赖表和已有检查诊断整理成调用图，供递归检测使用。例如甲调用乙、乙调用丙会形成连续关系，函数先调用后定义仍可对应。这里不再次解析函数或求值，也不在组装图时抹掉先前诊断。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

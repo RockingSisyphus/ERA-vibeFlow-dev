@@ -38,7 +38,7 @@
         },
         "role": {
           "display_name": "ERA 服务启动",
-          "description": "启动 ERA 异步服务工作流。"
+          "description": "这是“era.service”的入口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
         },
         "contract_source": "node_type",
         "flow_kind": "terminal",
@@ -71,7 +71,7 @@
         },
         "role": {
           "display_name": "读取当前脚本与脚本树",
-          "description": "经既有 service_host.ts 的无监听器启动期能力读取 getScriptId 与 global、preset、character 三类脚本树；只采集启用层级和脚本 ID。"
+          "description": "读取酒馆助手提供的当前脚本 ID，以及角色卡、全局和预设三个位置中已启用的脚本目录，得到当前脚本出现在哪些位置的事实。这里仅收集信息，不注册聊天监听器，也不自行决定是否启动；若宿主接口不可用，后续节点会据此选择兼容策略。"
         },
         "contract_source": "node_type",
         "flow_kind": "process",
@@ -110,7 +110,7 @@
         },
         "role": {
           "display_name": "分类安装作用域",
-          "description": "根据脚本所在的启用目录和当前脚本 ID，判断它属于角色卡、全局、预设，或无法明确归类。"
+          "description": "把当前脚本 ID 与已启用的脚本目录对应起来：只在角色卡中找到就归为角色卡脚本，只在全局或预设中找到就归到相应位置；同一 ID 出现在多个位置则记为位置不明确。读取失败、没有 ID 或没有匹配项记为未知，供启动策略区分“明确不应启动”和“无法判断”。这不是对所有 ERA 实例进行选主。"
         },
         "contract_source": "node_type",
         "flow_kind": "process",
@@ -155,7 +155,7 @@
         },
         "role": {
           "display_name": "决定启动策略",
-          "description": "character 允许完整启动；global、preset 与 ambiguous 要求 dormant；unknown 允许启动并要求一次兼容警告。"
+          "description": "根据脚本的安装位置决定本次 ERA 是否进入完整服务：角色卡内部的脚本继续启动；明确位于全局、预设，或同一脚本 ID 同时属于多个位置的实例只显示提示后结束，避免这些位置重复接管聊天。若宿主无法提供位置，则允许兼容启动并要求警告。这里输出策略，不负责停止其他实例，也不修改聊天。"
         },
         "contract_source": "node_type",
         "flow_kind": "process",
@@ -205,7 +205,7 @@
         },
         "role": {
           "display_name": "登记单层显示窗口与角色卡设置",
-          "description": "复用现有 Host 启停，登记角色卡单层开关和单一显示窗口控制器。优先监听真实显示事件，在 Helper 审计前移除非目标 DOM，保留最新 AI 原 iframe；用户发言不重建保留实例。切聊天重建显示关系，关闭恢复普通历史入口与原范围，观察器仅兜底非标准 DOM 变化。角色卡保存仍走 Service，不新增业务调度器。详见 reports/era-single-floor-change-list.md。"
+          "description": "把已允许启动的决定交给浏览器宿主，启用 ERA 接收聊天事件的入口及相关显示控制。宿主负责登记角色卡单层显示开关，在开启时只保留目标 AI 消息的显示窗口，切换聊天时重新建立显示关系。这个节点只是启用宿主设施；变量计算、回滚和保存仍由后续 Service 任务处理。"
         },
         "contract_source": "node_type",
         "flow_kind": "process",
@@ -244,7 +244,7 @@
         },
         "role": {
           "display_name": "发布休眠安装提示",
-          "description": "仅 dormant 时调用启动期 Host 的机械提示操作，随后结束；不登记事件、不运行 Sidecar、宏或 UI。"
+          "description": "当当前 ERA 被判定为全局、预设或位置不明确的实例时，要求宿主显示未启动的原因，然后沿结束分支退出。这条分支不会接收聊天事件，也不会加载聊天状态文件、处理宏或启动业务 UI，因而不会以这个实例接管聊天变量。"
         },
         "contract_source": "node_type",
         "flow_kind": "process",
@@ -283,7 +283,7 @@
         },
         "role": {
           "display_name": "初始化服务与 Scope 窗口状态",
-          "description": "创建有界事件、定时器、迭代与连续 MK 状态，并增加仅存在于当前页面实例的单调窗口 token 和未解析准入缓存；stop、pagehide、reload 或重新初始化随服务状态一并清除，不写消息或 Sidecar。"
+          "description": "为刚启动的 ERA 创建本页面实例的运行状态，包括待收集事件、定时器信息、事件序号、批次计数和消息处理进度。消息作用域的窗口和准入字段初始为空，后续处理再建立有效窗口；重载或停止时随实例销毁；它们用于识别过期请求，不作为聊天变量写入消息或状态文件。"
         },
         "contract_source": "node_type",
         "flow_kind": "process",
@@ -322,7 +322,7 @@
         },
         "role": {
           "display_name": "进入收集阶段",
-          "description": "只包装现有服务状态为内部 collect 阶段；保留原初始化状态所有字段，不接收事件、不提交宿主副作用。"
+          "description": "把初始服务状态标记为“收集事件”阶段，交给长期运行的服务循环。此时尚无批次需要执行，因此第一轮应等待聊天或 API 事件；本节点只增加阶段标签，保留原状态，不读取酒馆或修改变量。"
         },
         "contract_source": "node_type",
         "flow_kind": "process",
@@ -367,7 +367,7 @@
         },
         "role": {
           "display_name": "永久服务循环",
-          "description": "携带 collect 或 execute 阶段状态；收集时接收入站事件，执行时每轮处理一个步骤，批次结算后才恢复接收。"
+          "description": "长期运行 ERA 服务，循环携带“收集事件”或“执行批次”状态。收集阶段每轮接收一个事件；执行阶段每轮完成一个任务步骤，全部结算并发布后才恢复收集。该循环没有固定业务轮数上限，由宿主生命周期控制停止；不是同时并行执行多批聊天操作。"
         },
         "contract_source": "system_config",
         "flow_kind": "predefined",
@@ -420,7 +420,7 @@
         },
         "role": {
           "display_name": "ERA 服务结束",
-          "description": "表示永久循环将来按受控停止策略退出后到达的终点。"
+          "description": "这是“era.service”的出口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
         },
         "contract_source": "node_type",
         "flow_kind": "terminal",
@@ -556,7 +556,7 @@
         "path": "configs/nodesets/agent_candidate_attempt.jsonc"
       },
       "display_name": "生成并执行一整次候选",
-      "description": "单次模型候选经过有序块执行和恢复判定；不发送阶段完成通知。",
+      "description": "执行一次模型候选，从当前请求获得候选正文，把变量、函数和作者调用按原位置交给共用块循环应用，再检查是否成功。可纠错失败恢复本候选的整体起点并产生重试请求，更早成功阶段保留；无重试时返回终态。这一层不发送阶段完成通知，防止失败候选误触发下一阶段。",
       "status": "implemented",
       "flow_kind": "predefined",
       "effect_scope": "none",
@@ -648,7 +648,7 @@
             },
             "role": {
               "display_name": "候选尝试开始",
-              "description": "接收本次候选的请求、步骤和批次状态。"
+              "description": "这是“生成并执行一整次候选”的入口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
             },
             "contract_source": "node_type",
             "flow_kind": "terminal",
@@ -681,7 +681,7 @@
             },
             "role": {
               "display_name": "取出候选执行输入",
-              "description": "从候选状态取出生成请求、已准备步骤和批次状态，交给本次候选执行。"
+              "description": "从一次候选尝试的状态中取出当前生成请求、所属任务及批次上下文，交给模型执行和共用块处理流程。发生重试时取的是更新后的请求，原事件来源仍保留；这里仅解包，不改变候选恢复点，也不把上一轮结果当作本轮成功。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -736,7 +736,7 @@
             },
             "role": {
               "display_name": "生成标签格式结算候选",
-              "description": "读取模型输出中的变量、函数和函数调用标签，形成候选操作；格式错误时按整次候选恢复规则处理。"
+              "description": "根据已确定的生成阶段和请求执行 Agent 会话，包括必要的模型调用，整理其正文及变量、函数和函数调用标签为候选结果。输出尚待应用和验证的候选、阶段状态及诊断；模型给出文本不代表变量已经提交，格式错误或取消会留给阶段执行和候选恢复环节处理。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -791,7 +791,7 @@
             },
             "role": {
               "display_name": "标签候选接入共用逐块执行",
-              "description": "把模型输出按原位置送入共用块执行流程，依次处理变量操作、函数调用和后续内容，并保留候选恢复点。"
+              "description": "把模型候选放到本次应处理的消息楼层，建立与普通历史同步相同的逐块执行计划：规划阶段可以使用尚未创建的未来 AI 楼层，其他阶段沿用已捕获身份。记录变量、函数、日志及会话恢复点，供候选失败时撤销本次尝试；这里暂存正文并准备范围，不把候选立即保存。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -836,7 +836,7 @@
             },
             "role": {
               "display_name": "三阶段复用同一个内存块循环",
-              "description": "逐块更新内存工作状态，结束后交还累计消息和变量；保存由后续批次统一处理。"
+              "description": "按模型候选的正文顺序循环推进指令块及作者函数调用，携带累计变量、函数、日志、正文、作用域和随机进度，直到候选范围处理完或产生结束结果。每轮只更新内存工作状态，不逐块保存；退出后还需候选整体成功判定或恢复。"
             },
             "contract_source": "system_config",
             "flow_kind": "predefined",
@@ -905,7 +905,7 @@
             },
             "role": {
               "display_name": "回送已应用阶段状态及草稿",
-              "description": "候选结束判定：可纠错失败恢复整个候选及已发布内存、记录、scope、随机和done，旧上下文失效后通过阶段恢复发起下一次尝试；耗尽保留起点，更早阶段保留；成功才进入后续阶段。"
+              "description": "检查模型候选的全部块应用结果，并把成功阶段正文和变量进度记入当前会话。可纠错错误需要恢复整次候选的内存变量、正文、日志、作用域和随机进度，再准备下一次尝试；不是只撤销最后一个块。重试耗尽保留本候选起点，更早已完成阶段仍保留。取消也不会无故抹掉早前成功内容。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -950,7 +950,7 @@
             },
             "role": {
               "display_name": "判断是否重试候选",
-              "description": "有重试请求时更新候选状态并继续循环；否则输出本次候选的最终结果。"
+              "description": "读取候选执行结果是否附有重试请求：有则将该请求放入候选循环状态，标记尚未结束；没有则输出终态结果并结束候选循环。这里只决定是否继续尝试，不再次调用模型，也不发送阶段完成通知；通知必须等候选已达到终态后形成。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -1010,7 +1010,7 @@
             },
             "role": {
               "display_name": "候选尝试结束",
-              "description": "把更新后的候选状态、结束标记和结果交还候选循环。"
+              "description": "这是“生成并执行一整次候选”的出口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
             },
             "contract_source": "node_type",
             "flow_kind": "terminal",
@@ -1125,7 +1125,7 @@
         "path": "configs/nodesets/agent_generation_session.jsonc"
       },
       "display_name": "ERA 三阶段故事生成会话",
-      "description": "只处理生成生命周期、规划、正文衔接、结算与重试。先判定阶段，再准备必要请求、执行阶段、形成会话转换，复用原唯一同步边界。",
+      "description": "在有序 Service 任务中处理 Agent 的规划、正文及结算阶段：识别事件和来源，恢复必要基线，请求并应用模型候选，遇到可纠错失败按整次候选恢复后重试。阶段成功后通过完成标识与页面回调交接，再由新的恢复事件继续；需最终消息同步的结果走共用链，取消或失效来源如实结算，不重复应用候选内 API。",
       "status": "implemented",
       "flow_kind": "predefined",
       "effect_scope": "none",
@@ -1206,7 +1206,7 @@
             },
             "role": {
               "display_name": "生成会话开始",
-              "description": "进入一个 FIFO 内的生成阶段。"
+              "description": "这是“ERA 三阶段故事生成会话”的入口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
             },
             "contract_source": "node_type",
             "flow_kind": "terminal",
@@ -1239,7 +1239,7 @@
             },
             "role": {
               "display_name": "读取阶段工作状态与当前来源",
-              "description": "阶段恢复读取有效工作状态，不要求Sidecar已落盘；保留原生完成和来源确认。"
+              "description": "为本次生成读取 Agent 配置、会话和当前变量事实，并优先接续尚未保存的阶段正文。重新生成、切换回复或用户重试某阶段时，按历史日志恢复该阶段应有的起点，保留已经完成的前置内容；旧报告与当前会话不符时记录失效诊断。输出生成事实，不在这里请求模型或保存消息。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -1284,7 +1284,7 @@
             },
             "role": {
               "display_name": "判定事件与阶段",
-              "description": "判定正常生成、手动重试及内部阶段恢复；核对 executionId、completionId 和当前聊天/Swipe 来源，过期恢复终止。"
+              "description": "结合生成事件和当前会话事实，区分首次生成、继续生成、用户手动重试与内部阶段恢复，确定应处理规划、正文还是结算阶段。核对执行标识、完成标识以及聊天和候选回复来源；过期恢复不能接到新会话上。这里只作阶段决策，不调用模型。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -1329,7 +1329,7 @@
             },
             "role": {
               "display_name": "准备阶段请求",
-              "description": "候选请求基线：手动重新结算先通过共用历史计算恢复正文结束状态，撤销旧结算后再请求模型；保留正文done和记录。"
+              "description": "把阶段决策整理成一次生成请求，带上所需配置、历史、变量起点及会话信息。阶段重试采用前面按历史恢复的基线，不把旧阶段效果再算一遍；无效来源或不应执行的事件保留对应结论。这里准备候选执行的输入，还没有得到新的模型输出。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -1374,7 +1374,7 @@
             },
             "role": {
               "display_name": "形成阶段交接与恢复凭据",
-              "description": "纯业务策略为成功阶段构造唯一 completionId、最终结果及恢复意图；不在 FIFO 中等待回调。无交接时保留原阶段结果。页面等待结束后必须经原 Service 派发链核对并恢复。"
+              "description": "对于已经成功达到阶段边界的候选，生成唯一完成标识、阶段结果及下一步恢复意图，供页面依次执行订阅回调后再请求恢复。没有阶段交接的结果原样传递。这里不在当前任务队列里等待回调，否则回调请求同一队列可能互相等待；交接也不表示整个生成已结束。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -1419,7 +1419,7 @@
             },
             "role": {
               "display_name": "携带已应用阶段状态进入下一阶段",
-              "description": "规划草稿保留操作及done，正文独立结算仍应用指令；最终候选不重放本轮已应用API，进入统一批次保存。"
+              "description": "把候选最终结果转换成会话下一步：需要保存或沿普通消息同步完成的结果，携带对应楼层候选；只需阶段交接的结果直接结束当前片段。同时接续候选实际应用后的作用域窗口，不重复执行本轮 API。若候选无法对应原楼层，返回失败而不是写到新的消息。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -1479,7 +1479,7 @@
             },
             "role": {
               "display_name": "路由阶段结果",
-              "description": "决定直接结算还是恢复原任务。"
+              "description": "依据会话转换的模式选择出口：还需要普通消息同步或消息标识结算的结果走共享任务链；只需返回阶段结果、取消或失败的结果走直接回执。模式已由会话逻辑决定，节点不重新判断模型内容，也不更改批次状态。"
             },
             "contract_source": "node_type",
             "flow_kind": "decision",
@@ -1539,7 +1539,7 @@
             },
             "role": {
               "display_name": "把最终楼层候选交给唯一同步事务",
-              "description": "把默认模式或 Agent 最终楼层候选恢复为原 sync/update-mk 路由；故事完成、结算成功、结算耗尽和 UI 手动重试都携带同一个楼层 MK 进入同步，不存在第二条消息提交路径。"
+              "description": "把生成会话需要继续普通处理的结果转换成共享同步或消息标识任务，保持原楼层的 ERA 消息标识和来源。默认生成模式、最终正文及结算结果由同一消息处理链接续，而不是开另一条提交路径；这里只适配步骤，实际计算和保存由共享任务完成。"
             },
             "contract_source": "node_type",
             "flow_kind": "decision",
@@ -1599,7 +1599,7 @@
             },
             "role": {
               "display_name": "复用原同步任务",
-              "description": "故事组合后或默认模式下执行既有 Sidecar、表达式、压缩和历史同步。"
+              "description": "把当前聊天的真实消息历史与 ERA 变量、函数和日志保持一致：读取并校验状态文件绑定，优先沿用有效未保存的内存状态，规划回退及处理范围，逐块应用指令和函数，必要时压缩封存文本，最后批量保存消息及状态文件。保存后再刷新显示和返回结果；切换聊天或候选回复不会使旧任务覆盖新目标。"
             },
             "contract_source": "nodeset",
             "flow_kind": "predefined",
@@ -1653,7 +1653,7 @@
             },
             "role": {
               "display_name": "复用原 MK 任务",
-              "description": "规划注入后保持既有 message_sent MK 语义。"
+              "description": "为 ERA 消息标识任务返回结算。消息标识 MK 用于将消息与历史状态对应；它及占位符的读取、准备和必要写入已在统一派发中完成，本节点集仅核对并返回实际结果。不会再次改消息或重算变量，也不推进连续同步进度。"
             },
             "contract_source": "nodeset",
             "flow_kind": "predefined",
@@ -1702,7 +1702,7 @@
             },
             "role": {
               "display_name": "构造直接结果",
-              "description": "输出阶段交接标识和后置通知，使当前 FIFO 片段完成；通知后页面按序等待订阅回调，再提交内部恢复事件。片段 receipt 不代表整次生成已完成。"
+              "description": "将会话直接结束分支整理成任务回执，附带阶段完成标识、诊断和之后需要发送的通知。页面收到通知后按顺序等待订阅回调，再提交内部恢复事件；因此这份回执只代表当前队列片段完成，不能把它解释为规划、正文和结算全部结束。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -1747,7 +1747,7 @@
             },
             "role": {
               "display_name": "生成会话结束",
-              "description": "返回单一任务结果。"
+              "description": "这是“ERA 三阶段故事生成会话”的出口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
             },
             "contract_source": "node_type",
             "flow_kind": "terminal",
@@ -1780,7 +1780,7 @@
             },
             "role": {
               "display_name": "建立候选请求",
-              "description": "准备并执行候选内部循环。"
+              "description": "为候选重试循环建立初始请求、任务和批次状态。若本次是在替换一个已有阶段，还要先把按历史计算的保留前缀、变量、函数和会话基线安装到当前内存工作状态，撤销旧阶段效果后才能请求新模型候选。基线安装失败转为失败终态，不继续生成；这些更新仅在内存，尚未保存消息或状态文件。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -1835,7 +1835,7 @@
             },
             "role": {
               "display_name": "候选整体纠错循环",
-              "description": "候选完整恢复后再请求模型；只有终态进入阶段交接。"
+              "description": "循环执行当前模型候选尝试。每次尝试要完成正文块应用和结果检查；可纠错失败先恢复整次候选起点再使用新的重试请求，终态才退出并进入阶段交接。循环本身不发送成功通知，也不能用最后一个块的结果代替整候选结论。"
             },
             "contract_source": "system_config",
             "flow_kind": "predefined",
@@ -2075,7 +2075,7 @@
         "path": "configs/nodesets/agent_settings.jsonc"
       },
       "display_name": "管理 Agent 设置与连接",
-      "description": "在原 Service FIFO 中处理配置、预设、连接与模型列表；不进入生成会话状态机。",
+      "description": "在聊天和 API 共用的有序 Service 队列中处理 Agent 配置、预设、连接和模型列表，读取必要事实后执行相应设置命令并返回来源回执。它不进入规划、正文或结算的模型生成状态机，也不改聊天变量，避免设置任务误占用生成阶段的上下文。",
       "status": "implemented",
       "flow_kind": "predefined",
       "effect_scope": "none",
@@ -2145,7 +2145,7 @@
             },
             "role": {
               "display_name": "设置命令开始",
-              "description": "进入同一 Service FIFO 中的设置命令步骤。"
+              "description": "这是“管理 Agent 设置与连接”的入口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
             },
             "contract_source": "node_type",
             "flow_kind": "terminal",
@@ -2178,7 +2178,7 @@
             },
             "role": {
               "display_name": "准备设置命令",
-              "description": "读取当前配置所需事实，整理命令、预设或连接草稿；不把生成阶段的大上下文传给设置算法。"
+              "description": "为 Agent 设置命令读取必要配置、预设或连接事实，整理出具体设置请求。设置任务只需要这些资料，不带入模型生成阶段的大量历史和候选上下文；读取或请求问题作为诊断交给执行节点，不在此发起正文生成。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -2223,7 +2223,7 @@
             },
             "role": {
               "display_name": "执行设置命令",
-              "description": "仅执行配置/预设/连接/模型列表；复用连接与请求策略。即时连接事实读取、决策与发起写入保留在本节点连续执行。"
+              "description": "在与聊天操作相同的有序 Service 队列中处理 Agent 配置、预设、连接或模型列表命令，通过既有宿主接口读取或写入相应设置。连接相关的即时事实读取和发起操作连续完成，减少使用过期事实。返回真实操作结果，不启动生成会话、不应用消息中的变量指令。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -2268,7 +2268,7 @@
             },
             "role": {
               "display_name": "结算设置命令",
-              "description": "把设置结果与来源对应为原 TaskResult；不修改批次状态，不进入生成会话转换。"
+              "description": "把设置命令的实际返回值和诊断对应到原任务来源，形成一份可由 Service 合并的任务结果。这里只返回设置处理结论，不修改批次索引或进入生成阶段，也不将连接测试成功等同于后续模型生成成功。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -2318,7 +2318,7 @@
             },
             "role": {
               "display_name": "设置命令结束",
-              "description": "输出唯一设置任务结果，交还原批次汇合。"
+              "description": "这是“管理 Agent 设置与连接”的出口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
             },
             "contract_source": "node_type",
             "flow_kind": "terminal",
@@ -2403,7 +2403,7 @@
         "path": "configs/nodesets/api_commit.jsonc"
       },
       "display_name": "ERA 即时提交事务",
-      "description": "按请求顺序把操作应用到当前工作状态，再返回内存应用回执。独立 API 稍后按保存窗口落盘；消息处理中的 API 归入当前批次。",
+      "description": "按公共提交的作用域、调用窗口和目标进行准入检查，工作台草稿先转换为操作，随后把有效操作组成事务并通过共用消息块引擎在内存应用。已经执行的历史作用域可跳过，无效请求失败。成功回执代表内存应用已完成；作者函数随父批次保存，独立 API 按防抖窗口稍后保存，不把入队或回执等同于落盘。",
       "status": "implemented",
       "flow_kind": "predefined",
       "effect_scope": "none",
@@ -2484,7 +2484,7 @@
             },
             "role": {
               "display_name": "即时 Commit 开始",
-              "description": "接收提交请求和当前批次状态。"
+              "description": "这是“ERA 即时提交事务”的入口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
             },
             "contract_source": "node_type",
             "flow_kind": "terminal",
@@ -2517,7 +2517,7 @@
             },
             "role": {
               "display_name": "读取工作状态与调用来源",
-              "description": "显式调用位置或原状态栏来源决定上下文；按接收顺序，scope在工作状态即时生效，不读取旧文件替代新状态。"
+              "description": "读取 API 调用所对应的聊天身份、消息及当前作用域窗口，优先把尚未保存的内存正文覆盖到读取视图中。作者函数的显式调用位置与状态栏来源分别保留，供后续判断请求是否仍有效、该窗口是否获准写入。窗口是本次消息处理的上下文，不是保存防抖时间。读取失败输出失败事实；这个节点不应用操作，也不以旧文件替代当前工作状态。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -2567,7 +2567,7 @@
             },
             "role": {
               "display_name": "区分普通Commit与工作台编辑意图",
-              "description": "公共ERA.commit保持原operations请求；仅内部工作台command=workbench-commit进入草稿准备。沿现有era.facade.commit事件/FIFO传递，事件目录与公共API不新增命令。"
+              "description": "判断当前提交是否来自变量工作台：普通 ERA.commit 已经带有操作列表，直接继续准入校验；工作台提交带的是用户编辑草稿，需要先转换为操作。两种请求共用同一个提交入口和后续安全检查，避免工作台自行绕过作用域或消息目标校验。"
             },
             "contract_source": "node_type",
             "flow_kind": "decision",
@@ -2617,7 +2617,7 @@
             },
             "role": {
               "display_name": "按当前工作状态准备工作台意图",
-              "description": "复用原基准/保护/差异规则，基于当前工作状态，不以已保存revision代替尚未保存的修改。"
+              "description": "把变量工作台编辑草稿转成公共 commit 可执行的有序操作：读取当前基准，核对聊天、目标原值和保护条件，规划变量或函数差异，再按用户明确选择处理保护。过期草稿或不允许的操作返回失败。这里仅准备请求，不拥有消息或状态文件写事务，成功后仍走公共提交校验。"
             },
             "contract_source": "nodeset",
             "flow_kind": "predefined",
@@ -2676,7 +2676,7 @@
             },
             "role": {
               "display_name": "校验 Scope 与有序操作",
-              "description": "检查调用窗口、作用域和操作顺序，决定提交、跳过或返回失败。"
+              "description": "校验提交操作的格式和顺序，并结合调用来源、当前消息窗口及作用域判断是否可以应用。默认 message 规则在同一获准消息窗口可多次提交，后续窗口若发现消息已有记录则跳过；branch 按活动分支记录判断，always 每次允许的请求均执行，不按操作内容去重。窗口过期或输入不合规返回失败；此处只做准入，变量还未应用。"
             },
             "contract_source": "node_type",
             "flow_kind": "decision",
@@ -2731,7 +2731,7 @@
             },
             "role": {
               "display_name": "生成单次 era_tx",
-              "description": "把已校验的操作组成一次待应用事务，保持原有顺序。"
+              "description": "把已通过准入检查的操作按原顺序组成一个 ERA 事务文本，连同作用域、调用身份和批次状态送到目标定位环节。不会合并重排操作，也不会在构造文本时执行它们；同一事务随后交给共享消息块引擎处理，保证公共 API 与消息指令采用相同规则。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -2776,7 +2776,7 @@
             },
             "role": {
               "display_name": "定位函数锚点或普通目标末尾",
-              "description": "显式调用来源定位函数下方；状态栏保留旧楼/Swipe/ready，外置API保留原目标规则。捕获原目标版本，失效不回退到新楼。"
+              "description": "在准备实际提交前再次读取聊天和目标消息，并复核调用窗口是否仍属于原聊天与候选回复。作者函数把记录定位到调用位置下方，状态栏和外部 API 保留各自捕获的目标。读取视图纳入未保存的内存正文；目标失效则返回失败，不自动转而写入最新一楼。"
             },
             "contract_source": "node_type",
             "flow_kind": "io",
@@ -2821,7 +2821,7 @@
             },
             "role": {
               "display_name": "返回跳过回执",
-              "description": "已结算的历史作用域无需重做，直接返回跳过回执。"
+              "description": "为已经结算过、无需重复执行的作用域生成跳过回执，保留调用者和来源信息。跳过表示本次没有再次应用操作，不等同于新提交成功；不会新增事务文本或再次修改变量，避免重绘状态栏等重复调用产生重复效果。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -2866,7 +2866,7 @@
             },
             "role": {
               "display_name": "构造 Commit 失败",
-              "description": "输入、窗口或消息目标无效时，返回对应失败回执。"
+              "description": "把提交准入、工作台准备或目标读取形成的错误转换成公共调用可收到的失败回执，包括原因和对应来源。这里不重试、不生成替代操作，也不把失败请求写进新目标消息；作用是让调用方明确知道其 commit 没有按要求完成。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -2911,7 +2911,7 @@
             },
             "role": {
               "display_name": "合并即时 Commit 结果",
-              "description": "汇合提交、跳过和失败分支，要求恰好一个分支给出结果。"
+              "description": "汇合提交已应用、作用域跳过和提交失败三条互斥分支，要求实际恰有一个有效结果，再输出统一 commit 结果。不会选取最乐观的一条或再次应用操作；若出现多个结果或没有结果会暴露流程问题，避免公共调用得到含糊回执。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -2956,7 +2956,7 @@
             },
             "role": {
               "display_name": "构造待应用的普通era_tx及工作范围",
-              "description": "复用普通事务构造；调用处下方或目标末尾插入待保存消息。当前函数API就地应用，旧楼外部写入按原回退和后续重算规则建立工作范围。应用失败保持真实回执。"
+              "description": "将 API 事务暂时插入正确的消息位置：作者函数的调用下方，或已校验外部目标的相应位置，再用共享历史规划器建立逐块应用范围。采用当前内存变量和函数，同时保留此前提交但尚未保存的消息修改；旧楼操作会按历史回退和重算规则处理。这里建立内存执行计划，不立即保存酒馆。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -3001,7 +3001,7 @@
             },
             "role": {
               "display_name": "API复用同一个内存块循环",
-              "description": "max_iterations=null；处理块不落盘，结束时得到累计消息及状态。函数API应用后返回，不强制刷盘。"
+              "description": "循环应用本次 API 提交组成的事务及相关历史处理范围，逐块携带当前变量、函数、日志、正文和作用域。作者函数中的提交在原位置生效，再向函数返回应用回执；循环不强制每块落盘。退出后由回执节点判断真实成功或失败，保存由对应批次或防抖窗口安排。"
             },
             "contract_source": "system_config",
             "flow_kind": "predefined",
@@ -3070,7 +3070,7 @@
             },
             "role": {
               "display_name": "返回内存应用回执并登记保存时机",
-              "description": "工作状态、日志、scope和待保存消息一致后返回；不是入队即成功。当前函数归属父批次；独立API防抖加最长未保存时间，时间到通过既有事件端口请求批次保存。多次不await按序，多次await不强制刷盘。"
+              "description": "在逐块应用结束后向 ERA.commit 调用方返回结果：失败带回实际原因，成功代表内存变量、日志、作用域和待保存正文已经应用一致，不只是请求已入队。作者函数内的操作归属当前生成批次；独立 API 提交安排约 200 毫秒防抖、最长约 2 秒的保存请求，等待回执本身不会强制每次落盘。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -3115,7 +3115,7 @@
             },
             "role": {
               "display_name": "即时 Commit 结束",
-              "description": "把本次提交回执交还公共对象任务。"
+              "description": "这是“ERA 即时提交事务”的出口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
             },
             "contract_source": "node_type",
             "flow_kind": "terminal",
@@ -3321,7 +3321,7 @@
         "path": "configs/nodesets/prepare_workbench_commit.jsonc"
       },
       "display_name": "工作台草稿提交准备",
-      "description": "现有era.api.commit内的工作台专用准备分支；读取当前权威基准并将用户编辑意图转成原Commit操作，不拥有消息/Sidecar写事务。",
+      "description": "把变量工作台编辑草稿转成公共 commit 可执行的有序操作：读取当前基准，核对聊天、目标原值和保护条件，规划变量或函数差异，再按用户明确选择处理保护。过期草稿或不允许的操作返回失败。这里仅准备请求，不拥有消息或状态文件写事务，成功后仍走公共提交校验。",
       "status": "implemented",
       "flow_kind": "predefined",
       "effect_scope": "none",
@@ -3422,7 +3422,7 @@
             },
             "role": {
               "display_name": "开始工作台准备",
-              "description": "复用 Service 既有显式起点，调度已收到窗口事实的基准读取节点。"
+              "description": "这是“工作台草稿提交准备”的入口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
             },
             "contract_source": "node_type",
             "flow_kind": "terminal",
@@ -3455,7 +3455,7 @@
             },
             "role": {
               "display_name": "读取当前Sidecar基准",
-              "description": "仅使用已有era.tavern.sidecar.read_current/read_record读取身份、绑定指针及Sidecar V3记录；调用已有纯检查核对owner/就绪状态，不迁移、不创建绑定、不写文件。读取失败形成失败事实。"
+              "description": "为工作台草稿读取当前聊天身份、状态文件绑定和变量或函数的基准，优先采用可用的当前工作状态，检查其归属及就绪情况。读取结果是后续比较草稿是否过期的依据；这里不迁移数据、不新建绑定，也不保存用户编辑，读取失败会形成准备失败。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -3500,7 +3500,7 @@
             },
             "role": {
               "display_name": "校验编辑基准并区分变量和函数",
-              "description": "检查内部工作台请求、窗口/Sidecar身份、目标原值与原保护事实；切聊或目标/保护改变明确失败。区分变量草稿、函数库草稿、显式有序操作。结构化上下文保留当前基准与用户选择。"
+              "description": "检查工作台草稿属于当前聊天和状态文件，并核对用户打开编辑器时的目标原值是否仍然相同。新增目标须仍不存在，单项编辑只核对该目标，整库编辑核对全库；无关兄弟项更新不自动使单项草稿失效。还检查编辑模式和必需字段，失败则要求重新加载，成功后分到变量、函数或有序操作准备。"
             },
             "contract_source": "node_type",
             "flow_kind": "decision",
@@ -3550,7 +3550,7 @@
             },
             "role": {
               "display_name": "计算变量草稿真实增删改",
-              "description": "实际调用base_lib中的变量差异、Insert/Delete/Expression规划；对象类型替换及$template生成真实有序Delete/Insert，返回路径数组和每项变更kind。无宿主操作。"
+              "description": "把变量工作台中用户想要的最终值与当前基准比较，转换为实际有顺序的插入、删除或表达式操作，并记录每项变化的路径和类别。替换对象类型或模板时生成所需删除再插入动作，不把用户意图简单写成整库覆盖。只生成计划，仍需保护检查及公共提交流程确认。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -3595,7 +3595,7 @@
             },
             "role": {
               "display_name": "计算函数库真实增删改",
-              "description": "实际调用函数库差异规划；保留Insert/Edit/Delete顺序、函数名和原定义。引用校验复用表达式层。无宿主操作。"
+              "description": "把函数库草稿与当前函数定义比较，生成按顺序执行的新增、编辑或删除操作，保留函数名、原定义及变化类别，供保护检查和提交使用。函数引用等约束沿共用表达式处理链校验；这里不写状态文件，也不直接运行作者函数。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -3640,7 +3640,7 @@
             },
             "role": {
               "display_name": "校验显式有序操作",
-              "description": "保留工作台已有高级有序操作模式，只接受原允许的变量Insert/Edit/Delete，不自动替用户解除保护；不重排用户给出的操作。"
+              "description": "处理工作台的高级有序操作模式，校验允许的变量插入、编辑和删除操作，并保持用户给出的顺序。不会自行重排或解除保护；格式无效时带出准备失败，合格列表随后仍进入统一保护检查和 API 提交，而不是从工作台直接执行。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -3685,7 +3685,7 @@
             },
             "role": {
               "display_name": "按实际变更处理保护并生成提交参数",
-              "description": "从实际changes计算祖先/目标保护，核对预览事实及明确选择；统一普通/批量语义。只为仍存在且允许恢复的保护生成解锁/操作/恢复序列；禁止necessary临时恢复。输出已准备inspected或明确失败，不调用Host。"
+              "description": "根据实际准备的变化重新计算目标及祖先上的 ERA 保护条件，与用户预览时看到的保护逐项比较，防止提交期间保护已变。需要解锁时必须采用用户明确的选择，生成允许的解锁、操作及恢复顺序；不能临时恢复的必要保护不会被伪造恢复。无变化、条件不一致或缺少选择都返回失败，不在此写数据。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -3730,7 +3730,7 @@
             },
             "role": {
               "display_name": "返回基准或输入失败",
-              "description": "保留校验阶段的真实错误，构造failed准备结果；不产生操作，不向消息和Sidecar写入。"
+              "description": "把草稿校验阶段已经发现的错误转成提交准备失败，保留具体原因和原调用上下文。不会生成任何变量操作，也不向消息或状态文件写入；后续沿公共 API 的失败回执分支返回，让用户知道编辑为什么没有被应用。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -3775,7 +3775,7 @@
             },
             "role": {
               "display_name": "接回现有Commit准入或失败分支",
-              "description": "拆出ready/failed路由、带有有序operations的原inspected上下文及原era.api.commit.failure_context，使后续继续使用现有Scope/窗口校验或Commit失败构造。"
+              "description": "将工作台准备结果拆为分支标签、带有有序操作的提交上下文及失败上下文。准备成功后仍要经过公共 API 的作用域与窗口校验，准备失败则进入统一失败回执。这个节点只连接草稿准备和原提交事务，不把“已经生成操作”当成提交成功。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -3943,7 +3943,7 @@
         "path": "configs/nodesets/dispatch_prepare_context.jsonc"
       },
       "display_name": "ERA 选择并准备任务上下文",
-      "description": "从当前严格批次状态选择唯一 PlannedStep，再沿原统一准备链形成已路由任务上下文和外层任务族路由。",
+      "description": "为批次中的一个任务统一准备执行依据：先按索引取出步骤，判断是否需要聊天事实，再读取真实消息、候选回复和身份，规划消息标识及占位符，最后确定任务分支。普通同步只暂存消息变更，纯标识任务才可能提前提交。输出已准备任务供后续直接执行；失败保留到任务回执，避免各任务各自读出不一致的目标。",
       "status": "implemented",
       "flow_kind": "predefined",
       "effect_scope": "none",
@@ -4046,7 +4046,7 @@
             },
             "role": {
               "display_name": "统一准备启动",
-              "description": "启动一次任务执行前的共享上下文准备。"
+              "description": "这是“ERA 选择并准备任务上下文”的入口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
             },
             "contract_source": "node_type",
             "flow_kind": "terminal",
@@ -4079,7 +4079,7 @@
             },
             "role": {
               "display_name": "选择当前步骤",
-              "description": "按索引选择当前 PlannedStep，不执行或移除后续步骤。"
+              "description": "依据批次的当前索引取出这一次应执行的任务，连同完整批次状态一起传下去。不会跳过、删除或提前运行后续任务；一个任务完成并被统一合并后，索引才会推进，因此同批次的 API 和聊天操作保持既定顺序。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -4129,7 +4129,7 @@
             },
             "role": {
               "display_name": "分类生命周期与公共对象上下文",
-              "description": "验证 PlannedStep，保留 initialize、sync、update-mk 与 ignore；将直接公共对象 commit/sync 归为 api。Commit 的 Scope 准入和消息目标仍留在专用 workflow。"
+              "description": "检查所选步骤需要哪一种上下文：初始化、同步和消息标识任务按各自要求准备聊天事实；无需宿主数据的任务及忽略项走无读取分支；公共 ERA 提交和同步调用归入 API 任务。这里决定准备范围，具体的作用域准入和消息写入目标仍由 API 内部校验。"
             },
             "contract_source": "node_type",
             "flow_kind": "decision",
@@ -4184,7 +4184,7 @@
             },
             "role": {
               "display_name": "构造无宿主上下文",
-              "description": "为 context:none 和 ignore 任务构造无消息写入的派发结果，不调用任何 Tavern Capability。"
+              "description": "为不需要聊天事实的步骤构造派发上下文，例如明确忽略的事件。保留任务、事件来源和无宿主需求的结论，让后续仍能返回准确回执；不读取消息、变量或状态文件，也不制造消息写入。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -4229,7 +4229,7 @@
             },
             "role": {
               "display_name": "读取严格酒馆上下文",
-              "description": "读取包含待生成Swipe的真实全量消息位置，不以lastMessageId宏裁掉末楼；来源依据与实际写入核对使用一致的范围，业务回退仍由Service决定。"
+              "description": "读取当前聊天身份和所有消息的实际楼号、当前 Swipe（同一消息的候选回复）及正文。需要消息标识时还读取状态文件指针、已有 ERA 元数据和占位符设置。全量读取会保留准备生成的新末楼或空候选，避免把旧回复当成新目标；读取失败输出明确失败上下文，供后续停止写入。"
             },
             "contract_source": "node_type",
             "flow_kind": "data_store",
@@ -4274,7 +4274,7 @@
             },
             "role": {
               "display_name": "暂存楼层 MK、占位符与消息更新",
-              "description": "保留待生成末端Swipe的真实楼号和索引，明确空正文不等于旧候选正文；生成前回退不提前补写待生成楼，普通状态任务继续仅暂存，空聊天与API写入边界保持。"
+              "description": "根据聊天事实判断任务将处理哪条消息，以及是否要补充 ERA 消息标识（MK）和状态栏占位符。空的待生成候选仍是独立目标，不用旧候选正文替代。普通变量同步只暂存计划，稍后与变量结果一起保存；仅纯消息标识任务可进入预提交分支。这里规划变更，不直接写酒馆。"
             },
             "contract_source": "node_type",
             "flow_kind": "decision",
@@ -4324,7 +4324,7 @@
             },
             "role": {
               "display_name": "保留已准备上下文",
-              "description": "在消息文本和 ERAMetaData 已匹配时形成无写入准备结果，保持所有未知元数据和 SelectedMks 的 null 位置。"
+              "description": "当消息准备不需要提前写入时，把计划转成可派发的准备结果，保留正文、消息标识、元数据及失败信息。对于普通同步，尚待修改的正文继续作为暂存内容交给后续任务；“此处没有写入”不表示后续无需保存，也不会丢弃未知元数据。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -4369,7 +4369,7 @@
             },
             "role": {
               "display_name": "提交 MK 与占位符准备",
-              "description": "先以 affected 刷新确认当前文本写入；仅 update-mk 任务在此提交完整 ERAMetaData，状态任务的 SelectedMks 由后续同步事务随变量结果一次性提交；部分写入或结果未知立即标为 fatal。"
+              "description": "执行纯消息标识任务所需的提前写入：先更新目标正文并刷新受影响消息，确认成功后再保存 ERA 元数据到聊天状态文件。若无需对应变更就跳过。普通写入失败返回失败；若正文已变但元数据未能完成，或宿主无法确认写入结果，则报致命错误，避免继续使用不确定的标识关系。"
             },
             "contract_source": "node_type",
             "flow_kind": "data_store",
@@ -4414,7 +4414,7 @@
             },
             "role": {
               "display_name": "生成稳定楼层派发上下文 V3",
-              "description": "保留原上下文准备；仅将 era.ui.agent_configuration 分派到 agent-settings，生成事件仍进入 agent-generation-session。PlannedStep 的公开 taskRoute 不变。"
+              "description": "把读取、暂存或预提交后的结果装进所选任务，附上已准备的消息上下文，并选定实际执行分支：初始化、公共 API、生成会话，或简单任务。Agent 配置事件进入设置分支，不启动模型生成。这个节点只整理派发信息，保留准备失败供实际任务返回，不再次读写消息。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -4469,7 +4469,7 @@
             },
             "role": {
               "display_name": "统一准备结束",
-              "description": "结束任务执行前的共享上下文准备。"
+              "description": "这是“ERA 选择并准备任务上下文”的出口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
             },
             "contract_source": "node_type",
             "flow_kind": "terminal",
@@ -4615,7 +4615,7 @@
         "path": "configs/nodesets/service_collect_cycle_phase.jsonc"
       },
       "display_name": "ERA 收集与就绪批次阶段",
-      "description": "只在 collect 阶段接收和归约一个事件；按原控制路由等待或规划就绪批次。",
+      "description": "完成收集阶段的一轮：接收并验证一个事件，更新待处理集合，发送定时器控制；条件未满足则继续收集，批次就绪则规划任务并核对来源覆盖。计划不合法时立即为全部来源发布失败，否则切换执行阶段。这里不提前跑有效批次中的具体任务。",
       "status": "implemented",
       "flow_kind": "predefined",
       "effect_scope": "none",
@@ -4690,7 +4690,7 @@
             },
             "role": {
               "display_name": "收集轮次开始",
-              "description": "开始一次收集、等待或批次规划。"
+              "description": "这是“ERA 收集与就绪批次阶段”的入口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
             },
             "contract_source": "node_type",
             "flow_kind": "terminal",
@@ -4723,7 +4723,7 @@
             },
             "role": {
               "display_name": "接收并归约一个事件",
-              "description": "只有 collect 阶段接收入站事件，校验、归约并发送事件集控制。"
+              "description": "服务只在没有执行在途批次时从宿主有序事件入口接收一个事件，验证传输格式，再更新收集窗口和定时器。输出整理结果及定时器控制，不执行事件代表的变量或生成任务；等待与执行分支将在外层决定，确保事件接收和批次处理的边界明确。"
             },
             "contract_source": "nodeset",
             "flow_kind": "predefined",
@@ -4772,7 +4772,7 @@
             },
             "role": {
               "display_name": "选择等待或规划",
-              "description": "读取归约结果的 wait/execute 路由，不改变事件集。"
+              "description": "读取事件整理后的决定，把流程分到“继续等待”或“准备执行批次”。这里不重新判断窗口时间、不改变事件集合，只把已确定的分支传给工作流，保证实际执行采用同一次事件整理的结论。"
             },
             "contract_source": "node_type",
             "flow_kind": "decision",
@@ -4817,7 +4817,7 @@
             },
             "role": {
               "display_name": "携带等待状态",
-              "description": "把归约后的服务状态原样包装为下一轮 collect 阶段。"
+              "description": "当事件尚未达到执行条件时，把更新后的事件集合、定时器和序号包装回收集阶段，留给下一轮继续接收。已经收到的事件不会被丢弃或重新执行；这个节点只是保存本轮的收集进度，不向酒馆写入内容。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -4862,7 +4862,7 @@
             },
             "role": {
               "display_name": "规划并校验就绪批次",
-              "description": "规划严格步骤与来源覆盖；无效覆盖立即结算发布，有效批次进入 execute 阶段。"
+              "description": "把就绪事件集合规划成有顺序的任务，核对来源无漏项、无重复、无批次外事件且步骤不超过 128。通过后进入执行阶段，留待下一轮执行第一个任务；失败则不执行领域任务，直接结算并发布失败帧。这样任务规划问题不会造成来源调用失去结果。"
             },
             "contract_source": "nodeset",
             "flow_kind": "predefined",
@@ -4911,7 +4911,7 @@
             },
             "role": {
               "display_name": "收集轮次结束",
-              "description": "输出唯一下一阶段状态。"
+              "description": "这是“ERA 收集与就绪批次阶段”的出口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
             },
             "contract_source": "node_type",
             "flow_kind": "terminal",
@@ -5023,7 +5023,7 @@
         "path": "configs/nodesets/service_collect_phase.jsonc"
       },
       "display_name": "ERA 事件收集阶段",
-      "description": "只在 collect 阶段接收一个 Host FIFO 事件；保留 validate、reduce、send control 的真实顺序。",
+      "description": "服务只在没有执行在途批次时从宿主有序事件入口接收一个事件，验证传输格式，再更新收集窗口和定时器。输出整理结果及定时器控制，不执行事件代表的变量或生成任务；等待与执行分支将在外层决定，确保事件接收和批次处理的边界明确。",
       "status": "implemented",
       "flow_kind": "predefined",
       "effect_scope": "none",
@@ -5098,7 +5098,7 @@
             },
             "role": {
               "display_name": "收集阶段开始",
-              "description": "进入收集阶段，不处理在途批次。"
+              "description": "这是“ERA 事件收集阶段”的入口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
             },
             "contract_source": "node_type",
             "flow_kind": "terminal",
@@ -5131,7 +5131,7 @@
             },
             "role": {
               "display_name": "验证服务状态",
-              "description": "只解包 collect 阶段载体；输出继续符合原严格 Service State Schema。"
+              "description": "确认当前确实处于收集阶段，然后从循环载体中取出事件集合、序号和定时器等服务状态，供接收和整理新事件使用。它不接收事件、不清空集合；若把执行阶段的状态交到这里，会报错，避免混淆两种阶段的数据。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -5176,7 +5176,7 @@
             },
             "role": {
               "display_name": "接收服务事件",
-              "description": "只在 collect 阶段从原入站 Port 接收一个传输事件。"
+              "description": "从宿主连接的 ERA 入站事件队列等待并接收一个事件，可能是聊天变化、API 请求或定时器到期。收到的数据还只是传输输入，下一节点必须验证后才能进入业务规划。此节点不自行执行事件，不并行启动另一批任务；没有事件时等待，而不是轮询聊天变量。"
             },
             "contract_source": "system_config",
             "flow_kind": "io",
@@ -5218,7 +5218,7 @@
             },
             "role": {
               "display_name": "校验传输事件",
-              "description": "保留原 Schema、字节和宿主引用校验。"
+              "description": "检查刚从宿主收到的事件是否符合 ERA 的传输格式，包括必需字段、参数封装、体积限制及允许的宿主引用。合格后输出内部可用的事件；不合格时保留相应错误，不把损坏数据当成正常聊天操作继续规划。这一步只验证事件本身，不执行它代表的业务。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -5263,7 +5263,7 @@
             },
             "role": {
               "display_name": "归约有界事件集",
-              "description": "保留时间窗口、序号、高水位和控制命令语义。"
+              "description": "把一个新事件放入当前收集窗口，依据事件序号、窗口期限和容量限制更新待处理集合，决定继续等待还是立即执行一批事件。同步输出应启动或取消的定时器控制。它负责事件何时形成批次，而不是计算变量；事件的业务操作将在批次规划和任务执行中完成。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -5318,7 +5318,7 @@
             },
             "role": {
               "display_name": "发送事件集控制",
-              "description": "路由等待或规划前，向原出站 Port 提交定时器控制。"
+              "description": "把事件整理阶段产生的定时器控制送给宿主，要求按本轮决定启动、取消或保持收集窗口相关定时器。它发送的是收集控制，不是任务成功通知，也不会保存变量；先提交控制再选择等待或规划分支，使宿主计时与服务状态一致。"
             },
             "contract_source": "system_config",
             "flow_kind": "io",
@@ -5360,7 +5360,7 @@
             },
             "role": {
               "display_name": "收集阶段结束",
-              "description": "返回原 CollectionReduction，不执行任何批次任务。"
+              "description": "这是“ERA 事件收集阶段”的出口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
             },
             "contract_source": "node_type",
             "flow_kind": "terminal",
@@ -5472,7 +5472,7 @@
         "path": "configs/nodesets/service_finish_batch.jsonc"
       },
       "display_name": "ERA 批次结算与发布",
-      "description": "结算全部来源，构造并发送唯一批次结果帧；发送完成后才允许继续或抛出致命错误。",
+      "description": "结束本批次并为全部原始事件准确结算一次，构造统一结果帧，先发送给宿主，再判断能否继续服务。普通失败可带着诊断进入下一轮收集；无法确认写入等致命结果则在发送后抛错。这个顺序确保服务停止前，等待本批结果的调用方已能收到结论。",
       "status": "implemented",
       "flow_kind": "predefined",
       "effect_scope": "none",
@@ -5551,7 +5551,7 @@
             },
             "role": {
               "display_name": "批次收尾开始",
-              "description": "开始唯一一次批次结算。"
+              "description": "这是“ERA 批次结算与发布”的入口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
             },
             "contract_source": "node_type",
             "flow_kind": "terminal",
@@ -5584,7 +5584,7 @@
             },
             "role": {
               "display_name": "结算全部来源",
-              "description": "复用现有逐来源准确一次结算、诊断与服务迭代计数。"
+              "description": "在全部步骤结束或计划被拒绝后，核对每个原始事件都恰好获得一次结算，汇总批次诊断，并更新服务批次计数。把任务层结果整理为可发布的批次结论；不会重新执行失败任务，也不负责酒馆文件写入。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -5629,7 +5629,7 @@
             },
             "role": {
               "display_name": "构造批次结果帧",
-              "description": "构造幂等帧，确保结算先于通知，并携带致命决策。"
+              "description": "把已结算批次组织成一个出站结果帧，包括各事件回执、业务通知、诊断和是否必须终止服务的标记，同时得到后续服务状态。相同批次使用稳定标识，便于宿主识别重复结果。这里只构造帧；工作流必须先发送该帧，再处理致命错误。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -5684,7 +5684,7 @@
             },
             "role": {
               "display_name": "发送批次结果",
-              "description": "在抛出任何致命错误前，将最终帧提交到出站 Port。"
+              "description": "把已经结算的整批结果帧通过 ERA 出站通道交给宿主，其中包含每个原事件的回执、通知、诊断和致命标记。发送发生在任何致命抛错之前，让等待结果的调用方能知道发生了什么；这个节点不重新计算业务，也不把帧发送成功当成消息或状态文件保存成功。"
             },
             "contract_source": "system_config",
             "flow_kind": "io",
@@ -5726,7 +5726,7 @@
             },
             "role": {
               "display_name": "路由致命结果",
-              "description": "可恢复批次结果后继续；提交结果未知或部分提交时抛出错误。"
+              "description": "读取已经随批次结果确定的致命标记：可继续运行的结果进入下一次事件收集，无法确认写入等致命情况进入抛错分支。分支发生在结果帧已交给宿主之后，因此调用方先得知本批次失败；这里不把普通业务失败升级为致命错误。"
             },
             "contract_source": "node_type",
             "flow_kind": "decision",
@@ -5771,7 +5771,7 @@
             },
             "role": {
               "display_name": "继续服务",
-              "description": "导出已提交的批次后状态，供外层循环下一次迭代使用。"
+              "description": "当批次没有致命错误时，导出已经结算后的服务状态，包括后续收集所需进度。原值不变，不重新读取聊天或重算变量；它连接“本批次已发布”与“下一批事件可开始收集”两个时点。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -5816,7 +5816,7 @@
             },
             "role": {
               "display_name": "抛出致命服务错误",
-              "description": "仅在宿主收到终止批次帧后抛出带类型的致命错误。"
+              "description": "在宿主已经收到本批次结果帧后抛出服务致命错误，结束正常循环。用于写入结果未知或无法安全继续的情形，防止把不确定状态带入下一批任务。它不再发送第二份结算，也不自行回滚已确认的宿主写入。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -5861,7 +5861,7 @@
             },
             "role": {
               "display_name": "恢复收集阶段",
-              "description": "仅包装已发布的原服务状态；下轮才再次接收入站事件。"
+              "description": "把批次结束后可继续运行的服务状态包装回收集阶段，交给长期循环的下一轮。先前任务已经结算和发布；本节点自身不接收事件、不执行保存，只明确下一轮可以恢复接收新请求。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -5906,7 +5906,7 @@
             },
             "role": {
               "display_name": "批次收尾结束",
-              "description": "返回 collect 阶段；fatal 路径不会正常返回。"
+              "description": "这是“ERA 批次结算与发布”的出口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
             },
             "contract_source": "node_type",
             "flow_kind": "terminal",
@@ -6056,7 +6056,7 @@
         "path": "configs/nodesets/service_iteration.jsonc"
       },
       "display_name": "ERA 服务阶段迭代",
-      "description": "永久服务循环的一轮：收集阶段接收并归约一个事件；执行阶段选择一个步骤，准备上下文并运行对应任务，然后合并结果或结束批次。",
+      "description": "长期 Service 循环的一轮，只处理一种阶段：收集时接收一个事件并等待或形成批次；执行时取出一个计划步骤，统一准备其聊天上下文，调用初始化、API、生成会话或简单任务，再合并结果。最后一步完成时当轮发布整批结果，其他情况携带进度继续，不在执行批次中途插入新事件。",
       "status": "implemented",
       "flow_kind": "predefined",
       "effect_scope": "none",
@@ -6135,7 +6135,7 @@
             },
             "role": {
               "display_name": "阶段迭代开始",
-              "description": "开始一个收集或单步执行阶段。"
+              "description": "这是“ERA 服务阶段迭代”的入口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
             },
             "contract_source": "node_type",
             "flow_kind": "terminal",
@@ -6168,7 +6168,7 @@
             },
             "role": {
               "display_name": "选择当前阶段",
-              "description": "只读取内部 collect/execute 标签，不读取事件，不改变领域状态。"
+              "description": "读取当前循环状态的阶段标签，决定本轮是继续接收事件，还是执行已规划批次中的一个步骤。阶段载体格式无效时直接报错；正常情况下原状态原样传递。这样在执行批次期间不会误走收集分支，使任务顺序保持可预测。"
             },
             "contract_source": "node_type",
             "flow_kind": "decision",
@@ -6218,7 +6218,7 @@
             },
             "role": {
               "display_name": "收集、等待或规划批次",
-              "description": "接收一个事件，决定继续等待还是规划批次；来源覆盖校验失败时，当轮发送失败结果。"
+              "description": "完成收集阶段的一轮：接收并验证一个事件，更新待处理集合，发送定时器控制；条件未满足则继续收集，批次就绪则规划任务并核对来源覆盖。计划不合法时立即为全部来源发布失败，否则切换执行阶段。这里不提前跑有效批次中的具体任务。"
             },
             "contract_source": "nodeset",
             "flow_kind": "predefined",
@@ -6267,7 +6267,7 @@
             },
             "role": {
               "display_name": "验证在途批次状态",
-              "description": "仅 execute 阶段解包；输出通过既有严格批次状态 Schema 校验。"
+              "description": "确认循环处于执行阶段，再取出任务列表、当前步骤索引、累计结果和服务进度，交给单步执行流程。它不移动索引，也不修改计划；阶段标签或载体损坏时会报错，避免使用错误批次。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -6312,7 +6312,7 @@
             },
             "role": {
               "display_name": "选择步骤并准备派发上下文",
-              "description": "按批次索引选出唯一计划步骤，准备消息上下文，再选择初始化、API、生成或简单任务。"
+              "description": "为批次中的一个任务统一准备执行依据：先按索引取出步骤，判断是否需要聊天事实，再读取真实消息、候选回复和身份，规划消息标识及占位符，最后确定任务分支。普通同步只暂存消息变更，纯标识任务才可能提前提交。输出已准备任务供后续直接执行；失败保留到任务回执，避免各任务各自读出不一致的目标。"
             },
             "contract_source": "nodeset",
             "flow_kind": "predefined",
@@ -6376,7 +6376,7 @@
             },
             "role": {
               "display_name": "执行初始化任务",
-              "description": "执行设置、世界书、正则和消息资源初始化；启动操作随后复用共享同步事务。"
+              "description": "读取现有角色和聊天资源，按传统或外置模式规划并应用必要的 ERA 设置、世界书、正则及主开场白，遵守作者资源不覆盖条件。普通资源操作直接返回结果；启动初始化成功或无需变更时，再进入共享历史同步，使变量状态与当前消息一致。整个任务保留原来源，不另建初始化变量引擎。"
             },
             "contract_source": "nodeset",
             "flow_kind": "predefined",
@@ -6430,7 +6430,7 @@
             },
             "role": {
               "display_name": "执行 ERA 公共对象任务",
-              "description": "将 ERA.commit 交给即时提交事务，将 ERA.sync 交给共享同步；读取和订阅不作为服务事件执行。"
+              "description": "处理公共 ERA 对象的两种写入类请求：commit 将有序操作应用到当前内存工作状态并返回回执，sync 则把校验后的请求交给共享历史同步和保存。输入不合法时返回明确失败，各分支保持原调用来源。读取和订阅不作为此任务执行；结果统一交还批次结算。"
             },
             "contract_source": "nodeset",
             "flow_kind": "predefined",
@@ -6484,7 +6484,7 @@
             },
             "role": {
               "display_name": "接回公共对象任务结果",
-              "description": "保留 API 任务的独立结果类型并接入原步骤合并。"
+              "description": "把公共 API 任务专用的结果转交到 Service 的统一任务结果通道。结果中的成功、跳过、失败、来源和通知均保留原值，不重新计算。专用通道用于避免 API 内部同步结果与外层结果混用；真正推进批次索引由后续合并节点完成。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -6529,7 +6529,7 @@
             },
             "role": {
               "display_name": "执行三阶段故事生成会话",
-              "description": "按事件顺序处理生成阶段、候选重试和取消，并保留生成期间的任务隔离。"
+              "description": "在有序 Service 任务中处理 Agent 的规划、正文及结算阶段：识别事件和来源，恢复必要基线，请求并应用模型候选，遇到可纠错失败按整次候选恢复后重试。阶段成功后通过完成标识与页面回调交接，再由新的恢复事件继续；需最终消息同步的结果走共用链，取消或失效来源如实结算，不重复应用候选内 API。"
             },
             "contract_source": "nodeset",
             "flow_kind": "predefined",
@@ -6583,7 +6583,7 @@
             },
             "role": {
               "display_name": "执行已准备的简单任务",
-              "description": "普通同步、MK、Agent 设置及 ignore 在同一小型分支中完成，不重新准备上下文。"
+              "description": "执行已经准备好上下文的简单任务：历史同步走共用同步链，消息标识任务只结算已准备结果，Agent 设置处理配置与连接，忽略任务解释不执行的原因。初始化、公共 API 和生成会话由外层单独调用。各分支交还唯一任务结果，索引推进和批次发布仍由统一结算负责。"
             },
             "contract_source": "nodeset",
             "flow_kind": "predefined",
@@ -6642,7 +6642,7 @@
             },
             "role": {
               "display_name": "合并任务结果并继续或完成批次",
-              "description": "合并本步骤的唯一结果并推进索引；若已到最后一步，当轮发送批次结果。"
+              "description": "在一个任务结束后合并其回执、诊断和进度，推进批次索引。还有任务则继续执行原批次，全部结束则立即进入批次结算和发布，再恢复事件收集。该节点集只接续已产生的结果，不重做任务，也不因一条普通业务失败自动抛弃剩余计划。"
             },
             "contract_source": "nodeset",
             "flow_kind": "predefined",
@@ -6696,7 +6696,7 @@
             },
             "role": {
               "display_name": "阶段迭代结束",
-              "description": "输出唯一下一阶段状态供外层 Loop carry。"
+              "description": "这是“ERA 服务阶段迭代”的出口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
             },
             "contract_source": "node_type",
             "flow_kind": "terminal",
@@ -6891,7 +6891,7 @@
         "path": "configs/nodesets/service_prepare_batch_phase.jsonc"
       },
       "display_name": "ERA 就绪批次规划阶段",
-      "description": "只处理 execute 归约结果；保留原规划及覆盖校验，失败时立即结算发布，成功时转为执行阶段。",
+      "description": "把就绪事件集合规划成有顺序的任务，核对来源无漏项、无重复、无批次外事件且步骤不超过 128。通过后进入执行阶段，留待下一轮执行第一个任务；失败则不执行领域任务，直接结算并发布失败帧。这样任务规划问题不会造成来源调用失去结果。",
       "status": "implemented",
       "flow_kind": "predefined",
       "effect_scope": "none",
@@ -6961,7 +6961,7 @@
             },
             "role": {
               "display_name": "规划阶段开始",
-              "description": "仅接收就绪且非空的归约结果。"
+              "description": "这是“ERA 就绪批次规划阶段”的入口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
             },
             "contract_source": "node_type",
             "flow_kind": "terminal",
@@ -6994,7 +6994,7 @@
             },
             "role": {
               "display_name": "规划原生命周期步骤",
-              "description": "复用严格事件计划及来源顺序。"
+              "description": "把已经就绪的一组聊天或 API 事件翻译成有顺序的任务步骤，例如初始化、消息同步、消息标识更新、生成阶段或明确忽略。每一步保留它对应的原始事件来源，使多个事件即使合并为一个任务也能分别收到处理结果。这里只编排任务，不执行计算或保存。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -7039,7 +7039,7 @@
             },
             "role": {
               "display_name": "验证来源覆盖",
-              "description": "保持重复、缺失、批次外来源与 128 步上限的原错误规则。"
+              "description": "检查批次计划是否覆盖全部原始事件：不能漏掉来源、重复处理同一来源，或混入本批次之外的来源；步骤数也不能超过 128。成功时建立从第一个步骤开始的批次状态，失败时走整批失败结算，防止部分事件悄悄丢失或被执行两次。"
             },
             "contract_source": "node_type",
             "flow_kind": "decision",
@@ -7089,7 +7089,7 @@
             },
             "role": {
               "display_name": "构造覆盖失败批次",
-              "description": "每个来源恰好生成一条失败结算。"
+              "description": "当任务计划的来源覆盖检查不通过时，给本批次每个原始事件生成一条失败结算，保留检查诊断，并把批次标为待结束。不会执行计划中的任何领域任务；其意义是即使规划出错，等待结果的调用方也能收到明确失败。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -7134,7 +7134,7 @@
             },
             "role": {
               "display_name": "携带已校验批次",
-              "description": "只包装现有严格 BatchExecutionState，下一轮执行第一个步骤。"
+              "description": "把经过覆盖检查的批次状态标记为执行阶段，保留任务列表、当前索引和所有事件来源。下一轮开始执行第一个步骤，而不是再接收一批新事件；这里只切换阶段，不提前执行任务。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -7179,7 +7179,7 @@
             },
             "role": {
               "display_name": "发布覆盖失败批次",
-              "description": "无效计划不执行任何领域任务，原位结算并发布。"
+              "description": "结束本批次并为全部原始事件准确结算一次，构造统一结果帧，先发送给宿主，再判断能否继续服务。普通失败可带着诊断进入下一轮收集；无法确认写入等致命结果则在发送后抛错。这个顺序确保服务停止前，等待本批结果的调用方已能收到结论。"
             },
             "contract_source": "nodeset",
             "flow_kind": "predefined",
@@ -7228,7 +7228,7 @@
             },
             "role": {
               "display_name": "规划阶段结束",
-              "description": "输出唯一下一阶段状态。"
+              "description": "这是“ERA 就绪批次规划阶段”的出口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
             },
             "contract_source": "node_type",
             "flow_kind": "terminal",
@@ -7334,7 +7334,7 @@
         "path": "configs/nodesets/service_settle_step_phase.jsonc"
       },
       "display_name": "ERA 单步结果阶段",
-      "description": "合并恰好一个任务结果并推进批次索引；未完成时继续原批次，最后一步当轮结算发布。",
+      "description": "在一个任务结束后合并其回执、诊断和进度，推进批次索引。还有任务则继续执行原批次，全部结束则立即进入批次结算和发布，再恢复事件收集。该节点集只接续已产生的结果，不重做任务，也不因一条普通业务失败自动抛弃剩余计划。",
       "status": "implemented",
       "flow_kind": "predefined",
       "effect_scope": "none",
@@ -7415,7 +7415,7 @@
             },
             "role": {
               "display_name": "单步后处理开始",
-              "description": "读取一个已完成步骤的批次状态与完成标志。"
+              "description": "这是“ERA 单步结果阶段”的入口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
             },
             "contract_source": "node_type",
             "flow_kind": "terminal",
@@ -7448,7 +7448,7 @@
             },
             "role": {
               "display_name": "合并步骤结果",
-              "description": "记录一个可恢复任务结果、推进步骤索引，并报告是否已消费全部规划步骤。"
+              "description": "把当前任务的结果合入批次：累计各事件的结算、诊断和通知，接续消息处理进度，再把步骤索引推进一位。输出更新后的状态及是否已完成全部步骤；它不会重新执行任务或立即读入新事件。此处统一汇合，确保不同任务分支采用同一种批次推进规则。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -7503,7 +7503,7 @@
             },
             "role": {
               "display_name": "路由继续或收尾",
-              "description": "根据原 stepDone 选择下一步骤或当轮结算，不重新计算完成条件。"
+              "description": "读取任务合并给出的完成标志，决定带着更新后的状态执行下一个步骤，还是当轮结束批次。这里不重新计算步骤数或更改结果，只将同一次合并的结论用于分支选择，避免最后一步执行后多等一轮。"
             },
             "contract_source": "node_type",
             "flow_kind": "decision",
@@ -7558,7 +7558,7 @@
             },
             "role": {
               "display_name": "继续同一批次",
-              "description": "未完成时携带更新后的步骤索引、结算、诊断及游标；不接收入站事件。"
+              "description": "当批次还有剩余步骤时，把更新后的索引、累计结算、诊断和消息处理进度重新包装为执行阶段，供下一轮继续。不会在批次中途接收入站事件，也不会清空已完成任务的结果。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -7603,7 +7603,7 @@
             },
             "role": {
               "display_name": "确认待结算状态",
-              "description": "只转换既有批次状态类型；保留所有值并确认步骤索引已达到计划末尾。"
+              "description": "把已完成全部步骤的批次状态送到批次结算通道，保留所有值。这个节点只是转换数据出口，不再推进索引、不额外执行任务；完成条件由之前的任务合并和分支判断提供。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -7648,7 +7648,7 @@
             },
             "role": {
               "display_name": "结算并发布批次",
-              "description": "最后一步当轮完成结算、发送结果帧并恢复收集阶段。"
+              "description": "结束本批次并为全部原始事件准确结算一次，构造统一结果帧，先发送给宿主，再判断能否继续服务。普通失败可带着诊断进入下一轮收集；无法确认写入等致命结果则在发送后抛错。这个顺序确保服务停止前，等待本批结果的调用方已能收到结论。"
             },
             "contract_source": "nodeset",
             "flow_kind": "predefined",
@@ -7697,7 +7697,7 @@
             },
             "role": {
               "display_name": "单步后处理结束",
-              "description": "输出唯一下一阶段状态。"
+              "description": "这是“ERA 单步结果阶段”的出口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
             },
             "contract_source": "node_type",
             "flow_kind": "terminal",
@@ -7803,7 +7803,7 @@
         "path": "configs/nodesets/service_step.jsonc"
       },
       "display_name": "ERA 简单任务步骤",
-      "description": "仅执行已完成统一准备的普通同步、MK 更新、Agent 设置或 ignore；复杂任务由服务迭代直接调用。",
+      "description": "执行已经准备好上下文的简单任务：历史同步走共用同步链，消息标识任务只结算已准备结果，Agent 设置处理配置与连接，忽略任务解释不执行的原因。初始化、公共 API 和生成会话由外层单独调用。各分支交还唯一任务结果，索引推进和批次发布仍由统一结算负责。",
       "status": "implemented",
       "flow_kind": "predefined",
       "effect_scope": "none",
@@ -7904,7 +7904,7 @@
             },
             "role": {
               "display_name": "步骤启动",
-              "description": "接收一个已经完成上下文准备的简单任务。"
+              "description": "这是“ERA 简单任务步骤”的入口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
             },
             "contract_source": "node_type",
             "flow_kind": "terminal",
@@ -7937,7 +7937,7 @@
             },
             "role": {
               "display_name": "选择已准备的简单任务",
-              "description": "只接收已准备好的普通同步、消息密钥、Agent 设置或忽略步骤，并将步骤与批次状态交给对应分支。"
+              "description": "只接受已准备好的普通同步、消息标识、Agent 设置或忽略任务，把任务与批次状态交给相应分支。复杂初始化、公共 API 和生成会话不经这里。分支标签不属于这四类时会报错，而不是猜测任务用途；本节点自身不进行变量计算或宿主写入。"
             },
             "contract_source": "node_type",
             "flow_kind": "decision",
@@ -8002,7 +8002,7 @@
             },
             "role": {
               "display_name": "执行同步任务",
-              "description": "执行共享同步事务，覆盖普通协调、完整重算、最新修复、自动修复、定向回滚和 API 因果写入。"
+              "description": "把当前聊天的真实消息历史与 ERA 变量、函数和日志保持一致：读取并校验状态文件绑定，优先沿用有效未保存的内存状态，规划回退及处理范围，逐块应用指令和函数，必要时压缩封存文本，最后批量保存消息及状态文件。保存后再刷新显示和返回结果；切换聊天或候选回复不会使旧任务覆盖新目标。"
             },
             "contract_source": "nodeset",
             "flow_kind": "predefined",
@@ -8056,7 +8056,7 @@
             },
             "role": {
               "display_name": "更新消息密钥任务",
-              "description": "接收派发准备阶段已确认的消息密钥和占位符写入结果，只构造任务回执，不重复写消息。"
+              "description": "为 ERA 消息标识任务返回结算。消息标识 MK 用于将消息与历史状态对应；它及占位符的读取、准备和必要写入已在统一派发中完成，本节点集仅核对并返回实际结果。不会再次改消息或重算变量，也不推进连续同步进度。"
             },
             "contract_source": "nodeset",
             "flow_kind": "predefined",
@@ -8105,7 +8105,7 @@
             },
             "role": {
               "display_name": "执行 Agent 设置命令",
-              "description": "配置、预设、连接与模型列表在同一 Service FIFO 内独立处理，不进入生成阶段。"
+              "description": "在聊天和 API 共用的有序 Service 队列中处理 Agent 配置、预设、连接和模型列表，读取必要事实后执行相应设置命令并返回来源回执。它不进入规划、正文或结算的模型生成状态机，也不改聊天变量，避免设置任务误占用生成阶段的上下文。"
             },
             "contract_source": "nodeset",
             "flow_kind": "predefined",
@@ -8154,7 +8154,7 @@
             },
             "role": {
               "display_name": "结算忽略步骤",
-              "description": "使用规划器保留的原始 ignore 原因逐一结算来源，不伪装成同步或其他领域任务。"
+              "description": "处理规划器明确标为忽略的步骤，向其包含的每个原始事件返回被忽略的原因。不会假装执行过同步、生成或保存；任务类型不正确时会报错。这样无需业务操作的事件仍有可追踪的结果，不会使等待回执的调用方悬空。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -8199,7 +8199,7 @@
             },
             "role": {
               "display_name": "步骤结束",
-              "description": "交还唯一任务结果，由外层统一合并并推进批次索引。"
+              "description": "这是“ERA 简单任务步骤”的出口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
             },
             "contract_source": "node_type",
             "flow_kind": "terminal",
@@ -8325,7 +8325,7 @@
         "path": "configs/nodesets/sidecar_store.jsonc"
       },
       "display_name": "ERA Sidecar 状态存储",
-      "description": "ERA 聊天状态的唯一领域存储节点集。它检查聊天 SidecarId 指针与身份，读取或迁移用户文件状态，处理冲突选择，并在成功读取或写入后发布易失宏快照。聊天变量仅保留 ERAMetaData.SidecarId；stat_data、SelectedMks、EditLogs、函数日志及 statFunc 只在 Sidecar 文件中读写。",
+      "description": "加载当前聊天的 Sidecar，即独立保存 ERA 变量、函数和历史日志的状态文件。核对聊天指针及文件归属，优先沿用有效内存工作状态；需要时处理创建、旧数据迁移、绑定冲突或修复选择，再按来源校验执行。聊天中只保留文件指针，加载或写入确认后提供快照；来源变化和失败不会被当作成功绑定。",
       "status": "implemented",
       "flow_kind": "process",
       "effect_scope": "none",
@@ -8411,7 +8411,7 @@
             },
             "role": {
               "display_name": "Sidecar 状态存储启动",
-              "description": "开始一次当前聊天状态加载或绑定事务。"
+              "description": "这是“ERA Sidecar 状态存储”的入口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
             },
             "contract_source": "node_type",
             "flow_kind": "terminal",
@@ -8444,7 +8444,7 @@
             },
             "role": {
               "display_name": "读取并核对本次 Sidecar 事务来源",
-              "description": "从真实派发上下文保留原聊天、消息/Swipe/原文依据；读取 Sidecar 前后比对身份和指针，读取失败或来源改变形成 failed 同步上下文，不把新聊天事实与旧消息拼接。"
+              "description": "检查当前聊天绑定的是哪一个 Sidecar（独立保存 ERA 变量、函数和日志的状态文件），核对读取前后的聊天身份和文件指针。存在同一绑定的有效内存状态时优先沿用，避免已应用但未保存的操作被旧文件覆盖；必要时恢复被打断的模型候选起点。来源变化或读取失败转为失败事实，不把新聊天与旧消息混在一起。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -8494,7 +8494,7 @@
             },
             "role": {
               "display_name": "保留失败来源或解析绑定选择",
-              "description": "源上下文已失败时直接沿原 continue 下游进入同步失败结算，禁止新弹窗和写入；正常情况下复用 create/migrate-legacy/matched/conflict/repair 的既有选择规则。"
+              "description": "根据聊天与状态文件的关系决定接下来怎么办：首次使用可创建，旧格式可迁移，匹配的绑定可继续，所属聊天冲突或损坏则等待用户明确选择或修复。先前读取已经失败时直接保留失败，不再弹出新选择或安排写入。这里只形成决议，不自行创建文件。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -8544,7 +8544,7 @@
             },
             "role": {
               "display_name": "发布 Sidecar 冲突选择",
-              "description": "显示 workflow 已决定的不可关闭选择提示。"
+              "description": "仅在状态绑定处于等待选择时，要求宿主显示具体问题：文件属于其他聊天则提示冲突，文件或绑定无效则提示修复，并附当前身份、文件归属及版本供用户判断。用户已有有效选择时不会再次弹同一提示。这个节点只显示问题，不替用户选择，也不改变变量。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -8583,7 +8583,7 @@
             },
             "role": {
               "display_name": "按原来源执行恢复、确认保存并提交 Sidecar",
-              "description": "用生产 activeText 构造恢复消息；复核原聊天/绑定/记录 revision，向消息写入、文件写入和指针提交传递 sourceBasis。只在消息持久化 confirmed 后更新本任务依据并继续文件/指针提交；来源变化或保存失败保留实际已写事实并进入既有同步失败结算，不自动重试，不回写新聊天。"
+              "description": "执行已经确定的状态文件决议，例如创建绑定、迁移旧状态或应用用户选择。需要恢复消息时按当前有效正文构造更新，先确认消息保存，再写状态文件和聊天指针；全过程复核原聊天、绑定和文件版本。切换聊天或保存失败后记录实际已完成的写入并返回失败，不把旧状态写到新聊天，也不自动重复事务。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -8638,7 +8638,7 @@
             },
             "role": {
               "display_name": "Sidecar 状态存储结束",
-              "description": "输出已加载的同步上下文及路由。"
+              "description": "这是“ERA Sidecar 状态存储”的出口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
             },
             "contract_source": "node_type",
             "flow_kind": "terminal",
@@ -8742,7 +8742,7 @@
         "path": "configs/nodesets/message_block_step.jsonc"
       },
       "display_name": "ERA 块步进单次迭代",
-      "description": "共用内存块执行；累计消息、变量、函数、scope和日志，不在每块中执行聊天/Sidecar保存。",
+      "description": "共用消息块循环的一次推进：在当前位置应用指令或等待作者函数，整理工作项，必要时压缩已封存消息层，再发布到当前聊天的内存工作状态。累计变量、函数、日志、作用域和正文传给下一块，结束标志决定循环是否继续；每一块都不单独落盘，最终保存由任务尾部统一执行。",
       "status": "implemented",
       "flow_kind": "predefined",
       "effect_scope": "none",
@@ -8823,7 +8823,7 @@
             },
             "role": {
               "display_name": "块迭代开始",
-              "description": "进入单块推进边界。"
+              "description": "这是“ERA 块步进单次迭代”的入口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
             },
             "contract_source": "node_type",
             "flow_kind": "terminal",
@@ -8856,7 +8856,7 @@
             },
             "role": {
               "display_name": "共用块执行：指令、函数及位置API",
-              "description": "共用块执行处理阶段有序项，在当前位置验证操作；函数scope和记录沿用普通路径。函数上下文所有sync均明确拒绝；候选内错误上报候选控制，普通作者异常保留前缀标done。"
+              "description": "推进当前消息中的一个执行位置，按正文顺序应用变量指令、函数定义或作者函数调用。遇到作者函数时暂停块推进，等待该函数提交操作并就地应用，再返回回执后继续；函数内部不允许发起重算或回滚。更新仅进入内存工作状态，尚未保存。模型候选中的错误交给候选恢复，普通作者错误则保留可确认的成功前缀。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -8901,7 +8901,7 @@
             },
             "role": {
               "display_name": "累计操作记录及封存候选",
-              "description": "收集本轮消息补丁和累计日志；楼层完成时清内存进度并提供封存压缩候选，不构造每块持久化事务。"
+              "description": "把这一轮块推进后得到的工作项及块位置整理成压缩节点的输入，保留累计正文、变量、函数、日志和失败信息。当前实现只是携带已有结果，不在这里重新执行指令或清除进度；是否有已完成、可压缩的消息层由压缩应用器判断。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -8946,7 +8946,7 @@
             },
             "role": {
               "display_name": "Service 封存压缩组合",
-              "description": "在原位置依次识别、调用 Compaction AOT、以 Service CRUD 复放、回填并更新 marker；不新增宿主写入。"
+              "description": "在消息层完成后，寻找可以封存的 ERA 操作文本，按原顺序交给独立命令压缩工作流，得到更短的候选指令；再用 Service 实际的增删改规则重放确认，回填通过确认的文本并更新封存标记。压缩须保持变量、函数和随机行为，无法确认则保留原文；这里不保存酒馆或状态文件。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -8991,7 +8991,7 @@
             },
             "role": {
               "display_name": "发布内存应用结果与推进位置",
-              "description": "发布内存应用结果与推进位置；普通酒馆历史同步若在提交前发现目标 Swipe 已变化且没有写入，将旧分支作为可恢复空操作结算并安排当前历史重算。函数/API、已写入及其他错误保持失败。"
+              "description": "把已推进和压缩的结果发布为当前聊天的内存工作状态，连同日志、作用域和待保存正文供接下来的块或 API 读取，标记尚未落盘。若普通历史同步处理的旧 Swipe 已被用户切走且没有发生写入，则放弃旧分支，交给后续重新同步当前历史；作者函数、API 或模型候选失败仍按失败处理，不冒充成功。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -9041,7 +9041,7 @@
             },
             "role": {
               "display_name": "块迭代结束",
-              "description": "返回下一个块步进状态与是否结束本次块驱动。"
+              "description": "这是“ERA 块步进单次迭代”的出口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
             },
             "contract_source": "node_type",
             "flow_kind": "terminal",
@@ -9127,7 +9127,7 @@
         "path": "configs/nodesets/task_api.jsonc"
       },
       "display_name": "ERA 公共对象任务",
-      "description": "把唯一公共 Facade 的 commit 或 sync 命令路由到实际事务。",
+      "description": "处理公共 ERA 对象的两种写入类请求：commit 将有序操作应用到当前内存工作状态并返回回执，sync 则把校验后的请求交给共享历史同步和保存。输入不合法时返回明确失败，各分支保持原调用来源。读取和订阅不作为此任务执行；结果统一交还批次结算。",
       "status": "implemented",
       "flow_kind": "predefined",
       "effect_scope": "none",
@@ -9208,7 +9208,7 @@
             },
             "role": {
               "display_name": "公共对象任务开始",
-              "description": "接收已准备的 API 步骤和当前批次状态。"
+              "description": "这是“ERA 公共对象任务”的入口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
             },
             "contract_source": "node_type",
             "flow_kind": "terminal",
@@ -9241,7 +9241,7 @@
             },
             "role": {
               "display_name": "区分提交与同步请求",
-              "description": "读取步骤中的公共对象命令，将提交交给即时事务，将同步交给共享同步流程。"
+              "description": "读取公共 ERA 对象提交给 Service 的命令，把 commit（按顺序应用操作）交给提交事务，把 sync（按历史重新计算）交给共享同步流程，同时携带调用来源和批次状态。公共读取或订阅不属于此事件执行分支。这里仅选择工作流，不确认操作已经生效。"
             },
             "contract_source": "node_type",
             "flow_kind": "decision",
@@ -9301,7 +9301,7 @@
             },
             "role": {
               "display_name": "执行即时 ERA.commit",
-              "description": "按当前工作状态执行 ERA.commit，并返回提交结果。"
+              "description": "按公共提交的作用域、调用窗口和目标进行准入检查，工作台草稿先转换为操作，随后把有效操作组成事务并通过共用消息块引擎在内存应用。已经执行的历史作用域可跳过，无效请求失败。成功回执代表内存应用已完成；作者函数随父批次保存，独立 API 按防抖窗口稍后保存，不把入队或回执等同于落盘。"
             },
             "contract_source": "nodeset",
             "flow_kind": "predefined",
@@ -9355,7 +9355,7 @@
             },
             "role": {
               "display_name": "校验并构造同步步骤",
-              "description": "校验 ERA.sync 的模式和目标，生成可执行的共享同步步骤或明确的失败结果。"
+              "description": "校验公共 ERA.sync 请求的模式和目标，把有效请求转换为共享同步任务，附带原始调用来源和批次状态。请求无效则输出失败分支，不运行历史重算；有效也只表示计划可执行，实际回退、指令应用和保存由通用同步工作流完成。"
             },
             "contract_source": "node_type",
             "flow_kind": "decision",
@@ -9420,7 +9420,7 @@
             },
             "role": {
               "display_name": "运行共享同步事务",
-              "description": "用已校验的步骤执行与普通任务共用的同步及保存流程。"
+              "description": "把当前聊天的真实消息历史与 ERA 变量、函数和日志保持一致：读取并校验状态文件绑定，优先沿用有效未保存的内存状态，规划回退及处理范围，逐块应用指令和函数，必要时压缩封存文本，最后批量保存消息及状态文件。保存后再刷新显示和返回结果；切换聊天或候选回复不会使旧任务覆盖新目标。"
             },
             "contract_source": "nodeset",
             "flow_kind": "predefined",
@@ -9474,7 +9474,7 @@
             },
             "role": {
               "display_name": "构造 ERA.sync 回执",
-              "description": "把共享同步的任务结果转换为公共对象调用的回执。"
+              "description": "把共享同步任务的真实结果转换成 ERA.sync 调用方使用的回执，保留成功、无变更、失败以及诊断，不再次计算历史或保存。它使外部 API 能获得与普通聊天同步相同的业务结论，而不是另实现一套同步规则。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -9524,7 +9524,7 @@
             },
             "role": {
               "display_name": "构造同步输入失败",
-              "description": "同步输入无效时返回失败回执，不进入共享同步流程。"
+              "description": "当公共同步请求的模式、目标或其他输入无法通过校验时，直接生成相应的失败回执。此分支没有执行共享同步，所以不会声称历史已重算，也不会读写目标消息来尝试补救；错误按原调用来源返回。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -9569,7 +9569,7 @@
             },
             "role": {
               "display_name": "合并公共对象同步结果",
-              "description": "汇合成功同步与输入失败两条路径，输出统一的同步结果。"
+              "description": "把公共同步的“已经运行共享同步”与“输入校验失败”两个互斥分支合为唯一结果，核对恰有一份回执。不重新执行同步或改写成功失败状态；输出供外层公共 API 任务统一结算。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -9614,7 +9614,7 @@
             },
             "role": {
               "display_name": "合并公共对象任务结果",
-              "description": "汇合提交与同步结果，形成一个供批次结算使用的任务结果。"
+              "description": "接收 commit 或 sync 分支给出的唯一结果，转为公共 API 任务的统一出口，同时保留原调用来源、结算和通知。公共 API 内部可能包含同步子任务，但这里只有外层任务结果才交还 Service，避免内部结果提前推进批次。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -9659,7 +9659,7 @@
             },
             "role": {
               "display_name": "公共对象任务结束",
-              "description": "将唯一公共对象任务结果交还服务迭代。"
+              "description": "这是“ERA 公共对象任务”的出口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
             },
             "contract_source": "node_type",
             "flow_kind": "terminal",
@@ -9814,7 +9814,7 @@
         "path": "configs/nodesets/task_initialize.jsonc"
       },
       "display_name": "ERA 初始化任务",
-      "description": "规划并提交幂等设置、世界书、状态栏正则和角色主开场白示例资源；启动操作随后复用共享同步事务。",
+      "description": "读取现有角色和聊天资源，按传统或外置模式规划并应用必要的 ERA 设置、世界书、正则及主开场白，遵守作者资源不覆盖条件。普通资源操作直接返回结果；启动初始化成功或无需变更时，再进入共享历史同步，使变量状态与当前消息一致。整个任务保留原来源，不另建初始化变量引擎。",
       "status": "implemented",
       "flow_kind": "predefined",
       "effect_scope": "none",
@@ -9895,7 +9895,7 @@
             },
             "role": {
               "display_name": "初始化启动",
-              "description": "启动一次初始化任务。"
+              "description": "这是“ERA 初始化任务”的入口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
             },
             "contract_source": "node_type",
             "flow_kind": "terminal",
@@ -9928,7 +9928,7 @@
             },
             "role": {
               "display_name": "读取双模式初始化与现有外置配置",
-              "description": "读取现有身份、设置、世界书、正则、主开场白及角色卡外置配置；传递 traditional/external 内部选择，无参数沿用 traditional。仅采集事实，不在 Host 决定覆盖或初始化规则。"
+              "description": "读取当前角色和聊天身份、ERA 设置、世界书、状态栏正则、角色主开场白及外置配置，整理为初始化所需事实。传统模式和外置模式的选择一并传给规划器；未指定时采用传统模式。这里不决定覆盖哪些资源，也不保存角色卡，读取失败会随上下文交给后续结算。"
             },
             "contract_source": "node_type",
             "flow_kind": "data_store",
@@ -9973,7 +9973,7 @@
             },
             "role": {
               "display_name": "携带批次执行状态",
-              "description": "无损携带外层批次执行状态，供条件启动的共享同步事务使用。"
+              "description": "保留触发初始化的完整批次状态，供资源准备后可能发生的启动同步使用。资源初始化和历史同步是同一批次的连续步骤，因此不能丢失原始事件来源和消息处理进度；本节点只传递数据，不做初始化或保存。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -10018,7 +10018,7 @@
             },
             "role": {
               "display_name": "规划双模式资源与完整围栏边界",
-              "description": "复用双模式、单一标记及不覆盖规则。传统默认正则替换片段携带前后行边界，使紧邻正文/技术块的占位符也形成HTML块；不修改原消息或作者DOM，不覆盖已保存作者正则。外置模板仍为普通HTML，不加入围栏。其余变量/函数/世界书/开场白及外置初始化合同不变。见reports/era-statusbar-presentation-change-list.md。"
+              "description": "比较现有设置和角色资源，规划需要补齐的 ERA 世界书、正则、示例变量或函数及开场白。传统与外置模式按各自规则处理，已经保存的作者资源遵守不覆盖条件；传统默认占位符替换保留 HTML 所需行边界。输出有序变更计划和“有变更/无需变更”分支，不直接修改酒馆。"
             },
             "contract_source": "node_type",
             "flow_kind": "decision",
@@ -10068,7 +10068,7 @@
             },
             "role": {
               "display_name": "保留现有资源",
-              "description": "无动作或读取失败时保留计划并进入统一提交边界。"
+              "description": "在资源计划没有写入动作时，把同一计划传到统一提交入口，保留“无需变更”或读取失败的真实原因。不会凭没有动作就认定初始化成功，也不会新建替代资源；后续提交结果节点会据此决定返回或继续启动同步。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -10113,7 +10113,7 @@
             },
             "role": {
               "display_name": "确认资源变更",
-              "description": "保留纯规划器生成的声明式设置与资源变更。"
+              "description": "把纯规划器已经生成的资源变更计划送到构造提交请求的环节。此节点目前不再次推导资源差异，只保留有序动作及依据；计算职责已经由资源规划器承担，避免对同一设置重复判断。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -10158,7 +10158,7 @@
             },
             "role": {
               "display_name": "构造资源提交",
-              "description": "形成有序 Capability 动作列表，不执行宿主写入。"
+              "description": "把初始化计划整理成宿主可执行的资源提交请求，保持设置、世界书、正则和开场白等动作的既定顺序。这里仅形成请求，没有任何资源已经因此写入；下一节点执行后返回的确认结果才代表实际修改。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -10203,7 +10203,7 @@
             },
             "role": {
               "display_name": "提交初始化资源并决议首楼刷新",
-              "description": "在原 update-main-greeting 动作处保持先保存角色卡，再即时读取当前首楼事实，由 Service 规划保留/新建/更新，Host 执行既有重绘和保存；其余资源顺序、提交计数和错误语义不变。"
+              "description": "通过受限宿主接口顺序应用初始化资源计划，并记录哪些动作已确认完成。更新角色主开场白时先保存角色卡，再读取当前首楼事实，按 Service 的规则保留、创建或更新聊天首楼，最后执行相应保存和重绘。不会用早先读取的首楼覆盖用户新操作，失败或部分提交按实际结果返回。"
             },
             "contract_source": "node_type",
             "flow_kind": "data_store",
@@ -10248,7 +10248,7 @@
             },
             "role": {
               "display_name": "选择初始化完成方式",
-              "description": "将启动同步与资源直接结算分成不同数据类型，防止直接结果提前结束应继续进入 Sidecar 的启动同步。"
+              "description": "检查资源提交结果是否需要继续历史同步：只有启动初始化且资源已完成或本就无需变更时，构造一个共享同步步骤；其他初始化操作或失败走直接结果分支。两种结果用独立数据通道传递，避免提前返回导致该做的聊天变量同步被跳过。"
             },
             "contract_source": "node_type",
             "flow_kind": "decision",
@@ -10303,7 +10303,7 @@
             },
             "role": {
               "display_name": "适配启动同步步骤",
-              "description": "把初始化专用步骤转为共享同步 routed step。"
+              "description": "把初始化产生的启动同步请求和保留的批次状态交给通用同步流程。请求继续携带原事件来源和消息上下文，不另建初始化专用变量引擎；它只适配输入，后续共享同步负责读取状态、应用历史及保存。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -10358,7 +10358,7 @@
             },
             "role": {
               "display_name": "运行共享同步",
-              "description": "沿原启动分支调用唯一共享同步事务。"
+              "description": "把当前聊天的真实消息历史与 ERA 变量、函数和日志保持一致：读取并校验状态文件绑定，优先沿用有效未保存的内存状态，规划回退及处理范围，逐块应用指令和函数，必要时压缩封存文本，最后批量保存消息及状态文件。保存后再刷新显示和返回结果；切换聊天或候选回复不会使旧任务覆盖新目标。"
             },
             "contract_source": "nodeset",
             "flow_kind": "predefined",
@@ -10412,7 +10412,7 @@
             },
             "role": {
               "display_name": "结算非启动初始化",
-              "description": "仅在 finish 分支将专用的直接初始化结果转为任务结果。"
+              "description": "仅在初始化不需要继续共享同步的分支，把资源处理结论转成交给 Service 的任务结果。保留实际完成动作、无变更或失败诊断，不把资源初始化包装成聊天同步；随后由统一步骤结算推进批次。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -10457,7 +10457,7 @@
             },
             "role": {
               "display_name": "初始化结束",
-              "description": "结束一次初始化任务。"
+              "description": "这是“ERA 初始化任务”的出口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
             },
             "contract_source": "node_type",
             "flow_kind": "terminal",
@@ -10642,7 +10642,7 @@
         "path": "configs/nodesets/task_sync.jsonc"
       },
       "display_name": "ERA 同步任务",
-      "description": "接续有效工作状态，逐块处理确定范围，最后批量保存消息及Sidecar；API防抖到期同样进入该提交边界。",
+      "description": "把当前聊天的真实消息历史与 ERA 变量、函数和日志保持一致：读取并校验状态文件绑定，优先沿用有效未保存的内存状态，规划回退及处理范围，逐块应用指令和函数，必要时压缩封存文本，最后批量保存消息及状态文件。保存后再刷新显示和返回结果；切换聊天或候选回复不会使旧任务覆盖新目标。",
       "status": "implemented",
       "flow_kind": "predefined",
       "effect_scope": "none",
@@ -10723,7 +10723,7 @@
             },
             "role": {
               "display_name": "同步启动",
-              "description": "启动一次共享同步任务。"
+              "description": "这是“ERA 同步任务”的入口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
             },
             "contract_source": "node_type",
             "flow_kind": "terminal",
@@ -10756,7 +10756,7 @@
             },
             "role": {
               "display_name": "取得当前聊天工作状态",
-              "description": "按聊天身份接续未保存工作；切聊天不覆盖旧dirty批次，返回后核对正文Swipe和Sidecar来源再恢复，失效状态撤销重算；旧候选和迟到请求不能发布到新目标。"
+              "description": "接收已准备消息上下文的同步任务，提取批次中的连续处理进度和块级续做位置，再读取当前聊天的状态文件指针及可供旧数据迁移的事实。这里不直接把旧文件覆盖到内存；后续状态加载节点会核对身份并优先使用有效工作状态。读取失败或取消会形成失败上下文。"
             },
             "contract_source": "node_type",
             "flow_kind": "data_store",
@@ -10806,7 +10806,7 @@
             },
             "role": {
               "display_name": "接续工作状态或首次绑定Sidecar",
-              "description": "有效工作状态存在时直接继续；仅首次加载或恢复时复用Sidecar存储节点集的读取、绑定及迁移分支，不在每个任务重新读取旧文件覆盖dirty状态。"
+              "description": "加载当前聊天的 Sidecar，即独立保存 ERA 变量、函数和历史日志的状态文件。核对聊天指针及文件归属，优先沿用有效内存工作状态；需要时处理创建、旧数据迁移、绑定冲突或修复选择，再按来源校验执行。聊天中只保留文件指针，加载或写入确认后提供快照；来源变化和失败不会被当作成功绑定。"
             },
             "contract_source": "nodeset",
             "flow_kind": "predefined",
@@ -10860,7 +10860,7 @@
             },
             "role": {
               "display_name": "准备内存回退与本次消息范围",
-              "description": "沿用历史定位和回退；保存变量/函数起点、scope和随机偏移。防抖flush只提交指定待保存批次；聊天变更先使旧工作失效，不强写旧文本。"
+              "description": "以当前变量、函数和历史日志为起点，规划本次应回退哪些旧效果、从哪条消息继续，以及要处理哪些指令块。保存消息标识、作用域和随机位置作为后续依据。这个节点仅建立逐块处理状态，不提前执行块；无法处理或无需变更时把状态标为结束，让后续如实结算。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -10905,7 +10905,7 @@
             },
             "role": {
               "display_name": "共用循环：内存逐块处理目标范围",
-              "description": "max_iterations=null；处理块不落盘，结束时得到累计消息及状态。函数API应用后返回，不强制刷盘。"
+              "description": "按规划范围逐块处理消息中的变量、函数和作者调用，后一块读取前一块更新后的内存状态，并携带正文、日志、作用域及随机进度。结束标志控制退出，没有人为固定的块数上限；最终消息和状态文件统一在任务尾部保存，不每轮刷盘。"
             },
             "contract_source": "system_config",
             "flow_kind": "predefined",
@@ -10974,7 +10974,7 @@
             },
             "role": {
               "display_name": "冻结本批消息与Sidecar保存候选",
-              "description": "清理已完成消息临时进度；固定本次保存边界，done及对应操作记录在同一消息更新中保存。错误只保存仍有效的成功前缀；后到请求属于后续批次。"
+              "description": "逐块处理结束后，一次性固定本次待保存的消息修改和变量状态，使完成标记与操作记录在同一次消息更新中保存。若中途失败，只保留仍可确认的成功前缀，失败本身继续带到结算；无需提交则输出无写入结果。这里构造并校验保存请求，不执行磁盘写入。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -11019,7 +11019,7 @@
             },
             "role": {
               "display_name": "批量保存消息 → Sidecar并确认",
-              "description": "保持消息与Sidecar保存校验；普通宿主同步在消息已确认落盘但来源变化时，以no-op正常结束且不提交旧Sidecar。保存或回读未确认仍失败；作者API与Agent候选保持原失败边界。"
+              "description": "执行共享同步的保存边界：先批量更新并确认目标消息，随后写 Sidecar 状态文件、回读核对版本，再更新聊天绑定的快照。仅内存写入或未确认保存不能当作成功。若普通历史同步的原目标已改变，停止旧分支并交还重算；API 和模型候选保持明确失败。文件失败保留已确认的消息事实并提示修复，写入结果未知则报告致命状态。"
             },
             "contract_source": "node_type",
             "flow_kind": "data_store",
@@ -11064,7 +11064,7 @@
             },
             "role": {
               "display_name": "结算已保存批次与恢复事实",
-              "description": "来源变化继续交由原重算入口处理，保证最新回复完成同步；保留后到操作，不能把无失败的旧任务结束误报到生成栅栏，也不能覆盖已有块执行错误。"
+              "description": "核对保存结果与之前块执行的结论：即使成功保存了前缀，也不能抹掉后续块的失败。检测到用户改动了原消息来源时，通过现有入口安排重新计算当前历史；保存成功且没有后续未保存操作时取消多余保存定时器。输出最终结论，避免旧任务收尾漏掉最新回复或覆盖后到操作。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -11109,7 +11109,7 @@
             },
             "role": {
               "display_name": "呈现已提交的最终楼层",
-              "description": "消息及 Sidecar 提交成功且来源一致时，消费首次呈现意图刷新指定楼层；返回现有呈现诊断，不改变提交结果。"
+              "description": "在本次工作项带有首次显示意图时，要求酒馆刷新指定消息，使已完成内容和状态栏显示出来。保存分支只在消息与状态文件确认成功、来源仍一致时刷新；无提交分支按其已有显示意图处理。刷新失败只附加显示诊断，不撤销已经保存的业务结果，也不再次执行变量指令。"
             },
             "contract_source": "node_type",
             "flow_kind": "data_store",
@@ -11154,7 +11154,7 @@
             },
             "role": {
               "display_name": "结算提交结果与批次更新",
-              "description": "由 sync_result_policy 根据实际提交与来源结果生成来源回执、诊断和连续处理更新；批次合并仍在原 merge_task_result。"
+              "description": "把同步的实际保存结果整理成原事件回执、业务通知及诊断，并计算后续可接续的消息处理进度。它区分成功、无需变更、普通失败和致命失败，也保留显示环节的诊断；不再次保存或重算变量。统一步骤合并随后会把这些结果记入本批次。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -11199,7 +11199,7 @@
             },
             "role": {
               "display_name": "结算等待 Sidecar 选择的任务",
-              "description": "读取已判定的 Sidecar 等待结果，复用登记契约及结果策略生成无写入回执。"
+              "description": "当状态文件冲突或修复问题还在等待用户处理时，为原同步任务构造无写入的结果，保留等待原因及每个事件的回执。不会把“暂时不能继续”当成变量已同步，也不会擅自创建新绑定；这是状态选择分支与 Service 批次结算之间的出口。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -11244,7 +11244,7 @@
             },
             "role": {
               "display_name": "结算已完成的 Sidecar 绑定",
-              "description": "根据 Sidecar 分支结果生成任务回执；保持原路由条件与行为。"
+              "description": "状态文件修复已通过独立文件事务完成时，向本任务每个来源返回已完成结算，并标记无需再做普通同步。这里不重算历史或再次保存，避免把修复后仅存在于当前变量状态的 API 修改按旧聊天正文重放掉。此出口只表示修复分支无需额外动作，不能代替所有历史同步的结果。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -11289,7 +11289,7 @@
             },
             "role": {
               "display_name": "同步结束",
-              "description": "结束一次共享同步任务。"
+              "description": "这是“ERA 同步任务”的出口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
             },
             "contract_source": "node_type",
             "flow_kind": "terminal",
@@ -11465,7 +11465,7 @@
         "path": "configs/nodesets/task_update_mk.jsonc"
       },
       "display_name": "ERA 消息密钥任务",
-      "description": "消费统一任务上下文准备已经确认的 MK 与占位符结果，不再重复读取或提交消息，仅构造不推进连续状态的任务结算。",
+      "description": "为 ERA 消息标识任务返回结算。消息标识 MK 用于将消息与历史状态对应；它及占位符的读取、准备和必要写入已在统一派发中完成，本节点集仅核对并返回实际结果。不会再次改消息或重算变量，也不推进连续同步进度。",
       "status": "implemented",
       "flow_kind": "predefined",
       "effect_scope": "none",
@@ -11535,7 +11535,7 @@
             },
             "role": {
               "display_name": "MK 结算启动",
-              "description": "启动一次已统一准备的消息密钥任务结算。"
+              "description": "这是“ERA 消息密钥任务”的入口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
             },
             "contract_source": "node_type",
             "flow_kind": "terminal",
@@ -11568,7 +11568,7 @@
             },
             "role": {
               "display_name": "确认统一 MK 准备结果",
-              "description": "检查派发准备阶段的消息密钥、占位符和写入确认结果；本节点不再读取或写入酒馆消息。"
+              "description": "检查统一派发阶段已经提供的 ERA 消息标识（MK，用于把消息与历史状态对应起来）、占位符及写入确认结果，整理为标识任务的结算输入。正文和元数据已由派发准备处理，因此这里不会再次读取或修改消息；准备失败如实保留。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -11613,7 +11613,7 @@
             },
             "role": {
               "display_name": "构造 MK 任务结果",
-              "description": "对全部 step.sources 恰好结算一次，不额外发布业务事件，不推进连续 MK 状态，并保留普通失败或 fatal 身份。"
+              "description": "依据消息标识准备和提交的真实结果，向任务对应的每个原事件生成一次回执，保留无变更、失败或致命原因。这个节点只完成消息标识任务的结算，不再次写正文，也不把标识更新冒充变量同步或推进连续计算进度。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -11658,7 +11658,7 @@
             },
             "role": {
               "display_name": "MK 结算结束",
-              "description": "结束一次消息密钥任务结算。"
+              "description": "这是“ERA 消息密钥任务”的出口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
             },
             "contract_source": "node_type",
             "flow_kind": "terminal",
@@ -11721,7 +11721,7 @@
   "node_types": {
     "era.agent.adapt_legacy_step": {
       "display_name": "恢复原领域任务路由",
-      "description": "移除 Agent 外层路由并恢复 task.kind，使默认模式与 Agent 后置同步直接调用既有 Nodeset。",
+      "description": "把生成会话需要继续普通处理的结果转换成共享同步或消息标识任务，保持原楼层的 ERA 消息标识和来源。默认生成模式、最终正文及结算结果由同一消息处理链接续，而不是开另一条提交路径；这里只适配步骤，实际计算和保存由共享任务完成。",
       "category": "故事生成会话",
       "version": "1.0.0",
       "flow_kind": "decision",
@@ -11796,7 +11796,7 @@
     },
     "era.agent.build_result": {
       "display_name": "构造 Agent 直接任务结果",
-      "description": "对设置、重试、生成栅栏 no-op 或失败步骤按来源恰好结算一次。",
+      "description": "将会话直接结束分支整理成任务回执，附带阶段完成标识、诊断和之后需要发送的通知。页面收到通知后按顺序等待订阅回调，再提交内部恢复事件；因此这份回执只代表当前队列片段完成，不能把它解释为规划、正文和结算全部结束。",
       "category": "故事生成会话",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -11847,7 +11847,7 @@
     },
     "era.agent.build_settings_result": {
       "display_name": "结算设置命令",
-      "description": "把设置结果与来源对应为原 TaskResult；不修改批次状态，不进入生成会话转换。",
+      "description": "把设置命令的实际返回值和诊断对应到原任务来源，形成一份可由 Service 合并的任务结果。这里只返回设置处理结论，不修改批次索引或进入生成阶段，也不将连接测试成功等同于后续模型生成成功。",
       "category": "Agent 工作流",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -11906,7 +11906,7 @@
     },
     "era.agent.candidate_finish": {
       "display_name": "判断候选是否重试",
-      "description": "有重试请求时更新候选状态；否则结束候选循环，并把结果交给生成会话。",
+      "description": "读取候选执行结果是否附有重试请求：有则将该请求放入候选循环状态，标记尚未结束；没有则输出终态结果并结束候选循环。这里只决定是否继续尝试，不再次调用模型，也不发送阶段完成通知；通知必须等候选已达到终态后形成。",
       "category": "Agent候选",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -11981,7 +11981,7 @@
     },
     "era.agent.candidate_seed": {
       "display_name": "建立候选状态",
-      "description": "把本阶段的生成请求、已准备步骤和批次状态合成可重试的候选状态。",
+      "description": "为候选重试循环建立初始请求、任务和批次状态。若本次是在替换一个已有阶段，还要先把按历史计算的保留前缀、变量、函数和会话基线安装到当前内存工作状态，撤销旧阶段效果后才能请求新模型候选。基线安装失败转为失败终态，不继续生成；这些更新仅在内存，尚未保存消息或状态文件。",
       "category": "Agent候选",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -12048,7 +12048,7 @@
     },
     "era.agent.candidate_unpack": {
       "display_name": "取出候选执行输入",
-      "description": "从当前候选状态取出生成请求、已准备步骤和批次状态。",
+      "description": "从一次候选尝试的状态中取出当前生成请求、所属任务及批次上下文，交给模型执行和共用块处理流程。发生重试时取的是更新后的请求，原事件来源仍保留；这里仅解包，不改变候选恢复点，也不把上一轮结果当作本轮成功。",
       "category": "Agent候选",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -12115,7 +12115,7 @@
     },
     "era.agent.classify_generation_event": {
       "display_name": "判定事件与阶段",
-      "description": "依据事件、功能开关和现有会话判定规划、正文完成、重试、取消或原任务委托；不执行宿主操作。",
+      "description": "结合生成事件和当前会话事实，区分首次生成、继续生成、用户手动重试与内部阶段恢复，确定应处理规划、正文还是结算阶段。核对执行标识、完成标识以及聊天和候选回复来源；过期恢复不能接到新会话上。这里只作阶段决策，不调用模型。",
       "category": "Agent 工作流",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -12166,7 +12166,7 @@
     },
     "era.agent.execute_session_v2": {
       "display_name": "执行生成阶段",
-      "description": "仅执行选定生成阶段及其已有尝试/重试序列。Capability 调用留在有副作用的 Node；会话绑定事实读取、纯决策与 write_session 连续完成。设置命令从此节点移除。",
+      "description": "根据已确定的生成阶段和请求执行 Agent 会话，包括必要的模型调用，整理其正文及变量、函数和函数调用标签为候选结果。输出尚待应用和验证的候选、阶段状态及诊断；模型给出文本不代表变量已经提交，格式错误或取消会留给阶段执行和候选恢复环节处理。",
       "category": "故事生成会话",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -12232,7 +12232,7 @@
     },
     "era.agent.execute_settings_command": {
       "display_name": "执行设置命令",
-      "description": "仅执行配置/预设/连接/模型列表；复用连接与请求策略。即时连接事实读取、决策与发起写入保留在本节点连续执行。",
+      "description": "在与聊天操作相同的有序 Service 队列中处理 Agent 配置、预设、连接或模型列表命令，通过既有宿主接口读取或写入相应设置。连接相关的即时事实读取和发起操作连续完成，减少使用过期事实。返回真实操作结果，不启动生成会话、不应用消息中的变量指令。",
       "category": "Agent 工作流",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -12283,7 +12283,7 @@
     },
     "era.agent.form_session_transition": {
       "display_name": "形成会话转换",
-      "description": "把阶段结果、原步骤和批次边界组合为原 AgentTransition；将最终楼层候选交给已有唯一同步链。",
+      "description": "把候选最终结果转换成会话下一步：需要保存或沿普通消息同步完成的结果，携带对应楼层候选；只需阶段交接的结果直接结束当前片段。同时接续候选实际应用后的作用域窗口，不重复执行本轮 API。若候选无法对应原楼层，返回失败而不是写到新的消息。",
       "category": "Agent 工作流",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -12358,7 +12358,7 @@
     },
     "era.agent.prepare_auxiliary_execution_request": {
       "display_name": "读取生成事实",
-      "description": "沿原宿主读取位置取得生成事实与配置，不把批次状态放入领域算法请求。",
+      "description": "为本次生成读取 Agent 配置、会话和当前变量事实，并优先接续尚未保存的阶段正文。重新生成、切换回复或用户重试某阶段时，按历史日志恢复该阶段应有的起点，保留已经完成的前置内容；旧报告与当前会话不符时记录失效诊断。输出生成事实，不在这里请求模型或保存消息。",
       "category": "故事生成会话",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -12408,7 +12408,7 @@
     },
     "era.agent.prepare_generation_phase": {
       "display_name": "准备阶段请求",
-      "description": "按阶段提取配置快照、会话身份、正文和变量事实；领域算法只收到本阶段所需数据。",
+      "description": "把阶段决策整理成一次生成请求，带上所需配置、历史、变量起点及会话信息。阶段重试采用前面按历史恢复的基线，不把旧阶段效果再算一遍；无效来源或不应执行的事件保留对应结论。这里准备候选执行的输入，还没有得到新的模型输出。",
       "category": "Agent 工作流",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -12459,7 +12459,7 @@
     },
     "era.agent.prepare_settings_request": {
       "display_name": "准备设置命令",
-      "description": "读取当前配置所需事实，整理命令、预设或连接草稿；不把生成阶段的大上下文传给设置算法。",
+      "description": "为 Agent 设置命令读取必要配置、预设或连接事实，整理出具体设置请求。设置任务只需要这些资料，不带入模型生成阶段的大量历史和候选上下文；读取或请求问题作为诊断交给执行节点，不在此发起正文生成。",
       "category": "Agent 工作流",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -12510,7 +12510,7 @@
     },
     "era.agent.prepare_stage_handoff": {
       "display_name": "形成阶段交接与恢复凭据",
-      "description": "纯业务策略为成功阶段构造唯一 completionId、最终结果及恢复意图；不在 FIFO 中等待回调。无交接时保留原阶段结果。页面等待结束后必须经原 Service 派发链核对并恢复。",
+      "description": "对于已经成功达到阶段边界的候选，生成唯一完成标识、阶段结果及下一步恢复意图，供页面依次执行订阅回调后再请求恢复。没有阶段交接的结果原样传递。这里不在当前任务队列里等待回调，否则回调请求同一队列可能互相等待；交接也不表示整个生成已结束。",
       "category": "故事生成会话",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -12561,7 +12561,7 @@
     },
     "era.agent.route_transition": {
       "display_name": "路由 Agent 阶段结果",
-      "description": "将完整 Agent 阶段模式折叠为委托原任务与直接结算两条互斥工作流分支。",
+      "description": "依据会话转换的模式选择出口：还需要普通消息同步或消息标识结算的结果走共享任务链；只需返回阶段结果、取消或失败的结果走直接回执。模式已由会话逻辑决定，节点不重新判断模型内容，也不更改批次状态。",
       "category": "故事生成会话",
       "version": "1.0.0",
       "flow_kind": "decision",
@@ -12636,7 +12636,7 @@
     },
     "era.api.adapt_facade_sync": {
       "display_name": "构造 ERA.sync 回执",
-      "description": "把共享同步任务的结果转换为本次 ERA.sync 调用的回执。",
+      "description": "把共享同步任务的真实结果转换成 ERA.sync 调用方使用的回执，保留成功、无变更、失败以及诊断，不再次计算历史或保存。它使外部 API 能获得与普通聊天同步相同的业务结论，而不是另实现一套同步规则。",
       "category": "公共 Facade",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -12695,7 +12695,7 @@
     },
     "era.api.build_commit_failure": {
       "display_name": "构造 Commit 失败",
-      "description": "把输入、窗口或消息失败结算到本次调用。",
+      "description": "把提交准入、工作台准备或目标读取形成的错误转换成公共调用可收到的失败回执，包括原因和对应来源。这里不重试、不生成替代操作，也不把失败请求写进新目标消息；作用是让调用方明确知道其 commit 没有按要求完成。",
       "category": "公共 Facade",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -12746,7 +12746,7 @@
     },
     "era.api.build_facade_sync_failure": {
       "display_name": "构造同步输入失败",
-      "description": "非法 sync 模式不触碰宿主。",
+      "description": "当公共同步请求的模式、目标或其他输入无法通过校验时，直接生成相应的失败回执。此分支没有执行共享同步，所以不会声称历史已重算，也不会读写目标消息来尝试补救；错误按原调用来源返回。",
       "category": "公共 Facade",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -12797,7 +12797,7 @@
     },
     "era.api.build_single_era_tx": {
       "display_name": "生成单次 era_tx",
-      "description": "按原操作顺序生成一个且仅一个短 scope wrapper。",
+      "description": "把已通过准入检查的操作按原顺序组成一个 ERA 事务文本，连同作用域、调用身份和批次状态送到目标定位环节。不会合并重排操作，也不会在构造文本时执行它们；同一事务随后交给共享消息块引擎处理，保证公共 API 与消息指令采用相同规则。",
       "category": "公共 Facade",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -12848,7 +12848,7 @@
     },
     "era.api.build_skipped_receipt": {
       "display_name": "返回跳过回执",
-      "description": "历史作用域已结算时返回跳过回执，不写消息或发布状态。",
+      "description": "为已经结算过、无需重复执行的作用域生成跳过回执，保留调用者和来源信息。跳过表示本次没有再次应用操作，不等同于新提交成功；不会新增事务文本或再次修改变量，避免重绘状态栏等重复调用产生重复效果。",
       "category": "公共 Facade",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -12899,7 +12899,7 @@
     },
     "era.api.merge_commit_result": {
       "display_name": "合并即时 Commit 结果",
-      "description": "要求三条互斥分支恰好产生一个结果。",
+      "description": "汇合提交已应用、作用域跳过和提交失败三条互斥分支，要求实际恰有一个有效结果，再输出统一 commit 结果。不会选取最乐观的一条或再次应用操作；若出现多个结果或没有结果会暴露流程问题，避免公共调用得到含糊回执。",
       "category": "公共 Facade",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -12950,7 +12950,7 @@
     },
     "era.api.merge_facade_result": {
       "display_name": "合并公共对象任务结果",
-      "description": "commit 或 sync 恰好产生一个现有任务结果。",
+      "description": "接收 commit 或 sync 分支给出的唯一结果，转为公共 API 任务的统一出口，同时保留原调用来源、结算和通知。公共 API 内部可能包含同步子任务，但这里只有外层任务结果才交还 Service，避免内部结果提前推进批次。",
       "category": "公共 Facade",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -13001,7 +13001,7 @@
     },
     "era.api.merge_sync_result": {
       "display_name": "合并公共对象同步结果",
-      "description": "要求成功或失败分支恰好产生一个结果。",
+      "description": "把公共同步的“已经运行共享同步”与“输入校验失败”两个互斥分支合为唯一结果，核对恰有一份回执。不重新执行同步或改写成功失败状态；输出供外层公共 API 任务统一结算。",
       "category": "公共 Facade",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -13052,7 +13052,7 @@
     },
     "era.api.plan_facade_sync": {
       "display_name": "校验并构造同步步骤",
-      "description": "适配 auto、latest、full 与 rollbackTo。",
+      "description": "校验公共 ERA.sync 请求的模式和目标，把有效请求转换为共享同步任务，附带原始调用来源和批次状态。请求无效则输出失败分支，不运行历史重算；有效也只表示计划可执行，实际回退、指令应用和保存由通用同步工作流完成。",
       "category": "公共 Facade",
       "version": "1.0.0",
       "flow_kind": "decision",
@@ -13135,7 +13135,7 @@
     },
     "era.api.read_target_message": {
       "display_name": "复查消息写入目标",
-      "description": "提交前重新读取真实消息目标，避免把操作写入已经变化的位置。",
+      "description": "在准备实际提交前再次读取聊天和目标消息，并复核调用窗口是否仍属于原聊天与候选回复。作者函数把记录定位到调用位置下方，状态栏和外部 API 保留各自捕获的目标。读取视图纳入未保存的内存正文；目标失效则返回失败，不自动转而写入最新一楼。",
       "category": "公共 Facade",
       "version": "1.0.0",
       "flow_kind": "io",
@@ -13185,7 +13185,7 @@
     },
     "era.api.read_window_admission": {
       "display_name": "读取窗口准入与目标",
-      "description": "读取真实消息、身份与内存窗口准入。",
+      "description": "读取 API 调用所对应的聊天身份、消息及当前作用域窗口，优先把尚未保存的内存正文覆盖到读取视图中。作者函数的显式调用位置与状态栏来源分别保留，供后续判断请求是否仍有效、该窗口是否获准写入。窗口是本次消息处理的上下文，不是保存防抖时间。读取失败输出失败事实；这个节点不应用操作，也不以旧文件替代当前工作状态。",
       "category": "公共 Facade",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -13243,7 +13243,7 @@
     },
     "era.api.route_facade_command": {
       "display_name": "区分提交与同步请求",
-      "description": "只接受内部 commit 和 sync 命令，并把批次状态交给对应分支。",
+      "description": "读取公共 ERA 对象提交给 Service 的命令，把 commit（按顺序应用操作）交给提交事务，把 sync（按历史重新计算）交给共享同步流程，同时携带调用来源和批次状态。公共读取或订阅不属于此事件执行分支。这里仅选择工作流，不确认操作已经生效。",
       "category": "公共 Facade",
       "version": "1.0.0",
       "flow_kind": "decision",
@@ -13318,7 +13318,7 @@
     },
     "era.api.validate_commit": {
       "display_name": "校验 Scope 与有序操作",
-      "description": "校验窗口 token、scope、操作并决定 commit、skipped 或 failed。",
+      "description": "校验提交操作的格式和顺序，并结合调用来源、当前消息窗口及作用域判断是否可以应用。默认 message 规则在同一获准消息窗口可多次提交，后续窗口若发现消息已有记录则跳过；branch 按活动分支记录判断，always 每次允许的请求均执行，不按操作内容去重。窗口过期或输入不合规返回失败；此处只做准入，变量还未应用。",
       "category": "公共 Facade",
       "version": "1.0.0",
       "flow_kind": "decision",
@@ -13385,7 +13385,7 @@
     },
     "era.command_compaction.apply_sealed_layers_flat": {
       "display_name": "Service 封存压缩组合",
-      "description": "在 Service 原位组合封存识别、Compaction AOT、生产 CRUD 重放、回填和 marker 更新。",
+      "description": "在消息层完成后，寻找可以封存的 ERA 操作文本，按原顺序交给独立命令压缩工作流，得到更短的候选指令；再用 Service 实际的增删改规则重放确认，回填通过确认的文本并更新封存标记。压缩须保持变量、函数和随机行为，无法确认则保留原文；这里不保存酒馆或状态文件。",
       "category": "命令压缩集成",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -13436,7 +13436,7 @@
     },
     "era.command_compaction.attach_random_context": {
       "display_name": "附加封存楼层随机上下文",
-      "description": "从已识别楼层直接生成压缩请求，保留 MK/sourceKey 与零起始 drawOffset；不要求 Service 解析作用域。",
+      "description": "把已识别的压缩候选原样交给分段压缩环节，保留其稳定消息标识作为随机来源依据以及执行进度。当前节点本身不重新计算随机数或创建第二套随机游标，随机语义由真实压缩和求值链处理。",
       "category": "命令压缩集成",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -13487,7 +13487,7 @@
     },
     "era.command_compaction.compact_segments": {
       "display_name": "调用 Compaction 同步工作流",
-      "description": "原 compactCommandLayer API 委托已生成的同步 runWorkflow；每个封存楼层调用一次，由 Compaction 内部顺序处理各段。保留原返回格式与 Service 后续复放。",
+      "description": "逐个把待封存段送入独立命令压缩工作流，生成保持作用域与操作顺序的较短候选文本。结果仍需用 Service 实际执行规则重放确认；不合适的段保留原文。此处只处理计算结果，不向酒馆提交消息。",
       "category": "命令压缩集成",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -13538,7 +13538,7 @@
     },
     "era.command_compaction.identify_sealed": {
       "display_name": "识别已封存楼层",
-      "description": "选择已有后续 AI 消息的封存候选并清理已删除消息的孤儿 marker。",
+      "description": "从已经完成指令应用的工作项中识别可封存压缩的消息层，保留每层原文本、消息标识和计算起点，形成候选集合。没有可封存层则原样传递；识别只决定哪些层可以考虑压缩，不提前重写正文或保存。",
       "category": "命令压缩集成",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -13589,7 +13589,7 @@
     },
     "era.command_compaction.replay_service": {
       "display_name": "用 Service 真实语义重放",
-      "description": "使用生产 CRUD 引擎核对状态、函数库和诊断，失败仅放弃优化。",
+      "description": "使用 Service 本身的变量和函数操作规则，重放压缩前后的候选，检查最终状态和相关执行事实是否保持一致。独立压缩器给出候选不代表这里自动接受；确认失败则保留原文本和诊断，防止为缩短文本引入业务变化。",
       "category": "命令压缩集成",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -13640,7 +13640,7 @@
     },
     "era.command_compaction.update_markers": {
       "display_name": "更新压缩调度 Marker",
-      "description": "记录 MK、文本指纹和结果状态并返回既有 Sidecar 提交工作项。",
+      "description": "依据已确认并回填的压缩结果更新封存标记和相关统计，再将完整工作项交还消息同步链。标记用来描述哪些消息层已处理，不能代替重放验证；本节点不额外执行指令或宿主保存。",
       "category": "命令压缩集成",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -13691,7 +13691,7 @@
     },
     "era.command_compaction.write_segments": {
       "display_name": "回填单一 Scope 事务",
-      "description": "仅回填已通过生产重放的文本、消息更新及变量函数日志。",
+      "description": "把经过 Service 重放确认的候选写回工作项中的对应文本段，保留段顺序和作用域归属，未被接受的段继续沿用原文。这里的“写回”只是更新内存中的待保存消息，并不直接触发聊天或状态文件保存。",
       "category": "命令压缩集成",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -13742,7 +13742,7 @@
     },
     "era.dispatch.build_no_host_context": {
       "display_name": "构造无宿主上下文",
-      "description": "为 context:none 和 ignore 步骤形成不访问 Tavern 的准备结果。",
+      "description": "为不需要聊天事实的步骤构造派发上下文，例如明确忽略的事件。保留任务、事件来源和无宿主需求的结论，让后续仍能返回准确回执；不读取消息、变量或状态文件，也不制造消息写入。",
       "category": "任务派发",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -13793,7 +13793,7 @@
     },
     "era.dispatch.classify_context": {
       "display_name": "分类任务与上下文",
-      "description": "验证规划步骤与批次状态，形成显式任务来源和上下文准备路由。",
+      "description": "检查所选步骤需要哪一种上下文：初始化、同步和消息标识任务按各自要求准备聊天事实；无需宿主数据的任务及忽略项走无读取分支；公共 ERA 提交和同步调用归入 API 任务。这里决定准备范围，具体的作用域准入和消息写入目标仍由 API 内部校验。",
       "category": "任务派发",
       "version": "1.0.0",
       "flow_kind": "decision",
@@ -13860,7 +13860,7 @@
     },
     "era.dispatch.commit_preparation": {
       "display_name": "提交 MK 与占位符准备",
-      "description": "以 affected 刷新提交当前激活文本；仅 update-mk 任务提交完整 ERAMetaData，状态任务把 SelectedMks 留给同步事务提交；部分或未知提交立即致命失败。",
+      "description": "执行纯消息标识任务所需的提前写入：先更新目标正文并刷新受影响消息，确认成功后再保存 ERA 元数据到聊天状态文件。若无需对应变更就跳过。普通写入失败返回失败；若正文已变但元数据未能完成，或宿主无法确认写入结果，则报致命错误，避免继续使用不确定的标识关系。",
       "category": "任务派发",
       "version": "1.0.0",
       "flow_kind": "data_store",
@@ -13910,7 +13910,7 @@
     },
     "era.dispatch.finalize_context": {
       "display_name": "生成稳定楼层派发上下文 V3",
-      "description": "保留原上下文准备；Agent 设置使用专用路由，外层按已准备路由选择复杂任务或简单任务。PlannedStep 的公开 taskRoute 不变。",
+      "description": "把读取、暂存或预提交后的结果装进所选任务，附上已准备的消息上下文，并选定实际执行分支：初始化、公共 API、生成会话，或简单任务。Agent 配置事件进入设置分支，不启动模型生成。这个节点只整理派发信息，保留准备失败供实际任务返回，不再次读写消息。",
       "category": "任务派发",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -13977,7 +13977,7 @@
     },
     "era.dispatch.plan_message_preparation": {
       "display_name": "规划 MK 与占位符",
-      "description": "幂等准备最新消息 MK 和启用的非用户消息占位符；状态任务只暂存消息更新并交由同步事务原子提交，纯 update-mk 任务才进入预提交链。",
+      "description": "根据聊天事实判断任务将处理哪条消息，以及是否要补充 ERA 消息标识（MK）和状态栏占位符。空的待生成候选仍是独立目标，不用旧候选正文替代。普通变量同步只暂存计划，稍后与变量结果一起保存；仅纯消息标识任务可进入预提交分支。这里规划变更，不直接写酒馆。",
       "category": "任务派发",
       "version": "1.0.0",
       "flow_kind": "decision",
@@ -14036,7 +14036,7 @@
     },
     "era.dispatch.preserve_prepared_context": {
       "display_name": "保留已准备上下文",
-      "description": "保留无需写入或读取失败的准备计划，不触碰宿主。",
+      "description": "当消息准备不需要提前写入时，把计划转成可派发的准备结果，保留正文、消息标识、元数据及失败信息。对于普通同步，尚待修改的正文继续作为暂存内容交给后续任务；“此处没有写入”不表示后续无需保存，也不会丢弃未知元数据。",
       "category": "任务派发",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -14087,7 +14087,7 @@
     },
     "era.dispatch.read_canonical_context": {
       "display_name": "读取严格酒馆上下文",
-      "description": "通过严格消息投影读取当前激活文本，并按准备要求补读聊天元数据和脚本占位符设置。",
+      "description": "读取当前聊天身份和所有消息的实际楼号、当前 Swipe（同一消息的候选回复）及正文。需要消息标识时还读取状态文件指针、已有 ERA 元数据和占位符设置。全量读取会保留准备生成的新末楼或空候选，避免把旧回复当成新目标；读取失败输出明确失败上下文，供后续停止写入。",
       "category": "任务派发",
       "version": "1.0.0",
       "flow_kind": "data_store",
@@ -14137,7 +14137,7 @@
     },
     "era.expression.execute_era_commands.bridge": {
       "display_name": "计算历史同步计划",
-      "description": "消费收窄的 SyncPlanningInput，调用登记 sync_planning 的 planSyncWork；其真实重放链进入 Expression 同步 AOT，返回规划工作项，不读写宿主。",
+      "description": "接收 Service 已限定好消息范围、变量起点和执行原因的计算输入，调用历史同步规划器；其中的表达式计算由独立 Expression 工作流完成，形成后续可执行的工作项。随机来源与偏移沿实际求值链传递。这个边界只做计算，不直接读取或保存酒馆内容。",
       "category": "表达式集成",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -14188,7 +14188,7 @@
     },
     "era.initialize.adapt_startup_sync_step": {
       "display_name": "适配启动同步步骤",
-      "description": "将初始化专用步骤无损转换为共享同步 Nodeset 的 routed step，避免与外层初始化步骤发生类型碰撞。",
+      "description": "把初始化产生的启动同步请求和保留的批次状态交给通用同步流程。请求继续携带原事件来源和消息上下文，不另建初始化专用变量引擎；它只适配输入，后续共享同步负责读取状态、应用历史及保存。",
       "category": "初始化事务",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -14255,7 +14255,7 @@
     },
     "era.initialize.build_commit": {
       "display_name": "构造初始化提交",
-      "description": "把资源变更固定为有序、幂等的 Capability 动作列表。",
+      "description": "把初始化计划整理成宿主可执行的资源提交请求，保持设置、世界书、正则和开场白等动作的既定顺序。这里仅形成请求，没有任何资源已经因此写入；下一节点执行后返回的确认结果才代表实际修改。",
       "category": "初始化事务",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -14306,7 +14306,7 @@
     },
     "era.initialize.build_result": {
       "display_name": "规划初始化完成方式",
-      "description": "将直接初始化结果与启动同步结果分离，避免直接结果抢先结束启动同步。",
+      "description": "检查资源提交结果是否需要继续历史同步：只有启动初始化且资源已完成或本就无需变更时，构造一个共享同步步骤；其他初始化操作或失败走直接结果分支。两种结果用独立数据通道传递，避免提前返回导致该做的聊天变量同步被跳过。",
       "category": "初始化事务",
       "version": "1.1.0",
       "flow_kind": "decision",
@@ -14373,7 +14373,7 @@
     },
     "era.initialize.carry_execution_state": {
       "display_name": "携带初始化批次状态",
-      "description": "无损转发初始化任务所属的批次执行状态。",
+      "description": "保留触发初始化的完整批次状态，供资源准备后可能发生的启动同步使用。资源初始化和历史同步是同一批次的连续步骤，因此不能丢失原始事件来源和消息处理进度；本节点只传递数据，不做初始化或保存。",
       "category": "初始化事务",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -14424,7 +14424,7 @@
     },
     "era.initialize.compute": {
       "display_name": "确认初始化变更",
-      "description": "保留纯规划器生成的声明式资源变更。",
+      "description": "把纯规划器已经生成的资源变更计划送到构造提交请求的环节。此节点目前不再次推导资源差异，只保留有序动作及依据；计算职责已经由资源规划器承担，避免对同一设置重复判断。",
       "category": "初始化规划",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -14475,7 +14475,7 @@
     },
     "era.initialize.finalize_direct_result": {
       "display_name": "结算直接初始化结果",
-      "description": "仅在 finish 分支将专用直接初始化结果转为唯一任务结果。",
+      "description": "仅在初始化不需要继续共享同步的分支，把资源处理结论转成交给 Service 的任务结果。保留实际完成动作、无变更或失败诊断，不把资源初始化包装成聊天同步；随后由统一步骤结算推进批次。",
       "category": "初始化事务",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -14526,7 +14526,7 @@
     },
     "era.initialize.no_change": {
       "display_name": "保留初始化计划",
-      "description": "保留无宿主写入或读取失败的初始化计划。",
+      "description": "在资源计划没有写入动作时，把同一计划传到统一提交入口，保留“无需变更”或读取失败的真实原因。不会凭没有动作就认定初始化成功，也不会新建替代资源；后续提交结果节点会据此决定返回或继续启动同步。",
       "category": "初始化规划",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -14577,7 +14577,7 @@
     },
     "era.initialize.plan": {
       "display_name": "规划初始化资源",
-      "description": "调用纯规划器形成设置、世界书、正则与占位符动作。",
+      "description": "比较现有设置和角色资源，规划需要补齐的 ERA 世界书、正则、示例变量或函数及开场白。传统与外置模式按各自规则处理，已经保存的作者资源遵守不覆盖条件；传统默认占位符替换保留 HTML 所需行边界。输出有序变更计划和“有变更/无需变更”分支，不直接修改酒馆。",
       "category": "初始化规划",
       "version": "1.0.0",
       "flow_kind": "decision",
@@ -14636,7 +14636,7 @@
     },
     "era.installation.scope.activate_ingress": {
       "display_name": "登记 Tavern 事件入口",
-      "description": "仅 allow 分支让 Host 机械登记既有 Tavern ingress。",
+      "description": "把已允许启动的决定交给浏览器宿主，启用 ERA 接收聊天事件的入口及相关显示控制。宿主负责登记角色卡单层显示开关，在开启时只保留目标 AI 消息的显示窗口，切换聊天时重新建立显示关系。这个节点只是启用宿主设施；变量计算、回滚和保存仍由后续 Service 任务处理。",
       "category": "服务生命周期",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -14676,7 +14676,7 @@
     },
     "era.installation.scope.classify": {
       "display_name": "分类安装作用域",
-      "description": "纯规则根据唯一的启用脚本归属分类安装位置。",
+      "description": "把当前脚本 ID 与已启用的脚本目录对应起来：只在角色卡中找到就归为角色卡脚本，只在全局或预设中找到就归到相应位置；同一 ID 出现在多个位置则记为位置不明确。读取失败、没有 ID 或没有匹配项记为未知，供启动策略区分“明确不应启动”和“无法判断”。这不是对所有 ERA 实例进行选主。",
       "category": "服务生命周期",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -14727,7 +14727,7 @@
     },
     "era.installation.scope.decide": {
       "display_name": "决定启动策略",
-      "description": "角色卡脚本允许；全局、预设和重复安装休眠；未知兼容启动并警告。",
+      "description": "根据脚本的安装位置决定本次 ERA 是否进入完整服务：角色卡内部的脚本继续启动；明确位于全局、预设，或同一脚本 ID 同时属于多个位置的实例只显示提示后结束，避免这些位置重复接管聊天。若宿主无法提供位置，则允许兼容启动并要求警告。这里输出策略，不负责停止其他实例，也不修改聊天。",
       "category": "服务生命周期",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -14786,7 +14786,7 @@
     },
     "era.installation.scope.inspect": {
       "display_name": "读取当前脚本与脚本树",
-      "description": "通过已登记 Host 读取当前脚本 ID 与启用脚本树原始事实。",
+      "description": "读取酒馆助手提供的当前脚本 ID，以及角色卡、全局和预设三个位置中已启用的脚本目录，得到当前脚本出现在哪些位置的事实。这里仅收集信息，不注册聊天监听器，也不自行决定是否启动；若宿主接口不可用，后续节点会据此选择兼容策略。",
       "category": "服务生命周期",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -14826,7 +14826,7 @@
     },
     "era.installation.scope.publish_dormant": {
       "display_name": "发布休眠安装提示",
-      "description": "仅 dormant 分支结算无监听器启动结果。",
+      "description": "当当前 ERA 被判定为全局、预设或位置不明确的实例时，要求宿主显示未启动的原因，然后沿结束分支退出。这条分支不会接收聊天事件，也不会加载聊天状态文件、处理宏或启动业务 UI，因而不会以这个实例接管聊天变量。",
       "category": "服务生命周期",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -14866,7 +14866,7 @@
     },
     "era.lifecycle.finalize_block_step": {
       "display_name": "冻结本批消息与Sidecar保存候选",
-      "description": "清理已完成消息临时进度；固定本次保存边界，done及对应操作记录在同一消息更新中保存。错误只保存仍有效的成功前缀；后到请求属于后续批次。",
+      "description": "逐块处理结束后，一次性固定本次待保存的消息修改和变量状态，使完成标记与操作记录在同一次消息更新中保存。若中途失败，只保留仍可确认的成功前缀，失败本身继续带到结算；无需提交则输出无写入结果。这里构造并校验保存请求，不执行磁盘写入。",
       "category": "内存生命周期",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -14917,7 +14917,7 @@
     },
     "era.lifecycle.finish_stage_blocks": {
       "display_name": "回送已应用阶段状态及草稿",
-      "description": "将变量/函数、普通API记录及done传给原阶段交接；后续阶段读内存，完整轮次才保存；取消保留原草稿边界。",
+      "description": "检查模型候选的全部块应用结果，并把成功阶段正文和变量进度记入当前会话。可纠错错误需要恢复整次候选的内存变量、正文、日志、作用域和随机进度，再准备下一次尝试；不是只撤销最后一个块。重试耗尽保留本候选起点，更早已完成阶段仍保留。取消也不会无故抹掉早前成功内容。",
       "category": "内存生命周期",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -14968,7 +14968,7 @@
     },
     "era.lifecycle.prepare_api_blocks": {
       "display_name": "构造待应用的普通era_tx及工作范围",
-      "description": "复用普通事务构造；调用处下方或目标末尾插入待保存消息。当前函数API就地应用，旧楼外部写入按原回退和后续重算规则建立工作范围。应用失败保持真实回执。",
+      "description": "将 API 事务暂时插入正确的消息位置：作者函数的调用下方，或已校验外部目标的相应位置，再用共享历史规划器建立逐块应用范围。采用当前内存变量和函数，同时保留此前提交但尚未保存的消息修改；旧楼操作会按历史回退和重算规则处理。这里建立内存执行计划，不立即保存酒馆。",
       "category": "内存生命周期",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -15019,7 +15019,7 @@
     },
     "era.lifecycle.prepare_stage_blocks": {
       "display_name": "将阶段输出适配到共用块状态",
-      "description": "规划无正式楼时绑定草稿；正文与结算保持原文顺序，消息起点快照独立保存；报告引用不当可执行调用。",
+      "description": "把模型候选放到本次应处理的消息楼层，建立与普通历史同步相同的逐块执行计划：规划阶段可以使用尚未创建的未来 AI 楼层，其他阶段沿用已捕获身份。记录变量、函数、日志及会话恢复点，供候选失败时撤销本次尝试；这里暂存正文并准备范围，不把候选立即保存。",
       "category": "内存生命周期",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -15070,7 +15070,7 @@
     },
     "era.lifecycle.publish_block_application": {
       "display_name": "发布内存应用结果与推进位置",
-      "description": "把压缩后的工作状态更新到同一执行上下文，保留消息起点快照/随机偏移；同步更新API可读投影，不能覆盖后到操作。仅应用完成，不发布整批保存完成或提前ready。",
+      "description": "把已推进和压缩的结果发布为当前聊天的内存工作状态，连同日志、作用域和待保存正文供接下来的块或 API 读取，标记尚未落盘。若普通历史同步处理的旧 Swipe 已被用户切走且没有发生写入，则放弃旧分支，交给后续重新同步当前历史；作者函数、API 或模型候选失败仍按失败处理，不冒充成功。",
       "category": "内存生命周期",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -15129,7 +15129,7 @@
     },
     "era.lifecycle.return_applied_receipt": {
       "display_name": "返回内存应用回执并登记保存时机",
-      "description": "工作状态、日志、scope和待保存消息一致后返回；不是入队即成功。当前函数归属父批次；独立API防抖加最长未保存时间，时间到通过既有事件端口请求批次保存。多次不await按序，多次await不强制刷盘。",
+      "description": "在逐块应用结束后向 ERA.commit 调用方返回结果：失败带回实际原因，成功代表内存变量、日志、作用域和待保存正文已经应用一致，不只是请求已入队。作者函数内的操作归属当前生成批次；独立 API 提交安排约 200 毫秒防抖、最长约 2 秒的保存请求，等待回执本身不会强制每次落盘。",
       "category": "内存生命周期",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -15180,7 +15180,7 @@
     },
     "era.lifecycle.settle_saved_batch": {
       "display_name": "结算已保存批次与恢复事实",
-      "description": "保存成功仅清除本批待保存内容，保留后到操作；分别维护内存已应用与已保存事实。失败通过原恢复入口报告，不逆转已返回API成功，不永久停服。",
+      "description": "核对保存结果与之前块执行的结论：即使成功保存了前缀，也不能抹掉后续块的失败。检测到用户改动了原消息来源时，通过现有入口安排重新计算当前历史；保存成功且没有后续未保存操作时取消多余保存定时器。输出最终结论，避免旧任务收尾漏掉最新回复或覆盖后到操作。",
       "category": "内存生命周期",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -15231,7 +15231,7 @@
     },
     "era.mk.build_commit": {
       "display_name": "构造消息密钥提交请求",
-      "description": "把已路由候选转换为明确的消息文本更新与完整 ERAMetaData 更新请求，不执行宿主操作。",
+      "description": "检查消息标识候选确实有效且需要写入，再把目标正文、元数据和变更标志组织为提交请求。缺少标识、正文或元数据等必要信息会报错；仅构造请求，不表示目标消息已经保存。这份登记实现供需要独立标识提交的调用使用。",
       "category": "消息密钥纯计算",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -15282,7 +15282,7 @@
     },
     "era.mk.build_result": {
       "display_name": "构造消息密钥任务结果",
-      "description": "对 step.sources 逐一且仅一次结算，隔离普通失败与 fatal，不额外发布业务事件，并保持连续 MK 状态不变。",
+      "description": "依据消息标识准备和提交的真实结果，向任务对应的每个原事件生成一次回执，保留无变更、失败或致命原因。这个节点只完成消息标识任务的结算，不再次写正文，也不把标识更新冒充变量同步或推进连续计算进度。",
       "category": "消息密钥结果",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -15333,7 +15333,7 @@
     },
     "era.mk.consume_prepared": {
       "display_name": "确认统一 MK 准备结果",
-      "description": "检查已准备步骤中的消息密钥和写入确认结果，不再读取或写入酒馆消息。",
+      "description": "检查统一派发阶段已经提供的 ERA 消息标识（MK，用于把消息与历史状态对应起来）、占位符及写入确认结果，整理为标识任务的结算输入。正文和元数据已由派发准备处理，因此这里不会再次读取或修改消息；准备失败如实保留。",
       "category": "消息密钥",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -15384,7 +15384,7 @@
     },
     "era.mk.derive": {
       "display_name": "推导消息密钥提交候选",
-      "description": "仅扫描当前激活文本，使用主事件 occurredAt 与 eventId/sequence 的稳定 base36 token 生成 MK，并保真构造 SelectedMks 更新。",
+      "description": "根据目标消息原文、现有 ERA 元数据及占位符设置，生成或沿用消息标识 MK，并规划正文与标识列表需要怎样更新。作者正文和未知元数据保留，用户消息不补状态栏占位符。输出候选及是否需写入；无法定位目标或输入有问题时输出失败，不在此改动酒馆。",
       "category": "消息密钥纯计算",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -15435,7 +15435,7 @@
     },
     "era.mk.no_change": {
       "display_name": "保留消息密钥状态",
-      "description": "不调用任何宿主写入；把已一致候选转换为 no-op，或保留读取与推导阶段的普通失败。",
+      "description": "当消息标识候选无需写入或已经失败时，输出无变更或失败结论，保留原标识与错误。不会为了形成回执再写一次正文，也不修改变量历史；后续结果节点可据此明确区分“原本已正确”和“无法准备”。",
       "category": "消息密钥结果",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -15486,7 +15486,7 @@
     },
     "era.mk.route_commit": {
       "display_name": "路由消息密钥提交",
-      "description": "仅当消息文本或 SelectedMks 需要写入时进入提交分支；读取或推导失败留在无宿主写入分支。",
+      "description": "读取消息标识候选，只有候选有效且正文或元数据确实需要更新时才走提交分支；否则走无变更结算。候选本身原样携带，节点不重复生成标识或判断消息内容，避免同一个标识计划被独立计算两次。",
       "category": "消息密钥路由",
       "version": "1.0.0",
       "flow_kind": "decision",
@@ -15545,7 +15545,7 @@
     },
     "era.service.adapt_api_task_result": {
       "display_name": "接回公共对象任务结果",
-      "description": "把已完成的 API 任务结果接回统一步骤合并入口。",
+      "description": "把公共 API 任务专用的结果转交到 Service 的统一任务结果通道。结果中的成功、跳过、失败、来源和通知均保留原值，不重新计算。专用通道用于避免 API 内部同步结果与外层结果混用；真正推进批次索引由后续合并节点完成。",
       "category": "公共 Facade",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -15596,7 +15596,7 @@
     },
     "era.service.build_outbound": {
       "display_name": "构造批次结果帧",
-      "description": "构造确定性幂等 batch-result 帧、致命标记和批次后携带状态。",
+      "description": "把已结算批次组织成一个出站结果帧，包括各事件回执、业务通知、诊断和是否必须终止服务的标记，同时得到后续服务状态。相同批次使用稳定标识，便于宿主识别重复结果。这里只构造帧；工作流必须先发送该帧，再处理致命错误。",
       "category": "批次发布",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -15663,7 +15663,7 @@
     },
     "era.service.continue_state": {
       "display_name": "继续服务",
-      "description": "无损导出已发布批次的下一服务状态。",
+      "description": "当批次没有致命错误时，导出已经结算后的服务状态，包括后续收集所需进度。原值不变，不重新读取聊天或重算变量；它连接“本批次已发布”与“下一批事件可开始收集”两个时点。",
       "category": "批次发布",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -15714,7 +15714,7 @@
     },
     "era.service.coverage_failure": {
       "display_name": "构造覆盖失败结果",
-      "description": "将覆盖无效批次的全部来源构造成 typed failed 结算，服务本身继续运行。",
+      "description": "当任务计划的来源覆盖检查不通过时，给本批次每个原始事件生成一条失败结算，保留检查诊断，并把批次标为待结束。不会执行计划中的任何领域任务；其意义是即使规划出错，等待结果的调用方也能收到明确失败。",
       "category": "批次执行",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -15765,7 +15765,7 @@
     },
     "era.service.cycle.begin": {
       "display_name": "进入收集阶段",
-      "description": "进入收集阶段；保持原 Service 领域状态及执行顺序。",
+      "description": "把初始服务状态标记为“收集事件”阶段，交给长期运行的服务循环。此时尚无批次需要执行，因此第一轮应等待聊天或 API 事件；本节点只增加阶段标签，保留原状态，不读取酒馆或修改变量。",
       "category": "服务阶段循环",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -15816,7 +15816,7 @@
     },
     "era.service.cycle.begin_execution": {
       "display_name": "进入单步执行阶段",
-      "description": "进入单步执行阶段；保持原 Service 领域状态及执行顺序。",
+      "description": "把经过覆盖检查的批次状态标记为执行阶段，保留任务列表、当前索引和所有事件来源。下一轮开始执行第一个步骤，而不是再接收一批新事件；这里只切换阶段，不提前执行任务。",
       "category": "服务阶段循环",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -15867,7 +15867,7 @@
     },
     "era.service.cycle.carry_execution": {
       "display_name": "携带下一步骤状态",
-      "description": "携带下一步骤状态；保持原 Service 领域状态及执行顺序。",
+      "description": "当批次还有剩余步骤时，把更新后的索引、累计结算、诊断和消息处理进度重新包装为执行阶段，供下一轮继续。不会在批次中途接收入站事件，也不会清空已完成任务的结果。",
       "category": "服务阶段循环",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -15918,7 +15918,7 @@
     },
     "era.service.cycle.carry_wait": {
       "display_name": "携带等待状态",
-      "description": "携带等待状态；保持原 Service 领域状态及执行顺序。",
+      "description": "当事件尚未达到执行条件时，把更新后的事件集合、定时器和序号包装回收集阶段，留给下一轮继续接收。已经收到的事件不会被丢弃或重新执行；这个节点只是保存本轮的收集进度，不向酒馆写入内容。",
       "category": "服务阶段循环",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -15969,7 +15969,7 @@
     },
     "era.service.cycle.promote_done": {
       "display_name": "转交完成的批次状态",
-      "description": "转交完成的批次状态；保持原 Service 领域状态及执行顺序。",
+      "description": "把已完成全部步骤的批次状态送到批次结算通道，保留所有值。这个节点只是转换数据出口，不再推进索引、不额外执行任务；完成条件由之前的任务合并和分支判断提供。",
       "category": "服务阶段循环",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -16020,7 +16020,7 @@
     },
     "era.service.cycle.resume_collect": {
       "display_name": "恢复事件收集阶段",
-      "description": "恢复事件收集阶段；保持原 Service 领域状态及执行顺序。",
+      "description": "把批次结束后可继续运行的服务状态包装回收集阶段，交给长期循环的下一轮。先前任务已经结算和发布；本节点自身不接收事件、不执行保存，只明确下一轮可以恢复接收新请求。",
       "category": "服务阶段循环",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -16071,7 +16071,7 @@
     },
     "era.service.cycle.route": {
       "display_name": "选择服务阶段",
-      "description": "选择服务阶段；保持原 Service 领域状态及执行顺序。",
+      "description": "读取当前循环状态的阶段标签，决定本轮是继续接收事件，还是执行已规划批次中的一个步骤。阶段载体格式无效时直接报错；正常情况下原状态原样传递。这样在执行批次期间不会误走收集分支，使任务顺序保持可预测。",
       "category": "服务阶段循环",
       "version": "1.0.0",
       "flow_kind": "decision",
@@ -16130,7 +16130,7 @@
     },
     "era.service.cycle.route_completion": {
       "display_name": "选择继续或结算",
-      "description": "选择继续或结算；保持原 Service 领域状态及执行顺序。",
+      "description": "读取任务合并给出的完成标志，决定带着更新后的状态执行下一个步骤，还是当轮结束批次。这里不重新计算步骤数或更改结果，只将同一次合并的结论用于分支选择，避免最后一步执行后多等一轮。",
       "category": "服务阶段循环",
       "version": "1.0.0",
       "flow_kind": "decision",
@@ -16197,7 +16197,7 @@
     },
     "era.service.cycle.unpack_collect": {
       "display_name": "解包收集状态",
-      "description": "解包收集状态；保持原 Service 领域状态及执行顺序。",
+      "description": "确认当前确实处于收集阶段，然后从循环载体中取出事件集合、序号和定时器等服务状态，供接收和整理新事件使用。它不接收事件、不清空集合；若把执行阶段的状态交到这里，会报错，避免混淆两种阶段的数据。",
       "category": "服务阶段循环",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -16248,7 +16248,7 @@
     },
     "era.service.cycle.unpack_execution": {
       "display_name": "解包批次执行状态",
-      "description": "解包批次执行状态；保持原 Service 领域状态及执行顺序。",
+      "description": "确认循环处于执行阶段，再取出任务列表、当前步骤索引、累计结果和服务进度，交给单步执行流程。它不移动索引，也不修改计划；阶段标签或载体损坏时会报错，避免使用错误批次。",
       "category": "服务阶段循环",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -16299,7 +16299,7 @@
     },
     "era.service.finalize_batch": {
       "display_name": "完成批次收尾",
-      "description": "按来源序号规范化结算并确保恰好一次覆盖，构造下一状态与致命标记。",
+      "description": "在全部步骤结束或计划被拒绝后，核对每个原始事件都恰好获得一次结算，汇总批次诊断，并更新服务批次计数。把任务层结果整理为可发布的批次结论；不会重新执行失败任务，也不负责酒馆文件写入。",
       "category": "批次执行",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -16350,7 +16350,7 @@
     },
     "era.service.initialize_state": {
       "display_name": "初始化服务状态",
-      "description": "创建空事件集、零迭代、空定时器和空连续 MK 的严格有界状态。",
+      "description": "为刚启动的 ERA 创建本页面实例的运行状态，包括待收集事件、定时器信息、事件序号、批次计数和消息处理进度。消息作用域的窗口和准入字段初始为空，后续处理再建立有效窗口；重载或停止时随实例销毁；它们用于识别过期请求，不作为聊天变量写入消息或状态文件。",
       "category": "服务生命周期",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -16391,7 +16391,7 @@
     },
     "era.service.merge_task_result": {
       "display_name": "合并步骤结果",
-      "description": "合并任务结算、通知、诊断及可选连续处理 stateUpdate，推进索引并报告步骤是否全部消费。",
+      "description": "把当前任务的结果合入批次：累计各事件的结算、诊断和通知，接续消息处理进度，再把步骤索引推进一位。输出更新后的状态及是否已完成全部步骤；它不会重新执行任务或立即读入新事件。此处统一汇合，确保不同任务分支采用同一种批次推进规则。",
       "category": "步骤执行",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -16458,7 +16458,7 @@
     },
     "era.service.plan_batch": {
       "display_name": "规划领域事件批次",
-      "description": "使用 ERA 纯事件规划器直接生成严格有界 execute/ignore PlannedStep，完整保留 task、sources、reason 与全部来源事件。",
+      "description": "把已经就绪的一组聊天或 API 事件翻译成有顺序的任务步骤，例如初始化、消息同步、消息标识更新、生成阶段或明确忽略。每一步保留它对应的原始事件来源，使多个事件即使合并为一个任务也能分别收到处理结果。这里只编排任务，不执行计算或保存。",
       "category": "批次执行",
       "version": "1.1.0",
       "flow_kind": "process",
@@ -16509,7 +16509,7 @@
     },
     "era.service.raise_fatal": {
       "display_name": "抛出致命服务错误",
-      "description": "仅在 batch-result 已提交后抛出稳定致命错误，阻止服务继续接受事件。",
+      "description": "在宿主已经收到本批次结果帧后抛出服务致命错误，结束正常循环。用于写入结果未知或无法安全继续的情形，防止把不确定状态带入下一批任务。它不再发送第二份结算，也不自行回滚已确认的宿主写入。",
       "category": "批次发布",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -16560,7 +16560,7 @@
     },
     "era.service.reduce_collection": {
       "display_name": "归约事件集",
-      "description": "按候选基线归约 100/500/1500ms 收集窗口、生成边界、dry-run、组合、绝对截止定时器、迟到 token 和 128 条/2MiB 有界事件集。",
+      "description": "把一个新事件放入当前收集窗口，依据事件序号、窗口期限和容量限制更新待处理集合，决定继续等待还是立即执行一批事件。同步输出应启动或取消的定时器控制。它负责事件何时形成批次，而不是计算变量；事件的业务操作将在批次规划和任务执行中完成。",
       "category": "服务迭代",
       "version": "1.1.0",
       "flow_kind": "process",
@@ -16627,7 +16627,7 @@
     },
     "era.service.route_fatal": {
       "display_name": "路由致命结果",
-      "description": "根据已发送批次帧的致命标记选择继续服务或终止。",
+      "description": "读取已经随批次结果确定的致命标记：可继续运行的结果进入下一次事件收集，无法确认写入等致命情况进入抛错分支。分支发生在结果帧已交给宿主之后，因此调用方先得知本批次失败；这里不把普通业务失败升级为致命错误。",
       "category": "批次发布",
       "version": "1.0.0",
       "flow_kind": "decision",
@@ -16678,7 +16678,7 @@
     },
     "era.service.route_iteration": {
       "display_name": "路由等待或执行",
-      "description": "按事件集归约结果选择继续等待或执行批次。",
+      "description": "读取事件整理后的决定，把流程分到“继续等待”或“准备执行批次”。这里不重新判断窗口时间、不改变事件集合，只把已确定的分支传给工作流，保证实际执行采用同一次事件整理的结论。",
       "category": "服务迭代",
       "version": "1.0.0",
       "flow_kind": "decision",
@@ -16729,7 +16729,7 @@
     },
     "era.service.select_step": {
       "display_name": "选择当前步骤",
-      "description": "按有界索引选择当前 PlannedStep，并将未改写的批次执行状态交给准备链。",
+      "description": "依据批次的当前索引取出这一次应执行的任务，连同完整批次状态一起传下去。不会跳过、删除或提前运行后续任务；一个任务完成并被统一合并后，索引才会推进，因此同批次的 API 和聊天操作保持既定顺序。",
       "category": "步骤执行",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -16788,7 +16788,7 @@
     },
     "era.service.terminal": {
       "display_name": "表达式命令结束",
-      "description": "返回纯同步工作项。",
+      "description": "结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。",
       "category": "服务生命周期",
       "version": "1.0.0",
       "flow_kind": "terminal",
@@ -16819,7 +16819,7 @@
     },
     "era.service.validate_coverage": {
       "display_name": "验证来源覆盖",
-      "description": "验证每个批次来源序号恰好覆盖一次，并识别重复、缺失或越界来源。",
+      "description": "检查批次计划是否覆盖全部原始事件：不能漏掉来源、重复处理同一来源，或混入本批次之外的来源；步骤数也不能超过 128。成功时建立从第一个步骤开始的批次状态，失败时走整批失败结算，防止部分事件悄悄丢失或被执行两次。",
       "category": "批次执行",
       "version": "1.0.0",
       "flow_kind": "decision",
@@ -16878,7 +16878,7 @@
     },
     "era.service.validate_transport": {
       "display_name": "校验传输事件",
-      "description": "严格校验事件字段、tagged 参数、序号、来源、字节和宿主引用限制。",
+      "description": "检查刚从宿主收到的事件是否符合 ERA 的传输格式，包括必需字段、参数封装、体积限制及允许的宿主引用。合格后输出内部可用的事件；不合格时保留相应错误，不把损坏数据当成正常聊天操作继续规划。这一步只验证事件本身，不执行它代表的业务。",
       "category": "服务迭代",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -16929,7 +16929,7 @@
     },
     "era.sidecar_binding.apply_resolution": {
       "display_name": "执行 Sidecar 绑定事务",
-      "description": "核对原聊天、消息与绑定，确认恢复消息持久化后提交并回读 Sidecar；失败保留实际写入事实。",
+      "description": "执行已经确定的状态文件决议，例如创建绑定、迁移旧状态或应用用户选择。需要恢复消息时按当前有效正文构造更新，先确认消息保存，再写状态文件和聊天指针；全过程复核原聊天、绑定和文件版本。切换聊天或保存失败后记录实际已完成的写入并返回失败，不把旧状态写到新聊天，也不自动重复事务。",
       "category": "Sidecar 绑定",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -16995,7 +16995,7 @@
     },
     "era.sidecar_binding.build_applied_result": {
       "display_name": "结算已完成的 Sidecar 绑定",
-      "description": "根据 Sidecar 分支结果生成任务回执；保持原路由条件与行为。",
+      "description": "状态文件修复已通过独立文件事务完成时，向本任务每个来源返回已完成结算，并标记无需再做普通同步。这里不重算历史或再次保存，避免把修复后仅存在于当前变量状态的 API 修改按旧聊天正文重放掉。此出口只表示修复分支无需额外动作，不能代替所有历史同步的结果。",
       "category": "Sidecar 绑定",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -17046,7 +17046,7 @@
     },
     "era.sidecar_binding.build_blocked_result": {
       "display_name": "结算等待 Sidecar 选择的任务",
-      "description": "读取已判定的 Sidecar 等待结果，复用登记契约及结果策略生成无写入回执。",
+      "description": "当状态文件冲突或修复问题还在等待用户处理时，为原同步任务构造无写入的结果，保留等待原因及每个事件的回执。不会把“暂时不能继续”当成变量已同步，也不会擅自创建新绑定；这是状态选择分支与 Service 批次结算之间的出口。",
       "category": "Sidecar 绑定",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -17097,7 +17097,7 @@
     },
     "era.sidecar_binding.inspect_current": {
       "display_name": "检查当前 Sidecar 绑定",
-      "description": "核对派发身份及指针；中断候选恢复起点与有效阶段会话，再提供Sidecar事实。",
+      "description": "检查当前聊天绑定的是哪一个 Sidecar（独立保存 ERA 变量、函数和日志的状态文件），核对读取前后的聊天身份和文件指针。存在同一绑定的有效内存状态时优先沿用，避免已应用但未保存的操作被旧文件覆盖；必要时恢复被打断的模型候选起点。来源变化或读取失败转为失败事实，不把新聊天与旧消息混在一起。",
       "category": "Sidecar 绑定",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -17155,7 +17155,7 @@
     },
     "era.sidecar_binding.publish_choice_prompt": {
       "display_name": "发布 Sidecar 选择弹窗",
-      "description": "只显示 workflow 已作出的阻塞结论。",
+      "description": "仅在状态绑定处于等待选择时，要求宿主显示具体问题：文件属于其他聊天则提示冲突，文件或绑定无效则提示修复，并附当前身份、文件归属及版本供用户判断。用户已有有效选择时不会再次弹同一提示。这个节点只显示问题，不替用户选择，也不改变变量。",
       "category": "Sidecar 绑定",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -17195,7 +17195,7 @@
     },
     "era.sidecar_binding.resolve_choice": {
       "display_name": "规划 Sidecar 绑定选择",
-      "description": "纯规则规划绑定选择；失败上下文继续原失败结算，不生成选择提示。",
+      "description": "根据聊天与状态文件的关系决定接下来怎么办：首次使用可创建，旧格式可迁移，匹配的绑定可继续，所属聊天冲突或损坏则等待用户明确选择或修复。先前读取已经失败时直接保留失败，不再弹出新选择或安排写入。这里只形成决议，不自行创建文件。",
       "category": "Sidecar 绑定",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -17253,7 +17253,7 @@
     },
     "era.sync.build_notification": {
       "display_name": "结算提交结果与批次更新",
-      "description": "由 sync_result_policy 根据实际提交与来源结果生成来源回执、诊断和连续处理更新；批次合并仍在原 merge_task_result。",
+      "description": "把同步的实际保存结果整理成原事件回执、业务通知及诊断，并计算后续可接续的消息处理进度。它区分成功、无需变更、普通失败和致命失败，也保留显示环节的诊断；不再次保存或重算变量。统一步骤合并随后会把这些结果记入本批次。",
       "category": "同步事务",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -17304,7 +17304,7 @@
     },
     "era.sync.drive_message_blocks": {
       "display_name": "应用下一块或准备楼层维护",
-      "description": "复用纯块应用语义，独立携带消息起点变量/函数及连续随机偏移；done 仅按标签判断，旧 EraFCallTx 只作普通记录容器。未执行调用通过原生工具通道运行，其 API 交回同一块循环应用；成功或作者异常后标 done，服务应用失败时拒绝等待请求并释放调用。准备楼层完成清进度、纯回退和空聊天所需的维护写入。",
+      "description": "推进当前消息中的一个执行位置，按正文顺序应用变量指令、函数定义或作者函数调用。遇到作者函数时暂停块推进，等待该函数提交操作并就地应用，再返回回执后继续；函数内部不允许发起重算或回滚。更新仅进入内存工作状态，尚未保存。模型候选中的错误交给候选恢复，普通作者错误则保留可确认的成功前缀。",
       "category": "同步规划",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -17355,7 +17355,7 @@
     },
     "era.sync.prepare_block_step": {
       "display_name": "准备回退起点与单一执行状态",
-      "description": "只定位历史分歧、准备撤销旧效果和有序楼层范围，不预先执行整楼命令。状态持有楼层起点快照、当前累计值、随机偏移、累计日志及真实提交结果；文本进度与已保存日志共同支持恢复，信息不足返回可恢复失败。",
+      "description": "以当前变量、函数和历史日志为起点，规划本次应回退哪些旧效果、从哪条消息继续，以及要处理哪些指令块。保存消息标识、作用域和随机位置作为后续依据。这个节点仅建立逐块处理状态，不提前执行块；无法处理或无需变更时把状态标为结束，让后续如实结算。",
       "category": "同步规划",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -17406,7 +17406,7 @@
     },
     "era.sync.prepare_block_work": {
       "display_name": "构造单块与日志同步工作项",
-      "description": "从真实累计状态构造当前块的消息/Sidecar候选和完整累计回退日志。仅楼层完成时给出该封存楼层压缩候选；最新楼层不压缩；普通块候选为空。携带状态经工作项传递，禁止另算整楼终值。",
+      "description": "把这一轮块推进后得到的工作项及块位置整理成压缩节点的输入，保留累计正文、变量、函数、日志和失败信息。当前实现只是携带已有结果，不在这里重新执行指令或清除进度；是否有已完成、可压缩的消息层由压缩应用器判断。",
       "category": "同步规划",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -17457,7 +17457,7 @@
     },
     "era.sync.present_finalized_floor": {
       "display_name": "呈现已提交的最终楼层",
-      "description": "消息及 Sidecar 提交成功且来源一致时，消费首次呈现意图刷新指定楼层；返回现有呈现诊断，不改变提交结果。",
+      "description": "在本次工作项带有首次显示意图时，要求酒馆刷新指定消息，使已完成内容和状态栏显示出来。保存分支只在消息与状态文件确认成功、来源仍一致时刷新；无提交分支按其已有显示意图处理。刷新失败只附加显示诊断，不撤销已经保存的业务结果，也不再次执行变量指令。",
       "category": "同步事务",
       "version": "1.0.0",
       "flow_kind": "data_store",
@@ -17507,7 +17507,7 @@
     },
     "era.task.ignore": {
       "display_name": "结算忽略步骤",
-      "description": "按规划器保留的原因把 ignore 步骤来源结算为 ignored/no-op，不执行任何领域或宿主副作用。",
+      "description": "处理规划器明确标为忽略的步骤，向其包含的每个原始事件返回被忽略的原因。不会假装执行过同步、生成或保存；任务类型不正确时会报错。这样无需业务操作的事件仍有可追踪的结果，不会使等待回执的调用方悬空。",
       "category": "步骤执行",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -17558,7 +17558,7 @@
     },
     "era.tasks.dispatch": {
       "display_name": "分派已准备的简单任务",
-      "description": "仅根据统一准备后的路由选择 sync、update-mk、agent-settings 或 ignore，并原样传递步骤与批次状态。",
+      "description": "只接受已准备好的普通同步、消息标识、Agent 设置或忽略任务，把任务与批次状态交给相应分支。复杂初始化、公共 API 和生成会话不经这里。分支标签不属于这四类时会报错，而不是猜测任务用途；本节点自身不进行变量计算或宿主写入。",
       "category": "步骤执行",
       "version": "1.0.0",
       "flow_kind": "decision",
@@ -17641,7 +17641,7 @@
     },
     "era.tavern.initialization_commit": {
       "display_name": "提交 Tavern 初始化资源",
-      "description": "顺序提交设置、世界书、正则与角色主开场白动作；未知或部分提交进入 fatal，消息准备由统一上下文独占。",
+      "description": "通过受限宿主接口顺序应用初始化资源计划，并记录哪些动作已确认完成。更新角色主开场白时先保存角色卡，再读取当前首楼事实，按 Service 的规则保留、创建或更新聊天首楼，最后执行相应保存和重绘。不会用早先读取的首楼覆盖用户新操作，失败或部分提交按实际结果返回。",
       "category": "初始化宿主边界",
       "version": "1.0.0",
       "flow_kind": "data_store",
@@ -17691,7 +17691,7 @@
     },
     "era.tavern.initialization_read": {
       "display_name": "读取 Tavern 初始化资源",
-      "description": "消费统一严格消息投影，并读取身份、脚本设置、世界书、角色正则和当前角色主开场白快照。",
+      "description": "读取当前角色和聊天身份、ERA 设置、世界书、状态栏正则、角色主开场白及外置配置，整理为初始化所需事实。传统模式和外置模式的选择一并传给规划器；未指定时采用传统模式。这里不决定覆盖哪些资源，也不保存角色卡，读取失败会随上下文交给后续结算。",
       "category": "初始化宿主边界",
       "version": "1.0.0",
       "flow_kind": "data_store",
@@ -17741,7 +17741,7 @@
     },
     "era.tavern.mk_commit": {
       "display_name": "按逻辑边界提交消息密钥",
-      "description": "严格先确认消息文本写入及受影响消息刷新，再提交并回读 ERAMetaData；消息失败不写变量，消息已写后的变量失败或未知结果进入 fatal。",
+      "description": "按消息标识提交请求执行宿主写入，确认正文和相关元数据的实际结果，返回已提交、失败或无法安全继续的结论。正文与元数据的关系必须一致，部分写入不能当成完整成功；这里处理的是标识准备，不重新执行变量指令。",
       "category": "消息密钥宿主边界",
       "version": "1.0.0",
       "flow_kind": "data_store",
@@ -17791,7 +17791,7 @@
     },
     "era.tavern.mk_read": {
       "display_name": "读取 Tavern 消息与 ERA 元数据",
-      "description": "只调用 messages.read_context 与 variables.read，读取当前激活消息文本、完整 ERAMetaData 与状态占位符设置；读取失败被转换为无副作用任务失败上下文。",
+      "description": "通过宿主读取消息标识任务所需的目标消息正文、ERA 元数据和占位符设置，整理为候选规划的输入。读取失败保留具体诊断，不用空正文假装读取成功；这里不生成标识，也不写消息，后续节点才判断是否需要变更。",
       "category": "消息密钥宿主边界",
       "version": "1.0.0",
       "flow_kind": "data_store",
@@ -17841,7 +17841,7 @@
     },
     "era.tavern.sync_read": {
       "display_name": "读取同步输入与连续处理事实",
-      "description": "读取 Sidecar 指针与当前派发输入；在 Node 边界从批次状态投影连续 MK 和计数，后续规划不携带批次来源、通知或队列状态。",
+      "description": "接收已准备消息上下文的同步任务，提取批次中的连续处理进度和块级续做位置，再读取当前聊天的状态文件指针及可供旧数据迁移的事实。这里不直接把旧文件覆盖到内存；后续状态加载节点会核对身份并优先使用有效工作状态。读取失败或取消会形成失败上下文。",
       "category": "同步宿主边界",
       "version": "1.0.0",
       "flow_kind": "data_store",
@@ -17899,7 +17899,7 @@
     },
     "era.tavern.variables_commit": {
       "display_name": "提交消息与 Sidecar 并确认读回",
-      "description": "保持原唯一提交顺序和 Capability 调用；sync_commit_policy 负责候选、来源依据和读回判定。记录消息写入数、Sidecar 状态与来源变化，交给结果模块结算。",
+      "description": "执行共享同步的保存边界：先批量更新并确认目标消息，随后写 Sidecar 状态文件、回读核对版本，再更新聊天绑定的快照。仅内存写入或未确认保存不能当作成功。若普通历史同步的原目标已改变，停止旧分支并交还重算；API 和模型候选保持明确失败。文件失败保留已确认的消息事实并提示修复，写入结果未知则报告致命状态。",
       "category": "同步宿主边界",
       "version": "1.0.0",
       "flow_kind": "data_store",
@@ -17949,7 +17949,7 @@
     },
     "era.workbench.apply_protection_choice": {
       "display_name": "按实际变更处理保护并生成提交参数",
-      "description": "从实际changes计算祖先/目标保护，核对预览事实及明确选择；统一普通/批量语义。只为仍存在且允许恢复的保护生成解锁/操作/恢复序列；禁止necessary临时恢复。输出已准备inspected或明确失败，不调用Host。",
+      "description": "根据实际准备的变化重新计算目标及祖先上的 ERA 保护条件，与用户预览时看到的保护逐项比较，防止提交期间保护已变。需要解锁时必须采用用户明确的选择，生成允许的解锁、操作及恢复顺序；不能临时恢复的必要保护不会被伪造恢复。无变化、条件不一致或缺少选择都返回失败，不在此写数据。",
       "category": "工作台提交",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -17999,7 +17999,7 @@
     },
     "era.workbench.normalize_ordered": {
       "display_name": "校验显式有序操作",
-      "description": "保留工作台已有高级有序操作模式，只接受原允许的变量Insert/Edit/Delete，不自动替用户解除保护；不重排用户给出的操作。",
+      "description": "处理工作台的高级有序操作模式，校验允许的变量插入、编辑和删除操作，并保持用户给出的顺序。不会自行重排或解除保护；格式无效时带出准备失败，合格列表随后仍进入统一保护检查和 API 提交，而不是从工作台直接执行。",
       "category": "工作台提交",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -18049,7 +18049,7 @@
     },
     "era.workbench.plan_functions": {
       "display_name": "计算函数库真实增删改",
-      "description": "实际调用函数库差异规划；保留Insert/Edit/Delete顺序、函数名和原定义。引用校验复用表达式层。无宿主操作。",
+      "description": "把函数库草稿与当前函数定义比较，生成按顺序执行的新增、编辑或删除操作，保留函数名、原定义及变化类别，供保护检查和提交使用。函数引用等约束沿共用表达式处理链校验；这里不写状态文件，也不直接运行作者函数。",
       "category": "工作台提交",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -18099,7 +18099,7 @@
     },
     "era.workbench.plan_variables": {
       "display_name": "计算变量草稿真实增删改",
-      "description": "实际调用base_lib中的变量差异、Insert/Delete/Expression规划；对象类型替换及$template生成真实有序Delete/Insert，返回路径数组和每项变更kind。无宿主操作。",
+      "description": "把变量工作台中用户想要的最终值与当前基准比较，转换为实际有顺序的插入、删除或表达式操作，并记录每项变化的路径和类别。替换对象类型或模板时生成所需删除再插入动作，不把用户意图简单写成整库覆盖。只生成计划，仍需保护检查及公共提交流程确认。",
       "category": "工作台提交",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -18149,7 +18149,7 @@
     },
     "era.workbench.publish_preparation": {
       "display_name": "接回现有Commit准入或失败分支",
-      "description": "拆出ready/failed路由、带有有序operations的原inspected上下文及原era.api.commit.failure_context，使后续继续使用现有Scope/窗口校验或Commit失败构造。",
+      "description": "将工作台准备结果拆为分支标签、带有有序操作的提交上下文及失败上下文。准备成功后仍要经过公共 API 的作用域与窗口校验，准备失败则进入统一失败回执。这个节点只连接草稿准备和原提交事务，不把“已经生成操作”当成提交成功。",
       "category": "工作台提交",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -18215,7 +18215,7 @@
     },
     "era.workbench.read_baseline": {
       "display_name": "读取当前Sidecar基准",
-      "description": "仅使用已有era.tavern.sidecar.read_current/read_record读取身份、绑定指针及Sidecar V3记录；调用已有纯检查核对owner/就绪状态，不迁移、不创建绑定、不写文件。读取失败形成失败事实。",
+      "description": "为工作台草稿读取当前聊天身份、状态文件绑定和变量或函数的基准，优先采用可用的当前工作状态，检查其归属及就绪情况。读取结果是后续比较草稿是否过期的依据；这里不迁移数据、不新建绑定，也不保存用户编辑，读取失败会形成准备失败。",
       "category": "工作台提交",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -18265,7 +18265,7 @@
     },
     "era.workbench.reject_draft": {
       "display_name": "返回基准或输入失败",
-      "description": "保留校验阶段的真实错误，构造failed准备结果；不产生操作，不向消息和Sidecar写入。",
+      "description": "把草稿校验阶段已经发现的错误转成提交准备失败，保留具体原因和原调用上下文。不会生成任何变量操作，也不向消息或状态文件写入；后续沿公共 API 的失败回执分支返回，让用户知道编辑为什么没有被应用。",
       "category": "工作台提交",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -18315,7 +18315,7 @@
     },
     "era.workbench.route_request_kind": {
       "display_name": "区分普通Commit与工作台编辑意图",
-      "description": "公共ERA.commit保持原operations请求；仅内部工作台command=workbench-commit进入草稿准备。沿现有era.facade.commit事件/FIFO传递，事件目录与公共API不新增命令。",
+      "description": "判断当前提交是否来自变量工作台：普通 ERA.commit 已经带有操作列表，直接继续准入校验；工作台提交带的是用户编辑草稿，需要先转换为操作。两种请求共用同一个提交入口和后续安全检查，避免工作台自行绕过作用域或消息目标校验。",
       "category": "工作台提交",
       "version": "1.0.0",
       "flow_kind": "decision",
@@ -18373,7 +18373,7 @@
     },
     "era.workbench.validate_draft_basis": {
       "display_name": "校验编辑基准并区分变量和函数",
-      "description": "检查内部工作台请求、窗口/Sidecar身份、目标原值与原保护事实；切聊或目标/保护改变明确失败。区分变量草稿、函数库草稿、显式有序操作。结构化上下文保留当前基准与用户选择。",
+      "description": "检查工作台草稿属于当前聊天和状态文件，并核对用户打开编辑器时的目标原值是否仍然相同。新增目标须仍不存在，单项编辑只核对该目标，整库编辑核对全库；无关兄弟项更新不自动使单项草稿失效。还检查编辑模式和必需字段，失败则要求重新加载，成功后分到变量、函数或有序操作准备。",
       "category": "工作台提交",
       "version": "1.0.0",
       "flow_kind": "decision",

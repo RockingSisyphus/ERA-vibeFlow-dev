@@ -1,7 +1,7 @@
 {
   "type_key": "era.task.update_mk",
   "display_name": "ERA 消息密钥任务",
-  "description": "消费统一任务上下文准备已经确认的 MK 与占位符结果，不再重复读取或提交消息，仅构造不推进连续状态的任务结算。",
+  "description": "为 ERA 消息标识任务返回结算。消息标识 MK 用于将消息与历史状态对应；它及占位符的读取、准备和必要写入已在统一派发中完成，本节点集仅核对并返回实际结果。不会再次改消息或重算变量，也不推进连续同步进度。",
   "requires": [
     {
       "type": "era.step.request.routed",
@@ -32,25 +32,25 @@
         "id": "start",
         "type_used": "era.service.terminal",
         "display_name": "MK 结算启动",
-        "description": "启动一次已统一准备的消息密钥任务结算。"
+        "description": "这是“ERA 消息密钥任务”的入口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
       },
       {
         "id": "consume_prepared_mk_context",
         "type_used": "era.mk.consume_prepared",
         "display_name": "确认统一 MK 准备结果",
-        "description": "检查派发准备阶段的消息密钥、占位符和写入确认结果；本节点不再读取或写入酒馆消息。"
+        "description": "检查统一派发阶段已经提供的 ERA 消息标识（MK，用于把消息与历史状态对应起来）、占位符及写入确认结果，整理为标识任务的结算输入。正文和元数据已由派发准备处理，因此这里不会再次读取或修改消息；准备失败如实保留。"
       },
       {
         "id": "build_mk_result",
         "type_used": "era.mk.build_result",
         "display_name": "构造 MK 任务结果",
-        "description": "对全部 step.sources 恰好结算一次，不额外发布业务事件，不推进连续 MK 状态，并保留普通失败或 fatal 身份。"
+        "description": "依据消息标识准备和提交的真实结果，向任务对应的每个原事件生成一次回执，保留无变更、失败或致命原因。这个节点只完成消息标识任务的结算，不再次写正文，也不把标识更新冒充变量同步或推进连续计算进度。"
       },
       {
         "id": "end",
         "type_used": "era.service.terminal",
         "display_name": "MK 结算结束",
-        "description": "结束一次消息密钥任务结算。"
+        "description": "这是“ERA 消息密钥任务”的出口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
       }
     ],
     "edges": [

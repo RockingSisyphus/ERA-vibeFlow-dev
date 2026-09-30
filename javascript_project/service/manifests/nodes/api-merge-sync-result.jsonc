@@ -3,7 +3,7 @@
   "type_key": "era.api.merge_sync_result",
   "display_name": "合并公共对象同步结果",
   "category": "公共 Facade",
-  "description": "要求成功或失败分支恰好产生一个结果。",
+  "description": "把公共同步的“已经运行共享同步”与“输入校验失败”两个互斥分支合为唯一结果，核对恰有一份回执。不重新执行同步或改写成功失败状态；输出供外层公共 API 任务统一结算。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

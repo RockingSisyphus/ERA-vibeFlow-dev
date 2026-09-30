@@ -2,7 +2,7 @@
   "kind": "node",
   "type_key": "era.command_compaction.advance_segment",
   "display_name": "继承状态并推进分段",
-  "description": "沿用原段重放后的变量、函数和随机游标，累计输出文本、诊断、保留理由及计数，再推进到下一段。",
+  "description": "把当前段结果接回整层：只有该段含命令、允许重写、内容确实发生变化且没有诊断时才采用候选，否则保留原段。继承原语义得到的变量、函数和随机偏移，累计文本、理由和统计，再推进游标及结束标志；后段因此从真实前段结果开始计算。",
   "category": "ERA 命令压缩",
   "version": "1.1.0",
   "flow_kind": "process",

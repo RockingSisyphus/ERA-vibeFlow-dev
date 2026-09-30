@@ -20,7 +20,7 @@
   ],
   "capabilities": [],
   "display_name": "形成会话转换",
-  "description": "把阶段结果、原步骤和批次边界组合为原 AgentTransition；将最终楼层候选交给已有唯一同步链。",
+  "description": "把候选最终结果转换成会话下一步：需要保存或沿普通消息同步完成的结果，携带对应楼层候选；只需阶段交接的结果直接结束当前片段。同时接续候选实际应用后的作用域窗口，不重复执行本轮 API。若候选无法对应原楼层，返回失败而不是写到新的消息。",
   "flow_kind": "process",
   "contract": {
     "requires": [

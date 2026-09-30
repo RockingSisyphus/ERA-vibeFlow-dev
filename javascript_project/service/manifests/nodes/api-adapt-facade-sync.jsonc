@@ -3,7 +3,7 @@
   "type_key": "era.api.adapt_facade_sync",
   "display_name": "构造 ERA.sync 回执",
   "category": "公共 Facade",
-  "description": "把共享同步任务的结果转换为本次 ERA.sync 调用的回执。",
+  "description": "把共享同步任务的真实结果转换成 ERA.sync 调用方使用的回执，保留成功、无变更、失败以及诊断，不再次计算历史或保存。它使外部 API 能获得与普通聊天同步相同的业务结论，而不是另实现一套同步规则。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

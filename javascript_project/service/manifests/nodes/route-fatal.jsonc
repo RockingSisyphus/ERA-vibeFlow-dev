@@ -3,7 +3,7 @@
   "type_key": "era.service.route_fatal",
   "display_name": "路由致命结果",
   "category": "批次发布",
-  "description": "根据已发送批次帧的致命标记选择继续服务或终止。",
+  "description": "读取已经随批次结果确定的致命标记：可继续运行的结果进入下一次事件收集，无法确认写入等致命情况进入抛错分支。分支发生在结果帧已交给宿主之后，因此调用方先得知本批次失败；这里不把普通业务失败升级为致命错误。",
   "version": "1.0.0",
   "flow_kind": "decision",
   "contract": {

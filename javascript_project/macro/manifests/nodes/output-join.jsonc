@@ -3,7 +3,7 @@
   "type_key": "era.macro.output_join",
   "display_name": "选择宏结果",
   "category": "宏处理",
-  "description": "接收互斥分支中唯一激活的候选并输出公开替换结果。",
+  "description": "接收已激活分支的唯一文本候选：可能是无需替换时的准备后文本，也可能是完成宏展开后的文本。直接返回稳定的公开结果，不选择另一份候选或再计算一次。该汇合让调用方无需知道走了哪个分支，也不引入宿主读写。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

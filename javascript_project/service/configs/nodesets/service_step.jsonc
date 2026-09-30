@@ -12,7 +12,7 @@
   ],
   "type_key": "era.service.step",
   "display_name": "ERA 简单任务步骤",
-  "description": "仅执行已完成统一准备的普通同步、MK 更新、Agent 设置或 ignore；复杂任务由服务迭代直接调用。",
+  "description": "执行已经准备好上下文的简单任务：历史同步走共用同步链，消息标识任务只结算已准备结果，Agent 设置处理配置与连接，忽略任务解释不执行的原因。初始化、公共 API 和生成会话由外层单独调用。各分支交还唯一任务结果，索引推进和批次发布仍由统一结算负责。",
   "requires": [
     {
       "type": "era.step.request.routed",
@@ -65,43 +65,43 @@
         "id": "start",
         "type_used": "era.service.terminal",
         "display_name": "步骤启动",
-        "description": "接收一个已经完成上下文准备的简单任务。"
+        "description": "这是“ERA 简单任务步骤”的入口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
       },
       {
         "id": "route_simple_task",
         "type_used": "era.tasks.dispatch",
         "display_name": "选择已准备的简单任务",
-        "description": "只接收已准备好的普通同步、消息密钥、Agent 设置或忽略步骤，并将步骤与批次状态交给对应分支。"
+        "description": "只接受已准备好的普通同步、消息标识、Agent 设置或忽略任务，把任务与批次状态交给相应分支。复杂初始化、公共 API 和生成会话不经这里。分支标签不属于这四类时会报错，而不是猜测任务用途；本节点自身不进行变量计算或宿主写入。"
       },
       {
         "id": "task_sync",
         "type_used": "era.task.sync",
         "display_name": "执行同步任务",
-        "description": "执行共享同步事务，覆盖普通协调、完整重算、最新修复、自动修复、定向回滚和 API 因果写入。"
+        "description": "把当前聊天的真实消息历史与 ERA 变量、函数和日志保持一致：读取并校验状态文件绑定，优先沿用有效未保存的内存状态，规划回退及处理范围，逐块应用指令和函数，必要时压缩封存文本，最后批量保存消息及状态文件。保存后再刷新显示和返回结果；切换聊天或候选回复不会使旧任务覆盖新目标。"
       },
       {
         "id": "task_update_mk",
         "type_used": "era.task.update_mk",
         "display_name": "更新消息密钥任务",
-        "description": "接收派发准备阶段已确认的消息密钥和占位符写入结果，只构造任务回执，不重复写消息。"
+        "description": "为 ERA 消息标识任务返回结算。消息标识 MK 用于将消息与历史状态对应；它及占位符的读取、准备和必要写入已在统一派发中完成，本节点集仅核对并返回实际结果。不会再次改消息或重算变量，也不推进连续同步进度。"
       },
       {
         "id": "task_agent_settings",
         "type_used": "era.agent.settings",
         "display_name": "执行 Agent 设置命令",
-        "description": "配置、预设、连接与模型列表在同一 Service FIFO 内独立处理，不进入生成阶段。"
+        "description": "在聊天和 API 共用的有序 Service 队列中处理 Agent 配置、预设、连接和模型列表，读取必要事实后执行相应设置命令并返回来源回执。它不进入规划、正文或结算的模型生成状态机，也不改聊天变量，避免设置任务误占用生成阶段的上下文。"
       },
       {
         "id": "task_ignore",
         "type_used": "era.task.ignore",
         "display_name": "结算忽略步骤",
-        "description": "使用规划器保留的原始 ignore 原因逐一结算来源，不伪装成同步或其他领域任务。"
+        "description": "处理规划器明确标为忽略的步骤，向其包含的每个原始事件返回被忽略的原因。不会假装执行过同步、生成或保存；任务类型不正确时会报错。这样无需业务操作的事件仍有可追踪的结果，不会使等待回执的调用方悬空。"
       },
       {
         "id": "end",
         "type_used": "era.service.terminal",
         "display_name": "步骤结束",
-        "description": "交还唯一任务结果，由外层统一合并并推进批次索引。"
+        "description": "这是“ERA 简单任务步骤”的出口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
       }
     ],
     "edges": [

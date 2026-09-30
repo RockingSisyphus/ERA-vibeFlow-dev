@@ -3,7 +3,7 @@
   "type_key": "era.workbench.plan_functions",
   "display_name": "计算函数库真实增删改",
   "category": "工作台提交",
-  "description": "实际调用函数库差异规划；保留Insert/Edit/Delete顺序、函数名和原定义。引用校验复用表达式层。无宿主操作。",
+  "description": "把函数库草稿与当前函数定义比较，生成按顺序执行的新增、编辑或删除操作，保留函数名、原定义及变化类别，供保护检查和提交使用。函数引用等约束沿共用表达式处理链校验；这里不写状态文件，也不直接运行作者函数。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

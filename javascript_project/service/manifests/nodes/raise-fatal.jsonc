@@ -3,7 +3,7 @@
   "type_key": "era.service.raise_fatal",
   "display_name": "抛出致命服务错误",
   "category": "批次发布",
-  "description": "仅在 batch-result 已提交后抛出稳定致命错误，阻止服务继续接受事件。",
+  "description": "在宿主已经收到本批次结果帧后抛出服务致命错误，结束正常循环。用于写入结果未知或无法安全继续的情形，防止把不确定状态带入下一批任务。它不再发送第二份结算，也不自行回滚已确认的宿主写入。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

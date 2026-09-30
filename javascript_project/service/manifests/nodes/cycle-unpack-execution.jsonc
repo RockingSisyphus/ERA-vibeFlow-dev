@@ -3,7 +3,7 @@
   "type_key": "era.service.cycle.unpack_execution",
   "display_name": "解包批次执行状态",
   "category": "服务阶段循环",
-  "description": "解包批次执行状态；保持原 Service 领域状态及执行顺序。",
+  "description": "确认循环处于执行阶段，再取出任务列表、当前步骤索引、累计结果和服务进度，交给单步执行流程。它不移动索引，也不修改计划；阶段标签或载体损坏时会报错，避免使用错误批次。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

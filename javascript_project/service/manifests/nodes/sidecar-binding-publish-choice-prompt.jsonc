@@ -3,7 +3,7 @@
   "type_key": "era.sidecar_binding.publish_choice_prompt",
   "display_name": "发布 Sidecar 选择弹窗",
   "category": "Sidecar 绑定",
-  "description": "只显示 workflow 已作出的阻塞结论。",
+  "description": "仅在状态绑定处于等待选择时，要求宿主显示具体问题：文件属于其他聊天则提示冲突，文件或绑定无效则提示修复，并附当前身份、文件归属及版本供用户判断。用户已有有效选择时不会再次弹同一提示。这个节点只显示问题，不替用户选择，也不改变变量。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

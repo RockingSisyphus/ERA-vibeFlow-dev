@@ -2,7 +2,7 @@
   "type_key": "era.command_compaction.segment_step",
   "status": "implemented",
   "display_name": "顺序压缩一个真实文本段",
-  "description": "处理一个正文段或同作用域事务组：重放原文、分析依赖、生成并验证候选，再把结束状态传给下一段。",
+  "description": "处理一个正文段或相邻同作用域事务组，以前段结束后的变量、函数和随机进度为起点。先重放原操作取得基准，再分析依赖、生成安全候选并从同一起点验证，最后按允许重写条件采用候选或保留原文，推进分段游标。不会跨作用域乱合并，也不把计算状态写入酒馆。",
   "requires": [
     {
       "type": "era.command_compaction.segment.state",
@@ -38,49 +38,49 @@
         "id": "start",
         "type_used": "era.command_compaction.terminal",
         "display_name": "分段开始",
-        "description": "分段开始，不执行算法或宿主操作。"
+        "description": "这是“顺序压缩一个真实文本段”的入口标记。本工作流的结构起点或终点标记，执行时返回空结果，不计算表达式、不替换文本，也不读写酒馆。它只明确流程的入口或出口，业务输入与结果通过已声明的数据通道传递；最终结果由实际处理节点产生。"
       },
       {
         "id": "select_segment",
         "type_used": "era.command_compaction.select_segment",
         "display_name": "准备当前段与起点",
-        "description": "按当前游标选取正文段或同作用域事务组，带入前段的变量、函数和随机游标。没有剩余段时保留状态并结束。"
+        "description": "按游标取出当前正文段或同作用域事务组，将前段结束后的变量、函数和随机偏移作为它的执行起点，保留整份分段状态供结果合并。无事务包装的原请求保持其原快照默认规则。这里准备当前段输入，不跳段、不改原文，也不抽取随机数。"
       },
       {
         "id": "execute",
         "type_used": "era.command_compaction.execute_original_semantics",
         "display_name": "重放当前段原语义",
-        "description": "复用六类命令解释，记录该段原结果和随机游标；携带作用域与是否允许重写的信息。"
+        "description": "用真实 ERA 命令规则重放当前段的原始操作，得到原本应产生的变量、函数、随机进度和诊断，并保留命令位置等轨迹。这份结果是后续压缩候选必须匹配的基准，不是已经写入酒馆的状态；整个工作流只在请求内计算。"
       },
       {
         "id": "analyze_dependencies",
         "type_used": "era.command_compaction.analyze_dependencies",
         "display_name": "分析依赖与局部屏障",
-        "description": "分析变量与函数依赖，追踪随机调用及其间接影响，划定可安全重写的区域，供候选生成节点使用。"
+        "description": "读取原段执行轨迹，分析哪些变量或函数依赖其他值，哪些路径受到直接或间接随机调用影响，以及哪里是不能跨越的重写边界。输出依赖事实供候选生成使用，不改正文、不再执行一遍操作；目的是让文本简化有具体语义依据。"
       },
       {
         "id": "rewrite",
         "type_used": "era.command_compaction.rewrite_safe_regions",
         "display_name": "生成段候选",
-        "description": "只消费依赖分析结果形成替换，保留单事务不合并及不可重写段原文策略。"
+        "description": "依据变量、函数和随机依赖分析，为能证明安全的区域生成较短的替换文本，保留原命令与位置作为验证依据。这里只提出候选，没有候选或不安全部分继续保留原文；单事务及不同作用域不能被随意合并，分段合并时还会再次核对允许重写的条件。"
       },
       {
         "id": "verify",
         "type_used": "era.command_compaction.verify_replay_equivalence",
         "display_name": "确认段候选",
-        "description": "按原起点复放候选；保持原结果、诊断和随机游标语义，输出已确认文本与保留原文理由。"
+        "description": "从与原段相同的起点重放候选，确认最终变量、函数及相关诊断和随机语义仍等价。标签 JSON 无效返回无效，没有安全替换或候选验证失败返回原文及原因；通过后才输出已确认候选。计算结果不会在这里保存，稍后还要按分段作用域回填。"
       },
       {
         "id": "advance_segment",
         "type_used": "era.command_compaction.advance_segment",
         "display_name": "继承状态并推进分段",
-        "description": "沿用原段重放后的变量、函数和随机游标，累计输出文本、诊断、保留理由及计数，再推进到下一段。"
+        "description": "把当前段结果接回整层：只有该段含命令、允许重写、内容确实发生变化且没有诊断时才采用候选，否则保留原段。继承原语义得到的变量、函数和随机偏移，累计文本、理由和统计，再推进游标及结束标志；后段因此从真实前段结果开始计算。"
       },
       {
         "id": "end",
         "type_used": "era.command_compaction.terminal",
         "display_name": "分段结束",
-        "description": "分段结束，不执行算法或宿主操作。"
+        "description": "这是“顺序压缩一个真实文本段”的出口标记。本工作流的结构起点或终点标记，执行时返回空结果，不计算表达式、不替换文本，也不读写酒馆。它只明确流程的入口或出口，业务输入与结果通过已声明的数据通道传递；最终结果由实际处理节点产生。"
       }
     ],
     "edges": [

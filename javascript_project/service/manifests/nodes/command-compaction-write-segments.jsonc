@@ -3,7 +3,7 @@
   "type_key": "era.command_compaction.write_segments",
   "display_name": "回填单一 Scope 事务",
   "category": "命令压缩集成",
-  "description": "仅回填已通过生产重放的文本、消息更新及变量函数日志。",
+  "description": "把经过 Service 重放确认的候选写回工作项中的对应文本段，保留段顺序和作用域归属，未被接受的段继续沿用原文。这里的“写回”只是更新内存中的待保存消息，并不直接触发聊天或状态文件保存。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

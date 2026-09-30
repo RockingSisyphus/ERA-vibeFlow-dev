@@ -3,7 +3,7 @@
   "type_key": "era.mk.consume_prepared",
   "display_name": "确认统一 MK 准备结果",
   "category": "消息密钥",
-  "description": "检查已准备步骤中的消息密钥和写入确认结果，不再读取或写入酒馆消息。",
+  "description": "检查统一派发阶段已经提供的 ERA 消息标识（MK，用于把消息与历史状态对应起来）、占位符及写入确认结果，整理为标识任务的结算输入。正文和元数据已由派发准备处理，因此这里不会再次读取或修改消息；准备失败如实保留。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

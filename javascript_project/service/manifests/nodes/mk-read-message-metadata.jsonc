@@ -3,7 +3,7 @@
   "type_key": "era.tavern.mk_read",
   "display_name": "读取 Tavern 消息与 ERA 元数据",
   "category": "消息密钥宿主边界",
-  "description": "只调用 messages.read_context 与 variables.read，读取当前激活消息文本、完整 ERAMetaData 与状态占位符设置；读取失败被转换为无副作用任务失败上下文。",
+  "description": "通过宿主读取消息标识任务所需的目标消息正文、ERA 元数据和占位符设置，整理为候选规划的输入。读取失败保留具体诊断，不用空正文假装读取成功；这里不生成标识，也不写消息，后续节点才判断是否需要变更。",
   "version": "1.0.0",
   "flow_kind": "data_store",
   "contract": {

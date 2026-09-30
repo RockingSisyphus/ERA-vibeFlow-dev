@@ -3,7 +3,7 @@
   "type_key": "era.agent.execute_session_v2",
   "display_name": "执行生成阶段",
   "category": "故事生成会话",
-  "description": "仅执行选定生成阶段及其已有尝试/重试序列。Capability 调用留在有副作用的 Node；会话绑定事实读取、纯决策与 write_session 连续完成。设置命令从此节点移除。",
+  "description": "根据已确定的生成阶段和请求执行 Agent 会话，包括必要的模型调用，整理其正文及变量、函数和函数调用标签为候选结果。输出尚待应用和验证的候选、阶段状态及诊断；模型给出文本不代表变量已经提交，格式错误或取消会留给阶段执行和候选恢复环节处理。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

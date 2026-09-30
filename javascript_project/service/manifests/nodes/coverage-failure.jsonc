@@ -3,7 +3,7 @@
   "type_key": "era.service.coverage_failure",
   "display_name": "构造覆盖失败结果",
   "category": "批次执行",
-  "description": "将覆盖无效批次的全部来源构造成 typed failed 结算，服务本身继续运行。",
+  "description": "当任务计划的来源覆盖检查不通过时，给本批次每个原始事件生成一条失败结算，保留检查诊断，并把批次标为待结束。不会执行计划中的任何领域任务；其意义是即使规划出错，等待结果的调用方也能收到明确失败。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

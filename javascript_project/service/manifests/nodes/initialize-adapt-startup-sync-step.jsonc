@@ -3,7 +3,7 @@
   "type_key": "era.initialize.adapt_startup_sync_step",
   "display_name": "适配启动同步步骤",
   "category": "初始化事务",
-  "description": "将初始化专用步骤无损转换为共享同步 Nodeset 的 routed step，避免与外层初始化步骤发生类型碰撞。",
+  "description": "把初始化产生的启动同步请求和保留的批次状态交给通用同步流程。请求继续携带原事件来源和消息上下文，不另建初始化专用变量引擎；它只适配输入，后续共享同步负责读取状态、应用历史及保存。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

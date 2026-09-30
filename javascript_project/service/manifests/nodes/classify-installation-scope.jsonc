@@ -3,7 +3,7 @@
   "type_key": "era.installation.scope.classify",
   "display_name": "分类安装作用域",
   "category": "服务生命周期",
-  "description": "纯规则根据唯一的启用脚本归属分类安装位置。",
+  "description": "把当前脚本 ID 与已启用的脚本目录对应起来：只在角色卡中找到就归为角色卡脚本，只在全局或预设中找到就归到相应位置；同一 ID 出现在多个位置则记为位置不明确。读取失败、没有 ID 或没有匹配项记为未知，供启动策略区分“明确不应启动”和“无法判断”。这不是对所有 ERA 实例进行选主。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

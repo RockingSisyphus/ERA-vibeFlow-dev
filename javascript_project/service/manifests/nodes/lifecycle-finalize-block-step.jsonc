@@ -3,7 +3,7 @@
   "type_key": "era.lifecycle.finalize_block_step",
   "display_name": "冻结本批消息与Sidecar保存候选",
   "category": "内存生命周期",
-  "description": "清理已完成消息临时进度；固定本次保存边界，done及对应操作记录在同一消息更新中保存。错误只保存仍有效的成功前缀；后到请求属于后续批次。",
+  "description": "逐块处理结束后，一次性固定本次待保存的消息修改和变量状态，使完成标记与操作记录在同一次消息更新中保存。若中途失败，只保留仍可确认的成功前缀，失败本身继续带到结算；无需提交则输出无写入结果。这里构造并校验保存请求，不执行磁盘写入。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

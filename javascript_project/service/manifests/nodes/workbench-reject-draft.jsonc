@@ -3,7 +3,7 @@
   "type_key": "era.workbench.reject_draft",
   "display_name": "返回基准或输入失败",
   "category": "工作台提交",
-  "description": "保留校验阶段的真实错误，构造failed准备结果；不产生操作，不向消息和Sidecar写入。",
+  "description": "把草稿校验阶段已经发现的错误转成提交准备失败，保留具体原因和原调用上下文。不会生成任何变量操作，也不向消息或状态文件写入；后续沿公共 API 的失败回执分支返回，让用户知道编辑为什么没有被应用。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

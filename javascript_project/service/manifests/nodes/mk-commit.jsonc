@@ -3,7 +3,7 @@
   "type_key": "era.tavern.mk_commit",
   "display_name": "按逻辑边界提交消息密钥",
   "category": "消息密钥宿主边界",
-  "description": "严格先确认消息文本写入及受影响消息刷新，再提交并回读 ERAMetaData；消息失败不写变量，消息已写后的变量失败或未知结果进入 fatal。",
+  "description": "按消息标识提交请求执行宿主写入，确认正文和相关元数据的实际结果，返回已提交、失败或无法安全继续的结论。正文与元数据的关系必须一致，部分写入不能当成完整成功；这里处理的是标识准备，不重新执行变量指令。",
   "version": "1.0.0",
   "flow_kind": "data_store",
   "contract": {

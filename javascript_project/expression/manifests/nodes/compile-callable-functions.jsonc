@@ -3,7 +3,7 @@
   "type_key": "era.expression.compile_callable_functions",
   "display_name": "编译可调用函数库",
   "category": "表达式工作流",
-  "description": "冻结无环函数 AST 与形参表，运行时不做字符串替换。",
+  "description": "将解析好的函数体语法树、形参表和所有校验诊断组织成运行时可调用的函数库，标明是否有效。求值时按明确调用帧绑定参数，不通过字符串替换拼接函数体；存在格式、纯度或递归问题时不把库当作可执行。这里只准备调用结构，不调用作者函数或修改变量。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

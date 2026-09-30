@@ -3,7 +3,7 @@
   "type_key": "era.mk.derive",
   "display_name": "推导消息密钥提交候选",
   "category": "消息密钥纯计算",
-  "description": "仅扫描当前激活文本，使用主事件 occurredAt 与 eventId/sequence 的稳定 base36 token 生成 MK，并保真构造 SelectedMks 更新。",
+  "description": "根据目标消息原文、现有 ERA 元数据及占位符设置，生成或沿用消息标识 MK，并规划正文与标识列表需要怎样更新。作者正文和未知元数据保留，用户消息不补状态栏占位符。输出候选及是否需写入；无法定位目标或输入有问题时输出失败，不在此改动酒馆。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

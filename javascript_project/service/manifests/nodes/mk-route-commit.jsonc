@@ -3,7 +3,7 @@
   "type_key": "era.mk.route_commit",
   "display_name": "路由消息密钥提交",
   "category": "消息密钥路由",
-  "description": "仅当消息文本或 SelectedMks 需要写入时进入提交分支；读取或推导失败留在无宿主写入分支。",
+  "description": "读取消息标识候选，只有候选有效且正文或元数据确实需要更新时才走提交分支；否则走无变更结算。候选本身原样携带，节点不重复生成标识或判断消息内容，避免同一个标识计划被独立计算两次。",
   "version": "1.0.0",
   "flow_kind": "decision",
   "contract": {

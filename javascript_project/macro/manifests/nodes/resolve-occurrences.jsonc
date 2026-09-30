@@ -3,7 +3,7 @@
   "type_key": "era.macro.resolve_occurrences",
   "display_name": "解析快照路径",
   "category": "宏处理",
-  "description": "按宏类型选择快照并使用 Lodash 路径语义解析每个值。",
+  "description": "用本次选定的变量快照解析各个宏的路径，支持读取全部数据及含元数据视图。延迟标记先对解码文本中的普通宏作相同解析。状态快照缺失或编码无效时保留原文；快照存在但指定路径没有值时标记为缺项，后续用空文本替换。这里输出匹配值、缺项或保留决定，不重新读取酒馆，也不改变变量。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

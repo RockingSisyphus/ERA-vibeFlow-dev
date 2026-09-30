@@ -3,7 +3,7 @@
   "type_key": "era.api.plan_facade_sync",
   "display_name": "校验并构造同步步骤",
   "category": "公共 Facade",
-  "description": "适配 auto、latest、full 与 rollbackTo。",
+  "description": "校验公共 ERA.sync 请求的模式和目标，把有效请求转换为共享同步任务，附带原始调用来源和批次状态。请求无效则输出失败分支，不运行历史重算；有效也只表示计划可执行，实际回退、指令应用和保存由通用同步工作流完成。",
   "version": "1.0.0",
   "flow_kind": "decision",
   "contract": {

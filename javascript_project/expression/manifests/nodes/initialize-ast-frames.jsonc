@@ -3,7 +3,7 @@
   "type_key": "era.expression.initialize_ast_frames",
   "display_name": "初始化 AST 调用帧栈",
   "category": "表达式循环",
-  "description": "为一条操作建立显式后序求值栈。",
+  "description": "为当前表达式建立显式求值帧，记录接下来要计算的子表达式、参数和函数调用。函数嵌套通过帧栈推进，不依赖 JavaScript 的递归调用栈；函数库无效或没有可用语法树时采用内部安全占位，原错误仍保留到结果判断，不因占位而把操作判成功。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

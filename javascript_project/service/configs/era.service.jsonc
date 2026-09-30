@@ -48,55 +48,55 @@
         "id": "start",
         "type_used": "era.service.terminal",
         "display_name": "ERA 服务启动",
-        "description": "启动 ERA 异步服务工作流。"
+        "description": "这是“era.service”的入口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
       },
       {
         "id": "inspect_current_script_scope",
         "type_used": "era.installation.scope.inspect",
         "display_name": "读取当前脚本与脚本树",
-        "description": "经既有 service_host.ts 的无监听器启动期能力读取 getScriptId 与 global、preset、character 三类脚本树；只采集启用层级和脚本 ID。"
+        "description": "读取酒馆助手提供的当前脚本 ID，以及角色卡、全局和预设三个位置中已启用的脚本目录，得到当前脚本出现在哪些位置的事实。这里仅收集信息，不注册聊天监听器，也不自行决定是否启动；若宿主接口不可用，后续节点会据此选择兼容策略。"
       },
       {
         "id": "classify_installation_scope",
         "type_used": "era.installation.scope.classify",
         "display_name": "分类安装作用域",
-        "description": "根据脚本所在的启用目录和当前脚本 ID，判断它属于角色卡、全局、预设，或无法明确归类。"
+        "description": "把当前脚本 ID 与已启用的脚本目录对应起来：只在角色卡中找到就归为角色卡脚本，只在全局或预设中找到就归到相应位置；同一 ID 出现在多个位置则记为位置不明确。读取失败、没有 ID 或没有匹配项记为未知，供启动策略区分“明确不应启动”和“无法判断”。这不是对所有 ERA 实例进行选主。"
       },
       {
         "id": "decide_startup_policy",
         "type_used": "era.installation.scope.decide",
         "display_name": "决定启动策略",
-        "description": "character 允许完整启动；global、preset 与 ambiguous 要求 dormant；unknown 允许启动并要求一次兼容警告。"
+        "description": "根据脚本的安装位置决定本次 ERA 是否进入完整服务：角色卡内部的脚本继续启动；明确位于全局、预设，或同一脚本 ID 同时属于多个位置的实例只显示提示后结束，避免这些位置重复接管聊天。若宿主无法提供位置，则允许兼容启动并要求警告。这里输出策略，不负责停止其他实例，也不修改聊天。"
       },
       {
         "id": "activate_tavern_ingress",
         "type_used": "era.installation.scope.activate_ingress",
         "display_name": "登记单层显示窗口与角色卡设置",
-        "description": "复用现有 Host 启停，登记角色卡单层开关和单一显示窗口控制器。优先监听真实显示事件，在 Helper 审计前移除非目标 DOM，保留最新 AI 原 iframe；用户发言不重建保留实例。切聊天重建显示关系，关闭恢复普通历史入口与原范围，观察器仅兜底非标准 DOM 变化。角色卡保存仍走 Service，不新增业务调度器。详见 reports/era-single-floor-change-list.md。"
+        "description": "把已允许启动的决定交给浏览器宿主，启用 ERA 接收聊天事件的入口及相关显示控制。宿主负责登记角色卡单层显示开关，在开启时只保留目标 AI 消息的显示窗口，切换聊天时重新建立显示关系。这个节点只是启用宿主设施；变量计算、回滚和保存仍由后续 Service 任务处理。"
       },
       {
         "id": "publish_dormant_startup",
         "type_used": "era.installation.scope.publish_dormant",
         "display_name": "发布休眠安装提示",
-        "description": "仅 dormant 时调用启动期 Host 的机械提示操作，随后结束；不登记事件、不运行 Sidecar、宏或 UI。"
+        "description": "当当前 ERA 被判定为全局、预设或位置不明确的实例时，要求宿主显示未启动的原因，然后沿结束分支退出。这条分支不会接收聊天事件，也不会加载聊天状态文件、处理宏或启动业务 UI，因而不会以这个实例接管聊天变量。"
       },
       {
         "id": "initialize_state",
         "type_used": "era.service.initialize_state",
         "display_name": "初始化服务与 Scope 窗口状态",
-        "description": "创建有界事件、定时器、迭代与连续 MK 状态，并增加仅存在于当前页面实例的单调窗口 token 和未解析准入缓存；stop、pagehide、reload 或重新初始化随服务状态一并清除，不写消息或 Sidecar。"
+        "description": "为刚启动的 ERA 创建本页面实例的运行状态，包括待收集事件、定时器信息、事件序号、批次计数和消息处理进度。消息作用域的窗口和准入字段初始为空，后续处理再建立有效窗口；重载或停止时随实例销毁；它们用于识别过期请求，不作为聊天变量写入消息或状态文件。"
       },
       {
         "id": "begin_cycle",
         "type_used": "era.service.cycle.begin",
         "display_name": "进入收集阶段",
-        "description": "只包装现有服务状态为内部 collect 阶段；保留原初始化状态所有字段，不接收事件、不提交宿主副作用。"
+        "description": "把初始服务状态标记为“收集事件”阶段，交给长期运行的服务循环。此时尚无批次需要执行，因此第一轮应等待聊天或 API 事件；本节点只增加阶段标签，保留原状态，不读取酒馆或修改变量。"
       },
       {
         "id": "service_loop",
         "type_used": "vibeflow.loop.while",
         "display_name": "永久服务循环",
-        "description": "携带 collect 或 execute 阶段状态；收集时接收入站事件，执行时每轮处理一个步骤，批次结算后才恢复接收。",
+        "description": "长期运行 ERA 服务，循环携带“收集事件”或“执行批次”状态。收集阶段每轮接收一个事件；执行阶段每轮完成一个任务步骤，全部结算并发布后才恢复收集。该循环没有固定业务轮数上限，由宿主生命周期控制停止；不是同时并行执行多批聊天操作。",
         "requires": [
           {
             "type": "era.service.cycle.state",
@@ -121,7 +121,7 @@
         "id": "end",
         "type_used": "era.service.terminal",
         "display_name": "ERA 服务结束",
-        "description": "表示永久循环将来按受控停止策略退出后到达的终点。"
+        "description": "这是“era.service”的出口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
       }
     ],
     "edges": [

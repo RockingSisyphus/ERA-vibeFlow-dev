@@ -3,7 +3,7 @@
   "type_key": "era.expression.commit_operation_result",
   "display_name": "提交表达式操作结果",
   "category": "表达式循环",
-  "description": "在当前帧成功后更新当前状态、游标和累计结果。",
+  "description": "检查当前表达式结果是否成功且为有限数值，合格时将其写入本次纯计算状态的目标路径，累计随机消耗和结果，再推进操作索引。失败则保留未应用该操作前的变量状态及定位诊断。这里更新的是请求内的计算状态，不是酒馆变量；循环完成后统一返回最终状态。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

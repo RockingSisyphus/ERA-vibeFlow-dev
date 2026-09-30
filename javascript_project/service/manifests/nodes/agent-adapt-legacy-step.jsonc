@@ -3,7 +3,7 @@
   "type_key": "era.agent.adapt_legacy_step",
   "display_name": "恢复原领域任务路由",
   "category": "故事生成会话",
-  "description": "移除 Agent 外层路由并恢复 task.kind，使默认模式与 Agent 后置同步直接调用既有 Nodeset。",
+  "description": "把生成会话需要继续普通处理的结果转换成共享同步或消息标识任务，保持原楼层的 ERA 消息标识和来源。默认生成模式、最终正文及结算结果由同一消息处理链接续，而不是开另一条提交路径；这里只适配步骤，实际计算和保存由共享任务完成。",
   "version": "1.0.0",
   "flow_kind": "decision",
   "contract": {
