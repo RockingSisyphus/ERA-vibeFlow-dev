@@ -11,3 +11,5 @@
 修改前必须读取本 root 的 `vibeflow_project.jsonc` 和 `ARCHITECTURE.jsonc`，再沿 `source` 修改真实
 配置或节点。任何宏语义改变均为公开 ABI 变化：先维护变更清单并得到批准，之后重新生成 Architecture、
 执行 VibeFlow 检查及 app 宏差分/集成测试。
+
+节点、Nodeset、调用与数据流的中文说明遵循根 AGENTS 和[文档维护指南](../../docs/developer/文档维护指南.md#节点与数据流说明规范)。真实业务复测与失败处理遵循[回归测试与问题处理](../../docs/developer/回归测试与问题处理.md)，不以定向通过代替最终全量。

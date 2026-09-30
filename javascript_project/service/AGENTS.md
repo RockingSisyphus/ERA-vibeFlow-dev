@@ -16,3 +16,5 @@ Tavern 边界：Service 只依赖受限 Capability/Host Extension 提供的 JSON
 
 改动 workflow、Config、edge、Node 或 Nodeset 时遵循根目录协同协议：维护变更清单、生成 review，
 获得明确批准后实现；随后更新 Architecture，并运行适用的 validate、quality、build 与执行探针。
+
+节点、Nodeset、调用与数据流的中文说明遵循根 AGENTS 和[文档维护指南](../../docs/developer/文档维护指南.md#节点与数据流说明规范)。真实业务复测与失败处理遵循[回归测试与问题处理](../../docs/developer/回归测试与问题处理.md)，不以定向通过代替最终全量。

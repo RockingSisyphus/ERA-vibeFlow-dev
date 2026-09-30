@@ -1,6 +1,6 @@
 # VibeFlow 开发入口
 
-本项目使用两个 JavaScript AOT root：异步服务位于 `javascript_project/service`，同步宏位于 `javascript_project/macro`。先阅读所选 root 的 `vibeflow_project.jsonc` 和已登记的 `ARCHITECTURE.jsonc`，沿 Architecture 的 source 定位并修改真实 Config、Nodeset、descriptor 或 Node source；生成文档只通过 VibeFlow 命令更新。
+本项目使用四个 JavaScript AOT root：异步服务 `javascript_project/service`、同步宏 `javascript_project/macro`、表达式 `javascript_project/expression` 和命令压缩 `javascript_project/compaction`。先阅读所选 root 的 `vibeflow_project.jsonc` 和已登记的 `ARCHITECTURE.jsonc`，沿 Architecture 的 source 定位并修改真实 Config、Nodeset、descriptor 或 Node source；生成文档只通过 VibeFlow 命令更新。
 
 按任务阅读规范：
 
@@ -41,3 +41,11 @@ SillyTavern、Tavern Helper、浏览器事件、ERA 宏、UI 或真实酒馆联�
 这是用户明确指定的项目规则，覆盖 skill 的默认时长适用范围。跨轮测试按其心跳/目标模式
 规则监控，不以持续手动轮询代替；短测试完成后直接验收，不留无用心跳。
 具体记录、验收和收尾要求见 [开发总览](docs/developer/开发总览.md#测试职责)。
+
+## 回归循环与工作流说明强制规则
+
+真实业务测试、批量修复、定向复跑及断点续跑遵循[回归测试与问题处理](docs/developer/回归测试与问题处理.md)。先全量综合，再全量细则；一批问题跑完后统一归因、修复，先定向复跑失败路径再重跑全量。最终两套证据须对应同一最终 bundle 和测试定义，断点成绩须按原 ID 严格对账并称“分段覆盖通过”。细则额外检出的回退在当前任务修复，同时记录综合覆盖缺口，覆盖改进留主任务完成后处理。
+
+用户明确覆盖长任务 skill 默认异常暂停调度：suite 安全活跃时，个别 Evaluator failed 不停止整套测试，也不暂停唯一心跳；跟踪至自然结束。无活跃作业后才在分析、编码或等待必要决定期间暂停。提示词必须写出测试结束后的独立审计、批量归因、定向复跑、下一套全量测试与收尾，不把失败报告当任务终点。健康后约 60 分钟检查，启动/恢复约 10 分钟，可靠近完成 ETA 可缩短。
+
+所有 root 的 Config 调用、Node descriptor、Nodeset 的 `desc` 以及数据流说明必须遵循[文档维护指南](docs/developer/文档维护指南.md#节点与数据流说明规范)：适合中文的内容用中文，让不了解内部实现和相邻节点的人能单独读懂处理对象、具体动作、重要分支、结果和此处作用。以源码为事实，避免抽象短语、虚构职责和仅 tooltip 可读；正式图只由 VibeFlow 命令生成。
