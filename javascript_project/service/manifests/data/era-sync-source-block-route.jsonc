@@ -1,0 +1,16 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.sync.source.block.route",
+  "representation": "json",
+  "display_name": "当前正文位置种类",
+  "description": "由对应判断节点按当前事实产生，仅选择本次实际控制分支，不改变业务结果。",
+  "schema": {
+    "type": "string",
+    "enum": [
+      "command",
+      "author-call",
+      "skip",
+      "floor-end"
+    ]
+  }
+}

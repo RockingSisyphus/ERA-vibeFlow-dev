@@ -1,0 +1,24 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.command.operation.route",
+  "representation": "json",
+  "display_name": "下一微操作种类",
+  "description": "由对应判断节点按当前事实产生，仅选择本次实际控制分支，不改变业务结果。",
+  "schema": {
+    "type": "string",
+    "enum": [
+      "insert",
+      "edit",
+      "delete",
+      "function-group",
+      "function-insert",
+      "function-edit",
+      "function-delete",
+      "function-validate",
+      "stage-call",
+      "skip",
+      "done",
+      "function-meta-complete"
+    ]
+  }
+}

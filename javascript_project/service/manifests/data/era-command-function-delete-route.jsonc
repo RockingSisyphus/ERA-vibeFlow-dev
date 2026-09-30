@@ -1,0 +1,14 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.command.function.delete.route",
+  "representation": "json",
+  "display_name": "函数删除范围",
+  "description": "整函数动作保留原保护；元数据路径删除复用有序操作栈，不把候选修改提前提交。",
+  "schema": {
+    "type": "string",
+    "enum": [
+      "whole",
+      "meta"
+    ]
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.sync.position.state",
+  "representation": "json",
+  "display_name": "当前消息位置工作状态",
+  "description": "本轮私有载体，包括原块状态、正文范围、楼层起点、作者函数事件和失败；发布前不供外部任务读取。",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "state": {
+        "type": "object"
+      },
+      "position": {
+        "type": [
+          "object",
+          "null"
+        ]
+      },
+      "incomingFunctionEvent": {
+        "type": [
+          "object",
+          "null"
+        ]
+      },
+      "failure": {
+        "type": [
+          "object",
+          "null"
+        ]
+      },
+      "consumedSource": {
+        "type": "boolean"
+      },
+      "diagnosticsBefore": {
+        "type": "integer"
+      }
+    },
+    "required": [
+      "state",
+      "consumedSource",
+      "diagnosticsBefore"
+    ],
+    "additionalProperties": false
+  }
+}

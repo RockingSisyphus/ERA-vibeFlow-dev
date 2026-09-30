@@ -1,30 +1,8 @@
 {
-  "nodeset_imports": [
-    {
-      "path": "service_collect_cycle_phase.jsonc"
-    },
-    {
-      "path": "dispatch_prepare_context.jsonc"
-    },
-    {
-      "path": "task_initialize.jsonc"
-    },
-    {
-      "path": "task_api.jsonc"
-    },
-    {
-      "path": "agent_generation_session.jsonc"
-    },
-    {
-      "path": "service_step.jsonc"
-    },
-    {
-      "path": "service_settle_step_phase.jsonc"
-    }
-  ],
   "type_key": "era.service.iteration",
-  "display_name": "ERA 服务阶段迭代",
-  "description": "长期 Service 循环的一轮，只处理一种阶段：收集时接收一个事件并等待或形成批次；执行时取出一个计划步骤，统一准备其聊天上下文，调用初始化、API、生成会话或简单任务，再合并结果。最后一步完成时当轮发布整批结果，其他情况携带进度继续，不在执行批次中途插入新事件。",
+  "status": "planned",
+  "display_name": "ERA 服务阶段迭代：准备后直属执行",
+  "description": "一轮先收集事件，或完整执行在途批次的一个步骤。执行步骤时先准备资源/API/会话，再在本轮同级调用共享同步、commit 或候选循环，返回后适配原任务结果并统一结算。准备与接续不重新入 FIFO、不跨 Service 迭代保存恢复点；索引只在最终结果合并后推进，完整批次结果先发送再报告致命失败。",
   "requires": [
     {
       "type": "era.service.cycle.state",
@@ -43,13 +21,13 @@
     "entry_mode": "async",
     "inputs": [
       {
-        "key": "cycle_state",
+        "key": "input_0",
         "type": "era.service.cycle.state",
         "display_name": "当前阶段状态",
         "required": true
       }
     ],
-    "max_steps": 24,
+    "max_steps": 35,
     "nodes": [
       {
         "id": "start",
@@ -82,34 +60,368 @@
         "description": "为批次中的一个任务统一准备执行依据：先按索引取出步骤，判断是否需要聊天事实，再读取真实消息、候选回复和身份，规划消息标识及占位符，最后确定任务分支。普通同步只暂存消息变更，纯标识任务才可能提前提交。输出已准备任务供后续直接执行；失败保留到任务回执，避免各任务各自读出不一致的目标。"
       },
       {
+        "id": "route_task_entry",
+        "type_used": "era.task.route_entry",
+        "status": "planned",
+        "flow_kind": "decision",
+        "display_name": "选择任务准备入口或直属同步",
+        "description": "从已准备的原步骤和任务路由区分初始化、公共 API、生成会话、普通同步与简单任务。普通同步直接形成执行请求；复杂任务先完成各自准备后返回，当前步骤索引保持不变，因此所有执行仍属于同一个在途任务。",
+        "requires": [
+          {
+            "type": "era.step.request.routed",
+            "cardinality": "exactly_one",
+            "display_name": "原步骤、事件来源与已准备消息依据"
+          },
+          {
+            "type": "era.batch.execution.state",
+            "cardinality": "exactly_one",
+            "display_name": "当前在途批次，索引尚未推进"
+          },
+          {
+            "type": "era.task.route",
+            "cardinality": "exactly_one",
+            "display_name": "已准备任务路由"
+          }
+        ],
+        "provides": [
+          {
+            "key": "entry_route",
+            "type": "era.task.entry.route",
+            "display_name": "初始化、API、Agent、普通同步或简单任务"
+          },
+          {
+            "key": "routed_step",
+            "type": "era.step.request.routed",
+            "display_name": "原步骤、事件来源与已准备消息依据"
+          },
+          {
+            "key": "batch_state",
+            "type": "era.batch.execution.state",
+            "display_name": "当前在途批次，索引尚未推进"
+          },
+          {
+            "key": "task_route",
+            "type": "era.task.route",
+            "display_name": "简单任务原路由"
+          },
+          {
+            "key": "entry_continuation",
+            "type": "era.task.continuation.context",
+            "display_name": "本次请求所属的原步骤、来源、批次和回执适配依据"
+          }
+        ]
+      },
+      {
         "id": "task_initialize",
         "type_used": "era.task.initialize",
-        "display_name": "执行初始化任务",
-        "description": "读取现有角色和聊天资源，按传统或外置模式规划并应用必要的 ERA 设置、世界书、正则及主开场白，遵守作者资源不覆盖条件。普通资源操作直接返回结果；启动初始化成功或无需变更时，再进入共享历史同步，使变量状态与当前消息一致。整个任务保留原来源，不另建初始化变量引擎。"
+        "display_name": "先处理初始化资源并返回请求",
+        "description": "按原规则读取并补齐角色设置、世界书、正则和开场白，先确认资源操作。启动初始化成功或无需变更时，返回共享历史同步请求；其他情况返回直接结果。请求连同原事件及批次交还 Service 本轮迭代，迭代执行和结算前不移动索引、不接收其他任务。 本次调用：按原顺序处理角色资源；只有应继续启动同步时返回共享请求。准备返回后，本轮直接执行，不重入队、不推进批次。"
       },
       {
         "id": "task_api",
         "type_used": "era.task.api",
-        "display_name": "执行 ERA 公共对象任务",
-        "description": "处理公共 ERA 对象的两种写入类请求：commit 将有序操作应用到当前内存工作状态并返回回执，sync 则把校验后的请求交给共享历史同步和保存。输入不合法时返回明确失败，各分支保持原调用来源。读取和订阅不作为此任务执行；结果统一交还批次结算。"
-      },
-      {
-        "id": "adapt_api_task_result",
-        "type_used": "era.service.adapt_api_task_result",
-        "display_name": "接回公共对象任务结果",
-        "description": "把公共 API 任务专用的结果转交到 Service 的统一任务结果通道。结果中的成功、跳过、失败、来源和通知均保留原值，不重新计算。专用通道用于避免 API 内部同步结果与外层结果混用；真正推进批次索引由后续合并节点完成。"
+        "display_name": "先分类并准备公共 API 请求",
+        "description": "区分 commit 与 sync，保留有序操作、Scope、目标和原调用来源。commit 原样形成执行请求，sync 先做原有模式及目标校验，失败直接形成回执。准备完成后返回同级 Service 调用，不在本节点集中嵌套执行核心；最终 API 回执要等待真实执行结果。 本次调用：区分 commit 与 sync，完成原输入校验，携带 API 回执上下文返回；真实应用由本轮同级核心完成。"
       },
       {
         "id": "task_agent_generation_session",
         "type_used": "era.agent.generation_session",
-        "display_name": "执行三阶段故事生成会话",
-        "description": "在有序 Service 任务中处理 Agent 的规划、正文及结算阶段：识别事件和来源，恢复必要基线，请求并应用模型候选，遇到可纠错失败按整次候选恢复后重试。阶段成功后通过完成标识与页面回调交接，再由新的恢复事件继续；需最终消息同步的结果走共用链，取消或失效来源如实结算，不重复应用候选内 API。"
+        "display_name": "先准备会话与候选恢复起点",
+        "description": "读取生成事件、配置、会话和历史，确定规划、正文或结算阶段，再在请求模型前恢复并安装候选基线。输出候选状态和原任务接续上下文，随后由同一轮 Service 直接运行候选循环；这里没有候选执行或阶段成功通知。 本次调用：在模型调用之前恢复原候选基线，再返回候选状态。本轮随后直接执行候选循环，不把准备当成生成已成功。"
+      },
+      {
+        "id": "prepare_plain_sync",
+        "type_used": "era.task.prepare_plain_sync",
+        "status": "planned",
+        "flow_kind": "process",
+        "display_name": "把普通同步交给同级核心",
+        "description": "为已准备的普通同步步骤生成请求，保留原来源、批次和消息依据。这里仅整理接续上下文；读状态文件、逐块执行和保存仍由共享同步完成。",
+        "requires": [
+          {
+            "type": "era.step.request.routed",
+            "cardinality": "exactly_one",
+            "display_name": "原步骤、事件来源与已准备消息依据"
+          },
+          {
+            "type": "era.batch.execution.state",
+            "cardinality": "exactly_one",
+            "display_name": "当前在途批次，索引尚未推进"
+          },
+          {
+            "type": "era.task.continuation.context",
+            "cardinality": "exactly_one",
+            "display_name": "本次请求所属的原步骤、来源、批次和回执适配依据"
+          }
+        ],
+        "provides": [
+          {
+            "key": "prepared_task",
+            "type": "era.task.prepared",
+            "display_name": "准备完成；仍须在本轮执行并结算的请求"
+          }
+        ]
       },
       {
         "id": "execute_simple_task",
         "type_used": "era.service.step",
         "display_name": "执行已准备的简单任务",
-        "description": "执行已经准备好上下文的简单任务：历史同步走共用同步链，消息标识任务只结算已准备结果，Agent 设置处理配置与连接，忽略任务解释不执行的原因。初始化、公共 API 和生成会话由外层单独调用。各分支交还唯一任务结果，索引推进和批次发布仍由统一结算负责。"
+        "description": "只处理已准备的消息标识结算、Agent 设置和明确忽略。普通历史同步由 Service 迭代直接调用共享同步，与初始化/API/候选执行并列。简单分支交回唯一任务结果后才推进批次，不承担变量核心或重试循环。 本次调用：只执行已准备好的消息标识结算、Agent 设置或明确忽略任务，并返回唯一任务结果。消息标识所需读取和必要写入已在统一派发完成；设置分支处理配置与连接，忽略分支保留不执行原因。普通同步、初始化、公共 API 和候选生成均由本轮同级入口执行；此节点集不包含核心块循环，索引仍由统一结算推进。"
+      },
+      {
+        "id": "route_execution_request",
+        "type_used": "era.task.route_execution_request",
+        "status": "planned",
+        "flow_kind": "decision",
+        "display_name": "准备返回后选择直属核心",
+        "description": "读取准备结果中的请求种类，取出 commit 参数、同步步骤或候选状态并交给同级核心。把原步骤、事件来源和批次保存在独立接续通道，结果返回时据此适配。直接结果无需核心执行，但也只在统一结算后推进索引。",
+        "requires": [
+          {
+            "type": "era.task.prepared",
+            "cardinality": "exactly_one",
+            "display_name": "准备结果：执行请求与原任务接续上下文"
+          }
+        ],
+        "provides": [
+          {
+            "key": "execution_route",
+            "type": "era.task.execution.route",
+            "display_name": "本轮执行 commit、sync、candidate 或直接返回"
+          },
+          {
+            "key": "execution_request",
+            "type": "era.task.execution.request",
+            "display_name": "同一在途任务的待执行请求"
+          },
+          {
+            "key": "continuation",
+            "type": "era.task.continuation.context",
+            "display_name": "本次请求所属的原步骤、来源、批次和回执适配依据"
+          },
+          {
+            "key": "execution_step",
+            "type": "era.step.request.routed",
+            "display_name": "原步骤、事件来源与已准备消息依据"
+          },
+          {
+            "key": "execution_batch",
+            "type": "era.batch.execution.state",
+            "display_name": "当前在途批次，索引尚未推进"
+          },
+          {
+            "key": "api_request",
+            "type": "era.api.request",
+            "display_name": "待执行 API commit"
+          },
+          {
+            "key": "candidate_state",
+            "type": "era.agent.candidate.state",
+            "display_name": "候选初始状态"
+          }
+        ]
+      },
+      {
+        "id": "execute_commit",
+        "type_used": "era.api.commit",
+        "display_name": "同级执行共享 API commit",
+        "description": "在本轮直接执行原有 Scope、窗口与目标校验，通过同一个消息块/操作循环应用有序事务。回执仍表示内存应用，后续保存边界不变。"
+      },
+      {
+        "id": "candidate_loop",
+        "type_used": "vibeflow.loop.while",
+        "display_name": "候选整体纠错循环",
+        "description": "循环执行当前模型候选尝试。每次尝试要完成正文块应用和结果检查；可纠错失败先恢复整次候选起点再使用新的重试请求，终态才退出并进入阶段交接。循环本身不发送成功通知，也不能用最后一个块的结果代替整候选结论。",
+        "requires": [
+          {
+            "type": "era.agent.candidate.state",
+            "cardinality": "exactly_one",
+            "display_name": "当前候选状态"
+          }
+        ],
+        "provides": [
+          {
+            "key": "candidate_outcome",
+            "type": "era.agent.candidate.outcome",
+            "display_name": "候选执行结果"
+          }
+        ],
+        "loop": {
+          "body": "era.agent.candidate_attempt",
+          "max_iterations": null,
+          "stop_when": {
+            "from": "candidate_done",
+            "equals": true
+          },
+          "carry": [
+            {
+              "from": "era.agent.candidate.state",
+              "as": "candidate_state",
+              "update": "candidate_state_after"
+            }
+          ],
+          "outputs": [
+            {
+              "from": "candidate_outcome",
+              "as": "candidate_outcome"
+            }
+          ]
+        }
+      },
+      {
+        "id": "finish_agent_phase",
+        "type_used": "era.agent.finish_phase",
+        "display_name": "候选结束后交接并准备必要接续",
+        "description": "候选循环达到终态后才形成阶段完成标识并转换会话。接续候选实际应用的作用域窗口，决定返回直接结果，还是同级调用共享同步或 MK 结算。保持原回调及恢复事件机制，不重复应用候选，不跨 Service 迭代挂起本次任务。 本次调用：候选循环终态后才进行阶段交接。需要共享同步或消息标识时返回同级接续请求；只需结果时直接收尾，不重复候选内已应用操作。"
+      },
+      {
+        "id": "route_agent_followup",
+        "type_used": "era.task.route_agent_followup",
+        "status": "planned",
+        "flow_kind": "decision",
+        "display_name": "选择生成后的同步、标识或结果",
+        "description": "读取生成收尾返回的后续请求，区分共享同步、消息标识和直接结果。把更新后的作用域窗口和原任务带到下一个同级调用，不重新进入外部队列，也不允许其他任务插入。",
+        "requires": [
+          {
+            "type": "era.task.prepared",
+            "cardinality": "exactly_one",
+            "display_name": "准备结果：执行请求与原任务接续上下文"
+          }
+        ],
+        "provides": [
+          {
+            "key": "execution_route",
+            "type": "era.task.execution.route",
+            "display_name": "本轮执行 commit、sync、candidate 或直接返回"
+          },
+          {
+            "key": "execution_request",
+            "type": "era.task.execution.request",
+            "display_name": "同一在途任务的待执行请求"
+          },
+          {
+            "key": "continuation",
+            "type": "era.task.continuation.context",
+            "display_name": "本次请求所属的原步骤、来源、批次和回执适配依据"
+          },
+          {
+            "key": "execution_step",
+            "type": "era.step.request.routed",
+            "display_name": "原步骤、事件来源与已准备消息依据"
+          },
+          {
+            "key": "execution_batch",
+            "type": "era.batch.execution.state",
+            "display_name": "当前在途批次，索引尚未推进"
+          },
+          {
+            "key": "api_request",
+            "type": "era.api.request",
+            "display_name": "待执行 API commit"
+          },
+          {
+            "key": "candidate_state",
+            "type": "era.agent.candidate.state",
+            "display_name": "候选初始状态"
+          }
+        ]
+      },
+      {
+        "id": "execute_sync",
+        "type_used": "era.task.sync",
+        "display_name": "同级执行共享历史同步",
+        "description": "接收普通同步、启动初始化、公共 sync 或生成收尾的同一种同步步骤。在内存按历史逐块处理，楼层结束后才形成压缩候选，任务尾部确认消息及状态文件保存；外层随后按原任务类型适配结果。"
+      },
+      {
+        "id": "execute_agent_mk",
+        "type_used": "era.task.update_mk",
+        "display_name": "同级结算生成后的消息标识任务",
+        "description": "接续已准备并已应用的消息标识事实，返回原生成任务所需的结果，不再次执行候选或历史变量。"
+      },
+      {
+        "id": "adapt_commit_result",
+        "type_used": "era.task.accept_commit_result",
+        "status": "planned",
+        "flow_kind": "process",
+        "display_name": "接回 commit 的真实执行结果",
+        "description": "将共享 commit 的实际回执与保存的原任务上下文合在一起，保留 Scope、诊断及来源。只适配结果，不再应用操作，也不把内存回执说成实际保存。",
+        "requires": [
+          {
+            "type": "era.api.facade.result",
+            "cardinality": "exactly_one",
+            "display_name": "共享 commit 真实结果"
+          },
+          {
+            "type": "era.task.continuation.context",
+            "cardinality": "exactly_one",
+            "display_name": "本次请求所属的原步骤、来源、批次和回执适配依据"
+          }
+        ],
+        "provides": [
+          {
+            "key": "executed_task",
+            "type": "era.task.execution.result",
+            "display_name": "实际执行结果及原任务接续上下文"
+          }
+        ]
+      },
+      {
+        "id": "adapt_sync_result",
+        "type_used": "era.task.accept_sync_result",
+        "status": "planned",
+        "flow_kind": "process",
+        "display_name": "接回同步或标识的真实执行结果",
+        "description": "把共享同步或生成标识结算的实际任务结果与原任务上下文合并。普通同步、初始化、API sync 和生成收尾保留各自结果适配依据；内部同步返回还不能直接推进外层任务索引。",
+        "requires": [
+          {
+            "type": "era.task.result",
+            "cardinality": "exactly_one",
+            "display_name": "共享同步或标识任务真实结果"
+          },
+          {
+            "type": "era.task.continuation.context",
+            "cardinality": "exactly_one",
+            "display_name": "本次请求所属的原步骤、来源、批次和回执适配依据"
+          }
+        ],
+        "provides": [
+          {
+            "key": "executed_task",
+            "type": "era.task.execution.result",
+            "display_name": "实际执行结果及原任务接续上下文"
+          }
+        ]
+      },
+      {
+        "id": "take_direct_result",
+        "type_used": "era.task.take_direct_result",
+        "status": "planned",
+        "flow_kind": "process",
+        "display_name": "接回准备阶段已明确的直接结果",
+        "description": "当准备或生成收尾明确无需核心执行时，取出其原始直接结果，保持取消、输入失败、无变更或阶段交接的真实含义。它不补跑历史、不隐藏失败，随后与其他执行结果统一适配。",
+        "requires": [
+          {
+            "type": "era.task.execution.request",
+            "cardinality": "exactly_one",
+            "display_name": "直接结果请求"
+          },
+          {
+            "type": "era.task.continuation.context",
+            "cardinality": "exactly_one",
+            "display_name": "本次请求所属的原步骤、来源、批次和回执适配依据"
+          }
+        ],
+        "provides": [
+          {
+            "key": "executed_task",
+            "type": "era.task.execution.result",
+            "display_name": "实际执行结果及原任务接续上下文"
+          }
+        ]
+      },
+      {
+        "id": "complete_task",
+        "type_used": "era.task.complete_phase",
+        "display_name": "真实执行返回后恢复原任务回执",
+        "description": "从核心真实结果与原任务接续上下文，选择普通结果或 API 专用结果。API 先按原 commit/sync 回执适配，再转成外层任务结果；普通初始化/同步/生成片段直接适配。这里只恢复结果格式和来源，不应用变量、不发起同步；批次索引由随后统一结算推进。 本次调用：在同级结果适配节点集中区分原 API 与普通任务，保留 API 专用通道、原来源及状态。这里不重复执行核心；结果唯一后，才交统一结算推进索引。"
       },
       {
         "id": "settle_step",
@@ -147,41 +459,147 @@
         "unpack_execution",
         "prepare_dispatch_context"
       ],
+      [
+        "prepare_dispatch_context",
+        "route_task_entry"
+      ],
       {
-        "from": "prepare_dispatch_context",
+        "from": "route_task_entry",
         "to": "task_initialize",
-        "when": "task_family_route == 'initialize'"
+        "when": "entry_route == 'initialize'"
       },
       {
-        "from": "prepare_dispatch_context",
+        "from": "route_task_entry",
         "to": "task_api",
-        "when": "task_family_route == 'api'"
+        "when": "entry_route == 'api'"
       },
       {
-        "from": "prepare_dispatch_context",
+        "from": "route_task_entry",
         "to": "task_agent_generation_session",
-        "when": "task_family_route == 'agent-generation-session'"
+        "when": "entry_route == 'agent'"
       },
       {
-        "from": "prepare_dispatch_context",
+        "from": "route_task_entry",
+        "to": "prepare_plain_sync",
+        "when": "entry_route == 'sync'"
+      },
+      {
+        "from": "route_task_entry",
         "to": "execute_simple_task",
-        "when": "task_family_route == 'simple'"
+        "when": "entry_route == 'simple'"
       },
       [
         "task_initialize",
-        "settle_step"
+        "route_execution_request"
       ],
       [
         "task_api",
-        "adapt_api_task_result"
-      ],
-      [
-        "adapt_api_task_result",
-        "settle_step"
+        "route_execution_request"
       ],
       [
         "task_agent_generation_session",
-        "settle_step"
+        "route_execution_request"
+      ],
+      [
+        "prepare_plain_sync",
+        "route_execution_request"
+      ],
+      {
+        "from": "route_execution_request",
+        "to": "execute_commit",
+        "when": "execution_route == 'commit'"
+      },
+      {
+        "from": "route_execution_request",
+        "to": "execute_sync",
+        "when": "execution_route == 'sync'"
+      },
+      {
+        "from": "route_execution_request",
+        "to": "candidate_loop",
+        "when": "execution_route == 'candidate'"
+      },
+      {
+        "from": "route_execution_request",
+        "to": "take_direct_result",
+        "when": "execution_route == 'direct'"
+      },
+      [
+        "candidate_loop",
+        "finish_agent_phase"
+      ],
+      {
+        "from": "route_execution_request",
+        "to": "finish_agent_phase",
+        "schedule": false,
+        "when": "execution_route == 'candidate'"
+      },
+      [
+        "finish_agent_phase",
+        "route_agent_followup"
+      ],
+      {
+        "from": "route_agent_followup",
+        "to": "execute_sync",
+        "when": "execution_route == 'sync'"
+      },
+      {
+        "from": "route_agent_followup",
+        "to": "execute_agent_mk",
+        "when": "execution_route == 'update-mk'"
+      },
+      {
+        "from": "route_agent_followup",
+        "to": "take_direct_result",
+        "when": "execution_route == 'direct'"
+      },
+      [
+        "execute_commit",
+        "adapt_commit_result"
+      ],
+      [
+        "execute_sync",
+        "adapt_sync_result"
+      ],
+      [
+        "execute_agent_mk",
+        "adapt_sync_result"
+      ],
+      {
+        "from": "route_execution_request",
+        "to": "adapt_commit_result",
+        "schedule": false,
+        "when": "execution_route == 'commit'"
+      },
+      {
+        "from": "route_execution_request",
+        "to": "adapt_sync_result",
+        "schedule": false,
+        "when": "execution_route == 'sync'"
+      },
+      {
+        "from": "route_agent_followup",
+        "to": "adapt_sync_result",
+        "schedule": false,
+        "when": "execution_route == 'update-mk'"
+      },
+      {
+        "from": "route_agent_followup",
+        "to": "adapt_sync_result",
+        "schedule": false,
+        "when": "execution_route == 'sync'"
+      },
+      [
+        "adapt_commit_result",
+        "complete_task"
+      ],
+      [
+        "adapt_sync_result",
+        "complete_task"
+      ],
+      [
+        "take_direct_result",
+        "complete_task"
       ],
       [
         "execute_simple_task",
@@ -195,6 +613,10 @@
       [
         "settle_step",
         "end"
+      ],
+      [
+        "complete_task",
+        "settle_step"
       ]
     ],
     "outputs": [
@@ -202,8 +624,46 @@
         "type": "era.service.cycle.state",
         "cardinality": "exactly_one",
         "display_name": "下一阶段状态",
-        "as": "cycleStateNext"
+        "as": "cycle_state_next"
       }
     ]
-  }
+  },
+  "nodeset_imports": [
+    {
+      "path": "service_collect_cycle_phase.jsonc"
+    },
+    {
+      "path": "dispatch_prepare_context.jsonc"
+    },
+    {
+      "path": "task_initialize.jsonc"
+    },
+    {
+      "path": "task_api.jsonc"
+    },
+    {
+      "path": "agent_generation_session.jsonc"
+    },
+    {
+      "path": "agent_finish_phase.jsonc"
+    },
+    {
+      "path": "agent_candidate_attempt.jsonc"
+    },
+    {
+      "path": "api_commit.jsonc"
+    },
+    {
+      "path": "task_sync.jsonc"
+    },
+    {
+      "path": "service_step.jsonc"
+    },
+    {
+      "path": "service_settle_step_phase.jsonc"
+    },
+    {
+      "path": "task_complete_phase.jsonc"
+    }
+  ]
 }

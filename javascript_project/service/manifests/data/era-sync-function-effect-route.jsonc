@@ -1,0 +1,14 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.sync.function.effect.route",
+  "representation": "json",
+  "display_name": "作者宿主动作实际结果",
+  "description": "仅在当前作者函数步进选择实际完成或原错误清理；不增加新的业务准入。",
+  "schema": {
+    "type": "string",
+    "enum": [
+      "ok",
+      "failed"
+    ]
+  }
+}

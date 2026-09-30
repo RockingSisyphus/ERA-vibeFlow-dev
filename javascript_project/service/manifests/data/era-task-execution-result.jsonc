@@ -1,0 +1,33 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.task.execution.result",
+  "representation": "json",
+  "display_name": "核心执行结果与原任务",
+  "description": "只在核心真实执行或准备明确直接结果后产生，供恢复原 API 或任务回执，不重复业务计算。",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "kind": {
+        "type": "string",
+        "enum": [
+          "sync",
+          "commit",
+          "direct",
+          "update-mk"
+        ]
+      },
+      "value": {
+        "type": "object"
+      },
+      "continuation": {
+        "type": "object"
+      }
+    },
+    "required": [
+      "kind",
+      "value",
+      "continuation"
+    ],
+    "additionalProperties": false
+  }
+}

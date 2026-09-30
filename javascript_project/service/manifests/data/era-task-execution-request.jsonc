@@ -1,0 +1,30 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.task.execution.request",
+  "representation": "json",
+  "display_name": "同级核心执行请求",
+  "description": "准备返回后由同一 Service 迭代执行，种类区分同步、commit、候选、标识或直接结果；不进入外部 FIFO。",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "kind": {
+        "type": "string",
+        "enum": [
+          "sync",
+          "commit",
+          "candidate",
+          "update-mk",
+          "direct"
+        ]
+      },
+      "payload": {
+        "type": "object"
+      }
+    },
+    "required": [
+      "kind",
+      "payload"
+    ],
+    "additionalProperties": false
+  }
+}

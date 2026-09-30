@@ -1,0 +1,10 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.command.operation.done",
+  "representation": "json",
+  "display_name": "当前操作范围是否全部结束",
+  "description": "控制第四层操作循环退出；单字段或单函数完成不会提前结束整个块。",
+  "schema": {
+    "type": "boolean"
+  }
+}

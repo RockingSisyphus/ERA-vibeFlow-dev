@@ -1,0 +1,14 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.task.completion.route",
+  "representation": "json",
+  "display_name": "外层结算分支",
+  "description": "由对应判断节点按当前事实产生，仅选择本次实际控制分支，不改变业务结果。",
+  "schema": {
+    "type": "string",
+    "enum": [
+      "api",
+      "ordinary"
+    ]
+  }
+}

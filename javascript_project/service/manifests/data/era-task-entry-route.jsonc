@@ -1,0 +1,17 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.task.entry.route",
+  "representation": "json",
+  "display_name": "任务入口",
+  "description": "由对应判断节点按当前事实产生，仅选择本次实际控制分支，不改变业务结果。",
+  "schema": {
+    "type": "string",
+    "enum": [
+      "initialize",
+      "api",
+      "agent",
+      "sync",
+      "simple"
+    ]
+  }
+}

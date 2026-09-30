@@ -1,0 +1,491 @@
+{
+  "type_key": "era.sync.author_function_step",
+  "status": "planned",
+  "display_name": "作者函数：一次启动、等待与原位请求准备",
+  "description": "接续正文锚点和父任务状态，只完成作者函数的一次启动或一次等待。有效 commit 在调用处校验并插入待执行事务，交回外层块循环逐块应用；应用完之后再进入本节点集确认回执并等待下一事件。函数内 sync/回滚按原规则拒绝；正常、捕获/未捕获错误和宿主失败分别收尾，不包含 CRUD 循环，不逐步保存。",
+  "requires": [
+    {
+      "type": "era.sync.position.state",
+      "cardinality": "exactly_one",
+      "display_name": "作者函数的原正文位置、当前帧和父任务实际结论"
+    }
+  ],
+  "provides": [
+    {
+      "key": "position_state",
+      "type": "era.sync.position.state",
+      "display_name": "一次启动/等待/请求准备后的当前位置"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "input_0",
+        "type": "era.sync.position.state",
+        "display_name": "作者函数的原正文位置、当前帧和父任务实际结论",
+        "required": true
+      }
+    ],
+    "max_steps": 22,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.service.terminal",
+        "display_name": "作者函数步进开始",
+        "description": "标记此段流程的入口或出口；不修改变量、不执行作者函数，也不保存酒馆。"
+      },
+      {
+        "id": "route_author_lifecycle",
+        "type_used": "era.sync.route_author_lifecycle",
+        "status": "planned",
+        "flow_kind": "decision",
+        "display_name": "选择本轮函数帧动作",
+        "description": "接收块层已经选择的作者函数分支，只处理父任务终结、调用刚建立的启动，或一次等待及回执。函数 commit 的应用阶段不进入此包装，由外层消息块循环执行；因此不会把变量操作循环包进第五层。",
+        "requires": [
+          {
+            "type": "era.sync.position.state",
+            "cardinality": "exactly_one",
+            "display_name": "作者函数的原正文位置、当前帧和父任务实际结论"
+          }
+        ],
+        "provides": [
+          {
+            "key": "position_state",
+            "type": "era.sync.position.state",
+            "display_name": "一次启动/等待/请求准备后的当前位置"
+          },
+          {
+            "key": "author_lifecycle_route",
+            "type": "era.sync.author.lifecycle.route",
+            "display_name": "终结清理、函数启动或等待下一事件"
+          }
+        ]
+      },
+      {
+        "id": "release_terminal_function",
+        "type_used": "era.sync.release_terminal_function",
+        "status": "planned",
+        "flow_kind": "process",
+        "display_name": "终结时返回待处理失败并释放作者函数",
+        "description": "当父任务已经结束、失败或被取消时，为仍等待 commit 回执的作者函数返回原失败结论，再释放它的执行帧。宿主已经取消时按原清理规则容忍释放失败；不继续执行剩余正文、不把取消写成成功。",
+        "requires": [
+          {
+            "type": "era.sync.position.state",
+            "cardinality": "exactly_one",
+            "display_name": "当前消息位置、原块状态、正文范围和作者函数上下文"
+          }
+        ],
+        "provides": [
+          {
+            "key": "position_state",
+            "type": "era.sync.position.state",
+            "display_name": "本位置处理后的私有状态；尚未发布到宿主"
+          }
+        ]
+      },
+      {
+        "id": "inspect_author_call",
+        "type_used": "era.sync.inspect_author_call",
+        "status": "planned",
+        "flow_kind": "decision",
+        "display_name": "检查正文作者函数名、参数及解析诊断",
+        "description": "从当前 EraFCall（正文里的作者 JavaScript 函数调用标签）位置取出函数名、参数和解析诊断。语法无效时保留原错误并结束这个调用；有效才交受限宿主开始执行。不会把表达式函数或嵌套调用误作待启动的作者 JavaScript 函数。",
+        "requires": [
+          {
+            "type": "era.sync.position.state",
+            "cardinality": "exactly_one",
+            "display_name": "当前消息位置、原块状态、正文范围和作者函数上下文"
+          }
+        ],
+        "provides": [
+          {
+            "key": "position_state",
+            "type": "era.sync.position.state",
+            "display_name": "本位置处理后的私有状态；尚未发布到宿主"
+          },
+          {
+            "key": "author_call_route",
+            "type": "era.sync.author.call.route",
+            "display_name": "启动合法调用或结束无效调用"
+          }
+        ]
+      },
+      {
+        "id": "begin_author_function",
+        "type_used": "era.sync.begin_author_function",
+        "status": "planned",
+        "flow_kind": "decision",
+        "display_name": "启动一个作者函数并保留当前调用位置",
+        "description": "通过原 functions.begin 能力启动这个作者 JavaScript 函数，携带名字、参数和已捕获聊天/Swipe 来源。将调用帧改为等待后交回块循环；它不等待函数完成、不推进下一个原正文块，也不把启动当成作者代码已成功。 宿主调用异常以原错误进入统一函数清理分支，不直接抛出破坏来源结算。",
+        "requires": [
+          {
+            "type": "era.sync.position.state",
+            "cardinality": "exactly_one",
+            "display_name": "当前消息位置、原块状态、正文范围和作者函数上下文"
+          }
+        ],
+        "provides": [
+          {
+            "key": "position_state",
+            "type": "era.sync.position.state",
+            "display_name": "本位置处理后的私有状态；尚未发布到宿主"
+          },
+          {
+            "key": "function_effect_route",
+            "type": "era.sync.function.effect.route",
+            "display_name": "宿主动作完成或真实异常"
+          }
+        ]
+      },
+      {
+        "id": "acknowledge_completed_commit",
+        "type_used": "era.sync.acknowledge_completed_commit",
+        "status": "planned",
+        "flow_kind": "decision",
+        "display_name": "应用完本次函数 commit 后才确认回执",
+        "description": "函数帧中一次 commit 插入的操作块已全部按原顺序应用后，为该请求发送实际应用回执，再清除这份待确认请求。只表示内存应用完成，保存随父批次；如果还没应用完，生命周期路由不会进入这里，避免函数 await 过早返回。 宿主调用异常以原错误进入统一函数清理分支，不直接抛出破坏来源结算。",
+        "requires": [
+          {
+            "type": "era.sync.position.state",
+            "cardinality": "exactly_one",
+            "display_name": "当前消息位置、原块状态、正文范围和作者函数上下文"
+          }
+        ],
+        "provides": [
+          {
+            "key": "position_state",
+            "type": "era.sync.position.state",
+            "display_name": "本位置处理后的私有状态；尚未发布到宿主"
+          },
+          {
+            "key": "function_effect_route",
+            "type": "era.sync.function.effect.route",
+            "display_name": "宿主动作完成或真实异常"
+          }
+        ]
+      },
+      {
+        "id": "wait_function_event",
+        "type_used": "era.sync.wait_function_event",
+        "status": "planned",
+        "flow_kind": "process",
+        "display_name": "等待作者函数的下一次请求或结束",
+        "description": "调用原 functions.next 异步等待当前作者函数产出下一条 API 请求或结束结果。等待期间保留当前正文锚点、已应用块数、来源和随机状态，不让 Service 接收其他在途任务；正常等待不等于循环停滞，取消或宿主错误保留原失败结论。",
+        "requires": [
+          {
+            "type": "era.sync.position.state",
+            "cardinality": "exactly_one",
+            "display_name": "当前消息位置、原块状态、正文范围和作者函数上下文"
+          }
+        ],
+        "provides": [
+          {
+            "key": "position_state",
+            "type": "era.sync.position.state",
+            "display_name": "本位置处理后的私有状态；尚未发布到宿主"
+          }
+        ]
+      },
+      {
+        "id": "route_function_event",
+        "type_used": "era.sync.route_function_event",
+        "status": "planned",
+        "flow_kind": "decision",
+        "display_name": "区分函数 commit、禁止请求与结束",
+        "description": "读取刚收到的作者函数事件：正常或未捕获错误的结束走调用收尾；commit 走原位 Scope/目标校验；函数内 sync 和回滚返回原不支持错误。捕获与未捕获错误仍由原函数事件结果区分，不重新排到外部 FIFO。",
+        "requires": [
+          {
+            "type": "era.sync.position.state",
+            "cardinality": "exactly_one",
+            "display_name": "当前消息位置、原块状态、正文范围和作者函数上下文"
+          }
+        ],
+        "provides": [
+          {
+            "key": "position_state",
+            "type": "era.sync.position.state",
+            "display_name": "本位置处理后的私有状态；尚未发布到宿主"
+          },
+          {
+            "key": "function_event_route",
+            "type": "era.sync.function.event.route",
+            "display_name": "结束、原位提交、拒绝请求或宿主失败"
+          }
+        ]
+      },
+      {
+        "id": "reject_function_sync",
+        "type_used": "era.sync.reject_function_sync",
+        "status": "planned",
+        "flow_kind": "decision",
+        "display_name": "向函数返回禁止重算或回滚的原错误",
+        "description": "对作者函数内部的 sync 或回滚请求返回 ERA_FUNCTION_SYNC_UNSUPPORTED，解释须在调用结束后由外部发起。函数可按原行为捕获此错误后继续；不偷偷执行重算、不等待当前函数自身结束的外部队列。 宿主调用异常以原错误进入统一函数清理分支，不直接抛出破坏来源结算。",
+        "requires": [
+          {
+            "type": "era.sync.position.state",
+            "cardinality": "exactly_one",
+            "display_name": "当前消息位置、原块状态、正文范围和作者函数上下文"
+          }
+        ],
+        "provides": [
+          {
+            "key": "position_state",
+            "type": "era.sync.position.state",
+            "display_name": "本位置处理后的私有状态；尚未发布到宿主"
+          },
+          {
+            "key": "function_effect_route",
+            "type": "era.sync.function.effect.route",
+            "display_name": "宿主动作完成或真实异常"
+          }
+        ]
+      },
+      {
+        "id": "prepare_function_commit",
+        "type_used": "era.sync.prepare_function_commit",
+        "status": "planned",
+        "flow_kind": "decision",
+        "display_name": "在作者调用处校验并插入 commit",
+        "description": "读取当前宿主身份，按原调用窗口、Scope（本次执行作用域）和目标规则检查作者函数 commit，避免重复应用或写到已切换的消息。需跳过或失败时形成即时回执；有效操作序列化为事务，插在当前函数锚点之前，记录待应用块数和位置。这里只插入待执行文本，真正 CRUD 由同一消息块循环逐块完成。 身份能力异常交给统一宿主失败清理，不绕过原目标检查。",
+        "requires": [
+          {
+            "type": "era.sync.position.state",
+            "cardinality": "exactly_one",
+            "display_name": "当前消息位置、原块状态、正文范围和作者函数上下文"
+          }
+        ],
+        "provides": [
+          {
+            "key": "position_state",
+            "type": "era.sync.position.state",
+            "display_name": "本位置处理后的私有状态；尚未发布到宿主"
+          },
+          {
+            "key": "function_commit_route",
+            "type": "era.sync.function.commit.route",
+            "display_name": "立即返回回执或继续原位块应用"
+          }
+        ]
+      },
+      {
+        "id": "acknowledge_immediate_request",
+        "type_used": "era.sync.acknowledge_immediate_request",
+        "status": "planned",
+        "flow_kind": "decision",
+        "display_name": "返回未执行请求的真实跳过或失败回执",
+        "description": "对已被 Scope 判为重复/越界或输入、来源校验失败的函数请求，直接确认其原跳过/失败回执，不伪造已应用操作。函数帧保留到下一次等待，作者仍可捕获错误或继续提交其他 commit。 宿主调用异常以原错误进入统一函数清理分支，不直接抛出破坏来源结算。",
+        "requires": [
+          {
+            "type": "era.sync.position.state",
+            "cardinality": "exactly_one",
+            "display_name": "当前消息位置、原块状态、正文范围和作者函数上下文"
+          }
+        ],
+        "provides": [
+          {
+            "key": "position_state",
+            "type": "era.sync.position.state",
+            "display_name": "本位置处理后的私有状态；尚未发布到宿主"
+          },
+          {
+            "key": "function_effect_route",
+            "type": "era.sync.function.effect.route",
+            "display_name": "宿主动作完成或真实异常"
+          }
+        ]
+      },
+      {
+        "id": "finish_author_function",
+        "type_used": "era.sync.finish_author_function",
+        "status": "planned",
+        "flow_kind": "decision",
+        "display_name": "结束调用、清除锚点并接续正文",
+        "description": "记录作者函数正常结束或未捕获错误，移除临时锚点，给本次调用加原完成标记，并把正文游标移到调用及其插入操作之后。确曾启动时才释放帧；只消耗一个原函数调用的阶段前缀计数，不把函数 commit 插入的块算成原模型正文。 宿主调用异常以原错误进入统一函数清理分支，不直接抛出破坏来源结算。",
+        "requires": [
+          {
+            "type": "era.sync.position.state",
+            "cardinality": "exactly_one",
+            "display_name": "当前消息位置、原块状态、正文范围和作者函数上下文"
+          }
+        ],
+        "provides": [
+          {
+            "key": "position_state",
+            "type": "era.sync.position.state",
+            "display_name": "本位置处理后的私有状态；尚未发布到宿主"
+          },
+          {
+            "key": "function_effect_route",
+            "type": "era.sync.function.effect.route",
+            "display_name": "宿主动作完成或真实异常"
+          }
+        ]
+      },
+      {
+        "id": "record_host_failure",
+        "type_used": "era.sync.record_host_failure",
+        "status": "planned",
+        "flow_kind": "process",
+        "display_name": "保留宿主错误并结束当前块任务",
+        "description": "把函数能力或目标读取的真实异常解包为原失败代码及 Tavern 层诊断，释放仍存在的作者函数帧并结束本次任务。不会在失败时继续写新目标，也不会把宿主错误转成普通变量跳过。",
+        "requires": [
+          {
+            "type": "era.sync.position.state",
+            "cardinality": "exactly_one",
+            "display_name": "当前消息位置、原块状态、正文范围和作者函数上下文"
+          }
+        ],
+        "provides": [
+          {
+            "key": "position_state",
+            "type": "era.sync.position.state",
+            "display_name": "本位置处理后的私有状态；尚未发布到宿主"
+          }
+        ]
+      },
+      {
+        "id": "end",
+        "type_used": "era.service.terminal",
+        "display_name": "作者函数步进结束",
+        "description": "标记此段流程的入口或出口；不修改变量、不执行作者函数，也不保存酒馆。"
+      }
+    ],
+    "edges": [
+      [
+        "start",
+        "route_author_lifecycle"
+      ],
+      {
+        "from": "route_author_lifecycle",
+        "to": "release_terminal_function",
+        "when": "author_lifecycle_route == 'terminal'"
+      },
+      {
+        "from": "route_author_lifecycle",
+        "to": "inspect_author_call",
+        "when": "author_lifecycle_route == 'start'"
+      },
+      {
+        "from": "route_author_lifecycle",
+        "to": "acknowledge_completed_commit",
+        "when": "author_lifecycle_route == 'wait'"
+      },
+      [
+        "release_terminal_function",
+        "end"
+      ],
+      {
+        "from": "inspect_author_call",
+        "to": "begin_author_function",
+        "when": "author_call_route == 'valid'"
+      },
+      {
+        "from": "inspect_author_call",
+        "to": "finish_author_function",
+        "when": "author_call_route == 'invalid'"
+      },
+      {
+        "from": "begin_author_function",
+        "to": "end",
+        "when": "function_effect_route == 'ok'"
+      },
+      {
+        "from": "acknowledge_completed_commit",
+        "to": "wait_function_event",
+        "when": "function_effect_route == 'ok'"
+      },
+      [
+        "wait_function_event",
+        "route_function_event"
+      ],
+      {
+        "from": "route_function_event",
+        "to": "finish_author_function",
+        "when": "function_event_route == 'done'"
+      },
+      {
+        "from": "route_function_event",
+        "to": "prepare_function_commit",
+        "when": "function_event_route == 'commit'"
+      },
+      {
+        "from": "route_function_event",
+        "to": "reject_function_sync",
+        "when": "function_event_route == 'unsupported'"
+      },
+      {
+        "from": "route_function_event",
+        "to": "record_host_failure",
+        "when": "function_event_route == 'failed'"
+      },
+      {
+        "from": "reject_function_sync",
+        "to": "end",
+        "when": "function_effect_route == 'ok'"
+      },
+      {
+        "from": "prepare_function_commit",
+        "to": "acknowledge_immediate_request",
+        "when": "function_commit_route == 'immediate'"
+      },
+      {
+        "from": "acknowledge_immediate_request",
+        "to": "end",
+        "when": "function_effect_route == 'ok'"
+      },
+      {
+        "from": "finish_author_function",
+        "to": "end",
+        "when": "function_effect_route == 'ok'"
+      },
+      [
+        "record_host_failure",
+        "end"
+      ],
+      {
+        "from": "finish_author_function",
+        "to": "record_host_failure",
+        "when": "function_effect_route == 'failed'"
+      },
+      {
+        "from": "reject_function_sync",
+        "to": "record_host_failure",
+        "when": "function_effect_route == 'failed'"
+      },
+      {
+        "from": "acknowledge_immediate_request",
+        "to": "record_host_failure",
+        "when": "function_effect_route == 'failed'"
+      },
+      {
+        "from": "begin_author_function",
+        "to": "record_host_failure",
+        "when": "function_effect_route == 'failed'"
+      },
+      {
+        "from": "acknowledge_completed_commit",
+        "to": "record_host_failure",
+        "when": "function_effect_route == 'failed'"
+      },
+      {
+        "from": "prepare_function_commit",
+        "to": "record_host_failure",
+        "when": "function_commit_route == 'failed'"
+      },
+      {
+        "from": "prepare_function_commit",
+        "to": "end",
+        "when": "function_commit_route == 'apply'"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "era.sync.position.state",
+        "cardinality": "exactly_one",
+        "display_name": "一次启动/等待/请求准备后的当前位置",
+        "as": "position_state"
+      }
+    ]
+  }
+}

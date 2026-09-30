@@ -1,0 +1,266 @@
+{
+  "type_key": "era.agent.finish_phase",
+  "status": "planned",
+  "display_name": "候选终态后的阶段交接与接续准备",
+  "description": "候选循环达到终态后才形成阶段完成标识并转换会话。接续候选实际应用的作用域窗口，决定返回直接结果，还是同级调用共享同步或 MK 结算。保持原回调及恢复事件机制，不重复应用候选，不跨 Service 迭代挂起本次任务。",
+  "requires": [
+    {
+      "type": "era.agent.candidate.outcome",
+      "cardinality": "exactly_one",
+      "display_name": "候选循环唯一终态结果"
+    },
+    {
+      "type": "era.task.continuation.context",
+      "cardinality": "exactly_one",
+      "display_name": "本次请求所属的原步骤、来源、批次和回执适配依据"
+    }
+  ],
+  "provides": [
+    {
+      "key": "prepared_task",
+      "type": "era.task.prepared",
+      "display_name": "准备完成；仍须在本轮执行并结算的请求"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "input_0",
+        "type": "era.agent.candidate.outcome",
+        "display_name": "候选循环唯一终态结果",
+        "required": true
+      },
+      {
+        "key": "input_1",
+        "type": "era.task.continuation.context",
+        "display_name": "本次请求所属的原步骤、来源、批次和回执适配依据",
+        "required": true
+      }
+    ],
+    "max_steps": 17,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.service.terminal",
+        "display_name": "候选收尾开始",
+        "description": "标记这段流程的入口或出口，业务数据由声明的通道传递；本节点不修改变量、不调用作者函数，也不保存酒馆。"
+      },
+      {
+        "id": "unpack_finish_context",
+        "type_used": "era.agent.unpack_finish_context",
+        "status": "planned",
+        "flow_kind": "process",
+        "display_name": "取出候选终态及原步骤",
+        "description": "从候选终态和接续上下文取出原生成步骤、批次及已应用阶段结果，供旧阶段交接逻辑使用。这里不重建候选、不重新读取用户目标，也不改变步骤索引。",
+        "requires": [
+          {
+            "type": "era.agent.candidate.outcome",
+            "cardinality": "exactly_one",
+            "display_name": "候选循环唯一终态结果"
+          },
+          {
+            "type": "era.task.continuation.context",
+            "cardinality": "exactly_one",
+            "display_name": "本次请求所属的原步骤、来源、批次和回执适配依据"
+          }
+        ],
+        "provides": [
+          {
+            "key": "finish_step",
+            "type": "era.step.request.routed",
+            "display_name": "原步骤、事件来源与已准备消息依据"
+          },
+          {
+            "key": "finish_batch",
+            "type": "era.batch.execution.state",
+            "display_name": "当前在途批次，索引尚未推进"
+          },
+          {
+            "key": "candidate_outcome",
+            "type": "era.agent.candidate.outcome",
+            "display_name": "仍待阶段交接的候选终态"
+          },
+          {
+            "key": "finish_context",
+            "type": "era.task.continuation.context",
+            "display_name": "本次请求所属的原步骤、来源、批次和回执适配依据"
+          }
+        ]
+      },
+      {
+        "id": "prepare_stage_handoff",
+        "type_used": "era.agent.prepare_stage_handoff",
+        "display_name": "形成阶段交接与恢复凭据",
+        "description": "对于已经成功达到阶段边界的候选，生成唯一完成标识、阶段结果及下一步恢复意图，供页面依次执行订阅回调后再请求恢复。没有阶段交接的结果原样传递。这里不在当前任务队列里等待回调，否则回调请求同一队列可能互相等待；交接也不表示整个生成已结束。"
+      },
+      {
+        "id": "form_session_transition",
+        "type_used": "era.agent.form_session_transition",
+        "display_name": "携带已应用阶段状态进入下一阶段",
+        "description": "把候选最终结果转换成会话下一步：需要保存或沿普通消息同步完成的结果，携带对应楼层候选；只需阶段交接的结果直接结束当前片段。同时接续候选实际应用后的作用域窗口，不重复执行本轮 API。若候选无法对应原楼层，返回失败而不是写到新的消息。"
+      },
+      {
+        "id": "route_agent_transition",
+        "type_used": "era.agent.route_transition",
+        "display_name": "路由阶段结果",
+        "description": "依据会话转换的模式选择出口：还需要普通消息同步或消息标识结算的结果走共享任务链；只需返回阶段结果、取消或失败的结果走直接回执。模式已由会话逻辑决定，节点不重新判断模型内容，也不更改批次状态。"
+      },
+      {
+        "id": "adapt_legacy_step",
+        "type_used": "era.agent.adapt_legacy_step",
+        "display_name": "把最终楼层候选交给唯一同步事务",
+        "description": "把生成会话需要继续普通处理的结果转换成共享同步或消息标识任务，保持原楼层的 ERA 消息标识和来源。默认生成模式、最终正文及结算结果由同一消息处理链接续，而不是开另一条提交路径；这里只适配步骤，实际计算和保存由共享任务完成。"
+      },
+      {
+        "id": "build_direct_result",
+        "type_used": "era.agent.build_result",
+        "display_name": "构造直接结果",
+        "description": "将会话直接结束分支整理成任务回执，附带阶段完成标识、诊断和之后需要发送的通知。页面收到通知后按顺序等待订阅回调，再提交内部恢复事件；因此这份回执只代表当前队列片段完成，不能把它解释为规划、正文和结算全部结束。"
+      },
+      {
+        "id": "return_legacy_continuation",
+        "type_used": "era.agent.prepare_legacy_continuation",
+        "status": "planned",
+        "flow_kind": "process",
+        "display_name": "返回后续共享同步或标识请求",
+        "description": "将候选已应用的楼层、作用域窗口及原任务转换成后续请求。需要保存与普通历史同步的结果交给直属共享同步，需要消息标识结算的结果交给 MK 任务；不重复执行候选内的 API，不把该请求放入外部 FIFO。",
+        "requires": [
+          {
+            "type": "era.step.request.routed",
+            "cardinality": "exactly_one",
+            "display_name": "原步骤、事件来源与已准备消息依据"
+          },
+          {
+            "type": "era.batch.execution.state",
+            "cardinality": "exactly_one",
+            "display_name": "当前在途批次，索引尚未推进"
+          },
+          {
+            "type": "era.task.route",
+            "cardinality": "exactly_one",
+            "display_name": "既有同步或消息标识分支"
+          },
+          {
+            "type": "era.task.continuation.context",
+            "cardinality": "exactly_one",
+            "display_name": "本次请求所属的原步骤、来源、批次和回执适配依据"
+          }
+        ],
+        "provides": [
+          {
+            "key": "prepared_task",
+            "type": "era.task.prepared",
+            "display_name": "准备完成；仍须在本轮执行并结算的请求"
+          }
+        ]
+      },
+      {
+        "id": "return_direct_continuation",
+        "type_used": "era.agent.prepare_direct_continuation",
+        "status": "planned",
+        "flow_kind": "process",
+        "display_name": "返回当前阶段片段的真实结果",
+        "description": "把阶段交接、取消或失败结果连同原生成来源交还 Service。交接仍遵循原完成标识与页面回调顺序，回执只代表当前片段完成；不在当前在途任务中等待回调向同一队列提交请求。",
+        "requires": [
+          {
+            "type": "era.task.result",
+            "cardinality": "exactly_one",
+            "display_name": "阶段直接结果"
+          },
+          {
+            "type": "era.task.continuation.context",
+            "cardinality": "exactly_one",
+            "display_name": "本次请求所属的原步骤、来源、批次和回执适配依据"
+          }
+        ],
+        "provides": [
+          {
+            "key": "prepared_task",
+            "type": "era.task.prepared",
+            "display_name": "准备完成；仍须在本轮执行并结算的请求"
+          }
+        ]
+      },
+      {
+        "id": "end",
+        "type_used": "era.service.terminal",
+        "display_name": "候选收尾结束",
+        "description": "标记这段流程的入口或出口，业务数据由声明的通道传递；本节点不修改变量、不调用作者函数，也不保存酒馆。"
+      }
+    ],
+    "edges": [
+      [
+        "start",
+        "unpack_finish_context"
+      ],
+      [
+        "unpack_finish_context",
+        "prepare_stage_handoff"
+      ],
+      [
+        "prepare_stage_handoff",
+        "form_session_transition"
+      ],
+      {
+        "from": "unpack_finish_context",
+        "to": "form_session_transition",
+        "schedule": false
+      },
+      [
+        "form_session_transition",
+        "route_agent_transition"
+      ],
+      {
+        "from": "route_agent_transition",
+        "to": "adapt_legacy_step",
+        "when": "agent_route == 'legacy'"
+      },
+      {
+        "from": "route_agent_transition",
+        "to": "build_direct_result",
+        "when": "agent_route == 'direct'"
+      },
+      {
+        "from": "adapt_legacy_step",
+        "to": "return_legacy_continuation",
+        "when": "legacy_task_route == 'sync'"
+      },
+      {
+        "from": "adapt_legacy_step",
+        "to": "return_legacy_continuation",
+        "when": "legacy_task_route == 'update-mk'"
+      },
+      {
+        "from": "unpack_finish_context",
+        "to": "return_legacy_continuation",
+        "schedule": false
+      },
+      [
+        "build_direct_result",
+        "return_direct_continuation"
+      ],
+      {
+        "from": "unpack_finish_context",
+        "to": "return_direct_continuation",
+        "schedule": false
+      },
+      [
+        "return_legacy_continuation",
+        "end"
+      ],
+      [
+        "return_direct_continuation",
+        "end"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.task.prepared",
+        "cardinality": "exactly_one",
+        "display_name": "准备完成；仍须在本轮执行并结算的请求",
+        "as": "prepared_task"
+      }
+    ]
+  }
+}

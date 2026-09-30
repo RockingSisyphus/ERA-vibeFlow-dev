@@ -1,0 +1,32 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.command.expression.response",
+  "representation": "json",
+  "display_name": "带用途的 Expression 结果",
+  "description": "保留实际结果、诊断与随机位置及原请求用途，失败不被适配成成功。",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "purpose": {
+        "type": "string",
+        "enum": [
+          "value",
+          "library",
+          "stage-call"
+        ]
+      },
+      "response": {
+        "type": "object"
+      },
+      "operationState": {
+        "type": "object"
+      }
+    },
+    "required": [
+      "purpose",
+      "response",
+      "operationState"
+    ],
+    "additionalProperties": false
+  }
+}

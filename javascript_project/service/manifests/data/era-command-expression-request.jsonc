@@ -1,0 +1,32 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.command.expression.request",
+  "representation": "json",
+  "display_name": "带用途的 Expression 请求",
+  "description": "单路径公式、整组库校验或阶段调用使用现有 Expression root；携带原操作状态供结果适配。",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "purpose": {
+        "type": "string",
+        "enum": [
+          "value",
+          "library",
+          "stage-call"
+        ]
+      },
+      "request": {
+        "type": "object"
+      },
+      "operationState": {
+        "type": "object"
+      }
+    },
+    "required": [
+      "purpose",
+      "request",
+      "operationState"
+    ],
+    "additionalProperties": false
+  }
+}

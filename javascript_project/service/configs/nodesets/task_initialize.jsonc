@@ -1,8 +1,8 @@
 {
   "nodeset_imports": [],
   "type_key": "era.task.initialize",
-  "display_name": "ERA 初始化任务",
-  "description": "读取现有角色和聊天资源，按传统或外置模式规划并应用必要的 ERA 设置、世界书、正则及主开场白，遵守作者资源不覆盖条件。普通资源操作直接返回结果；启动初始化成功或无需变更时，再进入共享历史同步，使变量状态与当前消息一致。整个任务保留原来源，不另建初始化变量引擎。",
+  "display_name": "初始化资源并准备后续任务",
+  "description": "按原规则读取并补齐角色设置、世界书、正则和开场白，先确认资源操作。启动初始化成功或无需变更时，返回共享历史同步请求；其他情况返回直接结果。请求连同原事件及批次交还 Service 本轮迭代，迭代执行和结算前不移动索引、不接收其他任务。",
   "requires": [
     {
       "type": "era.step.request.routed",
@@ -13,13 +13,18 @@
       "type": "era.batch.execution.state",
       "cardinality": "exactly_one",
       "display_name": "当前批次执行状态"
+    },
+    {
+      "type": "era.task.continuation.context",
+      "cardinality": "exactly_one",
+      "display_name": "本次请求所属的原步骤、来源、批次和回执适配依据"
     }
   ],
   "provides": [
     {
-      "key": "initialize_task_result",
-      "type": "era.task.result",
-      "display_name": "初始化结果"
+      "key": "prepared_task",
+      "type": "era.task.prepared",
+      "display_name": "准备完成；仍须在本轮执行并结算的请求"
     }
   ],
   "pipeline": {
@@ -35,6 +40,12 @@
         "key": "execution_state",
         "type": "era.batch.execution.state",
         "display_name": "当前批次执行状态",
+        "required": true
+      },
+      {
+        "key": "continuation",
+        "type": "era.task.continuation.context",
+        "display_name": "本次请求所属的原步骤、来源、批次和回执适配依据",
         "required": true
       }
     ],
@@ -95,22 +106,63 @@
         "description": "检查资源提交结果是否需要继续历史同步：只有启动初始化且资源已完成或本就无需变更时，构造一个共享同步步骤；其他初始化操作或失败走直接结果分支。两种结果用独立数据通道传递，避免提前返回导致该做的聊天变量同步被跳过。"
       },
       {
-        "id": "adapt_startup_step",
-        "type_used": "era.initialize.adapt_startup_sync_step",
-        "display_name": "适配启动同步步骤",
-        "description": "把初始化产生的启动同步请求和保留的批次状态交给通用同步流程。请求继续携带原事件来源和消息上下文，不另建初始化专用变量引擎；它只适配输入，后续共享同步负责读取状态、应用历史及保存。"
+        "id": "prepare_startup_continuation",
+        "type_used": "era.initialize.prepare_startup_continuation",
+        "status": "planned",
+        "flow_kind": "process",
+        "display_name": "返回启动同步请求与原任务",
+        "description": "资源已经完成或本就无需写入时，把启动同步步骤和当前批次包装为待执行请求，保留初始化的来源及资源结果。这里只返回请求；历史变量尚未同步，Service 会在同一轮直接执行共享同步后才结算初始化。",
+        "requires": [
+          {
+            "type": "era.initialize.startup.sync.step",
+            "cardinality": "exactly_one",
+            "display_name": "资源处理产生的启动同步步骤"
+          },
+          {
+            "type": "era.batch.execution.state",
+            "cardinality": "exactly_one",
+            "display_name": "当前在途批次，索引尚未推进"
+          },
+          {
+            "type": "era.task.continuation.context",
+            "cardinality": "exactly_one",
+            "display_name": "本次请求所属的原步骤、来源、批次和回执适配依据"
+          }
+        ],
+        "provides": [
+          {
+            "key": "prepared_task",
+            "type": "era.task.prepared",
+            "display_name": "准备完成；仍须在本轮执行并结算的请求"
+          }
+        ]
       },
       {
-        "id": "run_shared_sync",
-        "type_used": "era.task.sync",
-        "display_name": "运行共享同步",
-        "description": "把当前聊天的真实消息历史与 ERA 变量、函数和日志保持一致：读取并校验状态文件绑定，优先沿用有效未保存的内存状态，规划回退及处理范围，逐块应用指令和函数，必要时压缩封存文本，最后批量保存消息及状态文件。保存后再刷新显示和返回结果；切换聊天或候选回复不会使旧任务覆盖新目标。"
-      },
-      {
-        "id": "finalize_direct_result",
-        "type_used": "era.initialize.finalize_direct_result",
-        "display_name": "结算非启动初始化",
-        "description": "仅在初始化不需要继续共享同步的分支，把资源处理结论转成交给 Service 的任务结果。保留实际完成动作、无变更或失败诊断，不把资源初始化包装成聊天同步；随后由统一步骤结算推进批次。"
+        "id": "prepare_resource_result",
+        "type_used": "era.initialize.prepare_resource_result",
+        "status": "planned",
+        "flow_kind": "process",
+        "display_name": "返回不需同步的资源结果",
+        "description": "非启动资源操作、失败或无需继续同步的结果，按原来源转换为直接任务结果，再放入准备载体。它不会把资源已处理说成变量已重算；外层只需结算此结果，不调用块引擎。",
+        "requires": [
+          {
+            "type": "era.initialize.direct.result",
+            "cardinality": "exactly_one",
+            "display_name": "初始化的真实直接结果"
+          },
+          {
+            "type": "era.task.continuation.context",
+            "cardinality": "exactly_one",
+            "display_name": "本次请求所属的原步骤、来源、批次和回执适配依据"
+          }
+        ],
+        "provides": [
+          {
+            "key": "prepared_task",
+            "type": "era.task.prepared",
+            "display_name": "准备完成；仍须在本轮执行并结算的请求"
+          }
+        ]
       },
       {
         "id": "end",
@@ -160,39 +212,36 @@
       ],
       {
         "from": "route_completion",
-        "to": "adapt_startup_step",
+        "to": "prepare_startup_continuation",
         "when": "initialize_completion_route == 'sync'"
       },
       {
         "from": "carry_execution_state",
-        "to": "adapt_startup_step",
+        "to": "prepare_startup_continuation",
         "schedule": false
       },
       {
         "from": "route_completion",
-        "to": "finalize_direct_result",
+        "to": "prepare_resource_result",
         "when": "initialize_completion_route == 'finish'"
       },
       [
-        "adapt_startup_step",
-        "run_shared_sync"
-      ],
-      [
-        "run_shared_sync",
+        "prepare_startup_continuation",
         "end"
       ],
       [
-        "finalize_direct_result",
+        "prepare_resource_result",
         "end"
       ]
     ],
     "outputs": [
       {
-        "type": "era.task.result",
+        "type": "era.task.prepared",
         "cardinality": "exactly_one",
-        "display_name": "初始化结果",
-        "as": "initializeTaskResult"
+        "display_name": "准备完成；仍须在本轮执行并结算的请求",
+        "as": "prepared_task"
       }
     ]
-  }
+  },
+  "status": "planned"
 }

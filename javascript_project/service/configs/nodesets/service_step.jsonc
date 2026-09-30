@@ -1,9 +1,6 @@
 {
   "nodeset_imports": [
     {
-      "path": "task_sync.jsonc"
-    },
-    {
       "path": "task_update_mk.jsonc"
     },
     {
@@ -12,7 +9,7 @@
   ],
   "type_key": "era.service.step",
   "display_name": "ERA 简单任务步骤",
-  "description": "执行已经准备好上下文的简单任务：历史同步走共用同步链，消息标识任务只结算已准备结果，Agent 设置处理配置与连接，忽略任务解释不执行的原因。初始化、公共 API 和生成会话由外层单独调用。各分支交还唯一任务结果，索引推进和批次发布仍由统一结算负责。",
+  "description": "只处理已准备的消息标识结算、Agent 设置和明确忽略。普通历史同步由 Service 迭代直接调用共享同步，与初始化/API/候选执行并列。简单分支交回唯一任务结果后才推进批次，不承担变量核心或重试循环。",
   "requires": [
     {
       "type": "era.step.request.routed",
@@ -70,14 +67,44 @@
       {
         "id": "route_simple_task",
         "type_used": "era.tasks.dispatch",
-        "display_name": "选择已准备的简单任务",
-        "description": "只接受已准备好的普通同步、消息标识、Agent 设置或忽略任务，把任务与批次状态交给相应分支。复杂初始化、公共 API 和生成会话不经这里。分支标签不属于这四类时会报错，而不是猜测任务用途；本节点自身不进行变量计算或宿主写入。"
-      },
-      {
-        "id": "task_sync",
-        "type_used": "era.task.sync",
-        "display_name": "执行同步任务",
-        "description": "把当前聊天的真实消息历史与 ERA 变量、函数和日志保持一致：读取并校验状态文件绑定，优先沿用有效未保存的内存状态，规划回退及处理范围，逐块应用指令和函数，必要时压缩封存文本，最后批量保存消息及状态文件。保存后再刷新显示和返回结果；切换聊天或候选回复不会使旧任务覆盖新目标。"
+        "status": "planned",
+        "flow_kind": "decision",
+        "display_name": "选择标识、设置或忽略任务",
+        "description": "只将已经准备好的消息标识、Agent 设置和忽略任务派往相应分支。普通同步已由外层直接调用，不经过本包装；返回结果不会提前推进索引，仍由统一结算完成。",
+        "requires": [
+          {
+            "type": "era.step.request.routed",
+            "cardinality": "exactly_one",
+            "display_name": "已准备路由步骤"
+          },
+          {
+            "type": "era.task.route",
+            "cardinality": "exactly_one",
+            "display_name": "已准备任务路由"
+          },
+          {
+            "type": "era.batch.execution.state",
+            "cardinality": "exactly_one",
+            "display_name": "当前批次执行状态"
+          }
+        ],
+        "provides": [
+          {
+            "key": "simple_task_route",
+            "type": "era.task.route",
+            "display_name": "仅消息标识、设置或忽略分支"
+          },
+          {
+            "key": "routed_step_for_task",
+            "type": "era.step.request.routed",
+            "display_name": "原步骤、事件来源与已准备消息依据"
+          },
+          {
+            "key": "execution_state_for_task",
+            "type": "era.batch.execution.state",
+            "display_name": "当前在途批次，索引尚未推进"
+          }
+        ]
       },
       {
         "id": "task_update_mk",
@@ -108,15 +135,6 @@
       [
         "start",
         "route_simple_task"
-      ],
-      {
-        "from": "route_simple_task",
-        "to": "task_sync",
-        "when": "simple_task_route == 'sync'"
-      },
-      [
-        "task_sync",
-        "end"
       ],
       {
         "from": "route_simple_task",
@@ -154,5 +172,6 @@
         "as": "simpleTaskResult"
       }
     ]
-  }
+  },
+  "status": "planned"
 }

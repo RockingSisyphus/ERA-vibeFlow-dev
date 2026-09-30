@@ -1,0 +1,96 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.command.operation.result",
+  "representation": "json",
+  "display_name": "完整块内操作结果",
+  "description": "当前变量与楼层快照分别保存；有序栈、候选函数组及随机位置保持原恢复范围。只有完整结果交回消息块层，不逐字段保存。",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "mode": {
+        "type": "string",
+        "enum": [
+          "command",
+          "stage-calls"
+        ]
+      },
+      "commands": {
+        "type": "array"
+      },
+      "commandIndex": {
+        "type": "integer"
+      },
+      "rootIndex": {
+        "type": "integer"
+      },
+      "stack": {
+        "type": "array"
+      },
+      "stat": {},
+      "statFunc": {
+        "type": "object"
+      },
+      "messageStartStat": {},
+      "messageStartStatFunc": {
+        "type": "object"
+      },
+      "randomCursor": {
+        "type": [
+          "object",
+          "null"
+        ]
+      },
+      "functionGroup": {
+        "type": [
+          "object",
+          "null"
+        ]
+      },
+      "stageCallTable": {
+        "type": [
+          "object",
+          "null"
+        ]
+      },
+      "editLog": {
+        "type": "array"
+      },
+      "functionEditLog": {
+        "type": "array"
+      },
+      "diagnostics": {
+        "type": "array"
+      },
+      "done": {
+        "type": "boolean"
+      },
+      "failure": {
+        "type": [
+          "object",
+          "null"
+        ]
+      },
+      "context": {
+        "type": "object"
+      },
+      "pendingAction": {
+        "type": [
+          "object",
+          "null"
+        ]
+      }
+    },
+    "required": [
+      "mode",
+      "stack",
+      "stat",
+      "statFunc",
+      "editLog",
+      "functionEditLog",
+      "diagnostics",
+      "done",
+      "context"
+    ],
+    "additionalProperties": false
+  }
+}

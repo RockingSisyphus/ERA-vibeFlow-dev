@@ -1,0 +1,51 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.task.continuation.context",
+  "representation": "json",
+  "display_name": "原任务接续上下文",
+  "description": "保留原步骤、来源与批次和 API/生成适配依据，执行返回后才结算；不是跨迭代持久化状态。",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "origin": {
+        "type": "string",
+        "enum": [
+          "sync",
+          "initialize",
+          "api",
+          "agent"
+        ]
+      },
+      "step": {
+        "type": "object"
+      },
+      "executionState": {
+        "type": "object"
+      },
+      "apiContext": {
+        "type": [
+          "object",
+          "null"
+        ]
+      },
+      "initializationContext": {
+        "type": [
+          "object",
+          "null"
+        ]
+      },
+      "agentContext": {
+        "type": [
+          "object",
+          "null"
+        ]
+      }
+    },
+    "required": [
+      "origin",
+      "step",
+      "executionState"
+    ],
+    "additionalProperties": false
+  }
+}
