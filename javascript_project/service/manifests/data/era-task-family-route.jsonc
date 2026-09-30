@@ -1,0 +1,17 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.task.family.route",
+  "representation": "json",
+  "display_name": "ERA 服务任务族路由",
+  "description": "统一准备后，仅用于选择 Service 直属复杂任务或简单任务分支；原 PlannedStep 任务路由保持独立。",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "string",
+    "enum": [
+      "initialize",
+      "api",
+      "agent-generation-session",
+      "simple"
+    ]
+  }
+}

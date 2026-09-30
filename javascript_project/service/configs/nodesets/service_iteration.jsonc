@@ -1,10 +1,19 @@
 {
   "nodeset_imports": [
     {
-      "path": "service_collect_phase.jsonc"
+      "path": "service_collect_cycle_phase.jsonc"
     },
     {
-      "path": "service_prepare_batch_phase.jsonc"
+      "path": "dispatch_prepare_context.jsonc"
+    },
+    {
+      "path": "task_initialize.jsonc"
+    },
+    {
+      "path": "task_api.jsonc"
+    },
+    {
+      "path": "agent_generation_session.jsonc"
     },
     {
       "path": "service_step.jsonc"
@@ -15,7 +24,7 @@
   ],
   "type_key": "era.service.iteration",
   "display_name": "ERA 服务阶段迭代",
-  "description": "外层永久 Loop 的单轮 body。collect 阶段只收集/规划，execute 阶段只执行一个严格 PlannedStep；结算后才再次接收入站事件。",
+  "description": "外层永久 Loop 的单轮 body：collect 阶段归约一个事件；execute 阶段选择并准备一个步骤，直属路由复杂任务，统一合并后继续或结算。",
   "requires": [
     {
       "type": "era.service.cycle.state",
@@ -55,28 +64,10 @@
         "description": "只读取内部 collect/execute 标签，不读取事件，不改变领域状态。"
       },
       {
-        "id": "collect_phase",
-        "type_used": "era.service.collect_phase",
-        "display_name": "接收并归约一个事件",
-        "description": "只有 collect 阶段接收入站事件，校验、归约并发送事件集控制。"
-      },
-      {
-        "id": "route_collection",
-        "type_used": "era.service.route_iteration",
-        "display_name": "选择等待或规划",
-        "description": "读取归约结果的 wait/execute 路由，不改变事件集。"
-      },
-      {
-        "id": "carry_wait",
-        "type_used": "era.service.cycle.carry_wait",
-        "display_name": "携带等待状态",
-        "description": "把归约后的服务状态原样包装为下一轮 collect 阶段。"
-      },
-      {
-        "id": "prepare_batch",
-        "type_used": "era.service.prepare_batch_phase",
-        "display_name": "规划并校验就绪批次",
-        "description": "规划严格步骤与来源覆盖；无效覆盖立即结算发布，有效批次进入 execute 阶段。"
+        "id": "collect_cycle_phase",
+        "type_used": "era.service.collect_cycle_phase",
+        "display_name": "收集、等待或规划批次",
+        "description": "原位收束事件归约及就绪批次规划；覆盖失败仍当轮结算并发布。"
       },
       {
         "id": "unpack_execution",
@@ -85,16 +76,46 @@
         "description": "仅 execute 阶段解包；输出通过既有严格批次状态 Schema 校验。"
       },
       {
-        "id": "execute_step",
+        "id": "prepare_dispatch_context",
+        "type_used": "era.dispatch.prepare_context",
+        "display_name": "选择步骤并准备派发上下文",
+        "description": "先选择唯一 PlannedStep，再执行原消息准备并生成复杂任务或简单任务族路由。"
+      },
+      {
+        "id": "task_initialize",
+        "type_used": "era.task.initialize",
+        "display_name": "执行初始化任务",
+        "description": "执行设置、世界书、正则和消息资源初始化；启动操作随后复用共享同步事务。"
+      },
+      {
+        "id": "task_api",
+        "type_used": "era.task.api",
+        "display_name": "执行 ERA 公共对象任务",
+        "description": "进入新的公共对象二级路由：一次 ERA.commit 对应一次即时消息与 Sidecar 事务，ERA.sync 复用共享同步；读取和订阅不进入 Service 事件任务。"
+      },
+      {
+        "id": "adapt_api_task_result",
+        "type_used": "era.service.adapt_api_task_result",
+        "display_name": "接回公共对象任务结果",
+        "description": "保留 API 任务的独立结果类型并接入原步骤合并。"
+      },
+      {
+        "id": "task_agent_generation_session",
+        "type_used": "era.agent.generation_session",
+        "display_name": "执行三阶段故事生成会话",
+        "description": "在原 FIFO、生成栅栏和取消域内处理生成生命周期与重试；设置命令已分到相邻 Nodeset。"
+      },
+      {
+        "id": "execute_simple_task",
         "type_used": "era.service.step",
-        "display_name": "执行一个规划步骤",
-        "description": "沿既有任务路由执行恰好一个步骤，并保留索引、结算与失败语义。"
+        "display_name": "执行已准备的简单任务",
+        "description": "普通同步、MK、Agent 设置及 ignore 在同一小型分支中完成，不重新准备上下文。"
       },
       {
         "id": "settle_step",
         "type_used": "era.service.settle_step_phase",
-        "display_name": "继续或完成批次",
-        "description": "未到最后一步时携带在途状态；最后一步当轮结算并发布后返回 collect。"
+        "display_name": "合并任务结果并继续或完成批次",
+        "description": "对恰好一个任务结果推进索引；最后一步当轮结算并发布。"
       },
       {
         "id": "end",
@@ -110,7 +131,7 @@
       ],
       {
         "from": "route_phase",
-        "to": "collect_phase",
+        "to": "collect_cycle_phase",
         "when": "cycle_route == 'collect'"
       },
       {
@@ -119,47 +140,58 @@
         "when": "cycle_route == 'execute'"
       },
       [
-        "collect_phase",
-        "route_collection"
-      ],
-      {
-        "from": "collect_phase",
-        "to": "carry_wait",
-        "schedule": false
-      },
-      {
-        "from": "collect_phase",
-        "to": "prepare_batch",
-        "schedule": false
-      },
-      {
-        "from": "route_collection",
-        "to": "carry_wait",
-        "when": "iteration_route == 'wait'",
-        "transfer": false
-      },
-      {
-        "from": "route_collection",
-        "to": "prepare_batch",
-        "when": "iteration_route == 'execute'",
-        "transfer": false
-      },
-      [
-        "carry_wait",
-        "end"
-      ],
-      [
-        "prepare_batch",
+        "collect_cycle_phase",
         "end"
       ],
       [
         "unpack_execution",
-        "execute_step"
+        "prepare_dispatch_context"
       ],
+      {
+        "from": "prepare_dispatch_context",
+        "to": "task_initialize",
+        "when": "task_family_route == 'initialize'"
+      },
+      {
+        "from": "prepare_dispatch_context",
+        "to": "task_api",
+        "when": "task_family_route == 'api'"
+      },
+      {
+        "from": "prepare_dispatch_context",
+        "to": "task_agent_generation_session",
+        "when": "task_family_route == 'agent-generation-session'"
+      },
+      {
+        "from": "prepare_dispatch_context",
+        "to": "execute_simple_task",
+        "when": "task_family_route == 'simple'"
+      },
       [
-        "execute_step",
+        "task_initialize",
         "settle_step"
       ],
+      [
+        "task_api",
+        "adapt_api_task_result"
+      ],
+      [
+        "adapt_api_task_result",
+        "settle_step"
+      ],
+      [
+        "task_agent_generation_session",
+        "settle_step"
+      ],
+      [
+        "execute_simple_task",
+        "settle_step"
+      ],
+      {
+        "from": "prepare_dispatch_context",
+        "to": "settle_step",
+        "schedule": false
+      },
       [
         "settle_step",
         "end"

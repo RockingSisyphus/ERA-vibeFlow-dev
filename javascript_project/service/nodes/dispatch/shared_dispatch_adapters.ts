@@ -17,19 +17,24 @@ export function FinalizeDispatchContextNode(
   const outcome = inputs["era.dispatch.preparation.outcome"]
     .value as DispatchPreparationOutcomeV1;
   const step = outcome.seed.step;
+  const preparedTaskRoute = step.kind === "execute"
+    ? step.taskRoute === "agent-generation-session" &&
+        step.task.primaryEvent.type === "era.ui.agent_configuration"
+      ? "agent-settings"
+      : step.taskRoute
+    : "ignore";
+  const taskFamilyRoute = preparedTaskRoute === "initialize" ||
+      preparedTaskRoute === "api" ||
+      preparedTaskRoute === "agent-generation-session"
+    ? preparedTaskRoute
+    : "simple";
   return {
     prepared_routed_step: {
       ...step,
       dispatchContext: dispatchContextOf(outcome),
     },
-    prepared_task_route:
-      step.kind === "execute"
-        ? step.taskRoute === "agent-generation-session" &&
-          step.task.primaryEvent.type === "era.ui.agent_configuration"
-          ? "agent-settings"
-          : step.taskRoute
-        : "ignore",
-    prepared_execution_state: outcome.seed.state,
+    prepared_task_route: preparedTaskRoute,
+    task_family_route: taskFamilyRoute,
   };
 }
 

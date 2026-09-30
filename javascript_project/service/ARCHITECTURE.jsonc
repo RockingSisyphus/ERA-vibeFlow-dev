@@ -3942,18 +3942,13 @@
         "root_id": "era-service",
         "path": "configs/nodesets/dispatch_prepare_context.jsonc"
       },
-      "display_name": "ERA 统一任务上下文准备",
-      "description": "在领域任务路由前统一分类任务上下文，读取严格酒馆消息投影；状态任务把消息 MK、占位符和最终楼层候选暂存在 EraDispatchContextV3，不提前写 Tavern，只有 update-mk 任务仍在此提交 SelectedMks。",
+      "display_name": "ERA 选择并准备任务上下文",
+      "description": "从当前严格批次状态选择唯一 PlannedStep，再沿原统一准备链形成已路由任务上下文和外层任务族路由。",
       "status": "implemented",
       "flow_kind": "predefined",
       "effect_scope": "none",
       "reachable_from_workflow": true,
       "requires": [
-        {
-          "type": "era.step.request",
-          "cardinality": "exactly_one",
-          "display_name": "已选规划步骤"
-        },
         {
           "type": "era.batch.execution.state",
           "cardinality": "exactly_one",
@@ -3975,6 +3970,11 @@
           "key": "prepared_execution_state",
           "type": "era.batch.execution.state",
           "display_name": "已准备批次状态"
+        },
+        {
+          "key": "task_family_route",
+          "type": "era.task.family.route",
+          "display_name": "外层任务族路由"
         }
       ],
       "global_config": {},
@@ -3984,12 +3984,6 @@
           "path": "configs/nodesets/dispatch_prepare_context.jsonc"
         },
         "inputs": [
-          {
-            "key": "selected_step",
-            "type": "era.step.request",
-            "display_name": "已选规划步骤",
-            "required": true
-          },
           {
             "key": "execution_state",
             "type": "era.batch.execution.state",
@@ -4015,6 +4009,12 @@
             "cardinality": "exactly_one",
             "display_name": "已准备批次状态",
             "as": "preparedExecutionState"
+          },
+          {
+            "type": "era.task.family.route",
+            "cardinality": "exactly_one",
+            "display_name": "外层任务族路由",
+            "as": "taskFamilyRoute"
           }
         ],
         "max_steps": 18,
@@ -4022,11 +4022,11 @@
         "execution_lock": null,
         "contains_global_state": false,
         "summary": {
-          "nodes": 9,
+          "nodes": 10,
           "nodesets": 19,
-          "explicit_edges": 10,
+          "explicit_edges": 11,
           "data_edges": 0,
-          "reported_edges": 10,
+          "reported_edges": 11,
           "contains_global_state": false
         },
         "entry_nodes": [
@@ -4035,12 +4035,7 @@
         "terminal_nodes": [
           "end"
         ],
-        "god_nodes": [
-          {
-            "node": "finalize_dispatch_context",
-            "degree": 4
-          }
-        ],
+        "god_nodes": [],
         "nodes": [
           {
             "id": "start",
@@ -4064,6 +4059,56 @@
             "planned_behavior": null,
             "requires": [],
             "provides": [],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "select_step",
+            "type_used": "era.service.select_step",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/dispatch_prepare_context.jsonc"
+            },
+            "role": {
+              "display_name": "选择当前步骤",
+              "description": "按索引选择当前 PlannedStep，不执行或移除后续步骤。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "process",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.batch.execution.state",
+                "cardinality": "exactly_one",
+                "display_name": "批次执行状态"
+              }
+            ],
+            "provides": [
+              {
+                "key": "selected_step",
+                "type": "era.step.request",
+                "display_name": "已选步骤"
+              },
+              {
+                "key": "prepared_execution_state",
+                "type": "era.batch.execution.state",
+                "display_name": "原样传递的批次状态"
+              }
+            ],
             "join_policy": "safe_any",
             "async": null,
             "loop": null,
@@ -4399,9 +4444,9 @@
                 "display_name": "已准备任务路由"
               },
               {
-                "key": "prepared_execution_state",
-                "type": "era.batch.execution.state",
-                "display_name": "已准备批次状态"
+                "key": "task_family_route",
+                "type": "era.task.family.route",
+                "display_name": "外层任务族路由"
               }
             ],
             "join_policy": "safe_any",
@@ -4452,6 +4497,16 @@
         "edges": [
           {
             "from": "start",
+            "to": "select_step",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "select_step",
             "to": "classify_context",
             "when": "",
             "roles": [
@@ -4553,64 +4608,64 @@
         ]
       }
     },
-    "era.service.batch_publish": {
-      "type_key": "era.service.batch_publish",
+    "era.service.collect_cycle_phase": {
+      "type_key": "era.service.collect_cycle_phase",
       "source": {
         "root_id": "era-service",
-        "path": "configs/nodesets/batch_publish.jsonc"
+        "path": "configs/nodesets/service_collect_cycle_phase.jsonc"
       },
-      "display_name": "ERA 批次发布",
-      "description": "构造并发送一个批次结果帧，然后选择正常继续或致命终止服务。",
+      "display_name": "ERA 收集与就绪批次阶段",
+      "description": "只在 collect 阶段接收和归约一个事件；按原控制路由等待或规划就绪批次。",
       "status": "implemented",
       "flow_kind": "predefined",
       "effect_scope": "none",
       "reachable_from_workflow": true,
       "requires": [
         {
-          "type": "era.batch.finalization",
+          "type": "era.service.cycle.routed",
           "cardinality": "exactly_one",
-          "display_name": "批次收尾结果"
+          "display_name": "收集阶段状态"
         }
       ],
       "provides": [
         {
-          "key": "published_state_next",
-          "type": "era.service.state.next",
-          "display_name": "发布后的下一状态"
+          "key": "collection_cycle_state",
+          "type": "era.service.cycle.state",
+          "display_name": "下一阶段状态"
         }
       ],
       "global_config": {},
       "body": {
         "source": {
           "root_id": "era-service",
-          "path": "configs/nodesets/batch_publish.jsonc"
+          "path": "configs/nodesets/service_collect_cycle_phase.jsonc"
         },
         "inputs": [
           {
-            "key": "batch_finalization",
-            "type": "era.batch.finalization",
-            "display_name": "批次收尾结果",
+            "key": "cycle_state",
+            "type": "era.service.cycle.routed",
+            "display_name": "收集阶段状态",
             "required": true
           }
         ],
         "outputs": [
           {
-            "type": "era.service.state.next",
+            "type": "era.service.cycle.state",
             "cardinality": "exactly_one",
-            "display_name": "发布后的下一状态",
-            "as": "publishedStateNext"
+            "display_name": "下一阶段状态",
+            "as": "cycleStateNext"
           }
         ],
-        "max_steps": 16,
+        "max_steps": 8,
         "entry_mode": "async",
         "execution_lock": null,
         "contains_global_state": false,
         "summary": {
-          "nodes": 7,
+          "nodes": 6,
           "nodesets": 19,
-          "explicit_edges": 10,
-          "data_edges": 3,
-          "reported_edges": 10,
+          "explicit_edges": 8,
+          "data_edges": 2,
+          "reported_edges": 8,
           "contains_global_state": false
         },
         "entry_nodes": [
@@ -4621,11 +4676,7 @@
         ],
         "god_nodes": [
           {
-            "node": "build_outbound",
-            "degree": 5
-          },
-          {
-            "node": "route_fatal",
+            "node": "collect_phase",
             "degree": 4
           }
         ],
@@ -4635,11 +4686,11 @@
             "type_used": "era.service.terminal",
             "source": {
               "root_id": "era-service",
-              "path": "configs/nodesets/batch_publish.jsonc"
+              "path": "configs/nodesets/service_collect_cycle_phase.jsonc"
             },
             "role": {
-              "display_name": "发布启动",
-              "description": "开始发布出站帧。"
+              "display_name": "收集轮次开始",
+              "description": "开始一次收集、等待或批次规划。"
             },
             "contract_source": "node_type",
             "flow_kind": "terminal",
@@ -4664,18 +4715,18 @@
             }
           },
           {
-            "id": "build_outbound",
-            "type_used": "era.service.build_outbound",
+            "id": "collect_phase",
+            "type_used": "era.service.collect_phase",
             "source": {
               "root_id": "era-service",
-              "path": "configs/nodesets/batch_publish.jsonc"
+              "path": "configs/nodesets/service_collect_cycle_phase.jsonc"
             },
             "role": {
-              "display_name": "构造批次结果帧",
-              "description": "构造幂等帧，确保结算先于通知，并携带致命决策。"
+              "display_name": "接收并归约一个事件",
+              "description": "只有 collect 阶段接收入站事件，校验、归约并发送事件集控制。"
             },
-            "contract_source": "node_type",
-            "flow_kind": "process",
+            "contract_source": "nodeset",
+            "flow_kind": "predefined",
             "effect_scope": "none",
             "runtime_dispatch": "unknown",
             "execution_lock": null,
@@ -4685,33 +4736,27 @@
             "planned_behavior": null,
             "requires": [
               {
-                "type": "era.batch.finalization",
+                "type": "era.service.cycle.routed",
                 "cardinality": "exactly_one",
-                "display_name": "批次收尾结果"
+                "display_name": "收集阶段状态"
               }
             ],
             "provides": [
               {
-                "key": "batch_result_frame",
-                "type": "era.batch.result",
-                "display_name": "批次结果帧"
-              },
-              {
-                "key": "batch_fatal_flag",
-                "type": "era.batch.fatal",
-                "display_name": "批次致命标记"
-              },
-              {
-                "key": "post_batch_state",
-                "type": "era.service.state.post_batch",
-                "display_name": "批次后状态"
+                "key": "collection_reduction",
+                "type": "era.collection.reduction",
+                "display_name": "事件集归约结果"
               }
             ],
             "join_policy": "safe_any",
             "async": null,
             "loop": null,
             "io": null,
-            "invokes": null,
+            "invokes": {
+              "kind": "nodeset",
+              "target": "era.service.collect_phase",
+              "target_status": "implemented"
+            },
             "config": {
               "call": {},
               "node_configs": {},
@@ -4719,57 +4764,15 @@
             }
           },
           {
-            "id": "send_batch_result",
-            "type_used": "vibeflow.io",
+            "id": "route_collection",
+            "type_used": "era.service.route_iteration",
             "source": {
               "root_id": "era-service",
-              "path": "configs/nodesets/batch_publish.jsonc"
+              "path": "configs/nodesets/service_collect_cycle_phase.jsonc"
             },
             "role": {
-              "display_name": "发送批次结果",
-              "description": "在抛出任何致命错误前，将最终帧提交到出站 Port。"
-            },
-            "contract_source": "system_config",
-            "flow_kind": "io",
-            "effect_scope": "none",
-            "runtime_dispatch": "unknown",
-            "execution_lock": null,
-            "effective_execution_lock": null,
-            "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
-            "requires": [
-              {
-                "type": "era.batch.result",
-                "cardinality": "exactly_one",
-                "display_name": "批次结果帧"
-              }
-            ],
-            "provides": [],
-            "join_policy": "safe_any",
-            "async": null,
-            "loop": null,
-            "io": {
-              "operation": "send",
-              "port": "era.service.out"
-            },
-            "invokes": null,
-            "config": {
-              "call": {},
-              "node_configs": {},
-              "allow_config_override": false
-            }
-          },
-          {
-            "id": "route_fatal",
-            "type_used": "era.service.route_fatal",
-            "source": {
-              "root_id": "era-service",
-              "path": "configs/nodesets/batch_publish.jsonc"
-            },
-            "role": {
-              "display_name": "路由致命结果",
-              "description": "可恢复批次结果后继续；提交结果未知或部分提交时抛出错误。"
+              "display_name": "选择等待或规划",
+              "description": "读取归约结果的 wait/execute 路由，不改变事件集。"
             },
             "contract_source": "node_type",
             "flow_kind": "decision",
@@ -4782,16 +4785,16 @@
             "planned_behavior": null,
             "requires": [
               {
-                "type": "era.batch.fatal",
+                "type": "era.collection.reduction",
                 "cardinality": "exactly_one",
-                "display_name": "批次致命标记"
+                "display_name": "事件集归约结果"
               }
             ],
             "provides": [
               {
-                "key": "fatal_route",
-                "type": "era.fatal.route",
-                "display_name": "致命结果路由"
+                "key": "iteration_route",
+                "type": "era.iteration.route",
+                "display_name": "迭代路由"
               }
             ],
             "join_policy": "safe_any",
@@ -4806,15 +4809,15 @@
             }
           },
           {
-            "id": "continue_state",
-            "type_used": "era.service.continue_state",
+            "id": "carry_wait",
+            "type_used": "era.service.cycle.carry_wait",
             "source": {
               "root_id": "era-service",
-              "path": "configs/nodesets/batch_publish.jsonc"
+              "path": "configs/nodesets/service_collect_cycle_phase.jsonc"
             },
             "role": {
-              "display_name": "继续服务",
-              "description": "导出已提交的批次后状态，供外层循环下一次迭代使用。"
+              "display_name": "携带等待状态",
+              "description": "把归约后的服务状态原样包装为下一轮 collect 阶段。"
             },
             "contract_source": "node_type",
             "flow_kind": "process",
@@ -4827,16 +4830,16 @@
             "planned_behavior": null,
             "requires": [
               {
-                "type": "era.service.state.post_batch",
+                "type": "era.collection.reduction",
                 "cardinality": "exactly_one",
-                "display_name": "批次后状态"
+                "display_name": "输入状态"
               }
             ],
             "provides": [
               {
-                "key": "continued_state_next",
-                "type": "era.service.state.next",
-                "display_name": "继续服务状态"
+                "key": "wait_cycle_state",
+                "type": "era.service.cycle.state",
+                "display_name": "阶段结果"
               }
             ],
             "join_policy": "safe_any",
@@ -4851,18 +4854,18 @@
             }
           },
           {
-            "id": "raise_fatal",
-            "type_used": "era.service.raise_fatal",
+            "id": "prepare_batch",
+            "type_used": "era.service.prepare_batch_phase",
             "source": {
               "root_id": "era-service",
-              "path": "configs/nodesets/batch_publish.jsonc"
+              "path": "configs/nodesets/service_collect_cycle_phase.jsonc"
             },
             "role": {
-              "display_name": "抛出致命服务错误",
-              "description": "仅在宿主收到终止批次帧后抛出带类型的致命错误。"
+              "display_name": "规划并校验就绪批次",
+              "description": "规划严格步骤与来源覆盖；无效覆盖立即结算发布，有效批次进入 execute 阶段。"
             },
-            "contract_source": "node_type",
-            "flow_kind": "process",
+            "contract_source": "nodeset",
+            "flow_kind": "predefined",
             "effect_scope": "none",
             "runtime_dispatch": "unknown",
             "execution_lock": null,
@@ -4872,23 +4875,27 @@
             "planned_behavior": null,
             "requires": [
               {
-                "type": "era.service.state.post_batch",
+                "type": "era.collection.reduction",
                 "cardinality": "exactly_one",
-                "display_name": "批次后状态"
+                "display_name": "就绪事件集"
               }
             ],
             "provides": [
               {
-                "key": "fatal_state_next",
-                "type": "era.service.state.next",
-                "display_name": "致命状态"
+                "key": "prepared_cycle_state",
+                "type": "era.service.cycle.state",
+                "display_name": "下一阶段状态"
               }
             ],
             "join_policy": "safe_any",
             "async": null,
             "loop": null,
             "io": null,
-            "invokes": null,
+            "invokes": {
+              "kind": "nodeset",
+              "target": "era.service.prepare_batch_phase",
+              "target_status": "implemented"
+            },
             "config": {
               "call": {},
               "node_configs": {},
@@ -4900,11 +4907,11 @@
             "type_used": "era.service.terminal",
             "source": {
               "root_id": "era-service",
-              "path": "configs/nodesets/batch_publish.jsonc"
+              "path": "configs/nodesets/service_collect_cycle_phase.jsonc"
             },
             "role": {
-              "display_name": "发布结束",
-              "description": "发布路径未被致命异常中断时结束。"
+              "display_name": "收集轮次结束",
+              "description": "输出唯一下一阶段状态。"
             },
             "contract_source": "node_type",
             "flow_kind": "terminal",
@@ -4932,7 +4939,7 @@
         "edges": [
           {
             "from": "start",
-            "to": "build_outbound",
+            "to": "collect_phase",
             "when": "",
             "roles": [
               "mainline",
@@ -4941,8 +4948,8 @@
             ]
           },
           {
-            "from": "build_outbound",
-            "to": "send_batch_result",
+            "from": "collect_phase",
+            "to": "route_collection",
             "when": "",
             "roles": [
               "mainline",
@@ -4951,17 +4958,8 @@
             ]
           },
           {
-            "from": "send_batch_result",
-            "to": "route_fatal",
-            "when": "",
-            "roles": [
-              "mainline",
-              "schedule"
-            ]
-          },
-          {
-            "from": "build_outbound",
-            "to": "route_fatal",
+            "from": "collect_phase",
+            "to": "carry_wait",
             "when": "",
             "roles": [
               "data_bypass",
@@ -4969,17 +4967,8 @@
             ]
           },
           {
-            "from": "route_fatal",
-            "to": "continue_state",
-            "when": "fatal_route == 'continue'",
-            "roles": [
-              "mainline",
-              "schedule"
-            ]
-          },
-          {
-            "from": "build_outbound",
-            "to": "continue_state",
+            "from": "collect_phase",
+            "to": "prepare_batch",
             "when": "",
             "roles": [
               "data_bypass",
@@ -4987,25 +4976,25 @@
             ]
           },
           {
-            "from": "route_fatal",
-            "to": "raise_fatal",
-            "when": "fatal_route == 'fatal'",
+            "from": "route_collection",
+            "to": "carry_wait",
+            "when": "iteration_route == 'wait'",
             "roles": [
               "mainline",
               "schedule"
             ]
           },
           {
-            "from": "build_outbound",
-            "to": "raise_fatal",
-            "when": "",
+            "from": "route_collection",
+            "to": "prepare_batch",
+            "when": "iteration_route == 'execute'",
             "roles": [
-              "data_bypass",
-              "transfer"
+              "mainline",
+              "schedule"
             ]
           },
           {
-            "from": "continue_state",
+            "from": "carry_wait",
             "to": "end",
             "when": "",
             "roles": [
@@ -5015,7 +5004,7 @@
             ]
           },
           {
-            "from": "raise_fatal",
+            "from": "prepare_batch",
             "to": "end",
             "when": "",
             "roles": [
@@ -5483,7 +5472,7 @@
         "path": "configs/nodesets/service_finish_batch.jsonc"
       },
       "display_name": "ERA 批次结算与发布",
-      "description": "复用原 finalizeBatch 和发布 Nodeset；最后一步或覆盖失败的当轮发出唯一结果帧，fatal 仍在发送后抛出。",
+      "description": "结算全部来源，构造并发送唯一批次结果帧；发送完成后才允许继续或抛出致命错误。",
       "status": "implemented",
       "flow_kind": "predefined",
       "effect_scope": "none",
@@ -5529,11 +5518,11 @@
         "execution_lock": null,
         "contains_global_state": false,
         "summary": {
-          "nodes": 5,
+          "nodes": 9,
           "nodesets": 19,
-          "explicit_edges": 4,
-          "data_edges": 0,
-          "reported_edges": 4,
+          "explicit_edges": 12,
+          "data_edges": 3,
+          "reported_edges": 12,
           "contains_global_state": false
         },
         "entry_nodes": [
@@ -5542,7 +5531,16 @@
         "terminal_nodes": [
           "end"
         ],
-        "god_nodes": [],
+        "god_nodes": [
+          {
+            "node": "build_outbound",
+            "degree": 5
+          },
+          {
+            "node": "route_fatal",
+            "degree": 4
+          }
+        ],
         "nodes": [
           {
             "id": "start",
@@ -5623,18 +5621,18 @@
             }
           },
           {
-            "id": "publish_batch",
-            "type_used": "era.service.batch_publish",
+            "id": "build_outbound",
+            "type_used": "era.service.build_outbound",
             "source": {
               "root_id": "era-service",
               "path": "configs/nodesets/service_finish_batch.jsonc"
             },
             "role": {
-              "display_name": "发送批次结果",
-              "description": "保留先发送回执帧、再处理致命错误的现有出站路径。"
+              "display_name": "构造批次结果帧",
+              "description": "构造幂等帧，确保结算先于通知，并携带致命决策。"
             },
-            "contract_source": "nodeset",
-            "flow_kind": "predefined",
+            "contract_source": "node_type",
+            "flow_kind": "process",
             "effect_scope": "none",
             "runtime_dispatch": "unknown",
             "execution_lock": null,
@@ -5651,20 +5649,203 @@
             ],
             "provides": [
               {
-                "key": "published_state_next",
-                "type": "era.service.state.next",
-                "display_name": "发布后的下一状态"
+                "key": "batch_result_frame",
+                "type": "era.batch.result",
+                "display_name": "批次结果帧"
+              },
+              {
+                "key": "batch_fatal_flag",
+                "type": "era.batch.fatal",
+                "display_name": "批次致命标记"
+              },
+              {
+                "key": "post_batch_state",
+                "type": "era.service.state.post_batch",
+                "display_name": "批次后状态"
               }
             ],
             "join_policy": "safe_any",
             "async": null,
             "loop": null,
             "io": null,
-            "invokes": {
-              "kind": "nodeset",
-              "target": "era.service.batch_publish",
-              "target_status": "implemented"
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "send_batch_result",
+            "type_used": "vibeflow.io",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/service_finish_batch.jsonc"
             },
+            "role": {
+              "display_name": "发送批次结果",
+              "description": "在抛出任何致命错误前，将最终帧提交到出站 Port。"
+            },
+            "contract_source": "system_config",
+            "flow_kind": "io",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.batch.result",
+                "cardinality": "exactly_one",
+                "display_name": "批次结果帧"
+              }
+            ],
+            "provides": [],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": {
+              "operation": "send",
+              "port": "era.service.out"
+            },
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "route_fatal",
+            "type_used": "era.service.route_fatal",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/service_finish_batch.jsonc"
+            },
+            "role": {
+              "display_name": "路由致命结果",
+              "description": "可恢复批次结果后继续；提交结果未知或部分提交时抛出错误。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "decision",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.batch.fatal",
+                "cardinality": "exactly_one",
+                "display_name": "批次致命标记"
+              }
+            ],
+            "provides": [
+              {
+                "key": "fatal_route",
+                "type": "era.fatal.route",
+                "display_name": "致命结果路由"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "continue_state",
+            "type_used": "era.service.continue_state",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/service_finish_batch.jsonc"
+            },
+            "role": {
+              "display_name": "继续服务",
+              "description": "导出已提交的批次后状态，供外层循环下一次迭代使用。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "process",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.service.state.post_batch",
+                "cardinality": "exactly_one",
+                "display_name": "批次后状态"
+              }
+            ],
+            "provides": [
+              {
+                "key": "continued_state_next",
+                "type": "era.service.state.next",
+                "display_name": "继续服务状态"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "raise_fatal",
+            "type_used": "era.service.raise_fatal",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/service_finish_batch.jsonc"
+            },
+            "role": {
+              "display_name": "抛出致命服务错误",
+              "description": "仅在宿主收到终止批次帧后抛出带类型的致命错误。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "process",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.service.state.post_batch",
+                "cardinality": "exactly_one",
+                "display_name": "批次后状态"
+              }
+            ],
+            "provides": [
+              {
+                "key": "fatal_state_next",
+                "type": "era.service.state.next",
+                "display_name": "致命状态"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
             "config": {
               "call": {},
               "node_configs": {},
@@ -5763,7 +5944,7 @@
           },
           {
             "from": "finalize_batch",
-            "to": "publish_batch",
+            "to": "build_outbound",
             "when": "",
             "roles": [
               "mainline",
@@ -5772,7 +5953,71 @@
             ]
           },
           {
-            "from": "publish_batch",
+            "from": "build_outbound",
+            "to": "send_batch_result",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "send_batch_result",
+            "to": "route_fatal",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule"
+            ]
+          },
+          {
+            "from": "build_outbound",
+            "to": "route_fatal",
+            "when": "",
+            "roles": [
+              "data_bypass",
+              "transfer"
+            ]
+          },
+          {
+            "from": "route_fatal",
+            "to": "continue_state",
+            "when": "fatal_route == 'continue'",
+            "roles": [
+              "mainline",
+              "schedule"
+            ]
+          },
+          {
+            "from": "build_outbound",
+            "to": "continue_state",
+            "when": "",
+            "roles": [
+              "data_bypass",
+              "transfer"
+            ]
+          },
+          {
+            "from": "route_fatal",
+            "to": "raise_fatal",
+            "when": "fatal_route == 'fatal'",
+            "roles": [
+              "mainline",
+              "schedule"
+            ]
+          },
+          {
+            "from": "build_outbound",
+            "to": "raise_fatal",
+            "when": "",
+            "roles": [
+              "data_bypass",
+              "transfer"
+            ]
+          },
+          {
+            "from": "continue_state",
             "to": "resume_collection",
             "when": "",
             "roles": [
@@ -5783,6 +6028,16 @@
           },
           {
             "from": "resume_collection",
+            "to": "end",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "raise_fatal",
             "to": "end",
             "when": "",
             "roles": [
@@ -5801,7 +6056,7 @@
         "path": "configs/nodesets/service_iteration.jsonc"
       },
       "display_name": "ERA 服务阶段迭代",
-      "description": "外层永久 Loop 的单轮 body。collect 阶段只收集/规划，execute 阶段只执行一个严格 PlannedStep；结算后才再次接收入站事件。",
+      "description": "外层永久 Loop 的单轮 body：collect 阶段归约一个事件；execute 阶段选择并准备一个步骤，直属路由复杂任务，统一合并后继续或结算。",
       "status": "implemented",
       "flow_kind": "predefined",
       "effect_scope": "none",
@@ -5847,11 +6102,11 @@
         "execution_lock": null,
         "contains_global_state": false,
         "summary": {
-          "nodes": 10,
+          "nodes": 12,
           "nodesets": 19,
-          "explicit_edges": 13,
-          "data_edges": 2,
-          "reported_edges": 13,
+          "explicit_edges": 16,
+          "data_edges": 1,
+          "reported_edges": 16,
           "contains_global_state": false
         },
         "entry_nodes": [
@@ -5860,7 +6115,16 @@
         "terminal_nodes": [
           "end"
         ],
-        "god_nodes": [],
+        "god_nodes": [
+          {
+            "node": "prepare_dispatch_context",
+            "degree": 6
+          },
+          {
+            "node": "settle_step",
+            "degree": 6
+          }
+        ],
         "nodes": [
           {
             "id": "start",
@@ -5946,15 +6210,15 @@
             }
           },
           {
-            "id": "collect_phase",
-            "type_used": "era.service.collect_phase",
+            "id": "collect_cycle_phase",
+            "type_used": "era.service.collect_cycle_phase",
             "source": {
               "root_id": "era-service",
               "path": "configs/nodesets/service_iteration.jsonc"
             },
             "role": {
-              "display_name": "接收并归约一个事件",
-              "description": "只有 collect 阶段接收入站事件，校验、归约并发送事件集控制。"
+              "display_name": "收集、等待或规划批次",
+              "description": "原位收束事件归约及就绪批次规划；覆盖失败仍当轮结算并发布。"
             },
             "contract_source": "nodeset",
             "flow_kind": "predefined",
@@ -5974,146 +6238,7 @@
             ],
             "provides": [
               {
-                "key": "collection_reduction",
-                "type": "era.collection.reduction",
-                "display_name": "事件集归约结果"
-              }
-            ],
-            "join_policy": "safe_any",
-            "async": null,
-            "loop": null,
-            "io": null,
-            "invokes": {
-              "kind": "nodeset",
-              "target": "era.service.collect_phase",
-              "target_status": "implemented"
-            },
-            "config": {
-              "call": {},
-              "node_configs": {},
-              "allow_config_override": false
-            }
-          },
-          {
-            "id": "route_collection",
-            "type_used": "era.service.route_iteration",
-            "source": {
-              "root_id": "era-service",
-              "path": "configs/nodesets/service_iteration.jsonc"
-            },
-            "role": {
-              "display_name": "选择等待或规划",
-              "description": "读取归约结果的 wait/execute 路由，不改变事件集。"
-            },
-            "contract_source": "node_type",
-            "flow_kind": "decision",
-            "effect_scope": "none",
-            "runtime_dispatch": "unknown",
-            "execution_lock": null,
-            "effective_execution_lock": null,
-            "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
-            "requires": [
-              {
-                "type": "era.collection.reduction",
-                "cardinality": "exactly_one",
-                "display_name": "事件集归约结果"
-              }
-            ],
-            "provides": [
-              {
-                "key": "iteration_route",
-                "type": "era.iteration.route",
-                "display_name": "迭代路由"
-              }
-            ],
-            "join_policy": "safe_any",
-            "async": null,
-            "loop": null,
-            "io": null,
-            "invokes": null,
-            "config": {
-              "call": {},
-              "node_configs": {},
-              "allow_config_override": false
-            }
-          },
-          {
-            "id": "carry_wait",
-            "type_used": "era.service.cycle.carry_wait",
-            "source": {
-              "root_id": "era-service",
-              "path": "configs/nodesets/service_iteration.jsonc"
-            },
-            "role": {
-              "display_name": "携带等待状态",
-              "description": "把归约后的服务状态原样包装为下一轮 collect 阶段。"
-            },
-            "contract_source": "node_type",
-            "flow_kind": "process",
-            "effect_scope": "none",
-            "runtime_dispatch": "unknown",
-            "execution_lock": null,
-            "effective_execution_lock": null,
-            "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
-            "requires": [
-              {
-                "type": "era.collection.reduction",
-                "cardinality": "exactly_one",
-                "display_name": "输入状态"
-              }
-            ],
-            "provides": [
-              {
-                "key": "wait_cycle_state",
-                "type": "era.service.cycle.state",
-                "display_name": "阶段结果"
-              }
-            ],
-            "join_policy": "safe_any",
-            "async": null,
-            "loop": null,
-            "io": null,
-            "invokes": null,
-            "config": {
-              "call": {},
-              "node_configs": {},
-              "allow_config_override": false
-            }
-          },
-          {
-            "id": "prepare_batch",
-            "type_used": "era.service.prepare_batch_phase",
-            "source": {
-              "root_id": "era-service",
-              "path": "configs/nodesets/service_iteration.jsonc"
-            },
-            "role": {
-              "display_name": "规划并校验就绪批次",
-              "description": "规划严格步骤与来源覆盖；无效覆盖立即结算发布，有效批次进入 execute 阶段。"
-            },
-            "contract_source": "nodeset",
-            "flow_kind": "predefined",
-            "effect_scope": "none",
-            "runtime_dispatch": "unknown",
-            "execution_lock": null,
-            "effective_execution_lock": null,
-            "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
-            "requires": [
-              {
-                "type": "era.collection.reduction",
-                "cardinality": "exactly_one",
-                "display_name": "就绪事件集"
-              }
-            ],
-            "provides": [
-              {
-                "key": "prepared_cycle_state",
+                "key": "collection_cycle_state",
                 "type": "era.service.cycle.state",
                 "display_name": "下一阶段状态"
               }
@@ -6124,7 +6249,7 @@
             "io": null,
             "invokes": {
               "kind": "nodeset",
-              "target": "era.service.prepare_batch_phase",
+              "target": "era.service.collect_cycle_phase",
               "target_status": "implemented"
             },
             "config": {
@@ -6179,15 +6304,15 @@
             }
           },
           {
-            "id": "execute_step",
-            "type_used": "era.service.step",
+            "id": "prepare_dispatch_context",
+            "type_used": "era.dispatch.prepare_context",
             "source": {
               "root_id": "era-service",
               "path": "configs/nodesets/service_iteration.jsonc"
             },
             "role": {
-              "display_name": "执行一个规划步骤",
-              "description": "沿既有任务路由执行恰好一个步骤，并保留索引、结算与失败语义。"
+              "display_name": "选择步骤并准备派发上下文",
+              "description": "先选择唯一 PlannedStep，再执行原消息准备并生成复杂任务或简单任务族路由。"
             },
             "contract_source": "nodeset",
             "flow_kind": "predefined",
@@ -6202,19 +6327,295 @@
               {
                 "type": "era.batch.execution.state",
                 "cardinality": "exactly_one",
-                "display_name": "批次执行状态"
+                "display_name": "当前批次执行状态"
               }
             ],
             "provides": [
               {
-                "key": "execution_state_next",
-                "type": "era.batch.execution.state.next",
-                "display_name": "下一执行状态"
+                "key": "prepared_routed_step",
+                "type": "era.step.request.routed",
+                "display_name": "已准备路由步骤"
               },
               {
-                "key": "step_done",
-                "type": "era.step.done",
-                "display_name": "全部步骤已消费"
+                "key": "prepared_task_route",
+                "type": "era.task.route",
+                "display_name": "已准备任务路由"
+              },
+              {
+                "key": "prepared_execution_state",
+                "type": "era.batch.execution.state",
+                "display_name": "已准备批次状态"
+              },
+              {
+                "key": "task_family_route",
+                "type": "era.task.family.route",
+                "display_name": "外层任务族路由"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": {
+              "kind": "nodeset",
+              "target": "era.dispatch.prepare_context",
+              "target_status": "implemented"
+            },
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "task_initialize",
+            "type_used": "era.task.initialize",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/service_iteration.jsonc"
+            },
+            "role": {
+              "display_name": "执行初始化任务",
+              "description": "执行设置、世界书、正则和消息资源初始化；启动操作随后复用共享同步事务。"
+            },
+            "contract_source": "nodeset",
+            "flow_kind": "predefined",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.step.request.routed",
+                "cardinality": "exactly_one",
+                "display_name": "已路由步骤"
+              },
+              {
+                "type": "era.batch.execution.state",
+                "cardinality": "exactly_one",
+                "display_name": "当前批次执行状态"
+              }
+            ],
+            "provides": [
+              {
+                "key": "initialize_task_result",
+                "type": "era.task.result",
+                "display_name": "初始化结果"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": {
+              "kind": "nodeset",
+              "target": "era.task.initialize",
+              "target_status": "implemented"
+            },
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "task_api",
+            "type_used": "era.task.api",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/service_iteration.jsonc"
+            },
+            "role": {
+              "display_name": "执行 ERA 公共对象任务",
+              "description": "进入新的公共对象二级路由：一次 ERA.commit 对应一次即时消息与 Sidecar 事务，ERA.sync 复用共享同步；读取和订阅不进入 Service 事件任务。"
+            },
+            "contract_source": "nodeset",
+            "flow_kind": "predefined",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.step.request.routed",
+                "cardinality": "exactly_one",
+                "display_name": "era.step.request.routed"
+              },
+              {
+                "type": "era.batch.execution.state",
+                "cardinality": "exactly_one",
+                "display_name": "era.batch.execution.state"
+              }
+            ],
+            "provides": [
+              {
+                "key": "api_task_result",
+                "type": "era.api.task.result",
+                "display_name": "api_task_result"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": {
+              "kind": "nodeset",
+              "target": "era.task.api",
+              "target_status": "implemented"
+            },
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "adapt_api_task_result",
+            "type_used": "era.service.adapt_api_task_result",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/service_iteration.jsonc"
+            },
+            "role": {
+              "display_name": "接回公共对象任务结果",
+              "description": "保留 API 任务的独立结果类型并接入原步骤合并。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "process",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.api.task.result",
+                "cardinality": "exactly_one",
+                "display_name": "公共对象任务结果"
+              }
+            ],
+            "provides": [
+              {
+                "key": "api_task_result_common",
+                "type": "era.task.result",
+                "display_name": "统一步骤任务结果"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "task_agent_generation_session",
+            "type_used": "era.agent.generation_session",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/service_iteration.jsonc"
+            },
+            "role": {
+              "display_name": "执行三阶段故事生成会话",
+              "description": "在原 FIFO、生成栅栏和取消域内处理生成生命周期与重试；设置命令已分到相邻 Nodeset。"
+            },
+            "contract_source": "nodeset",
+            "flow_kind": "predefined",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.step.request.routed",
+                "cardinality": "exactly_one",
+                "display_name": "Agent 包装步骤"
+              },
+              {
+                "type": "era.batch.execution.state",
+                "cardinality": "exactly_one",
+                "display_name": "当前批次状态"
+              }
+            ],
+            "provides": [
+              {
+                "key": "agent_task_result",
+                "type": "era.task.result",
+                "display_name": "生成会话任务结果"
+              }
+            ],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": {
+              "kind": "nodeset",
+              "target": "era.agent.generation_session",
+              "target_status": "implemented"
+            },
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "execute_simple_task",
+            "type_used": "era.service.step",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/service_iteration.jsonc"
+            },
+            "role": {
+              "display_name": "执行已准备的简单任务",
+              "description": "普通同步、MK、Agent 设置及 ignore 在同一小型分支中完成，不重新准备上下文。"
+            },
+            "contract_source": "nodeset",
+            "flow_kind": "predefined",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.step.request.routed",
+                "cardinality": "exactly_one",
+                "display_name": "已准备路由步骤"
+              },
+              {
+                "type": "era.task.route",
+                "cardinality": "exactly_one",
+                "display_name": "已准备任务路由"
+              },
+              {
+                "type": "era.batch.execution.state",
+                "cardinality": "exactly_one",
+                "display_name": "当前批次执行状态"
+              }
+            ],
+            "provides": [
+              {
+                "key": "simple_task_result",
+                "type": "era.task.result",
+                "display_name": "简单任务结果"
               }
             ],
             "join_policy": "safe_any",
@@ -6240,8 +6641,8 @@
               "path": "configs/nodesets/service_iteration.jsonc"
             },
             "role": {
-              "display_name": "继续或完成批次",
-              "description": "未到最后一步时携带在途状态；最后一步当轮结算并发布后返回 collect。"
+              "display_name": "合并任务结果并继续或完成批次",
+              "description": "对恰好一个任务结果推进索引；最后一步当轮结算并发布。"
             },
             "contract_source": "nodeset",
             "flow_kind": "predefined",
@@ -6254,14 +6655,14 @@
             "planned_behavior": null,
             "requires": [
               {
-                "type": "era.batch.execution.state.next",
+                "type": "era.batch.execution.state",
                 "cardinality": "exactly_one",
-                "display_name": "步骤后批次状态"
+                "display_name": "已准备批次状态"
               },
               {
-                "type": "era.step.done",
+                "type": "era.task.result",
                 "cardinality": "exactly_one",
-                "display_name": "步骤完成标志"
+                "display_name": "当前任务结果"
               }
             ],
             "provides": [
@@ -6333,7 +6734,7 @@
           },
           {
             "from": "route_phase",
-            "to": "collect_phase",
+            "to": "collect_cycle_phase",
             "when": "cycle_route == 'collect'",
             "roles": [
               "mainline",
@@ -6352,63 +6753,7 @@
             ]
           },
           {
-            "from": "collect_phase",
-            "to": "route_collection",
-            "when": "",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "collect_phase",
-            "to": "carry_wait",
-            "when": "",
-            "roles": [
-              "data_bypass",
-              "transfer"
-            ]
-          },
-          {
-            "from": "collect_phase",
-            "to": "prepare_batch",
-            "when": "",
-            "roles": [
-              "data_bypass",
-              "transfer"
-            ]
-          },
-          {
-            "from": "route_collection",
-            "to": "carry_wait",
-            "when": "iteration_route == 'wait'",
-            "roles": [
-              "mainline",
-              "schedule"
-            ]
-          },
-          {
-            "from": "route_collection",
-            "to": "prepare_batch",
-            "when": "iteration_route == 'execute'",
-            "roles": [
-              "mainline",
-              "schedule"
-            ]
-          },
-          {
-            "from": "carry_wait",
-            "to": "end",
-            "when": "",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "prepare_batch",
+            "from": "collect_cycle_phase",
             "to": "end",
             "when": "",
             "roles": [
@@ -6419,7 +6764,7 @@
           },
           {
             "from": "unpack_execution",
-            "to": "execute_step",
+            "to": "prepare_dispatch_context",
             "when": "",
             "roles": [
               "mainline",
@@ -6428,12 +6773,101 @@
             ]
           },
           {
-            "from": "execute_step",
+            "from": "prepare_dispatch_context",
+            "to": "task_initialize",
+            "when": "task_family_route == 'initialize'",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "prepare_dispatch_context",
+            "to": "task_api",
+            "when": "task_family_route == 'api'",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "prepare_dispatch_context",
+            "to": "task_agent_generation_session",
+            "when": "task_family_route == 'agent-generation-session'",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "prepare_dispatch_context",
+            "to": "execute_simple_task",
+            "when": "task_family_route == 'simple'",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "task_initialize",
             "to": "settle_step",
             "when": "",
             "roles": [
               "mainline",
               "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "task_api",
+            "to": "adapt_api_task_result",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "adapt_api_task_result",
+            "to": "settle_step",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "task_agent_generation_session",
+            "to": "settle_step",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "execute_simple_task",
+            "to": "settle_step",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "prepare_dispatch_context",
+            "to": "settle_step",
+            "when": "",
+            "roles": [
+              "data_bypass",
               "transfer"
             ]
           },
@@ -6900,21 +7334,21 @@
         "path": "configs/nodesets/service_settle_step_phase.jsonc"
       },
       "display_name": "ERA 单步结果阶段",
-      "description": "步骤未完成时携带同一批次继续；最后一步当轮复用原结算与发布，随后返回收集阶段。",
+      "description": "合并恰好一个任务结果并推进批次索引；未完成时继续原批次，最后一步当轮结算发布。",
       "status": "implemented",
       "flow_kind": "predefined",
       "effect_scope": "none",
       "reachable_from_workflow": true,
       "requires": [
         {
-          "type": "era.batch.execution.state.next",
+          "type": "era.batch.execution.state",
           "cardinality": "exactly_one",
-          "display_name": "步骤后批次状态"
+          "display_name": "已准备批次状态"
         },
         {
-          "type": "era.step.done",
+          "type": "era.task.result",
           "cardinality": "exactly_one",
-          "display_name": "步骤完成标志"
+          "display_name": "当前任务结果"
         }
       ],
       "provides": [
@@ -6932,15 +7366,15 @@
         },
         "inputs": [
           {
-            "key": "execution_state_next",
-            "type": "era.batch.execution.state.next",
-            "display_name": "步骤后批次状态",
+            "key": "execution_state",
+            "type": "era.batch.execution.state",
+            "display_name": "已准备批次状态",
             "required": true
           },
           {
-            "key": "step_done",
-            "type": "era.step.done",
-            "display_name": "步骤完成标志",
+            "key": "task_result",
+            "type": "era.task.result",
+            "display_name": "当前任务结果",
             "required": true
           }
         ],
@@ -6957,11 +7391,11 @@
         "execution_lock": null,
         "contains_global_state": false,
         "summary": {
-          "nodes": 6,
+          "nodes": 7,
           "nodesets": 19,
-          "explicit_edges": 6,
+          "explicit_edges": 7,
           "data_edges": 0,
-          "reported_edges": 6,
+          "reported_edges": 7,
           "contains_global_state": false
         },
         "entry_nodes": [
@@ -6994,6 +7428,61 @@
             "planned_behavior": null,
             "requires": [],
             "provides": [],
+            "join_policy": "safe_any",
+            "async": null,
+            "loop": null,
+            "io": null,
+            "invokes": null,
+            "config": {
+              "call": {},
+              "node_configs": {},
+              "allow_config_override": false
+            }
+          },
+          {
+            "id": "merge_task_result",
+            "type_used": "era.service.merge_task_result",
+            "source": {
+              "root_id": "era-service",
+              "path": "configs/nodesets/service_settle_step_phase.jsonc"
+            },
+            "role": {
+              "display_name": "合并步骤结果",
+              "description": "记录一个可恢复任务结果、推进步骤索引，并报告是否已消费全部规划步骤。"
+            },
+            "contract_source": "node_type",
+            "flow_kind": "process",
+            "effect_scope": "none",
+            "runtime_dispatch": "unknown",
+            "execution_lock": null,
+            "effective_execution_lock": null,
+            "contains_global_state": false,
+            "status": "implemented",
+            "planned_behavior": null,
+            "requires": [
+              {
+                "type": "era.task.result",
+                "cardinality": "exactly_one",
+                "display_name": "任务结果"
+              },
+              {
+                "type": "era.batch.execution.state",
+                "cardinality": "exactly_one",
+                "display_name": "当前批次执行状态"
+              }
+            ],
+            "provides": [
+              {
+                "key": "execution_state_next",
+                "type": "era.batch.execution.state.next",
+                "display_name": "下一执行状态"
+              },
+              {
+                "key": "step_done",
+                "type": "era.step.done",
+                "display_name": "全部步骤已消费"
+              }
+            ],
             "join_policy": "safe_any",
             "async": null,
             "loop": null,
@@ -7236,6 +7725,16 @@
         "edges": [
           {
             "from": "start",
+            "to": "merge_task_result",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "merge_task_result",
             "to": "route_completion",
             "when": "",
             "roles": [
@@ -7303,29 +7802,34 @@
         "root_id": "era-service",
         "path": "configs/nodesets/service_step.jsonc"
       },
-      "display_name": "ERA 规划步骤",
-      "description": "选择一个严格 PlannedStep，经显式任务路由执行 initialize、sync、公共对象 commit/sync、update-mk、三阶段故事生成会话或 ignore，并更新有界批次执行状态。",
+      "display_name": "ERA 简单任务步骤",
+      "description": "仅执行已完成统一准备的普通同步、MK 更新、Agent 设置或 ignore；复杂任务由服务迭代直接调用。",
       "status": "implemented",
       "flow_kind": "predefined",
       "effect_scope": "none",
       "reachable_from_workflow": true,
       "requires": [
         {
+          "type": "era.step.request.routed",
+          "cardinality": "exactly_one",
+          "display_name": "已准备路由步骤"
+        },
+        {
+          "type": "era.task.route",
+          "cardinality": "exactly_one",
+          "display_name": "已准备任务路由"
+        },
+        {
           "type": "era.batch.execution.state",
           "cardinality": "exactly_one",
-          "display_name": "批次执行状态"
+          "display_name": "当前批次执行状态"
         }
       ],
       "provides": [
         {
-          "key": "execution_state_next",
-          "type": "era.batch.execution.state.next",
-          "display_name": "下一执行状态"
-        },
-        {
-          "key": "step_done",
-          "type": "era.step.done",
-          "display_name": "全部步骤已消费"
+          "key": "simple_task_result",
+          "type": "era.task.result",
+          "display_name": "简单任务结果"
         }
       ],
       "global_config": {},
@@ -7336,36 +7840,42 @@
         },
         "inputs": [
           {
+            "key": "routed_step",
+            "type": "era.step.request.routed",
+            "display_name": "已准备路由步骤",
+            "required": true
+          },
+          {
+            "key": "task_route",
+            "type": "era.task.route",
+            "display_name": "已准备任务路由",
+            "required": true
+          },
+          {
             "key": "execution_state",
             "type": "era.batch.execution.state",
-            "display_name": "批次执行状态",
+            "display_name": "当前批次执行状态",
             "required": true
           }
         ],
         "outputs": [
           {
-            "type": "era.batch.execution.state.next",
+            "type": "era.task.result",
             "cardinality": "exactly_one",
-            "display_name": "下一执行状态",
-            "as": "executionStateNext"
-          },
-          {
-            "type": "era.step.done",
-            "cardinality": "exactly_one",
-            "display_name": "全部步骤已消费",
-            "as": "stepDone"
+            "display_name": "简单任务结果",
+            "as": "simpleTaskResult"
           }
         ],
-        "max_steps": 24,
+        "max_steps": 8,
         "entry_mode": "async",
         "execution_lock": null,
         "contains_global_state": false,
         "summary": {
-          "nodes": 13,
+          "nodes": 7,
           "nodesets": 19,
-          "explicit_edges": 19,
-          "data_edges": 1,
-          "reported_edges": 19,
+          "explicit_edges": 9,
+          "data_edges": 0,
+          "reported_edges": 9,
           "contains_global_state": false
         },
         "entry_nodes": [
@@ -7376,12 +7886,12 @@
         ],
         "god_nodes": [
           {
-            "node": "merge_task_result",
-            "degree": 9
+            "node": "route_simple_task",
+            "degree": 5
           },
           {
-            "node": "prepare_dispatch_context",
-            "degree": 9
+            "node": "end",
+            "degree": 4
           }
         ],
         "nodes": [
@@ -7419,18 +7929,18 @@
             }
           },
           {
-            "id": "select_step",
-            "type_used": "era.service.select_step",
+            "id": "route_simple_task",
+            "type_used": "era.tasks.dispatch",
             "source": {
               "root_id": "era-service",
               "path": "configs/nodesets/service_step.jsonc"
             },
             "role": {
-              "display_name": "选择当前步骤",
-              "description": "按索引选择当前 PlannedStep，不执行或移除后续步骤。"
+              "display_name": "选择已准备的简单任务",
+              "description": "仅接受统一准备后明确分类的 sync、update-mk、agent-settings 或 ignore，并原样转交已准备步骤与批次状态。"
             },
             "contract_source": "node_type",
-            "flow_kind": "process",
+            "flow_kind": "decision",
             "effect_scope": "none",
             "runtime_dispatch": "unknown",
             "execution_lock": null,
@@ -7440,21 +7950,36 @@
             "planned_behavior": null,
             "requires": [
               {
+                "type": "era.step.request.routed",
+                "cardinality": "exactly_one",
+                "display_name": "已准备路由步骤"
+              },
+              {
+                "type": "era.task.route",
+                "cardinality": "exactly_one",
+                "display_name": "已准备任务路由"
+              },
+              {
                 "type": "era.batch.execution.state",
                 "cardinality": "exactly_one",
-                "display_name": "批次执行状态"
+                "display_name": "当前批次执行状态"
               }
             ],
             "provides": [
               {
-                "key": "selected_step",
-                "type": "era.step.request",
-                "display_name": "已选步骤"
+                "key": "simple_task_route",
+                "type": "era.task.route",
+                "display_name": "简单任务路由"
               },
               {
-                "key": "execution_state_for_merge",
+                "key": "routed_step_for_task",
+                "type": "era.step.request.routed",
+                "display_name": "传递给简单任务的步骤"
+              },
+              {
+                "key": "execution_state_for_task",
                 "type": "era.batch.execution.state",
-                "display_name": "待合并批次状态"
+                "display_name": "传递给简单任务的批次状态"
               }
             ],
             "join_policy": "safe_any",
@@ -7462,124 +7987,6 @@
             "loop": null,
             "io": null,
             "invokes": null,
-            "config": {
-              "call": {},
-              "node_configs": {},
-              "allow_config_override": false
-            }
-          },
-          {
-            "id": "prepare_dispatch_context",
-            "type_used": "era.dispatch.prepare_context",
-            "source": {
-              "root_id": "era-service",
-              "path": "configs/nodesets/service_step.jsonc"
-            },
-            "role": {
-              "display_name": "统一准备并分派领域任务",
-              "description": "在任务路由前共享执行严格消息投影、MK、占位符、affected 预提交和显式 dispatch class，再路由到初始化、同步、API、更新 MK 或忽略语义。"
-            },
-            "contract_source": "nodeset",
-            "flow_kind": "predefined",
-            "effect_scope": "none",
-            "runtime_dispatch": "unknown",
-            "execution_lock": null,
-            "effective_execution_lock": null,
-            "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
-            "requires": [
-              {
-                "type": "era.step.request",
-                "cardinality": "exactly_one",
-                "display_name": "已选规划步骤"
-              },
-              {
-                "type": "era.batch.execution.state",
-                "cardinality": "exactly_one",
-                "display_name": "当前批次执行状态"
-              }
-            ],
-            "provides": [
-              {
-                "key": "prepared_routed_step",
-                "type": "era.step.request.routed",
-                "display_name": "已准备路由步骤"
-              },
-              {
-                "key": "prepared_task_route",
-                "type": "era.task.route",
-                "display_name": "已准备任务路由"
-              },
-              {
-                "key": "prepared_execution_state",
-                "type": "era.batch.execution.state",
-                "display_name": "已准备批次状态"
-              }
-            ],
-            "join_policy": "safe_any",
-            "async": null,
-            "loop": null,
-            "io": null,
-            "invokes": {
-              "kind": "nodeset",
-              "target": "era.dispatch.prepare_context",
-              "target_status": "implemented"
-            },
-            "config": {
-              "call": {},
-              "node_configs": {},
-              "allow_config_override": false
-            }
-          },
-          {
-            "id": "task_initialize",
-            "type_used": "era.task.initialize",
-            "source": {
-              "root_id": "era-service",
-              "path": "configs/nodesets/service_step.jsonc"
-            },
-            "role": {
-              "display_name": "执行初始化任务",
-              "description": "执行设置、世界书、正则和消息资源初始化；启动操作随后复用共享同步事务。"
-            },
-            "contract_source": "nodeset",
-            "flow_kind": "predefined",
-            "effect_scope": "none",
-            "runtime_dispatch": "unknown",
-            "execution_lock": null,
-            "effective_execution_lock": null,
-            "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
-            "requires": [
-              {
-                "type": "era.step.request.routed",
-                "cardinality": "exactly_one",
-                "display_name": "已路由步骤"
-              },
-              {
-                "type": "era.batch.execution.state",
-                "cardinality": "exactly_one",
-                "display_name": "当前批次执行状态"
-              }
-            ],
-            "provides": [
-              {
-                "key": "initialize_task_result",
-                "type": "era.task.result",
-                "display_name": "初始化结果"
-              }
-            ],
-            "join_policy": "safe_any",
-            "async": null,
-            "loop": null,
-            "io": null,
-            "invokes": {
-              "kind": "nodeset",
-              "target": "era.task.initialize",
-              "target_status": "implemented"
-            },
             "config": {
               "call": {},
               "node_configs": {},
@@ -7641,105 +8048,6 @@
             }
           },
           {
-            "id": "task_api",
-            "type_used": "era.task.api",
-            "source": {
-              "root_id": "era-service",
-              "path": "configs/nodesets/service_step.jsonc"
-            },
-            "role": {
-              "display_name": "执行 ERA 公共对象任务",
-              "description": "进入新的公共对象二级路由：一次 ERA.commit 对应一次即时消息与 Sidecar 事务，ERA.sync 复用共享同步；读取和订阅不进入 Service 事件任务。"
-            },
-            "contract_source": "nodeset",
-            "flow_kind": "predefined",
-            "effect_scope": "none",
-            "runtime_dispatch": "unknown",
-            "execution_lock": null,
-            "effective_execution_lock": null,
-            "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
-            "requires": [
-              {
-                "type": "era.step.request.routed",
-                "cardinality": "exactly_one",
-                "display_name": "era.step.request.routed"
-              },
-              {
-                "type": "era.batch.execution.state",
-                "cardinality": "exactly_one",
-                "display_name": "era.batch.execution.state"
-              }
-            ],
-            "provides": [
-              {
-                "key": "api_task_result",
-                "type": "era.api.task.result",
-                "display_name": "api_task_result"
-              }
-            ],
-            "join_policy": "safe_any",
-            "async": null,
-            "loop": null,
-            "io": null,
-            "invokes": {
-              "kind": "nodeset",
-              "target": "era.task.api",
-              "target_status": "implemented"
-            },
-            "config": {
-              "call": {},
-              "node_configs": {},
-              "allow_config_override": false
-            }
-          },
-          {
-            "id": "adapt_api_task_result",
-            "type_used": "era.service.adapt_api_task_result",
-            "source": {
-              "root_id": "era-service",
-              "path": "configs/nodesets/service_step.jsonc"
-            },
-            "role": {
-              "display_name": "接回公共对象任务结果",
-              "description": "保留 API 任务的独立结果类型并接入原步骤合并。"
-            },
-            "contract_source": "node_type",
-            "flow_kind": "process",
-            "effect_scope": "none",
-            "runtime_dispatch": "unknown",
-            "execution_lock": null,
-            "effective_execution_lock": null,
-            "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
-            "requires": [
-              {
-                "type": "era.api.task.result",
-                "cardinality": "exactly_one",
-                "display_name": "公共对象任务结果"
-              }
-            ],
-            "provides": [
-              {
-                "key": "api_task_result_common",
-                "type": "era.task.result",
-                "display_name": "统一步骤任务结果"
-              }
-            ],
-            "join_policy": "safe_any",
-            "async": null,
-            "loop": null,
-            "io": null,
-            "invokes": null,
-            "config": {
-              "call": {},
-              "node_configs": {},
-              "allow_config_override": false
-            }
-          },
-          {
             "id": "task_update_mk",
             "type_used": "era.task.update_mk",
             "source": {
@@ -7780,60 +8088,6 @@
             "invokes": {
               "kind": "nodeset",
               "target": "era.task.update_mk",
-              "target_status": "implemented"
-            },
-            "config": {
-              "call": {},
-              "node_configs": {},
-              "allow_config_override": false
-            }
-          },
-          {
-            "id": "task_agent_generation_session",
-            "type_used": "era.agent.generation_session",
-            "source": {
-              "root_id": "era-service",
-              "path": "configs/nodesets/service_step.jsonc"
-            },
-            "role": {
-              "display_name": "执行三阶段故事生成会话",
-              "description": "在原 FIFO、生成栅栏和取消域内处理生成生命周期与重试；设置命令已分到相邻 Nodeset。"
-            },
-            "contract_source": "nodeset",
-            "flow_kind": "predefined",
-            "effect_scope": "none",
-            "runtime_dispatch": "unknown",
-            "execution_lock": null,
-            "effective_execution_lock": null,
-            "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
-            "requires": [
-              {
-                "type": "era.step.request.routed",
-                "cardinality": "exactly_one",
-                "display_name": "Agent 包装步骤"
-              },
-              {
-                "type": "era.batch.execution.state",
-                "cardinality": "exactly_one",
-                "display_name": "当前批次状态"
-              }
-            ],
-            "provides": [
-              {
-                "key": "agent_task_result",
-                "type": "era.task.result",
-                "display_name": "生成会话任务结果"
-              }
-            ],
-            "join_policy": "safe_any",
-            "async": null,
-            "loop": null,
-            "io": null,
-            "invokes": {
-              "kind": "nodeset",
-              "target": "era.agent.generation_session",
               "target_status": "implemented"
             },
             "config": {
@@ -7937,61 +8191,6 @@
             }
           },
           {
-            "id": "merge_task_result",
-            "type_used": "era.service.merge_task_result",
-            "source": {
-              "root_id": "era-service",
-              "path": "configs/nodesets/service_step.jsonc"
-            },
-            "role": {
-              "display_name": "合并步骤结果",
-              "description": "记录一个可恢复任务结果、推进步骤索引，并报告是否已消费全部规划步骤。"
-            },
-            "contract_source": "node_type",
-            "flow_kind": "process",
-            "effect_scope": "none",
-            "runtime_dispatch": "unknown",
-            "execution_lock": null,
-            "effective_execution_lock": null,
-            "contains_global_state": false,
-            "status": "implemented",
-            "planned_behavior": null,
-            "requires": [
-              {
-                "type": "era.task.result",
-                "cardinality": "exactly_one",
-                "display_name": "任务结果"
-              },
-              {
-                "type": "era.batch.execution.state",
-                "cardinality": "exactly_one",
-                "display_name": "当前批次执行状态"
-              }
-            ],
-            "provides": [
-              {
-                "key": "execution_state_next",
-                "type": "era.batch.execution.state.next",
-                "display_name": "下一执行状态"
-              },
-              {
-                "key": "step_done",
-                "type": "era.step.done",
-                "display_name": "全部步骤已消费"
-              }
-            ],
-            "join_policy": "safe_any",
-            "async": null,
-            "loop": null,
-            "io": null,
-            "invokes": null,
-            "config": {
-              "call": {},
-              "node_configs": {},
-              "allow_config_override": false
-            }
-          },
-          {
             "id": "end",
             "type_used": "era.service.terminal",
             "source": {
@@ -8028,7 +8227,7 @@
         "edges": [
           {
             "from": "start",
-            "to": "select_step",
+            "to": "route_simple_task",
             "when": "",
             "roles": [
               "mainline",
@@ -8037,79 +8236,9 @@
             ]
           },
           {
-            "from": "select_step",
-            "to": "prepare_dispatch_context",
-            "when": "",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "prepare_dispatch_context",
-            "to": "task_initialize",
-            "when": "prepared_task_route == 'initialize'",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "prepare_dispatch_context",
+            "from": "route_simple_task",
             "to": "task_sync",
-            "when": "prepared_task_route == 'sync'",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "prepare_dispatch_context",
-            "to": "task_api",
-            "when": "prepared_task_route == 'api'",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "prepare_dispatch_context",
-            "to": "task_update_mk",
-            "when": "prepared_task_route == 'update-mk'",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "prepare_dispatch_context",
-            "to": "task_agent_generation_session",
-            "when": "prepared_task_route == 'agent-generation-session'",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "prepare_dispatch_context",
-            "to": "task_ignore",
-            "when": "prepared_task_route == 'ignore'",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "task_initialize",
-            "to": "merge_task_result",
-            "when": "",
+            "when": "simple_task_route == 'sync'",
             "roles": [
               "mainline",
               "schedule",
@@ -8118,75 +8247,6 @@
           },
           {
             "from": "task_sync",
-            "to": "merge_task_result",
-            "when": "",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "task_api",
-            "to": "adapt_api_task_result",
-            "when": "",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "adapt_api_task_result",
-            "to": "merge_task_result",
-            "when": "",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "task_update_mk",
-            "to": "merge_task_result",
-            "when": "",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "task_agent_generation_session",
-            "to": "merge_task_result",
-            "when": "",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "task_ignore",
-            "to": "merge_task_result",
-            "when": "",
-            "roles": [
-              "mainline",
-              "schedule",
-              "transfer"
-            ]
-          },
-          {
-            "from": "prepare_dispatch_context",
-            "to": "merge_task_result",
-            "when": "",
-            "roles": [
-              "data_bypass",
-              "transfer"
-            ]
-          },
-          {
-            "from": "merge_task_result",
             "to": "end",
             "when": "",
             "roles": [
@@ -8196,9 +8256,29 @@
             ]
           },
           {
-            "from": "prepare_dispatch_context",
+            "from": "route_simple_task",
+            "to": "task_update_mk",
+            "when": "simple_task_route == 'update-mk'",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "task_update_mk",
+            "to": "end",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "route_simple_task",
             "to": "task_agent_settings",
-            "when": "prepared_task_route == 'agent-settings'",
+            "when": "simple_task_route == 'agent-settings'",
             "roles": [
               "mainline",
               "schedule",
@@ -8207,7 +8287,27 @@
           },
           {
             "from": "task_agent_settings",
-            "to": "merge_task_result",
+            "to": "end",
+            "when": "",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "route_simple_task",
+            "to": "task_ignore",
+            "when": "simple_task_route == 'ignore'",
+            "roles": [
+              "mainline",
+              "schedule",
+              "transfer"
+            ]
+          },
+          {
+            "from": "task_ignore",
+            "to": "end",
             "when": "",
             "roles": [
               "mainline",
@@ -13810,7 +13910,7 @@
     },
     "era.dispatch.finalize_context": {
       "display_name": "生成稳定楼层派发上下文 V3",
-      "description": "保留原上下文准备；仅将 era.ui.agent_configuration 分派到 agent-settings，生成事件仍进入 agent-generation-session。PlannedStep 的公开 taskRoute 不变。",
+      "description": "保留原上下文准备；Agent 设置使用专用路由，外层按已准备路由选择复杂任务或简单任务。PlannedStep 的公开 taskRoute 不变。",
       "category": "任务派发",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -13834,9 +13934,9 @@
             "display_name": "已准备任务路由"
           },
           {
-            "key": "prepared_execution_state",
-            "type": "era.batch.execution.state",
-            "display_name": "已准备批次状态"
+            "key": "task_family_route",
+            "type": "era.task.family.route",
+            "display_name": "外层任务族路由"
           }
         ],
         "input_semantics": {
@@ -13851,8 +13951,8 @@
           "prepared_task_route": [
             "输出：已准备任务路由"
           ],
-          "prepared_execution_state": [
-            "输出：已准备批次状态"
+          "task_family_route": [
+            "按已准备的任务路由选择 initialize、api、agent-generation-session 或 simple；不重写 PlannedStep。"
           ]
         },
         "params_schema": {},
@@ -16629,7 +16729,7 @@
     },
     "era.service.select_step": {
       "display_name": "选择当前步骤",
-      "description": "按有界索引选择当前 PlannedStep，并通过只传数据的旁路保留批次执行状态。",
+      "description": "按有界索引选择当前 PlannedStep，并将未改写的批次执行状态交给准备链。",
       "category": "步骤执行",
       "version": "1.0.0",
       "flow_kind": "process",
@@ -16648,9 +16748,9 @@
             "display_name": "已选步骤"
           },
           {
-            "key": "execution_state_for_merge",
+            "key": "prepared_execution_state",
             "type": "era.batch.execution.state",
-            "display_name": "待合并批次状态"
+            "display_name": "原样传递的批次状态"
           }
         ],
         "input_semantics": {
@@ -16662,8 +16762,8 @@
           "selected_step": [
             "输出：已选步骤。"
           ],
-          "execution_state_for_merge": [
-            "输出：待合并批次状态。"
+          "prepared_execution_state": [
+            "输出：原样传递的批次执行状态；准备阶段不改写它。"
           ]
         },
         "params_schema": {},
@@ -17457,42 +17557,66 @@
       ]
     },
     "era.tasks.dispatch": {
-      "display_name": "分派领域任务",
-      "description": "按严格 PlannedStep 的稳定任务类别显式路由初始化、同步、API、更新 MK 或忽略步骤。",
+      "display_name": "分派已准备的简单任务",
+      "description": "仅根据统一准备后的路由选择 sync、update-mk、agent-settings 或 ignore，并原样传递步骤与批次状态。",
       "category": "步骤执行",
       "version": "1.0.0",
       "flow_kind": "decision",
       "contract": {
         "requires": [
           {
-            "type": "era.step.request",
+            "type": "era.step.request.routed",
             "cardinality": "exactly_one",
-            "display_name": "已选步骤"
+            "display_name": "已准备路由步骤"
+          },
+          {
+            "type": "era.task.route",
+            "cardinality": "exactly_one",
+            "display_name": "已准备任务路由"
+          },
+          {
+            "type": "era.batch.execution.state",
+            "cardinality": "exactly_one",
+            "display_name": "当前批次执行状态"
           }
         ],
         "provides": [
           {
-            "key": "routed_step",
-            "type": "era.step.request.routed",
-            "display_name": "已路由步骤"
+            "key": "simple_task_route",
+            "type": "era.task.route",
+            "display_name": "简单任务路由"
           },
           {
-            "key": "task_route",
-            "type": "era.task.route",
-            "display_name": "任务路由"
+            "key": "routed_step_for_task",
+            "type": "era.step.request.routed",
+            "display_name": "传递给简单任务的步骤"
+          },
+          {
+            "key": "execution_state_for_task",
+            "type": "era.batch.execution.state",
+            "display_name": "传递给简单任务的批次状态"
           }
         ],
         "input_semantics": {
-          "era.step.request": [
-            "输入：已选步骤。"
+          "era.step.request.routed": [
+            "输入：已完成统一准备的路由步骤。"
+          ],
+          "era.task.route": [
+            "输入：统一准备节点输出的路由；不得重新读取 Planner 的原始 taskRoute。"
+          ],
+          "era.batch.execution.state": [
+            "输入：当前批次执行状态，由本节点原样传给任务节点。"
           ]
         },
         "output_semantics": {
-          "routed_step": [
-            "输出：已路由步骤。"
+          "simple_task_route": [
+            "输出：已准备的简单任务路由；其他任务类别显式报错。"
           ],
-          "task_route": [
-            "输出：任务路由。"
+          "routed_step_for_task": [
+            "输出：原样传递已准备步骤。"
+          ],
+          "execution_state_for_task": [
+            "输出：原样传递批次状态。"
           ]
         },
         "params_schema": {},
@@ -43044,6 +43168,23 @@
           "$schema": "https://json-schema.org/draft/2020-12/schema",
           "type": "object",
           "additionalProperties": true
+        }
+      },
+      "era.task.family.route": {
+        "kind": "data_schema",
+        "type_key": "era.task.family.route",
+        "representation": "json",
+        "display_name": "ERA 服务任务族路由",
+        "description": "统一准备后，仅用于选择 Service 直属复杂任务或简单任务分支；原 PlannedStep 任务路由保持独立。",
+        "schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "string",
+          "enum": [
+            "initialize",
+            "api",
+            "agent-generation-session",
+            "simple"
+          ]
         }
       },
       "era.task.result": {

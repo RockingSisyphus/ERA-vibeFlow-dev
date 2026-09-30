@@ -3,7 +3,7 @@
   "type_key": "era.service.select_step",
   "display_name": "选择当前步骤",
   "category": "步骤执行",
-  "description": "按有界索引选择当前 PlannedStep，并通过只传数据的旁路保留批次执行状态。",
+  "description": "按有界索引选择当前 PlannedStep，并将未改写的批次执行状态交给准备链。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
@@ -21,9 +21,9 @@
         "display_name": "已选步骤"
       },
       {
-        "key": "execution_state_for_merge",
+        "key": "prepared_execution_state",
         "type": "era.batch.execution.state",
-        "display_name": "待合并批次状态"
+        "display_name": "原样传递的批次状态"
       }
     ],
     "params_schema": {},
@@ -37,8 +37,8 @@
       "selected_step": [
         "输出：已选步骤。"
       ],
-      "execution_state_for_merge": [
-        "输出：待合并批次状态。"
+      "prepared_execution_state": [
+        "输出：原样传递的批次执行状态；准备阶段不改写它。"
       ]
     }
   },

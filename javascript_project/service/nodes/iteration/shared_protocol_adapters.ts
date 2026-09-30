@@ -251,10 +251,22 @@ interface DispatchTask_Envelope<T> {
 }
 
 export function DispatchTaskNode(inputs: Readonly<{
-  "era.step.request": DispatchTask_Envelope<unknown>;
+  "era.step.request.routed": DispatchTask_Envelope<unknown>;
+  "era.task.route": DispatchTask_Envelope<unknown>;
+  "era.batch.execution.state": DispatchTask_Envelope<unknown>;
 }>): any {
-  const step = inputs["era.step.request"].value as PlannedStepV1;
-  return { routed_step: step, task_route: step.taskRoute };
+  const route = inputs["era.task.route"].value;
+  if (
+    route !== "sync" && route !== "update-mk" &&
+    route !== "agent-settings" && route !== "ignore"
+  ) {
+    throw new TypeError("简单任务节点只接受已准备的 sync、update-mk、agent-settings 或 ignore 路由。");
+  }
+  return {
+    simple_task_route: route,
+    routed_step_for_task: inputs["era.step.request.routed"].value,
+    execution_state_for_task: inputs["era.batch.execution.state"].value,
+  };
 }
 
 // Original node: nodes/step/merge_task_result.ts
@@ -287,7 +299,7 @@ export function SelectStepNode(inputs: Readonly<{
   const state = inputs["era.batch.execution.state"].value as BatchExecutionStateV1;
   return {
     selected_step: selectCurrentStep(state),
-    execution_state_for_merge: state,
+    prepared_execution_state: state,
   };
 }
 

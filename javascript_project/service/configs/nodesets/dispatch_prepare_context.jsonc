@@ -1,13 +1,8 @@
 {
   "type_key": "era.dispatch.prepare_context",
-  "display_name": "ERA 统一任务上下文准备",
-  "description": "在领域任务路由前统一分类任务上下文，读取严格酒馆消息投影；状态任务把消息 MK、占位符和最终楼层候选暂存在 EraDispatchContextV3，不提前写 Tavern，只有 update-mk 任务仍在此提交 SelectedMks。",
+  "display_name": "ERA 选择并准备任务上下文",
+  "description": "从当前严格批次状态选择唯一 PlannedStep，再沿原统一准备链形成已路由任务上下文和外层任务族路由。",
   "requires": [
-    {
-      "type": "era.step.request",
-      "cardinality": "exactly_one",
-      "display_name": "已选规划步骤"
-    },
     {
       "type": "era.batch.execution.state",
       "cardinality": "exactly_one",
@@ -29,17 +24,16 @@
       "key": "prepared_execution_state",
       "type": "era.batch.execution.state",
       "display_name": "已准备批次状态"
+    },
+    {
+      "key": "task_family_route",
+      "type": "era.task.family.route",
+      "display_name": "外层任务族路由"
     }
   ],
   "pipeline": {
     "entry_mode": "async",
     "inputs": [
-      {
-        "key": "selected_step",
-        "type": "era.step.request",
-        "display_name": "已选规划步骤",
-        "required": true
-      },
       {
         "key": "execution_state",
         "type": "era.batch.execution.state",
@@ -54,6 +48,12 @@
         "type_used": "era.service.terminal",
         "display_name": "统一准备启动",
         "description": "启动一次任务执行前的共享上下文准备。"
+      },
+      {
+        "id": "select_step",
+        "type_used": "era.service.select_step",
+        "display_name": "选择当前步骤",
+        "description": "按索引选择当前 PlannedStep，不执行或移除后续步骤。"
       },
       {
         "id": "classify_context",
@@ -107,6 +107,10 @@
     "edges": [
       [
         "start",
+        "select_step"
+      ],
+      [
+        "select_step",
         "classify_context"
       ],
       {
@@ -168,6 +172,12 @@
         "cardinality": "exactly_one",
         "display_name": "已准备批次状态",
         "as": "preparedExecutionState"
+      },
+      {
+        "type": "era.task.family.route",
+        "cardinality": "exactly_one",
+        "display_name": "外层任务族路由",
+        "as": "taskFamilyRoute"
       }
     ]
   }

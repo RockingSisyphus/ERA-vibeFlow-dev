@@ -1,0 +1,125 @@
+{
+  "nodeset_imports": [
+    {
+      "path": "service_collect_phase.jsonc"
+    },
+    {
+      "path": "service_prepare_batch_phase.jsonc"
+    }
+  ],
+  "type_key": "era.service.collect_cycle_phase",
+  "display_name": "ERA 收集与就绪批次阶段",
+  "description": "只在 collect 阶段接收和归约一个事件；按原控制路由等待或规划就绪批次。",
+  "requires": [
+    {
+      "type": "era.service.cycle.routed",
+      "cardinality": "exactly_one",
+      "display_name": "收集阶段状态"
+    }
+  ],
+  "provides": [
+    {
+      "key": "collection_cycle_state",
+      "type": "era.service.cycle.state",
+      "display_name": "下一阶段状态"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "cycle_state",
+        "type": "era.service.cycle.routed",
+        "display_name": "收集阶段状态",
+        "required": true
+      }
+    ],
+    "max_steps": 8,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.service.terminal",
+        "display_name": "收集轮次开始",
+        "description": "开始一次收集、等待或批次规划。"
+      },
+      {
+        "id": "collect_phase",
+        "type_used": "era.service.collect_phase",
+        "display_name": "接收并归约一个事件",
+        "description": "只有 collect 阶段接收入站事件，校验、归约并发送事件集控制。"
+      },
+      {
+        "id": "route_collection",
+        "type_used": "era.service.route_iteration",
+        "display_name": "选择等待或规划",
+        "description": "读取归约结果的 wait/execute 路由，不改变事件集。"
+      },
+      {
+        "id": "carry_wait",
+        "type_used": "era.service.cycle.carry_wait",
+        "display_name": "携带等待状态",
+        "description": "把归约后的服务状态原样包装为下一轮 collect 阶段。"
+      },
+      {
+        "id": "prepare_batch",
+        "type_used": "era.service.prepare_batch_phase",
+        "display_name": "规划并校验就绪批次",
+        "description": "规划严格步骤与来源覆盖；无效覆盖立即结算发布，有效批次进入 execute 阶段。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.service.terminal",
+        "display_name": "收集轮次结束",
+        "description": "输出唯一下一阶段状态。"
+      }
+    ],
+    "edges": [
+      [
+        "start",
+        "collect_phase"
+      ],
+      [
+        "collect_phase",
+        "route_collection"
+      ],
+      {
+        "from": "collect_phase",
+        "to": "carry_wait",
+        "schedule": false
+      },
+      {
+        "from": "collect_phase",
+        "to": "prepare_batch",
+        "schedule": false
+      },
+      {
+        "from": "route_collection",
+        "to": "carry_wait",
+        "when": "iteration_route == 'wait'",
+        "transfer": false
+      },
+      {
+        "from": "route_collection",
+        "to": "prepare_batch",
+        "when": "iteration_route == 'execute'",
+        "transfer": false
+      },
+      [
+        "carry_wait",
+        "end"
+      ],
+      [
+        "prepare_batch",
+        "end"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.service.cycle.state",
+        "cardinality": "exactly_one",
+        "display_name": "下一阶段状态",
+        "as": "cycleStateNext"
+      }
+    ]
+  }
+}

@@ -1,60 +1,65 @@
 {
   "nodeset_imports": [
     {
-      "path": "dispatch_prepare_context.jsonc"
-    },
-    {
-      "path": "task_api.jsonc"
-    },
-    {
-      "path": "task_initialize.jsonc"
-    },
-    {
       "path": "task_sync.jsonc"
     },
     {
       "path": "task_update_mk.jsonc"
     },
     {
-      "path": "agent_generation_session.jsonc"
-    },
-    {
       "path": "agent_settings.jsonc"
     }
   ],
   "type_key": "era.service.step",
-  "display_name": "ERA 规划步骤",
-  "description": "选择一个严格 PlannedStep，经显式任务路由执行 initialize、sync、公共对象 commit/sync、update-mk、三阶段故事生成会话或 ignore，并更新有界批次执行状态。",
+  "display_name": "ERA 简单任务步骤",
+  "description": "仅执行已完成统一准备的普通同步、MK 更新、Agent 设置或 ignore；复杂任务由服务迭代直接调用。",
   "requires": [
+    {
+      "type": "era.step.request.routed",
+      "cardinality": "exactly_one",
+      "display_name": "已准备路由步骤"
+    },
+    {
+      "type": "era.task.route",
+      "cardinality": "exactly_one",
+      "display_name": "已准备任务路由"
+    },
     {
       "type": "era.batch.execution.state",
       "cardinality": "exactly_one",
-      "display_name": "批次执行状态"
+      "display_name": "当前批次执行状态"
     }
   ],
   "provides": [
     {
-      "key": "execution_state_next",
-      "type": "era.batch.execution.state.next",
-      "display_name": "下一执行状态"
-    },
-    {
-      "key": "step_done",
-      "type": "era.step.done",
-      "display_name": "全部步骤已消费"
+      "key": "simple_task_result",
+      "type": "era.task.result",
+      "display_name": "简单任务结果"
     }
   ],
   "pipeline": {
     "entry_mode": "async",
     "inputs": [
       {
+        "key": "routed_step",
+        "type": "era.step.request.routed",
+        "display_name": "已准备路由步骤",
+        "required": true
+      },
+      {
+        "key": "task_route",
+        "type": "era.task.route",
+        "display_name": "已准备任务路由",
+        "required": true
+      },
+      {
         "key": "execution_state",
         "type": "era.batch.execution.state",
-        "display_name": "批次执行状态",
+        "display_name": "当前批次执行状态",
         "required": true
       }
     ],
-    "max_steps": 24,
+    "max_steps": 8,
     "nodes": [
       {
         "id": "start",
@@ -63,22 +68,10 @@
         "description": "启动一次有界动态步骤迭代。"
       },
       {
-        "id": "select_step",
-        "type_used": "era.service.select_step",
-        "display_name": "选择当前步骤",
-        "description": "按索引选择当前 PlannedStep，不执行或移除后续步骤。"
-      },
-      {
-        "id": "prepare_dispatch_context",
-        "type_used": "era.dispatch.prepare_context",
-        "display_name": "统一准备并分派领域任务",
-        "description": "在任务路由前共享执行严格消息投影、MK、占位符、affected 预提交和显式 dispatch class，再路由到初始化、同步、API、更新 MK 或忽略语义。"
-      },
-      {
-        "id": "task_initialize",
-        "type_used": "era.task.initialize",
-        "display_name": "执行初始化任务",
-        "description": "执行设置、世界书、正则和消息资源初始化；启动操作随后复用共享同步事务。"
+        "id": "route_simple_task",
+        "type_used": "era.tasks.dispatch",
+        "display_name": "选择已准备的简单任务",
+        "description": "仅接受统一准备后明确分类的 sync、update-mk、agent-settings 或 ignore，并原样转交已准备步骤与批次状态。"
       },
       {
         "id": "task_sync",
@@ -87,28 +80,10 @@
         "description": "执行共享同步事务，覆盖普通协调、完整重算、最新修复、自动修复、定向回滚和 API 因果写入。"
       },
       {
-        "id": "task_api",
-        "type_used": "era.task.api",
-        "display_name": "执行 ERA 公共对象任务",
-        "description": "进入新的公共对象二级路由：一次 ERA.commit 对应一次即时消息与 Sidecar 事务，ERA.sync 复用共享同步；读取和订阅不进入 Service 事件任务。"
-      },
-      {
-        "id": "adapt_api_task_result",
-        "type_used": "era.service.adapt_api_task_result",
-        "display_name": "接回公共对象任务结果",
-        "description": "保留 API 任务的独立结果类型并接入原步骤合并。"
-      },
-      {
         "id": "task_update_mk",
         "type_used": "era.task.update_mk",
         "display_name": "更新消息密钥任务",
         "description": "确保当前消息拥有稳定 MK，并按逻辑提交边界更新消息文本与 SelectedMks。"
-      },
-      {
-        "id": "task_agent_generation_session",
-        "type_used": "era.agent.generation_session",
-        "display_name": "执行三阶段故事生成会话",
-        "description": "在原 FIFO、生成栅栏和取消域内处理生成生命周期与重试；设置命令已分到相邻 Nodeset。"
       },
       {
         "id": "task_agent_settings",
@@ -123,12 +98,6 @@
         "description": "使用规划器保留的原始 ignore 原因逐一结算来源，不伪装成同步或其他领域任务。"
       },
       {
-        "id": "merge_task_result",
-        "type_used": "era.service.merge_task_result",
-        "display_name": "合并步骤结果",
-        "description": "记录一个可恢复任务结果、推进步骤索引，并报告是否已消费全部规划步骤。"
-      },
-      {
         "id": "end",
         "type_used": "era.service.terminal",
         "display_name": "步骤结束",
@@ -138,101 +107,51 @@
     "edges": [
       [
         "start",
-        "select_step"
-      ],
-      [
-        "select_step",
-        "prepare_dispatch_context"
+        "route_simple_task"
       ],
       {
-        "from": "prepare_dispatch_context",
-        "to": "task_initialize",
-        "when": "prepared_task_route == 'initialize'"
-      },
-      {
-        "from": "prepare_dispatch_context",
+        "from": "route_simple_task",
         "to": "task_sync",
-        "when": "prepared_task_route == 'sync'"
+        "when": "simple_task_route == 'sync'"
       },
-      {
-        "from": "prepare_dispatch_context",
-        "to": "task_api",
-        "when": "prepared_task_route == 'api'"
-      },
-      {
-        "from": "prepare_dispatch_context",
-        "to": "task_update_mk",
-        "when": "prepared_task_route == 'update-mk'"
-      },
-      {
-        "from": "prepare_dispatch_context",
-        "to": "task_agent_generation_session",
-        "when": "prepared_task_route == 'agent-generation-session'"
-      },
-      {
-        "from": "prepare_dispatch_context",
-        "to": "task_ignore",
-        "when": "prepared_task_route == 'ignore'"
-      },
-      [
-        "task_initialize",
-        "merge_task_result"
-      ],
       [
         "task_sync",
-        "merge_task_result"
-      ],
-      [
-        "task_api",
-        "adapt_api_task_result"
-      ],
-      [
-        "adapt_api_task_result",
-        "merge_task_result"
-      ],
-      [
-        "task_update_mk",
-        "merge_task_result"
-      ],
-      [
-        "task_agent_generation_session",
-        "merge_task_result"
-      ],
-      [
-        "task_ignore",
-        "merge_task_result"
-      ],
-      {
-        "from": "prepare_dispatch_context",
-        "to": "merge_task_result",
-        "schedule": false
-      },
-      [
-        "merge_task_result",
         "end"
       ],
       {
-        "from": "prepare_dispatch_context",
+        "from": "route_simple_task",
+        "to": "task_update_mk",
+        "when": "simple_task_route == 'update-mk'"
+      },
+      [
+        "task_update_mk",
+        "end"
+      ],
+      {
+        "from": "route_simple_task",
         "to": "task_agent_settings",
-        "when": "prepared_task_route == 'agent-settings'"
+        "when": "simple_task_route == 'agent-settings'"
       },
       [
         "task_agent_settings",
-        "merge_task_result"
+        "end"
+      ],
+      {
+        "from": "route_simple_task",
+        "to": "task_ignore",
+        "when": "simple_task_route == 'ignore'"
+      },
+      [
+        "task_ignore",
+        "end"
       ]
     ],
     "outputs": [
       {
-        "type": "era.batch.execution.state.next",
+        "type": "era.task.result",
         "cardinality": "exactly_one",
-        "display_name": "下一执行状态",
-        "as": "executionStateNext"
-      },
-      {
-        "type": "era.step.done",
-        "cardinality": "exactly_one",
-        "display_name": "全部步骤已消费",
-        "as": "stepDone"
+        "display_name": "简单任务结果",
+        "as": "simpleTaskResult"
       }
     ]
   }
