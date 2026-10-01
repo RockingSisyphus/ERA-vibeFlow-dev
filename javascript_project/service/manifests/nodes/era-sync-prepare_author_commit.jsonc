@@ -1,0 +1,64 @@
+{
+  "kind": "node",
+  "type_key": "era.sync.prepare_author_commit",
+  "display_name": "把作者函数提交的指令接入当前消息",
+  "category": "核心执行",
+  "description": "检查作者函数提出的提交请求，将有效指令插入当前正文位置，交给消息循环按顺序应用；可立即返回的请求就地回告函数，并保留具体处理结果。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.sync.author.state",
+        "cardinality": "exactly_one",
+        "display_name": "当前作者函数调用及消息处理进度"
+      }
+    ],
+    "provides": [
+      {
+        "key": "prepare_author_commit_author_state",
+        "type": "era.sync.author.state",
+        "display_name": "更新后的作者调用及消息进度"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.sync.author.state": [
+        "输入：当前作者函数调用及消息处理进度。"
+      ]
+    },
+    "output_semantics": {
+      "prepare_author_commit_author_state": [
+        "输出：更新后的作者调用及消息进度。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/sync/core_author_nodes.ts",
+        "export": "PrepareAuthorCommitNode"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.sync.position_author"
+  ],
+  "capabilities": [
+    {
+      "id": "era.tavern.functions",
+      "operations": [
+        "acknowledge",
+        "release"
+      ]
+    }
+  ]
+}

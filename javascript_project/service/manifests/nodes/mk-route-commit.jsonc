@@ -1,9 +1,9 @@
 {
   "kind": "node",
   "type_key": "era.mk.route_commit",
-  "display_name": "路由消息密钥提交",
+  "display_name": "路由消息历史标识提交",
   "category": "消息密钥路由",
-  "description": "读取消息标识候选，只有候选有效且正文或元数据确实需要更新时才走提交分支；否则走无变更结算。候选本身原样携带，节点不重复生成标识或判断消息内容，避免同一个标识计划被独立计算两次。",
+  "description": "检查消息历史标识准备是否成功、正文或元数据是否变化。需要写入时进入提交分支，否则进入无变化或失败结算分支。",
   "version": "1.0.0",
   "flow_kind": "decision",
   "contract": {
@@ -11,34 +11,34 @@
       {
         "type": "era.mk.candidate",
         "cardinality": "exactly_one",
-        "display_name": "MK 候选"
+        "display_name": "消息历史标识 候选"
       }
     ],
     "provides": [
       {
         "key": "mk_commit_route",
         "type": "era.mk.route",
-        "display_name": "MK 提交路由"
+        "display_name": "消息历史标识 提交路由"
       },
       {
         "key": "routed_mk_candidate",
         "type": "era.mk.candidate.routed",
-        "display_name": "已路由 MK 候选"
+        "display_name": "已路由 消息历史标识 候选"
       }
     ],
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
       "era.mk.candidate": [
-        "输入：MK 候选。"
+        "输入：消息历史标识 候选。"
       ]
     },
     "output_semantics": {
       "mk_commit_route": [
-        "输出：MK 提交路由。"
+        "输出：消息历史标识 提交路由。"
       ],
       "routed_mk_candidate": [
-        "输出：已路由 MK 候选。"
+        "输出：已路由 消息历史标识 候选。"
       ]
     }
   },

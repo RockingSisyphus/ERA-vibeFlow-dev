@@ -3,7 +3,7 @@
   "type_key": "era.service.cycle.unpack_execution",
   "display_name": "解包批次执行状态",
   "category": "服务阶段循环",
-  "description": "确认循环处于执行阶段，再取出任务列表、当前步骤索引、累计结果和服务进度，交给单步执行流程。它不移动索引，也不修改计划；阶段标签或载体损坏时会报错，避免使用错误批次。",
+  "description": "从执行阶段状态取出任务列表、当前位置、累计结果和消息处理进度，供本次任务执行。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
@@ -11,7 +11,7 @@
       {
         "type": "era.service.cycle.routed",
         "cardinality": "exactly_one",
-        "display_name": "输入状态"
+        "display_name": "本节点所需的当前运行资料"
       }
     ],
     "provides": [
@@ -25,12 +25,12 @@
     "params_defaults": {},
     "input_semantics": {
       "era.service.cycle.routed": [
-        "读取并保留输入值。"
+        "输入：本节点所需的当前运行资料。"
       ]
     },
     "output_semantics": {
       "execution_state": [
-        "供同一 Service 工作流的下一阶段使用。"
+        "输出：阶段结果。"
       ]
     }
   },

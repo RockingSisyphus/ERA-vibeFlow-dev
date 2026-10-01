@@ -1,9 +1,9 @@
 {
   "kind": "node",
   "type_key": "era.sidecar_binding.publish_choice_prompt",
-  "display_name": "发布 Sidecar 选择弹窗",
+  "display_name": "发布 独立状态文件 选择弹窗",
   "category": "Sidecar 绑定",
-  "description": "仅在状态绑定处于等待选择时，要求宿主显示具体问题：文件属于其他聊天则提示冲突，文件或绑定无效则提示修复，并附当前身份、文件归属及版本供用户判断。用户已有有效选择时不会再次弹同一提示。这个节点只显示问题，不替用户选择，也不改变变量。",
+  "description": "向页面显示状态文件归属冲突或损坏的处理选项，携带聊天身份、文件归属和版本资料；已有有效选择时沿用该选择。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
@@ -11,7 +11,7 @@
       {
         "type": "era.sidecar.binding.resolution",
         "cardinality": "exactly_one",
-        "display_name": "Sidecar 绑定决议"
+        "display_name": "独立状态文件 绑定决议"
       }
     ],
     "provides": [],
@@ -19,7 +19,7 @@
     "params_defaults": {},
     "input_semantics": {
       "era.sidecar.binding.resolution": [
-        "输入：确认需要用户选择的 Sidecar 决议。"
+        "输入：独立状态文件 绑定决议。"
       ]
     },
     "output_semantics": {}

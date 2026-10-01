@@ -1,0 +1,62 @@
+{
+  "kind": "node",
+  "type_key": "era.sync.finish_message_step",
+  "display_name": "整理这一步的消息进度和变更结果",
+  "category": "核心执行",
+  "description": "根据刚完成的正文指令、作者调用或消息结束动作更新处理进度，整理变量、函数、正文、日志和诊断，供历史压缩和下一轮消息处理使用。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.sync.position.state",
+        "cardinality": "exactly_one",
+        "display_name": "当前位置、变量、函数和待保存正文"
+      }
+    ],
+    "provides": [
+      {
+        "key": "expression_command_result",
+        "type": "era.expression.command.result",
+        "display_name": "单块或楼层维护工作项"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.sync.position.state": [
+        "输入：当前位置、变量、函数和待保存正文。"
+      ]
+    },
+    "output_semantics": {
+      "expression_command_result": [
+        "输出：单块或楼层维护工作项。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/sync/core_position_nodes.ts",
+        "export": "FinishMessageStepNode"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.command.operation_expressions",
+    "era.command.operation_state",
+    "era.service.agent_stage_program",
+    "era.service.function_block_execution",
+    "era.service.sync_contracts",
+    "era.service.sync_divergence",
+    "era.sync.position_source"
+  ],
+  "capabilities": []
+}

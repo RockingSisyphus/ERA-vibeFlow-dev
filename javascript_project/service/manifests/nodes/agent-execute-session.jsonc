@@ -3,7 +3,7 @@
   "type_key": "era.agent.execute_session_v2",
   "display_name": "执行生成阶段",
   "category": "故事生成会话",
-  "description": "根据已确定的生成阶段和请求执行 Agent 会话，包括必要的模型调用，整理其正文及变量、函数和函数调用标签为候选结果。输出尚待应用和验证的候选、阶段状态及诊断；模型给出文本不代表变量已经提交，格式错误或取消会留给阶段执行和候选恢复环节处理。",
+  "description": "按当前阶段请求模型生成文本，收集其中的变量命令、函数定义和作者调用，输出待应用的候选内容及模型执行结果。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
@@ -35,18 +35,18 @@
     "params_defaults": {},
     "input_semantics": {
       "era.agent.generation.request": [
-        "输入：阶段请求"
+        "输入：阶段请求。"
       ],
       "era.step.request.routed": [
-        "实际派发步骤"
+        "输入：实际派发步骤。"
       ],
       "era.batch.execution.state": [
-        "当前执行状态"
+        "输入：当前执行状态。"
       ]
     },
     "output_semantics": {
       "generation_outcome": [
-        "输出：阶段执行结果"
+        "输出：阶段执行结果。"
       ]
     }
   },

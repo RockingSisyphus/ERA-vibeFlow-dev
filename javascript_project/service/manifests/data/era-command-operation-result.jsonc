@@ -2,8 +2,8 @@
   "kind": "data_schema",
   "type_key": "era.command.operation.result",
   "representation": "json",
-  "display_name": "完整块内操作结果",
-  "description": "当前变量与楼层快照分别保存；有序栈、候选函数组及随机位置保持原恢复范围。只有完整结果交回消息块层，不逐字段保存。",
+  "display_name": "本段指令的变量、函数、日志和诊断结果",
+  "description": "保存一段指令处理完的变量、函数、历史记录、诊断和随机进度，供消息正文或生成阶段整理结果。",
   "schema": {
     "type": "object",
     "properties": {

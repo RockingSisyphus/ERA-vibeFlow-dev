@@ -1,9 +1,9 @@
 {
   "kind": "node",
   "type_key": "era.sidecar_binding.resolve_choice",
-  "display_name": "规划 Sidecar 绑定选择",
+  "display_name": "规划 独立状态文件 绑定选择",
   "category": "Sidecar 绑定",
-  "description": "根据聊天与状态文件的关系决定接下来怎么办：首次使用可创建，旧格式可迁移，匹配的绑定可继续，所属聊天冲突或损坏则等待用户明确选择或修复。先前读取已经失败时直接保留失败，不再弹出新选择或安排写入。这里只形成决议，不自行创建文件。",
+  "description": "根据当前状态文件资料及用户选择，决定新建、迁移、继续使用或等待归属、修复选择；读取失败时保留其原因。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
@@ -11,34 +11,34 @@
       {
         "type": "era.sidecar.binding.input",
         "cardinality": "exactly_one",
-        "display_name": "Sidecar 绑定输入"
+        "display_name": "独立状态文件 绑定输入"
       },
       {
         "type": "era.sidecar.binding.facts",
         "cardinality": "exactly_one",
-        "display_name": "当前 Sidecar 事实"
+        "display_name": "当前 独立状态文件 事实"
       }
     ],
     "provides": [
       {
         "key": "sidecar_binding_resolution",
         "type": "era.sidecar.binding.resolution",
-        "display_name": "Sidecar 绑定决议"
+        "display_name": "独立状态文件 绑定决议"
       }
     ],
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
       "era.sidecar.binding.input": [
-        "输入：转交的同步上下文。"
+        "输入：独立状态文件 绑定输入。"
       ],
       "era.sidecar.binding.facts": [
-        "输入：当前 Sidecar 检查事实。"
+        "输入：当前 独立状态文件 事实。"
       ]
     },
     "output_semantics": {
       "sidecar_binding_resolution": [
-        "输出：包含事实、用户选择和内部动作的纯决议。"
+        "输出：独立状态文件 绑定决议。"
       ]
     }
   },

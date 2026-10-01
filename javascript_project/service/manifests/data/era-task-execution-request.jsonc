@@ -2,8 +2,8 @@
   "kind": "data_schema",
   "type_key": "era.task.execution.request",
   "representation": "json",
-  "display_name": "同级核心执行请求",
-  "description": "准备返回后由同一 Service 迭代执行，种类区分同步、commit、候选、标识或直接结果；不进入外部 FIFO。",
+  "display_name": "共享执行流程执行请求",
+  "description": "保存选定的提交、历史同步、生成候选或直接返回请求，以及原任务回执资料。",
   "schema": {
     "type": "object",
     "properties": {

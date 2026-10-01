@@ -1,0 +1,104 @@
+{
+  "kind": "node",
+  "type_key": "era.api.identify_task_request",
+  "display_name": "识别脚本或界面的接口请求",
+  "category": "服务任务",
+  "description": "读取脚本或界面提交的接口请求，区分提交变量操作（commit）与按历史重算（sync），并把原任务和回执资料传给对应准备入口。",
+  "version": "1.0.0",
+  "flow_kind": "decision",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.step.request.routed",
+        "cardinality": "exactly_one",
+        "display_name": "原任务、触发事件与已读取消息"
+      },
+      {
+        "type": "era.batch.execution.state",
+        "cardinality": "exactly_one",
+        "display_name": "当前批次、任务列表与执行位置"
+      },
+      {
+        "type": "era.task.continuation.context",
+        "cardinality": "exactly_one",
+        "display_name": "原任务、事件来源、批次和回执资料"
+      }
+    ],
+    "provides": [
+      {
+        "key": "facade_request",
+        "type": "era.api.request",
+        "display_name": "脚本或界面传入的接口请求"
+      },
+      {
+        "key": "facade_route",
+        "type": "era.api.route",
+        "display_name": "提交变量操作或按历史重算"
+      },
+      {
+        "key": "facade_execution_state",
+        "type": "era.batch.execution.state",
+        "display_name": "请求所属批次"
+      },
+      {
+        "key": "facade_continuation",
+        "type": "era.task.continuation.context",
+        "display_name": "原请求及回执资料"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.step.request.routed": [
+        "输入：原任务、触发事件与已读取消息。"
+      ],
+      "era.batch.execution.state": [
+        "输入：当前批次、任务列表与执行位置。"
+      ],
+      "era.task.continuation.context": [
+        "输入：原任务、事件来源、批次和回执资料。"
+      ]
+    },
+    "output_semantics": {
+      "facade_request": [
+        "输出：脚本或界面传入的接口请求。"
+      ],
+      "facade_route": [
+        "输出：提交变量操作或按历史重算。"
+      ],
+      "facade_execution_state": [
+        "输出：请求所属批次。"
+      ],
+      "facade_continuation": [
+        "输出：原请求及回执资料。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/api/facade_nodes.ts",
+        "export": "identifyTaskRequest"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.facade_api_engine",
+    "era.service.sidecar_binding",
+    "era.service.sync_contracts",
+    "era.service.sync_result_policy",
+    "era.service.sync_work_preparation",
+    "era.service.task_continuation",
+    "era.service.types",
+    "era.service.working_state",
+    "era.workbench.context"
+  ],
+  "capabilities": []
+}

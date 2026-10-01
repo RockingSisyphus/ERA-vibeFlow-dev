@@ -1,1 +1,1 @@
-{"kind":"data_schema","type_key":"era.api.commit.failure_context","representation":"json","display_name":"即时 Commit 失败上下文","description":"校验、窗口或消息失败的结构化上下文。","schema":{"type":"object","additionalProperties":true}}
+{"kind":"data_schema","type_key":"era.api.commit.failure_context","representation":"json","display_name":"即时 变量提交 失败上下文","description":"校验、窗口或消息失败的结构化上下文。","schema":{"type":"object","additionalProperties":true}}

@@ -1,3 +1,4 @@
+import { run as prepareWork } from './prepare-block-work-fixture';
 import { contextWith } from './memory-lifecycle-fixture';
 import { run as generate } from '../../../javascript_project/service/nodes/agent/execute_generation_session';
 import { run as seed } from '../../../javascript_project/service/nodes/agent/candidate_seed';
@@ -7,10 +8,7 @@ import {
 } from '../../../javascript_project/service/nodes/initialize/shared_pure_adapters';
 import { run as prepare } from '../../../javascript_project/service/nodes/agent/prepare_stage_blocks';
 import { run as advance } from './message-block-fixture';
-import {
-  PrepareBlockWorkNode as prepareWork,
-  PublishBlockApplicationNode as publish,
-} from '../../../javascript_project/service/nodes/sync/shared_block_state_adapters';
+import { PublishBlockApplicationNode as publish } from '../../../javascript_project/service/nodes/sync/shared_block_state_adapters';
 import { FinishStageBlocksNode as finish } from '../../../javascript_project/service/nodes/agent/finish_stage_blocks.ts';
 import { recordFor } from '../../../javascript_project/service/base_lib/sidecar_binding';
 

@@ -3,7 +3,7 @@
   "type_key": "era.lifecycle.finish_stage_blocks",
   "display_name": "回送已应用阶段状态及草稿",
   "category": "内存生命周期",
-  "description": "检查模型候选的全部块应用结果，并把成功阶段正文和变量进度记入当前会话。可纠错错误需要恢复整次候选的内存变量、正文、日志、作用域和随机进度，再准备下一次尝试；不是只撤销最后一个块。重试耗尽保留本候选起点，更早已完成阶段仍保留。取消也不会无故抹掉早前成功内容。",
+  "description": "把模型候选中已完成的命令应用结果合入生成会话正文及进度。可重试的失败恢复本次候选起点，再准备重试；重试耗尽时保留候选起点及较早阶段成果并返回失败。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
@@ -25,12 +25,12 @@
     "params_defaults": {},
     "input_semantics": {
       "era.sync.block.step.state.next": [
-        "候选阶段逐块应用后的工作状态。"
+        "输入：块执行后状态。"
       ]
     },
     "output_semantics": {
       "applied_generation_outcome": [
-        "携带已应用结果和恢复事实，供下一阶段或重试使用。"
+        "输出：已应用的生成结果。"
       ]
     }
   },

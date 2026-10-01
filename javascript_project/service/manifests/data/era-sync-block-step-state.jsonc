@@ -3,7 +3,7 @@
   "type_key": "era.sync.block.step.state",
   "representation": "json",
   "display_name": "ERA·同步·块步进状态",
-  "description": "当前内存块工作项、原消息依据与调用上下文；完整范围结束后统一保存。",
+  "description": "保存本次消息范围、当前处理位置、变量、函数、日志及待保存正文，供消息循环继续处理。",
   "schema": {
     "type": "object",
     "properties": {

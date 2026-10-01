@@ -1,7 +1,7 @@
 {
   "kind": "base_lib",
   "id": "era.service.agent_generation_continue",
-  "display_name": "Agent 阶段继续",
+  "display_name": "多阶段生成 阶段继续",
   "description": "在原继续事件位置验证阶段身份、恢复会话并提交下一阶段。",
   "category": "Agent阶段",
   "version": "1.0.0",

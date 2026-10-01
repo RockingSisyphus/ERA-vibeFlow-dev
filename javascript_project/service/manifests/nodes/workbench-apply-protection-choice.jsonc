@@ -3,7 +3,7 @@
   "type_key": "era.workbench.apply_protection_choice",
   "display_name": "按实际变更处理保护并生成提交参数",
   "category": "工作台提交",
-  "description": "根据实际准备的变化重新计算目标及祖先上的 ERA 保护条件，与用户预览时看到的保护逐项比较，防止提交期间保护已变。需要解锁时必须采用用户明确的选择，生成允许的解锁、操作及恢复顺序；不能临时恢复的必要保护不会被伪造恢复。无变化、条件不一致或缺少选择都返回失败，不在此写数据。",
+  "description": "根据当前变量及草稿中的保护设置，判断修改是否需要用户解锁。有效选择按解锁、操作、恢复保护的顺序形成提交列表；不可修改或选择已过期时说明原因。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
@@ -25,12 +25,12 @@
     "params_defaults": {},
     "input_semantics": {
       "era.workbench.operation_plan": [
-        "变量、函数或显式操作及其实际变更。"
+        "输入：工作台操作计划。"
       ]
     },
     "output_semantics": {
       "protected_preparation_result": [
-        "按确认的保护选择生成待提交操作或明确失败。"
+        "输出：工作台准备结果。"
       ]
     }
   },

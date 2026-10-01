@@ -1,9 +1,9 @@
 {
   "kind": "node",
   "type_key": "era.dispatch.commit_preparation",
-  "display_name": "提交 MK 与占位符准备",
+  "display_name": "提交 消息历史标识 与占位符准备",
   "category": "任务派发",
-  "description": "执行纯消息标识任务所需的提前写入：先更新目标正文并刷新受影响消息，确认成功后再保存 ERA 元数据到聊天状态文件。若无需对应变更就跳过。普通写入失败返回失败；若正文已变但元数据未能完成，或宿主无法确认写入结果，则报致命错误，避免继续使用不确定的标识关系。",
+  "description": "提交单独更新消息历史标识任务所需的正文和元数据，记录每项实际写入结果。写入状态无法确认时输出需要停止本轮执行的原因。",
   "version": "1.0.0",
   "flow_kind": "data_store",
   "contract": {
@@ -25,12 +25,12 @@
     "params_defaults": {},
     "input_semantics": {
       "era.dispatch.preparation.plan": [
-        "输入：含明确消息写入，或 update-mk 元数据写入的准备计划。"
+        "输入：派发准备计划。"
       ]
     },
     "output_semantics": {
       "committed_preparation_outcome": [
-        "输出：当前任务拥有的全部预提交写入确认后的准备结果。"
+        "输出：已提交准备结果。"
       ]
     }
   },

@@ -2,7 +2,7 @@
   "kind": "data_schema",
   "type_key": "era.mk.commit.result",
   "representation": "json",
-  "display_name": "ERA 消息密钥提交结果",
+  "display_name": "ERA 消息历史标识提交结果",
   "description": "记录 no-op、committed、普通失败或 fatal，以及消息与变量两部分是否已经确认写入。",
   "schema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",

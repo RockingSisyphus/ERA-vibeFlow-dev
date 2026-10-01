@@ -3,7 +3,7 @@
   "type_key": "era.initialize.adapt_startup_sync_step",
   "display_name": "适配启动同步步骤",
   "category": "初始化事务",
-  "description": "把初始化产生的启动同步请求和保留的批次状态交给通用同步流程。请求继续携带原事件来源和消息上下文，不另建初始化专用变量引擎；它只适配输入，后续共享同步负责读取状态、应用历史及保存。",
+  "description": "把初始化后的历史同步请求转换为共享同步任务，保留原批次和事件来源。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
@@ -35,18 +35,18 @@
     "params_defaults": {},
     "input_semantics": {
       "era.initialize.startup.sync.step": [
-        "输入：初始化分支专用的启动同步步骤。"
+        "输入：专用启动同步步骤。"
       ],
       "era.batch.execution.state": [
-        "输入：初始化任务所属的批次执行状态。"
+        "输入：批次执行状态。"
       ]
     },
     "output_semantics": {
       "routed_startup_sync_step": [
-        "输出：共享 sync Nodeset 可消费的 routed step。"
+        "输出：已路由启动同步步骤。"
       ],
       "routed_startup_execution_state": [
-        "输出：未经修改的同一批次执行状态。"
+        "输出：启动同步批次状态。"
       ]
     }
   },

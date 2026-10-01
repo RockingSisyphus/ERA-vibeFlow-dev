@@ -3,7 +3,7 @@
   "type_key": "era.initialize.build_commit",
   "display_name": "构造初始化提交",
   "category": "初始化事务",
-  "description": "把初始化计划整理成宿主可执行的资源提交请求，保持设置、世界书、正则和开场白等动作的既定顺序。这里仅形成请求，没有任何资源已经因此写入；下一节点执行后返回的确认结果才代表实际修改。",
+  "description": "将已经准备好的初始化资源变更计划包装为酒馆写入请求，交给浏览器执行。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

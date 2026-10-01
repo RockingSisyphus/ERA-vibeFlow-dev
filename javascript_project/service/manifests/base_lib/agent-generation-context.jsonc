@@ -1,7 +1,7 @@
 {
   "kind": "base_lib",
   "id": "era.service.agent_generation_context",
-  "display_name": "Agent 会话上下文与 Capability 适配",
+  "display_name": "多阶段生成 会话上下文与 Capability 适配",
   "description": "从阶段上下文导出稳定请求事实，并由传入的 Agent Capability 执行原会话写入。",
   "category": "Agent阶段",
   "version": "1.0.0",

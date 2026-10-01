@@ -1,9 +1,9 @@
 {
   "kind": "node",
   "type_key": "era.agent.build_result",
-  "display_name": "构造 Agent 直接任务结果",
+  "display_name": "构造 多阶段生成 直接任务结果",
   "category": "故事生成会话",
-  "description": "将会话直接结束分支整理成任务回执，附带阶段完成标识、诊断和之后需要发送的通知。页面收到通知后按顺序等待订阅回调，再提交内部恢复事件；因此这份回执只代表当前队列片段完成，不能把它解释为规划、正文和结算全部结束。",
+  "description": "把本次生成片段的实际结果整理为任务回执，附上阶段完成标记、诊断和页面通知。页面可在订阅回调结束后请求执行下一阶段。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
@@ -11,26 +11,26 @@
       {
         "type": "era.agent.session.transition",
         "cardinality": "exactly_one",
-        "display_name": "Agent 转换"
+        "display_name": "多阶段生成 转换"
       }
     ],
     "provides": [
       {
         "key": "agent_task_result_direct",
         "type": "era.task.result",
-        "display_name": "Agent 直接结果"
+        "display_name": "多阶段生成 直接结果"
       }
     ],
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
       "era.agent.session.transition": [
-        "输入：无需原任务的阶段结果。"
+        "输入：多阶段生成 转换。"
       ]
     },
     "output_semantics": {
       "agent_task_result_direct": [
-        "输出：恰好一次结算。"
+        "输出：多阶段生成 直接结果。"
       ]
     }
   },

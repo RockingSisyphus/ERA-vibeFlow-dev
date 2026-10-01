@@ -1,9 +1,9 @@
 {
   "kind": "node",
   "type_key": "era.workbench.plan_variables",
-  "display_name": "计算变量草稿真实增删改",
+  "display_name": "计算变量草稿增删改",
   "category": "工作台提交",
-  "description": "把变量工作台中用户想要的最终值与当前基准比较，转换为实际有顺序的插入、删除或表达式操作，并记录每项变化的路径和类别。替换对象类型或模板时生成所需删除再插入动作，不把用户意图简单写成整库覆盖。只生成计划，仍需保护检查及公共提交流程确认。",
+  "description": "比较当前变量与用户期望值，生成有序的新增、删除和表达式操作。对象类型或模板改变时安排先删除再新增，并标出具体差异位置。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
@@ -25,12 +25,12 @@
     "params_defaults": {},
     "input_semantics": {
       "era.workbench.draft": [
-        "变量草稿及当前基准。"
+        "输入：工作台编辑草稿。"
       ]
     },
     "output_semantics": {
       "variable_operation_plan": [
-        "按变量差异形成有序增删改操作。"
+        "输出：工作台操作计划。"
       ]
     }
   },

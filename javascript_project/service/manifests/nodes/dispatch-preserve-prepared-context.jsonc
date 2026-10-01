@@ -3,7 +3,7 @@
   "type_key": "era.dispatch.preserve_prepared_context",
   "display_name": "保留已准备上下文",
   "category": "任务派发",
-  "description": "当消息准备不需要提前写入时，把计划转成可派发的准备结果，保留正文、消息标识、元数据及失败信息。对于普通同步，尚待修改的正文继续作为暂存内容交给后续任务；“此处没有写入”不表示后续无需保存，也不会丢弃未知元数据。",
+  "description": "将准备好的消息正文、元数据、待写入内容和读取错误一起传给下一阶段，供任务执行时使用。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
@@ -25,12 +25,12 @@
     "params_defaults": {},
     "input_semantics": {
       "era.dispatch.preparation.plan": [
-        "输入：不需要宿主写入的准备计划。"
+        "输入：派发准备计划。"
       ]
     },
     "output_semantics": {
       "preserved_preparation_outcome": [
-        "输出：保持状态和错误身份的准备结果。"
+        "输出：已保留准备结果。"
       ]
     }
   },

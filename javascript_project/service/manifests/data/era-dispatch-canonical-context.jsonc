@@ -2,8 +2,8 @@
   "kind": "data_schema",
   "type_key": "era.dispatch.canonical_context",
   "representation": "json",
-  "display_name": "ERA 严格派发读取上下文",
-  "description": "只携带严格消息投影、元数据与占位符设置。",
+  "display_name": "ERA 派发读取上下文",
+  "description": "保存当前聊天和消息的已读取资料，包括身份、正文、所选回复、元数据及占位设置，供任务准备。",
   "schema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",

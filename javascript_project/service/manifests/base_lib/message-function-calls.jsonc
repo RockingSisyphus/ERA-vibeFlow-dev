@@ -2,7 +2,7 @@
   "kind": "base_lib",
   "id": "era.service.message_function_calls",
   "display_name": "ERA 消息内函数调用语法与块步进",
-  "description": "解析 EraFCall 与普通操作的文本位置；仅 status=done 表示已调用。保留旧 EraFCallTx 普通操作读取和临时 era_block 进度读写，不提供函数执行器或专用操作区写入器。",
+  "description": "按正文位置解析作者函数调用标签与变量命令，读取调用完成标记，并维护消息处理中的临时进度。",
   "category": "消息内函数调用",
   "version": "1.0.0",
   "implementations": [

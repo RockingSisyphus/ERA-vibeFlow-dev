@@ -2,7 +2,7 @@
   "kind": "data_schema",
   "type_key": "era.working.result",
   "representation": "json",
-  "display_name": "ERA内存工作状态result",
+  "display_name": "当前内存变量和函数",
   "description": "Service拥有的工作状态及机械读写事实。",
   "schema": {
     "type": "object",

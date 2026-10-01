@@ -3,7 +3,7 @@
   "type_key": "era.initialize.compute",
   "display_name": "确认初始化变更",
   "category": "初始化规划",
-  "description": "把纯规划器已经生成的资源变更计划送到构造提交请求的环节。此节点目前不再次推导资源差异，只保留有序动作及依据；计算职责已经由资源规划器承担，避免对同一设置重复判断。",
+  "description": "传递已经生成的初始化资源计划，供后续写入请求组装使用。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

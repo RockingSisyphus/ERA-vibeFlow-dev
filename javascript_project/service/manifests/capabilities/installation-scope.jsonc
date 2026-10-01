@@ -3,7 +3,7 @@
   "id": "era.tavern.installation_scope",
   "targets": ["browser"],
   "display_name": "ERA 安装作用域读取",
-  "description": "只读当前脚本 ID 及三类 Tavern Helper 脚本树中的启用归属；不作业务分类。",
+  "description": "读取当前脚本身份及角色卡、全局、预设中的启用脚本资料，供启动位置判断。",
   "operations": {
     "read": {"input_type": "era.tavern.installation_scope.read.request", "output_type": "era.installation.scope.facts", "completion": "immediate"}
   }

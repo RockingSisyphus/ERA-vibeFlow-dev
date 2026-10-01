@@ -1,1 +1,1 @@
-{"kind":"data_schema","type_key":"era.api.commit.result","representation":"json","display_name":"即时 Commit 分支结果","description":"互斥的 committed、skipped 或 failed 结果。","schema":{"type":"object","additionalProperties":true}}
+{"kind":"data_schema","type_key":"era.api.commit.result","representation":"json","display_name":"即时 变量提交 分支结果","description":"互斥的 committed、skipped 或 failed 结果。","schema":{"type":"object","additionalProperties":true}}

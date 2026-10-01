@@ -54,15 +54,6 @@ function readCycle(inputs: CycleInput, phase?: CyclePhase): CycleState {
   return value as CycleState;
 }
 
-export function BeginCycleNode(inputs: CycleInput): any {
-  return {
-    cycle_state_initial: wrapCycle(
-      "collect",
-      inputs["era.service.state"].value as EraServiceStateV1,
-    ),
-  };
-}
-
 export function RouteCycleNode(inputs: CycleInput): any {
   const cycle = readCycle(inputs);
   return { cycle_route: cycle.phase, cycle_state_routed: cycle };
@@ -265,11 +256,6 @@ export function ValidateTransportNode(
   };
 }
 
-// Original node: nodes/lifecycle/initialize_state.ts
-export function InitializeStateNode(): any {
-  return { service_state_initial: createInitialServiceState() };
-}
-
 // Original node: nodes/publish/build_outbound.ts
 interface BuildOutbound_Envelope<T> {
   readonly value: T;
@@ -327,11 +313,11 @@ interface DispatchTask_Envelope<T> {
 export function DispatchTaskNode(
   inputs: Readonly<{
     "era.step.request.routed": DispatchTask_Envelope<unknown>;
-    "era.task.route": DispatchTask_Envelope<unknown>;
+    "era.task.route.selected": DispatchTask_Envelope<unknown>;
     "era.batch.execution.state": DispatchTask_Envelope<unknown>;
   }>,
 ): any {
-  const route = inputs["era.task.route"].value;
+  const route = inputs["era.task.route.selected"].value;
   if (
     route !== "update-mk" &&
     route !== "agent-settings" &&
@@ -402,4 +388,9 @@ export function TaskIgnoreNode(
     throw new TypeError("忽略任务节点只接受 kind=ignore 的严格步骤");
   }
   return { ignore_task_result: createProtocolIgnoreResult(step) };
+}
+
+/** 建立服务队列和批次进度，然后开始收集事件。 */
+export function BeginServiceNode(): any {
+ return { cycle_state_initial: wrapCycle('collect', createInitialServiceState()) };
 }

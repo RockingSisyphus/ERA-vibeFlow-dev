@@ -3,7 +3,7 @@
   "type_key": "era.tasks.dispatch",
   "display_name": "分派已准备的简单任务",
   "category": "步骤执行",
-  "description": "只将已经准备好的消息标识、Agent 设置和忽略任务派往相应分支。普通同步已由外层直接调用，不经过本包装；返回结果不会提前推进索引，仍由统一结算完成。",
+  "description": "按简单任务类型选择消息历史标识结算、生成设置操作或忽略事件处理。",
   "version": "1.0.0",
   "flow_kind": "decision",
   "contract": {
@@ -14,7 +14,7 @@
         "display_name": "已准备路由步骤"
       },
       {
-        "type": "era.task.route",
+        "type": "era.task.route.selected",
         "cardinality": "exactly_one",
         "display_name": "已准备任务路由"
       },
@@ -45,24 +45,24 @@
     "params_defaults": {},
     "input_semantics": {
       "era.step.request.routed": [
-        "输入：已完成统一准备的路由步骤。"
+        "输入：已准备路由步骤。"
       ],
-      "era.task.route": [
-        "输入：统一准备节点输出的路由；不得重新读取 Planner 的原始 taskRoute。"
+      "era.task.route.selected": [
+        "输入：已准备任务路由。"
       ],
       "era.batch.execution.state": [
-        "输入：当前批次执行状态，由本节点原样传给任务节点。"
+        "输入：当前批次执行状态。"
       ]
     },
     "output_semantics": {
       "simple_task_route": [
-        "输出：已准备的简单任务路由；其他任务类别显式报错。"
+        "输出：简单任务路由。"
       ],
       "routed_step_for_task": [
-        "输出：原样传递已准备步骤。"
+        "输出：传递给简单任务的步骤。"
       ],
       "execution_state_for_task": [
-        "输出：原样传递批次状态。"
+        "输出：传递给简单任务的批次状态。"
       ]
     }
   },

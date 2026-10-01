@@ -1,7 +1,7 @@
 {
   "kind": "base_lib",
   "id": "era.service.agent_configuration",
-  "display_name": "ERA Agent 配置合同与规范化",
+  "display_name": "ERA 多阶段生成 配置合同与规范化",
   "description": "独立规范化 Agent 配置与预设快照，不执行生成阶段。",
   "category": "Agent 配置",
   "version": "1.0.0",

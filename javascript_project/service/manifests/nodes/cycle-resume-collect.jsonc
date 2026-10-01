@@ -3,7 +3,7 @@
   "type_key": "era.service.cycle.resume_collect",
   "display_name": "恢复事件收集阶段",
   "category": "服务阶段循环",
-  "description": "把批次结束后可继续运行的服务状态包装回收集阶段，交给长期循环的下一轮。先前任务已经结算和发布；本节点自身不接收事件、不执行保存，只明确下一轮可以恢复接收新请求。",
+  "description": "把已发布批次的下一轮状态送回事件收集阶段，开始处理后续酒馆事件。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
@@ -11,7 +11,7 @@
       {
         "type": "era.service.state.next",
         "cardinality": "exactly_one",
-        "display_name": "输入状态"
+        "display_name": "本节点所需的当前运行资料"
       }
     ],
     "provides": [
@@ -25,12 +25,12 @@
     "params_defaults": {},
     "input_semantics": {
       "era.service.state.next": [
-        "读取并保留输入值。"
+        "输入：本节点所需的当前运行资料。"
       ]
     },
     "output_semantics": {
       "finished_cycle_state": [
-        "供同一 Service 工作流的下一阶段使用。"
+        "输出：阶段结果。"
       ]
     }
   },

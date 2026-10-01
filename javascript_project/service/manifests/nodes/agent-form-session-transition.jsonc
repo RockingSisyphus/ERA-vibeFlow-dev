@@ -20,7 +20,7 @@
   ],
   "capabilities": [],
   "display_name": "形成会话转换",
-  "description": "把候选最终结果转换成会话下一步：需要保存或沿普通消息同步完成的结果，携带对应楼层候选；只需阶段交接的结果直接结束当前片段。同时接续候选实际应用后的作用域窗口，不重复执行本轮 API。若候选无法对应原楼层，返回失败而不是写到新的消息。",
+  "description": "把候选应用结果转换为后续任务：需要消息保存或历史同步的结果进入共享消息流程，其余结果直接返回生成片段回执。保留原任务和本次允许执行的消息范围。",
   "flow_kind": "process",
   "contract": {
     "requires": [
@@ -56,21 +56,21 @@
     "params_defaults": {},
     "input_semantics": {
       "era.step.request.routed": [
-        "输入：已准备步骤"
+        "输入：已准备步骤。"
       ],
       "era.batch.execution.state": [
-        "输入：批次状态"
+        "输入：批次状态。"
       ],
       "era.agent.generation.outcome": [
-        "输入：阶段结果"
+        "输入：阶段结果。"
       ]
     },
     "output_semantics": {
       "agent_transition": [
-        "输出：会话转换"
+        "输出：会话转换。"
       ],
       "agent_execution_state": [
-        "输出：批次状态"
+        "输出：批次状态。"
       ]
     }
   },

@@ -2,8 +2,8 @@
   "kind": "data_schema",
   "type_key": "era.sidecar.binding.input",
   "representation": "json",
-  "display_name": "Sidecar 绑定输入",
-  "description": "仅在 Sidecar Nodeset 内部传递的同步上下文封装。",
+  "display_name": "独立状态文件 绑定输入",
+  "description": "保存状态文件绑定流程所需的聊天身份、文件资料及同步上下文。",
   "schema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",

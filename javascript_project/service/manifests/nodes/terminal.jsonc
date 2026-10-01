@@ -1,9 +1,9 @@
 {
   "kind": "node",
   "type_key": "era.service.terminal",
-  "display_name": "表达式命令结束",
+  "display_name": "流程起止标记",
   "category": "服务生命周期",
-  "description": "结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。",
+  "description": "标记流程开始或结束，返回空结果。",
   "version": "1.0.0",
   "flow_kind": "terminal",
   "contract": {

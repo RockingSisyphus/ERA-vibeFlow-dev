@@ -395,19 +395,24 @@ export function withPlan(position: PositionState, plan: any): PositionState {
     state: { ...position.state, work: { ...position.state.work, plan } },
   };
 }
+/** 外层块路由和作者函数收尾共享同一结束边界，范围为空也不再等待函数。 */
+export function blockExecutionIsTerminal(state: EraBlockStepStateV1): boolean {
+  const plan: any = state.work.plan;
+  return Boolean(
+    state.done ||
+    !plan ||
+    plan.status === "failed" ||
+    !plan.execution ||
+    state.work.disposition === "failed" ||
+    plan.execution.messageIndex >= plan.execution.endIndex,
+  );
+}
 export function routeBlockLifecycle(state: EraBlockStepStateV1): {
   state: PositionState;
   route: string;
 } {
   const plan: any = state.work.plan,
     frame = state.functionFrame;
-  const terminal =
-    state.done ||
-    !plan ||
-    plan.status === "failed" ||
-    !plan.execution ||
-    state.work.disposition === "failed" ||
-    plan.execution.messageIndex >= plan.execution.endIndex;
   return {
     state: {
       state,
@@ -415,7 +420,7 @@ export function routeBlockLifecycle(state: EraBlockStepStateV1): {
       consumedSource: false,
       diagnosticsBefore: plan?.diagnostics.length ?? 0,
     },
-    route: terminal
+    route: blockExecutionIsTerminal(state)
       ? "terminal"
       : frame?.phase === "start"
         ? "function-start"

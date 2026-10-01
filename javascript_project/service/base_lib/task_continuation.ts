@@ -12,7 +12,7 @@ export interface TaskContinuation {
   readonly apiContext?: any;
 }
 export interface ExecutionRequest {
-  readonly kind: "sync" | "commit" | "candidate" | "update-mk" | "direct";
+  readonly kind: "sync" | "commit" | "candidate" | "update-mk" | "simple" | "direct";
   readonly payload: any;
 }
 export interface PreparedTask {
@@ -20,7 +20,7 @@ export interface PreparedTask {
   readonly continuation: TaskContinuation;
 }
 export interface ExecutedTask {
-  readonly kind: "sync" | "commit" | "update-mk" | "direct";
+  readonly kind: "sync" | "commit" | "update-mk" | "simple" | "direct";
   readonly value: TaskResultV1;
   readonly continuation: TaskContinuation;
 }

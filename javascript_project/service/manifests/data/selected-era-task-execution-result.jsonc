@@ -1,0 +1,40 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.task.execution.result.selected",
+  "representation": "json",
+  "display_name": "选定入口的核心执行结果与原任务",
+  "description": "执行入口选中时携带真实请求或结果，其他入口为 null；实际入口沿用原请求合同。",
+  "schema": {
+    "anyOf": [
+      {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "sync",
+              "commit",
+              "direct",
+              "update-mk"
+            ]
+          },
+          "value": {
+            "type": "object"
+          },
+          "continuation": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "kind",
+          "value",
+          "continuation"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "type": "null"
+      }
+    ]
+  }
+}

@@ -1,0 +1,89 @@
+{
+  "kind": "node",
+  "type_key": "era.task.select_followup",
+  "display_name": "选择生成完成后的处理动作",
+  "category": "服务任务",
+  "description": "根据模型生成阶段的结论，选择历史同步、消息标识结算或直接返回阶段结果，并保留原任务、批次和回执资料。",
+  "version": "1.0.0",
+  "flow_kind": "decision",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.task.prepared",
+        "cardinality": "exactly_one",
+        "display_name": "任务准备结果"
+      }
+    ],
+    "provides": [
+      {
+        "key": "followup_route",
+        "type": "era.task.action.route",
+        "display_name": "这项任务接下来要执行的动作"
+      },
+      {
+        "key": "followup_continuation",
+        "type": "era.task.continuation.context",
+        "display_name": "原任务、事件来源与回执资料"
+      },
+      {
+        "key": "followup_batch",
+        "type": "era.batch.execution.state",
+        "display_name": "当前批次和消息进度"
+      },
+      {
+        "key": "followup_step",
+        "type": "era.step.request.routed",
+        "display_name": "本次执行的任务及聊天资料"
+      },
+      {
+        "key": "followup_direct",
+        "type": "era.task.execution.result.selected",
+        "display_name": "准备阶段已确定的任务结果"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.task.prepared": [
+        "输入：任务准备结果。"
+      ]
+    },
+    "output_semantics": {
+      "followup_route": [
+        "输出：这项任务接下来要执行的动作。"
+      ],
+      "followup_continuation": [
+        "输出：原任务、事件来源与回执资料。"
+      ],
+      "followup_batch": [
+        "输出：当前批次和消息进度。"
+      ],
+      "followup_step": [
+        "输出：本次执行的任务及聊天资料。"
+      ],
+      "followup_direct": [
+        "输出：准备阶段已确定的任务结果。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/iteration/task_execution_routes.ts",
+        "export": "selectFollowup"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.facade_api_engine",
+    "era.service.task_continuation"
+  ],
+  "capabilities": []
+}

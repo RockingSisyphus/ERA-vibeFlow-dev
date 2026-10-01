@@ -3,7 +3,7 @@
   "type_key": "era.task.prepared",
   "representation": "json",
   "display_name": "任务准备结果",
-  "description": "仅在当前在途任务内使用，包含待执行请求和原来源接续依据；不表示业务已应用。",
+  "description": "保存已经准备好、接下来需要执行的请求，以及原任务、事件来源和批次资料。",
   "schema": {
     "type": "object",
     "properties": {

@@ -2,8 +2,8 @@
   "kind": "data_schema",
   "type_key": "era.command.expression.route",
   "representation": "json",
-  "display_name": "表达式用途与真实结果分支",
-  "description": "由对应判断节点按当前事实产生，仅选择本次实际控制分支，不改变业务结果。",
+  "display_name": "公式求值、函数库检查或阶段函数结果分支",
+  "description": "记录表达式结果应进入变量赋值、函数库应用、阶段函数记录还是错误处理分支。",
   "schema": {
     "type": "string",
     "enum": [

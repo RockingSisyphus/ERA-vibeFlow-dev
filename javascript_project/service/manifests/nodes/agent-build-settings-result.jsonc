@@ -20,7 +20,7 @@
   ],
   "capabilities": [],
   "display_name": "结算设置命令",
-  "description": "把设置命令的实际返回值和诊断对应到原任务来源，形成一份可由 Service 合并的任务结果。这里只返回设置处理结论，不修改批次索引或进入生成阶段，也不将连接测试成功等同于后续模型生成成功。",
+  "description": "把配置、预设、连接或模型列表操作的实际结果对应到原请求，输出任务回执及诊断信息。",
   "flow_kind": "process",
   "contract": {
     "requires": [
@@ -46,15 +46,15 @@
     "params_defaults": {},
     "input_semantics": {
       "era.step.request.routed": [
-        "输入：已准备步骤"
+        "输入：已准备步骤。"
       ],
       "era.agent.settings.outcome": [
-        "输入：设置结果"
+        "输入：设置结果。"
       ]
     },
     "output_semantics": {
       "settings_result": [
-        "输出：设置任务结果"
+        "输出：设置任务结果。"
       ]
     }
   },

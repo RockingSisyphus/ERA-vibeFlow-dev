@@ -3,7 +3,7 @@
   "type_key": "era.dispatch.classify_context",
   "display_name": "分类任务与上下文",
   "category": "任务派发",
-  "description": "检查所选步骤需要哪一种上下文：初始化、同步和消息标识任务按各自要求准备聊天事实；无需宿主数据的任务及忽略项走无读取分支；公共 ERA 提交和同步调用归入 API 任务。这里决定准备范围，具体的作用域准入和消息写入目标仍由 API 内部校验。",
+  "description": "根据任务类型选择所需资料：初始化资源、消息历史同步、消息历史标识或公共 调用接口（API） 上下文；无需聊天资料的任务进入直接准备分支。",
   "version": "1.0.0",
   "flow_kind": "decision",
   "contract": {
@@ -35,18 +35,18 @@
     "params_defaults": {},
     "input_semantics": {
       "era.step.request": [
-        "输入：等待执行的唯一规划步骤。"
+        "输入：已选规划步骤。"
       ],
       "era.batch.execution.state": [
-        "输入：当前有界批次执行状态。"
+        "输入：当前批次执行状态。"
       ]
     },
     "output_semantics": {
       "dispatch_seed": [
-        "输出：携带显式任务来源和准备要求的种子。"
+        "输出：派发准备种子。"
       ],
       "context_route": [
-        "输出：none 或 read 的互斥路由。"
+        "输出：上下文准备路由。"
       ]
     }
   },

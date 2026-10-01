@@ -1,0 +1,80 @@
+{
+  "kind": "node",
+  "type_key": "era.api.prepare_history_sync",
+  "display_name": "检查同步请求，确定重算方式和范围",
+  "category": "服务任务",
+  "description": "检查按历史重算请求的模式和目标消息，生成历史同步任务；输入有误时形成具体失败结果。两种情况都保留原接口请求，供执行完成后返回回执。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.api.request",
+        "cardinality": "exactly_one",
+        "display_name": "ERA 公共对象请求"
+      },
+      {
+        "type": "era.batch.execution.state",
+        "cardinality": "exactly_one",
+        "display_name": "ERA 批次执行状态"
+      },
+      {
+        "type": "era.task.continuation.context",
+        "cardinality": "exactly_one",
+        "display_name": "原任务接续上下文"
+      }
+    ],
+    "provides": [
+      {
+        "key": "sync_prepared",
+        "type": "era.task.prepared",
+        "display_name": "同步任务或输入失败结果及原请求"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.api.request": [
+        "输入：ERA 公共对象请求。"
+      ],
+      "era.batch.execution.state": [
+        "输入：ERA 批次执行状态。"
+      ],
+      "era.task.continuation.context": [
+        "输入：原任务接续上下文。"
+      ]
+    },
+    "output_semantics": {
+      "sync_prepared": [
+        "输出：同步任务或输入失败结果及原请求。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/api/facade_nodes.ts",
+        "export": "prepareHistorySync"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.service.facade_api_engine",
+    "era.service.sidecar_binding",
+    "era.service.sync_contracts",
+    "era.service.sync_result_policy",
+    "era.service.sync_work_preparation",
+    "era.service.task_continuation",
+    "era.service.types",
+    "era.service.working_state",
+    "era.workbench.context"
+  ],
+  "capabilities": []
+}

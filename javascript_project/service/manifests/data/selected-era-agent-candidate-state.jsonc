@@ -1,0 +1,37 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.agent.candidate.state.selected",
+  "display_name": "选定入口的本次模型尝试的请求、起点和进度",
+  "representation": "json",
+  "schema": {
+    "anyOf": [
+      {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "request",
+          "step",
+          "executionState"
+        ],
+        "properties": {
+          "request": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "step": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "executionState": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      {
+        "type": "null"
+      }
+    ]
+  },
+  "description": "执行入口选中时携带真实请求或结果，其他入口为 null；实际入口沿用原请求合同。"
+}

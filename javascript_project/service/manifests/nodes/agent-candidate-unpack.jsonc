@@ -3,7 +3,7 @@
   "type_key": "era.agent.candidate_unpack",
   "display_name": "取出候选执行输入",
   "category": "Agent候选",
-  "description": "从一次候选尝试的状态中取出当前生成请求、所属任务及批次上下文，交给模型执行和共用块处理流程。发生重试时取的是更新后的请求，原事件来源仍保留；这里仅解包，不改变候选恢复点，也不把上一轮结果当作本轮成功。",
+  "description": "从当前候选运行状态取出模型请求、原任务和批次，交给下一次模型调用。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
@@ -11,7 +11,7 @@
       {
         "type": "era.agent.candidate.state",
         "cardinality": "exactly_one",
-        "display_name": "当前候选状态"
+        "display_name": "本次模型尝试的请求、起点和进度"
       }
     ],
     "provides": [
@@ -35,18 +35,18 @@
     "params_defaults": {},
     "input_semantics": {
       "era.agent.candidate.state": [
-        "包含生成请求、已准备步骤和批次状态的候选状态。"
+        "输入：本次模型尝试的请求、起点和进度。"
       ]
     },
     "output_semantics": {
       "generation_request": [
-        "取出本次候选的模型请求。"
+        "输出：生成请求。"
       ],
       "routed_step": [
-        "取出本次候选对应的已准备步骤。"
+        "输出：已准备的任务步骤。"
       ],
       "execution_state": [
-        "取出本次候选所属的批次状态。"
+        "输出：当前批次状态。"
       ]
     }
   },

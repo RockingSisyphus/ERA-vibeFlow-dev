@@ -2,7 +2,7 @@
   "kind": "base_lib",
   "id": "era.service.function_block_execution",
   "display_name": "函数位置与普通API事务规划",
-  "description": "复用Facade校验、scope与普通era_tx构造，仅决定当前消息插入位置和块推进；无工具或持久化副作用。",
+  "description": "检查作者函数发起的提交及其允许执行范围，将命令插入当前调用位置，供消息流程继续执行。",
   "category": "内存生命周期",
   "version": "1.0.0",
   "implementations": [

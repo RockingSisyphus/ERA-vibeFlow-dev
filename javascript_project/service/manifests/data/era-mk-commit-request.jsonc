@@ -2,7 +2,7 @@
   "kind": "data_schema",
   "type_key": "era.mk.commit.request",
   "representation": "json",
-  "display_name": "ERA 消息密钥提交请求",
+  "display_name": "ERA 消息历史标识提交请求",
   "description": "声明先消息后变量的单次逻辑提交所需的明确文本更新、完整 ERAMetaData 与写入标记。",
   "schema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",

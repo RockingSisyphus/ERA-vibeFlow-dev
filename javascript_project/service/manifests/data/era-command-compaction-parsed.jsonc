@@ -1,1 +1,1 @@
-{"kind":"data_schema","type_key":"era.command_compaction.parsed","representation":"json","display_name":"已解析 Scope 事务","description":"带原文 era_tx 顺序与 scope 摘要的压缩上下文。","schema":{"type":"object","additionalProperties":true}}
+{"kind":"data_schema","type_key":"era.command_compaction.parsed","representation":"json","display_name":"已识别执行范围的变量提交","description":"带原文 era_tx 顺序与 scope 摘要的压缩上下文。","schema":{"type":"object","additionalProperties":true}}

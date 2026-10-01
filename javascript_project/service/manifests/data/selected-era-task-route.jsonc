@@ -1,0 +1,27 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.task.route.selected",
+  "representation": "json",
+  "display_name": "选定入口的ERA 任务路由",
+  "description": "执行入口选中时携带真实请求或结果，其他入口为 null；实际入口沿用原请求合同。",
+  "schema": {
+    "anyOf": [
+      {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "string",
+        "enum": [
+          "initialize",
+          "sync",
+          "api",
+          "update-mk",
+          "agent-generation-session",
+          "ignore",
+          "agent-settings"
+        ]
+      },
+      {
+        "type": "null"
+      }
+    ]
+  }
+}

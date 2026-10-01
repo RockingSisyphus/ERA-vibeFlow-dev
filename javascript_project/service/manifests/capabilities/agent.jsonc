@@ -5,7 +5,7 @@
     "browser"
   ],
   "display_name": "ERA 多阶段生成宿主 I/O",
-  "description": "只执行 Service 已声明的角色卡、页面会话、独立模型请求、一次性注入与规划失败消息；最终楼层消息由同步事务提交。",
+  "description": "执行服务指定的角色设置、页面会话、模型请求和一次性内容注入，将接口实际结果交回生成流程。",
   "operations": {
     "await_native_completion": {
       "input_type": "era.agent.host.request",

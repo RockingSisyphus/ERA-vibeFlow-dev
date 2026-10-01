@@ -1,9 +1,9 @@
 {
   "kind": "node",
   "type_key": "era.workbench.publish_preparation",
-  "display_name": "接回现有Commit准入或失败分支",
+  "display_name": "接回现有变量提交准入或失败分支",
   "category": "工作台提交",
-  "description": "将工作台准备结果拆为分支标签、带有有序操作的提交上下文及失败上下文。准备成功后仍要经过公共 API 的作用域与窗口校验，准备失败则进入统一失败回执。这个节点只连接草稿准备和原提交事务，不把“已经生成操作”当成提交成功。",
+  "description": "把草稿准备成功后的操作、上下文和提交方式交给 调用接口（API） 许可判断；失败时交出具体问题及原请求资料。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
@@ -35,18 +35,18 @@
     "params_defaults": {},
     "input_semantics": {
       "era.workbench.preparation_result": [
-        "工作台草稿校验和操作规划的结果。"
+        "输入：工作台准备结果。"
       ]
     },
     "output_semantics": {
       "prepared_commit_inspected": [
-        "准备成功时交给通用提交校验的有序操作。"
+        "输出：已读取的提交请求。"
       ],
       "preparation_route": [
-        "选择继续提交或返回准备失败。"
+        "输出：工作台准备分支。"
       ],
       "preparation_failure": [
-        "准备失败时保留具体错误供回执使用。"
+        "输出：提交失败上下文。"
       ]
     }
   },

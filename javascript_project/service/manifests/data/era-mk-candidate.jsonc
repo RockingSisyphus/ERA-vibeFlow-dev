@@ -2,7 +2,7 @@
   "kind": "data_schema",
   "type_key": "era.mk.candidate",
   "representation": "json",
-  "display_name": "ERA 消息密钥提交候选",
+  "display_name": "ERA 消息历史标识提交候选",
   "description": "纯计算产生的消息文本与 ERAMetaData 候选，或进入无写入失败路径的明确错误。",
   "schema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",

@@ -1,9 +1,9 @@
 {
   "kind": "node",
   "type_key": "era.mk.derive",
-  "display_name": "推导消息密钥提交候选",
+  "display_name": "推导消息历史标识提交候选",
   "category": "消息密钥纯计算",
-  "description": "根据目标消息原文、现有 ERA 元数据及占位符设置，生成或沿用消息标识 MK，并规划正文与标识列表需要怎样更新。作者正文和未知元数据保留，用户消息不补状态栏占位符。输出候选及是否需写入；无法定位目标或输入有问题时输出失败，不在此改动酒馆。",
+  "description": "结合目标正文、原元数据和占位设置生成消息历史标识候选，保留原作者正文及其他元数据；用户消息仅准备历史标识。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
@@ -11,26 +11,26 @@
       {
         "type": "era.mk.context",
         "cardinality": "exactly_one",
-        "display_name": "MK 上下文"
+        "display_name": "消息历史标识 上下文"
       }
     ],
     "provides": [
       {
         "key": "mk_candidate",
         "type": "era.mk.candidate",
-        "display_name": "MK 候选"
+        "display_name": "消息历史标识 候选"
       }
     ],
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
       "era.mk.context": [
-        "输入：MK 上下文。"
+        "输入：消息历史标识 上下文。"
       ]
     },
     "output_semantics": {
       "mk_candidate": [
-        "输出：MK 候选。"
+        "输出：消息历史标识 候选。"
       ]
     }
   },

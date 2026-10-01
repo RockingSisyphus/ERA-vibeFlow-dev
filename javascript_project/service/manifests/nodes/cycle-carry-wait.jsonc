@@ -3,7 +3,7 @@
   "type_key": "era.service.cycle.carry_wait",
   "display_name": "携带等待状态",
   "category": "服务阶段循环",
-  "description": "当事件尚未达到执行条件时，把更新后的事件集合、定时器和序号包装回收集阶段，留给下一轮继续接收。已经收到的事件不会被丢弃或重新执行；这个节点只是保存本轮的收集进度，不向酒馆写入内容。",
+  "description": "把更新后的待处理事件、定时器和事件序号放回收集循环，继续等待本批事件准备就绪。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
@@ -11,7 +11,7 @@
       {
         "type": "era.collection.reduction",
         "cardinality": "exactly_one",
-        "display_name": "输入状态"
+        "display_name": "本节点所需的当前运行资料"
       }
     ],
     "provides": [
@@ -25,12 +25,12 @@
     "params_defaults": {},
     "input_semantics": {
       "era.collection.reduction": [
-        "读取并保留输入值。"
+        "输入：本节点所需的当前运行资料。"
       ]
     },
     "output_semantics": {
       "wait_cycle_state": [
-        "供同一 Service 工作流的下一阶段使用。"
+        "输出：阶段结果。"
       ]
     }
   },

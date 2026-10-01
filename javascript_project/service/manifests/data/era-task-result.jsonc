@@ -3,7 +3,7 @@
   "type_key": "era.task.result",
   "representation": "json",
   "display_name": "ERA 任务结果",
-  "description": "单个领域步骤的固定状态、来源结算、锁外通知与诊断。",
+  "description": "保存单个任务的实际状态、原事件回执、页面通知和诊断，供批次汇总。",
   "schema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",

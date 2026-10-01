@@ -1,7 +1,7 @@
 {
   "type_key": "era.agent.settings",
-  "display_name": "管理 Agent 设置与连接",
-  "description": "在聊天和 API 共用的有序 Service 队列中处理 Agent 配置、预设、连接和模型列表，读取必要事实后执行相应设置命令并返回来源回执。它不进入规划、正文或结算的模型生成状态机，也不改聊天变量，避免设置任务误占用生成阶段的上下文。",
+  "display_name": "管理生成配置、预设和连接",
+  "description": "处理多阶段生成的配置、预设、连接和模型列表操作。按命令读取必要的当前设置，通过浏览器接口执行相应操作，再将实际结果对应到原始请求。此流程负责设置管理，生成阶段在其他任务中执行。",
   "requires": [
     {
       "type": "era.step.request.routed",
@@ -32,31 +32,31 @@
         "id": "start",
         "type_used": "era.service.terminal",
         "display_name": "设置命令开始",
-        "description": "这是“管理 Agent 设置与连接”的入口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
+        "description": "开始管理生成配置、预设和连接。"
       },
       {
         "id": "prepare_settings_request",
         "type_used": "era.agent.prepare_settings_request",
         "display_name": "准备设置命令",
-        "description": "为 Agent 设置命令读取必要配置、预设或连接事实，整理出具体设置请求。设置任务只需要这些资料，不带入模型生成阶段的大量历史和候选上下文；读取或请求问题作为诊断交给执行节点，不在此发起正文生成。"
+        "description": "本次处理多阶段生成的设置操作。读取设置操作所需的当前配置、预设和连接资料，组装待执行命令并保留原请求。"
       },
       {
         "id": "execute_settings_command",
         "type_used": "era.agent.execute_settings_command",
         "display_name": "执行设置命令",
-        "description": "在与聊天操作相同的有序 Service 队列中处理 Agent 配置、预设、连接或模型列表命令，通过既有宿主接口读取或写入相应设置。连接相关的即时事实读取和发起操作连续完成，减少使用过期事实。返回真实操作结果，不启动生成会话、不应用消息中的变量指令。"
+        "description": "本次处理多阶段生成的设置操作。通过酒馆浏览器接口读取或修改生成配置、预设、连接和模型列表，返回接口实际完成的结果及错误信息。"
       },
       {
         "id": "build_settings_result",
         "type_used": "era.agent.build_settings_result",
         "display_name": "结算设置命令",
-        "description": "把设置命令的实际返回值和诊断对应到原任务来源，形成一份可由 Service 合并的任务结果。这里只返回设置处理结论，不修改批次索引或进入生成阶段，也不将连接测试成功等同于后续模型生成成功。"
+        "description": "本次处理多阶段生成的设置操作。把配置、预设、连接或模型列表操作的实际结果对应到原请求，输出任务回执及诊断信息。"
       },
       {
         "id": "end",
         "type_used": "era.service.terminal",
         "display_name": "设置命令结束",
-        "description": "这是“管理 Agent 设置与连接”的出口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
+        "description": "结束管理生成配置、预设和连接，输出本段流程的处理结果。"
       }
     ],
     "edges": [

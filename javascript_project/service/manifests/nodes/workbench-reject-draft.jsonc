@@ -3,7 +3,7 @@
   "type_key": "era.workbench.reject_draft",
   "display_name": "返回基准或输入失败",
   "category": "工作台提交",
-  "description": "把草稿校验阶段已经发现的错误转成提交准备失败，保留具体原因和原调用上下文。不会生成任何变量操作，也不向消息或状态文件写入；后续沿公共 API 的失败回执分支返回，让用户知道编辑为什么没有被应用。",
+  "description": "把草稿检查问题转换为公共 调用接口（API） 失败结果，说明需要重新读取或修改的原因。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
@@ -25,12 +25,12 @@
     "params_defaults": {},
     "input_semantics": {
       "era.workbench.draft": [
-        "基准或草稿校验发现的错误。"
+        "输入：工作台编辑草稿。"
       ]
     },
     "output_semantics": {
       "rejected_preparation_result": [
-        "保留错误并返回失败准备结果，不产生提交操作。"
+        "输出：工作台准备结果。"
       ]
     }
   },

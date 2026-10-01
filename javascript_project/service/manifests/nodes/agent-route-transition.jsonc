@@ -1,9 +1,9 @@
 {
   "kind": "node",
   "type_key": "era.agent.route_transition",
-  "display_name": "路由 Agent 阶段结果",
+  "display_name": "路由 多阶段生成 阶段结果",
   "category": "故事生成会话",
-  "description": "依据会话转换的模式选择出口：还需要普通消息同步或消息标识结算的结果走共享任务链；只需返回阶段结果、取消或失败的结果走直接回执。模式已由会话逻辑决定，节点不重新判断模型内容，也不更改批次状态。",
+  "description": "根据生成结果需要的结算方式选择出口：历史同步或消息历史标识进入共享任务流程，片段完成、取消或失败进入直接返回流程。",
   "version": "1.0.0",
   "flow_kind": "decision",
   "contract": {
@@ -11,7 +11,7 @@
       {
         "type": "era.agent.session.transition",
         "cardinality": "exactly_one",
-        "display_name": "Agent 转换"
+        "display_name": "多阶段生成 转换"
       },
       {
         "type": "era.batch.execution.state",
@@ -23,12 +23,12 @@
       {
         "key": "agent_route",
         "type": "era.agent.session.route",
-        "display_name": "Agent 路由"
+        "display_name": "多阶段生成 路由"
       },
       {
         "key": "agent_transition_routed",
         "type": "era.agent.session.transition",
-        "display_name": "已路由 Agent 转换"
+        "display_name": "已路由 多阶段生成 转换"
       },
       {
         "key": "agent_execution_state_routed",
@@ -40,21 +40,21 @@
     "params_defaults": {},
     "input_semantics": {
       "era.agent.session.transition": [
-        "输入：保留完整 mode 的阶段结果。"
+        "输入：多阶段生成 转换。"
       ],
       "era.batch.execution.state": [
-        "输入：随委托分支继续传递的批次状态。"
+        "输入：当前批次执行状态。"
       ]
     },
     "output_semantics": {
       "agent_route": [
-        "输出：legacy 或 direct 互斥后续路由。"
+        "输出：多阶段生成 路由。"
       ],
       "agent_transition_routed": [
-        "透传完整阶段结果，供被选中的后续分支消费。"
+        "输出：已路由 多阶段生成 转换。"
       ],
       "agent_execution_state_routed": [
-        "透传当前批次执行状态。"
+        "输出：已路由批次执行状态。"
       ]
     }
   },

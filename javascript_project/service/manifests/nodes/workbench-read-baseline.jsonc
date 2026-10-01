@@ -1,9 +1,9 @@
 {
   "kind": "node",
   "type_key": "era.workbench.read_baseline",
-  "display_name": "读取当前Sidecar基准",
+  "display_name": "读取当前独立状态文件基准",
   "category": "工作台提交",
-  "description": "为工作台草稿读取当前聊天身份、状态文件绑定和变量或函数的基准，优先采用可用的当前工作状态，检查其归属及就绪情况。读取结果是后续比较草稿是否过期的依据；这里不迁移数据、不新建绑定，也不保存用户编辑，读取失败会形成准备失败。",
+  "description": "读取当前聊天的状态文件绑定及可用的内存变量、函数，作为用户草稿比较和变更规划的依据。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
@@ -25,12 +25,12 @@
     "params_defaults": {},
     "input_semantics": {
       "era.api.commit.inspected": [
-        "内部工作台提交请求及窗口事实。"
+        "输入：已读取的提交请求。"
       ]
     },
     "output_semantics": {
       "baseline": [
-        "只读 Sidecar 当前记录并核对身份后的编辑基准。"
+        "输出：工作台当前基准。"
       ]
     }
   },

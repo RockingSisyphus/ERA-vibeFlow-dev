@@ -1,12 +1,10 @@
+import { run as prepareWork } from './prepare-block-work-fixture';
 import { expect, it } from 'vitest';
 import { contextWith, identity, sidecarId } from './memory-lifecycle-fixture';
 import { recordFor } from '../../../javascript_project/service/base_lib/sidecar_binding';
 import { run as prepare } from '../../../javascript_project/service/nodes/agent/prepare_stage_blocks';
 import { run as advance } from './message-block-fixture';
-import {
-  PrepareBlockWorkNode as prepareWork,
-  PublishBlockApplicationNode as publish,
-} from '../../../javascript_project/service/nodes/sync/shared_block_state_adapters';
+import { PublishBlockApplicationNode as publish } from '../../../javascript_project/service/nodes/sync/shared_block_state_adapters';
 import { FinishStageBlocksNode as finish } from '../../../javascript_project/service/nodes/agent/finish_stage_blocks.ts';
 import { parsePlanningOutput } from '../../../javascript_project/service/base_lib/agent/agent_generation_session';
 

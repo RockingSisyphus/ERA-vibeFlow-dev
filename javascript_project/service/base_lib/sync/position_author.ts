@@ -5,26 +5,24 @@ import {
   prepareFunctionApi,
 } from "./function_block_execution.ts";
 import { syncFailure } from "./sync_contracts.ts";
-import { forkPosition, type PositionState } from "./position_source.ts";
+import {
+  blockExecutionIsTerminal,
+  forkPosition,
+  type PositionState,
+} from "./position_source.ts";
 
 export function routeAuthorLifecycle(input: PositionState): {
   state: PositionState;
   route: string;
 } {
-  const state = input.state,
-    plan: any = state.work.plan;
+  const state = input.state;
   return {
     state: input,
-    route:
-      state.done ||
-      !plan ||
-      plan.status === "failed" ||
-      !plan.execution ||
-      state.work.disposition === "failed"
-        ? "terminal"
-        : state.functionFrame?.phase === "start"
-          ? "start"
-          : "wait",
+    route: blockExecutionIsTerminal(state)
+      ? "terminal"
+      : state.functionFrame?.phase === "start"
+        ? "start"
+        : "wait",
   };
 }
 export function releaseTerminalFunction(

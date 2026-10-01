@@ -1,0 +1,164 @@
+{
+  "type_key": "era.task.prepare",
+  "display_name": "准备当前任务及执行所需资料",
+  "description": "从批次取出当前任务，读取所需聊天资料，再按任务类型准备初始化、脚本接口、模型生成、历史同步或简单任务请求。输出下一步执行请求，并保留原事件和回执资料。",
+  "requires": [
+    {
+      "type": "era.batch.execution.state",
+      "cardinality": "exactly_one",
+      "display_name": "当前批次、待办任务和执行位置"
+    }
+  ],
+  "provides": [
+    {
+      "key": "prepared_task",
+      "type": "era.task.prepared",
+      "display_name": "下一步执行请求及原任务资料"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "batch",
+        "type": "era.batch.execution.state",
+        "required": true,
+        "display_name": "当前批次、待办任务和执行位置"
+      }
+    ],
+    "max_steps": 35,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.service.terminal",
+        "display_name": "任务准备开始",
+        "description": "开始为批次中的当前任务读取和整理执行资料。"
+      },
+      {
+        "id": "prepare_dispatch_context",
+        "type_used": "era.dispatch.prepare_context",
+        "display_name": "读取并准备当前任务的聊天资料",
+        "description": "为批次中的当前任务读取所需资料并选定执行入口。先确认任务需要哪些聊天事实，再读取真实消息及回复，准备历史标识和状态栏占位符。普通同步的修改留到统一保存，纯标识任务可先写入；输出已准备任务或具体失败原因。"
+      },
+      {
+        "id": "route_task_entry",
+        "type_used": "era.task.route_entry",
+        "display_name": "选择任务准备入口或同步",
+        "description": "根据原任务类型选择初始化、脚本接口（API）、多阶段生成、历史同步或简单任务入口。"
+      },
+      {
+        "id": "task_initialize",
+        "type_used": "era.task.initialize",
+        "display_name": "初始化角色资源并安排历史同步",
+        "description": "为角色卡准备 ERA 所需的设置、世界书、状态栏正则和开场白：读取现有资源，规划差异，再按顺序提交。启动初始化资源就绪后，交回历史同步请求；其他资源操作或失败直接返回结果。"
+      },
+      {
+        "id": "task_api",
+        "type_used": "era.task.api",
+        "display_name": "准备脚本或界面的提交、同步请求",
+        "description": "处理外部 ERA 公共接口的写入请求。commit 表示按顺序提交变量或函数操作，交回提交流程执行；sync 表示按消息历史重新计算，先检查模式和目标再交回历史同步。无效输入返回具体失败原因，最终回执在实际执行后形成。"
+      },
+      {
+        "id": "task_agent_generation_session",
+        "type_used": "era.agent.generation_session",
+        "display_name": "选择生成阶段并准备模型请求",
+        "description": "为一次多阶段生成准备请求。读取配置、消息历史和当前会话，判断应执行规划、正文还是结算阶段；重试或替换旧阶段时先恢复应保留的历史起点，再建立候选初始状态。输出待生成请求及原任务资料，供候选循环执行。"
+      },
+      {
+        "id": "prepare_plain_sync",
+        "type_used": "era.task.prepare_plain_sync",
+        "display_name": "把普通同步交给共享执行流程",
+        "description": "把普通历史同步任务、批次及已读取上下文组装为共享同步请求，保留原事件资料。"
+      },
+      {
+        "id": "prepare_simple_task",
+        "type_used": "era.task.prepare_simple",
+        "display_name": "准备标识、设置或忽略任务",
+        "description": "将消息标识、生成设置或忽略事件的任务及所需聊天资料，交给简单任务执行入口。设置读取和写入在执行入口完成。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.service.terminal",
+        "display_name": "任务准备完成",
+        "description": "返回下一步执行请求、原事件和批次资料，交给主循环选择执行动作。"
+      }
+    ],
+    "edges": [
+      [
+        "start",
+        "prepare_dispatch_context"
+      ],
+      [
+        "prepare_dispatch_context",
+        "route_task_entry"
+      ],
+      {
+        "from": "route_task_entry",
+        "to": "task_initialize",
+        "when": "route_entry_entry_route == 'initialize'"
+      },
+      {
+        "from": "route_task_entry",
+        "to": "task_api",
+        "when": "route_entry_entry_route == 'api'"
+      },
+      {
+        "from": "route_task_entry",
+        "to": "task_agent_generation_session",
+        "when": "route_entry_entry_route == 'agent'"
+      },
+      {
+        "from": "route_task_entry",
+        "to": "prepare_plain_sync",
+        "when": "route_entry_entry_route == 'sync'"
+      },
+      {
+        "from": "route_task_entry",
+        "to": "prepare_simple_task",
+        "when": "route_entry_entry_route == 'simple'"
+      },
+      [
+        "task_initialize",
+        "end"
+      ],
+      [
+        "task_api",
+        "end"
+      ],
+      [
+        "task_agent_generation_session",
+        "end"
+      ],
+      [
+        "prepare_plain_sync",
+        "end"
+      ],
+      [
+        "prepare_simple_task",
+        "end"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.task.prepared",
+        "cardinality": "exactly_one",
+        "as": "prepared_task",
+        "display_name": "下一步执行请求及原任务资料"
+      }
+    ]
+  },
+  "nodeset_imports": [
+    {
+      "path": "dispatch_prepare_context.jsonc"
+    },
+    {
+      "path": "task_initialize.jsonc"
+    },
+    {
+      "path": "task_api.jsonc"
+    },
+    {
+      "path": "agent_generation_session.jsonc"
+    }
+  ]
+}

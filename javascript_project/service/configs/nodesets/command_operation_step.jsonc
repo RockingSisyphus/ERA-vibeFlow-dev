@@ -1,24 +1,24 @@
 {
   "type_key": "era.command.operation_step",
-  "display_name": "块内操作：有序遍历、保护、模板、公式与日志",
-  "description": "对一个正文指令块或 Agent 阶段函数表反复执行有序微操作。显式栈保留父路径、字段索引及模板，字段轮到时读取前一项完成后的值；变量增删改分别判断保护并生成日志，函数定义先形成完整候选库再统一校验，公式调用已有 Expression root。当前值、楼层快照、函数库快照和随机位置分别携带；微操作不发布块完成、不封存楼层、不保存宿主，完整结果只交回消息块层。",
+  "display_name": "处理消息指令中的一项变量或函数操作",
+  "description": "按指令和对象字段的原有顺序执行一次业务操作：新增、修改或删除变量，整体修改一组函数，或计算生成阶段函数调用。每项动作完成自身检查、计算和日志记录，返回下一项进度；处理结束后输出完整变量、函数、日志和诊断。",
   "requires": [
     {
       "type": "era.command.operation.state",
       "cardinality": "exactly_one",
-      "display_name": "当前操作栈、变量/函数工作值、历史快照、随机位置与累计日志"
+      "display_name": "待处理字段、当前变量和函数、历史起点、随机次数与日志"
     }
   ],
   "provides": [
     {
       "key": "operation_state_after",
       "type": "era.command.operation.state.next",
-      "display_name": "下一轮操作状态或完整块内结果"
+      "display_name": "下一项操作进度或本段完整结果"
     },
     {
       "key": "operation_done",
       "type": "era.command.operation.done",
-      "display_name": "当前操作范围结束标志"
+      "display_name": "本段操作是否已完成"
     }
   ],
   "pipeline": {
@@ -27,466 +27,137 @@
       {
         "key": "operation_state",
         "type": "era.command.operation.state",
-        "display_name": "当前操作栈、变量/函数工作值、历史快照、随机位置与累计日志",
+        "display_name": "待处理字段、当前变量和函数、历史起点、随机次数与日志",
         "required": true
       }
     ],
-    "max_steps": 43,
+    "max_steps": 35,
     "nodes": [
       {
         "id": "start",
         "type_used": "era.service.terminal",
         "display_name": "块内操作迭代开始",
-        "description": "标记这段流程的入口或出口，业务数据由声明的通道传递；本节点不修改变量、不调用作者函数，也不保存酒馆。"
+        "description": "开始处理消息指令中的一项变量或函数操作。"
       },
       {
-        "id": "take_next_operation",
-        "type_used": "era.command.take_next_operation",
-        "display_name": "取出下一项：先完成当前子树",
-        "description": "从当前指令、数组根项和显式待处理栈取得下一项。对象字段按原 Object.keys 顺序深度优先访问，进入子对象后先处理完它再回父级；每次访问都读取前一项完成后的工作值，不预先把全对象展开后批量求值。函数根对象另保留整组候选和统一校验位置。 函数 meta 删除也使用此栈，子路径结束后返回同组函数候选，不写变量状态。"
-      },
-      {
-        "id": "inspect_insert",
-        "type_used": "era.command.inspect_insert",
-        "display_name": "检查新增路径与插入保护",
-        "description": "读取当前路径是否已存在、父对象和 unInsertAble（禁止新增）保护。已有对象按原顺序进入子字段，缺失路径准备整体插入；all 阻止普通子树插入，self 阻止新增直属键，合法 meta 维护仍按原规则处理。输出进入子树、应用新增或跳过的明确分支，尚未改变变量。"
-      },
-      {
-        "id": "inherit_insert_template",
-        "type_used": "era.command.inherit_insert_template",
-        "display_name": "合并继承模板与本地默认值",
-        "description": "为即将插入的路径取得沿父级继承的模板，再合并父对象本地 $template 和当前明确内容，本地及显式值按原优先级覆盖。数组按原整体替换规则，模板不追溯改已有对象；将结果和值复制到新增动作，不提前写入其他字段。"
+        "id": "select_operation",
+        "type_used": "era.command.select_business_operation",
+        "display_name": "按原顺序选择下一项指令操作",
+        "description": "从指令的有序操作和字段遍历进度中选择新增变量、修改变量、删除变量、整组函数修改或生成阶段函数调用。没有剩余操作时形成本段完整结果。"
       },
       {
         "id": "apply_insert",
-        "type_used": "era.command.apply_insert",
-        "display_name": "应用新增值到内存工作副本",
-        "description": "将已通过路径和保护判断、已完成模板合并的值写到当前缺失路径，按原清理与 own-property 规则处理特殊键和数组。仅修改本块私有变量工作副本，并形成原子新增记录；不保存消息、不回执块完成。"
+        "type_used": "era.command.apply_insert_action",
+        "display_name": "新增变量并记录变更",
+        "description": "根据指令选择目标变量，补齐该变量需要的模板字段，应用新增值并记录可回退的变更；对象内部的字段加入原有遍历顺序。"
       },
       {
-        "id": "inspect_edit",
-        "type_used": "era.command.inspect_edit",
-        "display_name": "检查修改保护并区分赋值与公式",
-        "description": "读取当前路径和 updatable（允许修改）保护；缺失目标按原规则跳过，显式修改 meta 解锁仍按原通路处理。已有对象补丁进入子字段，直接值走赋值，单键 $expr 走公式；旧控制键、空公式或非数值目标产生原诊断，不把错误转成默认值。"
-      },
-      {
-        "id": "apply_assignment",
-        "type_used": "era.command.apply_assignment",
-        "display_name": "记录正确历史旧值并赋新值",
-        "description": "对已允许修改的现有路径，按历史日志取得最近应作为修改旧值的值；没有对应历史记录时才使用当前值。清理和复制新值后写入工作副本，形成旧值/新值记录。后一项因此读到更新值，日志仍能按原规则回退；这里尚未保存。"
-      },
-      {
-        "id": "prepare_value_expression",
-        "type_used": "era.command.prepare_value_expression",
-        "display_name": "为当前路径构造公式请求",
-        "description": "把当前已更新的变量和函数库、消息楼层起点的变量/函数快照分开装入请求，带上消息 ERA 标识 MK 所确定的稳定随机来源和已使用的随机次数，使同一消息的重算继续原序列。只求这一个路径的 $expr，支持当前值与历史快照各自的含义；请求不包含宿主写入，也不提前改变目标。"
-      },
-      {
-        "id": "inspect_delete",
-        "type_used": "era.command.inspect_delete",
-        "display_name": "检查删除形状与 necessary 保护",
-        "description": "按当前路径的 necessary（防误删保留规则）判断删除：all 保留子树，children 阻止用空对象直接删除直属子项，self 保留自身但允许按规则继续子路径。非空对象补丁按原字段顺序深入，空对象才尝试原子删除；meta 解除保护通路和根对象不能整体删除的规则不变。"
+        "id": "apply_edit",
+        "type_used": "era.command.apply_edit_action",
+        "display_name": "修改变量，按需计算公式",
+        "description": "读取指令指定的变量，直接赋值或计算公式，再写入结果并记录变更。公式按执行到此处的变量、历史起点和随机进度求值；无效操作记录原因并继续原遍历。"
       },
       {
         "id": "apply_delete",
-        "type_used": "era.command.apply_delete",
-        "display_name": "删除一个允许删除的路径并记旧值",
-        "description": "复制将被删除路径的实际旧值，从当前工作副本移除该路径，生成一条原子删除日志。已在保护判断中跳过的路径不会到这里；删除只影响内存工作值，不把子树遍历的小步骤当成整个消息块已完成。 函数 meta 删除时目标为候选定义副本，原函数库仍未提交。"
+        "type_used": "era.command.apply_delete_action",
+        "display_name": "删除变量并记录变更",
+        "description": "按指令删除目标变量或其指定字段，记录删除前的值供历史回退；需要遍历的子字段依次处理，无效目标保留具体原因。"
       },
       {
-        "id": "push_child_paths",
-        "type_used": "era.command.push_child_paths",
-        "display_name": "保存父位置并逐字段深入",
-        "description": "在待处理栈中保存父对象的位置、字段顺序和下一个字段索引，再进入当前子项，继承本次操作种类及模板上下文。后续字段在轮到它时重新读取更新后的状态；不复制第二套 CRUD，不为每个对象再增加 Nodeset 层级。"
+        "id": "apply_function_group",
+        "type_used": "era.command.apply_function_group_action",
+        "display_name": "修改整组函数，通过检查后整体应用",
+        "description": "在当前函数库的候选副本上依次处理这一组新增、修改、删除及元数据操作，检查名称、元数据和完整函数库。整组有效时一次应用并记录日志，有误时保留原函数库和具体诊断。"
       },
       {
-        "id": "inspect_function_group",
-        "type_used": "era.command.inspect_function_group",
-        "display_name": "先核对整组函数名与操作形状",
-        "description": "针对当前函数指令的一个非空根对象，先检查组内全部名字：新增不得覆盖既有函数，修改必须存在，删除补丁只能采用原有空对象或 meta 形式。任何名字/格式无效就拒绝这一组并保留诊断；有效才复制完整函数库作候选，确保后续前向引用不会被逐函数提交破坏。"
-      },
-      {
-        "id": "begin_function_candidate",
-        "type_used": "era.command.begin_function_candidate",
-        "display_name": "建立整组函数候选及恢复起点",
-        "description": "复制当前完整函数库，保存这一组开始前的函数库和日志起点，再按原名字顺序准备各定义。候选修改不会立即进入当前可调用函数库；整组都收集完成后才交 Expression 校验，数组里的下一根仍按原顺序处理。"
-      },
-      {
-        "id": "prepare_function_insert",
-        "type_used": "era.command.prepare_function_insert",
-        "display_name": "准备函数新增定义",
-        "description": "复制当前待新增函数的定义和元数据，记录候选新增动作。此前整组名字检查已经确认名称不存在；这一轮只准备该定义，尚未提交函数库，其他同组函数稍后仍可引用它。"
-      },
-      {
-        "id": "prepare_function_edit",
-        "type_used": "era.command.prepare_function_edit",
-        "display_name": "准备函数修改与元数据继承",
-        "description": "读取既有函数，按原规则替换定义或只更新 $meta；补丁未指定 meta 时保留原 meta，指定时采用原合并规则。updatable=false 的函数只在补丁明确解锁时允许修改；得到候选动作或保护跳过，不立即改当前函数库。"
-      },
-      {
-        "id": "prepare_function_delete",
-        "type_used": "era.command.prepare_function_delete",
-        "display_name": "准备函数删除或 meta 删除",
-        "description": "空对象补丁准备整个函数的删除，necessary=self/all 的函数保留；meta 补丁转入同一有序路径栈，按原删除规则逐字段处理定义副本的 $meta。不存在的函数按原规则跳过。这里只准备或修改候选定义，不提交当前函数库；整组仍须统一校验。"
-      },
-      {
-        "id": "check_function_metadata",
-        "type_used": "era.command.check_function_metadata",
-        "display_name": "核对函数保护元数据及本项结论",
-        "description": "检查准备后的定义是否使用函数实体支持的元数据。函数是平面实体，不支持 unInsertAble 或 necessary=children；此类错误拒绝整组候选，已有保护导致的合法跳过只跳过当前项。通过的动作才进入候选库，保持原错误类别与保护行为。"
-      },
-      {
-        "id": "stage_function_change",
-        "type_used": "era.command.stage_function_change",
-        "display_name": "将本项纳入候选，不发布函数库",
-        "description": "把合法新增、修改或删除写入整组候选库，并保留每个名字的旧/新定义和原顺序。当前工作函数库仍保持组起点；下一次循环继续收集定义，直到出现独立的“整组校验”项。"
-      },
-      {
-        "id": "prepare_library_validation",
-        "type_used": "era.command.prepare_library_validation",
-        "display_name": "构造完整函数库的统一校验请求",
-        "description": "所有同组定义已收齐后，以完整候选函数库构造一次 Expression 请求，operations 为空，由原 Expression root 检查语法、纯函数限制和调用关系。前面定义可引用后面定义；不能把这一步拆为每个函数各自提交。"
-      },
-      {
-        "id": "prepare_stage_call",
-        "type_used": "era.command.prepare_stage_call",
-        "display_name": "为当前位置的阶段 JSON 函数构造请求",
-        "description": "取出 Agent 阶段函数表的下一项，按原参数格式形成公式调用，使用会话的随机来源和位置，并携带调用表恢复点。完整调用表的名字与格式已在进入循环前检查；本项只计算结果，不当作作者 JavaScript 函数或写宿主的 API。"
-      },
-      {
-        "id": "evaluate_expression",
-        "type_used": "era.command.evaluate_expression",
-        "display_name": "调用既有 Expression root",
-        "description": "将单路径公式、完整函数库校验或阶段函数请求交给已经存在的同步 Expression 工作流，接回真实数值、函数诊断和随机进度。此调用仍是普通 Node 对已有 root 的实际 API 调用，不新增 root，也不把 Service 的遍历或保护逻辑藏进外部边界。"
-      },
-      {
-        "id": "route_expression_result",
-        "type_used": "era.command.route_expression_result",
-        "display_name": "分开数值结果、整组校验和阶段结果",
-        "description": "结合请求用途和 Expression 实际诊断，区分可应用数值、有效函数库、成功阶段调用及各自失败。数值必须有限且按原规则规范化 -0；修改公式即使失败也保留原随机消耗，阶段函数整表失败的回退范围则按原会话规则处理，不统一成一种错误恢复。"
-      },
-      {
-        "id": "apply_expression_value",
-        "type_used": "era.command.apply_expression_value",
-        "display_name": "应用公式结果并记录原旧值",
-        "description": "把已确认有限的公式结果写入本路径工作值，使用与直接修改相同的历史旧值规则生成日志，并接续 Expression 返回的随机位置。只完成这一字段，后面的字段继续从当前工作状态求值；不把此结果当成整个块或候选成功。"
-      },
-      {
-        "id": "apply_function_candidate",
-        "type_used": "era.command.apply_function_candidate",
-        "display_name": "整组通过后统一应用函数库与日志",
-        "description": "只有完整候选库的统一校验通过才按原顺序应用这一组变更，生成函数新增、修改或删除日志。保护跳过的函数不生成伪变更；校验失败走拒绝分支，不把先收集的部分定义提交出去。"
-      },
-      {
-        "id": "accept_stage_call_result",
-        "type_used": "era.command.accept_stage_call_result",
-        "display_name": "记录阶段函数数值与抽取范围",
-        "description": "把本项阶段函数的真实有限数值、名字、参数和随机起止位置放入本块私有调用表，按原顺序累计。整表尚未完成前不发布阶段结果、不消耗正文块计数；全部成功后才由消息块层接回阶段调用结果。"
-      },
-      {
-        "id": "record_operation_diagnostic",
-        "type_used": "era.command.record_operation_diagnostic",
-        "display_name": "保留公式或局部操作诊断",
-        "description": "保留本路径的原错误代码、位置和信息，未成功的值不替换目标。修改公式的随机位置按原返回值接续；普通消息继续原有容错与成功前缀，是否拒绝 Agent 整候选由外层块结果规则决定。"
-      },
-      {
-        "id": "discard_function_candidate",
-        "type_used": "era.command.discard_function_candidate",
-        "display_name": "拒绝当前整组候选，保留原函数库",
-        "description": "名字、元数据或整库校验失败时，放弃这一组所有候选变更和候选日志，保留进入组前的当前函数库与原诊断。之前其他根对象已经成功的结果继续保留；不将整组失败缩小成只拒绝最后一个函数。"
-      },
-      {
-        "id": "fail_stage_call_table",
-        "type_used": "era.command.fail_stage_call_table",
-        "display_name": "结束失败阶段调用表并保留已算结果",
-        "description": "阶段函数校验或求值失败时记录原失败代码与调用表中可解释的成功/失败项，终止此表，不继续后续调用。按原阶段表边界保留起点和随机事实，交由消息块层报告候选失败；不自行把它改成普通字段跳过。"
-      },
-      {
-        "id": "append_operation_log",
-        "type_used": "era.command.append_operation_log",
-        "display_name": "合并原子变量记录与诊断",
-        "description": "将刚完成的新增、修改或删除记录合入本块私有日志，保留字段顺序、旧/新值以及公式诊断；没有实际变更的保护跳过不伪造日志。记录只供本块结束和历史回退使用，此处不写消息、Sidecar 或 API 回执。 候选函数 meta 的局部路径记录留在其私有动作中，不混入变量日志。"
+        "id": "apply_stage_call",
+        "type_used": "era.command.apply_stage_call_action",
+        "display_name": "执行生成阶段安排的函数调用",
+        "description": "按生成阶段的调用顺序，使用当前变量、函数、历史起点和随机进度计算本次调用，收集结果供阶段使用；失败时记录具体原因并形成阶段调用失败结果。"
       },
       {
         "id": "skip_operation",
         "type_used": "era.command.skip_operation",
-        "display_name": "跳过原规则明确不执行的一项",
-        "description": "对不存在的目标、保护拦截、原格式允许的空项或无效操作形状，采用原有跳过/诊断结论，不制造写入。后续推进只移动内部操作游标，不能因此宣布消息块已完成。"
+        "display_name": "保留跳过操作后的工作状态",
+        "description": "本次处理消息指令中的一项变量、函数或公式操作。在目标不存在、保护规则拦截或操作格式应跳过时，保留当前变量和处理进度。随后交给进度整理节点结束本项，使循环能够继续检查后面的操作。"
       },
       {
         "id": "settle_operation",
         "type_used": "era.command.settle_operation",
-        "display_name": "推进操作游标并携带有序工作状态",
-        "description": "根据本项结果推进字段、数组根或函数组游标，退出完成子树后回到父位置；保留当前变量/函数、消息起点快照、随机位置、候选组及累计日志。局部异常按原根项容错范围跳过剩余项，已确认前缀不被新恢复规则抹掉。输出下一轮状态，尚不发布块级结果。"
-      },
-      {
-        "id": "begin_function_meta_delete",
-        "type_used": "era.command.begin_function_meta_delete",
-        "display_name": "将函数元数据删除交给同一有序栈",
-        "description": "保存当前函数定义及函数组回到的位置，把 meta 删除补丁作为局部目标放入同一个路径栈。后续删除、保护和子路径遍历复用变量删除节点，但目标是候选定义副本，不是聊天变量；中间日志只供候选组使用。"
-      },
-      {
-        "id": "finish_function_meta_delete",
-        "type_used": "era.command.finish_function_meta_delete",
-        "display_name": "收拢元数据路径结果为候选函数定义",
-        "description": "元数据的子路径已按原顺序删除后，将定义副本和旧定义收拢成函数候选修改，回到原函数组位置。局部删除日志不进入变量历史；组通过时只生成原函数更新日志，当前可调用函数库仍等待整组校验。"
+        "display_name": "整理当前操作并准备继续",
+        "description": "本次处理消息指令中的一项变量、函数或公式操作。清除刚完成或已跳过的操作记录，保留更新后的变量、函数、日志及待处理列表。下一轮据此选择后续字段、下一组函数或下一项阶段调用。"
       },
       {
         "id": "complete_operations",
         "type_used": "era.command.complete_operations",
-        "display_name": "仅操作范围结束时形成块内终态",
-        "description": "当前指令所有数组根和子路径、整组函数校验或阶段调用表均已处理后，输出完整块内结果和结束标志。结果包括当前值、快照依据、日志、诊断与随机进度；楼层封存、正文完成标记、内存发布和保存仍由更外层按原边界完成。"
+        "display_name": "返回本段操作的完整结果",
+        "description": "本次处理消息指令中的一项变量、函数或公式操作。当前消息指令的全部字段、整组函数检查或阶段函数清单处理结束后，输出当前变量、函数、历史记录、诊断和随机进度，并标记本段操作已完成。消息流程接着更新正文记录或生成阶段结果。"
       },
       {
         "id": "end",
         "type_used": "era.service.terminal",
         "display_name": "块内操作迭代结束",
-        "description": "标记这段流程的入口或出口，业务数据由声明的通道传递；本节点不修改变量、不调用作者函数，也不保存酒馆。"
+        "description": "结束处理消息指令中的一项变量或函数操作，输出本段流程的处理结果。"
       }
     ],
     "edges": [
       [
         "start",
-        "take_next_operation"
+        "select_operation"
       ],
       {
-        "from": "take_next_operation",
-        "to": "inspect_insert",
+        "from": "select_operation",
+        "to": "apply_insert",
         "when": "take_next_operation_operation_route == 'insert'"
       },
       {
-        "from": "take_next_operation",
-        "to": "inspect_edit",
+        "from": "select_operation",
+        "to": "apply_edit",
         "when": "take_next_operation_operation_route == 'edit'"
       },
       {
-        "from": "take_next_operation",
-        "to": "inspect_delete",
+        "from": "select_operation",
+        "to": "apply_delete",
         "when": "take_next_operation_operation_route == 'delete'"
       },
       {
-        "from": "take_next_operation",
-        "to": "inspect_function_group",
+        "from": "select_operation",
+        "to": "apply_function_group",
         "when": "take_next_operation_operation_route == 'function-group'"
       },
       {
-        "from": "take_next_operation",
-        "to": "prepare_function_insert",
-        "when": "take_next_operation_operation_route == 'function-insert'"
-      },
-      {
-        "from": "take_next_operation",
-        "to": "prepare_function_edit",
-        "when": "take_next_operation_operation_route == 'function-edit'"
-      },
-      {
-        "from": "take_next_operation",
-        "to": "prepare_function_delete",
-        "when": "take_next_operation_operation_route == 'function-delete'"
-      },
-      {
-        "from": "take_next_operation",
-        "to": "prepare_library_validation",
-        "when": "take_next_operation_operation_route == 'function-validate'"
-      },
-      {
-        "from": "take_next_operation",
-        "to": "prepare_stage_call",
+        "from": "select_operation",
+        "to": "apply_stage_call",
         "when": "take_next_operation_operation_route == 'stage-call'"
       },
       {
-        "from": "take_next_operation",
+        "from": "select_operation",
         "to": "skip_operation",
         "when": "take_next_operation_operation_route == 'skip'"
       },
       {
-        "from": "take_next_operation",
+        "from": "select_operation",
         "to": "complete_operations",
         "when": "take_next_operation_operation_route == 'done'"
       },
-      {
-        "from": "inspect_insert",
-        "to": "push_child_paths",
-        "when": "inspect_insert_insert_route == 'descend'"
-      },
-      {
-        "from": "inspect_insert",
-        "to": "inherit_insert_template",
-        "when": "inspect_insert_insert_route == 'apply'"
-      },
-      {
-        "from": "inspect_insert",
-        "to": "skip_operation",
-        "when": "inspect_insert_insert_route == 'skip'"
-      },
-      {
-        "from": "inspect_edit",
-        "to": "push_child_paths",
-        "when": "inspect_edit_edit_route == 'descend'"
-      },
-      {
-        "from": "inspect_edit",
-        "to": "apply_assignment",
-        "when": "inspect_edit_edit_route == 'assign'"
-      },
-      {
-        "from": "inspect_edit",
-        "to": "prepare_value_expression",
-        "when": "inspect_edit_edit_route == 'expr'"
-      },
-      {
-        "from": "inspect_edit",
-        "to": "skip_operation",
-        "when": "inspect_edit_edit_route == 'skip'"
-      },
-      {
-        "from": "inspect_delete",
-        "to": "push_child_paths",
-        "when": "inspect_delete_delete_route == 'descend'"
-      },
-      {
-        "from": "inspect_delete",
-        "to": "apply_delete",
-        "when": "inspect_delete_delete_route == 'apply'"
-      },
-      {
-        "from": "inspect_delete",
-        "to": "skip_operation",
-        "when": "inspect_delete_delete_route == 'skip'"
-      },
-      {
-        "from": "inspect_function_group",
-        "to": "begin_function_candidate",
-        "when": "inspect_function_group_function_group_route == 'valid'"
-      },
-      {
-        "from": "inspect_function_group",
-        "to": "discard_function_candidate",
-        "when": "inspect_function_group_function_group_route == 'invalid'"
-      },
-      {
-        "from": "check_function_metadata",
-        "to": "stage_function_change",
-        "when": "check_function_metadata_function_item_route == 'apply'"
-      },
-      {
-        "from": "check_function_metadata",
-        "to": "skip_operation",
-        "when": "check_function_metadata_function_item_route == 'skip'"
-      },
-      {
-        "from": "check_function_metadata",
-        "to": "discard_function_candidate",
-        "when": "check_function_metadata_function_item_route == 'invalid'"
-      },
-      [
-        "inherit_insert_template",
-        "apply_insert"
-      ],
       [
         "apply_insert",
-        "append_operation_log"
+        "settle_operation"
       ],
       [
-        "apply_assignment",
-        "append_operation_log"
+        "apply_edit",
+        "settle_operation"
       ],
       [
         "apply_delete",
-        "append_operation_log"
-      ],
-      [
-        "apply_expression_value",
-        "append_operation_log"
-      ],
-      [
-        "prepare_function_insert",
-        "check_function_metadata"
-      ],
-      [
-        "prepare_function_edit",
-        "check_function_metadata"
-      ],
-      [
-        "prepare_value_expression",
-        "evaluate_expression"
-      ],
-      [
-        "prepare_library_validation",
-        "evaluate_expression"
-      ],
-      [
-        "prepare_stage_call",
-        "evaluate_expression"
-      ],
-      [
-        "evaluate_expression",
-        "route_expression_result"
-      ],
-      {
-        "from": "route_expression_result",
-        "to": "apply_expression_value",
-        "when": "route_expression_result_expression_route == 'value'"
-      },
-      {
-        "from": "route_expression_result",
-        "to": "record_operation_diagnostic",
-        "when": "route_expression_result_expression_route == 'value-failed'"
-      },
-      {
-        "from": "route_expression_result",
-        "to": "apply_function_candidate",
-        "when": "route_expression_result_expression_route == 'library'"
-      },
-      {
-        "from": "route_expression_result",
-        "to": "discard_function_candidate",
-        "when": "route_expression_result_expression_route == 'library-failed'"
-      },
-      {
-        "from": "route_expression_result",
-        "to": "accept_stage_call_result",
-        "when": "route_expression_result_expression_route == 'stage-call'"
-      },
-      {
-        "from": "route_expression_result",
-        "to": "fail_stage_call_table",
-        "when": "route_expression_result_expression_route == 'stage-call-failed'"
-      },
-      [
-        "push_child_paths",
         "settle_operation"
       ],
       [
-        "begin_function_candidate",
+        "apply_function_group",
         "settle_operation"
       ],
       [
-        "stage_function_change",
-        "settle_operation"
-      ],
-      [
-        "apply_function_candidate",
-        "settle_operation"
-      ],
-      [
-        "accept_stage_call_result",
-        "settle_operation"
-      ],
-      [
-        "record_operation_diagnostic",
-        "settle_operation"
-      ],
-      [
-        "discard_function_candidate",
-        "settle_operation"
-      ],
-      [
-        "fail_stage_call_table",
-        "settle_operation"
-      ],
-      [
-        "append_operation_log",
+        "apply_stage_call",
         "settle_operation"
       ],
       [
@@ -500,42 +171,19 @@
       [
         "complete_operations",
         "end"
-      ],
-      {
-        "from": "prepare_function_delete",
-        "to": "check_function_metadata",
-        "when": "prepare_function_delete_function_delete_route == 'whole'"
-      },
-      {
-        "from": "prepare_function_delete",
-        "to": "begin_function_meta_delete",
-        "when": "prepare_function_delete_function_delete_route == 'meta'"
-      },
-      [
-        "begin_function_meta_delete",
-        "settle_operation"
-      ],
-      {
-        "from": "take_next_operation",
-        "to": "finish_function_meta_delete",
-        "when": "take_next_operation_operation_route == 'function-meta-complete'"
-      },
-      [
-        "finish_function_meta_delete",
-        "check_function_metadata"
       ]
     ],
     "outputs": [
       {
         "type": "era.command.operation.state.next",
         "cardinality": "exactly_one",
-        "display_name": "下一轮操作状态或完整块内结果",
+        "display_name": "下一项操作进度或本段完整结果",
         "as": "operation_state_after"
       },
       {
         "type": "era.command.operation.done",
         "cardinality": "exactly_one",
-        "display_name": "当前操作范围结束标志",
+        "display_name": "本段操作是否已完成",
         "as": "operation_done"
       }
     ]

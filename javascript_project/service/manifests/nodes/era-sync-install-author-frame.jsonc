@@ -1,9 +1,9 @@
 {
   "kind": "node",
   "type_key": "era.sync.install_author_frame",
-  "display_name": "建立作者函数帧并放入正文锚点",
+  "display_name": "记录作者函数的调用位置和进度",
   "category": "核心执行",
-  "description": "为当前未处理作者调用建立包含楼层、调用位置和已插入块数的帧，在调用后放入临时锚点。下一轮才开始作者函数；此时尚未调用作者代码，不消耗当前原正文块，也不把函数的未来 commit 重新入队。",
+  "description": "遇到尚未执行的作者 JavaScript 函数调用时，记录它所在的消息、正文位置和插入操作数量，并在调用后放置临时定位标记。下一轮依据这些记录启动函数；函数提交的操作将接在这个位置处理。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
@@ -11,26 +11,26 @@
       {
         "type": "era.sync.position.state",
         "cardinality": "exactly_one",
-        "display_name": "当前消息位置、原块状态、正文范围和作者函数上下文"
+        "display_name": "消息及正文位置、允许处理范围和作者调用进度"
       }
     ],
     "provides": [
       {
         "key": "install_author_frame_position_state",
         "type": "era.sync.position.state",
-        "display_name": "本位置处理后的私有状态；尚未发布到宿主"
+        "display_name": "更新后的消息位置、内存变量和待保存正文"
       }
     ],
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
       "era.sync.position.state": [
-        "输入：当前消息位置、原块状态、正文范围和作者函数上下文。"
+        "输入：消息及正文位置、允许处理范围和作者调用进度。"
       ]
     },
     "output_semantics": {
       "install_author_frame_position_state": [
-        "输出：本位置处理后的私有状态；尚未发布到宿主。"
+        "输出：更新后的消息位置、内存变量和待保存正文。"
       ]
     }
   },

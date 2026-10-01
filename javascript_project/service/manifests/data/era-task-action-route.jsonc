@@ -1,0 +1,17 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.task.action.route",
+  "display_name": "这项任务接下来要执行的动作",
+  "representation": "json",
+  "schema": {
+    "type": "string",
+    "enum": [
+      "commit",
+      "sync",
+      "candidate",
+      "simple",
+      "update-mk",
+      "direct"
+    ]
+  }
+}

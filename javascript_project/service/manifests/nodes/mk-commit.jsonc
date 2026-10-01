@@ -1,9 +1,9 @@
 {
   "kind": "node",
   "type_key": "era.tavern.mk_commit",
-  "display_name": "按逻辑边界提交消息密钥",
+  "display_name": "按逻辑边界提交消息历史标识",
   "category": "消息密钥宿主边界",
-  "description": "按消息标识提交请求执行宿主写入，确认正文和相关元数据的实际结果，返回已提交、失败或无法安全继续的结论。正文与元数据的关系必须一致，部分写入不能当成完整成功；这里处理的是标识准备，不重新执行变量指令。",
+  "description": "向酒馆提交消息历史标识相关正文和元数据，返回每项写入实际确认的状态。",
   "version": "1.0.0",
   "flow_kind": "data_store",
   "contract": {
@@ -11,26 +11,26 @@
       {
         "type": "era.mk.commit.request",
         "cardinality": "exactly_one",
-        "display_name": "MK 提交请求"
+        "display_name": "消息历史标识 提交请求"
       }
     ],
     "provides": [
       {
         "key": "mk_commit_outcome",
         "type": "era.mk.commit.result",
-        "display_name": "MK 提交结果"
+        "display_name": "消息历史标识 提交结果"
       }
     ],
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
       "era.mk.commit.request": [
-        "输入：MK 提交请求。"
+        "输入：消息历史标识 提交请求。"
       ]
     },
     "output_semantics": {
       "mk_commit_outcome": [
-        "输出：MK 提交结果。"
+        "输出：消息历史标识 提交结果。"
       ]
     }
   },

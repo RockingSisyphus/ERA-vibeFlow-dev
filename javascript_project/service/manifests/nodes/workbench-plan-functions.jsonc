@@ -1,9 +1,9 @@
 {
   "kind": "node",
   "type_key": "era.workbench.plan_functions",
-  "display_name": "计算函数库真实增删改",
+  "display_name": "计算函数库增删改",
   "category": "工作台提交",
-  "description": "把函数库草稿与当前函数定义比较，生成按顺序执行的新增、编辑或删除操作，保留函数名、原定义及变化类别，供保护检查和提交使用。函数引用等约束沿共用表达式处理链校验；这里不写状态文件，也不直接运行作者函数。",
+  "description": "比较当前函数与用户草稿，生成有序的新增、修改和删除操作，保留旧定义与类型，供后续表达式检查及提交。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
@@ -25,12 +25,12 @@
     "params_defaults": {},
     "input_semantics": {
       "era.workbench.draft": [
-        "函数库草稿及当前基准。"
+        "输入：工作台编辑草稿。"
       ]
     },
     "output_semantics": {
       "function_operation_plan": [
-        "按函数差异形成有序增删改操作。"
+        "输出：工作台操作计划。"
       ]
     }
   },

@@ -42,66 +42,54 @@
   "pipeline": {
     "entry_mode": "async",
     "inputs": [],
-    "max_steps": 12,
+    "max_steps": 35,
     "nodes": [
       {
         "id": "start",
         "type_used": "era.service.terminal",
         "display_name": "ERA 服务启动",
-        "description": "这是“era.service”的入口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
+        "description": "开始ERA 服务。"
       },
       {
         "id": "inspect_current_script_scope",
         "type_used": "era.installation.scope.inspect",
         "display_name": "读取当前脚本与脚本树",
-        "description": "读取酒馆助手提供的当前脚本 ID，以及角色卡、全局和预设三个位置中已启用的脚本目录，得到当前脚本出现在哪些位置的事实。这里仅收集信息，不注册聊天监听器，也不自行决定是否启动；若宿主接口不可用，后续节点会据此选择兼容策略。"
+        "description": "读取当前脚本身份及角色卡、全局、预设中的启用脚本资料，供启动位置判断。"
       },
       {
-        "id": "classify_installation_scope",
-        "type_used": "era.installation.scope.classify",
-        "display_name": "分类安装作用域",
-        "description": "把当前脚本 ID 与已启用的脚本目录对应起来：只在角色卡中找到就归为角色卡脚本，只在全局或预设中找到就归到相应位置；同一 ID 出现在多个位置则记为位置不明确。读取失败、没有 ID 或没有匹配项记为未知，供启动策略区分“明确不应启动”和“无法判断”。这不是对所有 ERA 实例进行选主。"
-      },
-      {
-        "id": "decide_startup_policy",
-        "type_used": "era.installation.scope.decide",
-        "display_name": "决定启动策略",
-        "description": "根据脚本的安装位置决定本次 ERA 是否进入完整服务：角色卡内部的脚本继续启动；明确位于全局、预设，或同一脚本 ID 同时属于多个位置的实例只显示提示后结束，避免这些位置重复接管聊天。若宿主无法提供位置，则允许兼容启动并要求警告。这里输出策略，不负责停止其他实例，也不修改聊天。"
+        "id": "choose_startup",
+        "type_used": "era.installation.scope.choose_startup",
+        "display_name": "根据安装位置选择启动方式",
+        "description": "比对当前脚本在角色卡、全局和预设中的安装位置，决定启动服务还是显示休眠提示；位置未知时使用原有兼容启动方式，并给出诊断。"
       },
       {
         "id": "activate_tavern_ingress",
         "type_used": "era.installation.scope.activate_ingress",
         "display_name": "登记单层显示窗口与角色卡设置",
-        "description": "把已允许启动的决定交给浏览器宿主，启用 ERA 接收聊天事件的入口及相关显示控制。宿主负责登记角色卡单层显示开关，在开启时只保留目标 AI 消息的显示窗口，切换聊天时重新建立显示关系。这个节点只是启用宿主设施；变量计算、回滚和保存仍由后续 Service 任务处理。"
+        "description": "在酒馆页面启用聊天事件监听和界面显示规则。根据脚本安装位置选择显示目标，并在聊天界面重建后重新连接。"
       },
       {
         "id": "publish_dormant_startup",
         "type_used": "era.installation.scope.publish_dormant",
         "display_name": "发布休眠安装提示",
-        "description": "当当前 ERA 被判定为全局、预设或位置不明确的实例时，要求宿主显示未启动的原因，然后沿结束分支退出。这条分支不会接收聊天事件，也不会加载聊天状态文件、处理宏或启动业务 UI，因而不会以这个实例接管聊天变量。"
+        "description": "向酒馆页面显示脚本休眠原因，并结束本次启动分支。"
       },
       {
-        "id": "initialize_state",
-        "type_used": "era.service.initialize_state",
-        "display_name": "初始化服务与 Scope 窗口状态",
-        "description": "为刚启动的 ERA 创建本页面实例的运行状态，包括待收集事件、定时器信息、事件序号、批次计数和消息处理进度。消息作用域的窗口和准入字段初始为空，后续处理再建立有效窗口；重载或停止时随实例销毁；它们用于识别过期请求，不作为聊天变量写入消息或状态文件。"
-      },
-      {
-        "id": "begin_cycle",
-        "type_used": "era.service.cycle.begin",
-        "display_name": "进入收集阶段",
-        "description": "把初始服务状态标记为“收集事件”阶段，交给长期运行的服务循环。此时尚无批次需要执行，因此第一轮应等待聊天或 API 事件；本节点只增加阶段标签，保留原状态，不读取酒馆或修改变量。"
+        "id": "begin_service",
+        "type_used": "era.service.begin",
+        "display_name": "建立服务状态，从事件收集开始",
+        "description": "建立事件队列、计时器、批次计数和消息处理进度，随后进入收集聊天事件与脚本请求的阶段。"
       },
       {
         "id": "service_loop",
         "type_used": "vibeflow.loop.while",
-        "display_name": "永久服务循环",
-        "description": "一轮先收集事件，或完整执行在途批次的一个步骤。执行步骤时先准备资源/API/会话，再在本轮同级调用共享同步、commit 或候选循环，返回后适配原任务结果并统一结算。准备与接续不重新入 FIFO、不跨 Service 迭代保存恢复点；索引只在最终结果合并后推进，完整批次结果先发送再报告致命失败。 本次调用：长期运行 ERA 服务，循环携带“收集事件”或“执行批次”状态。收集阶段每轮接收一个事件；执行阶段每轮完成一个任务步骤，全部结算并发布后才恢复收集。该循环没有固定业务轮数上限，由宿主生命周期控制停止；不是同时并行执行多批聊天操作。",
+        "display_name": "持续收集并执行酒馆事件",
+        "description": "长期接收和处理酒馆事件。收集阶段每轮整理一个事件；执行阶段每轮完成当前批次的一个任务，再汇总结果。批次结束后回到事件收集，页面离开或服务停止时结束循环。",
         "requires": [
           {
             "type": "era.service.cycle.state",
             "cardinality": "exactly_one",
-            "display_name": "阶段循环状态"
+            "display_name": "服务当前阶段及待处理事件或任务"
           }
         ],
         "loop": {
@@ -121,7 +109,7 @@
         "id": "end",
         "type_used": "era.service.terminal",
         "display_name": "ERA 服务结束",
-        "description": "这是“era.service”的出口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
+        "description": "结束ERA 服务，输出本段流程的处理结果。"
       }
     ],
     "edges": [
@@ -131,32 +119,24 @@
       ],
       [
         "inspect_current_script_scope",
-        "classify_installation_scope"
-      ],
-      [
-        "classify_installation_scope",
-        "decide_startup_policy"
+        "choose_startup"
       ],
       {
-        "from": "decide_startup_policy",
+        "from": "choose_startup",
         "to": "activate_tavern_ingress",
         "when": "installation_scope_route == 'allow'"
       },
       {
-        "from": "decide_startup_policy",
+        "from": "choose_startup",
         "to": "publish_dormant_startup",
         "when": "installation_scope_route == 'dormant'"
       },
       [
         "activate_tavern_ingress",
-        "initialize_state"
+        "begin_service"
       ],
       [
-        "initialize_state",
-        "begin_cycle"
-      ],
-      [
-        "begin_cycle",
+        "begin_service",
         "service_loop"
       ],
       [

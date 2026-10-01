@@ -2,7 +2,7 @@
   "kind": "data_schema",
   "type_key": "era.tavern.sidecar.write_record.result",
   "representation": "json",
-  "display_name": "Sidecar 记录写入结果",
+  "display_name": "独立状态文件 记录写入结果",
   "description": "受控文件写入结论。",
   "schema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",

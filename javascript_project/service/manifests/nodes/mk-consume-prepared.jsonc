@@ -1,9 +1,9 @@
 {
   "kind": "node",
   "type_key": "era.mk.consume_prepared",
-  "display_name": "确认统一 MK 准备结果",
+  "display_name": "确认统一 消息历史标识 准备结果",
   "category": "消息密钥",
-  "description": "检查统一派发阶段已经提供的 ERA 消息标识（MK，用于把消息与历史状态对应起来）、占位符及写入确认结果，整理为标识任务的结算输入。正文和元数据已由派发准备处理，因此这里不会再次读取或修改消息；准备失败如实保留。",
+  "description": "取出任务准备阶段已经生成的消息历史标识、占位内容和实际写入结果，供标识任务结算。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
@@ -18,19 +18,19 @@
       {
         "key": "prepared_mk_outcome",
         "type": "era.mk.commit.result",
-        "display_name": "统一 MK 准备结果"
+        "display_name": "统一 消息历史标识 准备结果"
       }
     ],
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
       "era.step.request.routed": [
-        "输入：已经完成统一 MK 与占位符准备的步骤。"
+        "输入：已准备路由步骤。"
       ]
     },
     "output_semantics": {
       "prepared_mk_outcome": [
-        "输出：保持提交、无操作或失败身份的 MK 结果。"
+        "输出：统一 消息历史标识 准备结果。"
       ]
     }
   },

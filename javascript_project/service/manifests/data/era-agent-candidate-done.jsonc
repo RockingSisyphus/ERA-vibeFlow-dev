@@ -1,7 +1,7 @@
 {
   "kind": "data_schema",
   "type_key": "era.agent.candidate.done",
-  "display_name": "候选结束标记",
+  "display_name": "本阶段是否已成功或无法继续",
   "representation": "json",
   "schema": {
     "type": "boolean"

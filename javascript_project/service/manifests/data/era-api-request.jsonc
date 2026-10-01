@@ -3,7 +3,7 @@
   "type_key": "era.api.request",
   "representation": "json",
   "display_name": "ERA 公共对象请求",
-  "description": "内部 Facade 任务、来源、dispatch context 与 commit/sync 参数；不是公开事件 payload。",
+  "description": "保存提交或同步命令、原事件来源和已准备聊天资料，供公共接口任务执行。",
   "schema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",

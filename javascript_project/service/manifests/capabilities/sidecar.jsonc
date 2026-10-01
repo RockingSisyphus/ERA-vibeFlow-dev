@@ -4,8 +4,8 @@
   "targets": [
     "browser"
   ],
-  "display_name": "ERA Sidecar 宿主接线",
-  "description": "仅搬运当前身份、聊天变量、当前用户 files 和 UI 弹窗；不包含绑定、迁移或复制决策。",
+  "display_name": "ERA 独立状态文件 宿主接线",
+  "description": "提供当前聊天身份、用户文件和绑定选择弹窗的读写接口，供状态文件流程执行已选定操作。",
   "operations": {
     "read_current": {
       "input_type": "era.tavern.sidecar.read_current.request",

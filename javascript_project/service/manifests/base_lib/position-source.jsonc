@@ -2,7 +2,7 @@
   "kind": "base_lib",
   "id": "era.sync.position_source",
   "display_name": "正文位置步骤",
-  "description": "正文位置步骤；建立楼层起点、选择原文块、接回操作日志，楼层结束后才形成压缩候选；各真实节点共用这些独立步骤。",
+  "description": "提供逐段处理聊天正文的计算步骤：建立消息历史起点、识别正文内容、接回操作日志，并在消息处理完成后准备压缩候选。",
   "category": "核心执行",
   "version": "1.0.0",
   "implementations": [

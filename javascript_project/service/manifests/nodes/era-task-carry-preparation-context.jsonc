@@ -3,7 +3,7 @@
   "type_key": "era.task.carry_preparation_context",
   "display_name": "保留准备阶段的原任务来源",
   "category": "核心执行",
-  "description": "将原任务的来源、步骤和批次接续依据原样传到准备阶段的各个结果分支。中间节点只输出自己的资源或 API 结果，因此这里显式保留后续执行与回执需要的原任务；不修改变量、不推进批次索引，也不重新入队。",
+  "description": "携带原任务、批次和事件来源穿过执行资料准备阶段，供执行与回执使用。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
@@ -25,12 +25,12 @@
     "params_defaults": {},
     "input_semantics": {
       "era.task.continuation.context": [
-        "由外层任务入口产生，属于当前唯一在途步骤。"
+        "输入：原任务来源、步骤和当前批次的接续依据。"
       ]
     },
     "output_semantics": {
       "carry_preparation_context_result": [
-        "原任务来源、步骤和当前批次的接续依据；仅传递原事实，不代表业务已执行。"
+        "输出：原任务来源、步骤和当前批次的接续依据。"
       ]
     }
   },
@@ -50,6 +50,7 @@
     }
   ],
   "base_libs": [
+    "era.service.facade_api_engine",
     "era.service.task_continuation"
   ],
   "capabilities": []

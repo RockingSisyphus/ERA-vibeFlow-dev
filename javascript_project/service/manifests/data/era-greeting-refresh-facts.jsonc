@@ -2,7 +2,7 @@
   "kind": "data_schema",
   "type_key": "era.tavern.character.greeting_refresh.facts",
   "representation": "json",
-  "display_name": "开场白刷新facts",
+  "display_name": "当前开场白及首条消息资料",
   "description": "原初始化提交中的刷新事实、计划及结果。",
   "schema": {
     "type": "object",

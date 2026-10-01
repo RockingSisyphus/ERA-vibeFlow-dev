@@ -3,7 +3,7 @@
   "type_key": "era.service.finalize_batch",
   "display_name": "完成批次收尾",
   "category": "批次执行",
-  "description": "在全部步骤结束或计划被拒绝后，核对每个原始事件都恰好获得一次结算，汇总批次诊断，并更新服务批次计数。把任务层结果整理为可发布的批次结论；不会重新执行失败任务，也不负责酒馆文件写入。",
+  "description": "汇总批次中各任务的实际结果，为每个原事件生成一次最终回执，并更新已完成批次数。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

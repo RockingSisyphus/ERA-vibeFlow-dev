@@ -5,7 +5,7 @@
     "browser"
   ],
   "display_name": "执行域延迟准入",
-  "description": "按Node提供的事件和防抖窗口机械准入；不选择业务任务或操作变量。",
+  "description": "按服务传入的事件和合并保存期限安排宿主接收、等待及定时器，返回实际执行结果。",
   "operations": {
     "schedule": {
       "input_type": "era.working.request",

@@ -3,7 +3,7 @@
   "type_key": "era.service.adapt_api_task_result",
   "display_name": "接回公共对象任务结果",
   "category": "公共 Facade",
-  "description": "把公共 API 任务专用的结果转交到 Service 的统一任务结果通道。结果中的成功、跳过、失败、来源和通知均保留原值，不重新计算。专用通道用于避免 API 内部同步结果与外层结果混用；真正推进批次索引由后续合并节点完成。",
+  "description": "把公共 调用接口（API） 任务结果转换为批次可汇总的通用任务结果，保留实际状态、回执和诊断。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
@@ -25,12 +25,12 @@
     "params_defaults": {},
     "input_semantics": {
       "era.api.task.result": [
-        "已完成 API 任务结果。"
+        "输入：公共对象任务结果。"
       ]
     },
     "output_semantics": {
       "api_task_result_common": [
-        "与其他 Service 任务同形的结果。"
+        "输出：统一步骤任务结果。"
       ]
     }
   },

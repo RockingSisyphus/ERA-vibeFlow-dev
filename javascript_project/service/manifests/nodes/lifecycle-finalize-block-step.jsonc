@@ -1,9 +1,9 @@
 {
   "kind": "node",
   "type_key": "era.lifecycle.finalize_block_step",
-  "display_name": "冻结本批消息与Sidecar保存候选",
+  "display_name": "冻结本批消息与独立状态文件保存候选",
   "category": "内存生命周期",
-  "description": "逐块处理结束后，一次性固定本次待保存的消息修改和变量状态，使完成标记与操作记录在同一次消息更新中保存。若中途失败，只保留仍可确认的成功前缀，失败本身继续带到结算；无需提交则输出无写入结果。这里构造并校验保存请求，不执行磁盘写入。",
+  "description": "把消息命令执行的最终状态整理为待提交批次，包含正文变更和独立状态文件候选。失败时保留已确认的成功部分，无变化时选择无需提交分支。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
@@ -25,12 +25,12 @@
     "params_defaults": {},
     "input_semantics": {
       "era.sync.block.step.state.next": [
-        "全部目标块处理后的消息和工作状态。"
+        "输入：块执行后状态。"
       ]
     },
     "output_semantics": {
       "batch_save_request": [
-        "冻结本批待保存消息、Sidecar 状态和成功前缀。"
+        "输出：批次保存请求。"
       ]
     }
   },

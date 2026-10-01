@@ -1,7 +1,7 @@
 {
   "kind": "base_lib",
   "id": "era.service.facade_api_context",
-  "display_name": "ERA Facade 请求窗口",
+  "display_name": "ERA 公共接口 请求窗口",
   "description": "即时 Scope Facade 的请求校验、窗口检查与操作归一化。",
   "category": "公共 Facade",
   "version": "1.0.0",

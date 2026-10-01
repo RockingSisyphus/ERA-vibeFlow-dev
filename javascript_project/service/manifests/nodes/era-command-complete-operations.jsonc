@@ -1,9 +1,9 @@
 {
   "kind": "node",
   "type_key": "era.command.complete_operations",
-  "display_name": "仅操作范围结束时形成块内终态",
+  "display_name": "返回本段操作的完整结果",
   "category": "核心执行",
-  "description": "当前指令所有数组根和子路径、整组函数校验或阶段调用表均已处理后，输出完整块内结果和结束标志。结果包括当前值、快照依据、日志、诊断与随机进度；楼层封存、正文完成标记、内存发布和保存仍由更外层按原边界完成。",
+  "description": "当前消息指令的全部字段、整组函数检查或阶段函数清单处理结束后，输出当前变量、函数、历史记录、诊断和随机进度，并标记本段操作已完成。消息流程接着更新正文记录或生成阶段结果。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
@@ -11,7 +11,7 @@
       {
         "type": "era.command.operation.state",
         "cardinality": "exactly_one",
-        "display_name": "当前操作栈、变量/函数工作值、历史快照、随机位置与累计日志"
+        "display_name": "待处理字段、当前变量和函数、历史起点、随机次数与日志"
       }
     ],
     "provides": [
@@ -30,7 +30,7 @@
     "params_defaults": {},
     "input_semantics": {
       "era.command.operation.state": [
-        "输入：当前操作栈、变量/函数工作值、历史快照、随机位置与累计日志。"
+        "输入：待处理字段、当前变量和函数、历史起点、随机次数与日志。"
       ]
     },
     "output_semantics": {
@@ -60,6 +60,7 @@
   "base_libs": [
     "era.command.operation_expressions",
     "era.command.operation_functions",
+    "era.command.operation_state",
     "era.command.operation_traversal"
   ],
   "capabilities": []

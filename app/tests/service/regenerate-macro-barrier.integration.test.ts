@@ -211,6 +211,23 @@ describe('重新生成的宏与生成栅栏', () => {
     expect(sidecarFiles.size).toBeGreaterThan(0);
   });
 
+  it('删除已同步的最后一楼后，实际 AOT 发布回退值并成功保存空重算范围', async () => {
+    await vi.waitFor(() => expect(events.count('message_deleted')).toBe(1));
+    const initial = adapter.enqueue('era.facade.sync', 'era-api', [{ mode: 'full' }]);
+    if (!initial.accepted) throw new Error(initial.message);
+    expect((await initial.done).status).toBe('completed');
+    (SillyTavern.chat as unknown[]).splice(2);
+    events.only('message_deleted')(2);
+    const synced = adapter.enqueue('era.facade.sync', 'era-api', [{ mode: 'auto' }]);
+    if (!synced.accepted) throw new Error(synced.message);
+    expect((await synced.done).status).toBe('completed');
+    expect((await synced.waitThrough()).outcomes.filter(item => item.outcome.status === 'failed')).toEqual([]);
+    const { readCurrentEraMacroSnapshot } = await import('../../src/ERA变量框架/macro/registration');
+    expect(readCurrentEraMacroSnapshot()?.statWithoutMeta).toMatchObject({ generation_value: '上一楼的变量' });
+    const { readWorkingState } = await import('../../src/ERA变量框架/service/sidecar-runtime-snapshot');
+    expect(readWorkingState({ characterId: 'barrier-card', groupId: null, chatId: 'barrier-chat' })?.dirty).toBe(false);
+  });
+
   it('B已保存后切C再生成D：真实工作流不遗留失败回执且最终状态属于D', async () => {
     await vi.waitFor(() => expect(events.count('generation_started')).toBe(1));
     const initial = adapter.enqueue('era.facade.sync', 'era-api', [{ mode: 'full' }]);

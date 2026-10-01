@@ -3,7 +3,7 @@
   "type_key": "era.dispatch.build_no_host_context",
   "display_name": "构造无宿主上下文",
   "category": "任务派发",
-  "description": "为不需要聊天事实的步骤构造派发上下文，例如明确忽略的事件。保留任务、事件来源和无宿主需求的结论，让后续仍能返回准确回执；不读取消息、变量或状态文件，也不制造消息写入。",
+  "description": "为忽略任务或无需聊天资料的任务建立准备结果，保留事件来源，供后续任务返回对应回执。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
@@ -25,12 +25,12 @@
     "params_defaults": {},
     "input_semantics": {
       "era.dispatch.seed": [
-        "输入：无需宿主上下文的任务种子。"
+        "输入：派发准备种子。"
       ]
     },
     "output_semantics": {
       "no_host_outcome": [
-        "输出：零消息、零写入的准备结果。"
+        "输出：无宿主准备结果。"
       ]
     }
   },

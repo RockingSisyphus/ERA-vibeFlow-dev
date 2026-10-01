@@ -1,1 +1,1 @@
-{"kind":"data_schema","type_key":"era.api.commit.inspected","representation":"json","display_name":"即时 Commit 窗口事实","description":"当前身份、消息、目标与内存准入事实。","schema":{"type":"object","additionalProperties":true}}
+{"kind":"data_schema","type_key":"era.api.commit.inspected","representation":"json","display_name":"即时 变量提交 窗口事实","description":"当前身份、消息、目标与内存准入事实。","schema":{"type":"object","additionalProperties":true}}

@@ -1,7 +1,7 @@
 import { unescapeEraData } from '../../../javascript_project/service/base_lib/domain/snapshot_query';
 import { parseMessageCommands } from '../../../javascript_project/service/base_lib/domain/commands/crud_engine';
 import { describe, expect, it } from 'vitest';
-import { run as appliedReceipt } from '../../../javascript_project/service/nodes/api/return_applied_receipt';
+import { returnAppliedReceipt as appliedReceipt } from '../../../javascript_project/service/nodes/api/facade_nodes';
 
 import {
   buildAppend,

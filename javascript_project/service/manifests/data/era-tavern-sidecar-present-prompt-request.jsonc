@@ -2,7 +2,7 @@
   "kind": "data_schema",
   "type_key": "era.tavern.sidecar.present_prompt.request",
   "representation": "json",
-  "display_name": "Sidecar 弹窗请求",
+  "display_name": "独立状态文件 弹窗请求",
   "description": "显示 workflow 已确定的不可关闭选择弹窗。",
   "schema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",

@@ -1,9 +1,9 @@
 {
   "kind": "node",
   "type_key": "era.dispatch.read_canonical_context",
-  "display_name": "读取严格酒馆上下文",
+  "display_name": "读取酒馆上下文",
   "category": "任务派发",
-  "description": "读取当前聊天身份和所有消息的实际楼号、当前 Swipe（同一消息的候选回复）及正文。需要消息标识时还读取状态文件指针、已有 ERA 元数据和占位符设置。全量读取会保留准备生成的新末楼或空候选，避免把旧回复当成新目标；读取失败输出明确失败上下文，供后续停止写入。",
+  "description": "从酒馆读取当前聊天、消息身份、所选回复和正文，以及任务所需的状态文件绑定、元数据和占位设置，形成任务的统一输入资料。",
   "version": "1.0.0",
   "flow_kind": "data_store",
   "contract": {
@@ -18,19 +18,19 @@
       {
         "key": "canonical_dispatch_context",
         "type": "era.dispatch.canonical_context",
-        "display_name": "严格派发读取上下文"
+        "display_name": "派发读取上下文"
       }
     ],
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
       "era.dispatch.seed": [
-        "输入：需要读取消息的任务种子。"
+        "输入：派发准备种子。"
       ]
     },
     "output_semantics": {
       "canonical_dispatch_context": [
-        "输出：不含宿主对象的消息、元数据和占位符设置。"
+        "输出：派发读取上下文。"
       ]
     }
   },

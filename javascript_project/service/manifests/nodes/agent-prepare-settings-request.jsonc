@@ -27,7 +27,7 @@
     }
   ],
   "display_name": "准备设置命令",
-  "description": "为 Agent 设置命令读取必要配置、预设或连接事实，整理出具体设置请求。设置任务只需要这些资料，不带入模型生成阶段的大量历史和候选上下文；读取或请求问题作为诊断交给执行节点，不在此发起正文生成。",
+  "description": "读取设置操作所需的当前配置、预设和连接资料，组装待执行命令并保留原请求。",
   "flow_kind": "process",
   "contract": {
     "requires": [
@@ -48,12 +48,12 @@
     "params_defaults": {},
     "input_semantics": {
       "era.step.request.routed": [
-        "输入：已准备步骤"
+        "输入：已准备步骤。"
       ]
     },
     "output_semantics": {
       "settings_request": [
-        "输出：设置请求"
+        "输出：设置请求。"
       ]
     }
   },

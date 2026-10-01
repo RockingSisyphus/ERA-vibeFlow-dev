@@ -3,7 +3,7 @@
   "type_key": "era.sync.function.event.route",
   "representation": "json",
   "display_name": "作者函数等待事件",
-  "description": "由对应判断节点按当前事实产生，仅选择本次实际控制分支，不改变业务结果。",
+  "description": "记录作者函数返回的是变量提交、历史同步请求、正常结束还是错误，供调用流程选择处理方式。",
   "schema": {
     "type": "string",
     "enum": [

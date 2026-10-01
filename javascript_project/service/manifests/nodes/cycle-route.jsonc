@@ -3,7 +3,7 @@
   "type_key": "era.service.cycle.route",
   "display_name": "选择服务阶段",
   "category": "服务阶段循环",
-  "description": "读取当前循环状态的阶段标签，决定本轮是继续接收事件，还是执行已规划批次中的一个步骤。阶段载体格式无效时直接报错；正常情况下原状态原样传递。这样在执行批次期间不会误走收集分支，使任务顺序保持可预测。",
+  "description": "根据服务当前处于收集还是执行阶段选择对应入口；阶段状态无效时报告流程错误。",
   "version": "1.0.0",
   "flow_kind": "decision",
   "contract": {
@@ -11,7 +11,7 @@
       {
         "type": "era.service.cycle.state",
         "cardinality": "exactly_one",
-        "display_name": "输入状态"
+        "display_name": "本节点所需的当前运行资料"
       }
     ],
     "provides": [
@@ -30,15 +30,15 @@
     "params_defaults": {},
     "input_semantics": {
       "era.service.cycle.state": [
-        "读取并保留输入值。"
+        "输入：本节点所需的当前运行资料。"
       ]
     },
     "output_semantics": {
       "cycle_route": [
-        "供同一 Service 工作流的下一阶段使用。"
+        "输出：阶段结果。"
       ],
       "cycle_state_routed": [
-        "原样传递当前阶段状态。"
+        "输出：路由后的阶段状态。"
       ]
     }
   },

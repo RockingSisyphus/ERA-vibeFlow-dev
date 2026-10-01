@@ -3,7 +3,7 @@
   "type_key": "era.command.function.group.route",
   "representation": "json",
   "display_name": "函数组准入",
-  "description": "由对应判断节点按当前事实产生，仅选择本次实际控制分支，不改变业务结果。",
+  "description": "记录函数名称及格式检查后的分支：建立临时函数库或返回整组失败。",
   "schema": {
     "type": "string",
     "enum": [

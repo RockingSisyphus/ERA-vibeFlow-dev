@@ -1,3 +1,4 @@
+import { run as prepareWork } from './prepare-block-work-fixture';
 import { createCandidateRunner } from './agent-candidate-fixture';
 import { normalizeAgentConfiguration } from '../../../javascript_project/service/base_lib/agent/agent_generation_session';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -12,10 +13,7 @@ import {
 } from '../../src/ERA变量框架/service/sidecar-runtime-snapshot';
 import { prepare } from '../../../javascript_project/service/nodes/sync/prepare_block_step';
 import { run as advance } from './message-block-fixture';
-import {
-  PrepareBlockWorkNode as prepareWork,
-  PublishBlockApplicationNode as publish,
-} from '../../../javascript_project/service/nodes/sync/shared_block_state_adapters';
+import { PublishBlockApplicationNode as publish } from '../../../javascript_project/service/nodes/sync/shared_block_state_adapters';
 import { recordFor } from '../../../javascript_project/service/base_lib/sidecar_binding';
 import { planEraSync } from '../../../javascript_project/service/base_lib/sync/sync_planning';
 

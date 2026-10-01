@@ -2,7 +2,7 @@
   "kind": "base_lib",
   "id": "era.service.working_state",
   "display_name": "ERA工作状态投影",
-  "description": "Service内存工作状态形状及待保存消息投影，不执行I/O。",
+  "description": "定义当前内存变量、函数、日志和待保存消息的结构，供 Service 计算及保存计划使用。",
   "category": "内存生命周期",
   "version": "1.0.0",
   "implementations": [

@@ -1,0 +1,17 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.sync.message.action.route",
+  "display_name": "当前消息片段的处理动作",
+  "representation": "json",
+  "schema": {
+    "type": "string",
+    "enum": [
+      "author",
+      "operations",
+      "author-call",
+      "skip",
+      "message-end",
+      "complete"
+    ]
+  }
+}

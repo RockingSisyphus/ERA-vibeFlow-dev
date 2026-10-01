@@ -3,7 +3,7 @@
   "type_key": "era.service.cycle.begin_execution",
   "display_name": "进入单步执行阶段",
   "category": "服务阶段循环",
-  "description": "把经过覆盖检查的批次状态标记为执行阶段，保留任务列表、当前索引和所有事件来源。下一轮开始执行第一个步骤，而不是再接收一批新事件；这里只切换阶段，不提前执行任务。",
+  "description": "将已通过检查的任务批次放入执行阶段，从第一个任务开始逐项处理。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
@@ -11,7 +11,7 @@
       {
         "type": "era.batch.execution.state",
         "cardinality": "exactly_one",
-        "display_name": "输入状态"
+        "display_name": "本节点所需的当前运行资料"
       }
     ],
     "provides": [
@@ -25,12 +25,12 @@
     "params_defaults": {},
     "input_semantics": {
       "era.batch.execution.state": [
-        "读取并保留输入值。"
+        "输入：本节点所需的当前运行资料。"
       ]
     },
     "output_semantics": {
       "prepared_cycle_state": [
-        "供同一 Service 工作流的下一阶段使用。"
+        "输出：阶段结果。"
       ]
     }
   },

@@ -1,9 +1,9 @@
 {
   "kind": "node",
   "type_key": "era.task.prepare_plain_sync",
-  "display_name": "把普通同步交给同级核心",
+  "display_name": "把普通同步交给共享执行流程",
   "category": "核心执行",
-  "description": "为已准备的普通同步步骤生成请求，保留原来源、批次和消息依据。这里仅整理接续上下文；读状态文件、逐块执行和保存仍由共享同步完成。",
+  "description": "把普通历史同步任务、批次及已读取上下文组装为共享同步请求，保留原事件资料。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
@@ -11,42 +11,42 @@
       {
         "type": "era.step.request.routed",
         "cardinality": "exactly_one",
-        "display_name": "原步骤、事件来源与已准备消息依据"
+        "display_name": "原任务、触发事件与已读取消息"
       },
       {
         "type": "era.batch.execution.state",
         "cardinality": "exactly_one",
-        "display_name": "当前在途批次，索引尚未推进"
+        "display_name": "当前批次、任务列表与执行位置"
       },
       {
         "type": "era.task.continuation.context",
         "cardinality": "exactly_one",
-        "display_name": "本次请求所属的原步骤、来源、批次和回执适配依据"
+        "display_name": "原任务、事件来源、批次和回执资料"
       }
     ],
     "provides": [
       {
         "key": "prepare_plain_sync_prepared_task",
         "type": "era.task.prepared",
-        "display_name": "准备完成；仍须在本轮执行并结算的请求"
+        "display_name": "待执行请求及原任务资料"
       }
     ],
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
       "era.step.request.routed": [
-        "输入：原步骤、事件来源与已准备消息依据。"
+        "输入：原任务、触发事件与已读取消息。"
       ],
       "era.batch.execution.state": [
-        "输入：当前在途批次，索引尚未推进。"
+        "输入：当前批次、任务列表与执行位置。"
       ],
       "era.task.continuation.context": [
-        "输入：本次请求所属的原步骤、来源、批次和回执适配依据。"
+        "输入：原任务、事件来源、批次和回执资料。"
       ]
     },
     "output_semantics": {
       "prepare_plain_sync_prepared_task": [
-        "输出：准备完成；仍须在本轮执行并结算的请求。"
+        "输出：待执行请求及原任务资料。"
       ]
     }
   },
@@ -66,6 +66,7 @@
     }
   ],
   "base_libs": [
+    "era.service.facade_api_engine",
     "era.service.task_continuation"
   ],
   "capabilities": []

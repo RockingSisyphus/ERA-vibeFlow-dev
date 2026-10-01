@@ -1,9 +1,9 @@
 {
   "kind": "node",
   "type_key": "era.agent.unpack_finish_context",
-  "display_name": "取出候选终态及原步骤",
+  "display_name": "取出候选最终结果及原步骤",
   "category": "核心执行",
-  "description": "从候选终态和接续上下文取出原生成步骤、批次及已应用阶段结果，供旧阶段交接逻辑使用。这里不重建候选、不重新读取用户目标，也不改变步骤索引。",
+  "description": "从生成最终结果取出原任务、批次和候选应用结果，供阶段交接与结果结算使用。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
@@ -11,58 +11,58 @@
       {
         "type": "era.agent.candidate.outcome",
         "cardinality": "exactly_one",
-        "display_name": "候选循环唯一终态结果"
+        "display_name": "生成循环的最终结果"
       },
       {
         "type": "era.task.continuation.context",
         "cardinality": "exactly_one",
-        "display_name": "本次请求所属的原步骤、来源、批次和回执适配依据"
+        "display_name": "原任务、事件来源、批次和回执资料"
       }
     ],
     "provides": [
       {
         "key": "unpack_finish_context_finish_step",
         "type": "era.step.request.routed",
-        "display_name": "原步骤、事件来源与已准备消息依据"
+        "display_name": "原任务、触发事件与已读取消息"
       },
       {
         "key": "unpack_finish_context_finish_batch",
         "type": "era.batch.execution.state",
-        "display_name": "当前在途批次，索引尚未推进"
+        "display_name": "当前批次、任务列表与执行位置"
       },
       {
         "key": "unpack_finish_context_candidate_outcome",
         "type": "era.agent.candidate.outcome",
-        "display_name": "仍待阶段交接的候选终态"
+        "display_name": "仍待阶段交接的候选最终结果"
       },
       {
         "key": "unpack_finish_context_finish_context",
         "type": "era.task.continuation.context",
-        "display_name": "本次请求所属的原步骤、来源、批次和回执适配依据"
+        "display_name": "原任务、事件来源、批次和回执资料"
       }
     ],
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
       "era.agent.candidate.outcome": [
-        "输入：候选循环唯一终态结果。"
+        "输入：生成循环的最终结果。"
       ],
       "era.task.continuation.context": [
-        "输入：本次请求所属的原步骤、来源、批次和回执适配依据。"
+        "输入：原任务、事件来源、批次和回执资料。"
       ]
     },
     "output_semantics": {
       "unpack_finish_context_finish_step": [
-        "输出：原步骤、事件来源与已准备消息依据。"
+        "输出：原任务、触发事件与已读取消息。"
       ],
       "unpack_finish_context_finish_batch": [
-        "输出：当前在途批次，索引尚未推进。"
+        "输出：当前批次、任务列表与执行位置。"
       ],
       "unpack_finish_context_candidate_outcome": [
-        "输出：仍待阶段交接的候选终态。"
+        "输出：仍待阶段交接的候选最终结果。"
       ],
       "unpack_finish_context_finish_context": [
-        "输出：本次请求所属的原步骤、来源、批次和回执适配依据。"
+        "输出：原任务、事件来源、批次和回执资料。"
       ]
     }
   },

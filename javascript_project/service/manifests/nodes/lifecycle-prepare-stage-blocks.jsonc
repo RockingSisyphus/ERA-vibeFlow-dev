@@ -3,7 +3,7 @@
   "type_key": "era.lifecycle.prepare_stage_blocks",
   "display_name": "将阶段输出适配到共用块状态",
   "category": "内存生命周期",
-  "description": "把模型候选放到本次应处理的消息楼层，建立与普通历史同步相同的逐块执行计划：规划阶段可以使用尚未创建的未来 AI 楼层，其他阶段沿用已捕获身份。记录变量、函数、日志及会话恢复点，供候选失败时撤销本次尝试；这里暂存正文并准备范围，不把候选立即保存。",
+  "description": "为模型生成的候选正文建立消息命令执行计划，并保存失败恢复所需的起点。规划阶段可使用即将生成的 AI 消息位置，其余阶段使用捕获的实际目标。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
@@ -25,12 +25,12 @@
     "params_defaults": {},
     "input_semantics": {
       "era.agent.generation.raw": [
-        "尚未应用的模型阶段输出。"
+        "输入：未应用的生成输出。"
       ]
     },
     "output_semantics": {
       "block_step_state": [
-        "将阶段输出按原顺序装入共用块执行状态。"
+        "输出：待执行块状态。"
       ]
     }
   },

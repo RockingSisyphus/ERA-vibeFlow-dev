@@ -3,7 +3,7 @@
   "type_key": "era.dispatch.finalize_context",
   "display_name": "生成稳定楼层派发上下文 V3",
   "category": "任务派发",
-  "description": "把读取、暂存或预提交后的结果装进所选任务，附上已准备的消息上下文，并选定实际执行分支：初始化、公共 API、生成会话，或简单任务。Agent 配置事件进入设置分支，不启动模型生成。这个节点只整理派发信息，保留准备失败供实际任务返回，不再次读写消息。",
+  "description": "汇总已读取的聊天资料、待写入内容和实际写入结果，生成初始化、公共 调用接口（API）、生成或普通任务的执行资料。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
@@ -35,18 +35,18 @@
     "params_defaults": {},
     "input_semantics": {
       "era.dispatch.preparation.outcome": [
-        "输入：派发准备结果"
+        "输入：派发准备结果。"
       ]
     },
     "output_semantics": {
       "prepared_routed_step": [
-        "输出：已准备路由步骤"
+        "输出：已准备路由步骤。"
       ],
       "prepared_task_route": [
-        "输出：已准备任务路由"
+        "输出：已准备任务路由。"
       ],
       "task_family_route": [
-        "按已准备的任务路由选择 initialize、api、agent-generation-session 或 simple；不重写 PlannedStep。"
+        "输出：外层任务族路由。"
       ]
     }
   },

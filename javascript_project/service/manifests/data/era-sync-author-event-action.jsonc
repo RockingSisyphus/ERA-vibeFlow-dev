@@ -1,0 +1,16 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.sync.author.event.action",
+  "display_name": "作者函数接下来要处理的事件",
+  "representation": "json",
+  "schema": {
+    "type": "string",
+    "enum": [
+      "commit",
+      "unsupported",
+      "done",
+      "failed",
+      "complete"
+    ]
+  }
+}

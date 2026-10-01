@@ -1,10 +1,10 @@
 {
   "type_key": "era.api.commit",
-  "display_name": "ERA 即时提交事务",
-  "description": "按公共提交的作用域、调用窗口和目标进行准入检查，工作台草稿先转换为操作，随后把有效操作组成事务并通过共用消息块引擎在内存应用。已经执行的历史作用域可跳过，无效请求失败。成功回执代表内存应用已完成；作者函数随父批次保存，独立 API 按防抖窗口稍后保存，不把入队或回执等同于落盘。",
+  "display_name": "应用脚本或界面的变量提交",
+  "description": "处理公共接口提交的变量和函数操作。先检查聊天目标与允许执行的范围，工作台草稿先转成有序操作；有效请求转成消息事务，由共享消息流程在内存应用。已经处理过的范围返回跳过，输入无效返回失败；应用回执之后由相应任务安排保存。",
   "requires": [
     {
-      "type": "era.api.request",
+      "type": "era.api.request.selected",
       "cardinality": "exactly_one",
       "display_name": "公共对象请求"
     },
@@ -26,7 +26,7 @@
     "inputs": [
       {
         "key": "facade_request",
-        "type": "era.api.request",
+        "type": "era.api.request.selected",
         "required": true,
         "display_name": "公共对象请求"
       },
@@ -37,91 +37,55 @@
         "display_name": "当前批次状态"
       }
     ],
-    "max_steps": 24,
+    "max_steps": 35,
     "nodes": [
       {
         "id": "start",
         "type_used": "era.service.terminal",
-        "display_name": "即时 Commit 开始",
-        "description": "这是“ERA 即时提交事务”的入口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
+        "display_name": "即时 变量提交 开始",
+        "description": "开始应用脚本或界面的变量提交。"
       },
       {
-        "id": "read_window_admission",
-        "type_used": "era.api.read_window_admission",
-        "display_name": "读取工作状态与调用来源",
-        "description": "读取 API 调用所对应的聊天身份、消息及当前作用域窗口，优先把尚未保存的内存正文覆盖到读取视图中。作者函数的显式调用位置与状态栏来源分别保留，供后续判断请求是否仍有效、该窗口是否获准写入。窗口是本次消息处理的上下文，不是保存防抖时间。读取失败输出失败事实；这个节点不应用操作，也不以旧文件替代当前工作状态。"
-      },
-      {
-        "id": "route_request_kind",
-        "type_used": "era.workbench.route_request_kind",
-        "display_name": "区分普通Commit与工作台编辑意图",
-        "description": "判断当前提交是否来自变量工作台：普通 ERA.commit 已经带有操作列表，直接继续准入校验；工作台提交带的是用户编辑草稿，需要先转换为操作。两种请求共用同一个提交入口和后续安全检查，避免工作台自行绕过作用域或消息目标校验。"
+        "id": "inspect_submission",
+        "type_used": "era.api.inspect_submission",
+        "display_name": "读取提交范围，识别操作或工作台草稿",
+        "description": "读取当前聊天允许处理的消息范围，识别提交的是有序变量操作还是工作台编辑草稿。草稿先转成有序操作，再进行提交检查。"
       },
       {
         "id": "prepare_workbench_commit",
         "type_used": "era.api.prepare_workbench_commit",
-        "display_name": "按当前工作状态准备工作台意图",
-        "description": "把变量工作台编辑草稿转成公共 commit 可执行的有序操作：读取当前基准，核对聊天、目标原值和保护条件，规划变量或函数差异，再按用户明确选择处理保护。过期草稿或不允许的操作返回失败。这里仅准备请求，不拥有消息或状态文件写事务，成功后仍走公共提交校验。"
+        "display_name": "把编辑草稿转换为提交操作",
+        "description": "本次处理脚本或界面发起的变量提交。把变量或函数工作台的编辑草稿转成公共接口可执行的操作。读取当前数据，检查草稿是否仍对应原聊天和原值，计算差异，再按用户的选择处理保护规则。输出有序提交请求或要求重新加载、补充选择的失败原因。"
       },
       {
         "id": "validate_scope_and_operations",
         "type_used": "era.api.validate_commit",
-        "display_name": "校验 Scope 与有序操作",
-        "description": "校验提交操作的格式和顺序，并结合调用来源、当前消息窗口及作用域判断是否可以应用。默认 message 规则在同一获准消息窗口可多次提交，后续窗口若发现消息已有记录则跳过；branch 按活动分支记录判断，always 每次允许的请求均执行，不按操作内容去重。窗口过期或输入不合规返回失败；此处只做准入，变量还未应用。"
+        "display_name": "校验 允许执行范围 与有序操作",
+        "description": "本次处理脚本或界面发起的变量提交。检查有序操作和请求来源，再判断本次提交是否允许执行。消息范围内的重复调用可执行，后续范围已处理的调用可跳过；回复分支按该分支的执行记录判断，强制执行请求每次执行，过期范围返回失败。"
       },
       {
-        "id": "build_single_era_tx",
-        "type_used": "era.api.build_single_era_tx",
-        "display_name": "生成单次 era_tx",
-        "description": "把已通过准入检查的操作按原顺序组成一个 ERA 事务文本，连同作用域、调用身份和批次状态送到目标定位环节。不会合并重排操作，也不会在构造文本时执行它们；同一事务随后交给共享消息块引擎处理，保证公共 API 与消息指令采用相同规则。"
-      },
-      {
-        "id": "read_target_messages",
-        "type_used": "era.api.read_target_message",
-        "display_name": "定位函数锚点或普通目标末尾",
-        "description": "在准备实际提交前再次读取聊天和目标消息，并复核调用窗口是否仍属于原聊天与候选回复。作者函数把记录定位到调用位置下方，状态栏和外部 API 保留各自捕获的目标。读取视图纳入未保存的内存正文；目标失效则返回失败，不自动转而写入最新一楼。"
-      },
-      {
-        "id": "build_skipped_receipt",
-        "type_used": "era.api.build_skipped_receipt",
-        "display_name": "返回跳过回执",
-        "description": "为已经结算过、无需重复执行的作用域生成跳过回执，保留调用者和来源信息。跳过表示本次没有再次应用操作，不等同于新提交成功；不会新增事务文本或再次修改变量，避免重绘状态栏等重复调用产生重复效果。"
-      },
-      {
-        "id": "build_commit_failure",
-        "type_used": "era.api.build_commit_failure",
-        "display_name": "构造 Commit 失败",
-        "description": "把提交准入、工作台准备或目标读取形成的错误转换成公共调用可收到的失败回执，包括原因和对应来源。这里不重试、不生成替代操作，也不把失败请求写进新目标消息；作用是让调用方明确知道其 commit 没有按要求完成。"
-      },
-      {
-        "id": "merge_commit_result",
-        "type_used": "era.api.merge_commit_result",
-        "display_name": "合并即时 Commit 结果",
-        "description": "汇合提交已应用、作用域跳过和提交失败三条互斥分支，要求实际恰有一个有效结果，再输出统一 commit 结果。不会选取最乐观的一条或再次应用操作；若出现多个结果或没有结果会暴露流程问题，避免公共调用得到含糊回执。"
-      },
-      {
-        "id": "prepare_api_blocks",
-        "type_used": "era.lifecycle.prepare_api_blocks",
-        "display_name": "构造待应用的普通era_tx及工作范围",
-        "description": "将 API 事务暂时插入正确的消息位置：作者函数的调用下方，或已校验外部目标的相应位置，再用共享历史规划器建立逐块应用范围。采用当前内存变量和函数，同时保留此前提交但尚未保存的消息修改；旧楼操作会按历史回退和重算规则处理。这里建立内存执行计划，不立即保存酒馆。"
+        "id": "prepare_application",
+        "type_used": "era.api.prepare_application",
+        "display_name": "定位目标消息，准备本次提交",
+        "description": "把已确认的有序操作组成消息事务，读取真实目标消息，并建立共享消息处理的初始状态，随后按顺序应用操作。"
       },
       {
         "id": "apply_api_blocks",
         "type_used": "vibeflow.loop.while",
-        "display_name": "API复用同一个内存块循环",
-        "description": "按当前位置推进普通同步、API commit 或 Agent 候选的共同消息计划。先区分结束与作者函数帧，再建立楼层快照/MK/随机位置，识别指令、作者调用或楼层结束；指令和阶段 JSON 调用进入同一个第四层操作循环。作者函数在原位置启动、等待、就地应用 commit 并回执，禁止内部重算。块结束更新正文和计数，楼层结束才形成封存候选；随后按原次序压缩、发布内存结果，实际保存仍由任务尾部完成。 作者函数等待与请求准备单独在第四层展开；应用请求回到本层，不增加第五层。 本次调用：循环应用本次 API 提交组成的事务及相关历史处理范围，逐块携带当前变量、函数、日志、正文和作用域。作者函数中的提交在原位置生效，再向函数返回应用回执；循环不强制每块落盘。退出后由回执节点判断真实成功或失败，保存由对应批次或防抖窗口安排。",
+        "display_name": "依次应用本次接口提交的命令",
+        "description": "按目标消息位置执行本次接口提交及相关历史处理，逐段更新内存中的变量、函数、正文和日志。处理结束后返回实际应用结果；作者函数提交随所属批次保存，外部提交按合并保存窗口安排写入。",
         "requires": [
           {
             "type": "era.sync.block.step.state",
             "cardinality": "exactly_one",
-            "display_name": "初始块步进状态"
+            "display_name": "开始处理的消息范围、变量、函数和日志"
           }
         ],
         "provides": [
           {
             "key": "block_step_state_after",
             "type": "era.sync.block.step.state.next",
-            "display_name": "块步进后状态"
+            "display_name": "处理后的消息位置、变量、函数和日志"
           }
         ],
         "loop": {
@@ -147,65 +111,36 @@
         }
       },
       {
-        "id": "return_applied_receipt",
-        "type_used": "era.lifecycle.return_applied_receipt",
-        "display_name": "返回内存应用回执并登记保存时机",
-        "description": "在逐块应用结束后向 ERA.commit 调用方返回结果：失败带回实际原因，成功代表内存变量、日志、作用域和待保存正文已经应用一致，不只是请求已入队。作者函数内的操作归属当前生成批次；独立 API 提交安排约 200 毫秒防抖、最长约 2 秒的保存请求，等待回执本身不会强制每次落盘。"
+        "id": "return_immediate_result",
+        "type_used": "era.api.return_immediate_result",
+        "display_name": "返回跳过或输入失败的提交结果",
+        "description": "对已处理过的提交范围形成跳过回执，对无效操作或工作台草稿形成失败回执，保留具体原因并返回原接口格式。"
+      },
+      {
+        "id": "return_applied_result",
+        "type_used": "era.api.return_application_result",
+        "display_name": "返回消息操作的内存应用回执",
+        "description": "整理共享消息处理完成后的变量、函数、日志和诊断，形成接口提交回执。调用方根据该回执继续安排保存和显示更新。"
       },
       {
         "id": "end",
         "type_used": "era.service.terminal",
-        "display_name": "即时 Commit 结束",
-        "description": "这是“ERA 即时提交事务”的出口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
+        "display_name": "即时 变量提交 结束",
+        "description": "结束应用脚本或界面的变量提交，输出本段流程的处理结果。"
       }
     ],
     "edges": [
       [
         "start",
-        "read_window_admission"
+        "inspect_submission"
       ],
       {
-        "from": "validate_scope_and_operations",
-        "to": "build_single_era_tx",
-        "when": "commit_admission_route == 'commit'"
-      },
-      {
-        "from": "validate_scope_and_operations",
-        "to": "build_skipped_receipt",
-        "when": "commit_admission_route == 'skipped'"
-      },
-      {
-        "from": "validate_scope_and_operations",
-        "to": "build_commit_failure",
-        "when": "commit_admission_route == 'failed'"
-      },
-      [
-        "build_single_era_tx",
-        "read_target_messages"
-      ],
-      [
-        "build_skipped_receipt",
-        "merge_commit_result"
-      ],
-      [
-        "build_commit_failure",
-        "merge_commit_result"
-      ],
-      [
-        "merge_commit_result",
-        "end"
-      ],
-      [
-        "read_window_admission",
-        "route_request_kind"
-      ],
-      {
-        "from": "route_request_kind",
+        "from": "inspect_submission",
         "to": "validate_scope_and_operations",
         "when": "workbench_request_kind == 'operations'"
       },
       {
-        "from": "route_request_kind",
+        "from": "inspect_submission",
         "to": "prepare_workbench_commit",
         "when": "workbench_request_kind == 'draft'"
       },
@@ -216,24 +151,34 @@
       },
       {
         "from": "prepare_workbench_commit",
-        "to": "build_commit_failure",
+        "to": "return_immediate_result",
         "when": "preparation_route == 'failed'"
       },
+      {
+        "from": "validate_scope_and_operations",
+        "to": "prepare_application",
+        "when": "commit_admission_route == 'commit'"
+      },
+      {
+        "from": "validate_scope_and_operations",
+        "to": "return_immediate_result",
+        "when": "commit_admission_route != 'commit'"
+      },
       [
-        "read_target_messages",
-        "prepare_api_blocks"
-      ],
-      [
-        "prepare_api_blocks",
+        "prepare_application",
         "apply_api_blocks"
       ],
       [
         "apply_api_blocks",
-        "return_applied_receipt"
+        "return_applied_result"
       ],
       [
-        "return_applied_receipt",
-        "merge_commit_result"
+        "return_applied_result",
+        "end"
+      ],
+      [
+        "return_immediate_result",
+        "end"
       ]
     ],
     "outputs": [
@@ -241,7 +186,7 @@
         "type": "era.api.facade.result",
         "cardinality": "exactly_one",
         "as": "commitResult",
-        "display_name": "commitResult"
+        "display_name": "变量提交结果"
       }
     ]
   },

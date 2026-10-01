@@ -1,7 +1,7 @@
 {
   "kind": "data_schema",
   "type_key": "era.agent.candidate.state.next",
-  "display_name": "更新后的候选状态",
+  "display_name": "本次尝试后的进度及重试请求",
   "representation": "json",
   "schema": {
     "type": "object",

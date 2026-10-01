@@ -1,0 +1,70 @@
+{
+  "kind": "node",
+  "type_key": "era.sync.prepare_message_operations",
+  "display_name": "准备正文指令或生成阶段调用",
+  "category": "核心执行",
+  "description": "把正文中的变量指令或生成阶段函数调用整理为有序操作列表，附上当前变量、函数、历史起点和随机进度，供操作循环逐项处理。",
+  "version": "1.0.0",
+  "flow_kind": "process",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.sync.position.state",
+        "cardinality": "exactly_one",
+        "display_name": "当前位置、变量、函数和待保存正文"
+      }
+    ],
+    "provides": [
+      {
+        "key": "seed_command_operations_operation_state",
+        "type": "era.command.operation.state",
+        "display_name": "当前正文指令块操作初态"
+      },
+      {
+        "key": "seed_command_operations_position_state",
+        "type": "era.sync.position.state",
+        "display_name": "更新后的消息位置、内存变量和待保存正文"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.sync.position.state": [
+        "输入：当前位置、变量、函数和待保存正文。"
+      ]
+    },
+    "output_semantics": {
+      "seed_command_operations_operation_state": [
+        "输出：当前正文指令块操作初态。"
+      ],
+      "seed_command_operations_position_state": [
+        "输出：更新后的消息位置、内存变量和待保存正文。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/sync/core_position_nodes.ts",
+        "export": "PrepareMessageOperationsNode"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.command.operation_expressions",
+    "era.command.operation_state",
+    "era.service.agent_stage_program",
+    "era.service.function_block_execution",
+    "era.service.sync_contracts",
+    "era.service.sync_divergence",
+    "era.sync.position_source"
+  ],
+  "capabilities": []
+}

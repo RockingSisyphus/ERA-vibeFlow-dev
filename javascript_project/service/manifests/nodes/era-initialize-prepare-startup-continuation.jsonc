@@ -3,7 +3,7 @@
   "type_key": "era.initialize.prepare_startup_continuation",
   "display_name": "返回启动同步请求与原任务",
   "category": "核心执行",
-  "description": "资源已经完成或本就无需写入时，把启动同步步骤和当前批次包装为待执行请求，保留初始化的来源及资源结果。这里只返回请求；历史变量尚未同步，Service 会在同一轮直接执行共享同步后才结算初始化。",
+  "description": "资源准备完成后取出启动历史同步请求和原批次，交给共享消息同步流程。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
@@ -16,19 +16,19 @@
       {
         "type": "era.batch.execution.state",
         "cardinality": "exactly_one",
-        "display_name": "当前在途批次，索引尚未推进"
+        "display_name": "当前批次、任务列表与执行位置"
       },
       {
         "type": "era.task.continuation.context",
         "cardinality": "exactly_one",
-        "display_name": "本次请求所属的原步骤、来源、批次和回执适配依据"
+        "display_name": "原任务、事件来源、批次和回执资料"
       }
     ],
     "provides": [
       {
         "key": "prepare_startup_continuation_prepared_task",
         "type": "era.task.prepared",
-        "display_name": "准备完成；仍须在本轮执行并结算的请求"
+        "display_name": "待执行请求及原任务资料"
       }
     ],
     "params_schema": {},
@@ -38,15 +38,15 @@
         "输入：资源处理产生的启动同步步骤。"
       ],
       "era.batch.execution.state": [
-        "输入：当前在途批次，索引尚未推进。"
+        "输入：当前批次、任务列表与执行位置。"
       ],
       "era.task.continuation.context": [
-        "输入：本次请求所属的原步骤、来源、批次和回执适配依据。"
+        "输入：原任务、事件来源、批次和回执资料。"
       ]
     },
     "output_semantics": {
       "prepare_startup_continuation_prepared_task": [
-        "输出：准备完成；仍须在本轮执行并结算的请求。"
+        "输出：待执行请求及原任务资料。"
       ]
     }
   },

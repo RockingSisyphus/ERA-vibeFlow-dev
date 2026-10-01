@@ -1,9 +1,9 @@
 {
   "kind": "node",
   "type_key": "era.sidecar_binding.inspect_current",
-  "display_name": "检查当前 Sidecar 绑定",
+  "display_name": "检查当前 独立状态文件 绑定",
   "category": "Sidecar 绑定",
-  "description": "检查当前聊天绑定的是哪一个 Sidecar（独立保存 ERA 变量、函数和日志的状态文件），核对读取前后的聊天身份和文件指针。存在同一绑定的有效内存状态时优先沿用，避免已应用但未保存的操作被旧文件覆盖；必要时恢复被打断的模型候选起点。来源变化或读取失败转为失败事实，不把新聊天与旧消息混在一起。",
+  "description": "检查当前聊天指向的独立状态文件及聊天身份，优先使用同一有效绑定的内存变量、函数和日志，并识别需要恢复的未完成候选起点。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
@@ -18,12 +18,12 @@
       {
         "key": "sidecar_binding_input",
         "type": "era.sidecar.binding.input",
-        "display_name": "Sidecar 绑定输入"
+        "display_name": "独立状态文件 绑定输入"
       },
       {
         "key": "sidecar_binding_facts",
         "type": "era.sidecar.binding.facts",
-        "display_name": "当前 Sidecar 事实"
+        "display_name": "当前 独立状态文件 事实"
       }
     ],
     "params_schema": {},
@@ -35,10 +35,10 @@
     },
     "output_semantics": {
       "sidecar_binding_input": [
-        "输出：转交给 Sidecar 分支的同步上下文封装。"
+        "输出：独立状态文件 绑定输入。"
       ],
       "sidecar_binding_facts": [
-        "输出：当前身份、聊天变量和本地记录的只读检查事实。"
+        "输出：当前 独立状态文件 事实。"
       ]
     }
   },

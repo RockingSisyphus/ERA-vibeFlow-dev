@@ -3,7 +3,7 @@
   "type_key": "era.sync.block.step.state.next",
   "representation": "json",
   "display_name": "ERA·同步·块步进状态·下一个",
-  "description": "当前内存块工作项、原消息依据与调用上下文；完整范围结束后统一保存。",
+  "description": "保存一次正文处理后的消息位置、变量、函数和日志，并携带后续待处理内容。",
   "schema": {
     "type": "object",
     "properties": {

@@ -2,8 +2,8 @@
   "kind": "data_schema",
   "type_key": "era.sync.author.lifecycle.route",
   "representation": "json",
-  "display_name": "作者帧本轮动作",
-  "description": "仅在当前作者函数步进选择实际完成或原错误清理；不增加新的业务准入。",
+  "display_name": "作者函数本次应启动、等待或收尾",
+  "description": "记录正文作者函数本次应启动、确认提交、等待请求还是结束，供作者调用流程选择下一步。",
   "schema": {
     "type": "string",
     "enum": [

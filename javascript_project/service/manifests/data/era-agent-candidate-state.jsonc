@@ -1,7 +1,7 @@
 {
   "kind": "data_schema",
   "type_key": "era.agent.candidate.state",
-  "display_name": "当前候选状态",
+  "display_name": "本次模型尝试的请求、起点和进度",
   "representation": "json",
   "schema": {
     "type": "object",

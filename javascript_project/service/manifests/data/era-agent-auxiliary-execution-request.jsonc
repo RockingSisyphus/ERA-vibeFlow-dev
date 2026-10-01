@@ -2,8 +2,8 @@
   "kind": "data_schema",
   "type_key": "era.agent.auxiliary.execution_request",
   "representation": "json",
-  "display_name": "ERA Agent 辅助阶段执行请求",
-  "description": "归一化规划与变量结算的角色卡配置、预设脱敏快照和模型来源引用；只允许本机连接方案 ID 与名称提示进入领域 DTO，禁止 URL 与密钥正文。",
+  "display_name": "ERA 多阶段生成 辅助阶段执行请求",
+  "description": "保存规划或结算阶段所需的角色配置、预设摘要和本机模型连接引用。连接使用方案标识及名称，供宿主找到实际连接配置。",
   "schema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",

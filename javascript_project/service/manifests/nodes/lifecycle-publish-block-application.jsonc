@@ -3,7 +3,7 @@
   "type_key": "era.lifecycle.publish_block_application",
   "display_name": "发布内存应用结果与推进位置",
   "category": "内存生命周期",
-  "description": "把已推进和压缩的结果发布为当前聊天的内存工作状态，连同日志、作用域和待保存正文供接下来的块或 API 读取，标记尚未落盘。若普通历史同步处理的旧 Swipe 已被用户切走且没有发生写入，则放弃旧分支，交给后续重新同步当前历史；作者函数、API 或模型候选失败仍按失败处理，不冒充成功。",
+  "description": "发布消息命令执行后的内存变量、日志、执行范围及待保存正文。普通历史同步遇到旧回复已变化时重新计算当前分支；作者调用产生的 调用接口（API） 候选失败时保留失败结果。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
@@ -30,15 +30,15 @@
     "params_defaults": {},
     "input_semantics": {
       "era.command_compaction.result": [
-        "本轮块处理及压缩后的结果。"
+        "输入：指令压缩结果。"
       ]
     },
     "output_semantics": {
       "block_step_state_after": [
-        "把新消息、日志与随机偏移写回内存工作状态。"
+        "输出：更新后的块状态。"
       ],
       "block_step_done": [
-        "标明本轮是否已处理完目标块。"
+        "输出：块执行结束标记。"
       ]
     }
   },

@@ -3,7 +3,7 @@
   "type_key": "era.agent.adapt_legacy_step",
   "display_name": "恢复原领域任务路由",
   "category": "故事生成会话",
-  "description": "把生成会话需要继续普通处理的结果转换成共享同步或消息标识任务，保持原楼层的 ERA 消息标识和来源。默认生成模式、最终正文及结算结果由同一消息处理链接续，而不是开另一条提交路径；这里只适配步骤，实际计算和保存由共享任务完成。",
+  "description": "把生成后的消息结算要求转换为普通历史同步或消息历史标识任务，保留原消息位置、事件来源和批次，供共享消息流程继续处理。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
@@ -11,7 +11,7 @@
       {
         "type": "era.agent.session.transition",
         "cardinality": "exactly_one",
-        "display_name": "Agent 转换"
+        "display_name": "多阶段生成 转换"
       },
       {
         "type": "era.batch.execution.state",
@@ -40,21 +40,21 @@
     "params_defaults": {},
     "input_semantics": {
       "era.agent.session.transition": [
-        "输入：保留包装步骤的转换。"
+        "输入：多阶段生成 转换。"
       ],
       "era.batch.execution.state": [
-        "输入：保持原任务提交顺序的批次状态。"
+        "输入：当前批次执行状态。"
       ]
     },
     "output_semantics": {
       "legacy_routed_step": [
-        "输出：taskRoute 恢复为 task.kind。"
+        "输出：原领域步骤。"
       ],
       "legacy_task_route": [
-        "输出：原任务路由。"
+        "输出：原领域路由。"
       ],
       "legacy_execution_state": [
-        "输出：未经修改的当前批次执行状态。"
+        "输出：原领域批次状态。"
       ]
     }
   },

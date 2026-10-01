@@ -1,7 +1,7 @@
 {
   "kind": "base_lib",
   "id": "era.service.agent_session_binding",
-  "display_name": "Agent 会话关联计划",
+  "display_name": "多阶段生成 会话关联计划",
   "description": "原生来源和正文观察关联字段的纯计划，由原 Agent 执行节点在写入时消费。",
   "category": "故事生成会话",
   "version": "1.0.0",

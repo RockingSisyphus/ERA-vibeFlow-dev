@@ -1,7 +1,7 @@
 {
   "kind": "base_lib",
   "id": "era.service.sidecar_resolution_projection",
-  "display_name": "Sidecar 解析投影",
+  "display_name": "独立状态文件 解析投影",
   "description": "同步上下文的纯变量、状态和消息依据投影。",
   "category": "Sidecar",
   "version": "1.0.0",

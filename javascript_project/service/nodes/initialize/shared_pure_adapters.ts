@@ -122,10 +122,6 @@ export function ClassifyInstallationScope_classify(value: unknown): Readonly<{ s
   return { status: 'unknown', reason: 'script-id-not-in-enabled-tree' };
 }
 
-export function ClassifyInstallationScopeNode(inputs: Readonly<{ 'era.installation.scope.facts': { readonly value: unknown } }>): any {
-  return { installation_scope_classification: ClassifyInstallationScope_classify(inputs['era.installation.scope.facts'].value) };
-}
-
 // Original node: nodes/lifecycle/decide_startup_policy.ts
 type DecideStartupPolicy_Classification = 'character' | 'global' | 'preset' | 'ambiguous' | 'unknown';
 
@@ -138,11 +134,6 @@ export function DecideStartupPolicy_decide(value: unknown): Readonly<{ classific
   if (classification === 'character') return { classification, route: 'allow', warn: false };
   if (classification === 'unknown') return { classification, route: 'allow', warn: true };
   return { classification, route: 'dormant', warn: true };
-}
-
-export function DecideStartupPolicyNode(inputs: Readonly<{ 'era.installation.scope.classification': { readonly value: unknown } }>): any {
-  const installation_scope_decision = DecideStartupPolicy_decide(inputs['era.installation.scope.classification'].value);
-  return { installation_scope_decision, installation_scope_route: installation_scope_decision.route };
 }
 
 // Original node: nodes/lifecycle/inspect_installation_scope.ts
@@ -233,4 +224,10 @@ export function RouteMkCommitNode<T extends RouteMkCommit_Candidate>(
 /** Keep the API task result distinct inside its expanded workflow. */
 export function AdaptApiTaskResultNode(inputs: any): any {
   return { api_task_result_common: inputs["era.api.task.result"].value };
+}
+
+/** 根据脚本安装事实选择启动方式，并交付启动决议。 */
+export function ChooseStartupNode(inputs: any): any {
+ const decision = DecideStartupPolicy_decide(ClassifyInstallationScope_classify(inputs['era.installation.scope.facts'].value));
+ return { installation_scope_decision: decision, installation_scope_route: decision.route };
 }

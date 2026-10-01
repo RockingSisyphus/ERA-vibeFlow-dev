@@ -2,8 +2,8 @@
   "kind": "data_schema",
   "type_key": "era.command.operation.route",
   "representation": "json",
-  "display_name": "下一微操作种类",
-  "description": "由对应判断节点按当前事实产生，仅选择本次实际控制分支，不改变业务结果。",
+  "display_name": "下一项操作的处理方式",
+  "description": "记录下一项应处理的变量、函数或阶段计算类型，或标明整段操作结束。",
   "schema": {
     "type": "string",
     "enum": [

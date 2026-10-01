@@ -2,7 +2,7 @@
   "kind": "data_schema",
   "type_key": "era.tavern.sidecar.commit_metadata.result",
   "representation": "json",
-  "display_name": "Sidecar 元数据提交结果",
+  "display_name": "独立状态文件 元数据提交结果",
   "description": "聊天元数据提交后的回读。",
   "schema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",

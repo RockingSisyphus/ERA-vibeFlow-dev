@@ -2,8 +2,8 @@
   "kind": "data_schema",
   "type_key": "era.agent.function_call.result",
   "representation": "json",
-  "display_name": "ERA Agent 纯函数调用结果",
-  "description": "按原调用顺序保存已验证函数、有限数值结果、候选消息 MK 与可重放随机抽取区间。",
+  "display_name": "ERA 多阶段生成 纯函数调用结果",
+  "description": "按调用顺序保存已计算函数的名称、数值、消息历史标识和随机使用范围，供生成阶段整理结果。",
   "schema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",

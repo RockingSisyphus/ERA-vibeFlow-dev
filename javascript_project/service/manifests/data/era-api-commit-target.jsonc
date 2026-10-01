@@ -1,1 +1,1 @@
-{"kind":"data_schema","type_key":"era.api.commit.target","representation":"json","display_name":"即时 Commit 目标","description":"写入前重新读取的最新 AI 消息目标。","schema":{"type":"object","additionalProperties":true}}
+{"kind":"data_schema","type_key":"era.api.commit.target","representation":"json","display_name":"即时 变量提交 目标","description":"写入前重新读取的最新 AI 消息目标。","schema":{"type":"object","additionalProperties":true}}

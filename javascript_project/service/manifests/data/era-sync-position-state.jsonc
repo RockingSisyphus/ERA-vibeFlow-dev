@@ -2,8 +2,8 @@
   "kind": "data_schema",
   "type_key": "era.sync.position.state",
   "representation": "json",
-  "display_name": "当前消息位置工作状态",
-  "description": "本轮私有载体，包括原块状态、正文范围、楼层起点、作者函数事件和失败；发布前不供外部任务读取。",
+  "display_name": "当前位置、变量、函数和待保存正文",
+  "description": "保存当前消息和正文片段位置、变量与函数、历史起点、作者调用进度及失败原因，供逐段处理聊天正文。",
   "schema": {
     "type": "object",
     "properties": {

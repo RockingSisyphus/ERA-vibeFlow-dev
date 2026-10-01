@@ -1,7 +1,7 @@
 {
   "kind": "base_lib",
   "id": "era.service.agent_flow_policy",
-  "display_name": "Agent 阶段决策与候选映射",
+  "display_name": "多阶段生成 阶段决策与候选映射",
   "description": "Agent 阶段决策与候选映射；纯计算，不执行 Capability，不接收批次状态。",
   "category": "Agent 工作流",
   "version": "1.0.0",

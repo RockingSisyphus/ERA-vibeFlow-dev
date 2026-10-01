@@ -3,7 +3,7 @@
   "type_key": "era.agent.candidate_finish",
   "display_name": "判断候选是否重试",
   "category": "Agent候选",
-  "description": "读取候选执行结果是否附有重试请求：有则将该请求放入候选循环状态，标记尚未结束；没有则输出终态结果并结束候选循环。这里只决定是否继续尝试，不再次调用模型，也不发送阶段完成通知；通知必须等候选已达到终态后形成。",
+  "description": "检查一次生成候选是否需要重试。存在重试请求时保留运行进度继续尝试；否则输出本次生成的最终结果。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
@@ -11,7 +11,7 @@
       {
         "type": "era.agent.candidate.state",
         "cardinality": "exactly_one",
-        "display_name": "当前候选状态"
+        "display_name": "本次模型尝试的请求、起点和进度"
       },
       {
         "type": "era.agent.generation.outcome",
@@ -23,12 +23,12 @@
       {
         "key": "candidate_state_after",
         "type": "era.agent.candidate.state.next",
-        "display_name": "更新后的候选状态"
+        "display_name": "本次尝试后的进度及重试请求"
       },
       {
         "key": "candidate_done",
         "type": "era.agent.candidate.done",
-        "display_name": "候选结束标记"
+        "display_name": "本阶段是否已成功或无法继续"
       },
       {
         "key": "candidate_outcome",
@@ -40,21 +40,21 @@
     "params_defaults": {},
     "input_semantics": {
       "era.agent.candidate.state": [
-        "当前候选的请求、步骤和批次状态。"
+        "输入：本次模型尝试的请求、起点和进度。"
       ],
       "era.agent.generation.outcome": [
-        "本次生成及逐块应用的结果，包含是否需要重新生成。"
+        "输入：生成阶段结果。"
       ]
     },
     "output_semantics": {
       "candidate_state_after": [
-        "需要重试时换入新请求，否则保留当前候选状态。"
+        "输出：本次尝试后的进度及重试请求。"
       ],
       "candidate_done": [
-        "标明候选循环是否结束。"
+        "输出：本阶段是否已成功或无法继续。"
       ],
       "candidate_outcome": [
-        "移除内部重试请求后交给生成会话的结果。"
+        "输出：候选执行结果。"
       ]
     }
   },

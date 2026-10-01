@@ -2,7 +2,7 @@
   "kind": "data_schema",
   "type_key": "era.agent.story.capture",
   "representation": "json",
-  "display_name": "ERA Agent 故事捕获",
+  "display_name": "ERA 多阶段生成 故事捕获",
   "description": "保存当前 Swipe 的干净故事、被隔离的故事模型 ERA 标签、故事前状态引用及计划函数证据。",
   "schema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",

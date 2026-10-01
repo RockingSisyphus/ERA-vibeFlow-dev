@@ -3,7 +3,7 @@
   "type_key": "era.command.edit.route",
   "representation": "json",
   "display_name": "修改路径分支",
-  "description": "由对应判断节点按当前事实产生，仅选择本次实际控制分支，不改变业务结果。",
+  "description": "记录变量修改检查后应赋值、计算公式、深入子字段还是跳过。",
   "schema": {
     "type": "string",
     "enum": [

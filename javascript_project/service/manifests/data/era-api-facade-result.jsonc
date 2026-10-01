@@ -1,1 +1,1 @@
-{"kind":"data_schema","type_key":"era.api.facade.result","representation":"json","display_name":"公共 Facade 任务结果","description":"commit 或 sync 的唯一互斥结果。","schema":{"type":"object","additionalProperties":true}}
+{"kind":"data_schema","type_key":"era.api.facade.result","representation":"json","display_name":"公共 公共接口 任务结果","description":"commit 或 sync 的唯一互斥结果。","schema":{"type":"object","additionalProperties":true}}

@@ -3,7 +3,7 @@
   "type_key": "era.agent.settlement.validated",
   "representation": "json",
   "display_name": "ERA 已校验变量结算",
-  "description": "携带成功试执行后的规范单一 message scope 事务，或不写错误事务的未结算状态。",
+  "description": "保存生成阶段分析后可应用的消息命令，或本次尚未完成变量结算的状态与原因。",
   "schema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",

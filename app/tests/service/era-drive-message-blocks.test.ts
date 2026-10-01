@@ -2,10 +2,33 @@ import { describe, expect, it } from 'vitest';
 import { execute } from './memory-batch-fixture';
 import { contextWith } from './memory-lifecycle-fixture';
 import { planEraSync } from '../../../javascript_project/service/base_lib/sync/sync_planning';
+import { run as advanceBlock } from './message-block-fixture';
+import { vi } from 'vitest';
 
 // The former per-block disk pipeline is replaced by the approved memory publication pipeline.
 // Keep its rollback/expression/history conditions against the actual production nodes.
 describe('正式内存块链的历史与恢复', () => {
+  it.each([0, 1])('历史截断到空执行范围时直接收尾，不访问不存在的作者帧（越界偏移 %i）', async offset => {
+    const acknowledge = vi.fn();
+    const next = vi.fn();
+    const release = vi.fn();
+    const work = {
+      disposition: 'ready',
+      plan: { status: 'ready', execution: { messageIndex: 2 + offset, endIndex: 2 }, diagnostics: [] },
+    };
+    const result = await advanceBlock(
+      { 'era.sync.block.step.state': { value: { done: false, work } } },
+      {},
+      { capabilities: { 'era.tavern.functions': { acknowledge, next, release } } },
+    );
+    expect(result.block_step_pending.done).toBe(true);
+    expect(result.block_step_pending.work.plan.execution).toBeNull();
+    expect(result.block_step_pending.work.disposition).toBe('ready');
+    expect(result.block_step_pending.work.failure).toBeUndefined();
+    expect(acknowledge).not.toHaveBeenCalled();
+    expect(next).not.toHaveBeenCalled();
+    expect(release).not.toHaveBeenCalled();
+  });
   it('定向正文先补齐新增用户楼层，结算回退保留历史变量和函数且止于目标楼层', () => {
     const message = (messageId: number, role: string, text: string) => ({
       messageId,

@@ -1,16 +1,14 @@
+import { run as prepareWork } from './prepare-block-work-fixture';
 import { describe, expect, it } from 'vitest';
 import { contextWith, identity, sidecarId } from './memory-lifecycle-fixture';
 import { run as advance } from './message-block-fixture';
-import {
-  PrepareBlockWorkNode as prepareWork,
-  PublishBlockApplicationNode as publish,
-} from '../../../javascript_project/service/nodes/sync/shared_block_state_adapters';
+import { PublishBlockApplicationNode as publish } from '../../../javascript_project/service/nodes/sync/shared_block_state_adapters';
 import { recordFor } from '../../../javascript_project/service/base_lib/sidecar_binding';
 import { applySealedCommandCompactionToWork } from '../../../javascript_project/service/base_lib/sync/command_compaction';
 import { overlayWorkingMessages } from '../../../javascript_project/service/base_lib/working_state';
 
-import { run as prepareApi } from '../../../javascript_project/service/nodes/api/prepare_api_blocks';
-import { run as receipt } from '../../../javascript_project/service/nodes/api/return_applied_receipt';
+import { prepareApiBlocks as prepareApi } from '../../../javascript_project/service/nodes/api/facade_nodes';
+import { returnAppliedReceipt as receipt } from '../../../javascript_project/service/nodes/api/facade_nodes';
 import {
   buildTransaction,
   inspectWindow,

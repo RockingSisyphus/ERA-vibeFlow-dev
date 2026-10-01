@@ -1,9 +1,9 @@
 {
   "kind": "node",
   "type_key": "era.sidecar_binding.apply_resolution",
-  "display_name": "执行 Sidecar 绑定事务",
+  "display_name": "执行 独立状态文件 绑定事务",
   "category": "Sidecar 绑定",
-  "description": "执行已经确定的状态文件决议，例如创建绑定、迁移旧状态或应用用户选择。需要恢复消息时按当前有效正文构造更新，先确认消息保存，再写状态文件和聊天指针；全过程复核原聊天、绑定和文件版本。切换聊天或保存失败后记录实际已完成的写入并返回失败，不把旧状态写到新聊天，也不自动重复事务。",
+  "description": "执行用户选定的状态文件新建、迁移或修复方案。先提交必要的消息修改，再写入文件及聊天绑定；核对聊天身份和文件版本，记录已完成部分及失败原因。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
@@ -11,12 +11,12 @@
       {
         "type": "era.sidecar.binding.input",
         "cardinality": "exactly_one",
-        "display_name": "Sidecar 绑定输入"
+        "display_name": "独立状态文件 绑定输入"
       },
       {
         "type": "era.sidecar.binding.resolution",
         "cardinality": "exactly_one",
-        "display_name": "Sidecar 绑定决议"
+        "display_name": "独立状态文件 绑定决议"
       }
     ],
     "provides": [
@@ -28,25 +28,25 @@
       {
         "key": "sidecar_binding_route",
         "type": "era.sidecar.binding.route",
-        "display_name": "外部 Sidecar 绑定路由"
+        "display_name": "外部 独立状态文件 绑定路由"
       }
     ],
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
       "era.sidecar.binding.input": [
-        "输入：同步上下文封装。"
+        "输入：独立状态文件 绑定输入。"
       ],
       "era.sidecar.binding.resolution": [
-        "输入：确认可执行的 Sidecar 绑定决议。"
+        "输入：独立状态文件 绑定决议。"
       ]
     },
     "output_semantics": {
       "sidecar_applied_context": [
-        "输出：完成事务的同步上下文。"
+        "输出：事务后的同步上下文。"
       ],
       "sidecar_binding_route": [
-        "输出：apply 完成后继续原同步的外部路由。"
+        "输出：外部 独立状态文件 绑定路由。"
       ]
     }
   },

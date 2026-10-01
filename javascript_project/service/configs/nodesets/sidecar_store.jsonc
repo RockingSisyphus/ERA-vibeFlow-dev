@@ -2,8 +2,8 @@
   "type_key": "era.sidecar.store",
   "status": "implemented",
   "flow_kind": "process",
-  "display_name": "ERA Sidecar 状态存储",
-  "description": "加载当前聊天的 Sidecar，即独立保存 ERA 变量、函数和历史日志的状态文件。核对聊天指针及文件归属，优先沿用有效内存工作状态；需要时处理创建、旧数据迁移、绑定冲突或修复选择，再按来源校验执行。聊天中只保留文件指针，加载或写入确认后提供快照；来源变化和失败不会被当作成功绑定。",
+  "display_name": "加载或修复聊天的独立状态文件",
+  "description": "加载当前聊天使用的独立状态文件，文件中保存 ERA 变量、函数和历史日志。优先沿用同一聊天有效的内存结果；首次使用时建立绑定，旧数据需要时迁移，归属冲突或损坏时提示用户选择。执行选定的绑定方案后输出可用于历史同步的状态或等待、失败结果。",
   "requires": [
     {
       "type": "era.sync.context",
@@ -15,12 +15,12 @@
     {
       "key": "sidecar_binding_context",
       "type": "era.sync.context",
-      "display_name": "已加载 Sidecar 状态的同步上下文"
+      "display_name": "已加载 独立状态文件 状态的同步上下文"
     },
     {
       "key": "sidecar_binding_route",
       "type": "era.sidecar.binding.route",
-      "display_name": "Sidecar 状态路由"
+      "display_name": "独立状态文件 状态路由"
     }
   ],
   "pipeline": {
@@ -38,38 +38,38 @@
       {
         "id": "start",
         "type_used": "era.service.terminal",
-        "display_name": "Sidecar 状态存储启动",
-        "description": "这是“ERA Sidecar 状态存储”的入口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
+        "display_name": "独立状态文件 状态存储启动",
+        "description": "开始加载或修复聊天的独立状态文件。"
       },
       {
         "id": "inspect_current",
         "type_used": "era.sidecar_binding.inspect_current",
-        "display_name": "读取并核对本次 Sidecar 事务来源",
-        "description": "检查当前聊天绑定的是哪一个 Sidecar（独立保存 ERA 变量、函数和日志的状态文件），核对读取前后的聊天身份和文件指针。存在同一绑定的有效内存状态时优先沿用，避免已应用但未保存的操作被旧文件覆盖；必要时恢复被打断的模型候选起点。来源变化或读取失败转为失败事实，不把新聊天与旧消息混在一起。"
+        "display_name": "读取并核对本次 独立状态文件 事务来源",
+        "description": "本次处理当前聊天独立状态文件的绑定和加载。检查当前聊天指向的独立状态文件及聊天身份，优先使用同一有效绑定的内存变量、函数和日志，并识别需要恢复的未完成候选起点。"
       },
       {
         "id": "resolve_choice",
         "type_used": "era.sidecar_binding.resolve_choice",
         "display_name": "保留失败来源或解析绑定选择",
-        "description": "根据聊天与状态文件的关系决定接下来怎么办：首次使用可创建，旧格式可迁移，匹配的绑定可继续，所属聊天冲突或损坏则等待用户明确选择或修复。先前读取已经失败时直接保留失败，不再弹出新选择或安排写入。这里只形成决议，不自行创建文件。"
+        "description": "本次处理当前聊天独立状态文件的绑定和加载。根据当前状态文件资料及用户选择，决定新建、迁移、继续使用或等待归属、修复选择；读取失败时保留其原因。"
       },
       {
         "id": "publish_choice_prompt",
         "type_used": "era.sidecar_binding.publish_choice_prompt",
-        "display_name": "发布 Sidecar 冲突选择",
-        "description": "仅在状态绑定处于等待选择时，要求宿主显示具体问题：文件属于其他聊天则提示冲突，文件或绑定无效则提示修复，并附当前身份、文件归属及版本供用户判断。用户已有有效选择时不会再次弹同一提示。这个节点只显示问题，不替用户选择，也不改变变量。"
+        "display_name": "发布 独立状态文件 冲突选择",
+        "description": "本次处理当前聊天独立状态文件的绑定和加载。向页面显示状态文件归属冲突或损坏的处理选项，携带聊天身份、文件归属和版本资料；已有有效选择时沿用该选择。"
       },
       {
         "id": "apply_resolution",
         "type_used": "era.sidecar_binding.apply_resolution",
-        "display_name": "按原来源执行恢复、确认保存并提交 Sidecar",
-        "description": "执行已经确定的状态文件决议，例如创建绑定、迁移旧状态或应用用户选择。需要恢复消息时按当前有效正文构造更新，先确认消息保存，再写状态文件和聊天指针；全过程复核原聊天、绑定和文件版本。切换聊天或保存失败后记录实际已完成的写入并返回失败，不把旧状态写到新聊天，也不自动重复事务。"
+        "display_name": "按原来源执行恢复、确认保存并提交 独立状态文件",
+        "description": "本次处理当前聊天独立状态文件的绑定和加载。执行用户选定的状态文件新建、迁移或修复方案。先提交必要的消息修改，再写入文件及聊天绑定；核对聊天身份和文件版本，记录已完成部分及失败原因。"
       },
       {
         "id": "end",
         "type_used": "era.service.terminal",
-        "display_name": "Sidecar 状态存储结束",
-        "description": "这是“ERA Sidecar 状态存储”的出口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
+        "display_name": "独立状态文件 状态存储结束",
+        "description": "结束加载或修复聊天的独立状态文件，输出本段流程的处理结果。"
       }
     ],
     "edges": [
@@ -108,13 +108,13 @@
       {
         "type": "era.sync.context",
         "cardinality": "exactly_one",
-        "display_name": "已加载 Sidecar 状态的同步上下文",
+        "display_name": "已加载 独立状态文件 状态的同步上下文",
         "as": "sidecarBindingContext"
       },
       {
         "type": "era.sidecar.binding.route",
         "cardinality": "exactly_one",
-        "display_name": "Sidecar 状态路由",
+        "display_name": "独立状态文件 状态路由",
         "as": "sidecarBindingRoute"
       }
     ]

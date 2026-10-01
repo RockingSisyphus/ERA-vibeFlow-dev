@@ -1,7 +1,7 @@
 {
   "kind": "base_lib",
   "id": "era.service.facade_api_engine",
-  "display_name": "ERA 即时 Scope Facade 引擎",
+  "display_name": "ERA 即时 允许执行范围 公共接口 引擎",
   "description": "公共对象路由、窗口准入、短事务渲染、回读与 receipt 的纯领域规则。",
   "category": "公共 Facade",
   "version": "1.0.0",

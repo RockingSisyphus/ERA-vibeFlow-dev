@@ -1,9 +1,9 @@
 {
   "kind": "node",
   "type_key": "era.mk.no_change",
-  "display_name": "保留消息密钥状态",
+  "display_name": "保留消息历史标识状态",
   "category": "消息密钥结果",
-  "description": "当消息标识候选无需写入或已经失败时，输出无变更或失败结论，保留原标识与错误。不会为了形成回执再写一次正文，也不修改变量历史；后续结果节点可据此明确区分“原本已正确”和“无法准备”。",
+  "description": "传递消息历史标识任务的无变化或失败结果，保留原事件和原因，供统一结算。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
@@ -11,26 +11,26 @@
       {
         "type": "era.mk.candidate.routed",
         "cardinality": "exactly_one",
-        "display_name": "已路由 MK 候选"
+        "display_name": "已路由 消息历史标识 候选"
       }
     ],
     "provides": [
       {
         "key": "mk_noop_outcome",
         "type": "era.mk.commit.result",
-        "display_name": "MK 无操作结果"
+        "display_name": "消息历史标识 无操作结果"
       }
     ],
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
       "era.mk.candidate.routed": [
-        "输入：已路由 MK 候选。"
+        "输入：已路由 消息历史标识 候选。"
       ]
     },
     "output_semantics": {
       "mk_noop_outcome": [
-        "输出：MK 无操作结果。"
+        "输出：消息历史标识 无操作结果。"
       ]
     }
   },

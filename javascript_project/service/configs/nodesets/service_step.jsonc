@@ -8,8 +8,8 @@
     }
   ],
   "type_key": "era.service.step",
-  "display_name": "ERA 简单任务步骤",
-  "description": "只处理已准备的消息标识结算、Agent 设置和明确忽略。普通历史同步由 Service 迭代直接调用共享同步，与初始化/API/候选执行并列。简单分支交回唯一任务结果后才推进批次，不承担变量核心或重试循环。",
+  "display_name": "处理标识、设置或忽略任务",
+  "description": "执行已经准备好的三类简单任务：确认消息历史标识、处理多阶段生成设置，或为无需处理的事件返回忽略原因。选定分支返回一个任务结果，供批次统一合并。",
   "requires": [
     {
       "type": "era.step.request.routed",
@@ -17,7 +17,7 @@
       "display_name": "已准备路由步骤"
     },
     {
-      "type": "era.task.route",
+      "type": "era.task.route.selected",
       "cardinality": "exactly_one",
       "display_name": "已准备任务路由"
     },
@@ -45,7 +45,7 @@
       },
       {
         "key": "task_route",
-        "type": "era.task.route",
+        "type": "era.task.route.selected",
         "display_name": "已准备任务路由",
         "required": true
       },
@@ -62,37 +62,37 @@
         "id": "start",
         "type_used": "era.service.terminal",
         "display_name": "步骤启动",
-        "description": "这是“ERA 简单任务步骤”的入口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
+        "description": "开始处理标识、设置或忽略任务。"
       },
       {
         "id": "route_simple_task",
         "type_used": "era.tasks.dispatch",
         "display_name": "选择标识、设置或忽略任务",
-        "description": "只将已经准备好的消息标识、Agent 设置和忽略任务派往相应分支。普通同步已由外层直接调用，不经过本包装；返回结果不会提前推进索引，仍由统一结算完成。"
+        "description": "本次处理标识、设置或忽略事件的简单任务。按简单任务类型选择消息历史标识结算、生成设置操作或忽略事件处理。"
       },
       {
         "id": "task_update_mk",
         "type_used": "era.task.update_mk",
-        "display_name": "更新消息密钥任务",
-        "description": "为 ERA 消息标识任务返回结算。消息标识 MK 用于将消息与历史状态对应；它及占位符的读取、准备和必要写入已在统一派发中完成，本节点集仅核对并返回实际结果。不会再次改消息或重算变量，也不推进连续同步进度。"
+        "display_name": "结算消息历史标识更新",
+        "description": "本次处理标识、设置或忽略事件的简单任务。结算消息历史标识准备的结果。历史标识用于把每条聊天消息与变量变更日志对应起来；读取、生成和必要写入已在任务资料准备时完成。本流程检查该结果，再向任务的原始事件返回无变化、成功或失败回执。"
       },
       {
         "id": "task_agent_settings",
         "type_used": "era.agent.settings",
-        "display_name": "执行 Agent 设置命令",
-        "description": "在聊天和 API 共用的有序 Service 队列中处理 Agent 配置、预设、连接和模型列表，读取必要事实后执行相应设置命令并返回来源回执。它不进入规划、正文或结算的模型生成状态机，也不改聊天变量，避免设置任务误占用生成阶段的上下文。"
+        "display_name": "管理生成配置、预设和连接",
+        "description": "本次处理标识、设置或忽略事件的简单任务。处理多阶段生成的配置、预设、连接和模型列表操作。按命令读取必要的当前设置，通过浏览器接口执行相应操作，再将实际结果对应到原始请求。此流程负责设置管理，生成阶段在其他任务中执行。"
       },
       {
         "id": "task_ignore",
         "type_used": "era.task.ignore",
         "display_name": "结算忽略步骤",
-        "description": "处理规划器明确标为忽略的步骤，向其包含的每个原始事件返回被忽略的原因。不会假装执行过同步、生成或保存；任务类型不正确时会报错。这样无需业务操作的事件仍有可追踪的结果，不会使等待回执的调用方悬空。"
+        "description": "本次处理标识、设置或忽略事件的简单任务。为计划中决定忽略的每个原事件返回忽略回执，说明原因。"
       },
       {
         "id": "end",
         "type_used": "era.service.terminal",
         "display_name": "步骤结束",
-        "description": "这是“ERA 简单任务步骤”的出口标记。结构性的起点或终点标记，执行时返回空结果，不读取消息、不计算变量，也不保存或发送通知。它的意义是明确一段流程从哪里开始或在哪里收尾；具体业务数据沿该流程的声明通道传递。"
+        "description": "结束处理标识、设置或忽略任务，输出本段流程的处理结果。"
       }
     ],
     "edges": [

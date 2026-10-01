@@ -2,7 +2,7 @@
   "kind": "data_schema",
   "type_key": "era.mk.context",
   "representation": "json",
-  "display_name": "ERA 消息密钥读取上下文",
+  "display_name": "ERA 消息历史标识读取上下文",
   "description": "包含完整 update-mk 步骤、当前激活消息文本、ERAMetaData、状态占位符设置或读取失败；不携带身份或其他宿主状态。",
   "schema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",

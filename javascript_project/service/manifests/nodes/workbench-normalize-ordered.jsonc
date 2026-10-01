@@ -3,7 +3,7 @@
   "type_key": "era.workbench.normalize_ordered",
   "display_name": "校验显式有序操作",
   "category": "工作台提交",
-  "description": "处理工作台的高级有序操作模式，校验允许的变量插入、编辑和删除操作，并保持用户给出的顺序。不会自行重排或解除保护；格式无效时带出准备失败，合格列表随后仍进入统一保护检查和 API 提交，而不是从工作台直接执行。",
+  "description": "检查有序变量操作的类型和格式，保留原操作顺序，输出可提交的列表或输入错误。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
@@ -25,12 +25,12 @@
     "params_defaults": {},
     "input_semantics": {
       "era.workbench.draft": [
-        "用户给出的显式有序变量操作。"
+        "输入：工作台编辑草稿。"
       ]
     },
     "output_semantics": {
       "ordered_operation_plan": [
-        "校验后保留用户原顺序的操作计划。"
+        "输出：工作台操作计划。"
       ]
     }
   },

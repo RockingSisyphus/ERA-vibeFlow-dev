@@ -2,7 +2,7 @@
   "kind": "data_schema",
   "type_key": "era.sidecar.binding.facts",
   "representation": "json",
-  "display_name": "Sidecar 绑定事实",
+  "display_name": "独立状态文件 绑定事实",
   "description": "当前身份、聊天 SidecarId、V2 文件记录与仅用于一次迁移的旧状态事实。运行资格由安装作用域 workflow 决定，缺失指针为 create 或 migrate-legacy。",
   "schema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",

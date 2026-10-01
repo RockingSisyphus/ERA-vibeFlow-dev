@@ -35,7 +35,7 @@
     }
   ],
   "display_name": "执行设置命令",
-  "description": "在与聊天操作相同的有序 Service 队列中处理 Agent 配置、预设、连接或模型列表命令，通过既有宿主接口读取或写入相应设置。连接相关的即时事实读取和发起操作连续完成，减少使用过期事实。返回真实操作结果，不启动生成会话、不应用消息中的变量指令。",
+  "description": "通过酒馆浏览器接口读取或修改生成配置、预设、连接和模型列表，返回接口实际完成的结果及错误信息。",
   "flow_kind": "process",
   "contract": {
     "requires": [
@@ -56,12 +56,12 @@
     "params_defaults": {},
     "input_semantics": {
       "era.agent.settings.request": [
-        "输入：设置请求"
+        "输入：设置请求。"
       ]
     },
     "output_semantics": {
       "settings_outcome": [
-        "输出：设置结果"
+        "输出：设置结果。"
       ]
     }
   },

@@ -1,0 +1,40 @@
+{
+  "kind": "data_schema",
+  "type_key": "era.api.request.selected",
+  "representation": "json",
+  "display_name": "选定入口的ERA 公共对象请求",
+  "description": "执行入口选中时携带真实请求或结果，其他入口为 null；实际入口沿用原请求合同。",
+  "schema": {
+    "anyOf": [
+      {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "required": [
+          "task",
+          "sources"
+        ],
+        "properties": {
+          "task": {
+            "type": "object"
+          },
+          "sources": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 128,
+            "items": {
+              "type": "object"
+            }
+          },
+          "dispatchContext": {},
+          "detail": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "null"
+      }
+    ]
+  }
+}

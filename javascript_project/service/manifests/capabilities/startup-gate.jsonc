@@ -3,7 +3,7 @@
   "id": "era.tavern.startup_gate",
   "targets": ["browser"],
   "display_name": "ERA 启动闸门",
-  "description": "机械地结算 workflow 的启动决定；allow 才登记 Tavern ingress，dormant 不登记。",
+  "description": "按服务的启动决定连接酒馆事件入口，或返回休眠结果及原因。",
   "operations": {
     "activate": {"input_type": "era.installation.scope.decision", "output_type": "era.tavern.startup_gate.result", "completion": "immediate"},
     "dormant": {"input_type": "era.installation.scope.decision", "output_type": "era.tavern.startup_gate.result", "completion": "immediate"}

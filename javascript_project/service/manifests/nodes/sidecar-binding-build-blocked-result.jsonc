@@ -1,9 +1,9 @@
 {
   "kind": "node",
   "type_key": "era.sidecar_binding.build_blocked_result",
-  "display_name": "结算等待 Sidecar 选择的任务",
+  "display_name": "结算等待 独立状态文件 选择的任务",
   "category": "Sidecar 绑定",
-  "description": "当状态文件冲突或修复问题还在等待用户处理时，为原同步任务构造无写入的结果，保留等待原因及每个事件的回执。不会把“暂时不能继续”当成变量已同步，也不会擅自创建新绑定；这是状态选择分支与 Service 批次结算之间的出口。",
+  "description": "状态文件归属或损坏问题仍需用户选择时，为原事件生成包含选择原因的失败回执，供页面提示和任务结算。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
@@ -18,19 +18,19 @@
       {
         "key": "sidecar_binding_blocked_result",
         "type": "era.task.result",
-        "display_name": "Sidecar 选择等待结果"
+        "display_name": "独立状态文件 选择等待结果"
       }
     ],
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
       "era.sync.context": [
-        "输入：专用 Sidecar Nodeset 已标记为阻塞的同步上下文。"
+        "输入：同步上下文。"
       ]
     },
     "output_semantics": {
       "sidecar_binding_blocked_result": [
-        "输出：无变量写入、可定位的等待选择结果。"
+        "输出：独立状态文件 选择等待结果。"
       ]
     }
   },

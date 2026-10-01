@@ -3,7 +3,7 @@
   "type_key": "era.installation.scope.inspect",
   "display_name": "读取当前脚本与脚本树",
   "category": "服务生命周期",
-  "description": "读取酒馆助手提供的当前脚本 ID，以及角色卡、全局和预设三个位置中已启用的脚本目录，得到当前脚本出现在哪些位置的事实。这里仅收集信息，不注册聊天监听器，也不自行决定是否启动；若宿主接口不可用，后续节点会据此选择兼容策略。",
+  "description": "读取当前脚本身份及角色卡、全局、预设中的启用脚本资料，供启动位置判断。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
@@ -20,7 +20,7 @@
     "input_semantics": {},
     "output_semantics": {
       "installation_scope_facts": [
-        "输出：Host 原始作用域事实。"
+        "输出：安装作用域事实。"
       ]
     }
   },

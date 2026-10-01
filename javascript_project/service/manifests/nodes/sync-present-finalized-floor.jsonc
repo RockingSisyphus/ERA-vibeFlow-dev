@@ -3,7 +3,7 @@
   "type_key": "era.sync.present_finalized_floor",
   "display_name": "呈现已提交的最终楼层",
   "category": "同步事务",
-  "description": "在本次工作项带有首次显示意图时，要求酒馆刷新指定消息，使已完成内容和状态栏显示出来。保存分支只在消息与状态文件确认成功、来源仍一致时刷新；无提交分支按其已有显示意图处理。刷新失败只附加显示诊断，不撤销已经保存的业务结果，也不再次执行变量指令。",
+  "description": "在保存已确认且消息来源仍匹配时请求页面刷新显示；无需提交的分支沿用已有刷新要求。显示失败记录为附加诊断，保存结果保持其实际状态。",
   "version": "1.0.0",
   "flow_kind": "data_store",
   "contract": {
@@ -25,12 +25,12 @@
     "params_defaults": {},
     "input_semantics": {
       "era.tavern.commit.result": [
-        "输入：已经明确提交或失败的业务结论。"
+        "输入：原子楼层提交结果。"
       ]
     },
     "output_semantics": {
       "presented_sync_commit_result": [
-        "输出：业务结论不变，并可附带独立 presentation diagnostic。"
+        "输出：含首次呈现诊断的提交结果。"
       ]
     }
   },

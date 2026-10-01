@@ -3,7 +3,7 @@
   "type_key": "era.service.continue_state",
   "display_name": "继续服务",
   "category": "批次发布",
-  "description": "当批次没有致命错误时，导出已经结算后的服务状态，包括后续收集所需进度。原值不变，不重新读取聊天或重算变量；它连接“本批次已发布”与“下一批事件可开始收集”两个时点。",
+  "description": "将输出发布后的服务状态交给下一轮事件收集，供服务继续运行。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

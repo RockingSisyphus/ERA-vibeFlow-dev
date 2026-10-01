@@ -14,10 +14,3 @@ export function WorkbenchRejectDraftNode(inputs: any): any {
   const draft = inputs['era.workbench.draft'].value as Draft;
   return { rejected_preparation_result: rejected(draft.inspected, draft.error!) };
 }
-
-// Original node: nodes/api/workbench_route_request_kind.ts
-/** 原公共 commit 直接通过；只有内部工作台命令进入草稿准备。 */
-export function WorkbenchRouteRequestKindNode(inputs: any): any {
-  const inspected = inputs['era.api.commit.inspected'].value as Inspected;
-  return { commit_inspected: inspected, workbench_request_kind: inspected.request.detail.command === 'workbench-commit' ? 'draft' : 'operations' };
-}

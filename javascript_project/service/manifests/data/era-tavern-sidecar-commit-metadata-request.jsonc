@@ -2,7 +2,7 @@
   "kind": "data_schema",
   "type_key": "era.tavern.sidecar.commit_metadata.request",
   "representation": "json",
-  "display_name": "Sidecar 指针提交请求",
+  "display_name": "独立状态文件 指针提交请求",
   "description": "只提交 ERAMetaData.SidecarId；可在已确认文件提交后携带易失快照。",
   "schema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",

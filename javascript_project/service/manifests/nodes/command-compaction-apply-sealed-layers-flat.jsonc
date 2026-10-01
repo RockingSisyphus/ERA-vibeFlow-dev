@@ -3,7 +3,7 @@
   "type_key": "era.command_compaction.apply_sealed_layers_flat",
   "display_name": "Service 封存压缩组合",
   "category": "命令压缩集成",
-  "description": "在消息层完成后，寻找可以封存的 ERA 操作文本，按原顺序交给独立命令压缩工作流，得到更短的候选指令；再用 Service 实际的增删改规则重放确认，回填通过确认的文本并更新封存标记。压缩须保持变量、函数和随机行为，无法确认则保留原文；这里不保存酒馆或状态文件。",
+  "description": "压缩已完成历史消息中的 ERA 命令文本。先生成压缩候选，再通过 Service 重放确认变量、函数和随机使用结果一致；确认成功后采用候选及标记，否则保留原文。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
@@ -25,12 +25,12 @@
     "params_defaults": {},
     "input_semantics": {
       "era.expression.command.result": [
-        "原始同步工作项与封存候选。"
+        "输入：表达式命令同步结果。"
       ]
     },
     "output_semantics": {
       "command_compaction_result": [
-        "返回既有 Sidecar 提交链的同步工作项。"
+        "输出：已处理封存压缩的同步结果。"
       ]
     }
   },

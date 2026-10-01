@@ -5,7 +5,7 @@ import {
   readWindowNode,
   readTargetNode,
   validateCommitNode,
-  commitFailureNode,
+  returnImmediateResult,
 } from '../../../javascript_project/service/nodes/api/facade_nodes.ts';
 import {
   buildTransaction,
@@ -116,11 +116,11 @@ describe('API内存应用之前的读取与目标保护', () => {
     );
     const validated = validateCommitNode({ 'era.api.commit.inspected': { value: inspected.facade_commit_inspected } });
     expect(validated.commit_admission_route).toBe('failed');
-    const failed = commitFailureNode({
+    const failed = returnImmediateResult({
       'era.api.commit.failure_context': { value: validated.facade_commit_validation_failure },
     });
-    expect(failed.facade_commit_failed_result.status).toBe('failed');
-    expect(failed.facade_commit_failed_result.diagnostics[0].message).toBe('read failed');
+    expect(failed.immediate_facade_result.status).toBe('failed');
+    expect(failed.immediate_facade_result.diagnostics[0].message).toBe('read failed');
     f.capabilities['era.tavern.messages'].read_context = read;
     const next = await readWindowNode(
       { 'era.api.request': { value: f.request }, 'era.batch.execution.state': { value: f.execution } },

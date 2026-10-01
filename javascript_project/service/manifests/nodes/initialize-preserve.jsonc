@@ -3,7 +3,7 @@
   "type_key": "era.initialize.no_change",
   "display_name": "保留初始化计划",
   "category": "初始化规划",
-  "description": "在资源计划没有写入动作时，把同一计划传到统一提交入口，保留“无需变更”或读取失败的真实原因。不会凭没有动作就认定初始化成功，也不会新建替代资源；后续提交结果节点会据此决定返回或继续启动同步。",
+  "description": "将无需修改的资源计划或准备失败结果传到提交阶段，保留其具体原因。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {

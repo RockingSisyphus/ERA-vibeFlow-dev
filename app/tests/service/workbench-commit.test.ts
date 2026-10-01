@@ -1,7 +1,7 @@
+import { submissionKind } from '../../../javascript_project/service/nodes/api/facade_nodes';
 import { workingCapabilityFixture } from './working-capability-fixture';
 import { describe, expect, it, vi } from 'vitest';
 import {
-  WorkbenchRouteRequestKindNode as route,
   WorkbenchRejectDraftNode as reject,
   WorkbenchPublishPreparationNode as publish,
 } from '../../../javascript_project/service/nodes/api/shared_workbench_adapters';
@@ -87,10 +87,8 @@ async function prepare(f: ReturnType<typeof fixture>) {
 describe('真实工作台准备节点接回原 Commit', () => {
   it('普通公共 commit 绕过草稿读取；工作台结果进入原 always 事务', async () => {
     const f = fixture();
-    expect(
-      route(input('era.api.commit.inspected', { request: { detail: { command: 'commit' } } })).workbench_request_kind,
-    ).toBe('operations');
-    expect(route(input('era.api.commit.inspected', f.inspected)).workbench_request_kind).toBe('draft');
+    expect(submissionKind({ detail: { command: 'commit' } })).toBe('operations');
+    expect(submissionKind(f.inspected.request)).toBe('draft');
     const result = await prepare(f);
     expect(result.preparation_route).toBe('ready');
     const admitted = validateCommit(result.prepared_commit_inspected) as any;

@@ -3,7 +3,7 @@
   "type_key": "era.command.expression.response",
   "representation": "json",
   "display_name": "带用途的 Expression 结果",
-  "description": "保留实际结果、诊断与随机位置及原请求用途，失败不被适配成成功。",
+  "description": "保存表达式实际返回的数值或诊断、已使用随机次数及原请求用途，供判断下一步如何应用。",
   "schema": {
     "type": "object",
     "properties": {

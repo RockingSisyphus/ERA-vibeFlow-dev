@@ -3,7 +3,7 @@
   "type_key": "era.service.cycle.route_completion",
   "display_name": "选择继续或结算",
   "category": "服务阶段循环",
-  "description": "读取任务合并给出的完成标志，决定带着更新后的状态执行下一个步骤，还是当轮结束批次。这里不重新计算步骤数或更改结果，只将同一次合并的结论用于分支选择，避免最后一步执行后多等一轮。",
+  "description": "检查当前批次是否还有待执行任务。未结束时继续下一任务，已结束时进入批次结算。",
   "version": "1.0.0",
   "flow_kind": "decision",
   "contract": {
@@ -11,7 +11,7 @@
       {
         "type": "era.step.done",
         "cardinality": "exactly_one",
-        "display_name": "输入状态"
+        "display_name": "本节点所需的当前运行资料"
       },
       {
         "type": "era.batch.execution.state.next",
@@ -35,18 +35,18 @@
     "params_defaults": {},
     "input_semantics": {
       "era.step.done": [
-        "读取并保留输入值。"
+        "输入：本节点所需的当前运行资料。"
       ],
       "era.batch.execution.state.next": [
-        "步骤后的严格批次状态。"
+        "输入：步骤后状态。"
       ]
     },
     "output_semantics": {
       "completion_route": [
-        "供同一 Service 工作流的下一阶段使用。"
+        "输出：阶段结果。"
       ],
       "routed_execution_state": [
-        "原样交给唯一一个继续或结算分支。"
+        "输出：路由中的批次状态。"
       ]
     }
   },

@@ -2,7 +2,7 @@
   "kind": "node",
   "type_key": "era.agent.prepare_stage_handoff",
   "display_name": "形成阶段交接与恢复凭据",
-  "description": "对于已经成功达到阶段边界的候选，生成唯一完成标识、阶段结果及下一步恢复意图，供页面依次执行订阅回调后再请求恢复。没有阶段交接的结果原样传递。这里不在当前任务队列里等待回调，否则回调请求同一队列可能互相等待；交接也不表示整个生成已结束。",
+  "description": "在生成阶段成功后建立完成标记、阶段结果和下一阶段恢复资料。页面接到通知后依次执行订阅回调，再按恢复资料请求继续。",
   "category": "故事生成会话",
   "version": "1.0.0",
   "flow_kind": "process",
@@ -25,12 +25,12 @@
     "params_defaults": {},
     "input_semantics": {
       "era.agent.candidate.outcome": [
-        "候选循环最终结果。"
+        "输入：阶段执行结果。"
       ]
     },
     "output_semantics": {
       "handoff_outcome": [
-        "附带交接通知与恢复标识的阶段结果。"
+        "输出：含交接意图的阶段结果。"
       ]
     }
   },

@@ -1,9 +1,9 @@
 {
   "kind": "node",
   "type_key": "era.api.validate_commit",
-  "display_name": "校验 Scope 与有序操作",
+  "display_name": "校验 允许执行范围 与有序操作",
   "category": "公共 Facade",
-  "description": "校验提交操作的格式和顺序，并结合调用来源、当前消息窗口及作用域判断是否可以应用。默认 message 规则在同一获准消息窗口可多次提交，后续窗口若发现消息已有记录则跳过；branch 按活动分支记录判断，always 每次允许的请求均执行，不按操作内容去重。窗口过期或输入不合规返回失败；此处只做准入，变量还未应用。",
+  "description": "检查有序操作和请求来源，再判断本次提交是否允许执行。消息范围内的重复调用可执行，后续范围已处理的调用可跳过；回复分支按该分支的执行记录判断，强制执行请求每次执行，过期范围返回失败。",
   "version": "1.0.0",
   "flow_kind": "decision",
   "contract": {
@@ -35,18 +35,18 @@
     "params_defaults": {},
     "input_semantics": {
       "era.api.commit.inspected": [
-        "已读取目标和窗口事实的提交请求。"
+        "输入：已读取的提交请求。"
       ]
     },
     "output_semantics": {
       "commit_admission_route": [
-        "选择提交、跳过或失败分支。"
+        "输出：提交准入分支。"
       ],
       "facade_commit_validated": [
-        "保留已通过校验的范围与有序操作。"
+        "输出：已校验的提交请求。"
       ],
       "facade_commit_validation_failure": [
-        "保留窗口、范围或操作校验的失败原因。"
+        "输出：提交校验失败原因。"
       ]
     }
   },
@@ -67,9 +67,14 @@
   ],
   "base_libs": [
     "era.service.facade_api_engine",
+    "era.service.sidecar_binding",
+    "era.service.sync_contracts",
+    "era.service.sync_result_policy",
+    "era.service.sync_work_preparation",
     "era.service.task_continuation",
     "era.service.types",
-    "era.service.working_state"
+    "era.service.working_state",
+    "era.workbench.context"
   ],
   "capabilities": []
 }

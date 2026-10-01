@@ -1,9 +1,9 @@
 {
   "kind": "node",
   "type_key": "era.command.settle_operation",
-  "display_name": "推进操作游标并携带有序工作状态",
+  "display_name": "整理当前操作并准备继续",
   "category": "核心执行",
-  "description": "根据本项结果推进字段、数组根或函数组游标，退出完成子树后回到父位置；保留当前变量/函数、消息起点快照、随机位置、候选组及累计日志。局部异常按原根项容错范围跳过剩余项，已确认前缀不被新恢复规则抹掉。输出下一轮状态，尚不发布块级结果。",
+  "description": "清除刚完成或已跳过的操作记录，保留更新后的变量、函数、日志及待处理列表。下一轮据此选择后续字段、下一组函数或下一项阶段调用。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
@@ -11,7 +11,7 @@
       {
         "type": "era.command.operation.state",
         "cardinality": "exactly_one",
-        "display_name": "当前操作栈、变量/函数工作值、历史快照、随机位置与累计日志"
+        "display_name": "待处理字段、当前变量和函数、历史起点、随机次数与日志"
       }
     ],
     "provides": [
@@ -30,7 +30,7 @@
     "params_defaults": {},
     "input_semantics": {
       "era.command.operation.state": [
-        "输入：当前操作栈、变量/函数工作值、历史快照、随机位置与累计日志。"
+        "输入：待处理字段、当前变量和函数、历史起点、随机次数与日志。"
       ]
     },
     "output_semantics": {
@@ -60,6 +60,7 @@
   "base_libs": [
     "era.command.operation_expressions",
     "era.command.operation_functions",
+    "era.command.operation_state",
     "era.command.operation_traversal"
   ],
   "capabilities": []

@@ -3,7 +3,7 @@
   "type_key": "era.sync.floor.origin.route",
   "representation": "json",
   "display_name": "当前楼层准备结论",
-  "description": "由对应判断节点按当前事实产生，仅选择本次实际控制分支，不改变业务结果。",
+  "description": "记录当前消息的历史标识及起点准备是否有效，选择继续处理、跳过消息或结束范围。",
   "schema": {
     "type": "string",
     "enum": [

@@ -1,9 +1,9 @@
 {
   "kind": "node",
   "type_key": "era.mk.build_result",
-  "display_name": "构造消息密钥任务结果",
+  "display_name": "构造消息历史标识任务结果",
   "category": "消息密钥结果",
-  "description": "依据消息标识准备和提交的真实结果，向任务对应的每个原事件生成一次回执，保留无变更、失败或致命原因。这个节点只完成消息标识任务的结算，不再次写正文，也不把标识更新冒充变量同步或推进连续计算进度。",
+  "description": "根据消息历史标识的准备和写入结果，为每个原事件返回一次成功、无变化或失败回执，并附上诊断。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
@@ -11,26 +11,26 @@
       {
         "type": "era.mk.commit.result",
         "cardinality": "exactly_one",
-        "display_name": "MK 结果"
+        "display_name": "消息历史标识 结果"
       }
     ],
     "provides": [
       {
         "key": "update_mk_task_result",
         "type": "era.task.result",
-        "display_name": "MK 更新结果"
+        "display_name": "消息历史标识 更新结果"
       }
     ],
     "params_schema": {},
     "params_defaults": {},
     "input_semantics": {
       "era.mk.commit.result": [
-        "输入：MK 结果。"
+        "输入：消息历史标识 结果。"
       ]
     },
     "output_semantics": {
       "update_mk_task_result": [
-        "输出：MK 更新结果。"
+        "输出：消息历史标识 更新结果。"
       ]
     }
   },

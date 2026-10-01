@@ -5,7 +5,7 @@
     "browser"
   ],
   "display_name": "消息内原生工具调用通道",
-  "description": "调用酒馆注册工具，显式绑定参数对象，依次搬运API请求和应用回执；不执行变量规则。",
+  "description": "通过酒馆接口启动已注册的作者工具，传递参数，并将其接口请求及 Service 应用回执按顺序交还。",
   "operations": {
     "begin": {
       "input_type": "era.working.request",

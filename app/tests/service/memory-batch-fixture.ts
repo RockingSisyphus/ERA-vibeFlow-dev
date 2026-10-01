@@ -1,11 +1,9 @@
+import { run as prepareWork } from './prepare-block-work-fixture';
 import { expect } from 'vitest';
 import { contextWith, identity, sidecarId } from './memory-lifecycle-fixture';
 import { run as advance } from './message-block-fixture';
 import { prepare } from '../../../javascript_project/service/nodes/sync/prepare_block_step';
-import {
-  PrepareBlockWorkNode as prepareWork,
-  PublishBlockApplicationNode as publish,
-} from '../../../javascript_project/service/nodes/sync/shared_block_state_adapters';
+import { PublishBlockApplicationNode as publish } from '../../../javascript_project/service/nodes/sync/shared_block_state_adapters';
 import { finalize } from '../../../javascript_project/service/nodes/sync/finalize_block_step';
 import { run as save } from '../../../javascript_project/service/nodes/sync/commit_sync';
 import { run as settle } from '../../../javascript_project/service/nodes/sync/settle_saved_batch';

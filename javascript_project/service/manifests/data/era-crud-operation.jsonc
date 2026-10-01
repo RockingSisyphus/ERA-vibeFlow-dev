@@ -2,7 +2,7 @@
   "kind": "data_schema",
   "type_key": "era.crud.operation",
   "representation": "json",
-  "display_name": "ERA·CRUD·操作",
+  "display_name": "ERA·变量增删改·操作",
   "description": "定义“ERA·CRUD·操作”的数据结构与校验约束。",
   "schema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",

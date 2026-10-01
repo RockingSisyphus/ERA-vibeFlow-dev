@@ -2,7 +2,7 @@
   "kind": "base_lib",
   "id": "era.command.operation_traversal",
   "display_name": "有序路径操作",
-  "description": "有序路径操作；逐项判断插入模板、修改保护、表达式形状与删除保护，子项按原字段顺序深入，日志只进入工作副本。",
+  "description": "提供变量字段的有序处理：检查新增模板、修改和删除保护，安排子字段顺序，并记录变量变化。",
   "category": "核心执行",
   "version": "1.0.0",
   "implementations": [

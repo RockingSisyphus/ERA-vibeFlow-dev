@@ -3,7 +3,7 @@
   "type_key": "era.command.delete.route",
   "representation": "json",
   "display_name": "删除路径分支",
-  "description": "由对应判断节点按当前事实产生，仅选择本次实际控制分支，不改变业务结果。",
+  "description": "记录删除检查后应删除当前项、深入子字段还是跳过，供保留规则处理。",
   "schema": {
     "type": "string",
     "enum": [

@@ -1,0 +1,67 @@
+{
+  "kind": "node",
+  "type_key": "era.command.select_business_operation",
+  "display_name": "按原顺序选择下一项指令操作",
+  "category": "核心执行",
+  "description": "从指令的有序操作和字段遍历进度中选择新增变量、修改变量、删除变量、整组函数修改或生成阶段函数调用。没有剩余操作时形成本段完整结果。",
+  "version": "1.0.0",
+  "flow_kind": "decision",
+  "contract": {
+    "requires": [
+      {
+        "type": "era.command.operation.state",
+        "cardinality": "exactly_one",
+        "display_name": "待处理操作、当前变量和函数、历史起点与随机进度"
+      }
+    ],
+    "provides": [
+      {
+        "key": "take_next_operation_operation_state",
+        "type": "era.command.operation.state",
+        "display_name": "本项操作后的变量、函数、待处理字段和日志"
+      },
+      {
+        "key": "take_next_operation_operation_route",
+        "type": "era.command.operation.route",
+        "display_name": "新增/修改/删除、函数组/定义/整组校验、阶段调用、跳过或结束"
+      }
+    ],
+    "params_schema": {},
+    "params_defaults": {},
+    "input_semantics": {
+      "era.command.operation.state": [
+        "输入：待处理操作、当前变量和函数、历史起点与随机进度。"
+      ]
+    },
+    "output_semantics": {
+      "take_next_operation_operation_state": [
+        "输出：本项操作后的变量、函数、待处理字段和日志。"
+      ],
+      "take_next_operation_operation_route": [
+        "输出：新增/修改/删除、函数组/定义/整组校验、阶段调用、跳过或结束。"
+      ]
+    }
+  },
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "completion": "immediate",
+      "source": {
+        "kind": "file",
+        "ref": "nodes/sync/core_operation_nodes.ts",
+        "export": "SelectBusinessOperationNode"
+      }
+    }
+  ],
+  "base_libs": [
+    "era.command.operation_expressions",
+    "era.command.operation_functions",
+    "era.command.operation_state",
+    "era.command.operation_traversal"
+  ],
+  "capabilities": []
+}

@@ -3,7 +3,7 @@
   "type_key": "era.sync.block.step.pending",
   "representation": "json",
   "display_name": "ERA·同步·块步进状态·待提交",
-  "description": "当前内存块工作项、原消息依据与调用上下文；完整范围结束后统一保存。",
+  "description": "保存处理结束后的消息修改、独立状态文件候选及原任务资料，供统一保存。",
   "schema": {
     "type": "object",
     "properties": {

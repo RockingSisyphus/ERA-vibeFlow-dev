@@ -3,7 +3,7 @@
   "type_key": "era.installation.scope.publish_dormant",
   "display_name": "发布休眠安装提示",
   "category": "服务生命周期",
-  "description": "当当前 ERA 被判定为全局、预设或位置不明确的实例时，要求宿主显示未启动的原因，然后沿结束分支退出。这条分支不会接收聊天事件，也不会加载聊天状态文件、处理宏或启动业务 UI，因而不会以这个实例接管聊天变量。",
+  "description": "向酒馆页面显示脚本休眠原因，并结束本次启动分支。",
   "version": "1.0.0",
   "flow_kind": "process",
   "contract": {
@@ -19,7 +19,7 @@
     "params_defaults": {},
     "input_semantics": {
       "era.installation.scope.decision": [
-        "输入：dormant 启动决议。"
+        "输入：启动决议。"
       ]
     },
     "output_semantics": {}

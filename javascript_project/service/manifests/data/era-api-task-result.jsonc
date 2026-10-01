@@ -3,7 +3,7 @@
   "type_key": "era.api.task.result",
   "representation": "json",
   "display_name": "ERA 公共对象任务结果",
-  "description": "公共对象任务在原位同步前后保持标准任务结果形状的独立数据类型。",
+  "description": "保存公共接口任务的执行状态、返回值、回执和诊断，供原请求结算。",
   "schema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
