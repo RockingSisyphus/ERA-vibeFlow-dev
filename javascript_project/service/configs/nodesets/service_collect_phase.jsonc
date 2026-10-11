@@ -126,11 +126,6 @@
         "from": "send_collection_control",
         "to": "end",
         "transfer": false
-      },
-      {
-        "from": "reduce_collection",
-        "to": "end",
-        "schedule": false
       }
     ],
     "outputs": [

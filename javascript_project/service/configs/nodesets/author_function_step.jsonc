@@ -120,7 +120,12 @@
       {
         "from": "receive_event",
         "to": "finish_call",
-        "when": "author_finish == true"
+        "when": "author_event == 'done'"
+      },
+      {
+        "from": "receive_event",
+        "to": "finish_call",
+        "when": "author_event == 'failed'"
       },
       {
         "from": "receive_event",

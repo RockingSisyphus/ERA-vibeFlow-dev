@@ -136,7 +136,7 @@
       {
         "from": "carry_candidate_inputs",
         "to": "prepare_candidate_continuation",
-        "schedule": false
+        "schedule": true
       }
     ],
     "outputs": [

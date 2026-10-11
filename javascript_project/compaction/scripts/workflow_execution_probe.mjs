@@ -19,7 +19,7 @@ try {
       "--target", target,
       "--profile", "esm-module",
       "--out-dir", generated,
-    ], { cwd: repository, stdio: "pipe" });
+    ], { cwd: repository, stdio: ["ignore", "ignore", "inherit"] });
     execFileSync(esbuild, [
       path.join(generated, "workflow.js"),
       "--bundle",

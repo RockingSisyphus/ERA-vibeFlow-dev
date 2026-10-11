@@ -570,6 +570,35 @@ describe('ERA 服务 Host Extension 核心', () => {
     await host.stop();
   });
 
+  it('屏障告警后 stop 取消原回执并清理 watchdog，不留下永久等待', async () => {
+    const { adapter, host } = createFixture();
+    host.start();
+    const admission = assertAccepted(adapter.emit({ type: 'generation_started', source: 'tavern', args: [] }));
+    const barrier = admission.waitThrough();
+    adapter.clock.advance(5);
+    const warningsBeforeStop = adapter.warnings.length;
+    expect(adapter.warnings.at(-1)?.details).toMatchObject({ throughSequence: 1, pendingSequences: [1] });
+    await host.stop('explicit lifecycle stop');
+    await expect(admission.done).resolves.toMatchObject({ sequence: 1, status: 'cancelled' });
+    await expect(barrier).resolves.toMatchObject({ throughSequence: 1, hasFailures: true });
+    adapter.clock.advance(100);
+    expect(adapter.warnings).toHaveLength(warningsBeforeStop);
+  });
+
+  it('stop 在告警之前清理定时器并结算全部原回执', async () => {
+    const { adapter, host } = createFixture();
+    host.start();
+    const first = assertAccepted(adapter.emit({ type: 'generation_started', source: 'tavern', args: [] }));
+    const second = assertAccepted(adapter.emit({ type: 'message_received', source: 'tavern', args: [] }));
+    const barrier = second.waitThrough();
+    await host.stop('explicit lifecycle stop');
+    await expect(first.done).resolves.toMatchObject({ sequence: 1, status: 'cancelled' });
+    await expect(second.done).resolves.toMatchObject({ sequence: 2, status: 'cancelled' });
+    await expect(barrier).resolves.toMatchObject({ throughSequence: 2, hasFailures: true });
+    adapter.clock.advance(100);
+    expect(adapter.warnings.some(item => item.message.includes('高水位屏障'))).toBe(false);
+  });
+
   it('绝对 dueAt 定时器产生固定 timer 事件，并拒绝伪 timer 事件', async () => {
     const { adapter, host } = createFixture();
     host.start();

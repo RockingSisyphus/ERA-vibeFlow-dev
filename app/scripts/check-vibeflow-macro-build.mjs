@@ -27,10 +27,10 @@ function normalizePublicInterface(source, name) {
     .replace(/;+$/g, '');
 }
 
-assert(manifest.format === 'vibeflow.aot-build.v1', 'Macro build manifest 格式错误');
+assert(manifest.format === 'vibeflow.aot-build.v2', 'Macro build manifest 格式错误');
 assert(manifest.project_target === 'javascript', 'Macro 必须使用 JavaScript Target');
-assert(manifest.abi_version === 'vibeflow.workflow.v4', 'Macro Workflow ABI 错误');
-assert(manifest.plugin_abi_version === 'vibeflow.plugin.v1', 'Macro Plugin ABI 错误');
+assert(manifest.abi_version === 'vibeflow.workflow.v5', 'Macro Workflow ABI 错误');
+assert(manifest.plugin_abi_version === 'vibeflow.plugin.v3', 'Macro Plugin ABI 错误');
 assert(manifest.entry === 'era-macro.js', 'Macro 入口文件名错误');
 assert(manifest.entry_mode === 'sync', 'Macro 必须保持同步入口');
 assert(
@@ -51,10 +51,7 @@ assert(
 assert(manifest.toolchain?.node === '24.18.0', 'Macro Node.js 工具链版本错误');
 assert(manifest.toolchain?.typescript === '7.0.2', 'Macro TypeScript 工具链版本错误');
 assert(manifest.toolchain?.esbuild === '0.28.1', 'Macro esbuild 工具链版本错误');
-assert(
-  JSON.stringify(manifest.toolchain?.lock_files) === JSON.stringify(['package-lock.json']),
-  'Macro 必须只使用独立 package-lock.json',
-);
+// AOT manifest v2 不再返回 lock_files；工具链版本与产物哈希仍按实际 manifest 核验。
 
 for (const [relativePath, expectedHash] of Object.entries(manifest.files ?? {})) {
   const content = await readFile(new URL(relativePath, generatedRoot));

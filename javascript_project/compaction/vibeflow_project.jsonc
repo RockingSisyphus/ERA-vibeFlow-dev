@@ -1,13 +1,12 @@
 {
   "project_target": "javascript",
-  "descriptors": {
-    "nodes": ["manifests/nodes"],
-    "base_lib": ["manifests/base_lib"],
-    "data_schemas": ["manifests/data"]
-  },
   "javascript": {
     "package_root": ".",
-    "external_packages": ["@era/vibeflow-expression", "mathjs", "@stdlib/math-base-special-gamma"]
+    "external_packages": [
+      "@era/vibeflow-expression",
+      "mathjs",
+      "@stdlib/math-base-special-gamma"
+    ]
   },
   "quality_enabled": true,
   "architecture": {

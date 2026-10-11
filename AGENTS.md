@@ -1,6 +1,6 @@
 # VibeFlow 开发入口
 
-本项目使用四个 JavaScript AOT root：异步服务 `javascript_project/service`、同步宏 `javascript_project/macro`、表达式 `javascript_project/expression` 和命令压缩 `javascript_project/compaction`。先阅读所选 root 的 `vibeflow_project.jsonc` 和已登记的 `ARCHITECTURE.jsonc`，沿 Architecture 的 source 定位并修改真实 Config、Nodeset、descriptor 或 Node source；生成文档只通过 VibeFlow 命令更新。
+本项目使用四个 JavaScript AOT root：异步服务 `javascript_project/service`、同步宏 `javascript_project/macro`、表达式 `javascript_project/expression` 和命令压缩 `javascript_project/compaction`。先阅读所选 root 的 `vibeflow_project.jsonc` 和已登记的 `ARCHITECTURE.jsonc`，沿 Architecture 的 source 定位并修改真实 Config、Nodeset、代码插件声明或 Node source；生成文档只通过 VibeFlow 命令更新。
 
 按任务阅读规范：
 
@@ -8,8 +8,14 @@
 - 查阅 Python Target 接口（本项目当前不使用）：[`kernel/docs/user/python-development.md`](kernel/docs/user/python-development.md)
 - 开发 JavaScript/TypeScript Node：[`kernel/docs/user/javascript-development.md`](kernel/docs/user/javascript-development.md)
 - 开发 Nodeset 或 Loop：[`kernel/docs/user/nodesets-and-loops.md`](kernel/docs/user/nodesets-and-loops.md)
+- 定义或选择 Rule / Ruleset：[`kernel/docs/user/rules-and-nodes.md`](kernel/docs/user/rules-and-nodes.md)
 - 开发 Plugin、Capability 或 Host Extension：[`kernel/docs/user/plugins-and-integrations.md`](kernel/docs/user/plugins-and-integrations.md)
+- 登记多文件实现与源码归属：[`kernel/docs/user/multifile-resources.md`](kernel/docs/user/multifile-resources.md)
+- 升级旧资源声明及 API：[`kernel/docs/user/rule-system-migration.md`](kernel/docs/user/rule-system-migration.md)
+- 查询运行日志与状态：[`kernel/docs/user/runtime-observation.md`](kernel/docs/user/runtime-observation.md)
 - 运行检查或解释结果：[`kernel/docs/user/commands-and-results.md`](kernel/docs/user/commands-and-results.md)
+
+0.18.3 沿用 `@vibeflow/plugin` 的固定 SDK 插件，由顶层 workflow 显式选择；项目级 `descriptors` 登记已退役。Node 明确选择自己的 Ruleset，支撑源码通过 `implementation_files` 登记；共享库引用使用 `base_libs`。每项 `pipeline.inputs` 显式填写布尔 `required`。Workflow / Plugin / Rule ABI 分别为 v5 / v3 / v2，AOT manifest 为 v2；升级前生成的 AOT 与业务验收不能作为新版执行证据。当前迁移是否已实施，以交接说明和真实 Config 中的 planned 状态为准。
 
 完成修改后更新 Architecture，并执行适用的 validate、quality、build 和工作流执行探针。按结果中的实际证据报告完成状态。
 

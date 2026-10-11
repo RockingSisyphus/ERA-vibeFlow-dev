@@ -6,7 +6,10 @@ import { performance } from 'node:perf_hooks';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const generatedModuleUrl = new URL('../../generated/era-service/workflow.js', import.meta.url);
+const generatedModuleUrl = pathToFileURL(resolve(
+  process.env.ERA_SERVICE_BUILD_DIR ?? resolve(import.meta.dirname, '../../generated/era-service'),
+  'workflow.js',
+));
 const reportArgument = process.argv.indexOf('--report');
 const reportUrl = reportArgument >= 0
   ? pathToFileURL(resolve(process.argv[reportArgument + 1]))
@@ -462,8 +465,8 @@ async function probeWorkflowFrames(workflow) {
 
 const stagedWorkflow = await importGeneratedWorkflow();
 const workflow = stagedWorkflow.workflow;
-assert(workflow.VIBEFLOW_WORKFLOW_ABI === 'vibeflow.workflow.v4', 'Workflow ABI 不是 v4。');
-assert(workflow.VIBEFLOW_PLUGIN_ABI === 'vibeflow.plugin.v1', 'Plugin ABI 不是 v1。');
+assert(workflow.VIBEFLOW_WORKFLOW_ABI === 'vibeflow.workflow.v5', 'Workflow ABI 不是 v5。');
+assert(workflow.VIBEFLOW_PLUGIN_ABI === 'vibeflow.plugin.v3', 'Plugin ABI 不是 v3。');
 
 const report = {
   status: 'PASS',

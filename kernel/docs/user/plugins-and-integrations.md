@@ -1,134 +1,124 @@
-# Plugin 与宿主集成
+# 统一插件与宿主集成
 
-Plugin 扩展治理、编译或单次运行 hook；BaseLib 提供纯 helper；JavaScript Capability 与 Host Extension 连接宿主能力。
+固定插件贡献自定义 Node、Rule、Ruleset、DataSchema、BaseLib、Capability 和 HostExtension。Python 用 `Plugin`，JS/TS 用 `definePlugin`；workflow 的 `plugins` 显式选择本次使用的插件及资源。
 
-## Python Plugin
+默认规则和资源由内置插件自动接入，Config 无需声明。报告记录实际声明及实现来源。插件贡献普通 Rule/Ruleset 只让其可被引用；设置 `workflow_default` 的 Ruleset 才加入 Workflow 默认。Workflow/Nodeset 的 `rulesets=[]` 取消对应图级选择，Node 调用的 `[]` 只取消自身局部选择。
 
-Plugin 使用 `PluginInfo` 描述资源，并实现对应 hook：
-
-```python
-from vibeflow.targets.python.project import PluginInfo
-
-
-class Plugin:
-    PLUGIN_INFO = PluginInfo(
-        name="example_policy",
-        plugin_type="policy",
-        display_name="Example policy",
-        category="policy",
-        description="Adds project-specific structural findings.",
-        version="1.0.0",
-    )
-    name = "example_policy"
-    priority = 20
-
-    def extend_policy(self, policy):
-        return {"policy": {"maintainability": {"max_call_chain_length": 6}}}
-```
-
-Python 支持 `policy`、`compiler`、`runtime` 三类 Plugin。项目 Registry 登记可用资源，workflow 通过 `plugins[].id` 选择本次使用项：
-
-```python
-from vibeflow.targets.python.project import PluginResourceRegistry
-
-
-def build_plugin_registry() -> PluginResourceRegistry:
-    registry = PluginResourceRegistry()
-    registry.register(
-        "example_policy",
-        module="plugins.example_policy",
-        class_name="Plugin",
-        plugin_type="policy",
-        display_name="Example policy",
-        category="policy",
-        description="Adds project-specific structural findings.",
-        version="1.0.0",
-    )
-    return registry
-```
-
-workflow 只启用显式选择的 Plugin：
-
-```jsonc
-"plugins": [{"id": "example_policy", "config": {}}]
-```
-
-Runtime Plugin 围绕一次 workflow run 执行 hook；Plugin 是 `trusted` 边界，但仍遵守 Core 不可降级规则、契约和拓扑。
-
-## JavaScript Plugin
-
-Descriptor 指向同步工厂 `createPlugin(context)`：
+## 选择与配置
 
 ```jsonc
 {
-  "kind": "plugin",
-  "id": "example.runtime_audit",
-  "type": "runtime",
-  "targets": ["browser", "node"],
-  "priority": 30,
-  "implementations": [{
-    "language": "typescript",
-    "targets": ["browser", "node"],
-    "completion": "immediate",
-    "source": {"kind": "file", "ref": "plugins/runtime_audit.ts", "export": "createPlugin"}
-  }],
-  "dependencies": [],
-  "external_packages": [],
-  "config": {"schema": {"type": "object"}, "defaults": {}}
+  "plugins": [{
+    "id": "example.model",
+    "root": "python-project",
+    "source": {"kind": "file", "ref": "plugins/model.py", "export": "plugin"},
+    "config": {"mode": "review"}
+  }]
 }
 ```
+
+`id` 可选，用来核对插件导出身份。`root` 可选，取已登记的 workspace root ID。文件相对该 root；`module/package` 显式定位 Target 已安装的模块。插件导出固定资源列表、契约和规则组合；`config` 按插件 schema/defaults 合并，提供给图级和资源 Rule 的只读 `context.facts["plugins"]` 及生命周期工厂；Node 局部 Rule 使用自身声明、Rule 参数和当前调用资料。Node 调用 `params` 和 Ruleset 参数分别配置。
+
+不同 workflow 拥有独立的资源集合、插件配置和生命周期实例。`enabled: false` 跳过加载；`status: "planned"` 保存规划记录。Nodeset 的结构由导入文件提供，所需插件统一在顶层 workflow 选择。
+
+Python 的只读 JSON 配置转换由独立模块 `vibeflow.core.descriptors.json_values` 提供，也可从 `vibeflow.core.descriptors` 导入：
+
+```python
+from vibeflow.core.descriptors.json_values import freeze_json, thaw_json
+
+settings = {"labels": {"phase": "prepare"}, "stages": [{"name": "train"}]}
+readonly_settings = freeze_json(settings)
+editable_settings = thaw_json(readonly_settings)
+editable_settings["labels"]["phase"] = "evaluate"
+assert readonly_settings["labels"]["phase"] == "prepare"
+```
+
+`freeze_json(value, field_name="value")` 递归复制合法 JSON 数据，将对象变成只读映射、数组变成 tuple；无效值抛出 `DescriptorModelError` 并标注字段路径。`freeze_mapping(...)` 用于要求顶层为对象的配置，`None` 表示空对象。`thaw_json(value)` 递归生成普通 dict/list 副本，用于编辑或 `json.dumps`；它同时支持普通 list 内的只读对象。两个转换都保留嵌套结构和值，不改变输入对象，修改导出副本不影响原只读配置。插件的嵌套默认值和 workflow 覆盖值可直接使用，运行前 JSON 记录也保持其结构。
+
+## Plugin 如何贡献和使用规则
+
+把 Python 的 `@rule` 函数与 `ruleset(...)` 对象，或 JS/TS 的 `defineRule(...)` 与 `defineRuleset(...)` 对象，全部放进插件 `resources`。然后在顶层 Workflow 的 `plugins` 中选择这个固定导出。
+
+规则有两种默认声明、三种动态选择：
+
+- Node 类型的 `rulesets` 声明局部默认；Ruleset 的 `workflow_default` 声明 Workflow 默认。
+- Workflow、Nodeset 定义、Node 调用 Config 的 `rulesets` 可以显式选择已贡献的 Rule/Ruleset。
+- 动态列表替代对应默认或继承列表，局部规则与所属图级规则共同生效。
+
+Plugin 自己的 `rulesets` 检查其生命周期实现，`declaration_rulesets` 检查插件包声明；这两个字段不会给 Workflow 或全部 Node 附加规则。要提供 Workflow 默认，应在贡献的 **Ruleset** 上填写 `workflow_default`。
+
+完整 Python/TypeScript 定义、配置位置和替代示例见 [Rule、Ruleset 与 Node 声明](rules-and-nodes.md)。
+
+## 加载与检查
+
+VibeFlow 按以下顺序装配当前 workflow：
+
+1. 读取插件选择，加载受信入口及其直接导入，取得固定定义。
+2. 校验资源、配置和冲突，确定本次可用资源。
+3. 解析工作流引用和有效 Ruleset，再执行对应阶段的检查。
+4. 绑定延迟实现，进入原生构建或运行；生命周期工厂在各自阶段创建实例。
+
+加载或声明失败时，报告该根因并停止后续装配。已初始化源码仍接受所选规则审查，诊断描述已经发生的行为；它不会撤销初始化。尚未加载的延迟实现及闭包在所选 import 检查失败后保持未加载。规则与插件是受信扩展代码；只读上下文保证公共分析资料的使用约定，执行进程仍具有普通代码的文件系统能力。
+
+资源查询与 `review-rules` 取得声明并展示选择，框架不调用检查函数、业务执行入口或生命周期工厂。
+
+## 生命周期
+
+一个插件可以同时贡献资源并提供 compiler/runtime 工厂。`declaration_rulesets` 检查插件声明源码，`rulesets` 检查生命周期实现；两者分别明确选择。常用选择是 `vibeflow.plugin_declaration` 与 `vibeflow.plugin`。
+
+```python
+from vibeflow.targets.python.sdk import Plugin
+
+class Audit:
+    def before_run(self, payload):
+        pass
+    def dispose(self):
+        pass
+
+def create_runtime(context):
+    return Audit()  # context["config"] 为本次 workflow 的只读参数
+
+plugin = Plugin(id="example.audit", resources=[], runtime=create_runtime,
+                rulesets=["vibeflow.plugin"],
+                declaration_rulesets=["vibeflow.plugin_declaration"])
+```
+
+Python 实例使用 snake_case hooks，如 `before_run(inputs)`、`after_run(result, trace)`、`before_compile(graph)` 和 `after_compile(graph, compiled)`，通过 `dispose()` 释放资源。JS/TS 采用 Plugin ABI v3，使用 camelCase hooks：
 
 ```ts
-export function createPlugin(context: Readonly<{
-  abiVersion: "vibeflow.plugin.v1";
-  pluginId: string;
-  pluginType: "policy" | "compiler" | "runtime";
-  target: "browser" | "node";
-  workflowId: string;
-  config: Readonly<Record<string, unknown>>;
-  signal: AbortSignal;
-}>) {
-  return {
-    beforeRun() {},
-    afterRun() {},
-    dispose() {},
-  };
-}
+import {definePlugin} from "@vibeflow/plugin";
+export const plugin = definePlugin({
+  id: "example.audit", resources: [], priority: 30,
+  rulesets: ["vibeflow.plugin"], declaration_rulesets: ["vibeflow.plugin_declaration"],
+  runtime(context) {
+    return {beforeRun() {}, afterRun() {}, dispose() {}};
+  },
+});
 ```
 
-每次 workflow 调用创建独立 Runtime Plugin 实例并在结束时释放。长期宿主生命周期使用 Host Extension。
+JS 工厂同步返回实例，runtime hooks 可以按原协议异步完成。每次 workflow 调用创建并释放独立实例；长期宿主职责由原生 HostExtension 承担。compiler 的 beforeCompile/afterCompile 保留原来的编译变换职责。
 
-## Capability
+Plugin 可以通过 `implementation_files` 登记支撑源码，通过 `base_libs` 引用独立库，并设置默认 `presentation`。独立生命周期工厂可以各自声明这些字段。具体代码形式见[插件声明与生命周期](multifile-resources.md#插件声明与生命周期)。
 
-Capability 定义逐调用注入的宿主操作：
+## Capability 与 Host
 
-```jsonc
-{
-  "kind": "capability",
-  "id": "example.clock",
-  "targets": ["browser", "node"],
-  "display_name": "Clock",
-  "description": "Reads the host clock.",
-  "operations": {
-    "now": {
-      "input_type": "clock.now.request",
-      "output_type": "clock.now.result",
-      "completion": "suspend"
-    }
-  }
-}
+```ts
+import {defineCapability} from "@vibeflow/plugin";
+export const clock = defineCapability({
+  id: "example.clock", targets: ["browser", "node"],
+  operations: {now: {input_type: "clock.now.request", output_type: "clock.now.result", completion: "suspend"}},
+});
 ```
 
-输入输出类型需要 Data Schema。Node descriptor 同时声明 Capability ID 和 operation；宿主通过 workflow 调用 options 注入实现，或由启用的 Host Extension 提供。
+把此资源放入插件，并贡献其输入输出 DataSchema。Node 显式声明使用的 Capability，宿主通过 options 注入实现，或由启用的 JS HostExtension 提供。`defineHostExtension` 使用 `createHost` 回调或显式延迟源码；固定声明不改变原生 Host 协议。
 
-## Planned 资源
+Host 在 `host_extensions` 中选择，通常明确使用 `vibeflow.host_extension` Ruleset。入口及支撑文件共同实现一个 Host；每次创建时持有独立会话状态。`implementation_files` 登记内部文件，`base_libs` 引用共享库，`dependencies` 表达其他 Host 实例依赖。多文件示例、逐文件检查和架构资源区见[一个 Host，多个实现文件](multifile-resources.md#一个-host多个实现文件)。
 
-workflow 可把 Plugin 或 Host Extension 标为 `planned`，使其进入 Architecture 和审核图。planned 资源不绑定源码、不执行 hook、不提供 Capability，也不进入 bundle。
-
-验证资源：
+选择统一写在 workflow.host_extensions；旧项目级 Host 字段会返回迁移错误。
 
 ```bash
-python run.py validate --config <root>/configs/main.jsonc
-python run.py quality --path <root>
-python run.py build --config javascript_project/configs/main.jsonc --target node --profile esm-module --out-dir javascript_project/build/node
+python run.py inspect-resources --config <root>/configs/main.jsonc --json
+python run.py review-rules --config <root>/configs/main.jsonc --json
 ```
+
+升级已有项目时，按[一次迁移说明](rule-system-migration.md)把旧登记改为代码插件与显式选择。

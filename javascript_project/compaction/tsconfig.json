@@ -6,7 +6,17 @@
     "strict": true,
     "noEmit": true,
     "skipLibCheck": true,
-    "allowImportingTsExtensions": true
+    "allowImportingTsExtensions": true,
+    "paths": {
+      "@vibeflow/plugin": [
+        "../../kernel/javascript/sdk.d.ts"
+      ]
+    }
   },
-  "include": ["base_lib/**/*.ts", "nodes/**/*.ts", "tests/**/*.ts"]
+  "include": [
+    "base_lib/**/*.ts",
+    "nodes/**/*.ts",
+    "tests/**/*.ts",
+    "plugins/**/*.ts"
+  ]
 }

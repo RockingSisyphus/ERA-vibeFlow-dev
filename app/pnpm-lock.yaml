@@ -408,7 +408,7 @@ packages:
     version: 0.1.1
 
   '@era/vibeflow-expression@file:vendor/era-vibeflow-expression-0.3.0.tgz':
-    resolution: {integrity: sha512-bOhokQl//4H0I1cTNY1WcFHJF0RsMQTykO/2QHUJICLN2y57R/FHaqd0gY2DhRx3sGyHNrQny2U7p0IVYExuWw==, tarball: file:vendor/era-vibeflow-expression-0.3.0.tgz}
+    resolution: {integrity: sha512-t7vfaQFaffllluwWGk+IyHq+1Q2fXZsT82fYkqhv0+pCf04pba5Z04Uq4jLDiX0yHcUoaVplAnuSpfMPHkyarg==, tarball: file:vendor/era-vibeflow-expression-0.3.0.tgz}
     version: 0.3.0
     engines: {node: '>=24.18.0'}
 

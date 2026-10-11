@@ -91,6 +91,12 @@
         "type_used": "era.workbench.publish_preparation",
         "display_name": "接回现有变量提交准入或失败分支",
         "description": "本次把用户编辑草稿转换为变量或函数操作。把草稿准备成功后的操作、上下文和提交方式交给 调用接口（API） 许可判断；失败时交出具体问题及原请求资料。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.service.terminal",
+        "display_name": "结束工作台提交准备",
+        "description": "在已准备提交候选或拒绝结果发布后结束本段流程。只标记出口，不修改变量、消息或保存内容。"
       }
     ],
     "edges": [
@@ -141,6 +147,10 @@
       [
         "reject_draft",
         "publish_preparation"
+      ],
+      [
+        "publish_preparation",
+        "end"
       ]
     ],
     "outputs": [

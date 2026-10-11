@@ -1,5 +1,9 @@
 {
-  "nodeset_imports": [{ "path": "nodesets/execute_layer.jsonc" }],
+  "nodeset_imports": [
+    {
+      "path": "nodesets/execute_layer.jsonc"
+    }
+  ],
   "pipeline": {
     "entry_mode": "sync",
     "inputs": [
@@ -32,8 +36,14 @@
       }
     ],
     "edges": [
-      ["start", "execute_layer"],
-      ["execute_layer", "end"]
+      [
+        "start",
+        "execute_layer"
+      ],
+      [
+        "execute_layer",
+        "end"
+      ]
     ],
     "outputs": [
       {
@@ -43,5 +53,21 @@
         "as": "expressionResponse"
       }
     ]
-  }
+  },
+  "plugins": [
+    {
+      "source": {
+        "kind": "file",
+        "ref": "plugins/schemas.ts",
+        "export": "plugin"
+      }
+    },
+    {
+      "source": {
+        "kind": "file",
+        "ref": "plugins/era.ts",
+        "export": "plugin"
+      }
+    }
+  ]
 }

@@ -55,5 +55,21 @@
         "as": "compactionResponse"
       }
     ]
-  }
+  },
+  "plugins": [
+    {
+      "source": {
+        "kind": "file",
+        "ref": "plugins/schemas.ts",
+        "export": "plugin"
+      }
+    },
+    {
+      "source": {
+        "kind": "file",
+        "ref": "plugins/era.ts",
+        "export": "plugin"
+      }
+    }
+  ]
 }

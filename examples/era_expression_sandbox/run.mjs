@@ -14,7 +14,7 @@ function command(file, args, options = {}) {
   try {
     execFileSync(file, args, {
       cwd: root,
-      stdio: "pipe",
+      stdio: ["ignore", "ignore", "pipe"],
       encoding: "utf8",
       ...options
     });

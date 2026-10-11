@@ -30,7 +30,7 @@ try {
         "--out-dir",
         generated,
       ],
-      { cwd: repository, stdio: "pipe" },
+      { cwd: repository, stdio: ["ignore", "ignore", "inherit"] },
     );
     execFileSync(
       path.join(root, "node_modules/.bin/esbuild"),

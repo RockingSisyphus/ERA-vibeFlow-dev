@@ -10,7 +10,7 @@ const root = path.resolve(here, "../..");
 const compactionRoot = path.join(root, "javascript_project/compaction");
 
 function command(file, args, options = {}) {
-  try { execFileSync(file, args, { cwd: root, stdio: "pipe", encoding: "utf8", ...options }); }
+  try { execFileSync(file, args, { cwd: root, stdio: ["ignore", "ignore", "pipe"], encoding: "utf8", ...options }); }
   catch (error) { throw new Error(`${file} ${args.join(" ")} failed.\n${[error.stdout, error.stderr].filter(Boolean).join("\n")}`); }
 }
 

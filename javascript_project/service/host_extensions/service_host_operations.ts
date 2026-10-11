@@ -326,7 +326,7 @@ export interface EraServiceHostExtensionInstance {
     snapshot(): EraHostDiagnosticsSnapshot;
   };
   start(): void;
-  stop(): Promise<void>;
+  stop(reason?: unknown): Promise<void>;
 }
 
 /**
@@ -342,6 +342,6 @@ export function createHostExtension(
       snapshot: () => runtime.diagnosticsSnapshot(),
     }),
     start: () => runtime.start(),
-    stop: () => runtime.stop(),
+    stop: (reason?: unknown) => runtime.stop(reason),
   });
 }

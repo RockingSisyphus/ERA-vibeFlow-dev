@@ -281,7 +281,7 @@ function assertBatch(frame, expectedSequences) {
 
 const stagedWorkflow = await importGeneratedWorkflow();
 const workflow = stagedWorkflow.workflow;
-assert(workflow.VIBEFLOW_WORKFLOW_ABI === 'vibeflow.workflow.v4', 'Workflow ABI 不是 v4。');
+assert(workflow.VIBEFLOW_WORKFLOW_ABI === 'vibeflow.workflow.v5', 'Workflow ABI 不是 v5。');
 
 const controller = new AbortController();
 const port = new FakePort();

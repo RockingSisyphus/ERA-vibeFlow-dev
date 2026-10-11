@@ -181,7 +181,7 @@
       {
         "from": "carry_execution_state",
         "to": "prepare_startup_continuation",
-        "schedule": false
+        "schedule": true
       },
       {
         "from": "route_completion",
@@ -204,7 +204,7 @@
       {
         "from": "carry_preparation_context",
         "to": "prepare_resource_result",
-        "schedule": false
+        "schedule": true
       }
     ],
     "outputs": [
