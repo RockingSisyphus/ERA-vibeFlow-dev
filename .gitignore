@@ -19,3 +19,22 @@ reports/kernel-upgrade/**/migrate-*.mjs
 # Local caches and editor noise
 .cache/
 .DS_Store
+
+# Regenerable root-local builds and probe output
+javascript_project/*/build/
+javascript_project/*/runs/
+app/artifact/
+reports/native-workflows/
+
+# Local review output and machine-specific helpers
+/reports/*
+!/reports/README.md
+/restart-dsh-web.sh
+/.maintenance-*/
+/.t-*/
+
+# Separately checked-out upstream reference repositories
+/references/EraHelper-all-in-one-solution-for-ERA-scripts/
+/references/JS-Slash-Runner/
+/references/MagVarUpdate/
+/references/SillyTavern/

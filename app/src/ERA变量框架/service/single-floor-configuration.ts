@@ -1,8 +1,7 @@
 import { shallowRef } from 'vue';
 import { currentTavernContext } from './tavern-browser-host';
-import { writeCharacterExtension } from './character-extension-writer';
 import { requestEraService, requireAccepted } from './client';
-import { ERA_UI_EVENT, type EraCapabilityContext } from './types';
+import { ERA_UI_EVENT } from './types';
 
 export const SINGLE_FLOOR_KEY = 'era_single_floor';
 export const singleFloorSelection = shallowRef<{ characterId: string; chatId: string; enabled: boolean } | null>(null);
@@ -29,14 +28,4 @@ export async function saveSingleFloor(characterId: string, enabled: boolean): Pr
   if (result.status !== 'completed')
     throw new Error(`单层模式保存失败：${JSON.stringify(result.error ?? result.status)}`);
   refreshSingleFloorSelection();
-}
-export async function patchSingleFloor(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext) {
-  await writeCharacterExtension(
-    String(input.characterId),
-    SINGLE_FLOOR_KEY,
-    { version: 1, enabled: input.enabled },
-    context,
-  );
-  refreshSingleFloorSelection();
-  return { status: 'updated' };
 }

@@ -1,0 +1,16 @@
+{
+  "name": "@era/vibeflow-tavern",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.18.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.1",
+    "typescript": "7.0.2"
+  },
+  "dependencies": {
+    "@era/vibeflow-contracts": "file:../../packages/era-contracts/era-vibeflow-contracts-1.10.0.tgz"
+  }
+}

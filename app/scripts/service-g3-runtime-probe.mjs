@@ -1,27 +1,33 @@
 /// <reference types="node" />
 
 import { rmSync } from 'node:fs';
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { nativeG3 } from '../tests/native-tavern/g3-fixture.mjs';
+import { mkdir, mkdtemp, readFile, rm, writeFile, symlink } from 'node:fs/promises';
 import { performance } from 'node:perf_hooks';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const generatedModuleUrl = pathToFileURL(resolve(
-  process.env.ERA_SERVICE_BUILD_DIR ?? resolve(import.meta.dirname, '../../generated/era-service'),
-  'workflow.js',
-));
+const generatedModuleUrl = pathToFileURL(
+  resolve(
+    process.env.ERA_SERVICE_BUILD_DIR ?? resolve(import.meta.dirname, '../../generated/era-service'),
+    'workflow.js',
+  ),
+);
 const reportArgument = process.argv.indexOf('--report');
-const reportUrl = reportArgument >= 0
-  ? pathToFileURL(resolve(process.argv[reportArgument + 1]))
-  : new URL('../../reports/service-g3-runtime.json', import.meta.url);
+const reportUrl =
+  reportArgument >= 0
+    ? pathToFileURL(resolve(process.argv[reportArgument + 1]))
+    : new URL('../../reports/service-g3-runtime.json', import.meta.url);
 
 /**
  * 生成的 Service workflow 位于仓库根目录，而它的 browser runtime 依赖属于
  * app 包。为让 Node 探针按与 webpack 相同的 package root 解析这些依赖，临时
- * 复制完全相同的生成物到 app 下再导入；绝不改写或重新打包 workflow 内容。
+ * 在本次临时目录链接 app 依赖并导入完全相同的生成物；绝不改写或重新打包 workflow 内容。
  */
 async function importGeneratedWorkflow() {
-  const directory = await mkdtemp(resolve(import.meta.dirname, '.era-generated-workflow-'));
+  const directory = await mkdtemp(resolve(tmpdir(), 'era-generated-workflow-'));
+  await symlink(resolve(import.meta.dirname, '../node_modules'), resolve(directory, 'node_modules'), 'dir');
   process.once('exit', () => rmSync(directory, { recursive: true, force: true }));
   const stagedPath = resolve(directory, 'workflow.mjs');
   await writeFile(stagedPath, await readFile(generatedModuleUrl), 'utf8');
@@ -120,10 +126,14 @@ function createAdapter() {
         upsert: async () => ({ status: 'committed' }),
       },
       character: {
-        patch_external_statusbar: async () => { throw new Error('G3 帧探针不应执行外置配置写入'); },
-        patch_single_floor: async () => { throw new Error('G3 帧探针不应执行单层配置写入'); },
+        patch_external_statusbar: async () => {
+          throw new Error('G3 帧探针不应执行外置配置写入');
+        },
+        patch_single_floor: async () => {
+          throw new Error('G3 帧探针不应执行单层配置写入');
+        },
         read_greeting_refresh_context: () => ({ group: false, tainted: false, length: 2, first: null }),
-        apply_greeting_refresh: async () => ({ status: "refreshed", reason: "fixture" }),
+        apply_greeting_refresh: async () => ({ status: 'refreshed', reason: 'fixture' }),
         read_main_greeting: async input => ({
           ...input,
           status: 'ready',
@@ -234,45 +244,40 @@ function workbenchProbePayload(sequence, fake) {
   if (sequence === 9) return { scope: 'always', operations: [{ edit: { __workbenchProbe: 3 } }], windowToken: 1 };
   const record = fake.snapshot().workbenchRecord;
   const intent = {
-    domain: 'variable', mode: 'add', path: ['__workbenchProbe'], initial: '', value: 1,
-    identityKey: JSON.stringify(record.owner), sidecarId: record.sidecarId, revision: record.revision,
-    protections: [], choice: '',
+    domain: 'variable',
+    mode: 'add',
+    path: ['__workbenchProbe'],
+    initial: '',
+    value: 1,
+    identityKey: JSON.stringify(record.owner),
+    sidecarId: record.sidecarId,
+    revision: record.revision,
+    protections: [],
+    choice: '',
   };
-  if (sequence === 6) Object.assign(intent, { domain: 'function', name: 'workbenchProbe', value: { params: ['x'], expr: 'x+1' } });
-  if (sequence === 7) Object.assign(intent, { domain: 'ordered', mode: 'batch', path: [], initial: record.state.statData, operations: [{ edit: { __workbenchProbe: 2 } }] });
+  if (sequence === 6)
+    Object.assign(intent, { domain: 'function', name: 'workbenchProbe', value: { params: ['x'], expr: 'x+1' } });
+  if (sequence === 7)
+    Object.assign(intent, {
+      domain: 'ordered',
+      mode: 'batch',
+      path: [],
+      initial: record.state.statData,
+      operations: [{ edit: { __workbenchProbe: 2 } }],
+    });
   if (sequence === 8) Object.assign(intent, { mode: 'edit', initial: -1, value: 999 });
   return { command: 'workbench-commit', windowToken: 1, intent };
 }
 
-async function probeGeneratedHost(workflow) {
-  const fake = createAdapter();
-  globalThis.__ERA_VIBEFLOW_SERVICE_ADAPTER__ = fake.adapter;
-  const beforeCreate = fake.snapshot();
-  const host = workflow.createWorkflowHost();
-  const afterCreate = fake.snapshot();
-  await host.start();
-  const afterStart = fake.snapshot();
+async function probeNativeWorkflow(workflow) {
   const traceEvents = [];
-  const execution = host.runWorkflowAsync({}, { trace: 'full', onTrace: event => traceEvents.push(event) });
+  const fake = await nativeG3(workflow, traceEvents);
+  const execution = fake.owner.work;
   const workflowStopped = execution.then(
     () => ({ kind: 'stopped', error: null }),
     error => ({ kind: 'stopped', error }),
   );
-  // staged_startup 的唯一订阅由 workflow allow 分支完成，而不是 host.start。
-  for (let index = 0; index < 20 && fake.snapshot().registrations === 0; index += 1) {
-    await new Promise(resolve => setTimeout(resolve, 0));
-  }
   const afterActivation = fake.snapshot();
-  if (afterActivation.registrations === 0) {
-    const stopped = await Promise.race([
-      workflowStopped,
-      new Promise(resolve => setTimeout(() => resolve({ kind: 'pending' }), 10)),
-    ]);
-    throw new Error(
-      `workflow allow 未登记 Tavern 监听器：${JSON.stringify(stopped)}，trace=${JSON.stringify(traceEvents.slice(-30))}`,
-    );
-  }
-
   const startupAdmission = fake.emit({
     type: 'app_ready',
     source: 'tavern',
@@ -284,10 +289,15 @@ async function probeGeneratedHost(workflow) {
     workflowStopped,
   ]);
   if (startupObservation.kind === 'stopped') {
-    throw new Error(`启动初始化导致 workflow 停止：${String(startupObservation.error)}；trace=${JSON.stringify(traceEvents.slice(-30))}`);
+    throw new Error(
+      `启动初始化导致 workflow 停止：${String(startupObservation.error)}；trace=${JSON.stringify(traceEvents.slice(-30))}`,
+    );
   }
   const startupOutcome = startupObservation.outcome;
-  assert(startupOutcome.status === 'completed', `启动初始化未结算：${JSON.stringify(startupOutcome)}；trace=${JSON.stringify(traceEvents.slice(-30))}`);
+  assert(
+    startupOutcome.status === 'completed',
+    `启动初始化未结算：${JSON.stringify(startupOutcome)}；trace=${JSON.stringify(traceEvents.slice(-30))}`,
+  );
   const resourcesAdmission = fake.emit({
     type: 'era.ui.initialize_resources',
     source: 'ui',
@@ -295,15 +305,20 @@ async function probeGeneratedHost(workflow) {
     occurredAt: 1_000,
   });
   const resourcesOutcome = await resourcesAdmission.done;
-  assert(resourcesOutcome?.status === 'completed', `资源初始化未结算：${JSON.stringify({ admission: resourcesAdmission, outcome: resourcesOutcome, trace: traceEvents.slice(-20) })}`);
+  assert(
+    resourcesOutcome?.status === 'completed',
+    `资源初始化未结算：${JSON.stringify({ admission: resourcesAdmission, outcome: resourcesOutcome, trace: traceEvents.slice(-20) })}`,
+  );
 
   const outcomes = [];
-  const readCurrent = fake.adapter.sidecar.read_current;
   for (let sequence = 1; sequence <= 11; sequence += 1) {
-    fake.adapter.sidecar.read_current = sequence === 10
-      ? async () => { throw new Error('Sidecar 读取故障探针'); }
-      : readCurrent;
-    const type = sequence === 1 ? 'message_received' : sequence === 3 || (sequence >= 5 && sequence <= 9) ? 'era.facade.commit' : 'era.facade.sync';
+    fake.setReadFailure(sequence === 10);
+    const type =
+      sequence === 1
+        ? 'message_received'
+        : sequence === 3 || (sequence >= 5 && sequence <= 9)
+          ? 'era.facade.commit'
+          : 'era.facade.sync';
     const admission = fake.emit({
       type,
       source: sequence === 1 ? 'tavern' : 'era-api',
@@ -311,10 +326,16 @@ async function probeGeneratedHost(workflow) {
         sequence >= 5 && sequence <= 9
           ? [workbenchProbePayload(sequence, fake)]
           : sequence === 3
-          ? [{ scope: 'always', operations: [{ insert: { __eraRuntimeProbe: { value: sequence } } }], windowToken: 1 }]
-          : sequence === 1
-            ? []
-            : [{ mode: 'full' }],
+            ? [
+                {
+                  scope: 'always',
+                  operations: [{ insert: { __eraRuntimeProbe: { value: sequence } } }],
+                  windowToken: 1,
+                },
+              ]
+            : sequence === 1
+              ? []
+              : [{ mode: 'full' }],
       occurredAt: 1_000 + sequence,
     });
     assert(admission.accepted === true, `第 ${sequence} 个事件未被接纳。`);
@@ -331,7 +352,8 @@ async function probeGeneratedHost(workflow) {
   }
 
   const stopStartedAt = performance.now();
-  await host.stop();
+  fake.owner.page.dispatchEvent(new Event('pagehide'));
+  await execution;
   const stopMs = performance.now() - stopStartedAt;
   let executionCode = null;
   try {
@@ -340,27 +362,35 @@ async function probeGeneratedHost(workflow) {
     executionCode = error && typeof error === 'object' && 'code' in error ? error.code : null;
   }
   const afterStop = fake.snapshot();
-  delete globalThis.__ERA_VIBEFLOW_SERVICE_ADAPTER__;
 
-  assert(beforeCreate.registrations === 0, '导入前不应注册监听器。');
-  assert(afterCreate.registrations === 0, 'createWorkflowHost() 不应注册监听器。');
-  assert(afterStart.registrations === 0, 'staged host.start() 不得提前注册 Tavern 监听器。');
+  assert(workflow.createWorkflowHost === undefined, '主Service不得导出旧Host工厂。');
+  assert(
+    afterActivation.listenerCount > 0 && afterStop.listenerCount === 0,
+    '原生入口必须在激活后登记监听，并在卸载时全部释放。',
+  );
   assert(afterActivation.registrations === 1, 'workflow allow 分支必须只注册一套监听器。');
-  assert(afterStop.removals === 1, 'host.stop() 必须只注销一次监听器。');
+  assert(afterStop.removals === 1, '卸载必须只释放一次实例资源。');
   assert(
     outcomes.every((outcome, index) => outcome.status === (index === 7 || index === 9 ? 'failed' : 'completed')),
     `真实同步与 Facade 事件必须完整结算，Sidecar 失败后下一任务仍须完成：${JSON.stringify(outcomes)}`,
   );
   assert(afterStop.message.includes('<era_tx s="a">'), 'ERA.commit 必须写入独立 always 事务。');
   assert(!afterStop.message.includes('"__workbenchProbe":999'), '陈旧草稿失败后不能把拟写入值追加到消息。');
-  assert(afterStop.workbenchRecord.state.statData.__workbenchProbe === 3, '工作台三个出口与失败后公共提交必须产生真实最终状态。');
+  assert(
+    afterStop.workbenchRecord.state.statData.__workbenchProbe === 3,
+    '工作台三个出口与失败后公共提交必须产生真实最终状态。',
+  );
   assert(afterStop.workbenchRecord.state.statFunc.workbenchProbe.expr === 'x+1', '函数草稿必须进入最终 Sidecar。');
-  for (const node of ['plan_variables', 'plan_functions', 'normalize_ordered', 'reject_draft', 'publish_preparation']) assert(traceEvents.some(event => JSON.stringify(event).includes(node)), `真实 AOT 未执行工作台节点 ${node}`);
+  for (const node of ['plan_variables', 'plan_functions', 'normalize_ordered', 'reject_draft', 'publish_preparation'])
+    assert(
+      traceEvents.some(event => JSON.stringify(event).includes(node)),
+      `真实 AOT 未执行工作台节点 ${node}`,
+    );
   assert(afterStop.sidecarRecords >= 1, '即时 commit 必须提交 Sidecar。');
-  assert(executionCode === 'VF_ABORTED', `永久 workflow 停止码异常：${String(executionCode)}`);
+  assert(executionCode === null, `原生入口卸载收尾应正常返回：${String(executionCode)}`);
   assert(stopMs <= 1_000, `Host 停止耗时 ${stopMs}ms，超过 1 秒。`);
 
-  return { beforeCreate, afterCreate, afterStart, afterActivation, afterStop, startupOutcome, resourcesOutcome, outcomes, executionCode, stopMs };
+  return { afterActivation, afterStop, startupOutcome, resourcesOutcome, outcomes, executionCode, stopMs };
 }
 
 async function probeWorkflowFrames(workflow) {
@@ -431,7 +461,10 @@ async function probeWorkflowFrames(workflow) {
           'era.tavern.startup_gate': { activate: () => ({ activated: true }), dormant: () => ({ activated: false }) },
           'era.tavern.sidecar': directAdapter.sidecar,
           'era.tavern.functions': directAdapter.functions,
-          'era.lifecycle.admission': { schedule: () => ({ status: 'scheduled' }), cancel: () => ({ status: 'cancelled' }) },
+          'era.lifecycle.admission': {
+            schedule: () => ({ status: 'scheduled' }),
+            cancel: () => ({ status: 'cancelled' }),
+          },
         },
       },
     );
@@ -465,7 +498,7 @@ async function probeWorkflowFrames(workflow) {
 
 const stagedWorkflow = await importGeneratedWorkflow();
 const workflow = stagedWorkflow.workflow;
-assert(workflow.VIBEFLOW_WORKFLOW_ABI === 'vibeflow.workflow.v5', 'Workflow ABI 不是 v5。');
+assert(workflow.VIBEFLOW_WORKFLOW_ABI === 'vibeflow.workflow.v6', 'Workflow ABI 不是 v6。');
 assert(workflow.VIBEFLOW_PLUGIN_ABI === 'vibeflow.plugin.v3', 'Plugin ABI 不是 v3。');
 
 const report = {
@@ -473,7 +506,7 @@ const report = {
   generatedModule: generatedModuleUrl.pathname,
   abi: workflow.VIBEFLOW_WORKFLOW_ABI,
   pluginAbi: workflow.VIBEFLOW_PLUGIN_ABI,
-  host: await probeGeneratedHost(workflow),
+  native: await probeNativeWorkflow(workflow),
   workflow: await probeWorkflowFrames(workflow),
 };
 

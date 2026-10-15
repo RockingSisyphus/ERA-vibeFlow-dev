@@ -2,8 +2,10 @@
 import lodash from 'lodash';
 import { afterEach, expect, it, vi } from 'vitest';
 
-vi.mock('../../src/ERA变量框架/service/agent-tavern-host', () => ({ readCurrentAgentSession: () => null }));
-vi.mock('../../src/ERA变量框架/service/client', () => ({ requestEraService: vi.fn() }));
+vi.mock('../../src/ERA变量框架/service/client', () => ({
+  requestEraService: vi.fn(),
+  readCurrentAgentSession: () => null,
+}));
 
 afterEach(() => {
   document.body.replaceChildren();

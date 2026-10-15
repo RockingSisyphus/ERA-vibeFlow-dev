@@ -1,0 +1,120 @@
+{
+  "type_key": "era.tavern.flow.character_apply_greeting_refresh_finish",
+  "display_name": "执行开场白刷新：角色卡与显示配置：等待与确认",
+  "description": "续用同步段已发起资源；保留原等待后的具体处理、结果核对与错误身份。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.call.frame",
+      "cardinality": "exactly_one",
+      "display_name": "本次调用、实例资源与上一节点的事实"
+    }
+  ],
+  "provides": [
+    {
+      "key": "era_tavern_flow_character_apply_greeting_refresh_finish_frame",
+      "type": "era.tavern.call.frame",
+      "display_name": "处理后的资源与事实"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.call.frame",
+        "display_name": "同实例调用与资源",
+        "required": true
+      }
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.call.frame",
+        "cardinality": "exactly_one",
+        "as": "frame",
+        "display_name": "本段明确结果"
+      }
+    ],
+    "max_steps": 12,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.tavern.initialize.start",
+        "display_name": "开始当前原生流程",
+        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+      },
+      {
+        "id": "execute",
+        "type_used": "era.tavern.character_apply_greeting_refresh.execute",
+        "display_name": "等待本次执行开场白刷新：角色卡与显示配置的资源终态",
+        "description": "等待同步原生段已捕获的本次资源；检查所属实例和取消，不重发原 API，不执行后续回读或发布。"
+      },
+      {
+        "id": "clear_display",
+        "type_used": "era.tavern.character_apply_greeting_refresh_finish.clear_display",
+        "display_name": "等待酒馆清空聊天显示",
+        "description": "接收事件完成后调用一次 clearChat 并等待。"
+      },
+      {
+        "id": "print_messages",
+        "type_used": "era.tavern.character_apply_greeting_refresh_finish.print_messages",
+        "display_name": "等待酒馆重绘当前消息",
+        "description": "clearChat 完成后调用一次 printMessages 并等待。"
+      },
+      {
+        "id": "emit_rendered",
+        "type_used": "era.tavern.character_apply_greeting_refresh_finish.emit_rendered",
+        "display_name": "等待首楼渲染通知",
+        "description": "重绘完成后发出 CHARACTER_MESSAGE_RENDERED，沿用首楼 ID 与 first_message 来源。"
+      },
+      {
+        "id": "save_chat",
+        "type_used": "era.tavern.character_apply_greeting_refresh_finish.save_chat",
+        "display_name": "等待首楼聊天保存",
+        "description": "渲染通知完成后调用一次 saveChat 并等待，再形成原 refreshed 确认。"
+      },
+      {
+        "id": "return_result",
+        "type_used": "era.tavern.character_apply_greeting_refresh.return_result",
+        "display_name": "交还执行开场白刷新结果",
+        "description": "返回原 era.tavern.character.greeting_refresh.result 结果；需要脱敏的连接资料只返回摘要。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.tavern.initialize.end",
+        "display_name": "结束当前原生流程",
+        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+      }
+    ],
+    "edges": [
+      [
+        "save_chat",
+        "return_result"
+      ],
+      [
+        "execute",
+        "clear_display"
+      ],
+      [
+        "clear_display",
+        "print_messages"
+      ],
+      [
+        "print_messages",
+        "emit_rendered"
+      ],
+      [
+        "emit_rendered",
+        "save_chat"
+      ],
+      [
+        "start",
+        "execute"
+      ],
+      [
+        "return_result",
+        "end"
+      ]
+    ]
+  }
+}

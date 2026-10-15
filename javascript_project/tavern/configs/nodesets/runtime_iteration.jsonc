@@ -1,0 +1,349 @@
+{
+  "type_key": "era.tavern.flow.runtime_iteration",
+  "display_name": "后台唤醒任务",
+  "description": "后台监督迭代只设三个高权限边界：统一启动、等待任一结果、停止并等待退出。收件/任务分类、启动资料准备、引用整理和故障判断均为普通Node与显式分支。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.call.frame",
+      "cardinality": "exactly_one",
+      "display_name": "操作名、输入及实例资源令牌"
+    }
+  ],
+  "provides": [
+    {
+      "key": "era_tavern_flow_runtime_iteration_frame",
+      "type": "era.tavern.call.frame",
+      "display_name": "所选操作的完成结果"
+    },
+    {
+      "key": "era_tavern_flow_runtime_iteration_runtime_done",
+      "type": "era.tavern.runtime.done",
+      "display_name": "是否结束后台循环"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.call.frame",
+        "display_name": "操作调用",
+        "required": true
+      }
+    ],
+    "max_steps": 32,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.tavern.initialize.start",
+        "display_name": "开始当前原生流程",
+        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+      },
+      {
+        "id": "choose_next",
+        "type_used": "era.tavern.runtime_tasks.choose_next",
+        "display_name": "判断是否已有收件任务",
+        "description": "按顺序只启动一次资源持有任务、主Service任务，再保持一个收件等待；关闭后排空已有任务，最后等待实际退出。"
+      },
+      {
+        "id": "prepare_inbox",
+        "type_used": "era.tavern.runtime_tasks.prepare_inbox",
+        "display_name": "准备资源持有或收件任务的启动资料",
+        "description": "转交普通Decision选定的lifecycle、service或inbox槽和同一实例，不拥有遥控接口。"
+      },
+      {
+        "id": "launch",
+        "type_used": "era.tavern.runtime_tasks.launch",
+        "display_name": "启动已选定的一个受管任务",
+        "description": "唯一启动边界；从显式task_targets启动已由普通Node准备的资源、主Service、收件或后台任务。",
+        "task_targets": {
+          "inbox": {
+            "type_used": "era.tavern.entry_runtime.wait",
+            "display_name": "等待新请求或停止",
+            "description": "已有WaitTask持有局部收件等待，取消在finally释放句柄。"
+          },
+          "notification": {
+            "type_used": "era.tavern.flow.notification",
+            "display_name": "已有通知处理流程",
+            "description": "保留通知等待与结果记录Nodeset，不在管理节点复制其业务。"
+          },
+          "author_tool": {
+            "type_used": "era.tavern.flow.author_tool",
+            "display_name": "已有作者工具流程",
+            "description": "保留工具调用、诊断与next唤醒，实际步骤在原Nodeset。"
+          },
+          "notification_finalize": {
+            "type_used": "era.tavern.flow.notification_finalize",
+            "display_name": "已有通知组收尾流程",
+            "description": "保留按原顺序报告失败、释放通知组的原生流程。"
+          },
+          "lifecycle": {
+            "id": "lifecycle",
+            "type_used": "era.tavern.owned.hold_resources",
+            "display_name": "持有实例资源直至实际清理完成",
+            "description": "长期挂起的普通资源Node提供IO创建入口并持有Promise和监听句柄。结束时先关闭入口、执行同一停止前缀，再等原始IO及其编译后续体完成；不持有任务遥控接口，不负责业务路由。"
+          },
+          "timer_wait": {
+            "id": "timer_wait",
+            "type_used": "era.tavern.flow.timer_wait",
+            "display_name": "单个计时资源的原生等待",
+            "description": "在受管任务的挂起Node内创建真实Timeout，到期或取消均先清理，之后才交给原timer_fired流程。"
+          },
+          "service": {
+            "type_used": "era.tavern.flow.script_service",
+            "display_name": "本次主Service任务",
+            "description": "普通挂起Node等待真实Service AOT及其清理，复用现有启动边界。"
+          }
+        }
+      },
+      {
+        "id": "wait_any",
+        "type_used": "era.tavern.runtime_tasks.wait_any",
+        "display_name": "等待收件或任一后台任务退出",
+        "description": "唯一结果等待点调用waitAny，交回成功、失败或取消结果；不选择后续业务分支，不启动或停止任务，无工作时由收件任务挂起。"
+      },
+      {
+        "id": "choose_result",
+        "type_used": "era.tavern.runtime_tasks.choose_result",
+        "display_name": "区分新收件、后台完成与故障",
+        "description": "分类真实任务终态：失败进入故障收尾，主Service结束进入关闭分支，收件交给原队列处理，其他任务回收本地引用。"
+      },
+      {
+        "id": "read_inbox",
+        "type_used": "era.tavern.runtime_tasks.read_inbox",
+        "display_name": "读取收件交回的原始请求",
+        "description": "收件任务只提供轻量就绪标记；本普通Node移除其引用，并从同一实例队列取出一个原请求，不把完整请求放入框架任务结果缓存。"
+      },
+      {
+        "id": "choose",
+        "type_used": "era.tavern.runtime_iteration.choose",
+        "display_name": "识别后台唤醒任务",
+        "description": "普通Decision按原backgroundTask类型选择通知、作者工具、通知收尾或停止；非停止路径只准备资料，统一经过唯一任务启动点。"
+      },
+      {
+        "id": "prepare_worker",
+        "type_used": "era.tavern.runtime_tasks.prepare_worker",
+        "display_name": "准备原Decision已分类的后台任务",
+        "description": "沿原任务Decision确定的notification、author_tool或notification_finalize槽准备输入，剔除父监督表；这里只准备数据，实际启动统一经过启动节点。"
+      },
+      {
+        "id": "collect",
+        "type_used": "era.tavern.runtime_tasks.collect",
+        "display_name": "移除已实际退出的后台任务引用",
+        "description": "只从本地引用表移除已消费的终态并丢弃本地输出副本；不调用context.tasks，不把这一步称为已释放框架结果缓存。"
+      },
+      {
+        "id": "mark_failure",
+        "type_used": "era.tavern.runtime_tasks.mark_failure",
+        "display_name": "保留故障并转入停止路径",
+        "description": "保存结构化失败或意外收件取消的原因，准备停止资料；先沿原停止流程关闭入口，随后才请求停止和等待退出。"
+      },
+      {
+        "id": "route_stop",
+        "type_used": "era.tavern.flow.stop_prefix",
+        "display_name": "先同步关闭与取消实例资源",
+        "description": "复用同一停止前缀：关闭入口、取消生成及等待、注销监听、取消计时和未决回执，再沿原Loop排空现有工作。"
+      },
+      {
+        "id": "stop_and_wait",
+        "type_used": "era.tavern.runtime_tasks.stop_and_wait",
+        "display_name": "请求停止并等剩余任务实际退出",
+        "description": "唯一收尾控制点先requestStop再await waitAllExited；两者之间没有业务分支，始终等待真实执行和异步finally结束，不设置超时伪装退出。"
+      },
+      {
+        "id": "choose_exit",
+        "type_used": "era.tavern.runtime_tasks.choose_exit",
+        "display_name": "区分正常停止和已清理的故障",
+        "description": "普通Decision读取此前保存的故障及收尾结果；正常停止返回循环终态，故障则进入报告节点，不调用任务控制接口。"
+      },
+      {
+        "id": "raise_failure",
+        "type_used": "era.tavern.runtime_tasks.raise_failure",
+        "display_name": "报告已经完成收尾的后台故障",
+        "description": "全部受管任务实际退出后抛出保存原因，让长期运行失败；不吞掉清理中新增错误，也不返回伪成功。"
+      },
+      {
+        "id": "begin_closing",
+        "type_used": "era.tavern.owned.begin_closing",
+        "display_name": "进入排空通知与工作任务的停止阶段",
+        "description": "同步停止前缀已取消回执、计时和公开等待；标记关闭阶段，继续用原Loop收集工作终态并完成已安排的通知收尾，最后才进入停止并等待退出边界。"
+      },
+      {
+        "id": "join_return",
+        "type_used": "era.tavern.runtime_iteration.join_return",
+        "display_name": "汇合当前实际激活分支的结果",
+        "description": "接收当前所选路径的结果集合，交还其中唯一实际结果；不选择未激活分支、不重新执行操作。运行实现必须拒绝实际多结果，不以集合契约放宽唯一结果语义。"
+      },
+      {
+        "id": "return",
+        "type_used": "era.tavern.runtime_iteration.return",
+        "display_name": "交还后台唤醒任务结果",
+        "description": "返回所选分支产生的唯一结果，不再执行其他操作；保留原有错误类别和同步或异步返回约定。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.tavern.initialize.end",
+        "display_name": "结束当前原生流程",
+        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+      }
+    ],
+    "edges": [
+      [
+        "start",
+        "choose_next"
+      ],
+      [
+        "prepare_inbox",
+        "launch"
+      ],
+      [
+        "launch",
+        "join_return"
+      ],
+      [
+        "wait_any",
+        "choose_result"
+      ],
+      {
+        "from": "choose_result",
+        "to": "read_inbox",
+        "when": "runtime_tasks_choose_result_route == 'inbox'"
+      },
+      {
+        "from": "choose_result",
+        "to": "collect",
+        "when": "runtime_tasks_choose_result_route == 'completed'"
+      },
+      {
+        "from": "choose_result",
+        "to": "mark_failure",
+        "when": "runtime_tasks_choose_result_route == 'failed'"
+      },
+      [
+        "read_inbox",
+        "choose"
+      ],
+      {
+        "from": "choose",
+        "to": "prepare_worker",
+        "when": "era_tavern_runtime_iteration_choose_route == 'notification'"
+      },
+      {
+        "from": "choose",
+        "to": "prepare_worker",
+        "when": "era_tavern_runtime_iteration_choose_route == 'author_tool'"
+      },
+      {
+        "from": "choose",
+        "to": "prepare_worker",
+        "when": "era_tavern_runtime_iteration_choose_route == 'notification_finalize'"
+      },
+      {
+        "from": "choose",
+        "to": "route_stop",
+        "when": "era_tavern_runtime_iteration_choose_route == 'stop'"
+      },
+      [
+        "prepare_worker",
+        "launch"
+      ],
+      [
+        "collect",
+        "join_return"
+      ],
+      [
+        "mark_failure",
+        "route_stop"
+      ],
+      [
+        "stop_and_wait",
+        "choose_exit"
+      ],
+      {
+        "from": "choose_exit",
+        "to": "join_return",
+        "when": "runtime_tasks_choose_exit_route == 'stopped'"
+      },
+      {
+        "from": "choose_exit",
+        "to": "raise_failure",
+        "when": "runtime_tasks_choose_exit_route == 'failed'"
+      },
+      [
+        "join_return",
+        "return"
+      ],
+      [
+        "return",
+        "end"
+      ],
+      [
+        "raise_failure",
+        "end"
+      ],
+      {
+        "from": "choose_next",
+        "to": "prepare_inbox",
+        "when": "runtime_tasks_choose_next_route == 'lifecycle'"
+      },
+      {
+        "from": "choose_next",
+        "to": "prepare_inbox",
+        "when": "runtime_tasks_choose_next_route == 'inbox'"
+      },
+      {
+        "from": "choose_next",
+        "to": "wait_any",
+        "when": "runtime_tasks_choose_next_route == 'wait'"
+      },
+      {
+        "from": "choose_next",
+        "to": "route_stop",
+        "when": "runtime_tasks_choose_next_route == 'close'"
+      },
+      {
+        "from": "choose_next",
+        "to": "stop_and_wait",
+        "when": "runtime_tasks_choose_next_route == 'exit'"
+      },
+      {
+        "from": "choose_result",
+        "to": "route_stop",
+        "when": "runtime_tasks_choose_result_route == 'closing'"
+      },
+      {
+        "from": "choose",
+        "to": "prepare_worker",
+        "when": "era_tavern_runtime_iteration_choose_route == 'timer_wait'"
+      },
+      [
+        "route_stop",
+        "begin_closing"
+      ],
+      [
+        "begin_closing",
+        "join_return"
+      ],
+      {
+        "from": "choose_next",
+        "to": "prepare_inbox",
+        "when": "runtime_tasks_choose_next_route == 'service'"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.frame.final.runtime_iteration",
+        "cardinality": "exactly_one",
+        "display_name": "所选操作结果",
+        "as": "frame"
+      },
+      {
+        "type": "era.tavern.runtime.done",
+        "cardinality": "exactly_one",
+        "as": "runtime_done",
+        "display_name": "是否结束后台循环"
+      }
+    ]
+  }
+}

@@ -1,0 +1,6 @@
+packages:
+  - ST-Response-Lab
+  - ST-Test-Harness
+  - ERA-Test-Pack
+
+linkWorkspacePackages: true

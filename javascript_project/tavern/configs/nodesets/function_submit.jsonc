@@ -1,0 +1,106 @@
+{
+  "type_key": "era.tavern.flow.function_submit",
+  "display_name": "同步接纳作者函数请求",
+  "description": "作者 Facade 回调只转交此原生同步入口；准入、序号、回执、入队和唤醒都由 Node 执行。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.call.frame",
+      "cardinality": "exactly_one",
+      "display_name": "本次调用、资源句柄与处理位置"
+    }
+  ],
+  "provides": [
+    {
+      "key": "era_tavern_flow_function_submit_frame",
+      "type": "era.tavern.frame.function_submit.return_request",
+      "display_name": "本次原生步骤的资源与事实"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "sync",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.call.frame",
+        "required": true,
+        "display_name": "原作者请求"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.tavern.initialize.start",
+        "display_name": "开始当前原生流程",
+        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+      },
+      {
+        "id": "check_call",
+        "type_used": "era.tavern.function_submit.check_call",
+        "display_name": "检查作者调用并区分上下文读取与请求提交",
+        "description": "从本实例参数绑定表或调用ID取得调用，复核活跃状态、取消信号和消息依据；上下文读取直接返回已有Facade，请求提交才分配序号和回执。"
+      },
+      {
+        "id": "allocate_request",
+        "type_used": "era.tavern.function_submit.allocate_request",
+        "display_name": "分配当前调用请求与回执",
+        "description": "只为该作者调用递增请求 ID、克隆 payload 并建立局部 Promise，不进入外部业务 FIFO。"
+      },
+      {
+        "id": "enqueue_request",
+        "type_used": "era.tavern.function_submit.enqueue_request",
+        "display_name": "将请求交给原作者通道",
+        "description": "按顺序入队到当前调用的 requests/pending，随后唤醒已登记的 next 等待。"
+      },
+      {
+        "id": "return_request",
+        "type_used": "era.tavern.function_submit.return_request",
+        "display_name": "交还作者上下文或本次请求回执",
+        "description": "上下文路径交还已绑定Facade，提交路径交还新请求Promise；均不执行Service变量规则。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.tavern.initialize.end",
+        "display_name": "结束当前原生流程",
+        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+      }
+    ],
+    "edges": [
+      {
+        "from": "check_call",
+        "to": "allocate_request",
+        "when": "era_tavern_function_submit_check_call_route == 'submit'"
+      },
+      [
+        "allocate_request",
+        "enqueue_request"
+      ],
+      [
+        "enqueue_request",
+        "return_request"
+      ],
+      [
+        "start",
+        "check_call"
+      ],
+      [
+        "return_request",
+        "end"
+      ],
+      {
+        "from": "check_call",
+        "to": "return_request",
+        "when": "era_tavern_function_submit_check_call_route == 'context'"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.frame.function_submit.return_request",
+        "cardinality": "exactly_one",
+        "as": "frame",
+        "display_name": "作者请求 done"
+      }
+    ],
+    "max_steps": 10
+  }
+}

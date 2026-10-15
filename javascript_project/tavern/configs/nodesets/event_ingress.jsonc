@@ -1,0 +1,171 @@
+{
+  "type_key": "era.tavern.flow.event_ingress",
+  "display_name": "投影酒馆事件并保持原时序",
+  "description": "酒馆回调只调用此原生同步流程；普通事件即刻返回，生成屏障在异步入口等待对应 high-water。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.call.frame",
+      "cardinality": "exactly_one",
+      "display_name": "本次调用及实例资源令牌"
+    }
+  ],
+  "provides": [
+    {
+      "key": "era_tavern_flow_event_ingress_frame",
+      "type": "era.tavern.frame.event_ingress.result",
+      "display_name": "操作结果及后续处理所需的资源令牌"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "sync",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.call.frame",
+        "display_name": "调用与资源资料",
+        "required": true
+      }
+    ],
+    "max_steps": 17,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.tavern.initialize.start",
+        "display_name": "开始当前原生流程",
+        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+      },
+      {
+        "id": "read_event_facts",
+        "type_used": "era.tavern.event_ingress.read_event_facts",
+        "display_name": "读取事件来源及当前窗口",
+        "description": "读取事件目录、原生生成状态、内部写回记录及聊天身份，不规划变量同步或回退。"
+      },
+      {
+        "id": "choose_event",
+        "type_used": "era.tavern.event_ingress.choose_event",
+        "display_name": "选择忽略、普通入队或生成屏障",
+        "description": "排除辅助生成重入和 ERA 自身写回；其他事件保持现行生命周期变化、取消交接及入队顺序。"
+      },
+      {
+        "id": "branch_barrier_prepare",
+        "type_used": "era.tavern.event_ingress.branch_barrier_prepare",
+        "display_name": "登记本次生成屏障来源",
+        "description": "保存本次事件序号和生成交接等待来源，回调返回共享异步屏障流程的 Promise。"
+      },
+      {
+        "id": "branch_enqueue_prepare",
+        "type_used": "era.tavern.event_ingress.branch_enqueue_prepare",
+        "display_name": "更新事件生命周期事实",
+        "description": "按现行事件类型更新窗口 token、作者函数有效性、原生生成和会话清理事实，然后使用共享准入流程。"
+      },
+      {
+        "id": "branch_ignore",
+        "type_used": "era.tavern.event_ingress.branch_ignore",
+        "display_name": "忽略已有内部事件",
+        "description": "原事件不进入业务 FIFO，不新增回执。"
+      },
+      {
+        "id": "join_admission_input",
+        "type_used": "era.tavern.event_ingress.join_admission_input",
+        "display_name": "汇合当前选中的准入输入",
+        "description": "屏障事件或普通事件只选一个准备路径；严格汇合后共用一次原生准入，不注册两个相同输出。"
+      },
+      {
+        "id": "admit_shared",
+        "type_used": "era.tavern.flow.admission",
+        "display_name": "对当前选中的事件执行一次准入",
+        "description": "屏障与普通事件共同使用同一个实际原生准入流程。"
+      },
+      {
+        "id": "return_admission_branch",
+        "type_used": "era.tavern.event_ingress.return_admission_branch",
+        "display_name": "交还唯一准入结果",
+        "description": "只转换共享准入的结果类型，保留此前准备的回调与屏障意图，不再准入一次。"
+      },
+      {
+        "id": "join_return_event",
+        "type_used": "era.tavern.event_ingress.join_return_event",
+        "display_name": "汇合当前实际激活分支的结果",
+        "description": "接收当前所选路径的结果集合，交还其中唯一实际结果；不选择未激活分支、不重新执行操作。运行实现必须拒绝实际多结果，不以集合契约放宽唯一结果语义。"
+      },
+      {
+        "id": "return_event",
+        "type_used": "era.tavern.event_ingress.return_event",
+        "display_name": "返回原事件回调结果",
+        "description": "普通通知返回 void；需要等待的生成事件返回 Promise，不把普通监听改成异步。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.tavern.initialize.end",
+        "display_name": "结束当前原生流程",
+        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+      }
+    ],
+    "edges": [
+      [
+        "read_event_facts",
+        "choose_event"
+      ],
+      {
+        "from": "choose_event",
+        "to": "branch_ignore",
+        "when": "era_tavern_event_ingress_choose_event_route == 'ignore'"
+      },
+      [
+        "branch_ignore",
+        "join_return_event"
+      ],
+      {
+        "from": "choose_event",
+        "to": "branch_enqueue_prepare",
+        "when": "era_tavern_event_ingress_choose_event_route == 'enqueue'"
+      },
+      {
+        "from": "choose_event",
+        "to": "branch_barrier_prepare",
+        "when": "era_tavern_event_ingress_choose_event_route == 'barrier'"
+      },
+      [
+        "join_return_event",
+        "return_event"
+      ],
+      [
+        "branch_barrier_prepare",
+        "join_admission_input"
+      ],
+      [
+        "branch_enqueue_prepare",
+        "join_admission_input"
+      ],
+      [
+        "join_admission_input",
+        "admit_shared"
+      ],
+      [
+        "admit_shared",
+        "return_admission_branch"
+      ],
+      [
+        "return_admission_branch",
+        "join_return_event"
+      ],
+      [
+        "start",
+        "read_event_facts"
+      ],
+      [
+        "return_event",
+        "end"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.frame.event_ingress.result",
+        "cardinality": "exactly_one",
+        "display_name": "完成后的操作资料",
+        "as": "frame"
+      }
+    ]
+  }
+}

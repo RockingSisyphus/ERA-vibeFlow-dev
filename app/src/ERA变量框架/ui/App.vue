@@ -37,7 +37,7 @@ import RightRail from './components/RightRail.vue';
 import SidecarBindingDialog from './components/SidecarBindingDialog.vue';
 import ThemeManager from './components/ThemeManager.vue';
 import { useUiStore, type SidecarBindingPrompt } from './store';
-import { SIDECAR_PROMPT_EVENT } from '../service/sidecar-adapter';
+import { SIDECAR_PROMPT_EVENT } from '../service/sidecar-runtime-snapshot';
 
 const logger = new Logger();
 

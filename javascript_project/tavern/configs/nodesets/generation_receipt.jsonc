@@ -1,0 +1,152 @@
+{
+  "type_key": "era.tavern.flow.generation_receipt",
+  "display_name": "等待公共重试的完整生成回执",
+  "description": "替换图外generationAdmission包装；主Service原始FIFO回执不变。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.call.frame",
+      "cardinality": "exactly_one",
+      "display_name": "本次实例及调用资料"
+    }
+  ],
+  "provides": [
+    {
+      "key": "generation_receipt_frame",
+      "type": "era.tavern.call.frame",
+      "display_name": "本流程实际结果"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.call.frame",
+        "required": true,
+        "display_name": "本次实例及调用资料"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.tavern.initialize.start",
+        "display_name": "开始当前原生流程",
+        "description": "标记本段原生流程的控制边界，不创建资源或重复输出。"
+      },
+      {
+        "id": "await_receipt",
+        "type_used": "era.tavern.generation_receipt.await_receipt",
+        "display_name": "等待本次重试的原始回执",
+        "description": "只等待已经接受的原始done，不重新准入或改写FIFO结算。"
+      },
+      {
+        "id": "choose",
+        "type_used": "era.tavern.generation_receipt.choose",
+        "display_name": "选择片段回执或完整阶段交接",
+        "description": "回执value没有completionId直接返回；有标识才等待同实例的最终交接。"
+      },
+      {
+        "id": "original",
+        "type_used": "era.tavern.generation_receipt.original",
+        "display_name": "交还无交接标识的原始回执",
+        "description": "保留原结算，不延长普通任务等待。"
+      },
+      {
+        "id": "await_handoff",
+        "type_used": "era.tavern.generation_receipt.await_handoff",
+        "display_name": "等待真实生成的最终交接",
+        "description": "按当前回执给出的completionId等待；缺失或已取消时取得null，不借用其他执行。"
+      },
+      {
+        "id": "choose_final",
+        "type_used": "era.tavern.generation_receipt.choose_final",
+        "display_name": "区分最终结算或取消",
+        "description": "真实最终交接有结果才完成；null保持原生成会话已取消结果。"
+      },
+      {
+        "id": "completed",
+        "type_used": "era.tavern.generation_receipt.completed",
+        "display_name": "保留最终结果与原始事件身份",
+        "description": "使用最终结算，同时保留第一次接受的eventId/sequence，避免UI提前解除busy。"
+      },
+      {
+        "id": "cancelled",
+        "type_used": "era.tavern.generation_receipt.cancelled",
+        "display_name": "交还原生成会话取消结算",
+        "description": "保留原片段回执字段，将status设为cancelled及原原因；不制造成功。"
+      },
+      {
+        "id": "join_result",
+        "type_used": "era.tavern.generation_receipt.join_result",
+        "display_name": "交还本次重试等待结果",
+        "description": "汇合原回执、完整交接或取消，返回唯一公开done结果。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.tavern.initialize.end",
+        "display_name": "结束当前原生流程",
+        "description": "标记本段原生流程的控制边界，不创建资源或重复输出。"
+      }
+    ],
+    "edges": [
+      [
+        "start",
+        "await_receipt"
+      ],
+      [
+        "await_receipt",
+        "choose"
+      ],
+      {
+        "from": "choose",
+        "to": "original",
+        "when": "generation_receipt_choose_route == 'original'"
+      },
+      {
+        "from": "choose",
+        "to": "await_handoff",
+        "when": "generation_receipt_choose_route == 'handoff'"
+      },
+      [
+        "await_handoff",
+        "choose_final"
+      ],
+      {
+        "from": "choose_final",
+        "to": "completed",
+        "when": "generation_receipt_choose_final_route == 'completed'"
+      },
+      {
+        "from": "choose_final",
+        "to": "cancelled",
+        "when": "generation_receipt_choose_final_route == 'cancelled'"
+      },
+      [
+        "original",
+        "join_result"
+      ],
+      [
+        "completed",
+        "join_result"
+      ],
+      [
+        "cancelled",
+        "join_result"
+      ],
+      [
+        "join_result",
+        "end"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.call.frame",
+        "cardinality": "exactly_one",
+        "as": "frame",
+        "display_name": "当前实际结果"
+      }
+    ],
+    "max_steps": 13
+  }
+}

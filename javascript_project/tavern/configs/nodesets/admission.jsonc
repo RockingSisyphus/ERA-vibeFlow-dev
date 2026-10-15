@@ -1,0 +1,146 @@
+{
+  "type_key": "era.tavern.flow.admission",
+  "display_name": "检查事件并接纳到 FIFO",
+  "description": "同步接纳 Tavern、UI、公共 API 和 timer 事件；拒绝不分配序号，接受即返回原有回执句柄。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.call.frame",
+      "cardinality": "exactly_one",
+      "display_name": "本次调用及实例资源令牌"
+    }
+  ],
+  "provides": [
+    {
+      "key": "era_tavern_flow_admission_frame",
+      "type": "era.tavern.call.frame",
+      "display_name": "操作结果及后续处理所需的资源令牌"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "sync",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.call.frame",
+        "display_name": "调用与资源资料",
+        "required": true
+      }
+    ],
+    "max_steps": 14,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.tavern.initialize.start",
+        "display_name": "开始当前原生流程",
+        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+      },
+      {
+        "id": "check_event",
+        "type_used": "era.tavern.admission.check_event",
+        "display_name": "检查生命周期与事件格式",
+        "description": "检查启动、停止和致命态，以及事件类型、来源、时间和参数；保留原拒绝码。"
+      },
+      {
+        "id": "encode_event",
+        "type_used": "era.tavern.admission.encode_event",
+        "display_name": "编码 JSON 与实例引用",
+        "description": "复制可移植参数；函数、对象和密钥闭包保存为实例引用令牌，计算原有传输字节数。"
+      },
+      {
+        "id": "check_capacity",
+        "type_used": "era.tavern.admission.check_capacity",
+        "display_name": "检查事件和队列容量",
+        "description": "按原有限额检查事件大小、引用数和等待队列容量；直接交付等待接收者时保持原容量语义。"
+      },
+      {
+        "id": "choose_admission",
+        "type_used": "era.tavern.admission.choose_admission",
+        "display_name": "选择接纳或拒绝",
+        "description": "前述检查失败时原样返回拒绝；全部有效后才提交序号和回执。"
+      },
+      {
+        "id": "branch_rejected",
+        "type_used": "era.tavern.admission.branch_rejected",
+        "display_name": "保留原拒绝结果",
+        "description": "保留原错误码和说明，不修改事件序号、计数或资源仓库。"
+      },
+      {
+        "id": "branch_accepted",
+        "type_used": "era.tavern.admission.branch_accepted",
+        "display_name": "提交序号、引用及回执",
+        "description": "分配原序号、引用和内部回执；仅era.ui.agent_retry的公开done转交原生完整交接等待，其他任务及原始FIFO结算保持不变。"
+      },
+      {
+        "id": "join_deliver_result",
+        "type_used": "era.tavern.admission.join_deliver_result",
+        "display_name": "汇合当前实际激活分支的结果",
+        "description": "接收当前所选路径的结果集合，交还其中唯一实际结果；不选择未激活分支、不重新执行操作。运行实现必须拒绝实际多结果，不以集合契约放宽唯一结果语义。"
+      },
+      {
+        "id": "deliver_result",
+        "type_used": "era.tavern.admission.deliver_result",
+        "display_name": "交还同步准入结果",
+        "description": "接受时将事件交给挂起 receive 或压入 FIFO；返回原 accepted/eventId/sequence/done/waitThrough 约定。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.tavern.initialize.end",
+        "display_name": "结束当前原生流程",
+        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+      }
+    ],
+    "edges": [
+      [
+        "check_event",
+        "encode_event"
+      ],
+      [
+        "encode_event",
+        "check_capacity"
+      ],
+      [
+        "check_capacity",
+        "choose_admission"
+      ],
+      {
+        "from": "choose_admission",
+        "to": "branch_accepted",
+        "when": "era_tavern_admission_choose_admission_route == 'accepted'"
+      },
+      [
+        "branch_accepted",
+        "join_deliver_result"
+      ],
+      {
+        "from": "choose_admission",
+        "to": "branch_rejected",
+        "when": "era_tavern_admission_choose_admission_route == 'rejected'"
+      },
+      [
+        "branch_rejected",
+        "join_deliver_result"
+      ],
+      [
+        "join_deliver_result",
+        "deliver_result"
+      ],
+      [
+        "start",
+        "check_event"
+      ],
+      [
+        "deliver_result",
+        "end"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.call.frame",
+        "cardinality": "exactly_one",
+        "display_name": "完成后的操作资料",
+        "as": "frame"
+      }
+    ]
+  }
+}

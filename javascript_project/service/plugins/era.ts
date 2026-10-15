@@ -18,14 +18,13 @@ import {resource177, resource178, resource179, resource180, resource181, resourc
 import {resource189, resource190, resource191, resource192, resource193, resource194, resource195, resource196, resource197, resource198, resource199, resource200} from "./base_lib/era-base_lib-5.ts";
 import {resource201, resource202, resource203, resource204, resource205, resource206, resource207} from "./base_lib/era-base_lib-6.ts";
 import {resource208, resource209, resource210, resource211, resource212, resource213, resource214, resource215, resource216, resource217, resource218, resource219} from "./era-capability-1.ts";
-import {resource220, resource221, resource222, resource223, resource224, resource225, resource226} from "./era-host_extension-1.ts";
 
 export const plugin = definePlugin({
   id: "era.service.resources",
   display_name: "ERA 现有业务资源",
   description: "以新版 SDK 登记现有节点、库和宿主资源，保留原数据合同、实现入口及业务算法。",
   declaration_rulesets: ["vibeflow.plugin_declaration"],
-  implementation_files: ["nodes/era-node-1.ts", "nodes/era-node-2.ts", "nodes/era-node-3.ts", "nodes/era-node-4.ts", "nodes/era-node-5.ts", "nodes/era-node-6.ts", "nodes/era-node-7.ts", "nodes/era-node-8.ts", "nodes/era-node-9.ts", "nodes/era-node-10.ts", "nodes/era-node-11.ts", "nodes/era-node-12.ts", "base_lib/era-base_lib-1.ts", "base_lib/era-base_lib-2.ts", "base_lib/era-base_lib-3.ts", "base_lib/era-base_lib-4.ts", "base_lib/era-base_lib-5.ts", "base_lib/era-base_lib-6.ts", "era-capability-1.ts", "era-host_extension-1.ts"],
+  implementation_files: ["nodes/era-node-1.ts", "nodes/era-node-2.ts", "nodes/era-node-3.ts", "nodes/era-node-4.ts", "nodes/era-node-5.ts", "nodes/era-node-6.ts", "nodes/era-node-7.ts", "nodes/era-node-8.ts", "nodes/era-node-9.ts", "nodes/era-node-10.ts", "nodes/era-node-11.ts", "nodes/era-node-12.ts", "base_lib/era-base_lib-1.ts", "base_lib/era-base_lib-2.ts", "base_lib/era-base_lib-3.ts", "base_lib/era-base_lib-4.ts", "base_lib/era-base_lib-5.ts", "base_lib/era-base_lib-6.ts", "era-capability-1.ts"],
   resources: [
     resource0,
     resource1,
@@ -247,12 +246,5 @@ export const plugin = definePlugin({
     resource217,
     resource218,
     resource219,
-    resource220,
-    resource221,
-    resource222,
-    resource223,
-    resource224,
-    resource225,
-    resource226,
   ],
 });

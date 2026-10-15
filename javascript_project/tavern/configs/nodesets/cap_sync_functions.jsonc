@@ -1,0 +1,176 @@
+{
+  "type_key": "era.tavern.flow.cap_sync_functions",
+  "display_name": "消息内作者函数操作",
+  "description": "共享同一职责组的原操作与必要的等待前发起；无额外 cap 总分组。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.call.frame",
+      "cardinality": "exactly_one",
+      "display_name": "本次调用、实例资源与上一节点的事实"
+    }
+  ],
+  "provides": [
+    {
+      "key": "era_tavern_flow_cap_sync_functions_frame",
+      "type": "era.tavern.frame.final.cap_sync_functions",
+      "display_name": "处理后的资源与事实"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "sync",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.call.frame",
+        "display_name": "同实例调用与资源",
+        "required": true
+      }
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.frame.final.cap_sync_functions",
+        "cardinality": "exactly_one",
+        "as": "frame",
+        "display_name": "本段明确结果"
+      }
+    ],
+    "max_steps": 15,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.tavern.initialize.start",
+        "display_name": "开始当前原生流程",
+        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+      },
+      {
+        "id": "choose",
+        "type_used": "era.tavern.cap_sync_functions.choose",
+        "display_name": "识别消息内作者函数操作",
+        "description": "按已声明操作名选择唯一原生路径；即时操作、同步完成的 Promise 操作及真正等待前的发起共享本职责组，不重复分组。"
+      },
+      {
+        "id": "route_begin",
+        "type_used": "era.tavern.flow.functions_begin",
+        "display_name": "建立作者函数上下文并安排调用",
+        "description": "沿原 era.tavern.functions.begin 合同执行当前唯一操作。"
+      },
+      {
+        "id": "route_next__check_active",
+        "type_used": "era.tavern.functions_next.check_active",
+        "display_name": "取得下一个作者请求或最终结论：检查作者上下文仍有效",
+        "description": "检查调用状态、signal 和当前消息依据。"
+      },
+      {
+        "id": "route_next__capture_next",
+        "type_used": "era.tavern.flow.functions_next_capture",
+        "display_name": "取得下一个作者请求或最终结论：同步捕获作者请求、完成或等待资源",
+        "description": "当前同步调用内读取请求或完成状态；无结果才登记本次唤醒资源。"
+      },
+      {
+        "id": "route_acknowledge__find_request",
+        "type_used": "era.tavern.functions_acknowledge.find_request",
+        "display_name": "完成作者接口请求回执：查找当前调用的待确认请求",
+        "description": "按 id/requestId 查找原 pending 记录；已失效或不存在按原错误返回。"
+      },
+      {
+        "id": "route_acknowledge__resolve_request",
+        "type_used": "era.tavern.functions_acknowledge.resolve_request",
+        "display_name": "完成作者接口请求回执：完成作者请求并移除 pending",
+        "description": "复制 Service 的应用结算，完成请求 Promise，使作者函数继续执行。"
+      },
+      {
+        "id": "route_acknowledge__return_ack",
+        "type_used": "era.tavern.functions_acknowledge.return_ack",
+        "display_name": "完成作者接口请求回执：返回请求确认",
+        "description": "保持原 acknowledged 返回形状。"
+      },
+      {
+        "id": "route_release",
+        "type_used": "era.tavern.flow.functions_release",
+        "display_name": "释放作者函数上下文",
+        "description": "沿原 era.tavern.functions.release 合同执行当前唯一操作。"
+      },
+      {
+        "id": "route_next__start_wait",
+        "type_used": "era.tavern.functions_next.start_wait",
+        "display_name": "发起作者next的公开可取消等待",
+        "description": "在同步捕获之后固定调用原生async续体，交还本次publicPromise；保持单次next取消与作者调用整体取消的原区分，接线不管理Promise或队列。"
+      },
+      {
+        "id": "join_return",
+        "type_used": "era.tavern.cap_sync_functions.join_return",
+        "display_name": "汇合当前实际激活分支的结果",
+        "description": "接收当前所选路径的结果集合，交还其中唯一实际结果；不选择未激活分支、不重新执行操作。运行实现必须拒绝实际多结果，不以集合契约放宽唯一结果语义。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.tavern.initialize.end",
+        "display_name": "结束当前原生流程",
+        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+      }
+    ],
+    "edges": [
+      {
+        "from": "choose",
+        "to": "route_begin",
+        "when": "era_tavern_cap_sync_functions_choose_route == 'begin'"
+      },
+      [
+        "route_begin",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_next__check_active",
+        "when": "era_tavern_cap_sync_functions_choose_route == 'next'"
+      },
+      [
+        "route_next__capture_next",
+        "route_next__start_wait"
+      ],
+      {
+        "from": "choose",
+        "to": "route_acknowledge__find_request",
+        "when": "era_tavern_cap_sync_functions_choose_route == 'acknowledge'"
+      },
+      [
+        "route_acknowledge__return_ack",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_release",
+        "when": "era_tavern_cap_sync_functions_choose_route == 'release'"
+      },
+      [
+        "route_release",
+        "join_return"
+      ],
+      [
+        "route_next__check_active",
+        "route_next__capture_next"
+      ],
+      [
+        "route_acknowledge__find_request",
+        "route_acknowledge__resolve_request"
+      ],
+      [
+        "route_acknowledge__resolve_request",
+        "route_acknowledge__return_ack"
+      ],
+      [
+        "start",
+        "choose"
+      ],
+      [
+        "join_return",
+        "end"
+      ],
+      [
+        "route_next__start_wait",
+        "join_return"
+      ]
+    ]
+  }
+}

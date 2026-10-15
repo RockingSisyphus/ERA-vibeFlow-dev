@@ -1,7 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { INPUT_EVENT } from '../../src/ERA变量框架/events/catalog';
-import { ERA_TAVERN_LISTENER_COUNT, TavernEraServiceAdapter } from '../../src/ERA变量框架/service/tavern-adapter';
-import type { EraAdmissionAccepted, EraInboundEvent } from '../../src/ERA变量框架/service/types';
+import { fixture } from '../native-tavern/native-fixture.mjs';
+import { EVENT_CATALOG } from '../../src/ERA变量框架/events/catalog';
+const ERA_TAVERN_LISTENER_COUNT = 13;
+const owners: any[] = [];
+import type { EraInboundEvent } from '../../src/ERA变量框架/service/types';
 
 type EventHandler = (...args: unknown[]) => unknown;
 
@@ -37,14 +40,45 @@ class FakeTavernEvents {
   }
 }
 
-function accepted(waitThrough: () => Promise<never> | Promise<unknown>): EraAdmissionAccepted {
-  return {
-    accepted: true,
-    eventId: 'fake:event:1',
-    sequence: 1,
-    done: Promise.resolve({ eventId: 'fake:event:1', sequence: 1, status: 'completed' }),
-    waitThrough: waitThrough as EraAdmissionAccepted['waitThrough'],
+async function nativeOwner() {
+  const owner = await fixture(undefined, {
+    dynamicApi: globalThis,
+    api: {
+      location: { origin: 'http://tavern.test' },
+      getScriptTrees: ({ type }: { type: string }) =>
+        type === 'character'
+          ? [{ type: 'script', id: typeof getScriptId === 'function' ? getScriptId() : 'script', enabled: true }]
+          : [],
+    },
+    eventDefinitions: [...EVENT_CATALOG.values()],
+  });
+  owners.push(owner);
+  return owner;
+}
+async function emitThroughFrame(owner: any, notification: any, context: any) {
+  const request = owner.client.enqueue('notification-probe', 'ui');
+  await owner.caps['vibeflow.port'].receive({ port: 'era.service.in' });
+  const frame = {
+    schemaVersion: 1,
+    frameId: `notification:${request.sequence}`,
+    kind: 'batch-result',
+    throughSequence: request.sequence,
+    settlements: [{ eventId: request.eventId, sequence: request.sequence, status: 'ignored', reason: 'fixture' }],
+    notifications: [
+      {
+        type: notification.type,
+        args: notification.args.map((value: unknown) =>
+          value === undefined ? { kind: 'undefined' } : { kind: 'json', value },
+        ),
+      },
+    ],
+    diagnostics: [],
+    fatal: false,
   };
+  const sent = owner.direct({ action: 'send', input: { port: 'era.service.out', value: frame }, options: context });
+  await sent.notificationGroup.completion.promise;
+  const outcome = sent.notificationGroup.outcomes[0];
+  if (outcome.status === 'rejected') throw outcome.reason;
 }
 
 describe('ERA Tavern 生产接线', () => {
@@ -72,20 +106,26 @@ describe('ERA Tavern 生产接线', () => {
     vi.stubGlobal('toastr', { error: vi.fn() });
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    for (const owner of owners.splice(0)) {
+      owner.page.dispatchEvent(new Event('pagehide'));
+      await owner.work;
+    }
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
 
-  it('业务事件之外只增加原生收尾观察，不把结束事件送入业务队列', () => {
-    const adapter = new TavernEraServiceAdapter();
-    const listener = vi.fn(() => accepted(async () => ({ throughSequence: 1, outcomes: [], hasFailures: false })));
-    const stop = adapter.subscribe(listener);
+  it('业务事件之外只增加原生收尾观察，不把结束事件送入业务队列', async () => {
+    const owner = await nativeOwner();
+    const stop = async () => {
+      owner.page.dispatchEvent(new Event('pagehide'));
+      await owner.work;
+    };
 
     expect(events.count).toBe(ERA_TAVERN_LISTENER_COUNT + 1);
     expect(events.listeners.size).toBe(ERA_TAVERN_LISTENER_COUNT + 1);
     events.only('generation_ended')(0);
-    expect(listener).not.toHaveBeenCalled();
+    expect(owner.session.queue).toHaveLength(0);
     expect(events.listeners.has('era:updateByObject')).toBe(false);
     expect(events.listeners.has('era:requestWriteDone')).toBe(false);
     expect(events.listeners.has('era:forceSync')).toBe(false);
@@ -97,38 +137,61 @@ describe('ERA Tavern 生产接线', () => {
     expect(events.listeners.has('era-button:强制完全重算')).toBe(true);
     expect(events.orders.get(INPUT_EVENT.GENERATION_STARTED)).toBe('first');
     expect(events.orders.get(INPUT_EVENT.GENERATION_STOPPED)).toBe('normal');
-    expect(() => adapter.subscribe(listener)).toThrowError('不允许重复注册');
+    owner.caps['era.tavern.startup_gate'].activate({ route: 'allow' });
+    expect(events.count).toBe(ERA_TAVERN_LISTENER_COUNT + 1);
 
-    stop();
-    stop();
+    await stop();
+    await stop();
     expect(events.count).toBe(0);
   });
 
   it('generation dry-run 脱离等待，真实生成返回 waitThrough 栅栏', async () => {
-    const waitThrough = vi.fn(async () => ({ throughSequence: 1, outcomes: [], hasFailures: false }));
-    const received: EraInboundEvent[] = [];
-    const adapter = new TavernEraServiceAdapter();
-    const stop = adapter.subscribe(event => {
-      received.push(event);
-      return accepted(waitThrough);
-    });
+    const owner = await nativeOwner();
     const generation = events.only(INPUT_EVENT.GENERATION_STARTED);
-
     expect(generation('type', {}, true)).toBeUndefined();
-    expect(waitThrough).not.toHaveBeenCalled();
-    const realBarrier = generation('type', {}, false);
+    expect(owner.session.watchdogs.size).toBe(0);
+    const realBarrier = generation('type', {}, false) as Promise<unknown>;
     expect(realBarrier).toBeInstanceOf(Promise);
-    await realBarrier;
-    expect(waitThrough).toHaveBeenCalledTimes(1);
+    const port = owner.caps['vibeflow.port'];
+    const received: Array<EraInboundEvent & { eventId: string; sequence: number }> = [];
+    for (let i = 0; i < 2; i++) received.push((await port.receive({ port: 'era.service.in' })).value);
     expect(received).toHaveLength(2);
     expect(received[0]).toMatchObject({ type: INPUT_EVENT.GENERATION_STARTED, source: 'tavern' });
-    expect(received[0]?.args).toEqual(['type', {}, true]);
-
+    expect(received[0]?.args).toEqual([
+      { kind: 'json', value: 'type' },
+      { kind: 'json', value: {} },
+      { kind: 'json', value: true },
+    ]);
     expect(received.at(-1)).toMatchObject({ type: INPUT_EVENT.GENERATION_STARTED, source: 'tavern' });
-    stop();
+    let released = false;
+    realBarrier.then(() => {
+      released = true;
+    });
+    await Promise.resolve();
+    expect(released).toBe(false);
+    port.send({
+      port: 'era.service.out',
+      value: {
+        schemaVersion: 1,
+        frameId: 'barrier',
+        kind: 'batch-result',
+        throughSequence: 2,
+        settlements: received.map(event => ({
+          eventId: event.eventId,
+          sequence: event.sequence,
+          status: 'ignored',
+          reason: 'fixture',
+        })),
+        notifications: [],
+        diagnostics: [],
+        fatal: false,
+      },
+    });
+    await realBarrier;
+    expect(released).toBe(true);
   });
 
-  it('Agent 规划失败时在原生控制器尚未建立的场景延后到 after-commands 阻断，并随适配器清理', () => {
+  it('Agent 规划失败时在原生控制器尚未建立的场景延后到 after-commands 阻断，并随适配器清理', async () => {
     const stopNative = vi.fn().mockReturnValueOnce(false).mockReturnValueOnce(true);
     const stopAuxiliary = vi.fn(() => true);
     vi.stubGlobal('stopAllGeneration', stopAuxiliary);
@@ -136,14 +199,12 @@ describe('ERA Tavern 生产接线', () => {
       getContext: () => ({ stopGeneration: stopNative }),
     });
 
-    const adapter = new TavernEraServiceAdapter();
-    const stopAdapter = adapter.subscribe(() =>
-      accepted(async () => ({
-        throughSequence: 1,
-        outcomes: [],
-        hasFailures: false,
-      })),
-    );
+    const owner = await nativeOwner();
+    const adapter = { agent: owner.caps['era.tavern.agent'] };
+    const stopAdapter = async () => {
+      owner.page.dispatchEvent(new Event('pagehide'));
+      await owner.work;
+    };
     const result = adapter.agent.stop_native_generation(
       { reason: 'planning-exhausted' },
       { signal: new AbortController().signal },
@@ -160,7 +221,7 @@ describe('ERA Tavern 生产接线', () => {
 
     adapter.agent.stop_native_generation({}, { signal: new AbortController().signal });
     expect(events.listeners.has('GENERATION_AFTER_COMMANDS')).toBe(true);
-    stopAdapter();
+    await stopAdapter();
     expect(events.listeners.has('GENERATION_AFTER_COMMANDS')).toBe(false);
   });
 
@@ -265,7 +326,10 @@ describe('ERA Tavern 生产接线', () => {
       reloadCurrentChat: vi.fn(async () => undefined),
     });
 
-    const adapter = new TavernEraServiceAdapter();
+    const owner = await nativeOwner();
+    const adapter: any = Object.fromEntries(
+      ['regex', 'variables', 'identity', 'messages', 'worldbook'].map(name => [name, owner.caps['era.tavern.' + name]]),
+    );
     const controller = new AbortController();
     const context = { signal: controller.signal };
     expect(await adapter.regex.read({}, context)).toEqual({
@@ -328,11 +392,13 @@ describe('ERA Tavern 生产接线', () => {
 
     await adapter.regex.upsert({ regex: { script_name: 'new', futureRegexField: { keep: true } } }, context);
     expect(SillyTavern.writeExtensionField).toHaveBeenCalledTimes(2);
-    await adapter.notify({ type: 'era:test', args: [{ future: true }, undefined] }, context);
+    await emitThroughFrame(owner, { type: 'era:test', args: [{ future: true }, undefined] }, context);
     expect(emitted).toHaveBeenCalledWith('era:test', { future: true }, undefined);
 
     controller.abort(new Error('测试取消'));
-    await expect(adapter.variables.read({ scope: { type: 'chat' } }, context)).rejects.toThrow('测试取消');
-    await expect(adapter.notify({ type: 'era:test', args: [] }, context)).rejects.toThrow('测试取消');
+    await expect(adapter.variables.read({ scope: { type: 'chat' } }, context)).rejects.toMatchObject({
+      cause: expect.objectContaining({ message: '测试取消' }),
+    });
+    await expect(emitThroughFrame(owner, { type: 'era:test', args: [] }, context)).rejects.toThrow('测试取消');
   });
 });

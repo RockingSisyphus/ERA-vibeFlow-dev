@@ -2,8 +2,9 @@
 
 import { appendFile, mkdir, writeFile } from 'node:fs/promises';
 import { performance } from 'node:perf_hooks';
+import { nativeG3 } from '../tests/native-tavern/g3-fixture.mjs';
+import { realService } from '../tests/native-tavern/native-fixture.mjs';
 
-const generatedModuleUrl = new URL('../../generated/era-service/workflow.js', import.meta.url);
 const progressUrl = new URL('../../reports/service-idle-soak.progress.jsonl', import.meta.url);
 const reportUrl = new URL('../../reports/service-idle-soak.json', import.meta.url);
 const durationMs = Number(process.env.ERA_SOAK_MS ?? 2 * 60 * 60 * 1_000);
@@ -11,64 +12,6 @@ const sampleIntervalMs = Number(process.env.ERA_SOAK_SAMPLE_MS ?? 60_000);
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
-}
-
-function createAdapter(counters) {
-  let listener = null;
-  const count = name => {
-    counters[name] = (counters[name] ?? 0) + 1;
-  };
-  const operation = name => async () => {
-    count(name);
-    return {};
-  };
-  return {
-    subscribe(nextListener) {
-      assert(listener === null, '长稳探针检测到重复 Host 监听器。');
-      listener = nextListener;
-      count('subscriptions');
-      return () => {
-        if (listener !== null) count('unsubscriptions');
-        listener = null;
-      };
-    },
-    notify: operation('notifications'),
-    variables: { read: operation('variableReads'), commit: operation('variableCommits') },
-    messages: {
-      read_context: operation('messageReads'),
-      update_content: operation('messageWrites'),
-      refresh: operation('messageRefreshes'),
-    },
-    worldbook: {
-      read: operation('worldbookReads'),
-      create: operation('worldbookCreates'),
-      bind: operation('worldbookBinds'),
-      replace_entries: operation('worldbookWrites'),
-    },
-    regex: { read: operation('regexReads'), upsert: operation('regexWrites') },
-    identity: {
-      read() {
-        count('identityReads');
-        return { characterName: '长稳探针角色', isGroup: false };
-      },
-    },
-    installation_scope: { read: () => ({ scriptId: 'era-idle-soak', scopes: ['character'], readStatus: 'complete' }) },
-    sidecar: {
-      read_current: async () => {
-        count('sidecarReads');
-        return { identity: null, meta: null, stat: null };
-      },
-      read_record: operation('sidecarRecordReads'),
-      write_record: operation('sidecarRecordWrites'),
-      commit_metadata: operation('sidecarMetadataCommits'),
-      create_id: () => ({ sidecarId: 'era_chat_idle-soak-12345678' }),
-      present_prompt: operation('sidecarPrompts'),
-      clear_prompt: operation('sidecarPromptClears'),
-    },
-    warn() {
-      count('warnings');
-    },
-  };
 }
 
 function delay(milliseconds) {
@@ -80,13 +23,21 @@ assert(Number.isSafeInteger(sampleIntervalMs) && sampleIntervalMs > 0, 'ERA_SOAK
 await mkdir(new URL('.', reportUrl), { recursive: true });
 await writeFile(progressUrl, '', 'utf8');
 
-const workflow = await import(generatedModuleUrl.href);
-const counters = {};
-const adapter = createAdapter(counters);
-globalThis.__ERA_VIBEFLOW_SERVICE_ADAPTER__ = adapter;
-const host = workflow.createWorkflowHost();
-await host.start();
-const execution = host.runWorkflowAsync({});
+const workflow = { runWorkflowAsync: realService };
+const counters = { subscriptions: 0, unsubscriptions: 0 };
+const native = await nativeG3(workflow);
+const owner = native.owner;
+const initialResources = native.snapshot();
+counters.subscriptions = initialResources.registrations;
+for (const [name, fn] of Object.entries(owner.api)) {
+  if (typeof fn !== 'function' || !/^(get|set|replace|update|event|refresh|fetch|create)/.test(name)) continue;
+  owner.api[name] = (...args) => {
+    const key = name === 'eventRemoveListener' ? 'listenerRemovals' : name;
+    counters[key] = (counters[key] ?? 0) + 1;
+    return fn(...args);
+  };
+}
+const execution = owner.work;
 const startedAt = Date.now();
 const startedHeap = process.memoryUsage().heapUsed;
 const samples = [];
@@ -108,29 +59,34 @@ while (Date.now() - startedAt < durationMs) {
   await appendFile(progressUrl, `${JSON.stringify(sample)}\n`, 'utf8');
 }
 
+const idleCounters = { ...counters };
 const stopStartedAt = performance.now();
-await host.stop();
-const stopMs = performance.now() - stopStartedAt;
+native.owner.page.dispatchEvent(new Event('pagehide'));
 let executionCode = null;
 try {
   await execution;
 } catch (error) {
-  executionCode = error && typeof error === 'object' && 'code' in error ? error.code : null;
+  executionCode = error && typeof error === 'object' && 'code' in error ? error.code : 'UNCLASSIFIED_ERROR';
 }
+const stopMs = performance.now() - stopStartedAt;
+const finalResources = native.snapshot();
+counters.unsubscriptions = finalResources.removals;
 globalThis.gc?.();
 const finishedHeap = process.memoryUsage().heapUsed;
-delete globalThis.__ERA_VIBEFLOW_SERVICE_ADAPTER__;
 
-const unexpectedActivity = Object.entries(counters).filter(
+const unexpectedActivity = Object.entries(idleCounters).filter(
   ([name, value]) => !['subscriptions', 'unsubscriptions'].includes(name) && value !== 0,
 );
 const passed =
   Date.now() - startedAt >= durationMs &&
   counters.subscriptions === 1 &&
   counters.unsubscriptions === 1 &&
+  initialResources.listenerCount > 0 &&
+  finalResources.listenerCount === 0 &&
+  counters.listenerRemovals === initialResources.listenerCount &&
   unexpectedActivity.length === 0 &&
   stopMs <= 1_000 &&
-  executionCode === 'VF_ABORTED';
+  executionCode === null;
 const report = {
   status: passed ? 'PASS' : 'FAIL',
   startedAt: new Date(startedAt).toISOString(),
@@ -143,6 +99,9 @@ const report = {
   finishedHeap,
   retainedHeapBytes: finishedHeap - startedHeap,
   counters,
+  idleCounters,
+  initialResources,
+  finalResources,
   unexpectedActivity,
   stopMs,
   executionCode,

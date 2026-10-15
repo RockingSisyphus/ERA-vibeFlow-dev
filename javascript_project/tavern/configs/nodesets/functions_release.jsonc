@@ -1,0 +1,145 @@
+{
+  "type_key": "era.tavern.flow.functions_release",
+  "display_name": "释放作者函数上下文",
+  "description": "实现 era.tavern.functions.release；输入沿用 era.working.request，输出沿用 era.working.result，完成方式保持 immediate。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.call.frame",
+      "cardinality": "exactly_one",
+      "display_name": "本次调用及实例资源令牌"
+    }
+  ],
+  "provides": [
+    {
+      "key": "era_tavern_flow_functions_release_frame",
+      "type": "era.tavern.call.frame",
+      "display_name": "操作结果及后续处理所需的资源令牌"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "sync",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.call.frame",
+        "display_name": "调用与资源资料",
+        "required": true
+      }
+    ],
+    "max_steps": 12,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.tavern.initialize.start",
+        "display_name": "开始当前原生流程",
+        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+      },
+      {
+        "id": "close_call",
+        "type_used": "era.tavern.functions_release.close_call",
+        "display_name": "标记作者调用失效",
+        "description": "从实例中移除调用，禁止作者延后使用已失效接口。"
+      },
+      {
+        "id": "reject_pending_loop",
+        "type_used": "vibeflow.loop.while",
+        "display_name": "逐项拒绝作者未决请求循环",
+        "description": "每轮拒绝一个未完成请求；全部完成后解绑当前作者上下文。",
+        "requires": [
+          {
+            "type": "era.tavern.frame.functions_release.close_call",
+            "cardinality": "exactly_one",
+            "display_name": "当前请求、实例资源令牌及此前步骤取得的事实"
+          }
+        ],
+        "provides": [
+          {
+            "key": "era_tavern_flow_functions_release_reject_pending_loop_frame",
+            "type": "era.tavern.frame.functions_release.close_call",
+            "display_name": "逐项拒绝作者未决请求完成后的处理资料"
+          }
+        ],
+        "loop": {
+          "body": "era.tavern.flow.functions_release_reject_pending_item",
+          "max_iterations": null,
+          "stop_when": {
+            "from": "done",
+            "equals": true
+          },
+          "carry": [
+            {
+              "from": "era.tavern.frame.functions_release.close_call",
+              "as": "frame",
+              "update": "frame"
+            }
+          ],
+          "outputs": [
+            {
+              "from": "frame",
+              "as": "era_tavern_flow_functions_release_reject_pending_loop_frame"
+            }
+          ]
+        }
+      },
+      {
+        "id": "reject_pending",
+        "type_used": "era.tavern.functions_release.reject_pending",
+        "display_name": "汇总逐项拒绝作者未决请求",
+        "description": "将循环的终态资料转换为后续步骤使用的结果；不重复处理已经完成的条目。"
+      },
+      {
+        "id": "unbind_context",
+        "type_used": "era.tavern.functions_release.unbind_context",
+        "display_name": "解绑参数与取消监听并唤醒等待",
+        "description": "解除参数 Facade、移除取消监听、唤醒 next，让停止完整结束。"
+      },
+      {
+        "id": "return_release",
+        "type_used": "era.tavern.functions_release.return_release",
+        "display_name": "返回原释放确认",
+        "description": "保持 released 结果，重复释放仍幂等。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.tavern.initialize.end",
+        "display_name": "结束当前原生流程",
+        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+      }
+    ],
+    "edges": [
+      [
+        "close_call",
+        "reject_pending_loop"
+      ],
+      [
+        "reject_pending",
+        "unbind_context"
+      ],
+      [
+        "unbind_context",
+        "return_release"
+      ],
+      [
+        "reject_pending_loop",
+        "reject_pending"
+      ],
+      [
+        "start",
+        "close_call"
+      ],
+      [
+        "return_release",
+        "end"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.call.frame",
+        "cardinality": "exactly_one",
+        "display_name": "完成后的操作资料",
+        "as": "frame"
+      }
+    ]
+  }
+}

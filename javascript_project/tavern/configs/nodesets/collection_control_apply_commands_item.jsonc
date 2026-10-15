@@ -1,0 +1,208 @@
+{
+  "type_key": "era.tavern.flow.collection_control_apply_commands_item",
+  "display_name": "逐项执行计时指令",
+  "description": "每轮取得一条指令，调用共享 timer_control 并推进位置；所有命令完成后退出。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.frame.collection_control.prepare_commands",
+      "cardinality": "exactly_one",
+      "display_name": "当前条目、处理位置及实例资源令牌"
+    }
+  ],
+  "provides": [
+    {
+      "key": "era_tavern_flow_collection_control_apply_commands_item_frame",
+      "type": "era.tavern.item.result.collection_control_apply_commands_item",
+      "display_name": "下一条目或当前处理结论"
+    },
+    {
+      "key": "era_tavern_flow_collection_control_apply_commands_item_done",
+      "type": "era.tavern.done.collection_control.apply_commands",
+      "display_name": "是否完成"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "sync",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.frame.collection_control.prepare_commands",
+        "display_name": "当前处理位置",
+        "required": true
+      }
+    ],
+    "max_steps": 18,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.tavern.initialize.start",
+        "display_name": "开始当前原生流程",
+        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+      },
+      {
+        "id": "choose_item",
+        "type_used": "era.tavern.collection_control_apply_commands_item.choose_item",
+        "display_name": "检查是否还有待处理条目",
+        "description": "有当前条目才进入实际处理；列表为空或已处理完时直接形成完成标记，不调用共享操作。"
+      },
+      {
+        "id": "one_item_prepare",
+        "type_used": "era.tavern.collection_control_apply_commands_item.one_item_prepare",
+        "display_name": "逐项执行计时指令",
+        "description": "每轮取得一条指令，调用共享 timer_control 并推进位置；所有命令完成后退出。"
+      },
+      {
+        "id": "timer__read_timer",
+        "type_used": "era.tavern.timer_control.read_timer",
+        "display_name": "执行 Service 指定的计时安排：读取计时记录并确定本次截止时间",
+        "description": "读取现有token/key句柄和首次安排时间；收集控制沿用Service给出的dueAt，延迟准入核对delayMs/maxDelayMs，注销旧timer后按原时钟计算截止。"
+      },
+      {
+        "id": "timer__choose_timer",
+        "type_used": "era.tavern.timer_control.choose_timer",
+        "display_name": "执行 Service 指定的计时安排：选择保留、取消或重新安排",
+        "description": "相同到期时间保留原 timer；cancel 移除已有 timer；新安排先撤销旧句柄再登记。"
+      },
+      {
+        "id": "timer__branch_schedule",
+        "type_used": "era.tavern.timer_control.branch_schedule",
+        "display_name": "执行 Service 指定的计时安排：登记新的到期回调",
+        "description": "同步建立计时资源身份、控制器与绝对截止时间，替换旧资源后固定调用编译后的timer_wait异步入口；此处不直接登记长期Timeout。"
+      },
+      {
+        "id": "timer__branch_cancel",
+        "type_used": "era.tavern.timer_control.branch_cancel",
+        "display_name": "执行 Service 指定的计时安排：取消计时器并移除记录",
+        "description": "清除对应 timer，移除实例记录，已过期的回调不会再接纳事件。"
+      },
+      {
+        "id": "timer__branch_keep",
+        "type_used": "era.tavern.timer_control.branch_keep",
+        "display_name": "执行 Service 指定的计时安排：保留既有计时器",
+        "description": "不重复注册已对应同一 dueAt 的计时器。"
+      },
+      {
+        "id": "timer__join_return_timer",
+        "type_used": "era.tavern.timer_control.join_return_timer",
+        "display_name": "执行 Service 指定的计时安排：汇合当前实际激活分支的结果",
+        "description": "接收当前所选路径的结果集合，交还其中唯一实际结果；不选择未激活分支、不重新执行操作。运行实现必须拒绝实际多结果，不以集合契约放宽唯一结果语义。"
+      },
+      {
+        "id": "timer__return_timer",
+        "type_used": "era.tavern.timer_control.return_timer",
+        "display_name": "执行 Service 指定的计时安排：返回定时控制确认",
+        "description": "保留原控制帧和 schedule/cancel 的返回形状。"
+      },
+      {
+        "id": "one_item",
+        "type_used": "era.tavern.collection_control_apply_commands_item.one_item",
+        "display_name": "交还执行 Service 指定的计时安排结果",
+        "description": "保存共享原生流程的实际结果并继续当前分支；不重新执行准入、计时或结算。"
+      },
+      {
+        "id": "empty",
+        "type_used": "era.tavern.collection_control_apply_commands_item.empty",
+        "display_name": "完成空列表或已结束的遍历",
+        "description": "保留当前处理资料并返回 done=true，不执行任何条目副作用。"
+      },
+      {
+        "id": "join_end",
+        "type_used": "era.tavern.collection_control_apply_commands_item.join_end",
+        "display_name": "汇合当前实际激活分支的结果",
+        "description": "接收当前所选路径的结果集合，交还其中唯一实际结果；不选择未激活分支、不重新执行操作。运行实现必须拒绝实际多结果，不以集合契约放宽唯一结果语义。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.tavern.initialize.end",
+        "display_name": "结束当前原生流程",
+        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+      }
+    ],
+    "edges": [
+      {
+        "from": "choose_item",
+        "to": "one_item_prepare",
+        "when": "era_tavern_collection_control_apply_commands_item_choose_item_route == 'item'"
+      },
+      {
+        "from": "choose_item",
+        "to": "empty",
+        "when": "era_tavern_collection_control_apply_commands_item_choose_item_route == 'done'"
+      },
+      [
+        "one_item_prepare",
+        "timer__read_timer"
+      ],
+      [
+        "timer__return_timer",
+        "one_item"
+      ],
+      [
+        "one_item",
+        "join_end"
+      ],
+      [
+        "empty",
+        "join_end"
+      ],
+      [
+        "timer__read_timer",
+        "timer__choose_timer"
+      ],
+      {
+        "from": "timer__choose_timer",
+        "to": "timer__branch_keep",
+        "when": "era_tavern_timer_control_choose_timer_route == 'keep'"
+      },
+      [
+        "timer__branch_keep",
+        "timer__join_return_timer"
+      ],
+      {
+        "from": "timer__choose_timer",
+        "to": "timer__branch_cancel",
+        "when": "era_tavern_timer_control_choose_timer_route == 'cancel'"
+      },
+      [
+        "timer__branch_cancel",
+        "timer__join_return_timer"
+      ],
+      {
+        "from": "timer__choose_timer",
+        "to": "timer__branch_schedule",
+        "when": "era_tavern_timer_control_choose_timer_route == 'schedule'"
+      },
+      [
+        "timer__branch_schedule",
+        "timer__join_return_timer"
+      ],
+      [
+        "timer__join_return_timer",
+        "timer__return_timer"
+      ],
+      [
+        "start",
+        "choose_item"
+      ],
+      [
+        "join_end",
+        "end"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.item.result.collection_control_apply_commands_item",
+        "cardinality": "exactly_one",
+        "as": "frame",
+        "display_name": "更新位置"
+      },
+      {
+        "type": "era.tavern.done.collection_control.apply_commands",
+        "cardinality": "exactly_one",
+        "as": "done",
+        "display_name": "完成标记"
+      }
+    ]
+  }
+}

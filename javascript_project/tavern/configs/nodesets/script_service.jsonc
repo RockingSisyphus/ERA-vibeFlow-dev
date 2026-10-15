@@ -1,0 +1,80 @@
+{
+  "type_key": "era.tavern.flow.script_service",
+  "display_name": "运行本次局部脚本的主Service",
+  "description": "由原有唯一启动边界启动；资源就绪后await真实主Service，取消信号沿调用传递并等待清理。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.call.frame",
+      "cardinality": "exactly_one",
+      "display_name": "本次局部脚本会话"
+    }
+  ],
+  "provides": [
+    {
+      "key": "era_tavern_script_service_terminal",
+      "type": "era.tavern.task.finished",
+      "display_name": "主Service轻量终态"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.call.frame",
+        "required": true,
+        "display_name": "本次局部脚本会话"
+      }
+    ],
+    "max_steps": 6,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.tavern.initialize.start",
+        "display_name": "开始主Service任务",
+        "description": "原生任务入口。"
+      },
+      {
+        "id": "wait_owner",
+        "type_used": "era.tavern.owned.wait_owner",
+        "display_name": "等待本次资源持有者就绪",
+        "description": "只等待同次运行的资源Node公布入口；卸载或故障取消时退出，不登记外部运行Promise。"
+      },
+      {
+        "id": "run_service",
+        "type_used": "era.tavern.owned.run_script_service",
+        "display_name": "等待主Service实际结束",
+        "description": "通过机械回调调用编译后Service，传入本任务信号并等待实际收尾。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.tavern.initialize.end",
+        "display_name": "结束主Service任务",
+        "description": "资源和异步清理完成后结束。"
+      }
+    ],
+    "edges": [
+      [
+        "start",
+        "wait_owner"
+      ],
+      [
+        "wait_owner",
+        "run_service"
+      ],
+      [
+        "run_service",
+        "end"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.task.finished",
+        "cardinality": "exactly_one",
+        "display_name": "主Service轻量终态",
+        "as": "frame"
+      }
+    ]
+  }
+}

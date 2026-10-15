@@ -2,14 +2,15 @@
  * @file ERA唯一公共对象
  * @description 负责公开请求、即时状态及订阅投影。依赖Service执行变量操作，不承载业务事务；函数调用以显式上下文选择相同API合同。
  */
-import { functionCallContext } from './function-call-context';
-import {
-  generationSubscriptions,
-  type EraGenerationListener,
-  type EraGenerationStage,
-} from './generation-subscriptions';
+import type { EraGenerationListener, EraGenerationStage } from './generation-subscriptions';
 
-import { captureEraLifecycleToken, requestEraService } from './client';
+import {
+  captureEraLifecycleToken,
+  requestEraService,
+  requestEraFunctionContext,
+  subscribeEraGeneration,
+  clearEraGenerationSubscriptions,
+} from './client';
 import {
   readActiveSidecarRuntimeSnapshot,
   readWorkingState,
@@ -201,22 +202,32 @@ export function createCommit(transport: EraSubmit = submit) {
 export function createFunctionFacade(transport: EraSubmit, assertActive: () => void): EraFacade {
   const facade = getInstalledEraPublicApi();
   const commit = createCommit(transport);
+  // 作者API保留上下文错误；VibeFlow的节点位置包装留在工作流日志中。
+  const assertCurrent = () => {
+    try {
+      assertActive();
+    } catch (error) {
+      if (error instanceof Error && 'code' in error && error.code === 'VF_NODE_FAILED' && error.cause instanceof Error)
+        throw error.cause;
+      throw error;
+    }
+  };
   return Object.freeze({
     ...facade,
     commit: async (operations: readonly EraCommitOperation[], options?: Readonly<{ scope?: EraCommitScope }>) => {
-      assertActive();
+      assertCurrent();
       return commit(operations, options);
     },
     get: (options?: EraGetOptions) => {
-      assertActive();
+      assertCurrent();
       return facade.get(options);
     },
     ready: async () => {
-      assertActive();
+      assertCurrent();
       return facade.get();
     },
     sync: async () => {
-      assertActive();
+      assertCurrent();
       throw new Error('ERA_FUNCTION_SYNC_UNSUPPORTED：消息内函数禁止重算或回退，请在调用结束后由外部发起。');
     },
   });
@@ -230,9 +241,9 @@ export function createEraFacade(createStatusbar: EraStatusbarFactory): EraFacade
   let statusbar: EraStatusbarController | null = null;
   const commit = createCommit();
   const facade = {
-    forCall: functionCallContext,
+    forCall: requestEraFunctionContext,
     commit,
-    generation: Object.freeze({ subscribe: generationSubscriptions.subscribe.bind(generationSubscriptions) }),
+    generation: Object.freeze({ subscribe: subscribeEraGeneration }),
     get: () => currentState(),
     async ready() {
       const immediate = currentState();
@@ -309,7 +320,7 @@ export function installEraPublicApi(createStatusbar: EraStatusbarFactory): () =>
   return () => {
     active = false;
     const globalReleased = clearOwnedGlobalFacade(guarded);
-    generationSubscriptions.clear();
+    clearEraGenerationSubscriptions();
     if (installedFacade === guarded) installedFacade = null;
     (facade.statusbar as EraStatusbarController).stop();
     if (!globalReleased) throw new Error('ERA_GLOBAL_RELEASE_FAILED');

@@ -1,0 +1,126 @@
+{
+  "type_key": "era.tavern.flow.cap_sync_variables",
+  "display_name": "酒馆变量操作",
+  "description": "共享同一职责组的原操作与必要的等待前发起；无额外 cap 总分组。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.call.frame",
+      "cardinality": "exactly_one",
+      "display_name": "本次调用、实例资源与上一节点的事实"
+    }
+  ],
+  "provides": [
+    {
+      "key": "era_tavern_flow_cap_sync_variables_frame",
+      "type": "era.tavern.frame.final.cap_sync_variables",
+      "display_name": "处理后的资源与事实"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "sync",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.call.frame",
+        "display_name": "同实例调用与资源",
+        "required": true
+      }
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.frame.final.cap_sync_variables",
+        "cardinality": "exactly_one",
+        "as": "frame",
+        "display_name": "本段明确结果"
+      }
+    ],
+    "max_steps": 12,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.tavern.initialize.start",
+        "display_name": "开始当前原生流程",
+        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+      },
+      {
+        "id": "choose",
+        "type_used": "era.tavern.cap_sync_variables.choose",
+        "display_name": "识别酒馆变量操作",
+        "description": "按已声明操作名选择唯一原生路径；即时操作、同步完成的 Promise 操作及真正等待前的发起共享本职责组，不重复分组。"
+      },
+      {
+        "id": "route_read__check_request",
+        "type_used": "era.tavern.variables_read.check_request",
+        "display_name": "读取：酒馆变量：检查读取请求",
+        "description": "保持 era.tavern.variables.read 的现行参数、取消和目标复核；不新增资格条件。"
+      },
+      {
+        "id": "route_read__execute",
+        "type_used": "era.tavern.variables_read.execute",
+        "display_name": "读取：酒馆变量：执行读取操作",
+        "description": "在酒馆页面执行该操作的实际 API 或资源动作；保留未知字段、现有错误类别及原同步/异步约定。"
+      },
+      {
+        "id": "route_read__return_result",
+        "type_used": "era.tavern.variables_read.return_result",
+        "display_name": "读取：酒馆变量：交还读取结果",
+        "description": "返回原 era.tavern.variables.read.result 结果；需要脱敏的连接资料只返回摘要。"
+      },
+      {
+        "id": "route_commit",
+        "type_used": "era.tavern.flow.variables_commit",
+        "display_name": "应用 Service 指定的变量写入并回读",
+        "description": "沿原 era.tavern.variables.commit 合同执行当前唯一操作。"
+      },
+      {
+        "id": "join_return",
+        "type_used": "era.tavern.cap_sync_variables.join_return",
+        "display_name": "汇合当前实际激活分支的结果",
+        "description": "接收当前所选路径的结果集合，交还其中唯一实际结果；不选择未激活分支、不重新执行操作。运行实现必须拒绝实际多结果，不以集合契约放宽唯一结果语义。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.tavern.initialize.end",
+        "display_name": "结束当前原生流程",
+        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+      }
+    ],
+    "edges": [
+      {
+        "from": "choose",
+        "to": "route_read__check_request",
+        "when": "era_tavern_cap_sync_variables_choose_route == 'read'"
+      },
+      [
+        "route_read__return_result",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_commit",
+        "when": "era_tavern_cap_sync_variables_choose_route == 'commit'"
+      },
+      [
+        "route_commit",
+        "join_return"
+      ],
+      [
+        "route_read__check_request",
+        "route_read__execute"
+      ],
+      [
+        "route_read__execute",
+        "route_read__return_result"
+      ],
+      [
+        "start",
+        "choose"
+      ],
+      [
+        "join_return",
+        "end"
+      ]
+    ]
+  }
+}

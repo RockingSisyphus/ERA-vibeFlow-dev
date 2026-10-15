@@ -1,0 +1,125 @@
+{
+  "type_key": "era.tavern.flow.notification_finalize",
+  "display_name": "收尾已全部结束的通知组",
+  "description": "保持旧 allSettled 的整体完成、失败报告顺序和按组诊断计数；回调等待由独立 detached continuation 进行。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.call.frame",
+      "cardinality": "exactly_one",
+      "display_name": "当前通知及实例资源"
+    }
+  ],
+  "provides": [
+    {
+      "key": "era_tavern_flow_notification_finalize_frame",
+      "type": "era.tavern.task.finished",
+      "display_name": "本次步骤的结果与资源"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.call.frame",
+        "required": true,
+        "display_name": "当前完成组"
+      }
+    ],
+    "max_steps": 12,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.tavern.initialize.start",
+        "display_name": "开始当前原生流程",
+        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+      },
+      {
+        "id": "read_group",
+        "type_used": "era.tavern.notification_finalize.read_group",
+        "display_name": "读取当前已经全部终态的通知组",
+        "description": "固定原通知顺序的全部结果与待释放资源；此处没有未完成回调。"
+      },
+      {
+        "id": "report_failures_loop",
+        "type_used": "vibeflow.loop.while",
+        "display_name": "按原通知顺序报告全部失败",
+        "description": "只有组全部终态后才逐项报告失败；不改变既有状态结算或启动任何重试。",
+        "requires": [
+          {
+            "type": "era.tavern.frame.notification_finalize.read",
+            "cardinality": "exactly_one",
+            "display_name": "当前通知及实例资源"
+          }
+        ],
+        "provides": [
+          {
+            "key": "era_tavern_notification_finalize_report_failures_loop_frame",
+            "type": "era.tavern.frame.notification_finalize.read",
+            "display_name": "本次步骤的结果与资源"
+          }
+        ],
+        "loop": {
+          "body": "era.tavern.flow.notification_report_item",
+          "max_iterations": null,
+          "stop_when": {
+            "from": "done",
+            "equals": true
+          },
+          "carry": [
+            {
+              "from": "era.tavern.frame.notification_finalize.read",
+              "as": "frame",
+              "update": "frame"
+            }
+          ],
+          "outputs": [
+            {
+              "from": "frame",
+              "as": "era_tavern_notification_finalize_report_failures_loop_frame"
+            }
+          ]
+        }
+      },
+      {
+        "id": "release_group",
+        "type_used": "era.tavern.notification_finalize.release_group",
+        "display_name": "释放当前通知组并完成等待",
+        "description": "完成当前实际工作和应有收尾后只交回小的完成摘要；框架缓存不再持有本次请求、会话或私密函数引用。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.tavern.initialize.end",
+        "display_name": "结束当前原生流程",
+        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+      }
+    ],
+    "edges": [
+      [
+        "read_group",
+        "report_failures_loop"
+      ],
+      [
+        "report_failures_loop",
+        "release_group"
+      ],
+      [
+        "start",
+        "read_group"
+      ],
+      [
+        "release_group",
+        "end"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.task.finished",
+        "cardinality": "exactly_one",
+        "as": "frame",
+        "display_name": "已释放通知组"
+      }
+    ]
+  }
+}

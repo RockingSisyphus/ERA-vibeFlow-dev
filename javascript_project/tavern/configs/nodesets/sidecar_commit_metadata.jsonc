@@ -1,0 +1,116 @@
+{
+  "type_key": "era.tavern.flow.sidecar_commit_metadata",
+  "display_name": "提交聊天指针并发布已验证快照",
+  "description": "实现 era.tavern.sidecar.commit_metadata；输入沿用 era.tavern.sidecar.commit_metadata.request，输出沿用 era.tavern.sidecar.commit_metadata.result，完成方式保持 suspend。 原接口虽返回 Promise，但内部没有实际等待；完整原流程同步完成。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.call.frame",
+      "cardinality": "exactly_one",
+      "display_name": "当前实例与调用资料"
+    }
+  ],
+  "provides": [
+    {
+      "key": "era_tavern_flow_sidecar_commit_metadata_frame",
+      "type": "era.tavern.call.frame",
+      "display_name": "当前步骤的资源与已捕获事实"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "sync",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.call.frame",
+        "display_name": "调用与资源资料",
+        "required": true
+      }
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.call.frame",
+        "cardinality": "exactly_one",
+        "display_name": "完成后的操作资料",
+        "as": "frame"
+      }
+    ],
+    "max_steps": 11,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.tavern.initialize.start",
+        "display_name": "开始当前原生流程",
+        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+      },
+      {
+        "id": "check_pointer",
+        "type_used": "era.tavern.sidecar_commit_metadata.check_pointer",
+        "display_name": "复核来源、指针与快照归属",
+        "description": "在实际写聊天变量前核对 owner、sourceBasis 和 expectedSidecarId，保留原陈旧目标拒绝。"
+      },
+      {
+        "id": "write_pointer",
+        "type_used": "era.tavern.sidecar_commit_metadata.write_pointer",
+        "display_name": "提交唯一 Sidecar 指针",
+        "description": "只写当前聊天的 SidecarId 并按原合同移除旧 stat_data，不迁移或计算业务状态。"
+      },
+      {
+        "id": "check_working_version",
+        "type_used": "era.tavern.sidecar_commit_metadata.check_working_version",
+        "display_name": "核对工作状态版本",
+        "description": "判断 Service 指定的 workingVersion 是否仍与当前内存一致；过期结果不得发布。"
+      },
+      {
+        "id": "publish_snapshot",
+        "type_used": "era.tavern.sidecar_commit_metadata.publish_snapshot",
+        "display_name": "发布当前已提交快照",
+        "description": "按原归属与版本条件更新宏/UI 使用的易失快照，保留 notifySubscribers 设置。"
+      },
+      {
+        "id": "read_back",
+        "type_used": "era.tavern.sidecar_commit_metadata.read_back",
+        "display_name": "回读聊天指针",
+        "description": "返回 committed、SidecarId 和实际聊天变量，不把发布与文件保存混为同一动作。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.tavern.initialize.end",
+        "display_name": "结束当前原生流程",
+        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+      }
+    ],
+    "edges": [
+      [
+        "check_pointer",
+        "write_pointer"
+      ],
+      [
+        "write_pointer",
+        "check_working_version"
+      ],
+      [
+        "publish_snapshot",
+        "read_back"
+      ],
+      [
+        "start",
+        "check_pointer"
+      ],
+      [
+        "read_back",
+        "end"
+      ],
+      {
+        "from": "check_working_version",
+        "to": "publish_snapshot",
+        "when": "era_tavern_sidecar_commit_metadata_check_working_version_route == 'publish'"
+      },
+      {
+        "from": "check_working_version",
+        "to": "read_back",
+        "when": "era_tavern_sidecar_commit_metadata_check_working_version_route == 'skip'"
+      }
+    ]
+  }
+}

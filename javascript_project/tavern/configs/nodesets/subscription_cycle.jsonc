@@ -1,0 +1,168 @@
+{
+  "type_key": "era.tavern.flow.subscription_cycle",
+  "display_name": "逐个执行阶段订阅",
+  "description": "顺序等待作者回调的机制由原生Loop逐轮调度，取消与错误保留原合同。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.call.frame",
+      "cardinality": "exactly_one",
+      "display_name": "本次实例及调用资料"
+    }
+  ],
+  "provides": [
+    {
+      "key": "subscription_cycle_frame",
+      "type": "era.tavern.call.frame",
+      "display_name": "本流程实际结果"
+    },
+    {
+      "key": "subscription_cycle_done",
+      "type": "era.tavern.subscription_cycle.done",
+      "display_name": "循环终态"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.call.frame",
+        "required": true,
+        "display_name": "本次实例及调用资料"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.tavern.initialize.start",
+        "display_name": "开始当前原生流程",
+        "description": "标记本段原生流程的控制边界，不创建资源或重复输出。"
+      },
+      {
+        "id": "choose",
+        "type_used": "era.tavern.subscription_cycle.choose",
+        "display_name": "选择当前订阅、跳过或结束",
+        "description": "按捕获的订阅顺序检查周期取消、登记有效性及阶段筛选；仅当前合法订阅进入invoke。"
+      },
+      {
+        "id": "skip",
+        "type_used": "era.tavern.subscription_cycle.skip",
+        "display_name": "跳过已注销或不匹配阶段的订阅",
+        "description": "只推进一个捕获位置，不调用回调，不解除其他作者等待。"
+      },
+      {
+        "id": "empty",
+        "type_used": "era.tavern.subscription_cycle.empty",
+        "display_name": "结束当前订阅周期遍历",
+        "description": "周期取消或列表结束时返回done=true；取消不伪造作者原始操作已完成。"
+      },
+      {
+        "id": "invoke",
+        "type_used": "era.tavern.subscription_cycle.invoke",
+        "display_name": "执行当前作者订阅并等待其Promise",
+        "description": "使用只读观察副本和此回调的signal，登记局部取消句柄；取消解除等待但仍观察原始Promise拒绝。同步异常保存为事实。"
+      },
+      {
+        "id": "classify",
+        "type_used": "era.tavern.subscription_cycle.classify",
+        "display_name": "选择报告错误或直接推进",
+        "description": "仅未取消的回调失败需要报告；已取消等待不报告为业务失败。"
+      },
+      {
+        "id": "report_error",
+        "type_used": "era.tavern.subscription_cycle.report_error",
+        "display_name": "报告原阶段订阅失败",
+        "description": "按原console/toastr格式报告当前错误；保持继续之后的订阅和生成，不修改Service结论。"
+      },
+      {
+        "id": "advance",
+        "type_used": "era.tavern.subscription_cycle.advance",
+        "display_name": "释放本回调监听并推进一个位置",
+        "description": "汇合当前成功、取消或报告路径，移除本回调局部监听并推进一个位置；下一回调由外层原生Loop选择。"
+      },
+      {
+        "id": "join_result",
+        "type_used": "era.tavern.subscription_cycle.join_result",
+        "display_name": "交还当前轮次资料",
+        "description": "汇合invoke、skip或结束的实际结果；done由所选路径唯一提供。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.tavern.initialize.end",
+        "display_name": "结束当前原生流程",
+        "description": "标记本段原生流程的控制边界，不创建资源或重复输出。"
+      }
+    ],
+    "edges": [
+      [
+        "start",
+        "choose"
+      ],
+      {
+        "from": "choose",
+        "to": "skip",
+        "when": "subscription_cycle_choose_route == 'skip'"
+      },
+      {
+        "from": "choose",
+        "to": "empty",
+        "when": "subscription_cycle_choose_route == 'done'"
+      },
+      {
+        "from": "choose",
+        "to": "invoke",
+        "when": "subscription_cycle_choose_route == 'invoke'"
+      },
+      [
+        "invoke",
+        "classify"
+      ],
+      {
+        "from": "classify",
+        "to": "report_error",
+        "when": "subscription_cycle_classify_route == 'error'"
+      },
+      [
+        "advance",
+        "join_result"
+      ],
+      [
+        "skip",
+        "join_result"
+      ],
+      [
+        "empty",
+        "join_result"
+      ],
+      [
+        "join_result",
+        "end"
+      ],
+      {
+        "from": "classify",
+        "to": "advance",
+        "when": "subscription_cycle_classify_route == 'quiet'"
+      },
+      [
+        "report_error",
+        "advance"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.call.frame",
+        "cardinality": "exactly_one",
+        "as": "frame",
+        "display_name": "当前实际结果"
+      },
+      {
+        "type": "era.tavern.subscription_cycle.done",
+        "cardinality": "exactly_one",
+        "as": "done",
+        "display_name": "循环终态"
+      }
+    ],
+    "max_steps": 15
+  }
+}

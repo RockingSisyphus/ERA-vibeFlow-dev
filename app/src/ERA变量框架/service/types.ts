@@ -72,129 +72,17 @@ export interface EraStartupGateDecision {
   readonly warn?: boolean;
 }
 
-export interface EraCapabilityContext {
-  readonly signal: AbortSignal;
-}
-
-/**
- * Tavern Helper 能力适配器；所有方法只执行工作流已声明的宿主操作，
- * 不拥有 CRUD、同步、回滚或资源选择规则。
- */
-export interface EraTavernAdapter {
-  subscribe(listener: (event: EraInboundEvent) => EraAdmissionResult): () => void;
-  notify(notification: EraPreparedNotification, context: EraCapabilityContext): Promise<void>;
-  readonly agent: {
-    await_native_completion(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
-    read_context(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
-    write_configuration(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
-    capture_preset(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
-    read_configuration_sources(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
-    read_connection_state(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
-    upsert_connection_profile(
-      input: Readonly<Record<string, unknown>>,
-      context: EraCapabilityContext,
-    ): Promise<unknown>;
-    delete_connection_profile(
-      input: Readonly<Record<string, unknown>>,
-      context: EraCapabilityContext,
-    ): Promise<unknown>;
-    clear_connection_profile_key(
-      input: Readonly<Record<string, unknown>>,
-      context: EraCapabilityContext,
-    ): Promise<unknown>;
-    list_connection_models(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
-    list_connection_models_draft(
-      input: Readonly<Record<string, unknown>>,
-      context: EraCapabilityContext,
-    ): Promise<unknown>;
-    generate(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
-    generate_story(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
-    inject_once(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
-    read_session_binding(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
-    write_session(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
-    clear_session(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
-    create_error_message(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
-    stop_native_generation(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
-  };
-  readonly variables: {
-    read(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
-    commit(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
-  };
-  readonly messages: {
-    read_context(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
-    update_content(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
-    refresh(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
-  };
-  readonly worldbook: {
-    read(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
-    create(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
-    bind(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
-    replace_entries(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
-  };
-  readonly regex: {
-    read(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
-    upsert(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
-  };
-  /** 当前单角色卡主开场白的机械 I/O；选择、冲突和幂等规则属于 Service。 */
-  readonly character: {
-    patch_single_floor?(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
-    patch_external_statusbar?(
-      input: Readonly<Record<string, unknown>>,
-      context: EraCapabilityContext,
-    ): Promise<unknown>;
-    read_greeting_refresh_context(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
-    apply_greeting_refresh(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
-    read_main_greeting(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
-    write_main_greeting(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
-  };
-  readonly identity: {
-    read(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
-  };
-  /** 只读当前脚本在三类 Tavern Helper 脚本树中的启用归属。 */
-  readonly installation_scope: {
-    read(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
-  };
-  /** Sidecar 宿主机械能力；绑定规则与迁移决策位于 VibeFlow service workflow。 */
-  readonly functions: {
-    begin(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
-    next(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
-    acknowledge(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
-    release(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
-  };
-  readonly sidecar: {
-    read_working(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
-    write_working(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
-    read_current(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
-    read_record(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
-    write_record(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
-    commit_metadata(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): Promise<unknown>;
-    publish_snapshot(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
-    create_id(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
-    present_prompt(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
-    clear_prompt(input: Readonly<Record<string, unknown>>, context: EraCapabilityContext): unknown;
-  };
-}
-
 /** 应用启动器和 UI client 共用的最小入站接口。 */
 export interface EraServiceIngress {
   enqueue(type: string, source: Exclude<EraEventSource, 'timer'>, args?: readonly unknown[]): EraAdmissionResult;
   /** 当前页面实例的单调 Tavern 生命周期 token；只作为 Service 的原始输入事实。 */
   currentLifecycleToken(): number;
-  stopAccepting(): void;
-}
-
-export type EraRuntimeAdapter = EraTavernAdapter & EraServiceIngress;
-
-/** 真实 Tavern adapter 由 workflow Host 结算一次启动闸门。 */
-export interface EraStartupGateAdapter {
-  waitForStartupGate(): Promise<EraStartupGateDecision>;
-  settleStartupGate(decision: EraStartupGateDecision): void;
-}
-
-/** 应用层只依赖 AOT Host 的公开生命周期 ABI。 */
-export interface EraWorkflowHost {
-  readonly started: boolean;
-  start(): Promise<void>;
-  stop(): Promise<void>;
-  runWorkflowAsync(inputs: object): Promise<unknown>;
+  forCall?(parameters: object): import('./public-api').EraFacade;
+  subscribeGeneration?(
+    listener: import('./generation-subscriptions').EraGenerationListener,
+    options?: { readonly stages?: readonly import('./generation-subscriptions').EraGenerationStage[] },
+  ): import('./generation-subscriptions').GenerationSubscriptionStop;
+  clearGenerationSubscriptions?(): void;
+  readAgentSession?(): Record<string, unknown> | null;
+  diagnostics?(): Readonly<{ started: boolean; stopping: boolean }>;
 }

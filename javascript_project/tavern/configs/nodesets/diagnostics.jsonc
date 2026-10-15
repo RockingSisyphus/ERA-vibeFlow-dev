@@ -1,0 +1,80 @@
+{
+  "type_key": "era.tavern.flow.diagnostics",
+  "display_name": "读取实例诊断与生命周期令牌",
+  "description": "读取实例运行、队列、回执、timer、引用和通知计数，保留 client 捕获当前生命周期 token 的接口。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.call.frame",
+      "cardinality": "exactly_one",
+      "display_name": "本次调用及实例资源令牌"
+    }
+  ],
+  "provides": [
+    {
+      "key": "era_tavern_flow_diagnostics_frame",
+      "type": "era.tavern.call.frame",
+      "display_name": "操作结果及后续处理所需的资源令牌"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "sync",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.call.frame",
+        "display_name": "调用与资源资料",
+        "required": true
+      }
+    ],
+    "max_steps": 8,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.tavern.initialize.start",
+        "display_name": "开始当前原生流程",
+        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+      },
+      {
+        "id": "read_resources",
+        "type_used": "era.tavern.diagnostics.read_resources",
+        "display_name": "读取当前实例资源事实",
+        "description": "读取当前会话的资源计数、运行状态和生命周期 token，不推断业务是否通过。"
+      },
+      {
+        "id": "return_diagnostics",
+        "type_used": "era.tavern.diagnostics.return_diagnostics",
+        "display_name": "返回原诊断和令牌形状",
+        "description": "生成现有 diagnosticsSnapshot 或 currentLifecycleToken 结果；不更改运行状态。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.tavern.initialize.end",
+        "display_name": "结束当前原生流程",
+        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+      }
+    ],
+    "edges": [
+      [
+        "read_resources",
+        "return_diagnostics"
+      ],
+      [
+        "start",
+        "read_resources"
+      ],
+      [
+        "return_diagnostics",
+        "end"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.call.frame",
+        "cardinality": "exactly_one",
+        "display_name": "完成后的操作资料",
+        "as": "frame"
+      }
+    ]
+  }
+}

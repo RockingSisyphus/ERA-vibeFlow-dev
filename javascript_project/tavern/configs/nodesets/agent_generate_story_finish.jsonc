@@ -1,0 +1,151 @@
+{
+  "type_key": "era.tavern.flow.agent_generate_story_finish",
+  "display_name": "执行酒馆正文重试：等待与确认",
+  "description": "续用同步段已发起资源；保留原等待后的具体处理、结果核对与错误身份。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.call.frame",
+      "cardinality": "exactly_one",
+      "display_name": "本次调用、实例资源与上一节点的事实"
+    }
+  ],
+  "provides": [
+    {
+      "key": "era_tavern_flow_agent_generate_story_finish_frame",
+      "type": "era.tavern.call.frame",
+      "display_name": "处理后的资源与事实"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.call.frame",
+        "display_name": "同实例调用与资源",
+        "required": true
+      }
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.call.frame",
+        "cardinality": "exactly_one",
+        "as": "frame",
+        "display_name": "本段明确结果"
+      }
+    ],
+    "max_steps": 14,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.tavern.initialize.start",
+        "display_name": "开始当前原生流程",
+        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+      },
+      {
+        "id": "request_model",
+        "type_used": "era.tavern.agent_generate_story.request_model",
+        "display_name": "等待本次执行酒馆正文重试的资源终态",
+        "description": "续用本次真实原始请求的终态结果，不重新调用模型。公开等待取消与原始请求终态分别记录；资源回调此前已同步解除辅助生成保护。"
+      },
+      {
+        "id": "leave_auxiliary",
+        "type_used": "era.tavern.agent_generate_story.leave_auxiliary",
+        "display_name": "归还生成重入计数",
+        "description": "按当前请求资源核对保护已归还；同一请求只归还一次，不因取消公开等待提前归还，也不重新创建已停止实例的资源。"
+      },
+      {
+        "id": "classify_result",
+        "type_used": "era.tavern.agent_generate_story.classify_result",
+        "display_name": "区分文本响应、失败和取消",
+        "description": "保留两个操作各自的失败返回/抛出约定，检查实际文本响应并完成观察记录。"
+      },
+      {
+        "id": "select_cancelled",
+        "type_used": "era.tavern.agent_generate_story.select_cancelled",
+        "display_name": "保留取消原因",
+        "description": "清理本次资源后传播原 signal 的取消身份，不当作普通模型失败。"
+      },
+      {
+        "id": "select_failed",
+        "type_used": "era.tavern.agent_generate_story.select_failed",
+        "display_name": "保留该操作的失败约定",
+        "description": "普通辅助请求返回原失败结果；正文重试保留原异常，不改写为成功。"
+      },
+      {
+        "id": "select_text",
+        "type_used": "era.tavern.agent_generate_story.select_text",
+        "display_name": "接受实际文本响应",
+        "description": "完成 responded 观察记录并保留原 response 与 requestId。"
+      },
+      {
+        "id": "join_return_model",
+        "type_used": "era.tavern.agent_generate_story.join_return_model",
+        "display_name": "汇合当前实际激活分支的结果",
+        "description": "接收当前所选路径的结果集合，交还其中唯一实际结果；不选择未激活分支、不重新执行操作。运行实现必须拒绝实际多结果，不以集合契约放宽唯一结果语义。"
+      },
+      {
+        "id": "return_model",
+        "type_used": "era.tavern.agent_generate_story.return_model",
+        "display_name": "交还模型结果",
+        "description": "返回原 response、generationId/requestId 和脱敏 route，密钥不会进入流程输出。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.tavern.initialize.end",
+        "display_name": "结束当前原生流程",
+        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+      }
+    ],
+    "edges": [
+      [
+        "request_model",
+        "leave_auxiliary"
+      ],
+      [
+        "leave_auxiliary",
+        "classify_result"
+      ],
+      {
+        "from": "classify_result",
+        "to": "select_text",
+        "when": "era_tavern_agent_generate_story_classify_result_route == 'text'"
+      },
+      [
+        "select_text",
+        "join_return_model"
+      ],
+      {
+        "from": "classify_result",
+        "to": "select_failed",
+        "when": "era_tavern_agent_generate_story_classify_result_route == 'failed'"
+      },
+      [
+        "select_failed",
+        "join_return_model"
+      ],
+      {
+        "from": "classify_result",
+        "to": "select_cancelled",
+        "when": "era_tavern_agent_generate_story_classify_result_route == 'cancelled'"
+      },
+      [
+        "select_cancelled",
+        "join_return_model"
+      ],
+      [
+        "join_return_model",
+        "return_model"
+      ],
+      [
+        "start",
+        "request_model"
+      ],
+      [
+        "return_model",
+        "end"
+      ]
+    ]
+  }
+}

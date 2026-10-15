@@ -1,0 +1,141 @@
+{
+  "type_key": "era.tavern.flow.timer_control",
+  "display_name": "执行 Service 指定的计时安排",
+  "description": "保持原定时 token、dueAt、重复控制和取消规则，到期只回送事件，不重新决定领域任务。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.call.frame",
+      "cardinality": "exactly_one",
+      "display_name": "本次调用及实例资源令牌"
+    }
+  ],
+  "provides": [
+    {
+      "key": "era_tavern_flow_timer_control_frame",
+      "type": "era.tavern.call.frame",
+      "display_name": "操作结果及后续处理所需的资源令牌"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "sync",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.call.frame",
+        "display_name": "调用与资源资料",
+        "required": true
+      }
+    ],
+    "max_steps": 13,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.tavern.initialize.start",
+        "display_name": "开始当前原生流程",
+        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+      },
+      {
+        "id": "read_timer",
+        "type_used": "era.tavern.timer_control.read_timer",
+        "display_name": "读取计时记录并确定本次截止时间",
+        "description": "读取现有token/key句柄和首次安排时间；收集控制沿用Service给出的dueAt，延迟准入核对delayMs/maxDelayMs，注销旧timer后按原时钟计算截止。"
+      },
+      {
+        "id": "choose_timer",
+        "type_used": "era.tavern.timer_control.choose_timer",
+        "display_name": "选择保留、取消或重新安排",
+        "description": "相同到期时间保留原 timer；cancel 移除已有 timer；新安排先撤销旧句柄再登记。"
+      },
+      {
+        "id": "branch_schedule",
+        "type_used": "era.tavern.timer_control.branch_schedule",
+        "display_name": "登记新的到期回调",
+        "description": "同步建立计时资源身份、控制器与绝对截止时间，替换旧资源后固定调用编译后的timer_wait异步入口；此处不直接登记长期Timeout。"
+      },
+      {
+        "id": "branch_cancel",
+        "type_used": "era.tavern.timer_control.branch_cancel",
+        "display_name": "取消计时器并移除记录",
+        "description": "清除对应 timer，移除实例记录，已过期的回调不会再接纳事件。"
+      },
+      {
+        "id": "branch_keep",
+        "type_used": "era.tavern.timer_control.branch_keep",
+        "display_name": "保留既有计时器",
+        "description": "不重复注册已对应同一 dueAt 的计时器。"
+      },
+      {
+        "id": "join_return_timer",
+        "type_used": "era.tavern.timer_control.join_return_timer",
+        "display_name": "汇合当前实际激活分支的结果",
+        "description": "接收当前所选路径的结果集合，交还其中唯一实际结果；不选择未激活分支、不重新执行操作。运行实现必须拒绝实际多结果，不以集合契约放宽唯一结果语义。"
+      },
+      {
+        "id": "return_timer",
+        "type_used": "era.tavern.timer_control.return_timer",
+        "display_name": "返回定时控制确认",
+        "description": "保留原控制帧和 schedule/cancel 的返回形状。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.tavern.initialize.end",
+        "display_name": "结束当前原生流程",
+        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+      }
+    ],
+    "edges": [
+      [
+        "read_timer",
+        "choose_timer"
+      ],
+      {
+        "from": "choose_timer",
+        "to": "branch_keep",
+        "when": "era_tavern_timer_control_choose_timer_route == 'keep'"
+      },
+      [
+        "branch_keep",
+        "join_return_timer"
+      ],
+      {
+        "from": "choose_timer",
+        "to": "branch_cancel",
+        "when": "era_tavern_timer_control_choose_timer_route == 'cancel'"
+      },
+      [
+        "branch_cancel",
+        "join_return_timer"
+      ],
+      {
+        "from": "choose_timer",
+        "to": "branch_schedule",
+        "when": "era_tavern_timer_control_choose_timer_route == 'schedule'"
+      },
+      [
+        "branch_schedule",
+        "join_return_timer"
+      ],
+      [
+        "join_return_timer",
+        "return_timer"
+      ],
+      [
+        "start",
+        "read_timer"
+      ],
+      [
+        "return_timer",
+        "end"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.call.frame",
+        "cardinality": "exactly_one",
+        "display_name": "完成后的操作资料",
+        "as": "frame"
+      }
+    ]
+  }
+}

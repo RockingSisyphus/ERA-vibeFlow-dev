@@ -2,6 +2,10 @@
   "policy": {},
   "roots": [
     {
+      "id": "era-tavern",
+      "path": "javascript_project/tavern"
+    },
+    {
       "id": "era-service",
       "path": "javascript_project/service"
     },

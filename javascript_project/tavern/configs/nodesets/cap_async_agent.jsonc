@@ -1,0 +1,296 @@
+{
+  "type_key": "era.tavern.flow.cap_async_agent",
+  "display_name": "生成、连接及页面会话操作：异步完成",
+  "description": "只保留真正等待的操作；完全同步的 Promise 接口没有本入口分支。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.call.frame",
+      "cardinality": "exactly_one",
+      "display_name": "本次调用、实例资源与上一节点的事实"
+    }
+  ],
+  "provides": [
+    {
+      "key": "era_tavern_flow_cap_async_agent_frame",
+      "type": "era.tavern.frame.final.cap_async_agent",
+      "display_name": "处理后的资源与事实"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.call.frame",
+        "display_name": "同实例调用与资源",
+        "required": true
+      }
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.frame.final.cap_async_agent",
+        "cardinality": "exactly_one",
+        "as": "frame",
+        "display_name": "本段明确结果"
+      }
+    ],
+    "max_steps": 25,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.tavern.initialize.start",
+        "display_name": "开始当前原生流程",
+        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+      },
+      {
+        "id": "choose",
+        "type_used": "era.tavern.cap_async_agent.choose",
+        "display_name": "识别生成、连接及页面会话操作",
+        "description": "按原 Capability 的操作名选择唯一 async 路径，操作原参数、返回类型和错误身份保持。"
+      },
+      {
+        "id": "route_await_native_completion__wait_terminal",
+        "type_used": "era.tavern.agent_await_native_completion.wait_terminal",
+        "display_name": "等待原生生成结束后重读上下文：等待与确认：等待本次等待原生生成结束后重读上下文的资源终态",
+        "description": "等待对应真实 GENERATION_ENDED，排除辅助生成结束；非原生会话返回原 not-native 结论。"
+      },
+      {
+        "id": "route_await_native_completion__read_current",
+        "type_used": "era.tavern.agent_await_native_completion.read_current",
+        "display_name": "等待原生生成结束后重读上下文：等待与确认：重新读取会话、身份和最新消息",
+        "description": "等待完成后重新读取当前事实，不沿用等待前可能已失效的会话。"
+      },
+      {
+        "id": "route_await_native_completion__return_native",
+        "type_used": "era.tavern.agent_await_native_completion.return_native",
+        "display_name": "等待原生生成结束后重读上下文：等待与确认：返回原生结束关联结果",
+        "description": "返回原 status、executionId、identity、latestMessage，保持跨聊天取消边界。"
+      },
+      {
+        "id": "route_write_configuration__execute",
+        "type_used": "era.tavern.agent_write_configuration.execute",
+        "display_name": "写入角色生成配置：生成、连接及页面会话：等待与确认：等待本次写入角色生成配置：生成、连接及页面会话的资源终态",
+        "description": "在酒馆页面执行该操作的实际 API 或资源动作；保留未知字段、现有错误类别及原同步/异步约定。"
+      },
+      {
+        "id": "route_write_configuration__return_result",
+        "type_used": "era.tavern.agent_write_configuration.return_result",
+        "display_name": "写入角色生成配置：生成、连接及页面会话：等待与确认：交还写入角色生成配置结果",
+        "description": "返回原 era.agent.host.result 结果；需要脱敏的连接资料只返回摘要。"
+      },
+      {
+        "id": "route_upsert_connection_profile__execute",
+        "type_used": "era.tavern.agent_upsert_connection_profile.execute",
+        "display_name": "保存本机连接方案：生成、连接及页面会话：等待与确认：等待本次保存本机连接方案：生成、连接及页面会话的资源终态",
+        "description": "在酒馆页面执行该操作的实际 API 或资源动作；保留未知字段、现有错误类别及原同步/异步约定。"
+      },
+      {
+        "id": "route_upsert_connection_profile__return_result",
+        "type_used": "era.tavern.agent_upsert_connection_profile.return_result",
+        "display_name": "保存本机连接方案：生成、连接及页面会话：等待与确认：交还保存本机连接方案结果",
+        "description": "返回原 era.agent.host.result 结果；需要脱敏的连接资料只返回摘要。"
+      },
+      {
+        "id": "route_delete_connection_profile__execute",
+        "type_used": "era.tavern.agent_delete_connection_profile.execute",
+        "display_name": "删除本机连接方案：生成、连接及页面会话：等待与确认：等待本次删除本机连接方案：生成、连接及页面会话的资源终态",
+        "description": "在酒馆页面执行该操作的实际 API 或资源动作；保留未知字段、现有错误类别及原同步/异步约定。"
+      },
+      {
+        "id": "route_delete_connection_profile__return_result",
+        "type_used": "era.tavern.agent_delete_connection_profile.return_result",
+        "display_name": "删除本机连接方案：生成、连接及页面会话：等待与确认：交还删除本机连接方案结果",
+        "description": "返回原 era.agent.host.result 结果；需要脱敏的连接资料只返回摘要。"
+      },
+      {
+        "id": "route_clear_connection_profile_key__execute",
+        "type_used": "era.tavern.agent_clear_connection_profile_key.execute",
+        "display_name": "清除本机密钥：生成、连接及页面会话：等待与确认：等待本次清除本机密钥：生成、连接及页面会话的资源终态",
+        "description": "在酒馆页面执行该操作的实际 API 或资源动作；保留未知字段、现有错误类别及原同步/异步约定。"
+      },
+      {
+        "id": "route_clear_connection_profile_key__return_result",
+        "type_used": "era.tavern.agent_clear_connection_profile_key.return_result",
+        "display_name": "清除本机密钥：生成、连接及页面会话：等待与确认：交还清除本机密钥结果",
+        "description": "返回原 era.agent.host.result 结果；需要脱敏的连接资料只返回摘要。"
+      },
+      {
+        "id": "route_list_connection_models",
+        "type_used": "era.tavern.flow.agent_list_connection_models_finish",
+        "display_name": "列出已保存方案的模型：生成、连接及页面会话：等待与确认",
+        "description": "只续用本次同步段已经发起的资源；具体等待与确认在所选原生路径。"
+      },
+      {
+        "id": "route_list_connection_models_draft",
+        "type_used": "era.tavern.flow.agent_list_connection_models_draft_finish",
+        "display_name": "列出草稿连接的模型：生成、连接及页面会话：等待与确认",
+        "description": "只续用本次同步段已经发起的资源；具体等待与确认在所选原生路径。"
+      },
+      {
+        "id": "route_generate",
+        "type_used": "era.tavern.flow.agent_generate_finish",
+        "display_name": "执行独立阶段模型请求：等待与确认",
+        "description": "只续用本次同步段已经发起的资源；具体等待与确认在所选原生路径。"
+      },
+      {
+        "id": "route_generate_story",
+        "type_used": "era.tavern.flow.agent_generate_story_finish",
+        "display_name": "执行酒馆正文重试：等待与确认",
+        "description": "只续用本次同步段已经发起的资源；具体等待与确认在所选原生路径。"
+      },
+      {
+        "id": "route_create_error_message__execute",
+        "type_used": "era.tavern.agent_create_error_message.execute",
+        "display_name": "建立生成错误消息：生成、连接及页面会话：等待与确认：等待本次建立生成错误消息：生成、连接及页面会话的资源终态",
+        "description": "在酒馆页面执行该操作的实际 API 或资源动作；保留未知字段、现有错误类别及原同步/异步约定。"
+      },
+      {
+        "id": "route_create_error_message__return_result",
+        "type_used": "era.tavern.agent_create_error_message.return_result",
+        "display_name": "建立生成错误消息：生成、连接及页面会话：等待与确认：交还建立生成错误消息结果",
+        "description": "返回原 era.agent.host.result 结果；需要脱敏的连接资料只返回摘要。"
+      },
+      {
+        "id": "join_return",
+        "type_used": "era.tavern.cap_async_agent.join_return",
+        "display_name": "汇合当前实际激活分支的结果",
+        "description": "接收当前所选路径的结果集合，交还其中唯一实际结果；不选择未激活分支、不重新执行操作。运行实现必须拒绝实际多结果，不以集合契约放宽唯一结果语义。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.tavern.initialize.end",
+        "display_name": "结束当前原生流程",
+        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+      }
+    ],
+    "edges": [
+      {
+        "from": "choose",
+        "to": "route_await_native_completion__wait_terminal",
+        "when": "era_tavern_cap_async_agent_choose_route == 'await_native_completion'"
+      },
+      [
+        "route_await_native_completion__return_native",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_write_configuration__execute",
+        "when": "era_tavern_cap_async_agent_choose_route == 'write_configuration'"
+      },
+      [
+        "route_write_configuration__return_result",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_upsert_connection_profile__execute",
+        "when": "era_tavern_cap_async_agent_choose_route == 'upsert_connection_profile'"
+      },
+      [
+        "route_upsert_connection_profile__return_result",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_delete_connection_profile__execute",
+        "when": "era_tavern_cap_async_agent_choose_route == 'delete_connection_profile'"
+      },
+      [
+        "route_delete_connection_profile__return_result",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_clear_connection_profile_key__execute",
+        "when": "era_tavern_cap_async_agent_choose_route == 'clear_connection_profile_key'"
+      },
+      [
+        "route_clear_connection_profile_key__return_result",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_list_connection_models",
+        "when": "era_tavern_cap_async_agent_choose_route == 'list_connection_models'"
+      },
+      [
+        "route_list_connection_models",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_list_connection_models_draft",
+        "when": "era_tavern_cap_async_agent_choose_route == 'list_connection_models_draft'"
+      },
+      [
+        "route_list_connection_models_draft",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_generate",
+        "when": "era_tavern_cap_async_agent_choose_route == 'generate'"
+      },
+      [
+        "route_generate",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_generate_story",
+        "when": "era_tavern_cap_async_agent_choose_route == 'generate_story'"
+      },
+      [
+        "route_generate_story",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_create_error_message__execute",
+        "when": "era_tavern_cap_async_agent_choose_route == 'create_error_message'"
+      },
+      [
+        "route_create_error_message__return_result",
+        "join_return"
+      ],
+      [
+        "route_await_native_completion__wait_terminal",
+        "route_await_native_completion__read_current"
+      ],
+      [
+        "route_await_native_completion__read_current",
+        "route_await_native_completion__return_native"
+      ],
+      [
+        "route_write_configuration__execute",
+        "route_write_configuration__return_result"
+      ],
+      [
+        "route_upsert_connection_profile__execute",
+        "route_upsert_connection_profile__return_result"
+      ],
+      [
+        "route_delete_connection_profile__execute",
+        "route_delete_connection_profile__return_result"
+      ],
+      [
+        "route_clear_connection_profile_key__execute",
+        "route_clear_connection_profile_key__return_result"
+      ],
+      [
+        "route_create_error_message__execute",
+        "route_create_error_message__return_result"
+      ],
+      [
+        "start",
+        "choose"
+      ],
+      [
+        "join_return",
+        "end"
+      ]
+    ]
+  }
+}

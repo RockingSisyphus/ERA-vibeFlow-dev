@@ -1,0 +1,9 @@
+{
+  "name": "era-testing-toolchain-workspace",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@10.34.5",
+  "scripts": {
+    "verify": "pnpm --dir ST-Response-Lab verify && pnpm --dir ST-Test-Harness verify && pnpm --dir ERA-Test-Pack verify"
+  }
+}

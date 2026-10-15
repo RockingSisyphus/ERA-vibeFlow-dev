@@ -1,0 +1,117 @@
+{
+  "type_key": "era.tavern.flow.stop_cancel_receipts_item",
+  "display_name": "取消未决回执",
+  "description": "每轮完成一个未决来源为 cancelled、释放该来源引用；原有已完成来源不重复结算。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.frame.stop.clear_timers",
+      "cardinality": "exactly_one",
+      "display_name": "当前条目、处理位置及实例资源令牌"
+    }
+  ],
+  "provides": [
+    {
+      "key": "era_tavern_flow_stop_cancel_receipts_item_frame",
+      "type": "era.tavern.item.result.stop_cancel_receipts_item",
+      "display_name": "下一条目或当前处理结论"
+    },
+    {
+      "key": "era_tavern_flow_stop_cancel_receipts_item_done",
+      "type": "era.tavern.done.stop.cancel_receipts",
+      "display_name": "是否完成"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "sync",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.frame.stop.clear_timers",
+        "display_name": "当前处理位置",
+        "required": true
+      }
+    ],
+    "max_steps": 10,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.tavern.initialize.start",
+        "display_name": "开始当前原生流程",
+        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+      },
+      {
+        "id": "choose_item",
+        "type_used": "era.tavern.stop_cancel_receipts_item.choose_item",
+        "display_name": "检查是否还有待处理条目",
+        "description": "有当前条目才进入实际处理；列表为空或已处理完时直接形成完成标记，不调用共享操作。"
+      },
+      {
+        "id": "one_item",
+        "type_used": "era.tavern.stop_cancel_receipts_item.one_item",
+        "display_name": "取消未决回执",
+        "description": "每轮完成一个未决来源为 cancelled、释放该来源引用；原有已完成来源不重复结算。"
+      },
+      {
+        "id": "empty",
+        "type_used": "era.tavern.stop_cancel_receipts_item.empty",
+        "display_name": "完成空列表或已结束的遍历",
+        "description": "保留当前处理资料并返回 done=true，不执行任何条目副作用。"
+      },
+      {
+        "id": "join_end",
+        "type_used": "era.tavern.stop_cancel_receipts_item.join_end",
+        "display_name": "汇合当前实际激活分支的结果",
+        "description": "接收当前所选路径的结果集合，交还其中唯一实际结果；不选择未激活分支、不重新执行操作。运行实现必须拒绝实际多结果，不以集合契约放宽唯一结果语义。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.tavern.initialize.end",
+        "display_name": "结束当前原生流程",
+        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+      }
+    ],
+    "edges": [
+      {
+        "from": "choose_item",
+        "to": "one_item",
+        "when": "era_tavern_stop_cancel_receipts_item_choose_item_route == 'item'"
+      },
+      {
+        "from": "choose_item",
+        "to": "empty",
+        "when": "era_tavern_stop_cancel_receipts_item_choose_item_route == 'done'"
+      },
+      [
+        "one_item",
+        "join_end"
+      ],
+      [
+        "empty",
+        "join_end"
+      ],
+      [
+        "start",
+        "choose_item"
+      ],
+      [
+        "join_end",
+        "end"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.item.result.stop_cancel_receipts_item",
+        "cardinality": "exactly_one",
+        "as": "frame",
+        "display_name": "更新位置"
+      },
+      {
+        "type": "era.tavern.done.stop.cancel_receipts",
+        "cardinality": "exactly_one",
+        "as": "done",
+        "display_name": "完成标记"
+      }
+    ]
+  }
+}

@@ -1,4 +1,3 @@
-
 import { createHash } from 'node:crypto';
 
 import { readFile, writeFile } from 'node:fs/promises';
@@ -29,7 +28,7 @@ function normalizePublicInterface(source, name) {
 
 assert(manifest.format === 'vibeflow.aot-build.v2', 'Macro build manifest 格式错误');
 assert(manifest.project_target === 'javascript', 'Macro 必须使用 JavaScript Target');
-assert(manifest.abi_version === 'vibeflow.workflow.v5', 'Macro Workflow ABI 错误');
+assert(manifest.abi_version === 'vibeflow.workflow.v6', 'Macro Workflow ABI 错误');
 assert(manifest.plugin_abi_version === 'vibeflow.plugin.v3', 'Macro Plugin ABI 错误');
 assert(manifest.entry === 'era-macro.js', 'Macro 入口文件名错误');
 assert(manifest.entry_mode === 'sync', 'Macro 必须保持同步入口');

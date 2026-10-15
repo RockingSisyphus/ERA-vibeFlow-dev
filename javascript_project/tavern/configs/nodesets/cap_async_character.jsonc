@@ -1,0 +1,161 @@
+{
+  "type_key": "era.tavern.flow.cap_async_character",
+  "display_name": "角色卡与显示配置操作：异步完成",
+  "description": "只保留真正等待的操作；完全同步的 Promise 接口没有本入口分支。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.call.frame",
+      "cardinality": "exactly_one",
+      "display_name": "本次调用、实例资源与上一节点的事实"
+    }
+  ],
+  "provides": [
+    {
+      "key": "era_tavern_flow_cap_async_character_frame",
+      "type": "era.tavern.frame.final.cap_async_character",
+      "display_name": "处理后的资源与事实"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.call.frame",
+        "display_name": "同实例调用与资源",
+        "required": true
+      }
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.frame.final.cap_async_character",
+        "cardinality": "exactly_one",
+        "as": "frame",
+        "display_name": "本段明确结果"
+      }
+    ],
+    "max_steps": 14,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.tavern.initialize.start",
+        "display_name": "开始当前原生流程",
+        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+      },
+      {
+        "id": "choose",
+        "type_used": "era.tavern.cap_async_character.choose",
+        "display_name": "识别角色卡与显示配置操作",
+        "description": "按原 Capability 的操作名选择唯一 async 路径，操作原参数、返回类型和错误身份保持。"
+      },
+      {
+        "id": "route_patch_single_floor",
+        "type_used": "era.tavern.flow.character_patch_single_floor_finish",
+        "display_name": "更新单层显示配置：角色卡与显示配置：等待与确认",
+        "description": "只续用本次同步段已经发起的资源；具体等待与确认在所选原生路径。"
+      },
+      {
+        "id": "route_patch_external_statusbar",
+        "type_used": "era.tavern.flow.character_patch_external_statusbar_finish",
+        "display_name": "更新外置状态栏配置：角色卡与显示配置：等待与确认",
+        "description": "只续用本次同步段已经发起的资源；具体等待与确认在所选原生路径。"
+      },
+      {
+        "id": "route_read_main_greeting__execute",
+        "type_used": "era.tavern.character_read_main_greeting.execute",
+        "display_name": "读取主开场白：角色卡与显示配置：等待与确认：等待本次读取主开场白：角色卡与显示配置的资源终态",
+        "description": "在酒馆页面执行该操作的实际 API 或资源动作；保留未知字段、现有错误类别及原同步/异步约定。"
+      },
+      {
+        "id": "route_read_main_greeting__return_result",
+        "type_used": "era.tavern.character_read_main_greeting.return_result",
+        "display_name": "读取主开场白：角色卡与显示配置：等待与确认：交还读取主开场白结果",
+        "description": "返回原 era.tavern.character.read_main_greeting.result 结果；需要脱敏的连接资料只返回摘要。"
+      },
+      {
+        "id": "route_write_main_greeting",
+        "type_used": "era.tavern.flow.character_write_main_greeting_finish",
+        "display_name": "写入主开场白：角色卡与显示配置：等待与确认",
+        "description": "只续用本次同步段已经发起的资源；具体等待与确认在所选原生路径。"
+      },
+      {
+        "id": "route_apply_greeting_refresh",
+        "type_used": "era.tavern.flow.character_apply_greeting_refresh_finish",
+        "display_name": "执行开场白刷新：角色卡与显示配置：等待与确认",
+        "description": "只续用本次同步段已经发起的资源；具体等待与确认在所选原生路径。"
+      },
+      {
+        "id": "join_return",
+        "type_used": "era.tavern.cap_async_character.join_return",
+        "display_name": "汇合当前实际激活分支的结果",
+        "description": "接收当前所选路径的结果集合，交还其中唯一实际结果；不选择未激活分支、不重新执行操作。运行实现必须拒绝实际多结果，不以集合契约放宽唯一结果语义。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.tavern.initialize.end",
+        "display_name": "结束当前原生流程",
+        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+      }
+    ],
+    "edges": [
+      {
+        "from": "choose",
+        "to": "route_patch_single_floor",
+        "when": "era_tavern_cap_async_character_choose_route == 'patch_single_floor'"
+      },
+      [
+        "route_patch_single_floor",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_patch_external_statusbar",
+        "when": "era_tavern_cap_async_character_choose_route == 'patch_external_statusbar'"
+      },
+      [
+        "route_patch_external_statusbar",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_read_main_greeting__execute",
+        "when": "era_tavern_cap_async_character_choose_route == 'read_main_greeting'"
+      },
+      [
+        "route_read_main_greeting__return_result",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_write_main_greeting",
+        "when": "era_tavern_cap_async_character_choose_route == 'write_main_greeting'"
+      },
+      [
+        "route_write_main_greeting",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_apply_greeting_refresh",
+        "when": "era_tavern_cap_async_character_choose_route == 'apply_greeting_refresh'"
+      },
+      [
+        "route_apply_greeting_refresh",
+        "join_return"
+      ],
+      [
+        "route_read_main_greeting__execute",
+        "route_read_main_greeting__return_result"
+      ],
+      [
+        "start",
+        "choose"
+      ],
+      [
+        "join_return",
+        "end"
+      ]
+    ]
+  }
+}

@@ -1,0 +1,637 @@
+{
+  "type_key": "era.tavern.flow.cap_sync_agent",
+  "display_name": "生成、连接及页面会话操作",
+  "description": "共享同一职责组的原操作与必要的等待前发起；无额外 cap 总分组。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.call.frame",
+      "cardinality": "exactly_one",
+      "display_name": "本次调用、实例资源与上一节点的事实"
+    }
+  ],
+  "provides": [
+    {
+      "key": "era_tavern_flow_cap_sync_agent_frame",
+      "type": "era.tavern.frame.final.cap_sync_agent",
+      "display_name": "处理后的资源与事实"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "sync",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.call.frame",
+        "display_name": "同实例调用与资源",
+        "required": true
+      }
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.frame.final.cap_sync_agent",
+        "cardinality": "exactly_one",
+        "as": "frame",
+        "display_name": "本段明确结果"
+      }
+    ],
+    "max_steps": 51,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.tavern.initialize.start",
+        "display_name": "开始当前原生流程",
+        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+      },
+      {
+        "id": "choose",
+        "type_used": "era.tavern.cap_sync_agent.choose",
+        "display_name": "识别生成、连接及页面会话操作",
+        "description": "按已声明操作名选择唯一原生路径；即时操作、同步完成的 Promise 操作及真正等待前的发起共享本职责组，不重复分组。"
+      },
+      {
+        "id": "route_await_native_completion__check_identity",
+        "type_used": "era.tavern.agent_await_native_completion.check_identity",
+        "display_name": "等待原生生成结束后重读上下文：检查原生等待的聊天与执行身份",
+        "description": "检查 chatId/executionId 和当前会话是否仍为原生生成。"
+      },
+      {
+        "id": "route_await_native_completion__start_operation",
+        "type_used": "era.tavern.agent_await_native_completion.start_operation",
+        "display_name": "等待原生生成结束后重读上下文：登记本次原生生成终态等待",
+        "description": "检查当前会话是否原生生成；登记当前执行身份的等待，非原生分支捕获已完成结果，不在异步段重读登记范围。 此 Node 只发起原始操作并创建等待资源；不执行异步续体。"
+      },
+      {
+        "id": "route_read_context__check_request",
+        "type_used": "era.tavern.agent_read_context.check_request",
+        "display_name": "读取上下文：生成、连接及页面会话：检查读取上下文请求",
+        "description": "保持 era.tavern.agent.read_context 的现行参数、取消和目标复核；不新增资格条件。"
+      },
+      {
+        "id": "route_read_context__execute",
+        "type_used": "era.tavern.agent_read_context.execute",
+        "display_name": "读取上下文：生成、连接及页面会话：执行读取上下文操作",
+        "description": "在酒馆页面执行该操作的实际 API 或资源动作；保留未知字段、现有错误类别及原同步/异步约定。"
+      },
+      {
+        "id": "route_read_context__return_result",
+        "type_used": "era.tavern.agent_read_context.return_result",
+        "display_name": "读取上下文：生成、连接及页面会话：交还读取上下文结果",
+        "description": "返回原 era.agent.host.result 结果；需要脱敏的连接资料只返回摘要。"
+      },
+      {
+        "id": "route_write_configuration__check_request",
+        "type_used": "era.tavern.agent_write_configuration.check_request",
+        "display_name": "写入角色生成配置：生成、连接及页面会话：检查写入角色生成配置请求",
+        "description": "保持 era.tavern.agent.write_configuration 的现行参数、取消和目标复核；不新增资格条件。"
+      },
+      {
+        "id": "route_write_configuration__start_operation",
+        "type_used": "era.tavern.agent_write_configuration.start_operation",
+        "display_name": "写入角色生成配置：生成、连接及页面会话：发起角色 Agent 配置写入",
+        "description": "核对单角色和当前索引，捕获配置，调用一次 writeExtensionField。 此 Node 只发起原始操作并创建等待资源；不执行异步续体。"
+      },
+      {
+        "id": "route_capture_preset__check_request",
+        "type_used": "era.tavern.agent_capture_preset.check_request",
+        "display_name": "捕获预设：生成、连接及页面会话：检查捕获预设请求",
+        "description": "保持 era.tavern.agent.capture_preset 的现行参数、取消和目标复核；不新增资格条件。"
+      },
+      {
+        "id": "route_capture_preset__execute",
+        "type_used": "era.tavern.agent_capture_preset.execute",
+        "display_name": "捕获预设：生成、连接及页面会话：执行捕获预设操作",
+        "description": "在酒馆页面执行该操作的实际 API 或资源动作；保留未知字段、现有错误类别及原同步/异步约定。"
+      },
+      {
+        "id": "route_capture_preset__return_result",
+        "type_used": "era.tavern.agent_capture_preset.return_result",
+        "display_name": "捕获预设：生成、连接及页面会话：交还捕获预设结果",
+        "description": "返回原 era.agent.host.result 结果；需要脱敏的连接资料只返回摘要。"
+      },
+      {
+        "id": "route_read_configuration_sources__check_request",
+        "type_used": "era.tavern.agent_read_configuration_sources.check_request",
+        "display_name": "读取配置来源：生成、连接及页面会话：检查读取配置来源请求",
+        "description": "保持 era.tavern.agent.read_configuration_sources 的现行参数、取消和目标复核；不新增资格条件。"
+      },
+      {
+        "id": "route_read_configuration_sources__execute",
+        "type_used": "era.tavern.agent_read_configuration_sources.execute",
+        "display_name": "读取配置来源：生成、连接及页面会话：执行读取配置来源操作",
+        "description": "在酒馆页面执行该操作的实际 API 或资源动作；保留未知字段、现有错误类别及原同步/异步约定。"
+      },
+      {
+        "id": "route_read_configuration_sources__return_result",
+        "type_used": "era.tavern.agent_read_configuration_sources.return_result",
+        "display_name": "读取配置来源：生成、连接及页面会话：交还读取配置来源结果",
+        "description": "返回原 era.agent.host.result 结果；需要脱敏的连接资料只返回摘要。"
+      },
+      {
+        "id": "route_read_connection_state__check_request",
+        "type_used": "era.tavern.agent_read_connection_state.check_request",
+        "display_name": "读取本机连接状态：生成、连接及页面会话：检查读取本机连接状态请求",
+        "description": "保持 era.tavern.agent.read_connection_state 的现行参数、取消和目标复核；不新增资格条件。"
+      },
+      {
+        "id": "route_read_connection_state__execute",
+        "type_used": "era.tavern.agent_read_connection_state.execute",
+        "display_name": "读取本机连接状态：生成、连接及页面会话：执行读取本机连接状态操作",
+        "description": "在酒馆页面执行该操作的实际 API 或资源动作；保留未知字段、现有错误类别及原同步/异步约定。"
+      },
+      {
+        "id": "route_read_connection_state__return_result",
+        "type_used": "era.tavern.agent_read_connection_state.return_result",
+        "display_name": "读取本机连接状态：生成、连接及页面会话：交还读取本机连接状态结果",
+        "description": "返回原 era.agent.connection.state 结果；需要脱敏的连接资料只返回摘要。"
+      },
+      {
+        "id": "route_upsert_connection_profile__check_request",
+        "type_used": "era.tavern.agent_upsert_connection_profile.check_request",
+        "display_name": "保存本机连接方案：生成、连接及页面会话：检查保存本机连接方案请求",
+        "description": "核对原请求，并从本实例引用仓库解析keyReference携带的私密函数；过期、未知或非函数引用拒绝，不把函数或密钥写入主Service DTO。"
+      },
+      {
+        "id": "route_upsert_connection_profile__start_operation",
+        "type_used": "era.tavern.agent_upsert_connection_profile.start_operation",
+        "display_name": "保存本机连接方案：生成、连接及页面会话：更新连接方案并发起保存",
+        "description": "同步完成原 materializeProfile、实例设置更新和 saveSettingsDebounced 发起；不在等待后重读密钥。 此 Node 只发起原始操作并创建等待资源；不执行异步续体。"
+      },
+      {
+        "id": "route_delete_connection_profile__check_request",
+        "type_used": "era.tavern.agent_delete_connection_profile.check_request",
+        "display_name": "删除本机连接方案：生成、连接及页面会话：检查删除本机连接方案请求",
+        "description": "保持 era.tavern.agent.delete_connection_profile 的现行参数、取消和目标复核；不新增资格条件。"
+      },
+      {
+        "id": "route_delete_connection_profile__start_operation",
+        "type_used": "era.tavern.agent_delete_connection_profile.start_operation",
+        "display_name": "删除本机连接方案：生成、连接及页面会话：删除连接方案并发起保存",
+        "description": "同步从实例设置中删除指定方案并发起 saveSettingsDebounced；不改角色引用。 此 Node 只发起原始操作并创建等待资源；不执行异步续体。"
+      },
+      {
+        "id": "route_clear_connection_profile_key__check_request",
+        "type_used": "era.tavern.agent_clear_connection_profile_key.check_request",
+        "display_name": "清除本机密钥：生成、连接及页面会话：检查清除本机密钥请求",
+        "description": "保持 era.tavern.agent.clear_connection_profile_key 的现行参数、取消和目标复核；不新增资格条件。"
+      },
+      {
+        "id": "route_clear_connection_profile_key__start_operation",
+        "type_used": "era.tavern.agent_clear_connection_profile_key.start_operation",
+        "display_name": "清除本机密钥：生成、连接及页面会话：清除连接密钥并发起保存",
+        "description": "同步写入明确空密钥并发起 saveSettingsDebounced；密钥不进入便携 DTO。 此 Node 只发起原始操作并创建等待资源；不执行异步续体。"
+      },
+      {
+        "id": "route_list_connection_models__check_request",
+        "type_used": "era.tavern.agent_list_connection_models.check_request",
+        "display_name": "列出已保存方案的模型：生成、连接及页面会话：检查列出已保存方案的模型请求",
+        "description": "保持 era.tavern.agent.list_connection_models 的现行参数、取消和目标复核；不新增资格条件。"
+      },
+      {
+        "id": "route_list_connection_models__start_operation",
+        "type_used": "era.tavern.agent_list_connection_models.start_operation",
+        "display_name": "列出已保存方案的模型：生成、连接及页面会话：捕获连接方案并发起模型枚举",
+        "description": "同步解析指定方案、端点与密钥，发起一次 /api/backends/chat-completions/status；响应解码和脱敏结果在后续节点。 此 Node 只发起原始操作并创建等待资源；不执行异步续体。"
+      },
+      {
+        "id": "route_list_connection_models_draft__check_request",
+        "type_used": "era.tavern.agent_list_connection_models_draft.check_request",
+        "display_name": "列出草稿连接的模型：生成、连接及页面会话：检查列出草稿连接的模型请求",
+        "description": "核对原请求，并从本实例引用仓库解析keyReference携带的私密函数；过期、未知或非函数引用拒绝，不把函数或密钥写入主Service DTO。"
+      },
+      {
+        "id": "route_list_connection_models_draft__start_operation",
+        "type_used": "era.tavern.agent_list_connection_models_draft.start_operation",
+        "display_name": "列出草稿连接的模型：生成、连接及页面会话：读取草稿密钥并发起模型枚举",
+        "description": "同步调用草稿密钥提供器一次并固定端点，发起状态请求；密钥只在资源闭包内。 此 Node 只发起原始操作并创建等待资源；不执行异步续体。"
+      },
+      {
+        "id": "route_generate",
+        "type_used": "era.tavern.flow.agent_generate",
+        "display_name": "执行独立阶段模型请求",
+        "description": "沿原 era.tavern.agent.generate 合同执行当前唯一操作。"
+      },
+      {
+        "id": "route_generate_story",
+        "type_used": "era.tavern.flow.agent_generate_story",
+        "display_name": "执行酒馆正文重试",
+        "description": "沿原 era.tavern.agent.generate_story 合同执行当前唯一操作。"
+      },
+      {
+        "id": "route_inject_once__check_request",
+        "type_used": "era.tavern.agent_inject_once.check_request",
+        "display_name": "注入一次性提示：生成、连接及页面会话：检查注入一次性提示请求",
+        "description": "保持 era.tavern.agent.inject_once 的现行参数、取消和目标复核；不新增资格条件。"
+      },
+      {
+        "id": "route_inject_once__execute",
+        "type_used": "era.tavern.agent_inject_once.execute",
+        "display_name": "注入一次性提示：生成、连接及页面会话：执行注入一次性提示操作",
+        "description": "在酒馆页面执行该操作的实际 API 或资源动作；保留未知字段、现有错误类别及原同步/异步约定。"
+      },
+      {
+        "id": "route_inject_once__return_result",
+        "type_used": "era.tavern.agent_inject_once.return_result",
+        "display_name": "注入一次性提示：生成、连接及页面会话：交还注入一次性提示结果",
+        "description": "返回原 era.agent.host.result 结果；需要脱敏的连接资料只返回摘要。"
+      },
+      {
+        "id": "route_write_session",
+        "type_used": "era.tavern.flow.agent_write_session",
+        "display_name": "写入页面生成会话并完成观察通知",
+        "description": "沿原 era.tavern.agent.write_session 合同执行当前唯一操作。"
+      },
+      {
+        "id": "route_clear_session__check_request",
+        "type_used": "era.tavern.agent_clear_session.check_request",
+        "display_name": "清理生成会话：生成、连接及页面会话：检查清理生成会话请求",
+        "description": "保持 era.tavern.agent.clear_session 的现行参数、取消和目标复核；不新增资格条件。"
+      },
+      {
+        "id": "route_clear_session__execute",
+        "type_used": "era.tavern.agent_clear_session.execute",
+        "display_name": "清理生成会话：生成、连接及页面会话：执行清理生成会话操作",
+        "description": "在酒馆页面执行该操作的实际 API 或资源动作；保留未知字段、现有错误类别及原同步/异步约定。"
+      },
+      {
+        "id": "route_clear_session__return_result",
+        "type_used": "era.tavern.agent_clear_session.return_result",
+        "display_name": "清理生成会话：生成、连接及页面会话：交还清理生成会话结果",
+        "description": "返回原 era.agent.host.result 结果；需要脱敏的连接资料只返回摘要。"
+      },
+      {
+        "id": "route_create_error_message__check_request",
+        "type_used": "era.tavern.agent_create_error_message.check_request",
+        "display_name": "建立生成错误消息：生成、连接及页面会话：检查建立生成错误消息请求",
+        "description": "保持 era.tavern.agent.create_error_message 的现行参数、取消和目标复核；不新增资格条件。"
+      },
+      {
+        "id": "route_create_error_message__start_operation",
+        "type_used": "era.tavern.agent_create_error_message.start_operation",
+        "display_name": "建立生成错误消息：生成、连接及页面会话：同步发起系统错误消息创建",
+        "description": "核对错误文本后发起一次 createChatMessages，使用原 era_agent extra 和插入位置。 此 Node 只发起原始操作并创建等待资源；不执行异步续体。"
+      },
+      {
+        "id": "route_stop_native_generation__check_request",
+        "type_used": "era.tavern.agent_stop_native_generation.check_request",
+        "display_name": "停止原生生成：生成、连接及页面会话：检查停止原生生成请求",
+        "description": "保持 era.tavern.agent.stop_native_generation 的现行参数、取消和目标复核；不新增资格条件。"
+      },
+      {
+        "id": "route_stop_native_generation__execute",
+        "type_used": "era.tavern.agent_stop_native_generation.execute",
+        "display_name": "停止原生生成：生成、连接及页面会话：执行停止原生生成操作",
+        "description": "在酒馆页面执行该操作的实际 API 或资源动作；保留未知字段、现有错误类别及原同步/异步约定。"
+      },
+      {
+        "id": "route_stop_native_generation__return_result",
+        "type_used": "era.tavern.agent_stop_native_generation.return_result",
+        "display_name": "停止原生生成：生成、连接及页面会话：交还停止原生生成结果",
+        "description": "返回原 era.agent.host.result 结果；需要脱敏的连接资料只返回摘要。"
+      },
+      {
+        "id": "route_read_session_binding__check_request",
+        "type_used": "era.tavern.agent_read_session_binding.check_request",
+        "display_name": "读取会话绑定：生成、连接及页面会话：检查读取会话绑定请求",
+        "description": "保持 era.tavern.agent.read_session_binding 的现行参数、取消和目标复核；不新增资格条件。"
+      },
+      {
+        "id": "route_read_session_binding__execute",
+        "type_used": "era.tavern.agent_read_session_binding.execute",
+        "display_name": "读取会话绑定：生成、连接及页面会话：执行读取会话绑定操作",
+        "description": "在酒馆页面执行该操作的实际 API 或资源动作；保留未知字段、现有错误类别及原同步/异步约定。"
+      },
+      {
+        "id": "route_read_session_binding__return_result",
+        "type_used": "era.tavern.agent_read_session_binding.return_result",
+        "display_name": "读取会话绑定：生成、连接及页面会话：交还读取会话绑定结果",
+        "description": "返回原 era.agent.session.binding.facts 结果；需要脱敏的连接资料只返回摘要。"
+      },
+      {
+        "id": "join_return",
+        "type_used": "era.tavern.cap_sync_agent.join_return",
+        "display_name": "汇合当前实际激活分支的结果",
+        "description": "接收当前所选路径的结果集合，交还其中唯一实际结果；不选择未激活分支、不重新执行操作。运行实现必须拒绝实际多结果，不以集合契约放宽唯一结果语义。"
+      },
+      {
+        "id": "choose_native_stop",
+        "type_used": "era.tavern.owned.choose_native_stop",
+        "display_name": "区分已经停止和等待命令阶段重试",
+        "description": "按原生停止API的布尔结果选择已停止或一次延后尝试；结果和重试路径分别交给普通资源Node。"
+      },
+      {
+        "id": "clear_native_stop",
+        "type_used": "era.tavern.owned.clear_native_stop",
+        "display_name": "取消旧的原生停止一次监听",
+        "description": "原生生成已经停止，释放此前待命的一次监听并返回原stopped结果。监听的实际句柄由长期资源Node持有。"
+      },
+      {
+        "id": "arm_native_stop",
+        "type_used": "era.tavern.owned.arm_native_stop",
+        "display_name": "登记命令阶段后的一次停止尝试",
+        "description": "取得或复用GENERATION_AFTER_COMMANDS的一次监听，返回原deferred结果；回调只转交固定原生重试入口，取消与卸载由资源持有者释放。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.tavern.initialize.end",
+        "display_name": "结束当前原生流程",
+        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+      }
+    ],
+    "edges": [
+      {
+        "from": "choose",
+        "to": "route_await_native_completion__check_identity",
+        "when": "era_tavern_cap_sync_agent_choose_route == 'await_native_completion'"
+      },
+      [
+        "route_await_native_completion__start_operation",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_read_context__check_request",
+        "when": "era_tavern_cap_sync_agent_choose_route == 'read_context'"
+      },
+      [
+        "route_read_context__return_result",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_write_configuration__check_request",
+        "when": "era_tavern_cap_sync_agent_choose_route == 'write_configuration'"
+      },
+      [
+        "route_write_configuration__start_operation",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_capture_preset__check_request",
+        "when": "era_tavern_cap_sync_agent_choose_route == 'capture_preset'"
+      },
+      [
+        "route_capture_preset__return_result",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_read_configuration_sources__check_request",
+        "when": "era_tavern_cap_sync_agent_choose_route == 'read_configuration_sources'"
+      },
+      [
+        "route_read_configuration_sources__return_result",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_read_connection_state__check_request",
+        "when": "era_tavern_cap_sync_agent_choose_route == 'read_connection_state'"
+      },
+      [
+        "route_read_connection_state__return_result",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_upsert_connection_profile__check_request",
+        "when": "era_tavern_cap_sync_agent_choose_route == 'upsert_connection_profile'"
+      },
+      [
+        "route_upsert_connection_profile__start_operation",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_delete_connection_profile__check_request",
+        "when": "era_tavern_cap_sync_agent_choose_route == 'delete_connection_profile'"
+      },
+      [
+        "route_delete_connection_profile__start_operation",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_clear_connection_profile_key__check_request",
+        "when": "era_tavern_cap_sync_agent_choose_route == 'clear_connection_profile_key'"
+      },
+      [
+        "route_clear_connection_profile_key__start_operation",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_list_connection_models__check_request",
+        "when": "era_tavern_cap_sync_agent_choose_route == 'list_connection_models'"
+      },
+      [
+        "route_list_connection_models__start_operation",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_list_connection_models_draft__check_request",
+        "when": "era_tavern_cap_sync_agent_choose_route == 'list_connection_models_draft'"
+      },
+      [
+        "route_list_connection_models_draft__start_operation",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_generate",
+        "when": "era_tavern_cap_sync_agent_choose_route == 'generate'"
+      },
+      [
+        "route_generate",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_generate_story",
+        "when": "era_tavern_cap_sync_agent_choose_route == 'generate_story'"
+      },
+      [
+        "route_generate_story",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_inject_once__check_request",
+        "when": "era_tavern_cap_sync_agent_choose_route == 'inject_once'"
+      },
+      [
+        "route_inject_once__return_result",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_write_session",
+        "when": "era_tavern_cap_sync_agent_choose_route == 'write_session'"
+      },
+      [
+        "route_write_session",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_clear_session__check_request",
+        "when": "era_tavern_cap_sync_agent_choose_route == 'clear_session'"
+      },
+      [
+        "route_clear_session__return_result",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_create_error_message__check_request",
+        "when": "era_tavern_cap_sync_agent_choose_route == 'create_error_message'"
+      },
+      [
+        "route_create_error_message__start_operation",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_stop_native_generation__check_request",
+        "when": "era_tavern_cap_sync_agent_choose_route == 'stop_native_generation'"
+      },
+      [
+        "route_stop_native_generation__return_result",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_read_session_binding__check_request",
+        "when": "era_tavern_cap_sync_agent_choose_route == 'read_session_binding'"
+      },
+      [
+        "route_read_session_binding__return_result",
+        "join_return"
+      ],
+      [
+        "route_await_native_completion__check_identity",
+        "route_await_native_completion__start_operation"
+      ],
+      [
+        "route_read_context__check_request",
+        "route_read_context__execute"
+      ],
+      [
+        "route_read_context__execute",
+        "route_read_context__return_result"
+      ],
+      [
+        "route_write_configuration__check_request",
+        "route_write_configuration__start_operation"
+      ],
+      [
+        "route_capture_preset__check_request",
+        "route_capture_preset__execute"
+      ],
+      [
+        "route_capture_preset__execute",
+        "route_capture_preset__return_result"
+      ],
+      [
+        "route_read_configuration_sources__check_request",
+        "route_read_configuration_sources__execute"
+      ],
+      [
+        "route_read_configuration_sources__execute",
+        "route_read_configuration_sources__return_result"
+      ],
+      [
+        "route_read_connection_state__check_request",
+        "route_read_connection_state__execute"
+      ],
+      [
+        "route_read_connection_state__execute",
+        "route_read_connection_state__return_result"
+      ],
+      [
+        "route_upsert_connection_profile__check_request",
+        "route_upsert_connection_profile__start_operation"
+      ],
+      [
+        "route_delete_connection_profile__check_request",
+        "route_delete_connection_profile__start_operation"
+      ],
+      [
+        "route_clear_connection_profile_key__check_request",
+        "route_clear_connection_profile_key__start_operation"
+      ],
+      [
+        "route_list_connection_models__check_request",
+        "route_list_connection_models__start_operation"
+      ],
+      [
+        "route_list_connection_models_draft__check_request",
+        "route_list_connection_models_draft__start_operation"
+      ],
+      [
+        "route_inject_once__check_request",
+        "route_inject_once__execute"
+      ],
+      [
+        "route_inject_once__execute",
+        "route_inject_once__return_result"
+      ],
+      [
+        "route_clear_session__check_request",
+        "route_clear_session__execute"
+      ],
+      [
+        "route_clear_session__execute",
+        "route_clear_session__return_result"
+      ],
+      [
+        "route_create_error_message__check_request",
+        "route_create_error_message__start_operation"
+      ],
+      [
+        "route_stop_native_generation__check_request",
+        "route_stop_native_generation__execute"
+      ],
+      [
+        "route_read_session_binding__check_request",
+        "route_read_session_binding__execute"
+      ],
+      [
+        "route_read_session_binding__execute",
+        "route_read_session_binding__return_result"
+      ],
+      [
+        "start",
+        "choose"
+      ],
+      [
+        "join_return",
+        "end"
+      ],
+      [
+        "route_stop_native_generation__execute",
+        "choose_native_stop"
+      ],
+      {
+        "from": "choose_native_stop",
+        "to": "clear_native_stop",
+        "when": "owned_choose_native_stop_route == 'stopped'"
+      },
+      {
+        "from": "choose_native_stop",
+        "to": "arm_native_stop",
+        "when": "owned_choose_native_stop_route == 'deferred'"
+      },
+      [
+        "clear_native_stop",
+        "route_stop_native_generation__return_result"
+      ],
+      [
+        "arm_native_stop",
+        "route_stop_native_generation__return_result"
+      ]
+    ]
+  }
+}

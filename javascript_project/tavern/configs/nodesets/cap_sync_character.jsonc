@@ -1,0 +1,236 @@
+{
+  "type_key": "era.tavern.flow.cap_sync_character",
+  "display_name": "角色卡与显示配置操作",
+  "description": "共享同一职责组的原操作与必要的等待前发起；无额外 cap 总分组。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.call.frame",
+      "cardinality": "exactly_one",
+      "display_name": "本次调用、实例资源与上一节点的事实"
+    }
+  ],
+  "provides": [
+    {
+      "key": "era_tavern_flow_cap_sync_character_frame",
+      "type": "era.tavern.frame.final.cap_sync_character",
+      "display_name": "处理后的资源与事实"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "sync",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.call.frame",
+        "display_name": "同实例调用与资源",
+        "required": true
+      }
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.frame.final.cap_sync_character",
+        "cardinality": "exactly_one",
+        "as": "frame",
+        "display_name": "本段明确结果"
+      }
+    ],
+    "max_steps": 21,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.tavern.initialize.start",
+        "display_name": "开始当前原生流程",
+        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+      },
+      {
+        "id": "choose",
+        "type_used": "era.tavern.cap_sync_character.choose",
+        "display_name": "识别角色卡与显示配置操作",
+        "description": "按已声明操作名选择唯一原生路径；即时操作、同步完成的 Promise 操作及真正等待前的发起共享本职责组，不重复分组。"
+      },
+      {
+        "id": "route_patch_single_floor__check_request",
+        "type_used": "era.tavern.character_patch_single_floor.check_request",
+        "display_name": "更新单层显示配置：角色卡与显示配置：检查更新单层显示配置请求",
+        "description": "保持 era.tavern.character.patch_single_floor 的现行参数、取消和目标复核；不新增资格条件。"
+      },
+      {
+        "id": "route_patch_single_floor__start_operation",
+        "type_used": "era.tavern.character_patch_single_floor.start_operation",
+        "display_name": "更新单层显示配置：角色卡与显示配置：发起指定角色的单层设置写入",
+        "description": "固定 avatar、序列化镜像和设置值，核对角色存在后发起 /api/characters/merge-attributes；成功后才更新镜像和 UI。 此 Node 只发起原始操作并创建等待资源；不执行异步续体。"
+      },
+      {
+        "id": "route_patch_external_statusbar__check_request",
+        "type_used": "era.tavern.character_patch_external_statusbar.check_request",
+        "display_name": "更新外置状态栏配置：角色卡与显示配置：检查更新外置状态栏配置请求",
+        "description": "保持 era.tavern.character.patch_external_statusbar 的现行参数、取消和目标复核；不新增资格条件。"
+      },
+      {
+        "id": "route_patch_external_statusbar__start_operation",
+        "type_used": "era.tavern.character_patch_external_statusbar.start_operation",
+        "display_name": "更新外置状态栏配置：角色卡与显示配置：发起指定角色的外置状态栏写入",
+        "description": "固定 avatar、原外置配置与明确补丁，发起 merge-attributes；成功后才更新镜像和 UI。 此 Node 只发起原始操作并创建等待资源；不执行异步续体。"
+      },
+      {
+        "id": "route_read_main_greeting__check_request",
+        "type_used": "era.tavern.character_read_main_greeting.check_request",
+        "display_name": "读取主开场白：角色卡与显示配置：检查读取主开场白请求",
+        "description": "保持 era.tavern.character.read_main_greeting 的现行参数、取消和目标复核；不新增资格条件。"
+      },
+      {
+        "id": "route_read_main_greeting__start_operation",
+        "type_used": "era.tavern.character_read_main_greeting.start_operation",
+        "display_name": "读取主开场白：角色卡与显示配置：发起当前角色主开场白读取",
+        "description": "同步捕获角色名及群聊事实；缺失时捕获 missing，否则发起 getCharacter。 此 Node 只发起原始操作并创建等待资源；不执行异步续体。"
+      },
+      {
+        "id": "route_write_main_greeting__check_request",
+        "type_used": "era.tavern.character_write_main_greeting.check_request",
+        "display_name": "写入主开场白：角色卡与显示配置：检查写入主开场白请求",
+        "description": "保持 era.tavern.character.write_main_greeting 的现行参数、取消和目标复核；不新增资格条件。"
+      },
+      {
+        "id": "route_write_main_greeting__start_operation",
+        "type_used": "era.tavern.character_write_main_greeting.start_operation",
+        "display_name": "写入主开场白：角色卡与显示配置：核对输入并发起角色开场白读取",
+        "description": "固定 expected、next 及当前角色名；拒绝群聊或缺失目标，再发起 getCharacter；旧值比对与持久化保留在异步段。 此 Node 只发起原始操作并创建等待资源；不执行异步续体。"
+      },
+      {
+        "id": "route_read_greeting_refresh_context__check_request",
+        "type_used": "era.tavern.character_read_greeting_refresh_context.check_request",
+        "display_name": "读取开场白刷新事实：角色卡与显示配置：检查读取开场白刷新事实请求",
+        "description": "保持 era.tavern.character.read_greeting_refresh_context 的现行参数、取消和目标复核；不新增资格条件。"
+      },
+      {
+        "id": "route_read_greeting_refresh_context__execute",
+        "type_used": "era.tavern.character_read_greeting_refresh_context.execute",
+        "display_name": "读取开场白刷新事实：角色卡与显示配置：执行读取开场白刷新事实操作",
+        "description": "在酒馆页面执行该操作的实际 API 或资源动作；保留未知字段、现有错误类别及原同步/异步约定。"
+      },
+      {
+        "id": "route_read_greeting_refresh_context__return_result",
+        "type_used": "era.tavern.character_read_greeting_refresh_context.return_result",
+        "display_name": "读取开场白刷新事实：角色卡与显示配置：交还读取开场白刷新事实结果",
+        "description": "返回原 era.tavern.character.greeting_refresh.facts 结果；需要脱敏的连接资料只返回摘要。"
+      },
+      {
+        "id": "route_apply_greeting_refresh__check_request",
+        "type_used": "era.tavern.character_apply_greeting_refresh.check_request",
+        "display_name": "执行开场白刷新：角色卡与显示配置：检查执行开场白刷新请求",
+        "description": "保持 era.tavern.character.apply_greeting_refresh 的现行参数、取消和目标复核；不新增资格条件。"
+      },
+      {
+        "id": "route_apply_greeting_refresh__start_operation",
+        "type_used": "era.tavern.character_apply_greeting_refresh.start_operation",
+        "display_name": "执行开场白刷新：角色卡与显示配置：更新纯净首楼并发起接收事件",
+        "description": "按 Service 指定 empty/append 结果同步更新首楼镜像与 swipe，发起一次 MESSAGE_RECEIVED；清空显示、重绘及保存随后按原顺序执行。 此 Node 只发起原始操作并创建等待资源；不执行异步续体。"
+      },
+      {
+        "id": "join_return",
+        "type_used": "era.tavern.cap_sync_character.join_return",
+        "display_name": "汇合当前实际激活分支的结果",
+        "description": "接收当前所选路径的结果集合，交还其中唯一实际结果；不选择未激活分支、不重新执行操作。运行实现必须拒绝实际多结果，不以集合契约放宽唯一结果语义。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.tavern.initialize.end",
+        "display_name": "结束当前原生流程",
+        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+      }
+    ],
+    "edges": [
+      {
+        "from": "choose",
+        "to": "route_patch_single_floor__check_request",
+        "when": "era_tavern_cap_sync_character_choose_route == 'patch_single_floor'"
+      },
+      [
+        "route_patch_single_floor__start_operation",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_patch_external_statusbar__check_request",
+        "when": "era_tavern_cap_sync_character_choose_route == 'patch_external_statusbar'"
+      },
+      [
+        "route_patch_external_statusbar__start_operation",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_read_main_greeting__check_request",
+        "when": "era_tavern_cap_sync_character_choose_route == 'read_main_greeting'"
+      },
+      [
+        "route_read_main_greeting__start_operation",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_write_main_greeting__check_request",
+        "when": "era_tavern_cap_sync_character_choose_route == 'write_main_greeting'"
+      },
+      [
+        "route_write_main_greeting__start_operation",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_read_greeting_refresh_context__check_request",
+        "when": "era_tavern_cap_sync_character_choose_route == 'read_greeting_refresh_context'"
+      },
+      [
+        "route_read_greeting_refresh_context__return_result",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_apply_greeting_refresh__check_request",
+        "when": "era_tavern_cap_sync_character_choose_route == 'apply_greeting_refresh'"
+      },
+      [
+        "route_apply_greeting_refresh__start_operation",
+        "join_return"
+      ],
+      [
+        "route_patch_single_floor__check_request",
+        "route_patch_single_floor__start_operation"
+      ],
+      [
+        "route_patch_external_statusbar__check_request",
+        "route_patch_external_statusbar__start_operation"
+      ],
+      [
+        "route_read_main_greeting__check_request",
+        "route_read_main_greeting__start_operation"
+      ],
+      [
+        "route_write_main_greeting__check_request",
+        "route_write_main_greeting__start_operation"
+      ],
+      [
+        "route_read_greeting_refresh_context__check_request",
+        "route_read_greeting_refresh_context__execute"
+      ],
+      [
+        "route_read_greeting_refresh_context__execute",
+        "route_read_greeting_refresh_context__return_result"
+      ],
+      [
+        "route_apply_greeting_refresh__check_request",
+        "route_apply_greeting_refresh__start_operation"
+      ],
+      [
+        "start",
+        "choose"
+      ],
+      [
+        "join_return",
+        "end"
+      ]
+    ]
+  }
+}

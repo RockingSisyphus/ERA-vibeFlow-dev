@@ -1,6 +1,5 @@
-# Service 数据 Schema
+# 合同一致性检查用 Data Schema
 
-本目录登记 Service 节点之间、端口和宿主能力使用的 JSON 数据类型。类型键供程序和
-工作流引用，中文名称与说明供审核图阅读；实际字段以各文件的 `schema` 为准。
-未被当前工作流引用的历史预留类型不代表已接入功能。运行时 DTO 的版本字段不得
-写入 ERA 持久化数据。
+本目录JSONC由`packages/era-contracts/scripts/check-schema-sync.mjs`读取，与contracts包的canonical Schema核对结构。它们是实际检查输入，不能按“旧manifests目录”整体删除。
+
+运行时资源登记以本root的`plugins/`固定SDK声明为准，正式架构由`ARCHITECTURE.jsonc`生成。修改数据合同时同步检查canonical Schema与SDK声明；本目录不恢复项目级descriptors注册。

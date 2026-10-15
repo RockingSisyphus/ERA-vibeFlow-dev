@@ -1,14 +1,44 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createSidecarAdapter } from '../../src/ERA变量框架/service/sidecar-adapter';
+import { fixture as nativeFixture } from '../native-tavern/native-fixture.mjs';
+const nativeOwners: any[] = [];
+async function adapter() {
+  const native = await nativeFixture(undefined, {
+    api: { ...globalThis, location: { origin: 'http://tavern.test' } },
+    publishSnapshot: publishSidecarRuntimeSnapshot,
+  });
+  nativeOwners.push(native);
+  return Object.fromEntries(
+    Object.entries(native.caps['era.tavern.sidecar']).map(([name, fn]: [string, any]) => [
+      name,
+      (...args: any[]) => {
+        try {
+          const value = fn(...args);
+          return value?.then
+            ? value.catch((error: any) => {
+                throw error.cause ?? error;
+              })
+            : value;
+        } catch (error: any) {
+          throw error.cause ?? error;
+        }
+      },
+    ]),
+  );
+}
 import {
   clearSidecarRuntimeSnapshot,
+  publishSidecarRuntimeSnapshot,
   readActiveSidecarRuntimeSnapshot,
   subscribeSidecarRuntimeSnapshot,
 } from '../../src/ERA变量框架/service/sidecar-runtime-snapshot';
 
 const owner = { characterId: 'card-a', groupId: null, chatId: 'chat-a' };
 const sidecarId = 'era_chat_12345678';
-afterEach(() => {
+afterEach(async () => {
+  for (const native of nativeOwners.splice(0)) {
+    native.page.dispatchEvent(new Event('pagehide'));
+    await native.work;
+  }
   clearSidecarRuntimeSnapshot();
   vi.unstubAllGlobals();
 });
@@ -33,7 +63,7 @@ describe('Sidecar 指针提交紧贴当前宿主身份', () => {
     { ...owner, characterId: 'card-b' },
   ])('文件回读后切换身份时不覆盖新聊天指针或删除旧状态：%j', async identity => {
     const { variables, write } = fixture(identity);
-    await expect(createSidecarAdapter().commit_metadata(input, context)).rejects.toMatchObject({
+    await expect((await adapter()).commit_metadata(input, context)).rejects.toMatchObject({
       code: 'ERA_MESSAGE_WRITE_TARGET_CHANGED',
       reason: 'chat',
       written: false,
@@ -49,11 +79,8 @@ describe('Sidecar 指针提交紧贴当前宿主身份', () => {
       const fetch = vi.fn();
       vi.stubGlobal('fetch', fetch);
       await expect(
-        Promise.resolve().then(() =>
-          createSidecarAdapter()[operation](
-            { ...input, record: input.snapshot, expectedSidecarId: sidecarId },
-            context,
-          ),
+        Promise.resolve().then(async () =>
+          (await adapter())[operation]({ ...input, record: input.snapshot, expectedSidecarId: sidecarId }, context),
         ),
       ).rejects.toMatchObject({
         code: 'ERA_MESSAGE_WRITE_TARGET_CHANGED',
@@ -68,7 +95,7 @@ describe('Sidecar 指针提交紧贴当前宿主身份', () => {
   );
   it('身份一致时提交原指针并发布已确认的快照', async () => {
     const { variables, write } = fixture(owner);
-    await expect(createSidecarAdapter().commit_metadata(input, context)).resolves.toMatchObject({
+    await expect((await adapter()).commit_metadata(input, context)).resolves.toMatchObject({
       status: 'committed',
     });
     expect(write).toHaveBeenCalledTimes(1);
@@ -83,10 +110,10 @@ it('中间块更新即时读取缓存，消息完成才通知已有订阅者', a
   const unsubscribe = subscribeSidecarRuntimeSnapshot(listener);
   listener.mockClear();
   try {
-    await createSidecarAdapter().commit_metadata({ ...input, notifySubscribers: false }, context);
+    await (await adapter()).commit_metadata({ ...input, notifySubscribers: false }, context);
     expect(readActiveSidecarRuntimeSnapshot()?.statData).toEqual({ hp: 10 });
     expect(listener).not.toHaveBeenCalled();
-    await createSidecarAdapter().commit_metadata({ ...input, snapshot: { ...input.snapshot, revision: 2 } }, context);
+    await (await adapter()).commit_metadata({ ...input, snapshot: { ...input.snapshot, revision: 2 } }, context);
     expect(listener).toHaveBeenCalledTimes(1);
     expect(listener.mock.calls[0][0].revision).toBe(2);
   } finally {

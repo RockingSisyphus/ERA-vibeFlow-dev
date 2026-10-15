@@ -1,0 +1,126 @@
+{
+  "type_key": "era.tavern.flow.activate",
+  "display_name": "按安装决议登记或休眠",
+  "description": "执行主 Service 给出的 allow/dormant 决议；只有 allow 注册事件，dormant 只完成等待。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.call.frame",
+      "cardinality": "exactly_one",
+      "display_name": "本次调用及实例资源令牌"
+    }
+  ],
+  "provides": [
+    {
+      "key": "era_tavern_flow_activate_frame",
+      "type": "era.tavern.call.frame",
+      "display_name": "操作结果及后续处理所需的资源令牌"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "sync",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.call.frame",
+        "display_name": "调用与资源资料",
+        "required": true
+      }
+    ],
+    "max_steps": 12,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.tavern.initialize.start",
+        "display_name": "开始当前原生流程",
+        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+      },
+      {
+        "id": "check_instance",
+        "type_used": "era.tavern.activate.check_instance",
+        "display_name": "检查当前启动实例",
+        "description": "确认当前实例尚未停止，不允许已清理实例再次注册监听。"
+      },
+      {
+        "id": "choose_scope",
+        "type_used": "era.tavern.activate.choose_scope",
+        "display_name": "区分启用与休眠决议",
+        "description": "读取已经由主 Service 决定的安装结论，不在辅助流程重新选择角色卡或全局脚本的业务策略。"
+      },
+      {
+        "id": "branch_dormant",
+        "type_used": "era.tavern.activate.branch_dormant",
+        "display_name": "保留无监听休眠状态",
+        "description": "不注册任何 Tavern listener，记录主 Service 给出的休眠原因。"
+      },
+      {
+        "id": "branch_allow",
+        "type_used": "era.tavern.activate.branch_allow",
+        "display_name": "登记唯一监听集合",
+        "description": "按现行事件目录和监听优先级登记普通事件、生成屏障及按钮；已登记则保持同一集合。"
+      },
+      {
+        "id": "join_settle_startup",
+        "type_used": "era.tavern.activate.join_settle_startup",
+        "display_name": "汇合当前实际激活分支的结果",
+        "description": "接收当前所选路径的结果集合，交还其中唯一实际结果；不选择未激活分支、不重新执行操作。运行实现必须拒绝实际多结果，不以集合契约放宽唯一结果语义。"
+      },
+      {
+        "id": "settle_startup",
+        "type_used": "era.tavern.activate.settle_startup",
+        "display_name": "完成安装决议等待",
+        "description": "完成启动 Promise，返回 activated 状态；UI、宏和公共入口按既有启动顺序继续装配。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.tavern.initialize.end",
+        "display_name": "结束当前原生流程",
+        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+      }
+    ],
+    "edges": [
+      [
+        "check_instance",
+        "choose_scope"
+      ],
+      {
+        "from": "choose_scope",
+        "to": "branch_allow",
+        "when": "era_tavern_activate_choose_scope_route == 'allow'"
+      },
+      [
+        "branch_allow",
+        "join_settle_startup"
+      ],
+      {
+        "from": "choose_scope",
+        "to": "branch_dormant",
+        "when": "era_tavern_activate_choose_scope_route == 'dormant'"
+      },
+      [
+        "branch_dormant",
+        "join_settle_startup"
+      ],
+      [
+        "join_settle_startup",
+        "settle_startup"
+      ],
+      [
+        "start",
+        "check_instance"
+      ],
+      [
+        "settle_startup",
+        "end"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.call.frame",
+        "cardinality": "exactly_one",
+        "display_name": "完成后的操作资料",
+        "as": "frame"
+      }
+    ]
+  }
+}

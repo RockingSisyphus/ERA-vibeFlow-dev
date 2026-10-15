@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { updateEraMessageContent } from '../../src/ERA变量框架/service/message-writer';
+import { writeMessage } from '../native-tavern/message-fixture.mjs';
+const updateEraMessageContent = (input: Readonly<Record<string, unknown>>, _writes: Map<unknown, unknown>) =>
+  writeMessage(input);
 
 describe('message writer host extra merge', () => {
   afterEach(() => {

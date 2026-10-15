@@ -1,0 +1,121 @@
+{
+  "type_key": "era.tavern.flow.subscription_control",
+  "display_name": "登记和释放生成阶段订阅",
+  "description": "公开generation.subscribe及其注销器只转交此原生同步流程，回调表按实例隔离。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.call.frame",
+      "cardinality": "exactly_one",
+      "display_name": "本次实例及调用资料"
+    }
+  ],
+  "provides": [
+    {
+      "key": "subscription_control_frame",
+      "type": "era.tavern.call.frame",
+      "display_name": "本流程实际结果"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "sync",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.call.frame",
+        "required": true,
+        "display_name": "本次实例及调用资料"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.tavern.initialize.start",
+        "display_name": "开始当前原生流程",
+        "description": "标记本段原生流程的控制边界，不创建资源或重复输出。"
+      },
+      {
+        "id": "choose",
+        "type_used": "era.tavern.subscription_control.choose",
+        "display_name": "区分登记、注销或取消阶段订阅",
+        "description": "按公开登记或资源释放请求选择唯一动作；不调用作者回调。"
+      },
+      {
+        "id": "register",
+        "type_used": "era.tavern.subscription_control.register",
+        "display_name": "登记当前实例的阶段订阅",
+        "description": "校验函数和阶段选项，保存本实例回调资源；返回只转交注销请求的stop及cancelPending句柄。停止后的旧Facade返回空注销器。"
+      },
+      {
+        "id": "stop",
+        "type_used": "era.tavern.subscription_control.stop",
+        "display_name": "注销本次订阅或取消其在途等待",
+        "description": "普通注销仅退出此订阅并解除本回调等待；cancelPending同时取消它正在参与的生成周期。资源句柄必须属于当前实例。"
+      },
+      {
+        "id": "cancel",
+        "type_used": "era.tavern.subscription_control.cancel",
+        "display_name": "取消当前生成周期或释放全部订阅",
+        "description": "取消本实例原始控制器；导航保留登记，停止时注销全部资源。此Node不顺序执行作者函数，不重启生成。"
+      },
+      {
+        "id": "join_result",
+        "type_used": "era.tavern.subscription_control.join_result",
+        "display_name": "交还当前订阅资源操作结果",
+        "description": "严格汇合当前互斥路径，返回原stop句柄或释放确认。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.tavern.initialize.end",
+        "display_name": "结束当前原生流程",
+        "description": "标记本段原生流程的控制边界，不创建资源或重复输出。"
+      }
+    ],
+    "edges": [
+      [
+        "start",
+        "choose"
+      ],
+      {
+        "from": "choose",
+        "to": "register",
+        "when": "subscription_control_choose_route == 'register'"
+      },
+      [
+        "register",
+        "join_result"
+      ],
+      {
+        "from": "choose",
+        "to": "stop",
+        "when": "subscription_control_choose_route == 'stop'"
+      },
+      [
+        "stop",
+        "join_result"
+      ],
+      {
+        "from": "choose",
+        "to": "cancel",
+        "when": "subscription_control_choose_route == 'cancel'"
+      },
+      [
+        "cancel",
+        "join_result"
+      ],
+      [
+        "join_result",
+        "end"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.call.frame",
+        "cardinality": "exactly_one",
+        "as": "frame",
+        "display_name": "当前实际结果"
+      }
+    ],
+    "max_steps": 10
+  }
+}

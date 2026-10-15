@@ -1,0 +1,146 @@
+{
+  "type_key": "era.tavern.flow.agent_write_session",
+  "display_name": "写入页面生成会话并完成观察通知",
+  "description": "实现 era.tavern.agent.write_session；输入沿用 era.agent.host.request，输出沿用 era.agent.host.result，完成方式保持 immediate。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.call.frame",
+      "cardinality": "exactly_one",
+      "display_name": "本次调用及实例资源令牌"
+    }
+  ],
+  "provides": [
+    {
+      "key": "era_tavern_flow_agent_write_session_frame",
+      "type": "era.tavern.call.frame",
+      "display_name": "操作结果及后续处理所需的资源令牌"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "sync",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.call.frame",
+        "display_name": "调用与资源资料",
+        "required": true
+      }
+    ],
+    "max_steps": 14,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.tavern.initialize.start",
+        "display_name": "开始当前原生流程",
+        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+      },
+      {
+        "id": "check_chat",
+        "type_used": "era.tavern.agent_write_session.check_chat",
+        "display_name": "检查聊天键及会话输入",
+        "description": "读取 Service 指定的 chatKey、session、storageSession 与观察意图。"
+      },
+      {
+        "id": "choose_observation",
+        "type_used": "era.tavern.agent_write_session.choose_observation",
+        "display_name": "选择是否启动故事观察",
+        "description": "只根据 startStoryObservation 执行已给出的观察意图，不重新规划故事阶段。"
+      },
+      {
+        "id": "select_keep",
+        "type_used": "era.tavern.agent_write_session.select_keep",
+        "display_name": "保留 Service 提供的会话",
+        "description": "不重新生成观察标识，沿用本次给出的 session/storageSession。"
+      },
+      {
+        "id": "select_start",
+        "type_used": "era.tavern.agent_write_session.select_start",
+        "display_name": "建立本次故事观察",
+        "description": "生成本次故事请求关联，保留现行观察记录和原生正文关联。"
+      },
+      {
+        "id": "join_begin_observation",
+        "type_used": "era.tavern.agent_write_session.join_begin_observation",
+        "display_name": "汇合当前实际激活分支的结果",
+        "description": "接收当前所选路径的结果集合，交还其中唯一实际结果；不选择未激活分支、不重新执行操作。运行实现必须拒绝实际多结果，不以集合契约放宽唯一结果语义。"
+      },
+      {
+        "id": "begin_observation",
+        "type_used": "era.tavern.agent_write_session.begin_observation",
+        "display_name": "登记故事和原生结束等待",
+        "description": "保持请求记录、storyRequestId 和 nativeExecutionId 的既有顺序。"
+      },
+      {
+        "id": "store_session",
+        "type_used": "era.tavern.agent_write_session.store_session",
+        "display_name": "保存克隆后的本页会话",
+        "description": "按现行 storageSession 选择保存当前聊天会话，并完成已有故事文本记录。"
+      },
+      {
+        "id": "publish_session",
+        "type_used": "era.tavern.agent_write_session.publish_session",
+        "display_name": "发布会话更新通知",
+        "description": "发出原 era-agent-session-updated 通知，返回原写入确认。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.tavern.initialize.end",
+        "display_name": "结束当前原生流程",
+        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+      }
+    ],
+    "edges": [
+      [
+        "check_chat",
+        "choose_observation"
+      ],
+      [
+        "begin_observation",
+        "store_session"
+      ],
+      [
+        "store_session",
+        "publish_session"
+      ],
+      {
+        "from": "choose_observation",
+        "to": "select_start",
+        "when": "era_tavern_agent_write_session_choose_observation_route == 'start'"
+      },
+      [
+        "select_start",
+        "join_begin_observation"
+      ],
+      {
+        "from": "choose_observation",
+        "to": "select_keep",
+        "when": "era_tavern_agent_write_session_choose_observation_route == 'keep'"
+      },
+      [
+        "select_keep",
+        "join_begin_observation"
+      ],
+      [
+        "join_begin_observation",
+        "begin_observation"
+      ],
+      [
+        "start",
+        "check_chat"
+      ],
+      [
+        "publish_session",
+        "end"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.call.frame",
+        "cardinality": "exactly_one",
+        "display_name": "完成后的操作资料",
+        "as": "frame"
+      }
+    ]
+  }
+}

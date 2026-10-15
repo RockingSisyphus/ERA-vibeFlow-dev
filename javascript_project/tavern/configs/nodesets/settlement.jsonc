@@ -1,0 +1,155 @@
+{
+  "type_key": "era.tavern.flow.settlement",
+  "display_name": "依次结算批次并安排后置通知",
+  "description": "按序号完成批次回执，先设置致命转换标记再允许回执回调重入；通知不占用主 Service 执行等待。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.call.frame",
+      "cardinality": "exactly_one",
+      "display_name": "本次调用及实例资源令牌"
+    }
+  ],
+  "provides": [
+    {
+      "key": "era_tavern_flow_settlement_frame",
+      "type": "era.tavern.call.frame",
+      "display_name": "操作结果及后续处理所需的资源令牌"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "sync",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.call.frame",
+        "display_name": "调用与资源资料",
+        "required": true
+      }
+    ],
+    "max_steps": 13,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.tavern.initialize.start",
+        "display_name": "开始当前原生流程",
+        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+      },
+      {
+        "id": "mark_fatal_transition",
+        "type_used": "era.tavern.settlement.mark_fatal_transition",
+        "display_name": "登记致命转换边界",
+        "description": "fatal 批次先进入转换状态，使回执回调中再次准入时立即获得原拒绝。"
+      },
+      {
+        "id": "settle_receipts_loop",
+        "type_used": "vibeflow.loop.while",
+        "display_name": "逐项结算来源循环",
+        "description": "每轮结算一个来源、释放它的引用并推进位置；所有来源完成后结束。回执重入时仍看到本批次已设置的致命转换边界。",
+        "requires": [
+          {
+            "type": "era.tavern.frame.settlement.mark_fatal_transition",
+            "cardinality": "exactly_one",
+            "display_name": "当前请求、实例资源令牌及此前步骤取得的事实"
+          }
+        ],
+        "provides": [
+          {
+            "key": "era_tavern_flow_settlement_settle_receipts_loop_frame",
+            "type": "era.tavern.frame.settlement.mark_fatal_transition",
+            "display_name": "逐项结算来源完成后的处理资料"
+          }
+        ],
+        "loop": {
+          "body": "era.tavern.flow.settlement_settle_receipts_item",
+          "max_iterations": null,
+          "stop_when": {
+            "from": "done",
+            "equals": true
+          },
+          "carry": [
+            {
+              "from": "era.tavern.frame.settlement.mark_fatal_transition",
+              "as": "frame",
+              "update": "frame"
+            }
+          ],
+          "outputs": [
+            {
+              "from": "frame",
+              "as": "era_tavern_flow_settlement_settle_receipts_loop_frame"
+            }
+          ]
+        }
+      },
+      {
+        "id": "settle_receipts",
+        "type_used": "era.tavern.settlement.settle_receipts",
+        "display_name": "汇总逐项结算来源",
+        "description": "将循环的终态资料转换为后续步骤使用的结果；不重复处理已经完成的条目。"
+      },
+      {
+        "id": "latch_fatal",
+        "type_used": "era.tavern.settlement.latch_fatal",
+        "display_name": "完成致命态与等待取消",
+        "description": "fatal 时锁定致命态并取消 operational 等待；普通批次保持运行。"
+      },
+      {
+        "id": "publish_diagnostics",
+        "type_used": "era.tavern.settlement.publish_diagnostics",
+        "display_name": "报告 Service 输出诊断",
+        "description": "按既有 Console 内容报告诊断，不把预期错误改成成功，也不静默过滤告警。"
+      },
+      {
+        "id": "enqueue_notifications",
+        "type_used": "era.tavern.settlement.enqueue_notifications",
+        "display_name": "保存已经解码的后置通知资料",
+        "description": "只保存本批次通知参数和实例引用；不入后台队列或发起回调。同步 frame_send 在 remember_frame 后通过原生 Loop 发起。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.tavern.initialize.end",
+        "display_name": "结束当前原生流程",
+        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+      }
+    ],
+    "edges": [
+      [
+        "mark_fatal_transition",
+        "settle_receipts_loop"
+      ],
+      [
+        "settle_receipts",
+        "latch_fatal"
+      ],
+      [
+        "latch_fatal",
+        "publish_diagnostics"
+      ],
+      [
+        "publish_diagnostics",
+        "enqueue_notifications"
+      ],
+      [
+        "settle_receipts_loop",
+        "settle_receipts"
+      ],
+      [
+        "start",
+        "mark_fatal_transition"
+      ],
+      [
+        "enqueue_notifications",
+        "end"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.call.frame",
+        "cardinality": "exactly_one",
+        "display_name": "完成后的操作资料",
+        "as": "frame"
+      }
+    ]
+  }
+}

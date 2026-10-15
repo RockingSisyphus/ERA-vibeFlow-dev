@@ -1,0 +1,117 @@
+{
+  "type_key": "era.tavern.flow.notification_report_item",
+  "display_name": "逐项报告已结束的通知结果",
+  "description": "此原生 Loop 不创建任务，只按原通知顺序报告已经固定的最终失败。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.frame.notification_finalize.read",
+      "cardinality": "exactly_one",
+      "display_name": "当前通知及实例资源"
+    }
+  ],
+  "provides": [
+    {
+      "key": "era_tavern_flow_notification_report_item_frame",
+      "type": "era.tavern.frame.notification_report_item.final",
+      "display_name": "本次步骤的结果与资源"
+    },
+    {
+      "key": "era_tavern_flow_notification_report_item_done",
+      "type": "era.tavern.done.notification_report",
+      "display_name": "本次步骤的结果与资源"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.frame.notification_finalize.read",
+        "required": true,
+        "display_name": "当前报告位置"
+      }
+    ],
+    "max_steps": 12,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.tavern.initialize.start",
+        "display_name": "开始当前原生流程",
+        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+      },
+      {
+        "id": "choose_item",
+        "type_used": "era.tavern.notification_report_item.choose_item",
+        "display_name": "选择仍需报告的原顺序条目",
+        "description": "未完成列表才选择当前结果，结束时不产生日志。"
+      },
+      {
+        "id": "report_one",
+        "type_used": "era.tavern.notification_report_item.report_one",
+        "display_name": "报告一个已完成通知的原失败",
+        "description": "仅 rejected 结果按原告警格式报告；fulfilled 只推进位置，不改写回执。"
+      },
+      {
+        "id": "empty",
+        "type_used": "era.tavern.notification_report_item.empty",
+        "display_name": "完成原顺序报告遍历",
+        "description": "没有当前结果时只形成 done=true。"
+      },
+      {
+        "id": "join_result",
+        "type_used": "era.tavern.notification_report_item.join_result",
+        "display_name": "汇合当前唯一报告结果",
+        "description": "只交回原生遍历的当前结果。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.tavern.initialize.end",
+        "display_name": "结束当前原生流程",
+        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+      }
+    ],
+    "edges": [
+      {
+        "from": "choose_item",
+        "to": "report_one",
+        "when": "era_tavern_notification_report_item_choose_item_route == 'item'"
+      },
+      {
+        "from": "choose_item",
+        "to": "empty",
+        "when": "era_tavern_notification_report_item_choose_item_route == 'done'"
+      },
+      [
+        "report_one",
+        "join_result"
+      ],
+      [
+        "empty",
+        "join_result"
+      ],
+      [
+        "start",
+        "choose_item"
+      ],
+      [
+        "join_result",
+        "end"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.frame.notification_report_item.final",
+        "cardinality": "exactly_one",
+        "as": "frame",
+        "display_name": "下一报告位置"
+      },
+      {
+        "type": "era.tavern.done.notification_report",
+        "cardinality": "exactly_one",
+        "as": "done",
+        "display_name": "是否结束报告"
+      }
+    ]
+  }
+}

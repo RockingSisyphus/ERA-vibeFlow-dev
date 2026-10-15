@@ -16,8 +16,10 @@ const mocks = vi.hoisted(() => ({
   > | null,
   request: vi.fn(() => ({ accepted: false, message: 'fixture refusal' })),
 }));
-vi.mock('../../src/ERA变量框架/service/agent-tavern-host', () => ({ readCurrentAgentSession: () => mocks.session }));
-vi.mock('../../src/ERA变量框架/service/client', () => ({ requestEraService: mocks.request }));
+vi.mock('../../src/ERA变量框架/service/client', () => ({
+  requestEraService: mocks.request,
+  readCurrentAgentSession: () => mocks.session,
+}));
 
 afterEach(() => {
   releaseReportApps(true);

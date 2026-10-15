@@ -3,7 +3,7 @@ import {
   type GreetingRefreshFacts,
 } from '../../../javascript_project/service/base_lib/greeting_refresh_policy';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createCharacterGreetingAdapter } from '../../src/ERA变量框架/service/character-greeting-adapter';
+import { fixture as nativeFixture } from '../native-tavern/native-fixture.mjs';
 
 type FixtureOptions = Readonly<{
   chat?: SillyTavern.ChatMessage[];
@@ -69,25 +69,29 @@ function fixture(options: FixtureOptions = {}) {
 }
 
 async function writeGreeting() {
-  const adapter = createCharacterGreetingAdapter(signal => {
-    if (signal.aborted) throw signal.reason;
-  });
-  const input = {
-    expected: '作者原文',
-    next: '作者原文\n<VariableInsert>demo</VariableInsert>\n<StatusPlaceHolderImpl/>',
-  };
-  const context = { signal: new AbortController().signal };
-  const written = (await adapter.write_main_greeting(input, context)) as Record<string, unknown>;
-  const target = planGreetingRefresh(
-    input.expected,
-    input.next,
-    adapter.read_greeting_refresh_context({}, context) as GreetingRefreshFacts,
-  );
-  const chatRefresh =
-    target.kind === 'result'
-      ? target.result
-      : await adapter.apply_greeting_refresh({ ...target, next: input.next }, context);
-  return { ...written, chatRefresh };
+  const native = await nativeFixture(undefined, { api: { ...globalThis, location: { origin: 'http://tavern.test' } } });
+  const adapter = native.caps['era.tavern.character'];
+  try {
+    const input = {
+      expected: '作者原文',
+      next: '作者原文\n<VariableInsert>demo</VariableInsert>\n<StatusPlaceHolderImpl/>',
+    };
+    const context = { signal: new AbortController().signal };
+    const written = (await adapter.write_main_greeting(input, context)) as Record<string, unknown>;
+    const target = planGreetingRefresh(
+      input.expected,
+      input.next,
+      adapter.read_greeting_refresh_context({}, context) as GreetingRefreshFacts,
+    );
+    const chatRefresh =
+      target.kind === 'result'
+        ? target.result
+        : await adapter.apply_greeting_refresh({ ...target, next: input.next }, context);
+    return { ...written, chatRefresh };
+  } finally {
+    native.page.dispatchEvent(new Event('pagehide'));
+    await native.work;
+  }
 }
 
 describe('角色主开场白初始化适配器', () => {
@@ -118,7 +122,7 @@ describe('角色主开场白初始化适配器', () => {
     });
 
     const request = state.fetchMock.mock.calls[0];
-    expect(request?.[0]).toBe('/api/characters/merge-attributes');
+    expect(request?.[0]).toBe('http://tavern.test/api/characters/merge-attributes');
     expect(JSON.parse(String(request?.[1]?.body))).toMatchObject({
       avatar: 'real-avatar-file.png',
       first_mes: expect.stringContaining('<StatusPlaceHolderImpl/>'),

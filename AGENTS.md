@@ -1,6 +1,6 @@
 # VibeFlow 开发入口
 
-本项目使用四个 JavaScript AOT root：异步服务 `javascript_project/service`、同步宏 `javascript_project/macro`、表达式 `javascript_project/expression` 和命令压缩 `javascript_project/compaction`。先阅读所选 root 的 `vibeflow_project.jsonc` 和已登记的 `ARCHITECTURE.jsonc`，沿 Architecture 的 source 定位并修改真实 Config、Nodeset、代码插件声明或 Node source；生成文档只通过 VibeFlow 命令更新。
+本项目内核为 VibeFlow 0.20.0，已实施五个 JavaScript AOT root：异步领域服务 `javascript_project/service`、同步宏 `javascript_project/macro`、表达式 `javascript_project/expression`、命令压缩 `javascript_project/compaction` 和酒馆辅助流程 `javascript_project/tavern`。旧 Host 已由辅助 root 的原生 Node/Nodeset 替换并接入生产；局部脚本单次入口、三个任务控制边界及资源归属保持获批结构。同最终 bundle 综合495/495、细则924分段覆盖通过，日常酒馆未单独联调，完整证据与限制见交接。先阅读所选 root 的 `vibeflow_project.jsonc` 和已登记的 `ARCHITECTURE.jsonc`，沿 Architecture 的 source 定位并修改真实 Config、Nodeset、SDK声明或 Node source；生成文档只通过 VibeFlow 命令更新。
 
 按任务阅读规范：
 
@@ -13,9 +13,12 @@
 - 登记多文件实现与源码归属：[`kernel/docs/user/multifile-resources.md`](kernel/docs/user/multifile-resources.md)
 - 升级旧资源声明及 API：[`kernel/docs/user/rule-system-migration.md`](kernel/docs/user/rule-system-migration.md)
 - 查询运行日志与状态：[`kernel/docs/user/runtime-observation.md`](kernel/docs/user/runtime-observation.md)
+- 开发并发任务、协作停止或等待退出：[`kernel/docs/user/task-management.md`](kernel/docs/user/task-management.md)
 - 运行检查或解释结果：[`kernel/docs/user/commands-and-results.md`](kernel/docs/user/commands-and-results.md)
 
-0.18.3 沿用 `@vibeflow/plugin` 的固定 SDK 插件，由顶层 workflow 显式选择；项目级 `descriptors` 登记已退役。Node 明确选择自己的 Ruleset，支撑源码通过 `implementation_files` 登记；共享库引用使用 `base_libs`。每项 `pipeline.inputs` 显式填写布尔 `required`。Workflow / Plugin / Rule ABI 分别为 v5 / v3 / v2，AOT manifest 为 v2；升级前生成的 AOT 与业务验收不能作为新版执行证据。当前迁移是否已实施，以交接说明和真实 Config 中的 planned 状态为准。
+0.20.0 沿用 `@vibeflow/plugin` 的固定 SDK 插件，由顶层 workflow 显式选择；项目级 `descriptors` 登记已退役。Node 明确选择自己的 Ruleset，支撑源码通过 `implementation_files` 登记；共享库引用使用 `base_libs`。每项 `pipeline.inputs` 显式填写布尔 `required`。Workflow / Plugin / Rule ABI 分别为 v6 / v3 / v2，AOT manifest 为 v2；升级前生成的 AOT 与业务验收不能作为新版执行证据。当前迁移是否已实施，以交接说明和真实 Config 中的 planned 状态为准。
+
+并发控制使用 `flow_kind="task_manager"`、`vibeflow.task_manager`、调用点 `task_targets` 和 `context.tasks`。旧调用级 `async`、`result_key`、`detached` 及停止等待超时选项已移除。TaskRef 只属于本次 workflow 运行；不得将 context 或控制接口存入 Session，也不得在 Node 返回后的回调中调用它。0.20.0 的 waitAny/waitAllExited 一次交付结果即回收任务记录；接收后从待处理名单删除引用，不得再次等待或停止该引用。普通 Node 接入取消并在 `finally` 完成资源释放，workflow 结束须等待实际任务和异步清理，不把请求停止或超时当作已退出。
 
 完成修改后更新 Architecture，并执行适用的 validate、quality、build 和工作流执行探针。按结果中的实际证据报告完成状态。
 
@@ -32,7 +35,7 @@ SillyTavern、Tavern Helper、浏览器事件、ERA 宏、UI 或真实酒馆联�
 - `app/**`：读取 `app/AGENTS.md`，其 `@types/**` 是本仓 Tavern Helper/SillyTavern 接口
   的唯一类型参考；实际可用性仍由已连接酒馆页面验证。
 - `app/src/ERA变量框架/**`：额外读取该目录及 `service`、`macro` 或 `ui` 下的局部规则；
-  ERA 业务状态不得绕过 Service Host 直接修改。
+  ERA 业务状态不得绕过主 Service 规划及原生 Capability 执行路径直接修改。
 - `javascript_project/service/**` 或 `javascript_project/macro/**`：读取对应 root 的局部规则；
   先遵循本文件的 VibeFlow review/validate/build 流程，再处理 Tavern 宿主边界。
 
@@ -55,3 +58,7 @@ SillyTavern、Tavern Helper、浏览器事件、ERA 宏、UI 或真实酒馆联�
 用户明确覆盖长任务 skill 默认异常暂停调度：suite 安全活跃时，个别 Evaluator failed 不停止整套测试，也不暂停唯一心跳；跟踪至自然结束。无活跃作业后才在分析、编码或等待必要决定期间暂停。提示词必须写出测试结束后的独立审计、批量归因、定向复跑、下一套全量测试与收尾，不把失败报告当任务终点。健康后约 60 分钟检查，启动/恢复约 10 分钟，可靠近完成 ETA 可缩短。
 
 所有 root 的 Config 调用、Node descriptor、Nodeset 的 `desc` 以及数据流说明必须遵循[文档维护指南](docs/developer/文档维护指南.md#节点与数据流说明规范)：适合中文的内容用中文，让不了解内部实现和相邻节点的人能单独读懂处理对象、具体动作、重要分支、结果和此处作用。以源码为事实，避免抽象短语、虚构职责和仅 tooltip 可读；正式图只由 VibeFlow 命令生成。
+
+## 本项目资料存放与清理
+
+用户明确要求：本项目的源码、文档、报告、日志、备份、归档及临时资料只保存在当前开发目录内。不得向项目旁边、外部归档目录或其他项目目录写入本项目资料；过时内容直接删除，不以迁出归档代替清理。需要中间处理时优先使用内存，确需落盘则在本项目内使用独立临时位置并及时删除。此用户约束优先于通用临时目录skill的默认位置。已有外部工具链的共享服务及其自身数据不因本规则获得清理或搬移授权。

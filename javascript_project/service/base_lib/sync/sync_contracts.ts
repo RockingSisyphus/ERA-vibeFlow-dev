@@ -189,6 +189,19 @@ export function errorMessage(error: unknown): string {
   return String(error);
 }
 
+/** 为了让既有写入保护和重新同步分支读取原错误事实，解开能力及原生Node的已知包装。
+ * 只转换错误数据，不选择业务路径；未知错误保留自身身份及cause。 */
+export function unwrapCapabilityFailure(error: unknown): unknown {
+  while (
+    isRecord(error) &&
+    (error.code === "VF_CAPABILITY_FAILED" || error.code === "VF_NODE_FAILED") &&
+    error.cause !== undefined
+  ) {
+    error = error.cause;
+  }
+  return error;
+}
+
 export function isCancellation(error: unknown): boolean {
   return (
     (error instanceof Error && error.name === "AbortError") ||

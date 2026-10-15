@@ -3,7 +3,7 @@ import { TavernListeners } from './tavern-listeners';
 import { createApp, type App } from 'vue';
 import AgentReportViewer from '../ui/components/AgentReportViewer.vue';
 import { agentExecutionRecords, currentAgentRecordChat } from './agent-execution-records';
-import { readCurrentAgentSession } from './agent-tavern-host';
+import { readCurrentAgentSession } from './client';
 import type { AgentReportStage } from './agent-report-view-model';
 import { activeMessageText, messageMk } from './statusbar-message-identity';
 

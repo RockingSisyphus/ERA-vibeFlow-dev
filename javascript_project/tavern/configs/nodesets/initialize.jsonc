@@ -1,0 +1,100 @@
+{
+  "type_key": "era.tavern.flow.initialize",
+  "display_name": "建立隔离的酒馆会话资源",
+  "description": "同步建立限额、实例及安装决议回执；不在短流程里创建长期监听。资源就绪与默认激活在同一辅助root的异步启动入口完成，对外start完成时监听已经就绪。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.call.frame",
+      "cardinality": "exactly_one",
+      "display_name": "本次调用及实例资源令牌"
+    }
+  ],
+  "provides": [
+    {
+      "key": "era_tavern_flow_initialize_frame",
+      "type": "era.tavern.frame.initialize.return_session",
+      "display_name": "操作结果及后续处理所需的资源令牌"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "sync",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.call.frame",
+        "display_name": "调用与资源资料",
+        "required": true
+      }
+    ],
+    "max_steps": 12,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.tavern.initialize.start",
+        "display_name": "开始当前原生流程",
+        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+      },
+      {
+        "id": "read_limits",
+        "type_used": "era.tavern.initialize.read_limits",
+        "display_name": "读取现有端口和限额",
+        "description": "读取迁移后的原有配置；保持事件字节、队列容量、引用数量和屏障告警阈值，不新增运行资格条件。"
+      },
+      {
+        "id": "allocate_session",
+        "type_used": "era.tavern.initialize.allocate_session",
+        "display_name": "建立本实例资源仓库",
+        "description": "分配实例令牌，建立队列、回执、引用、会话与控制器；同一实例的三个 AOT 入口共享同一仓库，不同实例分开。"
+      },
+      {
+        "id": "open_startup_wait",
+        "type_used": "era.tavern.initialize.open_startup_wait",
+        "display_name": "建立安装决议等待",
+        "description": "创建本实例startup Promise和停止监听；按staged_startup选择等待显式决议或复用自动激活，不在接线里选择监听策略。"
+      },
+      {
+        "id": "return_session",
+        "type_used": "era.tavern.initialize.return_session",
+        "display_name": "交还会话与调用入口资料",
+        "description": "返回实例令牌和初始化结果，供生成的接线启动后台流程并向 Service 提供能力。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.tavern.initialize.end",
+        "display_name": "结束当前原生流程",
+        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+      }
+    ],
+    "edges": [
+      [
+        "start",
+        "read_limits"
+      ],
+      [
+        "read_limits",
+        "allocate_session"
+      ],
+      [
+        "allocate_session",
+        "open_startup_wait"
+      ],
+      [
+        "open_startup_wait",
+        "return_session"
+      ],
+      [
+        "return_session",
+        "end"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.frame.initialize.return_session",
+        "cardinality": "exactly_one",
+        "display_name": "完成后的操作资料",
+        "as": "frame"
+      }
+    ]
+  }
+}

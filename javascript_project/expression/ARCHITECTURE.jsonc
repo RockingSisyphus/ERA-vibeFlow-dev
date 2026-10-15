@@ -81,6 +81,7 @@
         "metadata": {},
         "contract_source": "node_type",
         "flow_kind": "terminal",
+        "task_targets": {},
         "effect_scope": "none",
         "execution_lock": null,
         "effective_execution_lock": null,
@@ -131,6 +132,7 @@
         "metadata": {},
         "contract_source": "nodeset",
         "flow_kind": "predefined",
+        "task_targets": {},
         "effect_scope": "unconstrained",
         "execution_lock": null,
         "effective_execution_lock": null,
@@ -203,6 +205,7 @@
         "metadata": {},
         "contract_source": "node_type",
         "flow_kind": "terminal",
+        "task_targets": {},
         "effect_scope": "none",
         "execution_lock": null,
         "effective_execution_lock": null,
@@ -355,6 +358,7 @@
             "metadata": {},
             "contract_source": "node_type",
             "flow_kind": "terminal",
+            "task_targets": {},
             "effect_scope": "none",
             "execution_lock": null,
             "effective_execution_lock": null,
@@ -411,6 +415,7 @@
             "metadata": {},
             "contract_source": "node_type",
             "flow_kind": "process",
+            "task_targets": {},
             "effect_scope": "none",
             "execution_lock": null,
             "effective_execution_lock": null,
@@ -479,6 +484,7 @@
             "metadata": {},
             "contract_source": "node_type",
             "flow_kind": "process",
+            "task_targets": {},
             "effect_scope": "none",
             "execution_lock": null,
             "effective_execution_lock": null,
@@ -547,6 +553,7 @@
             "metadata": {},
             "contract_source": "node_type",
             "flow_kind": "process",
+            "task_targets": {},
             "effect_scope": "none",
             "execution_lock": null,
             "effective_execution_lock": null,
@@ -615,6 +622,7 @@
             "metadata": {},
             "contract_source": "node_type",
             "flow_kind": "process",
+            "task_targets": {},
             "effect_scope": "none",
             "execution_lock": null,
             "effective_execution_lock": null,
@@ -683,6 +691,7 @@
             "metadata": {},
             "contract_source": "node_type",
             "flow_kind": "process",
+            "task_targets": {},
             "effect_scope": "none",
             "execution_lock": null,
             "effective_execution_lock": null,
@@ -756,6 +765,7 @@
             "metadata": {},
             "contract_source": "node_type",
             "flow_kind": "process",
+            "task_targets": {},
             "effect_scope": "none",
             "execution_lock": null,
             "effective_execution_lock": null,
@@ -829,6 +839,7 @@
             "metadata": {},
             "contract_source": "node_type",
             "flow_kind": "process",
+            "task_targets": {},
             "effect_scope": "none",
             "execution_lock": null,
             "effective_execution_lock": null,
@@ -897,6 +908,7 @@
             "metadata": {},
             "contract_source": "node_type",
             "flow_kind": "process",
+            "task_targets": {},
             "effect_scope": "none",
             "execution_lock": null,
             "effective_execution_lock": null,
@@ -970,6 +982,7 @@
             "metadata": {},
             "contract_source": "node_type",
             "flow_kind": "process",
+            "task_targets": {},
             "effect_scope": "none",
             "execution_lock": null,
             "effective_execution_lock": null,
@@ -1038,6 +1051,7 @@
             "metadata": {},
             "contract_source": "node_type",
             "flow_kind": "process",
+            "task_targets": {},
             "effect_scope": "none",
             "execution_lock": null,
             "effective_execution_lock": null,
@@ -1110,6 +1124,7 @@
             "metadata": {},
             "contract_source": "system_config",
             "flow_kind": "predefined",
+            "task_targets": {},
             "effect_scope": "unconstrained",
             "execution_lock": null,
             "effective_execution_lock": null,
@@ -1202,6 +1217,7 @@
             "metadata": {},
             "contract_source": "node_type",
             "flow_kind": "process",
+            "task_targets": {},
             "effect_scope": "none",
             "execution_lock": null,
             "effective_execution_lock": null,
@@ -1275,6 +1291,7 @@
             "metadata": {},
             "contract_source": "node_type",
             "flow_kind": "process",
+            "task_targets": {},
             "effect_scope": "none",
             "execution_lock": null,
             "effective_execution_lock": null,
@@ -1343,6 +1360,7 @@
             "metadata": {},
             "contract_source": "node_type",
             "flow_kind": "process",
+            "task_targets": {},
             "effect_scope": "none",
             "execution_lock": null,
             "effective_execution_lock": null,
@@ -1421,6 +1439,7 @@
             "metadata": {},
             "contract_source": "node_type",
             "flow_kind": "terminal",
+            "task_targets": {},
             "effect_scope": "none",
             "execution_lock": null,
             "effective_execution_lock": null,
@@ -1798,6 +1817,7 @@
             "metadata": {},
             "contract_source": "node_type",
             "flow_kind": "terminal",
+            "task_targets": {},
             "effect_scope": "none",
             "execution_lock": null,
             "effective_execution_lock": null,
@@ -1854,6 +1874,7 @@
             "metadata": {},
             "contract_source": "node_type",
             "flow_kind": "process",
+            "task_targets": {},
             "effect_scope": "none",
             "execution_lock": null,
             "effective_execution_lock": null,
@@ -1922,6 +1943,7 @@
             "metadata": {},
             "contract_source": "node_type",
             "flow_kind": "process",
+            "task_targets": {},
             "effect_scope": "none",
             "execution_lock": null,
             "effective_execution_lock": null,
@@ -1990,6 +2012,7 @@
             "metadata": {},
             "contract_source": "node_type",
             "flow_kind": "process",
+            "task_targets": {},
             "effect_scope": "none",
             "execution_lock": null,
             "effective_execution_lock": null,
@@ -2058,6 +2081,7 @@
             "metadata": {},
             "contract_source": "node_type",
             "flow_kind": "process",
+            "task_targets": {},
             "effect_scope": "none",
             "execution_lock": null,
             "effective_execution_lock": null,
@@ -2141,6 +2165,7 @@
             "metadata": {},
             "contract_source": "node_type",
             "flow_kind": "terminal",
+            "task_targets": {},
             "effect_scope": "none",
             "execution_lock": null,
             "effective_execution_lock": null,
@@ -4936,6 +4961,7 @@
             "graph_scope": "current_graph",
             "order": [
               "architecture",
+              "async",
               "effects",
               "interface",
               "maintainability"
@@ -4945,6 +4971,18 @@
                 "id": "architecture",
                 "rule_id": "vibeflow.node_architecture",
                 "original_rule_id": "vibeflow.node_architecture",
+                "params": {},
+                "dependencies": [],
+                "inputs": {},
+                "origins": [
+                  "vibeflow.process"
+                ],
+                "parameter_sources": {}
+              },
+              {
+                "id": "async",
+                "rule_id": "vibeflow.async_lifecycle",
+                "original_rule_id": "vibeflow.async_lifecycle",
                 "params": {},
                 "dependencies": [],
                 "inputs": {},
@@ -5008,6 +5046,11 @@
           },
           "results": {
             "architecture": {
+              "state": "completed",
+              "records": {},
+              "findings": []
+            },
+            "async": {
               "state": "completed",
               "records": {},
               "findings": []
@@ -5739,6 +5782,7 @@
           ],
           "executed": [
             "architecture",
+            "async",
             "effects",
             "interface",
             "maintainability"
@@ -5840,6 +5884,7 @@
             "graph_scope": "current_graph",
             "order": [
               "architecture",
+              "async",
               "effects",
               "interface",
               "maintainability"
@@ -5849,6 +5894,18 @@
                 "id": "architecture",
                 "rule_id": "vibeflow.node_architecture",
                 "original_rule_id": "vibeflow.node_architecture",
+                "params": {},
+                "dependencies": [],
+                "inputs": {},
+                "origins": [
+                  "vibeflow.process"
+                ],
+                "parameter_sources": {}
+              },
+              {
+                "id": "async",
+                "rule_id": "vibeflow.async_lifecycle",
+                "original_rule_id": "vibeflow.async_lifecycle",
                 "params": {},
                 "dependencies": [],
                 "inputs": {},
@@ -5912,6 +5969,11 @@
           },
           "results": {
             "architecture": {
+              "state": "completed",
+              "records": {},
+              "findings": []
+            },
+            "async": {
               "state": "completed",
               "records": {},
               "findings": []
@@ -7501,6 +7563,7 @@
           ],
           "executed": [
             "architecture",
+            "async",
             "effects",
             "interface",
             "maintainability"
@@ -7602,6 +7665,7 @@
             "graph_scope": "current_graph",
             "order": [
               "architecture",
+              "async",
               "effects",
               "interface",
               "maintainability"
@@ -7611,6 +7675,18 @@
                 "id": "architecture",
                 "rule_id": "vibeflow.node_architecture",
                 "original_rule_id": "vibeflow.node_architecture",
+                "params": {},
+                "dependencies": [],
+                "inputs": {},
+                "origins": [
+                  "vibeflow.process"
+                ],
+                "parameter_sources": {}
+              },
+              {
+                "id": "async",
+                "rule_id": "vibeflow.async_lifecycle",
+                "original_rule_id": "vibeflow.async_lifecycle",
                 "params": {},
                 "dependencies": [],
                 "inputs": {},
@@ -7674,6 +7750,11 @@
           },
           "results": {
             "architecture": {
+              "state": "completed",
+              "records": {},
+              "findings": []
+            },
+            "async": {
               "state": "completed",
               "records": {},
               "findings": []
@@ -9117,6 +9198,7 @@
           ],
           "executed": [
             "architecture",
+            "async",
             "effects",
             "interface",
             "maintainability"
@@ -9218,6 +9300,7 @@
             "graph_scope": "current_graph",
             "order": [
               "architecture",
+              "async",
               "effects",
               "interface",
               "maintainability"
@@ -9227,6 +9310,18 @@
                 "id": "architecture",
                 "rule_id": "vibeflow.node_architecture",
                 "original_rule_id": "vibeflow.node_architecture",
+                "params": {},
+                "dependencies": [],
+                "inputs": {},
+                "origins": [
+                  "vibeflow.process"
+                ],
+                "parameter_sources": {}
+              },
+              {
+                "id": "async",
+                "rule_id": "vibeflow.async_lifecycle",
+                "original_rule_id": "vibeflow.async_lifecycle",
                 "params": {},
                 "dependencies": [],
                 "inputs": {},
@@ -9290,6 +9385,11 @@
           },
           "results": {
             "architecture": {
+              "state": "completed",
+              "records": {},
+              "findings": []
+            },
+            "async": {
               "state": "completed",
               "records": {},
               "findings": []
@@ -11010,6 +11110,7 @@
           ],
           "executed": [
             "architecture",
+            "async",
             "effects",
             "interface",
             "maintainability"
@@ -11118,6 +11219,7 @@
             "graph_scope": "current_graph",
             "order": [
               "architecture",
+              "async",
               "effects",
               "interface",
               "maintainability"
@@ -11127,6 +11229,18 @@
                 "id": "architecture",
                 "rule_id": "vibeflow.node_architecture",
                 "original_rule_id": "vibeflow.node_architecture",
+                "params": {},
+                "dependencies": [],
+                "inputs": {},
+                "origins": [
+                  "vibeflow.process"
+                ],
+                "parameter_sources": {}
+              },
+              {
+                "id": "async",
+                "rule_id": "vibeflow.async_lifecycle",
+                "original_rule_id": "vibeflow.async_lifecycle",
                 "params": {},
                 "dependencies": [],
                 "inputs": {},
@@ -11190,6 +11304,11 @@
           },
           "results": {
             "architecture": {
+              "state": "completed",
+              "records": {},
+              "findings": []
+            },
+            "async": {
               "state": "completed",
               "records": {},
               "findings": []
@@ -12744,6 +12863,7 @@
           ],
           "executed": [
             "architecture",
+            "async",
             "effects",
             "interface",
             "maintainability"
@@ -12852,6 +12972,7 @@
             "graph_scope": "current_graph",
             "order": [
               "architecture",
+              "async",
               "effects",
               "interface",
               "maintainability"
@@ -12861,6 +12982,18 @@
                 "id": "architecture",
                 "rule_id": "vibeflow.node_architecture",
                 "original_rule_id": "vibeflow.node_architecture",
+                "params": {},
+                "dependencies": [],
+                "inputs": {},
+                "origins": [
+                  "vibeflow.process"
+                ],
+                "parameter_sources": {}
+              },
+              {
+                "id": "async",
+                "rule_id": "vibeflow.async_lifecycle",
+                "original_rule_id": "vibeflow.async_lifecycle",
                 "params": {},
                 "dependencies": [],
                 "inputs": {},
@@ -12924,6 +13057,11 @@
           },
           "results": {
             "architecture": {
+              "state": "completed",
+              "records": {},
+              "findings": []
+            },
+            "async": {
               "state": "completed",
               "records": {},
               "findings": []
@@ -14356,6 +14494,7 @@
           ],
           "executed": [
             "architecture",
+            "async",
             "effects",
             "interface",
             "maintainability"
@@ -14457,6 +14596,7 @@
             "graph_scope": "current_graph",
             "order": [
               "architecture",
+              "async",
               "effects",
               "interface",
               "maintainability"
@@ -14466,6 +14606,18 @@
                 "id": "architecture",
                 "rule_id": "vibeflow.node_architecture",
                 "original_rule_id": "vibeflow.node_architecture",
+                "params": {},
+                "dependencies": [],
+                "inputs": {},
+                "origins": [
+                  "vibeflow.process"
+                ],
+                "parameter_sources": {}
+              },
+              {
+                "id": "async",
+                "rule_id": "vibeflow.async_lifecycle",
+                "original_rule_id": "vibeflow.async_lifecycle",
                 "params": {},
                 "dependencies": [],
                 "inputs": {},
@@ -14529,6 +14681,11 @@
           },
           "results": {
             "architecture": {
+              "state": "completed",
+              "records": {},
+              "findings": []
+            },
+            "async": {
               "state": "completed",
               "records": {},
               "findings": []
@@ -15245,6 +15402,7 @@
           ],
           "executed": [
             "architecture",
+            "async",
             "effects",
             "interface",
             "maintainability"
@@ -15346,6 +15504,7 @@
             "graph_scope": "current_graph",
             "order": [
               "architecture",
+              "async",
               "effects",
               "interface",
               "maintainability"
@@ -15355,6 +15514,18 @@
                 "id": "architecture",
                 "rule_id": "vibeflow.node_architecture",
                 "original_rule_id": "vibeflow.node_architecture",
+                "params": {},
+                "dependencies": [],
+                "inputs": {},
+                "origins": [
+                  "vibeflow.process"
+                ],
+                "parameter_sources": {}
+              },
+              {
+                "id": "async",
+                "rule_id": "vibeflow.async_lifecycle",
+                "original_rule_id": "vibeflow.async_lifecycle",
                 "params": {},
                 "dependencies": [],
                 "inputs": {},
@@ -15418,6 +15589,11 @@
           },
           "results": {
             "architecture": {
+              "state": "completed",
+              "records": {},
+              "findings": []
+            },
+            "async": {
               "state": "completed",
               "records": {},
               "findings": []
@@ -16226,6 +16402,7 @@
           ],
           "executed": [
             "architecture",
+            "async",
             "effects",
             "interface",
             "maintainability"
@@ -16327,6 +16504,7 @@
             "graph_scope": "current_graph",
             "order": [
               "architecture",
+              "async",
               "effects",
               "interface",
               "maintainability"
@@ -16336,6 +16514,18 @@
                 "id": "architecture",
                 "rule_id": "vibeflow.node_architecture",
                 "original_rule_id": "vibeflow.node_architecture",
+                "params": {},
+                "dependencies": [],
+                "inputs": {},
+                "origins": [
+                  "vibeflow.process"
+                ],
+                "parameter_sources": {}
+              },
+              {
+                "id": "async",
+                "rule_id": "vibeflow.async_lifecycle",
+                "original_rule_id": "vibeflow.async_lifecycle",
                 "params": {},
                 "dependencies": [],
                 "inputs": {},
@@ -16399,6 +16589,11 @@
           },
           "results": {
             "architecture": {
+              "state": "completed",
+              "records": {},
+              "findings": []
+            },
+            "async": {
               "state": "completed",
               "records": {},
               "findings": []
@@ -17853,6 +18048,7 @@
           ],
           "executed": [
             "architecture",
+            "async",
             "effects",
             "interface",
             "maintainability"
@@ -17954,6 +18150,7 @@
             "graph_scope": "current_graph",
             "order": [
               "architecture",
+              "async",
               "effects",
               "interface",
               "maintainability"
@@ -17963,6 +18160,18 @@
                 "id": "architecture",
                 "rule_id": "vibeflow.node_architecture",
                 "original_rule_id": "vibeflow.node_architecture",
+                "params": {},
+                "dependencies": [],
+                "inputs": {},
+                "origins": [
+                  "vibeflow.process"
+                ],
+                "parameter_sources": {}
+              },
+              {
+                "id": "async",
+                "rule_id": "vibeflow.async_lifecycle",
+                "original_rule_id": "vibeflow.async_lifecycle",
                 "params": {},
                 "dependencies": [],
                 "inputs": {},
@@ -18026,6 +18235,11 @@
           },
           "results": {
             "architecture": {
+              "state": "completed",
+              "records": {},
+              "findings": []
+            },
+            "async": {
               "state": "completed",
               "records": {},
               "findings": []
@@ -19746,6 +19960,7 @@
           ],
           "executed": [
             "architecture",
+            "async",
             "effects",
             "interface",
             "maintainability"
@@ -19847,6 +20062,7 @@
             "graph_scope": "current_graph",
             "order": [
               "architecture",
+              "async",
               "effects",
               "interface",
               "maintainability"
@@ -19856,6 +20072,18 @@
                 "id": "architecture",
                 "rule_id": "vibeflow.node_architecture",
                 "original_rule_id": "vibeflow.node_architecture",
+                "params": {},
+                "dependencies": [],
+                "inputs": {},
+                "origins": [
+                  "vibeflow.process"
+                ],
+                "parameter_sources": {}
+              },
+              {
+                "id": "async",
+                "rule_id": "vibeflow.async_lifecycle",
+                "original_rule_id": "vibeflow.async_lifecycle",
                 "params": {},
                 "dependencies": [],
                 "inputs": {},
@@ -19919,6 +20147,11 @@
           },
           "results": {
             "architecture": {
+              "state": "completed",
+              "records": {},
+              "findings": []
+            },
+            "async": {
               "state": "completed",
               "records": {},
               "findings": []
@@ -21351,6 +21584,7 @@
           ],
           "executed": [
             "architecture",
+            "async",
             "effects",
             "interface",
             "maintainability"
@@ -21452,6 +21686,7 @@
             "graph_scope": "current_graph",
             "order": [
               "architecture",
+              "async",
               "effects",
               "interface",
               "maintainability"
@@ -21461,6 +21696,18 @@
                 "id": "architecture",
                 "rule_id": "vibeflow.node_architecture",
                 "original_rule_id": "vibeflow.node_architecture",
+                "params": {},
+                "dependencies": [],
+                "inputs": {},
+                "origins": [
+                  "vibeflow.process"
+                ],
+                "parameter_sources": {}
+              },
+              {
+                "id": "async",
+                "rule_id": "vibeflow.async_lifecycle",
+                "original_rule_id": "vibeflow.async_lifecycle",
                 "params": {},
                 "dependencies": [],
                 "inputs": {},
@@ -21524,6 +21771,11 @@
           },
           "results": {
             "architecture": {
+              "state": "completed",
+              "records": {},
+              "findings": []
+            },
+            "async": {
               "state": "completed",
               "records": {},
               "findings": []
@@ -22552,6 +22804,7 @@
           ],
           "executed": [
             "architecture",
+            "async",
             "effects",
             "interface",
             "maintainability"
@@ -22653,6 +22906,7 @@
             "graph_scope": "current_graph",
             "order": [
               "architecture",
+              "async",
               "effects",
               "interface",
               "maintainability"
@@ -22662,6 +22916,18 @@
                 "id": "architecture",
                 "rule_id": "vibeflow.node_architecture",
                 "original_rule_id": "vibeflow.node_architecture",
+                "params": {},
+                "dependencies": [],
+                "inputs": {},
+                "origins": [
+                  "vibeflow.process"
+                ],
+                "parameter_sources": {}
+              },
+              {
+                "id": "async",
+                "rule_id": "vibeflow.async_lifecycle",
+                "original_rule_id": "vibeflow.async_lifecycle",
                 "params": {},
                 "dependencies": [],
                 "inputs": {},
@@ -22725,6 +22991,11 @@
           },
           "results": {
             "architecture": {
+              "state": "completed",
+              "records": {},
+              "findings": []
+            },
+            "async": {
               "state": "completed",
               "records": {},
               "findings": []
@@ -24168,6 +24439,7 @@
           ],
           "executed": [
             "architecture",
+            "async",
             "effects",
             "interface",
             "maintainability"
@@ -24269,6 +24541,7 @@
             "graph_scope": "current_graph",
             "order": [
               "architecture",
+              "async",
               "effects",
               "interface",
               "maintainability"
@@ -24278,6 +24551,18 @@
                 "id": "architecture",
                 "rule_id": "vibeflow.node_architecture",
                 "original_rule_id": "vibeflow.node_architecture",
+                "params": {},
+                "dependencies": [],
+                "inputs": {},
+                "origins": [
+                  "vibeflow.process"
+                ],
+                "parameter_sources": {}
+              },
+              {
+                "id": "async",
+                "rule_id": "vibeflow.async_lifecycle",
+                "original_rule_id": "vibeflow.async_lifecycle",
                 "params": {},
                 "dependencies": [],
                 "inputs": {},
@@ -24341,6 +24626,11 @@
           },
           "results": {
             "architecture": {
+              "state": "completed",
+              "records": {},
+              "findings": []
+            },
+            "async": {
               "state": "completed",
               "records": {},
               "findings": []
@@ -25072,6 +25362,7 @@
           ],
           "executed": [
             "architecture",
+            "async",
             "effects",
             "interface",
             "maintainability"
@@ -25173,6 +25464,7 @@
             "graph_scope": "current_graph",
             "order": [
               "architecture",
+              "async",
               "effects",
               "interface",
               "maintainability"
@@ -25182,6 +25474,18 @@
                 "id": "architecture",
                 "rule_id": "vibeflow.node_architecture",
                 "original_rule_id": "vibeflow.node_architecture",
+                "params": {},
+                "dependencies": [],
+                "inputs": {},
+                "origins": [
+                  "vibeflow.process"
+                ],
+                "parameter_sources": {}
+              },
+              {
+                "id": "async",
+                "rule_id": "vibeflow.async_lifecycle",
+                "original_rule_id": "vibeflow.async_lifecycle",
                 "params": {},
                 "dependencies": [],
                 "inputs": {},
@@ -25245,6 +25549,11 @@
           },
           "results": {
             "architecture": {
+              "state": "completed",
+              "records": {},
+              "findings": []
+            },
+            "async": {
               "state": "completed",
               "records": {},
               "findings": []
@@ -25324,6 +25633,7 @@
           "findings": [],
           "executed": [
             "architecture",
+            "async",
             "effects",
             "interface",
             "maintainability"
@@ -25423,6 +25733,7 @@
             "graph_scope": "current_graph",
             "order": [
               "architecture",
+              "async",
               "effects",
               "interface",
               "maintainability"
@@ -25432,6 +25743,18 @@
                 "id": "architecture",
                 "rule_id": "vibeflow.node_architecture",
                 "original_rule_id": "vibeflow.node_architecture",
+                "params": {},
+                "dependencies": [],
+                "inputs": {},
+                "origins": [
+                  "vibeflow.process"
+                ],
+                "parameter_sources": {}
+              },
+              {
+                "id": "async",
+                "rule_id": "vibeflow.async_lifecycle",
+                "original_rule_id": "vibeflow.async_lifecycle",
                 "params": {},
                 "dependencies": [],
                 "inputs": {},
@@ -25495,6 +25818,11 @@
           },
           "results": {
             "architecture": {
+              "state": "completed",
+              "records": {},
+              "findings": []
+            },
+            "async": {
               "state": "completed",
               "records": {},
               "findings": []
@@ -25575,6 +25903,7 @@
           "executed": [],
           "aliases": {
             "architecture": "session:vibeflow.process/architecture",
+            "async": "session:vibeflow.process/async",
             "effects": "session:vibeflow.process/effects",
             "interface": "session:vibeflow.process/interface",
             "maintainability": "session:vibeflow.process/maintainability"
@@ -25673,6 +26002,7 @@
             "graph_scope": "current_graph",
             "order": [
               "architecture",
+              "async",
               "effects",
               "interface",
               "maintainability"
@@ -25682,6 +26012,18 @@
                 "id": "architecture",
                 "rule_id": "vibeflow.node_architecture",
                 "original_rule_id": "vibeflow.node_architecture",
+                "params": {},
+                "dependencies": [],
+                "inputs": {},
+                "origins": [
+                  "vibeflow.process"
+                ],
+                "parameter_sources": {}
+              },
+              {
+                "id": "async",
+                "rule_id": "vibeflow.async_lifecycle",
+                "original_rule_id": "vibeflow.async_lifecycle",
                 "params": {},
                 "dependencies": [],
                 "inputs": {},
@@ -25745,6 +26087,11 @@
           },
           "results": {
             "architecture": {
+              "state": "completed",
+              "records": {},
+              "findings": []
+            },
+            "async": {
               "state": "completed",
               "records": {},
               "findings": []
@@ -25825,6 +26172,7 @@
           "executed": [],
           "aliases": {
             "architecture": "session:vibeflow.process/architecture",
+            "async": "session:vibeflow.process/async",
             "effects": "session:vibeflow.process/effects",
             "interface": "session:vibeflow.process/interface",
             "maintainability": "session:vibeflow.process/maintainability"
@@ -25923,6 +26271,7 @@
             "graph_scope": "current_graph",
             "order": [
               "architecture",
+              "async",
               "effects",
               "interface",
               "maintainability"
@@ -25932,6 +26281,18 @@
                 "id": "architecture",
                 "rule_id": "vibeflow.node_architecture",
                 "original_rule_id": "vibeflow.node_architecture",
+                "params": {},
+                "dependencies": [],
+                "inputs": {},
+                "origins": [
+                  "vibeflow.process"
+                ],
+                "parameter_sources": {}
+              },
+              {
+                "id": "async",
+                "rule_id": "vibeflow.async_lifecycle",
+                "original_rule_id": "vibeflow.async_lifecycle",
                 "params": {},
                 "dependencies": [],
                 "inputs": {},
@@ -25995,6 +26356,11 @@
           },
           "results": {
             "architecture": {
+              "state": "completed",
+              "records": {},
+              "findings": []
+            },
+            "async": {
               "state": "completed",
               "records": {},
               "findings": []
@@ -26075,6 +26441,7 @@
           "executed": [],
           "aliases": {
             "architecture": "session:vibeflow.process/architecture",
+            "async": "session:vibeflow.process/async",
             "effects": "session:vibeflow.process/effects",
             "interface": "session:vibeflow.process/interface",
             "maintainability": "session:vibeflow.process/maintainability"
@@ -26173,6 +26540,7 @@
             "graph_scope": "current_graph",
             "order": [
               "architecture",
+              "async",
               "effects",
               "interface",
               "maintainability"
@@ -26182,6 +26550,18 @@
                 "id": "architecture",
                 "rule_id": "vibeflow.node_architecture",
                 "original_rule_id": "vibeflow.node_architecture",
+                "params": {},
+                "dependencies": [],
+                "inputs": {},
+                "origins": [
+                  "vibeflow.process"
+                ],
+                "parameter_sources": {}
+              },
+              {
+                "id": "async",
+                "rule_id": "vibeflow.async_lifecycle",
+                "original_rule_id": "vibeflow.async_lifecycle",
                 "params": {},
                 "dependencies": [],
                 "inputs": {},
@@ -26245,6 +26625,11 @@
           },
           "results": {
             "architecture": {
+              "state": "completed",
+              "records": {},
+              "findings": []
+            },
+            "async": {
               "state": "completed",
               "records": {},
               "findings": []
@@ -26325,6 +26710,7 @@
           "executed": [],
           "aliases": {
             "architecture": "session:vibeflow.process/architecture",
+            "async": "session:vibeflow.process/async",
             "effects": "session:vibeflow.process/effects",
             "interface": "session:vibeflow.process/interface",
             "maintainability": "session:vibeflow.process/maintainability"
@@ -26423,6 +26809,7 @@
             "graph_scope": "current_graph",
             "order": [
               "architecture",
+              "async",
               "effects",
               "interface",
               "maintainability"
@@ -26432,6 +26819,18 @@
                 "id": "architecture",
                 "rule_id": "vibeflow.node_architecture",
                 "original_rule_id": "vibeflow.node_architecture",
+                "params": {},
+                "dependencies": [],
+                "inputs": {},
+                "origins": [
+                  "vibeflow.process"
+                ],
+                "parameter_sources": {}
+              },
+              {
+                "id": "async",
+                "rule_id": "vibeflow.async_lifecycle",
+                "original_rule_id": "vibeflow.async_lifecycle",
                 "params": {},
                 "dependencies": [],
                 "inputs": {},
@@ -26495,6 +26894,11 @@
           },
           "results": {
             "architecture": {
+              "state": "completed",
+              "records": {},
+              "findings": []
+            },
+            "async": {
               "state": "completed",
               "records": {},
               "findings": []
@@ -26575,6 +26979,7 @@
           "executed": [],
           "aliases": {
             "architecture": "session:vibeflow.process/architecture",
+            "async": "session:vibeflow.process/async",
             "effects": "session:vibeflow.process/effects",
             "interface": "session:vibeflow.process/interface",
             "maintainability": "session:vibeflow.process/maintainability"
@@ -26675,6 +27080,7 @@
             "graph_scope": "current_graph",
             "order": [
               "architecture",
+              "async",
               "effects",
               "interface",
               "maintainability"
@@ -26684,6 +27090,18 @@
                 "id": "architecture",
                 "rule_id": "vibeflow.node_architecture",
                 "original_rule_id": "vibeflow.node_architecture",
+                "params": {},
+                "dependencies": [],
+                "inputs": {},
+                "origins": [
+                  "vibeflow.process"
+                ],
+                "parameter_sources": {}
+              },
+              {
+                "id": "async",
+                "rule_id": "vibeflow.async_lifecycle",
+                "original_rule_id": "vibeflow.async_lifecycle",
                 "params": {},
                 "dependencies": [],
                 "inputs": {},
@@ -26747,6 +27165,11 @@
           },
           "results": {
             "architecture": {
+              "state": "completed",
+              "records": {},
+              "findings": []
+            },
+            "async": {
               "state": "completed",
               "records": {},
               "findings": []
@@ -28190,6 +28613,7 @@
           ],
           "executed": [
             "architecture",
+            "async",
             "effects",
             "interface",
             "maintainability"
@@ -28291,6 +28715,7 @@
             "graph_scope": "current_graph",
             "order": [
               "architecture",
+              "async",
               "effects",
               "interface",
               "maintainability"
@@ -28300,6 +28725,18 @@
                 "id": "architecture",
                 "rule_id": "vibeflow.node_architecture",
                 "original_rule_id": "vibeflow.node_architecture",
+                "params": {},
+                "dependencies": [],
+                "inputs": {},
+                "origins": [
+                  "vibeflow.process"
+                ],
+                "parameter_sources": {}
+              },
+              {
+                "id": "async",
+                "rule_id": "vibeflow.async_lifecycle",
+                "original_rule_id": "vibeflow.async_lifecycle",
                 "params": {},
                 "dependencies": [],
                 "inputs": {},
@@ -28363,6 +28800,11 @@
           },
           "results": {
             "architecture": {
+              "state": "completed",
+              "records": {},
+              "findings": []
+            },
+            "async": {
               "state": "completed",
               "records": {},
               "findings": []
@@ -29079,6 +29521,7 @@
           ],
           "executed": [
             "architecture",
+            "async",
             "effects",
             "interface",
             "maintainability"
@@ -29180,6 +29623,7 @@
             "graph_scope": "current_graph",
             "order": [
               "architecture",
+              "async",
               "effects",
               "interface",
               "maintainability"
@@ -29189,6 +29633,18 @@
                 "id": "architecture",
                 "rule_id": "vibeflow.node_architecture",
                 "original_rule_id": "vibeflow.node_architecture",
+                "params": {},
+                "dependencies": [],
+                "inputs": {},
+                "origins": [
+                  "vibeflow.process"
+                ],
+                "parameter_sources": {}
+              },
+              {
+                "id": "async",
+                "rule_id": "vibeflow.async_lifecycle",
+                "original_rule_id": "vibeflow.async_lifecycle",
                 "params": {},
                 "dependencies": [],
                 "inputs": {},
@@ -29252,6 +29708,11 @@
           },
           "results": {
             "architecture": {
+              "state": "completed",
+              "records": {},
+              "findings": []
+            },
+            "async": {
               "state": "completed",
               "records": {},
               "findings": []
@@ -30280,6 +30741,7 @@
           ],
           "executed": [
             "architecture",
+            "async",
             "effects",
             "interface",
             "maintainability"
@@ -42864,6 +43326,38 @@
         },
         {
           "kind": "rule",
+          "id": "vibeflow.async_lifecycle",
+          "descriptor": {
+            "kind": "rule",
+            "id": "vibeflow.async_lifecycle",
+            "display_name": "",
+            "description": "Check explicit asynchronous task ownership and controller use.",
+            "implementations": [
+              {
+                "language": "python",
+                "source": {
+                  "kind": "file",
+                  "ref": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/handlers.py",
+                  "export": "javascript_source_bindings.<locals>.asynchronous"
+                }
+              }
+            ],
+            "inputs": {},
+            "outputs": {},
+            "params_schema": {},
+            "params_defaults": {},
+            "handler": "",
+            "scope": "source"
+          },
+          "origin": {
+            "plugin_id": "vibeflow.core",
+            "path": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/definitions.py",
+            "line": 8,
+            "symbol": "source_rule_resources"
+          }
+        },
+        {
+          "kind": "rule",
           "id": "vibeflow.graph.duplicates",
           "descriptor": {
             "kind": "rule",
@@ -42875,7 +43369,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/graph.py",
+                  "ref": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/graph.py",
                   "export": "_duplicates"
                 }
               }
@@ -42889,7 +43383,7 @@
           },
           "origin": {
             "plugin_id": "vibeflow.core",
-            "path": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/graph/topics.py",
+            "path": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/graph/topics.py",
             "line": 6,
             "symbol": "workflow_topic_resources"
           }
@@ -42907,7 +43401,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/graph.py",
+                  "ref": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/graph.py",
                   "export": "_flow"
                 }
               }
@@ -42921,7 +43415,7 @@
           },
           "origin": {
             "plugin_id": "vibeflow.core",
-            "path": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/graph/topics.py",
+            "path": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/graph/topics.py",
             "line": 6,
             "symbol": "workflow_topic_resources"
           }
@@ -42939,7 +43433,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/graph.py",
+                  "ref": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/graph.py",
                   "export": "_join"
                 }
               }
@@ -42953,7 +43447,7 @@
           },
           "origin": {
             "plugin_id": "vibeflow.core",
-            "path": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/graph/topics.py",
+            "path": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/graph/topics.py",
             "line": 6,
             "symbol": "workflow_topic_resources"
           }
@@ -42971,7 +43465,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/graph.py",
+                  "ref": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/graph.py",
                   "export": "_nodesets"
                 }
               }
@@ -42995,7 +43489,7 @@
           },
           "origin": {
             "plugin_id": "vibeflow.core",
-            "path": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/graph/topics.py",
+            "path": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/graph/topics.py",
             "line": 6,
             "symbol": "workflow_topic_resources"
           }
@@ -43013,7 +43507,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/graph.py",
+                  "ref": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/graph.py",
                   "export": "_planned"
                 }
               }
@@ -43029,7 +43523,7 @@
           },
           "origin": {
             "plugin_id": "vibeflow.core",
-            "path": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/graph/topics.py",
+            "path": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/graph/topics.py",
             "line": 6,
             "symbol": "workflow_topic_resources"
           }
@@ -43047,7 +43541,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/handlers.py",
+                  "ref": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/handlers.py",
                   "export": "javascript_source_bindings.<locals>.implementation.<locals>.check"
                 }
               }
@@ -43069,8 +43563,8 @@
           },
           "origin": {
             "plugin_id": "vibeflow.core",
-            "path": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/definitions.py",
-            "line": 30,
+            "path": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/definitions.py",
+            "line": 31,
             "symbol": "implementation_resources"
           }
         },
@@ -43087,7 +43581,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/handlers.py",
+                  "ref": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/handlers.py",
                   "export": "javascript_source_bindings.<locals>.implementation.<locals>.check"
                 }
               }
@@ -43109,8 +43603,8 @@
           },
           "origin": {
             "plugin_id": "vibeflow.core",
-            "path": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/definitions.py",
-            "line": 30,
+            "path": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/definitions.py",
+            "line": 31,
             "symbol": "implementation_resources"
           }
         },
@@ -43127,7 +43621,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/handlers.py",
+                  "ref": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/handlers.py",
                   "export": "javascript_source_bindings.<locals>.implementation.<locals>.check"
                 }
               }
@@ -43149,8 +43643,8 @@
           },
           "origin": {
             "plugin_id": "vibeflow.core",
-            "path": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/definitions.py",
-            "line": 30,
+            "path": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/definitions.py",
+            "line": 31,
             "symbol": "implementation_resources"
           }
         },
@@ -43167,7 +43661,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/handlers.py",
+                  "ref": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/handlers.py",
                   "export": "javascript_source_bindings.<locals>.imports"
                 }
               }
@@ -43228,7 +43722,7 @@
           },
           "origin": {
             "plugin_id": "vibeflow.core",
-            "path": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/definitions.py",
+            "path": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/definitions.py",
             "line": 8,
             "symbol": "source_rule_resources"
           }
@@ -43246,7 +43740,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/handlers.py",
+                  "ref": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/handlers.py",
                   "export": "javascript_source_bindings.<locals>.input_writes"
                 }
               }
@@ -43280,7 +43774,7 @@
           },
           "origin": {
             "plugin_id": "vibeflow.core",
-            "path": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/definitions.py",
+            "path": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/definitions.py",
             "line": 8,
             "symbol": "source_rule_resources"
           }
@@ -43298,7 +43792,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/handlers.py",
+                  "ref": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/handlers.py",
                   "export": "javascript_source_bindings.<locals>.maintainability"
                 }
               }
@@ -43320,7 +43814,7 @@
           },
           "origin": {
             "plugin_id": "vibeflow.core",
-            "path": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/definitions.py",
+            "path": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/definitions.py",
             "line": 8,
             "symbol": "source_rule_resources"
           }
@@ -43338,7 +43832,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/handlers.py",
+                  "ref": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/handlers.py",
                   "export": "javascript_source_bindings.<locals>.effects"
                 }
               }
@@ -43401,7 +43895,7 @@
           },
           "origin": {
             "plugin_id": "vibeflow.core",
-            "path": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/definitions.py",
+            "path": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/definitions.py",
             "line": 8,
             "symbol": "source_rule_resources"
           }
@@ -43419,7 +43913,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/handlers.py",
+                  "ref": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/handlers.py",
                   "export": "javascript_source_bindings.<locals>.architecture"
                 }
               }
@@ -43433,7 +43927,7 @@
           },
           "origin": {
             "plugin_id": "vibeflow.core",
-            "path": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/definitions.py",
+            "path": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/definitions.py",
             "line": 8,
             "symbol": "source_rule_resources"
           }
@@ -43451,7 +43945,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/handlers.py",
+                  "ref": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/handlers.py",
                   "export": "javascript_source_bindings.<locals>.interface"
                 }
               }
@@ -43474,7 +43968,7 @@
           },
           "origin": {
             "plugin_id": "vibeflow.core",
-            "path": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/definitions.py",
+            "path": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/definitions.py",
             "line": 8,
             "symbol": "source_rule_resources"
           }
@@ -43492,7 +43986,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/project.py",
+                  "ref": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/project.py",
                   "export": "project_handler.<locals>.check"
                 }
               }
@@ -43520,7 +44014,7 @@
           },
           "origin": {
             "plugin_id": "vibeflow.core",
-            "path": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/project.py",
+            "path": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/project.py",
             "line": 12,
             "symbol": "project_quality_resources"
           }
@@ -43538,7 +44032,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/project.py",
+                  "ref": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/project.py",
                   "export": "project_handler.<locals>.check"
                 }
               }
@@ -43552,7 +44046,7 @@
           },
           "origin": {
             "plugin_id": "vibeflow.core",
-            "path": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/project.py",
+            "path": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/project.py",
             "line": 12,
             "symbol": "project_quality_resources"
           }
@@ -43570,7 +44064,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/project.py",
+                  "ref": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/project.py",
                   "export": "project_handler.<locals>.check"
                 }
               }
@@ -43630,7 +44124,7 @@
           },
           "origin": {
             "plugin_id": "vibeflow.core",
-            "path": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/project.py",
+            "path": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/project.py",
             "line": 12,
             "symbol": "project_quality_resources"
           }
@@ -43648,7 +44142,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/project.py",
+                  "ref": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/project.py",
                   "export": "project_handler.<locals>.check"
                 }
               }
@@ -43800,7 +44294,7 @@
           },
           "origin": {
             "plugin_id": "vibeflow.core",
-            "path": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/project.py",
+            "path": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/project.py",
             "line": 12,
             "symbol": "project_quality_resources"
           }
@@ -43818,7 +44312,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/workflow.py",
+                  "ref": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/workflow.py",
                   "export": "summary"
                 }
               }
@@ -43838,7 +44332,7 @@
           },
           "origin": {
             "plugin_id": "vibeflow.core",
-            "path": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/graph/workflow.py",
+            "path": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/graph/workflow.py",
             "line": 6,
             "symbol": "workflow_plan_resources"
           }
@@ -43856,7 +44350,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/workflow.py",
+                  "ref": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/workflow.py",
                   "export": "analysis"
                 }
               }
@@ -43872,7 +44366,7 @@
           },
           "origin": {
             "plugin_id": "vibeflow.core",
-            "path": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/graph/workflow.py",
+            "path": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/graph/workflow.py",
             "line": 6,
             "symbol": "workflow_plan_resources"
           }
@@ -43890,7 +44384,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/workflow.py",
+                  "ref": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/workflow.py",
                   "export": "topic.<locals>.check"
                 }
               }
@@ -43906,7 +44400,7 @@
           },
           "origin": {
             "plugin_id": "vibeflow.core",
-            "path": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/graph/workflow.py",
+            "path": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/graph/workflow.py",
             "line": 6,
             "symbol": "workflow_plan_resources"
           }
@@ -43924,7 +44418,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/workflow.py",
+                  "ref": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/workflow.py",
                   "export": "topic.<locals>.check"
                 }
               }
@@ -43940,7 +44434,7 @@
           },
           "origin": {
             "plugin_id": "vibeflow.core",
-            "path": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/graph/workflow.py",
+            "path": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/graph/workflow.py",
             "line": 6,
             "symbol": "workflow_plan_resources"
           }
@@ -43958,7 +44452,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/workflow.py",
+                  "ref": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/workflow.py",
                   "export": "topic.<locals>.check"
                 }
               }
@@ -43974,7 +44468,7 @@
           },
           "origin": {
             "plugin_id": "vibeflow.core",
-            "path": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/graph/workflow.py",
+            "path": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/graph/workflow.py",
             "line": 6,
             "symbol": "workflow_plan_resources"
           }
@@ -43992,7 +44486,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/workflow.py",
+                  "ref": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/workflow.py",
                   "export": "nodesets"
                 }
               }
@@ -44018,7 +44512,7 @@
           },
           "origin": {
             "plugin_id": "vibeflow.core",
-            "path": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/graph/workflow.py",
+            "path": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/graph/workflow.py",
             "line": 6,
             "symbol": "workflow_plan_resources"
           }
@@ -44036,7 +44530,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/workflow.py",
+                  "ref": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/workflow.py",
                   "export": "topic.<locals>.check"
                 }
               }
@@ -44054,7 +44548,7 @@
           },
           "origin": {
             "plugin_id": "vibeflow.core",
-            "path": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/graph/workflow.py",
+            "path": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/graph/workflow.py",
             "line": 6,
             "symbol": "workflow_plan_resources"
           }
@@ -44072,7 +44566,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/workflow.py",
+                  "ref": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/workflow.py",
                   "export": "review"
                 }
               }
@@ -44090,7 +44584,7 @@
           },
           "origin": {
             "plugin_id": "vibeflow.core",
-            "path": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/graph/workflow.py",
+            "path": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/graph/workflow.py",
             "line": 6,
             "symbol": "workflow_plan_resources"
           }
@@ -44115,6 +44609,11 @@
                 "rule_id": "vibeflow.node_interface"
               },
               {
+                "id": "async",
+                "params": {},
+                "rule_id": "vibeflow.async_lifecycle"
+              },
+              {
                 "id": "maintainability",
                 "params": {},
                 "rule_id": "vibeflow.maintainability"
@@ -44156,7 +44655,7 @@
           },
           "origin": {
             "plugin_id": "vibeflow.core",
-            "path": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rulesets/standard.py",
+            "path": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rulesets/standard.py",
             "line": 5,
             "symbol": "standard_rulesets"
           }
@@ -44181,6 +44680,11 @@
                 "rule_id": "vibeflow.node_interface"
               },
               {
+                "id": "async",
+                "params": {},
+                "rule_id": "vibeflow.async_lifecycle"
+              },
+              {
                 "id": "maintainability",
                 "params": {},
                 "rule_id": "vibeflow.maintainability"
@@ -44204,12 +44708,14 @@
                 "effects",
                 "architecture",
                 "interface",
+                "async",
                 "maintainability"
               ],
               "run": [
                 "effects",
                 "architecture",
                 "interface",
+                "async",
                 "maintainability"
               ],
               "import": [
@@ -44224,7 +44730,7 @@
           },
           "origin": {
             "plugin_id": "vibeflow.core",
-            "path": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rulesets/standard.py",
+            "path": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rulesets/standard.py",
             "line": 5,
             "symbol": "standard_rulesets"
           }
@@ -44249,6 +44755,11 @@
                 "rule_id": "vibeflow.node_interface"
               },
               {
+                "id": "async",
+                "params": {},
+                "rule_id": "vibeflow.async_lifecycle"
+              },
+              {
                 "id": "maintainability",
                 "params": {},
                 "rule_id": "vibeflow.maintainability"
@@ -44272,12 +44783,14 @@
                 "effects",
                 "architecture",
                 "interface",
+                "async",
                 "maintainability"
               ],
               "run": [
                 "effects",
                 "architecture",
                 "interface",
+                "async",
                 "maintainability"
               ],
               "import": [
@@ -44292,7 +44805,7 @@
           },
           "origin": {
             "plugin_id": "vibeflow.core",
-            "path": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rulesets/standard.py",
+            "path": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rulesets/standard.py",
             "line": 5,
             "symbol": "standard_rulesets"
           }
@@ -44317,6 +44830,11 @@
                 "rule_id": "vibeflow.node_interface"
               },
               {
+                "id": "async",
+                "params": {},
+                "rule_id": "vibeflow.async_lifecycle"
+              },
+              {
                 "id": "maintainability",
                 "params": {},
                 "rule_id": "vibeflow.maintainability"
@@ -44340,12 +44858,14 @@
                 "effects",
                 "architecture",
                 "interface",
+                "async",
                 "maintainability"
               ],
               "run": [
                 "effects",
                 "architecture",
                 "interface",
+                "async",
                 "maintainability"
               ],
               "import": [
@@ -44360,7 +44880,7 @@
           },
           "origin": {
             "plugin_id": "vibeflow.core",
-            "path": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rulesets/standard.py",
+            "path": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rulesets/standard.py",
             "line": 5,
             "symbol": "standard_rulesets"
           }
@@ -44390,6 +44910,11 @@
                 "rule_id": "vibeflow.node_interface"
               },
               {
+                "id": "async",
+                "params": {},
+                "rule_id": "vibeflow.async_lifecycle"
+              },
+              {
                 "id": "maintainability",
                 "params": {},
                 "rule_id": "vibeflow.maintainability"
@@ -44409,12 +44934,14 @@
               "static": [
                 "effects",
                 "interface",
+                "async",
                 "maintainability",
                 "architecture"
               ],
               "run": [
                 "effects",
                 "interface",
+                "async",
                 "maintainability",
                 "architecture"
               ]
@@ -44426,7 +44953,7 @@
           },
           "origin": {
             "plugin_id": "vibeflow.core",
-            "path": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rulesets/standard.py",
+            "path": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rulesets/standard.py",
             "line": 5,
             "symbol": "standard_rulesets"
           }
@@ -44449,6 +44976,11 @@
                 "id": "interface",
                 "params": {},
                 "rule_id": "vibeflow.node_interface"
+              },
+              {
+                "id": "async",
+                "params": {},
+                "rule_id": "vibeflow.async_lifecycle"
               },
               {
                 "id": "maintainability",
@@ -44474,12 +45006,14 @@
                 "effects",
                 "architecture",
                 "interface",
+                "async",
                 "maintainability"
               ],
               "run": [
                 "effects",
                 "architecture",
                 "interface",
+                "async",
                 "maintainability"
               ],
               "import": [
@@ -44494,7 +45028,7 @@
           },
           "origin": {
             "plugin_id": "vibeflow.core",
-            "path": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rulesets/standard.py",
+            "path": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rulesets/standard.py",
             "line": 5,
             "symbol": "standard_rulesets"
           }
@@ -44524,6 +45058,11 @@
                 "rule_id": "vibeflow.node_interface"
               },
               {
+                "id": "async",
+                "params": {},
+                "rule_id": "vibeflow.async_lifecycle"
+              },
+              {
                 "id": "maintainability",
                 "params": {},
                 "rule_id": "vibeflow.maintainability"
@@ -44543,12 +45082,14 @@
               "static": [
                 "effects",
                 "interface",
+                "async",
                 "maintainability",
                 "architecture"
               ],
               "run": [
                 "effects",
                 "interface",
+                "async",
                 "maintainability",
                 "architecture"
               ]
@@ -44560,7 +45101,7 @@
           },
           "origin": {
             "plugin_id": "vibeflow.core",
-            "path": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rulesets/standard.py",
+            "path": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rulesets/standard.py",
             "line": 5,
             "symbol": "standard_rulesets"
           }
@@ -44602,7 +45143,7 @@
           },
           "origin": {
             "plugin_id": "vibeflow.core",
-            "path": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rulesets/standard.py",
+            "path": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rulesets/standard.py",
             "line": 5,
             "symbol": "standard_rulesets"
           }
@@ -44627,6 +45168,11 @@
                 "rule_id": "vibeflow.node_interface"
               },
               {
+                "id": "async",
+                "params": {},
+                "rule_id": "vibeflow.async_lifecycle"
+              },
+              {
                 "id": "maintainability",
                 "params": {},
                 "rule_id": "vibeflow.maintainability"
@@ -44650,12 +45196,14 @@
                 "effects",
                 "architecture",
                 "interface",
+                "async",
                 "maintainability"
               ],
               "run": [
                 "effects",
                 "architecture",
                 "interface",
+                "async",
                 "maintainability"
               ],
               "import": [
@@ -44670,7 +45218,7 @@
           },
           "origin": {
             "plugin_id": "vibeflow.core",
-            "path": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rulesets/standard.py",
+            "path": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rulesets/standard.py",
             "line": 5,
             "symbol": "standard_rulesets"
           }
@@ -44695,6 +45243,11 @@
                 "rule_id": "vibeflow.node_interface"
               },
               {
+                "id": "async",
+                "params": {},
+                "rule_id": "vibeflow.async_lifecycle"
+              },
+              {
                 "id": "maintainability",
                 "params": {},
                 "rule_id": "vibeflow.maintainability"
@@ -44718,12 +45271,14 @@
                 "effects",
                 "architecture",
                 "interface",
+                "async",
                 "maintainability"
               ],
               "run": [
                 "effects",
                 "architecture",
                 "interface",
+                "async",
                 "maintainability"
               ],
               "import": [
@@ -44738,7 +45293,7 @@
           },
           "origin": {
             "plugin_id": "vibeflow.core",
-            "path": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rulesets/standard.py",
+            "path": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rulesets/standard.py",
             "line": 5,
             "symbol": "standard_rulesets"
           }
@@ -44792,9 +45347,84 @@
           },
           "origin": {
             "plugin_id": "vibeflow.core",
-            "path": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rulesets/project.py",
+            "path": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rulesets/project.py",
             "line": 5,
             "symbol": "project_quality_ruleset"
+          }
+        },
+        {
+          "kind": "ruleset",
+          "id": "vibeflow.task_manager",
+          "descriptor": {
+            "kind": "ruleset",
+            "id": "vibeflow.task_manager",
+            "calls": [
+              {
+                "id": "effects",
+                "params": {
+                  "effect_scope": "none"
+                },
+                "rule_id": "vibeflow.no_side_effects"
+              },
+              {
+                "id": "interface",
+                "params": {},
+                "rule_id": "vibeflow.node_interface"
+              },
+              {
+                "id": "async",
+                "params": {},
+                "rule_id": "vibeflow.async_lifecycle"
+              },
+              {
+                "id": "maintainability",
+                "params": {},
+                "rule_id": "vibeflow.maintainability"
+              },
+              {
+                "id": "imports",
+                "params": {
+                  "effect_scope": "none"
+                },
+                "rule_id": "vibeflow.import_side_effects"
+              },
+              {
+                "id": "architecture",
+                "params": {},
+                "rule_id": "vibeflow.node_architecture"
+              }
+            ],
+            "relations": [],
+            "entrypoints": {
+              "static": [
+                "effects",
+                "architecture",
+                "interface",
+                "async",
+                "maintainability"
+              ],
+              "run": [
+                "effects",
+                "architecture",
+                "interface",
+                "async",
+                "maintainability"
+              ],
+              "import": [
+                "imports",
+                "architecture"
+              ]
+            },
+            "display_name": "",
+            "description": "",
+            "workflow_default": false,
+            "graph_scope": null
+          },
+          "origin": {
+            "plugin_id": "vibeflow.core",
+            "path": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rulesets/standard.py",
+            "line": 5,
+            "symbol": "standard_rulesets"
           }
         },
         {
@@ -44974,7 +45604,7 @@
           },
           "origin": {
             "plugin_id": "vibeflow.core",
-            "path": "/home/example/projects/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rulesets/standard.py",
+            "path": "/home/example/.codex/worktrees/era-native-resources/ERA-vibeFlow/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rulesets/standard.py",
             "line": 5,
             "symbol": "standard_rulesets"
           }
@@ -47108,6 +47738,7 @@
             "id": "era.expression.execution",
             "export": "",
             "role": "entry",
+            "flowKind": "",
             "completion": "immediate"
           },
           {
@@ -47116,6 +47747,7 @@
             "id": "era.expression.execution_core",
             "export": "",
             "role": "entry",
+            "flowKind": "",
             "completion": "immediate"
           },
           {
@@ -47124,6 +47756,7 @@
             "id": "era.expression.functions",
             "export": "",
             "role": "entry",
+            "flowKind": "",
             "completion": "immediate"
           },
           {
@@ -47132,6 +47765,7 @@
             "id": "era.expression.operation",
             "export": "",
             "role": "entry",
+            "flowKind": "",
             "completion": "immediate"
           },
           {
@@ -47140,6 +47774,7 @@
             "id": "era.expression.primitives",
             "export": "",
             "role": "entry",
+            "flowKind": "",
             "completion": "immediate"
           },
           {
@@ -47148,6 +47783,7 @@
             "id": "era.expression.symbolic",
             "export": "",
             "role": "entry",
+            "flowKind": "",
             "completion": "immediate"
           },
           {
@@ -47156,6 +47792,7 @@
             "id": "era.expression.syntax",
             "export": "",
             "role": "entry",
+            "flowKind": "",
             "completion": "immediate"
           },
           {
@@ -47164,6 +47801,7 @@
             "id": "era.expression.types",
             "export": "",
             "role": "entry",
+            "flowKind": "",
             "completion": "immediate"
           },
           {
@@ -47172,6 +47810,7 @@
             "id": "era.expression.build_function_call_graph",
             "export": "run",
             "role": "entry",
+            "flowKind": "process",
             "completion": "immediate"
           },
           {
@@ -47180,6 +47819,7 @@
             "id": "era.expression.compile_callable_functions",
             "export": "run",
             "role": "entry",
+            "flowKind": "process",
             "completion": "immediate"
           },
           {
@@ -47188,6 +47828,7 @@
             "id": "era.expression.derive_symbolic_layer",
             "export": "run",
             "role": "entry",
+            "flowKind": "process",
             "completion": "immediate"
           },
           {
@@ -47196,6 +47837,7 @@
             "id": "era.expression.commit_operation_result",
             "export": "run",
             "role": "entry",
+            "flowKind": "process",
             "completion": "immediate"
           },
           {
@@ -47204,6 +47846,7 @@
             "id": "era.expression.evaluate_ast",
             "export": "run",
             "role": "entry",
+            "flowKind": "process",
             "completion": "immediate"
           },
           {
@@ -47212,6 +47855,7 @@
             "id": "era.expression.initialize_ast_frames",
             "export": "run",
             "role": "entry",
+            "flowKind": "process",
             "completion": "immediate"
           },
           {
@@ -47220,6 +47864,7 @@
             "id": "era.expression.extract_function_dependencies",
             "export": "run",
             "role": "entry",
+            "flowKind": "process",
             "completion": "immediate"
           },
           {
@@ -47228,6 +47873,7 @@
             "id": "era.expression.guard_random_compaction",
             "export": "run",
             "role": "entry",
+            "flowKind": "process",
             "completion": "immediate"
           },
           {
@@ -47236,6 +47882,7 @@
             "id": "era.expression.initialize_random_sequence_state",
             "export": "run",
             "role": "entry",
+            "flowKind": "process",
             "completion": "immediate"
           },
           {
@@ -47244,6 +47891,7 @@
             "id": "era.expression.normalize_compaction",
             "export": "run",
             "role": "entry",
+            "flowKind": "process",
             "completion": "immediate"
           },
           {
@@ -47252,6 +47900,7 @@
             "id": "era.expression.parse_function_definitions",
             "export": "run",
             "role": "entry",
+            "flowKind": "process",
             "completion": "immediate"
           },
           {
@@ -47260,6 +47909,7 @@
             "id": "era.expression.parse_operations",
             "export": "run",
             "role": "entry",
+            "flowKind": "process",
             "completion": "immediate"
           },
           {
@@ -47268,6 +47918,7 @@
             "id": "era.expression.reject_recursive_functions",
             "export": "run",
             "role": "entry",
+            "flowKind": "process",
             "completion": "immediate"
           },
           {
@@ -47276,6 +47927,7 @@
             "id": "era.expression.select_next_operation",
             "export": "run",
             "role": "entry",
+            "flowKind": "process",
             "completion": "immediate"
           },
           {
@@ -47284,6 +47936,7 @@
             "id": "era.expression.terminal",
             "export": "run",
             "role": "entry",
+            "flowKind": "terminal",
             "completion": "immediate"
           },
           {
@@ -47292,6 +47945,7 @@
             "id": "era.expression.validate_function_purity",
             "export": "run",
             "role": "entry",
+            "flowKind": "process",
             "completion": "immediate"
           },
           {
@@ -47300,6 +47954,7 @@
             "id": "era.expression.validate_random_context",
             "export": "run",
             "role": "entry",
+            "flowKind": "process",
             "completion": "immediate"
           },
           {
@@ -47308,6 +47963,7 @@
             "id": "era.expression.validate_request",
             "export": "run",
             "role": "entry",
+            "flowKind": "process",
             "completion": "immediate"
           },
           {
@@ -47316,6 +47972,7 @@
             "id": "era.expression.resources",
             "export": "",
             "role": "support",
+            "flowKind": "",
             "completion": "immediate"
           },
           {
@@ -47324,6 +47981,7 @@
             "id": "era.expression.resources",
             "export": "",
             "role": "support",
+            "flowKind": "",
             "completion": "immediate"
           },
           {
@@ -47332,6 +47990,7 @@
             "id": "era.expression.resources",
             "export": "",
             "role": "support",
+            "flowKind": "",
             "completion": "immediate"
           },
           {
@@ -47340,6 +47999,7 @@
             "id": "era.expression.resources",
             "export": "plugin",
             "role": "entry",
+            "flowKind": "",
             "completion": "immediate"
           },
           {
@@ -47348,6 +48008,7 @@
             "id": "era.expression.schemas",
             "export": "",
             "role": "support",
+            "flowKind": "",
             "completion": "immediate"
           },
           {
@@ -47356,6 +48017,7 @@
             "id": "era.expression.schemas",
             "export": "",
             "role": "support",
+            "flowKind": "",
             "completion": "immediate"
           },
           {
@@ -47364,6 +48026,7 @@
             "id": "era.expression.schemas",
             "export": "",
             "role": "support",
+            "flowKind": "",
             "completion": "immediate"
           },
           {
@@ -47372,6 +48035,7 @@
             "id": "era.expression.schemas",
             "export": "plugin",
             "role": "entry",
+            "flowKind": "",
             "completion": "immediate"
           }
         ],
@@ -47701,6 +48365,7 @@
           "mathjs"
         ],
         "source_roots": [
+          "@era-tavern/.",
           "@era-service/.",
           "@era-macro/.",
           "@era-command-compaction/."
@@ -47847,6 +48512,7 @@
               "graph_scope": "current_graph",
               "order": [
                 "architecture",
+                "async",
                 "effects",
                 "interface",
                 "maintainability"
@@ -47856,6 +48522,18 @@
                   "id": "architecture",
                   "rule_id": "vibeflow.node_architecture",
                   "original_rule_id": "vibeflow.node_architecture",
+                  "params": {},
+                  "dependencies": [],
+                  "inputs": {},
+                  "origins": [
+                    "vibeflow.process"
+                  ],
+                  "parameter_sources": {}
+                },
+                {
+                  "id": "async",
+                  "rule_id": "vibeflow.async_lifecycle",
+                  "original_rule_id": "vibeflow.async_lifecycle",
                   "params": {},
                   "dependencies": [],
                   "inputs": {},
@@ -47925,6 +48603,7 @@
               "graph_scope": "current_graph",
               "order": [
                 "architecture",
+                "async",
                 "effects",
                 "interface",
                 "maintainability"
@@ -47934,6 +48613,18 @@
                   "id": "architecture",
                   "rule_id": "vibeflow.node_architecture",
                   "original_rule_id": "vibeflow.node_architecture",
+                  "params": {},
+                  "dependencies": [],
+                  "inputs": {},
+                  "origins": [
+                    "vibeflow.process"
+                  ],
+                  "parameter_sources": {}
+                },
+                {
+                  "id": "async",
+                  "rule_id": "vibeflow.async_lifecycle",
+                  "original_rule_id": "vibeflow.async_lifecycle",
                   "params": {},
                   "dependencies": [],
                   "inputs": {},
@@ -48218,6 +48909,7 @@
               "graph_scope": "current_graph",
               "order": [
                 "architecture",
+                "async",
                 "effects",
                 "interface",
                 "maintainability"
@@ -48227,6 +48919,18 @@
                   "id": "architecture",
                   "rule_id": "vibeflow.node_architecture",
                   "original_rule_id": "vibeflow.node_architecture",
+                  "params": {},
+                  "dependencies": [],
+                  "inputs": {},
+                  "origins": [
+                    "vibeflow.process"
+                  ],
+                  "parameter_sources": {}
+                },
+                {
+                  "id": "async",
+                  "rule_id": "vibeflow.async_lifecycle",
+                  "original_rule_id": "vibeflow.async_lifecycle",
                   "params": {},
                   "dependencies": [],
                   "inputs": {},
@@ -48296,6 +49000,7 @@
               "graph_scope": "current_graph",
               "order": [
                 "architecture",
+                "async",
                 "effects",
                 "interface",
                 "maintainability"
@@ -48305,6 +49010,18 @@
                   "id": "architecture",
                   "rule_id": "vibeflow.node_architecture",
                   "original_rule_id": "vibeflow.node_architecture",
+                  "params": {},
+                  "dependencies": [],
+                  "inputs": {},
+                  "origins": [
+                    "vibeflow.process"
+                  ],
+                  "parameter_sources": {}
+                },
+                {
+                  "id": "async",
+                  "rule_id": "vibeflow.async_lifecycle",
+                  "original_rule_id": "vibeflow.async_lifecycle",
                   "params": {},
                   "dependencies": [],
                   "inputs": {},
@@ -48572,6 +49289,7 @@
               "graph_scope": "current_graph",
               "order": [
                 "architecture",
+                "async",
                 "effects",
                 "interface",
                 "maintainability"
@@ -48581,6 +49299,18 @@
                   "id": "architecture",
                   "rule_id": "vibeflow.node_architecture",
                   "original_rule_id": "vibeflow.node_architecture",
+                  "params": {},
+                  "dependencies": [],
+                  "inputs": {},
+                  "origins": [
+                    "vibeflow.process"
+                  ],
+                  "parameter_sources": {}
+                },
+                {
+                  "id": "async",
+                  "rule_id": "vibeflow.async_lifecycle",
+                  "original_rule_id": "vibeflow.async_lifecycle",
                   "params": {},
                   "dependencies": [],
                   "inputs": {},
@@ -48650,6 +49380,7 @@
               "graph_scope": "current_graph",
               "order": [
                 "architecture",
+                "async",
                 "effects",
                 "interface",
                 "maintainability"
@@ -48659,6 +49390,18 @@
                   "id": "architecture",
                   "rule_id": "vibeflow.node_architecture",
                   "original_rule_id": "vibeflow.node_architecture",
+                  "params": {},
+                  "dependencies": [],
+                  "inputs": {},
+                  "origins": [
+                    "vibeflow.process"
+                  ],
+                  "parameter_sources": {}
+                },
+                {
+                  "id": "async",
+                  "rule_id": "vibeflow.async_lifecycle",
+                  "original_rule_id": "vibeflow.async_lifecycle",
                   "params": {},
                   "dependencies": [],
                   "inputs": {},
@@ -48927,6 +49670,7 @@
               "graph_scope": "current_graph",
               "order": [
                 "architecture",
+                "async",
                 "effects",
                 "interface",
                 "maintainability"
@@ -48936,6 +49680,18 @@
                   "id": "architecture",
                   "rule_id": "vibeflow.node_architecture",
                   "original_rule_id": "vibeflow.node_architecture",
+                  "params": {},
+                  "dependencies": [],
+                  "inputs": {},
+                  "origins": [
+                    "vibeflow.process"
+                  ],
+                  "parameter_sources": {}
+                },
+                {
+                  "id": "async",
+                  "rule_id": "vibeflow.async_lifecycle",
+                  "original_rule_id": "vibeflow.async_lifecycle",
                   "params": {},
                   "dependencies": [],
                   "inputs": {},
@@ -49005,6 +49761,7 @@
               "graph_scope": "current_graph",
               "order": [
                 "architecture",
+                "async",
                 "effects",
                 "interface",
                 "maintainability"
@@ -49014,6 +49771,18 @@
                   "id": "architecture",
                   "rule_id": "vibeflow.node_architecture",
                   "original_rule_id": "vibeflow.node_architecture",
+                  "params": {},
+                  "dependencies": [],
+                  "inputs": {},
+                  "origins": [
+                    "vibeflow.process"
+                  ],
+                  "parameter_sources": {}
+                },
+                {
+                  "id": "async",
+                  "rule_id": "vibeflow.async_lifecycle",
+                  "original_rule_id": "vibeflow.async_lifecycle",
                   "params": {},
                   "dependencies": [],
                   "inputs": {},
@@ -49274,6 +50043,7 @@
               "graph_scope": "current_graph",
               "order": [
                 "architecture",
+                "async",
                 "effects",
                 "interface",
                 "maintainability"
@@ -49283,6 +50053,18 @@
                   "id": "architecture",
                   "rule_id": "vibeflow.node_architecture",
                   "original_rule_id": "vibeflow.node_architecture",
+                  "params": {},
+                  "dependencies": [],
+                  "inputs": {},
+                  "origins": [
+                    "vibeflow.process"
+                  ],
+                  "parameter_sources": {}
+                },
+                {
+                  "id": "async",
+                  "rule_id": "vibeflow.async_lifecycle",
+                  "original_rule_id": "vibeflow.async_lifecycle",
                   "params": {},
                   "dependencies": [],
                   "inputs": {},
@@ -49352,6 +50134,7 @@
               "graph_scope": "current_graph",
               "order": [
                 "architecture",
+                "async",
                 "effects",
                 "interface",
                 "maintainability"
@@ -49361,6 +50144,18 @@
                   "id": "architecture",
                   "rule_id": "vibeflow.node_architecture",
                   "original_rule_id": "vibeflow.node_architecture",
+                  "params": {},
+                  "dependencies": [],
+                  "inputs": {},
+                  "origins": [
+                    "vibeflow.process"
+                  ],
+                  "parameter_sources": {}
+                },
+                {
+                  "id": "async",
+                  "rule_id": "vibeflow.async_lifecycle",
+                  "original_rule_id": "vibeflow.async_lifecycle",
                   "params": {},
                   "dependencies": [],
                   "inputs": {},
@@ -49620,6 +50415,7 @@
               "graph_scope": "current_graph",
               "order": [
                 "architecture",
+                "async",
                 "effects",
                 "interface",
                 "maintainability"
@@ -49629,6 +50425,18 @@
                   "id": "architecture",
                   "rule_id": "vibeflow.node_architecture",
                   "original_rule_id": "vibeflow.node_architecture",
+                  "params": {},
+                  "dependencies": [],
+                  "inputs": {},
+                  "origins": [
+                    "vibeflow.process"
+                  ],
+                  "parameter_sources": {}
+                },
+                {
+                  "id": "async",
+                  "rule_id": "vibeflow.async_lifecycle",
+                  "original_rule_id": "vibeflow.async_lifecycle",
                   "params": {},
                   "dependencies": [],
                   "inputs": {},
@@ -49698,6 +50506,7 @@
               "graph_scope": "current_graph",
               "order": [
                 "architecture",
+                "async",
                 "effects",
                 "interface",
                 "maintainability"
@@ -49707,6 +50516,18 @@
                   "id": "architecture",
                   "rule_id": "vibeflow.node_architecture",
                   "original_rule_id": "vibeflow.node_architecture",
+                  "params": {},
+                  "dependencies": [],
+                  "inputs": {},
+                  "origins": [
+                    "vibeflow.process"
+                  ],
+                  "parameter_sources": {}
+                },
+                {
+                  "id": "async",
+                  "rule_id": "vibeflow.async_lifecycle",
+                  "original_rule_id": "vibeflow.async_lifecycle",
                   "params": {},
                   "dependencies": [],
                   "inputs": {},
@@ -49924,6 +50745,7 @@
               "graph_scope": "current_graph",
               "order": [
                 "architecture",
+                "async",
                 "effects",
                 "interface",
                 "maintainability"
@@ -49933,6 +50755,18 @@
                   "id": "architecture",
                   "rule_id": "vibeflow.node_architecture",
                   "original_rule_id": "vibeflow.node_architecture",
+                  "params": {},
+                  "dependencies": [],
+                  "inputs": {},
+                  "origins": [
+                    "vibeflow.process"
+                  ],
+                  "parameter_sources": {}
+                },
+                {
+                  "id": "async",
+                  "rule_id": "vibeflow.async_lifecycle",
+                  "original_rule_id": "vibeflow.async_lifecycle",
                   "params": {},
                   "dependencies": [],
                   "inputs": {},
@@ -50002,6 +50836,7 @@
               "graph_scope": "current_graph",
               "order": [
                 "architecture",
+                "async",
                 "effects",
                 "interface",
                 "maintainability"
@@ -50011,6 +50846,18 @@
                   "id": "architecture",
                   "rule_id": "vibeflow.node_architecture",
                   "original_rule_id": "vibeflow.node_architecture",
+                  "params": {},
+                  "dependencies": [],
+                  "inputs": {},
+                  "origins": [
+                    "vibeflow.process"
+                  ],
+                  "parameter_sources": {}
+                },
+                {
+                  "id": "async",
+                  "rule_id": "vibeflow.async_lifecycle",
+                  "original_rule_id": "vibeflow.async_lifecycle",
                   "params": {},
                   "dependencies": [],
                   "inputs": {},
@@ -50270,6 +51117,7 @@
               "graph_scope": "current_graph",
               "order": [
                 "architecture",
+                "async",
                 "effects",
                 "interface",
                 "maintainability"
@@ -50279,6 +51127,18 @@
                   "id": "architecture",
                   "rule_id": "vibeflow.node_architecture",
                   "original_rule_id": "vibeflow.node_architecture",
+                  "params": {},
+                  "dependencies": [],
+                  "inputs": {},
+                  "origins": [
+                    "vibeflow.process"
+                  ],
+                  "parameter_sources": {}
+                },
+                {
+                  "id": "async",
+                  "rule_id": "vibeflow.async_lifecycle",
+                  "original_rule_id": "vibeflow.async_lifecycle",
                   "params": {},
                   "dependencies": [],
                   "inputs": {},
@@ -50348,6 +51208,7 @@
               "graph_scope": "current_graph",
               "order": [
                 "architecture",
+                "async",
                 "effects",
                 "interface",
                 "maintainability"
@@ -50357,6 +51218,18 @@
                   "id": "architecture",
                   "rule_id": "vibeflow.node_architecture",
                   "original_rule_id": "vibeflow.node_architecture",
+                  "params": {},
+                  "dependencies": [],
+                  "inputs": {},
+                  "origins": [
+                    "vibeflow.process"
+                  ],
+                  "parameter_sources": {}
+                },
+                {
+                  "id": "async",
+                  "rule_id": "vibeflow.async_lifecycle",
+                  "original_rule_id": "vibeflow.async_lifecycle",
                   "params": {},
                   "dependencies": [],
                   "inputs": {},
@@ -50632,6 +51505,7 @@
               "graph_scope": "current_graph",
               "order": [
                 "architecture",
+                "async",
                 "effects",
                 "interface",
                 "maintainability"
@@ -50641,6 +51515,18 @@
                   "id": "architecture",
                   "rule_id": "vibeflow.node_architecture",
                   "original_rule_id": "vibeflow.node_architecture",
+                  "params": {},
+                  "dependencies": [],
+                  "inputs": {},
+                  "origins": [
+                    "vibeflow.process"
+                  ],
+                  "parameter_sources": {}
+                },
+                {
+                  "id": "async",
+                  "rule_id": "vibeflow.async_lifecycle",
+                  "original_rule_id": "vibeflow.async_lifecycle",
                   "params": {},
                   "dependencies": [],
                   "inputs": {},
@@ -50710,6 +51596,7 @@
               "graph_scope": "current_graph",
               "order": [
                 "architecture",
+                "async",
                 "effects",
                 "interface",
                 "maintainability"
@@ -50719,6 +51606,18 @@
                   "id": "architecture",
                   "rule_id": "vibeflow.node_architecture",
                   "original_rule_id": "vibeflow.node_architecture",
+                  "params": {},
+                  "dependencies": [],
+                  "inputs": {},
+                  "origins": [
+                    "vibeflow.process"
+                  ],
+                  "parameter_sources": {}
+                },
+                {
+                  "id": "async",
+                  "rule_id": "vibeflow.async_lifecycle",
+                  "original_rule_id": "vibeflow.async_lifecycle",
                   "params": {},
                   "dependencies": [],
                   "inputs": {},
@@ -50995,6 +51894,7 @@
               "graph_scope": "current_graph",
               "order": [
                 "architecture",
+                "async",
                 "effects",
                 "interface",
                 "maintainability"
@@ -51004,6 +51904,18 @@
                   "id": "architecture",
                   "rule_id": "vibeflow.node_architecture",
                   "original_rule_id": "vibeflow.node_architecture",
+                  "params": {},
+                  "dependencies": [],
+                  "inputs": {},
+                  "origins": [
+                    "vibeflow.process"
+                  ],
+                  "parameter_sources": {}
+                },
+                {
+                  "id": "async",
+                  "rule_id": "vibeflow.async_lifecycle",
+                  "original_rule_id": "vibeflow.async_lifecycle",
                   "params": {},
                   "dependencies": [],
                   "inputs": {},
@@ -51073,6 +51985,7 @@
               "graph_scope": "current_graph",
               "order": [
                 "architecture",
+                "async",
                 "effects",
                 "interface",
                 "maintainability"
@@ -51082,6 +51995,18 @@
                   "id": "architecture",
                   "rule_id": "vibeflow.node_architecture",
                   "original_rule_id": "vibeflow.node_architecture",
+                  "params": {},
+                  "dependencies": [],
+                  "inputs": {},
+                  "origins": [
+                    "vibeflow.process"
+                  ],
+                  "parameter_sources": {}
+                },
+                {
+                  "id": "async",
+                  "rule_id": "vibeflow.async_lifecycle",
+                  "original_rule_id": "vibeflow.async_lifecycle",
                   "params": {},
                   "dependencies": [],
                   "inputs": {},
@@ -51341,6 +52266,7 @@
               "graph_scope": "current_graph",
               "order": [
                 "architecture",
+                "async",
                 "effects",
                 "interface",
                 "maintainability"
@@ -51350,6 +52276,18 @@
                   "id": "architecture",
                   "rule_id": "vibeflow.node_architecture",
                   "original_rule_id": "vibeflow.node_architecture",
+                  "params": {},
+                  "dependencies": [],
+                  "inputs": {},
+                  "origins": [
+                    "vibeflow.process"
+                  ],
+                  "parameter_sources": {}
+                },
+                {
+                  "id": "async",
+                  "rule_id": "vibeflow.async_lifecycle",
+                  "original_rule_id": "vibeflow.async_lifecycle",
                   "params": {},
                   "dependencies": [],
                   "inputs": {},
@@ -51419,6 +52357,7 @@
               "graph_scope": "current_graph",
               "order": [
                 "architecture",
+                "async",
                 "effects",
                 "interface",
                 "maintainability"
@@ -51428,6 +52367,18 @@
                   "id": "architecture",
                   "rule_id": "vibeflow.node_architecture",
                   "original_rule_id": "vibeflow.node_architecture",
+                  "params": {},
+                  "dependencies": [],
+                  "inputs": {},
+                  "origins": [
+                    "vibeflow.process"
+                  ],
+                  "parameter_sources": {}
+                },
+                {
+                  "id": "async",
+                  "rule_id": "vibeflow.async_lifecycle",
+                  "original_rule_id": "vibeflow.async_lifecycle",
                   "params": {},
                   "dependencies": [],
                   "inputs": {},
@@ -51646,6 +52597,7 @@
               "graph_scope": "current_graph",
               "order": [
                 "architecture",
+                "async",
                 "effects",
                 "interface",
                 "maintainability"
@@ -51655,6 +52607,18 @@
                   "id": "architecture",
                   "rule_id": "vibeflow.node_architecture",
                   "original_rule_id": "vibeflow.node_architecture",
+                  "params": {},
+                  "dependencies": [],
+                  "inputs": {},
+                  "origins": [
+                    "vibeflow.process"
+                  ],
+                  "parameter_sources": {}
+                },
+                {
+                  "id": "async",
+                  "rule_id": "vibeflow.async_lifecycle",
+                  "original_rule_id": "vibeflow.async_lifecycle",
                   "params": {},
                   "dependencies": [],
                   "inputs": {},
@@ -51724,6 +52688,7 @@
               "graph_scope": "current_graph",
               "order": [
                 "architecture",
+                "async",
                 "effects",
                 "interface",
                 "maintainability"
@@ -51733,6 +52698,18 @@
                   "id": "architecture",
                   "rule_id": "vibeflow.node_architecture",
                   "original_rule_id": "vibeflow.node_architecture",
+                  "params": {},
+                  "dependencies": [],
+                  "inputs": {},
+                  "origins": [
+                    "vibeflow.process"
+                  ],
+                  "parameter_sources": {}
+                },
+                {
+                  "id": "async",
+                  "rule_id": "vibeflow.async_lifecycle",
+                  "original_rule_id": "vibeflow.async_lifecycle",
                   "params": {},
                   "dependencies": [],
                   "inputs": {},
@@ -51992,6 +52969,7 @@
               "graph_scope": "current_graph",
               "order": [
                 "architecture",
+                "async",
                 "effects",
                 "interface",
                 "maintainability"
@@ -52001,6 +52979,18 @@
                   "id": "architecture",
                   "rule_id": "vibeflow.node_architecture",
                   "original_rule_id": "vibeflow.node_architecture",
+                  "params": {},
+                  "dependencies": [],
+                  "inputs": {},
+                  "origins": [
+                    "vibeflow.process"
+                  ],
+                  "parameter_sources": {}
+                },
+                {
+                  "id": "async",
+                  "rule_id": "vibeflow.async_lifecycle",
+                  "original_rule_id": "vibeflow.async_lifecycle",
                   "params": {},
                   "dependencies": [],
                   "inputs": {},
@@ -52070,6 +53060,7 @@
               "graph_scope": "current_graph",
               "order": [
                 "architecture",
+                "async",
                 "effects",
                 "interface",
                 "maintainability"
@@ -52079,6 +53070,18 @@
                   "id": "architecture",
                   "rule_id": "vibeflow.node_architecture",
                   "original_rule_id": "vibeflow.node_architecture",
+                  "params": {},
+                  "dependencies": [],
+                  "inputs": {},
+                  "origins": [
+                    "vibeflow.process"
+                  ],
+                  "parameter_sources": {}
+                },
+                {
+                  "id": "async",
+                  "rule_id": "vibeflow.async_lifecycle",
+                  "original_rule_id": "vibeflow.async_lifecycle",
                   "params": {},
                   "dependencies": [],
                   "inputs": {},
@@ -52296,6 +53299,7 @@
               "graph_scope": "current_graph",
               "order": [
                 "architecture",
+                "async",
                 "effects",
                 "interface",
                 "maintainability"
@@ -52305,6 +53309,18 @@
                   "id": "architecture",
                   "rule_id": "vibeflow.node_architecture",
                   "original_rule_id": "vibeflow.node_architecture",
+                  "params": {},
+                  "dependencies": [],
+                  "inputs": {},
+                  "origins": [
+                    "vibeflow.process"
+                  ],
+                  "parameter_sources": {}
+                },
+                {
+                  "id": "async",
+                  "rule_id": "vibeflow.async_lifecycle",
+                  "original_rule_id": "vibeflow.async_lifecycle",
                   "params": {},
                   "dependencies": [],
                   "inputs": {},
@@ -52374,6 +53390,7 @@
               "graph_scope": "current_graph",
               "order": [
                 "architecture",
+                "async",
                 "effects",
                 "interface",
                 "maintainability"
@@ -52383,6 +53400,18 @@
                   "id": "architecture",
                   "rule_id": "vibeflow.node_architecture",
                   "original_rule_id": "vibeflow.node_architecture",
+                  "params": {},
+                  "dependencies": [],
+                  "inputs": {},
+                  "origins": [
+                    "vibeflow.process"
+                  ],
+                  "parameter_sources": {}
+                },
+                {
+                  "id": "async",
+                  "rule_id": "vibeflow.async_lifecycle",
+                  "original_rule_id": "vibeflow.async_lifecycle",
                   "params": {},
                   "dependencies": [],
                   "inputs": {},
@@ -52577,6 +53606,7 @@
               "graph_scope": "current_graph",
               "order": [
                 "architecture",
+                "async",
                 "effects",
                 "interface",
                 "maintainability"
@@ -52586,6 +53616,18 @@
                   "id": "architecture",
                   "rule_id": "vibeflow.node_architecture",
                   "original_rule_id": "vibeflow.node_architecture",
+                  "params": {},
+                  "dependencies": [],
+                  "inputs": {},
+                  "origins": [
+                    "vibeflow.process"
+                  ],
+                  "parameter_sources": {}
+                },
+                {
+                  "id": "async",
+                  "rule_id": "vibeflow.async_lifecycle",
+                  "original_rule_id": "vibeflow.async_lifecycle",
                   "params": {},
                   "dependencies": [],
                   "inputs": {},
@@ -52655,6 +53697,7 @@
               "graph_scope": "current_graph",
               "order": [
                 "architecture",
+                "async",
                 "effects",
                 "interface",
                 "maintainability"
@@ -52664,6 +53707,18 @@
                   "id": "architecture",
                   "rule_id": "vibeflow.node_architecture",
                   "original_rule_id": "vibeflow.node_architecture",
+                  "params": {},
+                  "dependencies": [],
+                  "inputs": {},
+                  "origins": [
+                    "vibeflow.process"
+                  ],
+                  "parameter_sources": {}
+                },
+                {
+                  "id": "async",
+                  "rule_id": "vibeflow.async_lifecycle",
+                  "original_rule_id": "vibeflow.async_lifecycle",
                   "params": {},
                   "dependencies": [],
                   "inputs": {},
@@ -52931,6 +53986,7 @@
               "graph_scope": "current_graph",
               "order": [
                 "architecture",
+                "async",
                 "effects",
                 "interface",
                 "maintainability"
@@ -52940,6 +53996,18 @@
                   "id": "architecture",
                   "rule_id": "vibeflow.node_architecture",
                   "original_rule_id": "vibeflow.node_architecture",
+                  "params": {},
+                  "dependencies": [],
+                  "inputs": {},
+                  "origins": [
+                    "vibeflow.process"
+                  ],
+                  "parameter_sources": {}
+                },
+                {
+                  "id": "async",
+                  "rule_id": "vibeflow.async_lifecycle",
+                  "original_rule_id": "vibeflow.async_lifecycle",
                   "params": {},
                   "dependencies": [],
                   "inputs": {},
@@ -53009,6 +54077,7 @@
               "graph_scope": "current_graph",
               "order": [
                 "architecture",
+                "async",
                 "effects",
                 "interface",
                 "maintainability"
@@ -53018,6 +54087,18 @@
                   "id": "architecture",
                   "rule_id": "vibeflow.node_architecture",
                   "original_rule_id": "vibeflow.node_architecture",
+                  "params": {},
+                  "dependencies": [],
+                  "inputs": {},
+                  "origins": [
+                    "vibeflow.process"
+                  ],
+                  "parameter_sources": {}
+                },
+                {
+                  "id": "async",
+                  "rule_id": "vibeflow.async_lifecycle",
+                  "original_rule_id": "vibeflow.async_lifecycle",
                   "params": {},
                   "dependencies": [],
                   "inputs": {},
@@ -53235,6 +54316,7 @@
               "graph_scope": "current_graph",
               "order": [
                 "architecture",
+                "async",
                 "effects",
                 "interface",
                 "maintainability"
@@ -53244,6 +54326,18 @@
                   "id": "architecture",
                   "rule_id": "vibeflow.node_architecture",
                   "original_rule_id": "vibeflow.node_architecture",
+                  "params": {},
+                  "dependencies": [],
+                  "inputs": {},
+                  "origins": [
+                    "vibeflow.process"
+                  ],
+                  "parameter_sources": {}
+                },
+                {
+                  "id": "async",
+                  "rule_id": "vibeflow.async_lifecycle",
+                  "original_rule_id": "vibeflow.async_lifecycle",
                   "params": {},
                   "dependencies": [],
                   "inputs": {},
@@ -53313,6 +54407,7 @@
               "graph_scope": "current_graph",
               "order": [
                 "architecture",
+                "async",
                 "effects",
                 "interface",
                 "maintainability"
@@ -53322,6 +54417,18 @@
                   "id": "architecture",
                   "rule_id": "vibeflow.node_architecture",
                   "original_rule_id": "vibeflow.node_architecture",
+                  "params": {},
+                  "dependencies": [],
+                  "inputs": {},
+                  "origins": [
+                    "vibeflow.process"
+                  ],
+                  "parameter_sources": {}
+                },
+                {
+                  "id": "async",
+                  "rule_id": "vibeflow.async_lifecycle",
+                  "original_rule_id": "vibeflow.async_lifecycle",
                   "params": {},
                   "dependencies": [],
                   "inputs": {},
@@ -53540,6 +54647,7 @@
               "graph_scope": "current_graph",
               "order": [
                 "architecture",
+                "async",
                 "effects",
                 "interface",
                 "maintainability"
@@ -53549,6 +54657,18 @@
                   "id": "architecture",
                   "rule_id": "vibeflow.node_architecture",
                   "original_rule_id": "vibeflow.node_architecture",
+                  "params": {},
+                  "dependencies": [],
+                  "inputs": {},
+                  "origins": [
+                    "vibeflow.process"
+                  ],
+                  "parameter_sources": {}
+                },
+                {
+                  "id": "async",
+                  "rule_id": "vibeflow.async_lifecycle",
+                  "original_rule_id": "vibeflow.async_lifecycle",
                   "params": {},
                   "dependencies": [],
                   "inputs": {},
@@ -53618,6 +54738,7 @@
               "graph_scope": "current_graph",
               "order": [
                 "architecture",
+                "async",
                 "effects",
                 "interface",
                 "maintainability"
@@ -53627,6 +54748,18 @@
                   "id": "architecture",
                   "rule_id": "vibeflow.node_architecture",
                   "original_rule_id": "vibeflow.node_architecture",
+                  "params": {},
+                  "dependencies": [],
+                  "inputs": {},
+                  "origins": [
+                    "vibeflow.process"
+                  ],
+                  "parameter_sources": {}
+                },
+                {
+                  "id": "async",
+                  "rule_id": "vibeflow.async_lifecycle",
+                  "original_rule_id": "vibeflow.async_lifecycle",
                   "params": {},
                   "dependencies": [],
                   "inputs": {},

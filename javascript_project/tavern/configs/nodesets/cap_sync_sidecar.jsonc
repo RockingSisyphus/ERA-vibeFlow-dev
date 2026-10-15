@@ -1,0 +1,376 @@
+{
+  "type_key": "era.tavern.flow.cap_sync_sidecar",
+  "display_name": "独立状态文件与内存快照操作",
+  "description": "共享同一职责组的原操作与必要的等待前发起；无额外 cap 总分组。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.call.frame",
+      "cardinality": "exactly_one",
+      "display_name": "本次调用、实例资源与上一节点的事实"
+    }
+  ],
+  "provides": [
+    {
+      "key": "era_tavern_flow_cap_sync_sidecar_frame",
+      "type": "era.tavern.frame.final.cap_sync_sidecar",
+      "display_name": "处理后的资源与事实"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "sync",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.call.frame",
+        "display_name": "同实例调用与资源",
+        "required": true
+      }
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.frame.final.cap_sync_sidecar",
+        "cardinality": "exactly_one",
+        "as": "frame",
+        "display_name": "本段明确结果"
+      }
+    ],
+    "max_steps": 33,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.tavern.initialize.start",
+        "display_name": "开始当前原生流程",
+        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+      },
+      {
+        "id": "choose",
+        "type_used": "era.tavern.cap_sync_sidecar.choose",
+        "display_name": "识别独立状态文件与内存快照操作",
+        "description": "按已声明操作名选择唯一原生路径；即时操作、同步完成的 Promise 操作及真正等待前的发起共享本职责组，不重复分组。"
+      },
+      {
+        "id": "route_read_current__check_request",
+        "type_used": "era.tavern.sidecar_read_current.check_request",
+        "display_name": "读取当前聊天状态：独立状态文件与内存快照：检查读取当前聊天状态请求",
+        "description": "保持 era.tavern.sidecar.read_current 的现行参数、取消和目标复核；不新增资格条件。"
+      },
+      {
+        "id": "route_read_current__execute",
+        "type_used": "era.tavern.sidecar_read_current.execute",
+        "display_name": "读取当前聊天状态：独立状态文件与内存快照：执行读取当前聊天状态操作",
+        "description": "在酒馆页面执行该操作的实际 API 或资源动作；保留未知字段、现有错误类别及原同步/异步约定。"
+      },
+      {
+        "id": "route_read_current__return_result",
+        "type_used": "era.tavern.sidecar_read_current.return_result",
+        "display_name": "读取当前聊天状态：独立状态文件与内存快照：交还读取当前聊天状态结果",
+        "description": "返回原 era.tavern.sidecar.read_current.result 结果；需要脱敏的连接资料只返回摘要。"
+      },
+      {
+        "id": "route_read_record__check_request",
+        "type_used": "era.tavern.sidecar_read_record.check_request",
+        "display_name": "读取状态文件：独立状态文件与内存快照：检查读取状态文件请求",
+        "description": "保持 era.tavern.sidecar.read_record 的现行参数、取消和目标复核；不新增资格条件。"
+      },
+      {
+        "id": "route_read_record__start_operation",
+        "type_used": "era.tavern.sidecar_read_record.start_operation",
+        "display_name": "读取状态文件：独立状态文件与内存快照：发起指定 Sidecar 文件读取",
+        "description": "同步校验 SidecarId，捕获请求头并发起一次文件 fetch；404、失败和 JSON 结果由后续真实分支判断。 此 Node 只发起原始操作并创建等待资源；不执行异步续体。"
+      },
+      {
+        "id": "route_write_record",
+        "type_used": "era.tavern.flow.sidecar_write_record",
+        "display_name": "保存独立状态文件",
+        "description": "沿原 era.tavern.sidecar.write_record 合同执行当前唯一操作。"
+      },
+      {
+        "id": "route_commit_metadata",
+        "type_used": "era.tavern.flow.sidecar_commit_metadata",
+        "display_name": "提交聊天指针并发布已验证快照",
+        "description": "沿原 era.tavern.sidecar.commit_metadata 合同执行当前唯一操作。"
+      },
+      {
+        "id": "route_publish_snapshot__check_request",
+        "type_used": "era.tavern.sidecar_publish_snapshot.check_request",
+        "display_name": "发布快照：独立状态文件与内存快照：检查发布快照请求",
+        "description": "保持 era.tavern.sidecar.publish_snapshot 的现行参数、取消和目标复核；不新增资格条件。"
+      },
+      {
+        "id": "route_publish_snapshot__execute",
+        "type_used": "era.tavern.sidecar_publish_snapshot.execute",
+        "display_name": "发布快照：独立状态文件与内存快照：执行发布快照操作",
+        "description": "在酒馆页面执行该操作的实际 API 或资源动作；保留未知字段、现有错误类别及原同步/异步约定。"
+      },
+      {
+        "id": "route_publish_snapshot__return_result",
+        "type_used": "era.tavern.sidecar_publish_snapshot.return_result",
+        "display_name": "发布快照：独立状态文件与内存快照：交还发布快照结果",
+        "description": "返回原 era.tavern.sidecar.commit_metadata.result 结果；需要脱敏的连接资料只返回摘要。"
+      },
+      {
+        "id": "route_create_id__check_request",
+        "type_used": "era.tavern.sidecar_create_id.check_request",
+        "display_name": "建立文件标识：独立状态文件与内存快照：检查建立文件标识请求",
+        "description": "保持 era.tavern.sidecar.create_id 的现行参数、取消和目标复核；不新增资格条件。"
+      },
+      {
+        "id": "route_create_id__execute",
+        "type_used": "era.tavern.sidecar_create_id.execute",
+        "display_name": "建立文件标识：独立状态文件与内存快照：执行建立文件标识操作",
+        "description": "在酒馆页面执行该操作的实际 API 或资源动作；保留未知字段、现有错误类别及原同步/异步约定。"
+      },
+      {
+        "id": "route_create_id__return_result",
+        "type_used": "era.tavern.sidecar_create_id.return_result",
+        "display_name": "建立文件标识：独立状态文件与内存快照：交还建立文件标识结果",
+        "description": "返回原 era.tavern.sidecar.create_id.result 结果；需要脱敏的连接资料只返回摘要。"
+      },
+      {
+        "id": "route_present_prompt__check_request",
+        "type_used": "era.tavern.sidecar_present_prompt.check_request",
+        "display_name": "显示绑定提示：独立状态文件与内存快照：检查显示绑定提示请求",
+        "description": "保持 era.tavern.sidecar.present_prompt 的现行参数、取消和目标复核；不新增资格条件。"
+      },
+      {
+        "id": "route_present_prompt__execute",
+        "type_used": "era.tavern.sidecar_present_prompt.execute",
+        "display_name": "显示绑定提示：独立状态文件与内存快照：执行显示绑定提示操作",
+        "description": "在酒馆页面执行该操作的实际 API 或资源动作；保留未知字段、现有错误类别及原同步/异步约定。"
+      },
+      {
+        "id": "route_present_prompt__return_result",
+        "type_used": "era.tavern.sidecar_present_prompt.return_result",
+        "display_name": "显示绑定提示：独立状态文件与内存快照：交还显示绑定提示结果",
+        "description": "返回原 era.tavern.sidecar.present_prompt.result 结果；需要脱敏的连接资料只返回摘要。"
+      },
+      {
+        "id": "route_clear_prompt__check_request",
+        "type_used": "era.tavern.sidecar_clear_prompt.check_request",
+        "display_name": "清理绑定提示：独立状态文件与内存快照：检查清理绑定提示请求",
+        "description": "保持 era.tavern.sidecar.clear_prompt 的现行参数、取消和目标复核；不新增资格条件。"
+      },
+      {
+        "id": "route_clear_prompt__execute",
+        "type_used": "era.tavern.sidecar_clear_prompt.execute",
+        "display_name": "清理绑定提示：独立状态文件与内存快照：执行清理绑定提示操作",
+        "description": "在酒馆页面执行该操作的实际 API 或资源动作；保留未知字段、现有错误类别及原同步/异步约定。"
+      },
+      {
+        "id": "route_clear_prompt__return_result",
+        "type_used": "era.tavern.sidecar_clear_prompt.return_result",
+        "display_name": "清理绑定提示：独立状态文件与内存快照：交还清理绑定提示结果",
+        "description": "返回原 era.tavern.sidecar.clear_prompt.result 结果；需要脱敏的连接资料只返回摘要。"
+      },
+      {
+        "id": "route_read_working__check_request",
+        "type_used": "era.tavern.sidecar_read_working.check_request",
+        "display_name": "读取工作状态：独立状态文件与内存快照：检查读取工作状态请求",
+        "description": "保持 era.tavern.sidecar.read_working 的现行参数、取消和目标复核；不新增资格条件。"
+      },
+      {
+        "id": "route_read_working__execute",
+        "type_used": "era.tavern.sidecar_read_working.execute",
+        "display_name": "读取工作状态：独立状态文件与内存快照：执行读取工作状态操作",
+        "description": "在酒馆页面执行该操作的实际 API 或资源动作；保留未知字段、现有错误类别及原同步/异步约定。"
+      },
+      {
+        "id": "route_read_working__return_result",
+        "type_used": "era.tavern.sidecar_read_working.return_result",
+        "display_name": "读取工作状态：独立状态文件与内存快照：交还读取工作状态结果",
+        "description": "返回原 era.working.result 结果；需要脱敏的连接资料只返回摘要。"
+      },
+      {
+        "id": "route_write_working__check_request",
+        "type_used": "era.tavern.sidecar_write_working.check_request",
+        "display_name": "更新工作状态：独立状态文件与内存快照：检查更新工作状态请求",
+        "description": "保持 era.tavern.sidecar.write_working 的现行参数、取消和目标复核；不新增资格条件。"
+      },
+      {
+        "id": "route_write_working__execute",
+        "type_used": "era.tavern.sidecar_write_working.execute",
+        "display_name": "更新工作状态：独立状态文件与内存快照：执行更新工作状态操作",
+        "description": "在酒馆页面执行该操作的实际 API 或资源动作；保留未知字段、现有错误类别及原同步/异步约定。"
+      },
+      {
+        "id": "route_write_working__return_result",
+        "type_used": "era.tavern.sidecar_write_working.return_result",
+        "display_name": "更新工作状态：独立状态文件与内存快照：交还更新工作状态结果",
+        "description": "返回原 era.working.result 结果；需要脱敏的连接资料只返回摘要。"
+      },
+      {
+        "id": "join_return",
+        "type_used": "era.tavern.cap_sync_sidecar.join_return",
+        "display_name": "汇合当前实际激活分支的结果",
+        "description": "接收当前所选路径的结果集合，交还其中唯一实际结果；不选择未激活分支、不重新执行操作。运行实现必须拒绝实际多结果，不以集合契约放宽唯一结果语义。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.tavern.initialize.end",
+        "display_name": "结束当前原生流程",
+        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+      }
+    ],
+    "edges": [
+      {
+        "from": "choose",
+        "to": "route_read_current__check_request",
+        "when": "era_tavern_cap_sync_sidecar_choose_route == 'read_current'"
+      },
+      [
+        "route_read_current__return_result",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_read_record__check_request",
+        "when": "era_tavern_cap_sync_sidecar_choose_route == 'read_record'"
+      },
+      [
+        "route_read_record__start_operation",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_write_record",
+        "when": "era_tavern_cap_sync_sidecar_choose_route == 'write_record'"
+      },
+      [
+        "route_write_record",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_commit_metadata",
+        "when": "era_tavern_cap_sync_sidecar_choose_route == 'commit_metadata'"
+      },
+      [
+        "route_commit_metadata",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_publish_snapshot__check_request",
+        "when": "era_tavern_cap_sync_sidecar_choose_route == 'publish_snapshot'"
+      },
+      [
+        "route_publish_snapshot__return_result",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_create_id__check_request",
+        "when": "era_tavern_cap_sync_sidecar_choose_route == 'create_id'"
+      },
+      [
+        "route_create_id__return_result",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_present_prompt__check_request",
+        "when": "era_tavern_cap_sync_sidecar_choose_route == 'present_prompt'"
+      },
+      [
+        "route_present_prompt__return_result",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_clear_prompt__check_request",
+        "when": "era_tavern_cap_sync_sidecar_choose_route == 'clear_prompt'"
+      },
+      [
+        "route_clear_prompt__return_result",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_read_working__check_request",
+        "when": "era_tavern_cap_sync_sidecar_choose_route == 'read_working'"
+      },
+      [
+        "route_read_working__return_result",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_write_working__check_request",
+        "when": "era_tavern_cap_sync_sidecar_choose_route == 'write_working'"
+      },
+      [
+        "route_write_working__return_result",
+        "join_return"
+      ],
+      [
+        "route_read_current__check_request",
+        "route_read_current__execute"
+      ],
+      [
+        "route_read_current__execute",
+        "route_read_current__return_result"
+      ],
+      [
+        "route_read_record__check_request",
+        "route_read_record__start_operation"
+      ],
+      [
+        "route_publish_snapshot__check_request",
+        "route_publish_snapshot__execute"
+      ],
+      [
+        "route_publish_snapshot__execute",
+        "route_publish_snapshot__return_result"
+      ],
+      [
+        "route_create_id__check_request",
+        "route_create_id__execute"
+      ],
+      [
+        "route_create_id__execute",
+        "route_create_id__return_result"
+      ],
+      [
+        "route_present_prompt__check_request",
+        "route_present_prompt__execute"
+      ],
+      [
+        "route_present_prompt__execute",
+        "route_present_prompt__return_result"
+      ],
+      [
+        "route_clear_prompt__check_request",
+        "route_clear_prompt__execute"
+      ],
+      [
+        "route_clear_prompt__execute",
+        "route_clear_prompt__return_result"
+      ],
+      [
+        "route_read_working__check_request",
+        "route_read_working__execute"
+      ],
+      [
+        "route_read_working__execute",
+        "route_read_working__return_result"
+      ],
+      [
+        "route_write_working__check_request",
+        "route_write_working__execute"
+      ],
+      [
+        "route_write_working__execute",
+        "route_write_working__return_result"
+      ],
+      [
+        "start",
+        "choose"
+      ],
+      [
+        "join_return",
+        "end"
+      ]
+    ]
+  }
+}

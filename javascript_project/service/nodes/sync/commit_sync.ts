@@ -8,6 +8,7 @@ import {
   errorMessage,
   isCancellation,
   syncFailure,
+  unwrapCapabilityFailure,
   type SyncCommitRequestV1,
   type SyncCommitResultV1,
   type SyncFailureV1,
@@ -61,14 +62,8 @@ function changedSource(
   sidecarCommitted: boolean,
   error: unknown,
 ): SyncCommitResultV1 | null {
-  // AOT 的 Capability 边界保留原异常在 cause；只解开这一层已知协议包装。
-  if (
-    error !== null &&
-    typeof error === "object" &&
-    (error as { code?: unknown }).code === "VF_CAPABILITY_FAILED"
-  ) {
-    error = (error as { cause?: unknown }).cause;
-  }
+  // 辅助workflow会再包一层Node错误；保留原reason/written事实才能沿用原保护分支。
+  error = unwrapCapabilityFailure(error);
   if (
     error === null ||
     typeof error !== "object" ||
@@ -91,12 +86,7 @@ function changedSource(
 }
 
 function failureFor(error: unknown, code: string): SyncFailureV1 {
-  if (
-    error !== null &&
-    typeof error === "object" &&
-    (error as { code?: unknown }).code === "VF_CAPABILITY_FAILED"
-  )
-    error = (error as { cause?: unknown }).cause ?? error;
+  error = unwrapCapabilityFailure(error);
   const cancelled = isCancellation(error);
   return syncFailure(
     cancelled ? `${code}_CANCELLED` : code,

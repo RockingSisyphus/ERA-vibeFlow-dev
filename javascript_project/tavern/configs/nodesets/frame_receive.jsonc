@@ -1,0 +1,80 @@
+{
+  "type_key": "era.tavern.flow.frame_receive",
+  "display_name": "接收队列事件或挂起等待",
+  "description": "执行入站 Port receive，保持唯一挂起接收者及实例、致命态和单次调用的取消联动。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.call.frame",
+      "cardinality": "exactly_one",
+      "display_name": "当前实例与调用资料"
+    }
+  ],
+  "provides": [
+    {
+      "key": "era_tavern_flow_frame_receive_frame",
+      "type": "era.tavern.call.frame",
+      "display_name": "当前步骤的资源与已捕获事实"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.call.frame",
+        "display_name": "调用与资源资料",
+        "required": true
+      }
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.call.frame",
+        "cardinality": "exactly_one",
+        "display_name": "完成后的操作资料",
+        "as": "frame"
+      }
+    ],
+    "max_steps": 10,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.tavern.initialize.start",
+        "display_name": "开始当前原生流程",
+        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+      },
+      {
+        "id": "await_event",
+        "type_used": "era.tavern.frame_receive.await_event",
+        "display_name": "等待事件或取消",
+        "description": "等待新事件交付；取消时移除本次等待和监听，不吞掉取消原因。"
+      },
+      {
+        "id": "return_event",
+        "type_used": "era.tavern.frame_receive.return_event",
+        "display_name": "返回入站传输事件",
+        "description": "返回原 Port 的 value 包装，原始浏览器对象不会进入主 Service。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.tavern.initialize.end",
+        "display_name": "结束当前原生流程",
+        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+      }
+    ],
+    "edges": [
+      [
+        "await_event",
+        "return_event"
+      ],
+      [
+        "start",
+        "await_event"
+      ],
+      [
+        "return_event",
+        "end"
+      ]
+    ]
+  }
+}

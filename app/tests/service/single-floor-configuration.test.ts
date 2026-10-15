@@ -1,3 +1,4 @@
+import { patchCharacter } from '../native-tavern/character-config-fixture.mjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 const host = vi.hoisted(() => ({
   characterId: 0,
@@ -7,7 +8,6 @@ const host = vi.hoisted(() => ({
 }));
 vi.mock('../../src/ERA变量框架/service/tavern-browser-host', () => ({ currentTavernContext: () => host }));
 import {
-  patchSingleFloor,
   refreshSingleFloorSelection,
   singleFloorSelection,
 } from '../../src/ERA变量框架/service/single-floor-configuration';
@@ -60,3 +60,7 @@ describe('单层配置的真实保存边界', () => {
     expect(host.characters[0].data.extensions).toEqual({ author: 'preserved' });
   });
 });
+
+function patchSingleFloor(input: Readonly<Record<string, unknown>>, context: { signal: AbortSignal }) {
+  return patchCharacter(input, context, host, 'patch_single_floor', refreshSingleFloorSelection);
+}

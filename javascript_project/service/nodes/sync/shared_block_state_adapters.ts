@@ -1,6 +1,6 @@
 // Adapters with identical declared base libraries share this source.
 import { type EraBlockStepStateV1 } from "../../base_lib/sync/sync_contracts.ts";
-import { syncFailure, type SyncWorkV1 } from "../../base_lib/sync/sync_contracts.ts";
+import { syncFailure, unwrapCapabilityFailure, type SyncWorkV1 } from "../../base_lib/sync/sync_contracts.ts";
 
 function supersededTavernSwipe(state: EraBlockStepStateV1, error: unknown): boolean {
   const step = state.work.step;
@@ -62,10 +62,7 @@ export function PublishBlockApplicationNode(inputs: any, _params: any, context: 
       });
     }
   } catch (error) {
-    const unwrapped =
-      (error as any)?.code === "VF_CAPABILITY_FAILED"
-        ? (error as any).cause
-        : error;
+    const unwrapped = unwrapCapabilityFailure(error) as any;
     // A later native Swipe superseded this ordinary history snapshot before
     // write_working could publish it. The Host rejects the write before any
     // side effect; settle_saved_batch schedules a fresh full history sync.

@@ -1,0 +1,80 @@
+{
+  "type_key": "era.tavern.flow.stop",
+  "display_name": "释放实例全部运行资源",
+  "description": "在停止状态下释放监听、timer、挂起操作和回执；清理使用仍可执行的专用调用，不因原 signal 已取消而跳过。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.call.frame",
+      "cardinality": "exactly_one",
+      "display_name": "当前实例与调用资料"
+    }
+  ],
+  "provides": [
+    {
+      "key": "era_tavern_flow_stop_frame",
+      "type": "era.tavern.call.frame",
+      "display_name": "当前步骤的资源与已捕获事实"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.call.frame",
+        "display_name": "调用与资源资料",
+        "required": true
+      }
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.call.frame",
+        "cardinality": "exactly_one",
+        "display_name": "完成后的操作资料",
+        "as": "frame"
+      }
+    ],
+    "max_steps": 15,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.tavern.initialize.start",
+        "display_name": "开始当前原生流程",
+        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+      },
+      {
+        "id": "await_background",
+        "type_used": "era.tavern.stop.await_background",
+        "display_name": "等待后台任务收尾",
+        "description": "等待本实例通知、工具及其他已启动任务真正结束；与停止信号联动，不永久等待无响应订阅者。"
+      },
+      {
+        "id": "release_session",
+        "type_used": "era.tavern.stop.release_session",
+        "display_name": "释放队列、引用和会话仓库",
+        "description": "清空队列、失败记录、帧记录和会话资源，移除当前实例注册点；不同实例保留。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.tavern.initialize.end",
+        "display_name": "结束当前原生流程",
+        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+      }
+    ],
+    "edges": [
+      [
+        "await_background",
+        "release_session"
+      ],
+      [
+        "start",
+        "await_background"
+      ],
+      [
+        "release_session",
+        "end"
+      ]
+    ]
+  }
+}

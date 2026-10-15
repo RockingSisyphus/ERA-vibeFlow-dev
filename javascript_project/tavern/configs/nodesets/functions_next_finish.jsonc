@@ -1,0 +1,151 @@
+{
+  "type_key": "era.tavern.flow.functions_next_finish",
+  "display_name": "等待作者请求并交还结果",
+  "description": "已取得结果直接交还；挂起路径由原生 Loop 等待和再次检查，原 request/done/wait 分支保持可见。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.call.frame",
+      "cardinality": "exactly_one",
+      "display_name": "本次调用、实例资源与上一节点的事实"
+    }
+  ],
+  "provides": [
+    {
+      "key": "era_tavern_flow_functions_next_finish_frame",
+      "type": "era.tavern.call.frame",
+      "display_name": "处理后的资源与事实"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.call.frame",
+        "display_name": "同实例调用与资源",
+        "required": true
+      }
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.call.frame",
+        "cardinality": "exactly_one",
+        "as": "frame",
+        "display_name": "本段明确结果"
+      }
+    ],
+    "max_steps": 11,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.tavern.initialize.start",
+        "display_name": "开始当前原生流程",
+        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+      },
+      {
+        "id": "choose_ready",
+        "type_used": "era.tavern.functions_next_finish.choose_ready",
+        "display_name": "区分已捕获结果与挂起资源",
+        "description": "同步段已取得 request/done 时直接返回；只有 pending 才进入原生等待 Loop。"
+      },
+      {
+        "id": "ready",
+        "type_used": "era.tavern.functions_next_finish.ready",
+        "display_name": "转交已捕获作者结果",
+        "description": "只交还同步段捕获的结果，不再次取队列。"
+      },
+      {
+        "id": "wait_request_loop",
+        "type_used": "vibeflow.loop.while",
+        "display_name": "等待作者请求或完成循环",
+        "description": "每轮检查当前队列、finished 和 pending；未达到终态时等待唤醒，达到 request/done 后退出，不忙轮询。",
+        "loop": {
+          "body": "era.tavern.flow.functions_next_wait_request_item",
+          "max_iterations": null,
+          "stop_when": {
+            "from": "done",
+            "equals": true
+          },
+          "carry": [
+            {
+              "from": "era.tavern.call.frame.next_state",
+              "as": "frame",
+              "update": "frame"
+            }
+          ],
+          "outputs": [
+            {
+              "from": "frame",
+              "as": "functions_next_wait_request_loop_frame"
+            }
+          ]
+        },
+        "requires": [
+          {
+            "type": "era.tavern.call.frame.next_state",
+            "cardinality": "exactly_one",
+            "display_name": "本次调用、实例资源与上一节点的事实"
+          }
+        ],
+        "provides": [
+          {
+            "key": "functions_next_wait_request_loop_frame",
+            "type": "era.tavern.frame.functions_next.check_active",
+            "display_name": "等待作者请求或完成完成后的处理资料"
+          }
+        ]
+      },
+      {
+        "id": "join_ready",
+        "type_used": "era.tavern.functions_next_finish.join_ready",
+        "display_name": "汇合当前作者结果",
+        "description": "仅汇合直接取得或原生 Loop 返回的一个结果，不读取作者队列。"
+      },
+      {
+        "id": "return_request",
+        "type_used": "era.tavern.functions_next.return_request",
+        "display_name": "交还请求或作者调用诊断",
+        "description": "返回原 request/done 形状，不将作者 commit 送进会等待自身的外部 FIFO。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.tavern.initialize.end",
+        "display_name": "结束当前原生流程",
+        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+      }
+    ],
+    "edges": [
+      {
+        "from": "choose_ready",
+        "to": "ready",
+        "when": "era_tavern_functions_next_finish_choose_ready_route == 'ready'"
+      },
+      {
+        "from": "choose_ready",
+        "to": "wait_request_loop",
+        "when": "era_tavern_functions_next_finish_choose_ready_route == 'pending'"
+      },
+      [
+        "ready",
+        "join_ready"
+      ],
+      [
+        "wait_request_loop",
+        "join_ready"
+      ],
+      [
+        "join_ready",
+        "return_request"
+      ],
+      [
+        "start",
+        "choose_ready"
+      ],
+      [
+        "return_request",
+        "end"
+      ]
+    ]
+  }
+}

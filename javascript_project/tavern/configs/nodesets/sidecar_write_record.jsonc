@@ -1,0 +1,100 @@
+{
+  "type_key": "era.tavern.flow.sidecar_write_record",
+  "display_name": "保存独立状态文件",
+  "description": "实现 era.tavern.sidecar.write_record；输入沿用 era.tavern.sidecar.write_record.request，输出沿用 era.tavern.sidecar.write_record.result，完成方式保持 suspend。 原节点保留；仅把首次等待划为同步发起与异步等待，后续处理在对应 finish 流程。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.call.frame",
+      "cardinality": "exactly_one",
+      "display_name": "当前实例与调用资料"
+    }
+  ],
+  "provides": [
+    {
+      "key": "era_tavern_flow_sidecar_write_record_frame",
+      "type": "era.tavern.frame.sidecar_write_record.started",
+      "display_name": "当前步骤的资源与已捕获事实"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "sync",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.call.frame",
+        "display_name": "调用与资源资料",
+        "required": true
+      }
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.frame.sidecar_write_record.started",
+        "cardinality": "exactly_one",
+        "as": "frame",
+        "display_name": "本次已经发起的等待资源"
+      }
+    ],
+    "max_steps": 11,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.tavern.initialize.start",
+        "display_name": "开始当前原生流程",
+        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+      },
+      {
+        "id": "check_record",
+        "type_used": "era.tavern.sidecar_write_record.check_record",
+        "display_name": "检查文件标识与记录结构",
+        "description": "检查原 SidecarId 和完整记录形状，构造原用户 files 文件名。"
+      },
+      {
+        "id": "check_target",
+        "type_used": "era.tavern.sidecar_write_record.check_target",
+        "display_name": "复核消息依据与当前指针",
+        "description": "保留原 sourceBasis 和 expectedSidecarId 检查，拒绝陈旧写入。"
+      },
+      {
+        "id": "encode_file",
+        "type_used": "era.tavern.sidecar_write_record.encode_file",
+        "display_name": "编码现有 JSON 文件内容",
+        "description": "复制记录并使用原文件端点所需编码，不改变持久化格式。"
+      },
+      {
+        "id": "start_operation",
+        "type_used": "era.tavern.sidecar_write_record.start_operation",
+        "display_name": "核对当前来源并发起 Sidecar 上传",
+        "description": "保留原记录、来源核对和编码节点；在同一同步段再次核对指针及消息依据，调用一次 /api/files/upload。 此 Node 只发起原始操作并创建等待资源；不执行异步续体。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.tavern.initialize.end",
+        "display_name": "结束当前原生流程",
+        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+      }
+    ],
+    "edges": [
+      [
+        "check_record",
+        "check_target"
+      ],
+      [
+        "check_target",
+        "encode_file"
+      ],
+      [
+        "encode_file",
+        "start_operation"
+      ],
+      [
+        "start",
+        "check_record"
+      ],
+      [
+        "start_operation",
+        "end"
+      ]
+    ]
+  }
+}

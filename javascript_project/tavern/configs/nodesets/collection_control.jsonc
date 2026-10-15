@@ -1,0 +1,135 @@
+{
+  "type_key": "era.tavern.flow.collection_control",
+  "display_name": "依次处理收集窗口的计时指令",
+  "description": "按原命令顺序处理 collection-control 中的所有 timer 操作，单次延迟准入仍直接使用 timer_control。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.call.frame",
+      "cardinality": "exactly_one",
+      "display_name": "本次调用及实例资源令牌"
+    }
+  ],
+  "provides": [
+    {
+      "key": "era_tavern_flow_collection_control_frame",
+      "type": "era.tavern.call.frame",
+      "display_name": "操作结果及后续处理所需的资源令牌"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "sync",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.call.frame",
+        "display_name": "调用与资源资料",
+        "required": true
+      }
+    ],
+    "max_steps": 11,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.tavern.initialize.start",
+        "display_name": "开始当前原生流程",
+        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+      },
+      {
+        "id": "prepare_commands",
+        "type_used": "era.tavern.collection_control.prepare_commands",
+        "display_name": "准备原定时器指令列表",
+        "description": "保留 frame 中命令的原顺序和 token/dueAt，初始化处理位置。"
+      },
+      {
+        "id": "apply_commands_loop",
+        "type_used": "vibeflow.loop.while",
+        "display_name": "逐项执行计时指令循环",
+        "description": "每轮取得一条指令，调用共享 timer_control 并推进位置；所有命令完成后退出。",
+        "requires": [
+          {
+            "type": "era.tavern.frame.collection_control.prepare_commands",
+            "cardinality": "exactly_one",
+            "display_name": "当前请求、实例资源令牌及此前步骤取得的事实"
+          }
+        ],
+        "provides": [
+          {
+            "key": "era_tavern_flow_collection_control_apply_commands_loop_frame",
+            "type": "era.tavern.frame.collection_control.prepare_commands",
+            "display_name": "逐项执行计时指令完成后的处理资料"
+          }
+        ],
+        "loop": {
+          "body": "era.tavern.flow.collection_control_apply_commands_item",
+          "max_iterations": null,
+          "stop_when": {
+            "from": "done",
+            "equals": true
+          },
+          "carry": [
+            {
+              "from": "era.tavern.frame.collection_control.prepare_commands",
+              "as": "frame",
+              "update": "frame"
+            }
+          ],
+          "outputs": [
+            {
+              "from": "frame",
+              "as": "era_tavern_flow_collection_control_apply_commands_loop_frame"
+            }
+          ]
+        }
+      },
+      {
+        "id": "apply_commands",
+        "type_used": "era.tavern.collection_control.apply_commands",
+        "display_name": "汇总逐项执行计时指令",
+        "description": "将循环的终态资料转换为后续步骤使用的结果；不重复处理已经完成的条目。"
+      },
+      {
+        "id": "return_control",
+        "type_used": "era.tavern.collection_control.return_control",
+        "display_name": "返回控制帧确认",
+        "description": "全部命令完成后交还原同步确认，不遗漏列表尾部命令。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.tavern.initialize.end",
+        "display_name": "结束当前原生流程",
+        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+      }
+    ],
+    "edges": [
+      [
+        "prepare_commands",
+        "apply_commands_loop"
+      ],
+      [
+        "apply_commands",
+        "return_control"
+      ],
+      [
+        "apply_commands_loop",
+        "apply_commands"
+      ],
+      [
+        "start",
+        "prepare_commands"
+      ],
+      [
+        "return_control",
+        "end"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.call.frame",
+        "cardinality": "exactly_one",
+        "display_name": "完成后的操作资料",
+        "as": "frame"
+      }
+    ]
+  }
+}

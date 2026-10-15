@@ -1,7 +1,6 @@
 # ERA 浏览器宿主边界
 
-此目录是 ERA 的浏览器宿主组合层：负责启动/停止 VibeFlow Service、注册同步宏、挂载 UI，及把 Tavern
-Helper 的事件和高层 API 投影为受限 Host 能力。真实业务规则不应在此复制。
+此目录是 ERA 的浏览器宿主组合层：调用一次原生辅助workflow入口、提供Tavern API发现及展示端口、注册同步宏和挂载UI。事件、Capability、任务和资源生命周期由javascript_project/tavern的Node组合执行。真实业务规则不应在此复制。
 
 开始前阅读：
 
@@ -12,11 +11,8 @@ Helper 的事件和高层 API 投影为受限 Host 能力。真实业务规则�
 
 - 聊天、变量、世界书和显示更新优先使用 Tavern Helper 高层 API；不得以 DOM 或 `exported.sillytavern.d.ts`
   替代已有高层操作。
-- 只允许 `service/tavern-adapter.ts` 把 Tavern 副作用实现为 Host 能力；不在 UI、宏或旧 `events/**`
-  中新增第二套业务调度器。
+- Tavern副作用由 `javascript_project/tavern` 的已登记Node执行；此目录保留API发现、公共Facade和展示，不在UI、宏或旧events中新增业务调度器。
 - 公开 `era:*` 事件、持久化数据格式、通知顺序和宏语义是 ABI；改动前必须明确用户批准，并同时更新合同测试和现行设计文档。
-- 生命周期必须成对管理：注册的 listener、DOM、style、timer、global 入口和 pending work 在
-  `pagehide`/stop 后必须由同一实例清理。
+- 生命周期必须成对管理：注册的 listener、DOM、style、timer、global 入口和 pending work 由辅助workflow资源Node在pagehide/取消及finally中清理，并等待实际异步收尾。
 
-按子目录继续读取局部 `AGENTS.md`。`events/**`、`core/**`
-的旧代码仅在现有差分测试所规定的范围内作为兼容 oracle；不要把它当作新的生产实现入口。
+按子目录继续读取局部 `AGENTS.md`。`events/**`、`core/**`中的共享实现与差分参考按真实导入保留；新领域逻辑以Service为入口，不在这些目录恢复旧Host调度。

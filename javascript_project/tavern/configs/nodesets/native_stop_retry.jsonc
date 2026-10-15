@@ -1,0 +1,106 @@
+{
+  "type_key": "era.tavern.flow.native_stop_retry",
+  "display_name": "命令阶段后的一次原生停止尝试",
+  "description": "只接受当前实例仍有效的once票据；一次尝试后释放记录，陈旧回调不执行停止。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.call.frame",
+      "cardinality": "exactly_one",
+      "display_name": "当前实例及启动资料"
+    }
+  ],
+  "provides": [
+    {
+      "key": "era_tavern_flow_native_stop_retry_frame",
+      "type": "era.tavern.frame.native_stop_retry.returned",
+      "display_name": "该流程的唯一结果"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "sync",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.call.frame",
+        "required": true,
+        "display_name": "当前实例及调用资料"
+      }
+    ],
+    "max_steps": 24,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.tavern.initialize.start",
+        "display_name": "开始当前资源流程",
+        "description": "保持原生控制入口或出口，不创建额外资源。"
+      },
+      {
+        "id": "choose_active",
+        "type_used": "era.tavern.owned.choose_native_retry",
+        "display_name": "核对一次停止监听是否仍属于本实例",
+        "description": "当前票据仍有效且实例未停止时允许一次原生停止尝试；已取消或被替换的回调直接结束，避免影响后来生成。"
+      },
+      {
+        "id": "attempt_once",
+        "type_used": "era.tavern.owned.attempt_native_retry",
+        "display_name": "执行此前登记的一次原生停止",
+        "description": "确认once已自然注销后移除本地票据，再调用原生停止API一次；不重新登记监听，不重复停止辅助模型。"
+      },
+      {
+        "id": "ignore_stale",
+        "type_used": "era.tavern.owned.ignore_native_retry",
+        "display_name": "结束已失效的一次停止回调",
+        "description": "陈旧或已经取消的监听不调用停止API，只形成当前回调的空结果。"
+      },
+      {
+        "id": "return_retry",
+        "type_used": "era.tavern.owned.return_native_retry",
+        "display_name": "交回一次停止回调的结果",
+        "description": "汇合有效尝试或失效路径的唯一结果，交回原生同步入口。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.tavern.initialize.end",
+        "display_name": "结束当前资源流程",
+        "description": "保持原生控制入口或出口，不创建额外资源。"
+      }
+    ],
+    "edges": [
+      [
+        "start",
+        "choose_active"
+      ],
+      {
+        "from": "choose_active",
+        "to": "attempt_once",
+        "when": "owned_choose_native_retry_route == 'active'"
+      },
+      {
+        "from": "choose_active",
+        "to": "ignore_stale",
+        "when": "owned_choose_native_retry_route == 'stale'"
+      },
+      [
+        "attempt_once",
+        "return_retry"
+      ],
+      [
+        "ignore_stale",
+        "return_retry"
+      ],
+      [
+        "return_retry",
+        "end"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.frame.native_stop_retry.returned",
+        "cardinality": "exactly_one",
+        "as": "frame",
+        "display_name": "该流程的完成结果"
+      }
+    ]
+  }
+}

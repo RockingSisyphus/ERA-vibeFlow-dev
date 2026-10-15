@@ -563,6 +563,16 @@ function parse_configuration(entry: Entry, is_release = false): (_env: any, argv
         // VibeFlow JavaScript AOT 的稳定浏览器入口是 workflow.js；测试与运行探针
         // 已使用同一入口，生产 webpack 不能继续指向已废弃的 era-service.js。
         '@era/vibeflow-service$': path.resolve(import.meta.dirname, '../generated/era-service/workflow.js'),
+        '@era/vibeflow-tavern$': path.resolve(
+          import.meta.dirname,
+          '../javascript_project/tavern/generated/bindings.mjs',
+        ),
+        '@era/vibeflow-tavern-sync$': path.resolve(import.meta.dirname, '../generated/era-tavern/sync/workflow.js'),
+        '@era/vibeflow-tavern-async$': path.resolve(import.meta.dirname, '../generated/era-tavern/async/workflow.js'),
+        '@era/vibeflow-tavern-runtime$': path.resolve(
+          import.meta.dirname,
+          '../generated/era-tavern/runtime/workflow.js',
+        ),
       },
     },
     plugins: (is_release
@@ -678,6 +688,7 @@ function parse_configuration(entry: Entry, is_release = false): (_env: any, argv
         request.startsWith('ERA变量框架') ||
         request === '@era/vibeflow-macro' ||
         request === '@era/vibeflow-service' ||
+        request.startsWith('@era/vibeflow-tavern') ||
         request === '@era/example-resources' ||
         request.startsWith('-') ||
         request.startsWith('.') ||

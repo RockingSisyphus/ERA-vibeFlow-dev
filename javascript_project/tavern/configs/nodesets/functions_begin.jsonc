@@ -1,0 +1,100 @@
+{
+  "type_key": "era.tavern.flow.functions_begin",
+  "display_name": "建立作者函数上下文并安排调用",
+  "description": "实现 era.tavern.functions.begin；输入沿用 era.working.request，输出沿用 era.working.result，完成方式保持 immediate。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.call.frame",
+      "cardinality": "exactly_one",
+      "display_name": "本次调用及实例资源令牌"
+    }
+  ],
+  "provides": [
+    {
+      "key": "era_tavern_flow_functions_begin_frame",
+      "type": "era.tavern.call.frame",
+      "display_name": "操作结果及后续处理所需的资源令牌"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "sync",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.call.frame",
+        "display_name": "调用与资源资料",
+        "required": true
+      }
+    ],
+    "max_steps": 10,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.tavern.initialize.start",
+        "display_name": "开始当前原生流程",
+        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+      },
+      {
+        "id": "check_call",
+        "type_used": "era.tavern.functions_begin.check_call",
+        "display_name": "检查调用身份与消息依据",
+        "description": "拒绝重复调用或陈旧来源；保留参数复制和原错误身份。"
+      },
+      {
+        "id": "bind_context",
+        "type_used": "era.tavern.functions_begin.bind_context",
+        "display_name": "建立作者接口与请求队列",
+        "description": "为本次函数参数绑定受限 Facade、独立队列、pending 记录和取消监听。"
+      },
+      {
+        "id": "schedule_tool",
+        "type_used": "era.tavern.functions_begin.schedule_tool",
+        "display_name": "把原生工具调用交给后台流程",
+        "description": "登记 ToolManager 调用任务后即返回 started，不等待作者函数自身结束。"
+      },
+      {
+        "id": "return_call",
+        "type_used": "era.tavern.functions_begin.return_call",
+        "display_name": "交还作者函数启动确认",
+        "description": "保留原 id 和 started 结果，后续 next/acknowledge 由 Service 同一块循环执行。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.tavern.initialize.end",
+        "display_name": "结束当前原生流程",
+        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+      }
+    ],
+    "edges": [
+      [
+        "check_call",
+        "bind_context"
+      ],
+      [
+        "bind_context",
+        "schedule_tool"
+      ],
+      [
+        "schedule_tool",
+        "return_call"
+      ],
+      [
+        "start",
+        "check_call"
+      ],
+      [
+        "return_call",
+        "end"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.call.frame",
+        "cardinality": "exactly_one",
+        "display_name": "完成后的操作资料",
+        "as": "frame"
+      }
+    ]
+  }
+}

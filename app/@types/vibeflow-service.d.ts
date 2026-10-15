@@ -8,12 +8,11 @@ declare module '@era/vibeflow-service' {
     readonly trace?: 'off' | 'boundary' | 'full';
     readonly onTrace?: (event: Readonly<Record<string, unknown>>) => void;
   }
-  export interface WorkflowHost {
-    readonly signal: VibeFlowAbortSignal;
-    readonly started: boolean;
-    start(): Promise<void>;
-    stop(): Promise<void>;
-    runWorkflowAsync(inputs: WorkflowInputs, options?: WorkflowRunOptions): Promise<WorkflowOutputs>;
-  }
-  export function createWorkflowHost(): WorkflowHost;
+}
+
+declare module '@era/vibeflow-service' {
+  export function runWorkflowAsync(
+    inputs: WorkflowInputs,
+    options?: WorkflowRunOptions & { readonly capabilities?: Readonly<Record<string, unknown>> },
+  ): Promise<WorkflowOutputs>;
 }

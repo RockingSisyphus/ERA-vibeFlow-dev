@@ -36,7 +36,9 @@
     "verify:aot": "node scripts/check-vibeflow-macro-build.mjs",
     "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm typecheck:quality && pnpm verify:aot && pnpm quality && pnpm test:unit",
     "dump": "node dump_schema.ts",
-    "sync": "node tavern_sync.mjs"
+    "sync": "node tavern_sync.mjs",
+    "build:workflows": "node scripts/build-native-workflows.mjs",
+    "test:integration:tavern": "node scripts/native-tavern-probe.mjs"
   },
   "browserslist": [
     "defaults and partially supports es6-module"
@@ -113,7 +115,7 @@
   },
   "dependencies": {
     "@era/example-resources": "file:../packages/era-example-resources/era-example-resources-0.1.1.tgz",
-    "@era/vibeflow-expression": "file:vendor/era-vibeflow-expression-0.3.0.tgz",
+    "@era/vibeflow-expression": "file:vendor/era-vibeflow-expression-0.3.2.tgz",
     "@era/vibeflow-floor-snapshot": "file:../packages/era-floor-snapshot/era-vibeflow-floor-snapshot-0.1.3.tgz",
     "@era/vibeflow-macro-syntax": "file:../packages/era-macro-syntax/era-vibeflow-macro-syntax-0.1.1.tgz",
     "@era/vibeflow-workbench": "file:../packages/era-workbench/era-vibeflow-workbench-0.1.1.tgz",

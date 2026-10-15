@@ -1,0 +1,132 @@
+{
+  "type_key": "era.tavern.flow.notification_start_item",
+  "display_name": "逐项同步发起后置通知",
+  "description": "只发起，不等待；通知回调重入发生在同一 send 调用，且结果帧已先登记去重。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.frame.notification_batch.begin",
+      "cardinality": "exactly_one",
+      "display_name": "当前帧、实例资源与通知位置"
+    }
+  ],
+  "provides": [
+    {
+      "key": "era_tavern_flow_notification_start_item_frame",
+      "type": "era.tavern.call.frame",
+      "display_name": "本次原生步骤产生的资料"
+    },
+    {
+      "key": "era_tavern_flow_notification_start_item_done",
+      "type": "era.tavern.done.notification_start",
+      "display_name": "本次原生步骤产生的资料"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "sync",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.frame.notification_batch.begin",
+        "required": true,
+        "display_name": "本次调用与资源"
+      }
+    ],
+    "max_steps": 14,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.tavern.initialize.start",
+        "display_name": "开始当前原生流程",
+        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+      },
+      {
+        "id": "choose_item",
+        "type_used": "era.tavern.notification_start_item.choose_item",
+        "display_name": "选择普通通知、阶段订阅或结束",
+        "description": "有当前通知才进入发起路径；按其原 type 选择 event 或 handoff；列表结束直接返回 done。"
+      },
+      {
+        "id": "start_event",
+        "type_used": "era.tavern.notification_start_item.start_event",
+        "display_name": "同步发起原 eventEmit",
+        "description": "立即以原参数调用 eventEmit，回调重入也在同轮接纳；把返回 Promise 或启动异常保存为受控资源，不等待也不抛给发送者。"
+      },
+      {
+        "id": "start_handoff",
+        "type_used": "era.tavern.notification_start_item.start_handoff",
+        "display_name": "同步发起阶段完成订阅",
+        "description": "核对completionId仍待交接后，同步捕获订阅顺序、只读观察副本与周期控制器；固定机械调用进入本root异步原生订阅Loop，保存proceed等待，不调用旧GenerationSubscriptions.publish。"
+      },
+      {
+        "id": "empty",
+        "type_used": "era.tavern.notification_start_item.empty",
+        "display_name": "返回通知发起完成标记",
+        "description": "没有条目时不发射回调，也不创建额外通知组。"
+      },
+      {
+        "id": "join_result",
+        "type_used": "era.tavern.notification_start_item.join_result",
+        "display_name": "汇合当前唯一通知发起结果",
+        "description": "严格交还当前实际分支的一个资源和处理位置。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.tavern.initialize.end",
+        "display_name": "结束当前原生流程",
+        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+      }
+    ],
+    "edges": [
+      {
+        "from": "choose_item",
+        "to": "start_event",
+        "when": "era_tavern_notification_start_item_choose_item_route == 'event'"
+      },
+      {
+        "from": "choose_item",
+        "to": "start_handoff",
+        "when": "era_tavern_notification_start_item_choose_item_route == 'handoff'"
+      },
+      {
+        "from": "choose_item",
+        "to": "empty",
+        "when": "era_tavern_notification_start_item_choose_item_route == 'done'"
+      },
+      [
+        "start_event",
+        "join_result"
+      ],
+      [
+        "start_handoff",
+        "join_result"
+      ],
+      [
+        "empty",
+        "join_result"
+      ],
+      [
+        "start",
+        "choose_item"
+      ],
+      [
+        "join_result",
+        "end"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.frame.notification_start_item.final",
+        "cardinality": "exactly_one",
+        "as": "frame",
+        "display_name": "当前阶段结果"
+      },
+      {
+        "type": "era.tavern.done.notification_start",
+        "cardinality": "exactly_one",
+        "as": "done",
+        "display_name": "是否完成遍历"
+      }
+    ]
+  }
+}

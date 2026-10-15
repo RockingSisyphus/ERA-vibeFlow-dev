@@ -1,0 +1,100 @@
+{
+  "type_key": "era.tavern.flow.barrier_wait",
+  "display_name": "等待 high-water 回执和生成交接",
+  "description": "等待指定序号及之前请求全部到终态，再等待原生生成交接；看门狗只报告等待，不自动放行。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.call.frame",
+      "cardinality": "exactly_one",
+      "display_name": "当前实例与调用资料"
+    }
+  ],
+  "provides": [
+    {
+      "key": "era_tavern_flow_barrier_wait_frame",
+      "type": "era.tavern.call.frame",
+      "display_name": "当前步骤的资源与已捕获事实"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.call.frame",
+        "display_name": "调用与资源资料",
+        "required": true
+      }
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.call.frame",
+        "cardinality": "exactly_one",
+        "display_name": "完成后的操作资料",
+        "as": "frame"
+      }
+    ],
+    "max_steps": 12,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.tavern.initialize.start",
+        "display_name": "开始当前原生流程",
+        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+      },
+      {
+        "id": "await_receipts",
+        "type_used": "era.tavern.barrier_wait.await_receipts",
+        "display_name": "等待已捕获来源全部结算",
+        "description": "等待每个原始 done 到终态，汇总失败和取消结论；停止取消仍按原接口完成。"
+      },
+      {
+        "id": "report_barrier",
+        "type_used": "era.tavern.barrier_wait.report_barrier",
+        "display_name": "按既有合同报告屏障失败",
+        "description": "保持现有生成失败报告和兼容 fail-open 行为，不新增自动成功或超时策略。"
+      },
+      {
+        "id": "await_handoff",
+        "type_used": "era.tavern.barrier_wait.await_handoff",
+        "display_name": "等待当前阶段交接完成",
+        "description": "继续等待此前登记的阶段交接，避免只完成 FIFO 片段就放行正文或 UI。"
+      },
+      {
+        "id": "cleanup_watchdog",
+        "type_used": "era.tavern.barrier_wait.cleanup_watchdog",
+        "display_name": "清理看门狗和已消费失败记录",
+        "description": "成功、失败或取消均清理本次 watchdog；只消费已覆盖序号的失败记录。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.tavern.initialize.end",
+        "display_name": "结束当前原生流程",
+        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+      }
+    ],
+    "edges": [
+      [
+        "await_receipts",
+        "report_barrier"
+      ],
+      [
+        "report_barrier",
+        "await_handoff"
+      ],
+      [
+        "await_handoff",
+        "cleanup_watchdog"
+      ],
+      [
+        "start",
+        "await_receipts"
+      ],
+      [
+        "cleanup_watchdog",
+        "end"
+      ]
+    ]
+  }
+}

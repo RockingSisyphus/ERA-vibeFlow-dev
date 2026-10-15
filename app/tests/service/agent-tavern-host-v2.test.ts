@@ -10,17 +10,15 @@ import {
 } from '../../../javascript_project/service/base_lib/agent/agent_generation_context';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { AgentTavernHost } from '../../src/ERA变量框架/service/agent-tavern-host';
+import { fixture } from '../native-tavern/native-fixture.mjs';
+const owners: any[] = [];
+type AgentOperations = Record<string, (input: any, context: any) => any>;
 import { agentExecutionRecords, currentAgentRecordChat } from '../../src/ERA变量框架/service/agent-execution-records';
 
 const signal = new AbortController().signal;
 const capabilityContext = { signal };
 
-function save(
-  operations: AgentTavernHost['operations'],
-  input: Readonly<Record<string, unknown>>,
-  context: { signal: AbortSignal },
-) {
+function save(operations: AgentOperations, input: Readonly<Record<string, unknown>>, context: { signal: AbortSignal }) {
   const state = operations.read_connection_state({ id: connectionId(input.id) }, context) as ConnectionState;
   return operations.upsert_connection_profile(
     { ...planConnectionSave(input, state), keyProvider: input.keyProvider },
@@ -30,7 +28,7 @@ function save(
 
 /** 调用原 Node 的真实写入入口，Host 测试只绑定能力上下文。 */
 function writeSession(
-  operations: AgentTavernHost['operations'],
+  operations: AgentOperations,
   input: Readonly<Record<string, unknown>>,
   context: { signal: AbortSignal },
 ) {
@@ -106,17 +104,65 @@ describe('AgentTavernHost V2 local routes', () => {
     );
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    for (const owner of owners.splice(0)) {
+      owner.page.dispatchEvent(new Event('pagehide'));
+      await owner.work;
+    }
     agentExecutionRecords.clear();
     vi.unstubAllGlobals();
     vi.clearAllMocks();
   });
 
-  function host(): AgentTavernHost {
-    return new AgentTavernHost({
-      internalMessageWrites: new Map(),
-      readIdentity: () => ({ chatId: 'chat-v2', groupId: null }),
+  async function host() {
+    const owner = await fixture(undefined, {
+      dynamicApi: globalThis,
+      api: { location: { origin: 'http://tavern.test' } },
+      agentRecordView: agentExecutionRecords,
+      observeAgentRequest: (status: string, value: any) => {
+        if (status === 'begin')
+          agentExecutionRecords.begin(
+            value.id,
+            value.chat,
+            value.stage,
+            value.input,
+            value.hostConfiguration,
+            value.requestContext,
+          );
+        else agentExecutionRecords.finish(value.id, status as 'responded' | 'failed', value.response);
+      },
     });
+    owners.push(owner);
+    const unwrap = (error: any): any => {
+      while (error?.code === 'VF_NODE_FAILED' && error.cause) error = error.cause;
+      return error;
+    };
+    const operations: AgentOperations = Object.fromEntries(
+      Object.entries(owner.caps['era.tavern.agent']).map(([key, call]: [string, any]) => [
+        key,
+        (...args: any[]) => {
+          try {
+            const result = call(...args);
+            return result?.then
+              ? result.catch((error: any) => {
+                  throw unwrap(error);
+                })
+              : result;
+          } catch (error) {
+            throw unwrap(error);
+          }
+        },
+      ]),
+    );
+    return {
+      operations,
+      owner,
+      readSessionForViewer: () => owner.client.readAgentSession(),
+      stop: async () => {
+        owner.page.dispatchEvent(new Event('pagehide'));
+        await owner.work;
+      },
+    };
   }
 
   it('releases the native waiter from the native event and cleans up its observer', async () => {
@@ -125,9 +171,12 @@ describe('AgentTavernHost V2 local routes', () => {
     vi.stubGlobal('eventOn', (name: string, handler: (messageId: number) => void) => handlers.set(name, handler));
     vi.stubGlobal('eventRemoveListener', (name: string) => handlers.delete(name));
     vi.stubGlobal('getChatMessages', () => [{ message_id: 3, message: 'story', swipe_id: 0 }]);
-    const instance = host();
-    const stop = instance.nativeGeneration.observe();
-    instance.nativeGeneration.start();
+    const instance = await host();
+    const stop = instance.stop;
+    instance.owner.direct({
+      action: 'event',
+      input: { type: 'generation_started', source: 'tavern', args: ['normal', {}, false] },
+    });
     writeSession(
       instance.operations,
       {
@@ -149,14 +198,14 @@ describe('AgentTavernHost V2 local routes', () => {
     expect(completed).toHaveBeenCalledWith(
       expect.objectContaining({ status: 'completed', executionId: 'cycle-1', messageId: 3 }),
     );
-    stop();
+    await stop();
     expect(handlers.size).toBe(0);
-    instance.stop();
+    await instance.stop();
   });
 
   it('does not wait for a future native event when Helper creates messages outside generation', async () => {
     vi.stubGlobal('getChatMessages', () => []);
-    const instance = host();
+    const instance = await host();
     writeSession(
       instance.operations,
       { chatKey: 'test-chat', nativeGeneration: true, session: { status: 'opened', execution: { id: 'manual' } } },
@@ -165,11 +214,11 @@ describe('AgentTavernHost V2 local routes', () => {
     await expect(
       instance.operations.await_native_completion({ chatId: 'test-chat', executionId: 'manual' }, capabilityContext),
     ).resolves.toMatchObject({ status: 'not-native' });
-    instance.stop();
+    await instance.stop();
   });
 
-  it('records native story without planning and retains its request across settlement writes', () => {
-    const instance = host();
+  it('records native story without planning and retains its request across settlement writes', async () => {
+    const instance = await host();
     writeSession(
       instance.operations,
       { chatKey: 'test-chat', nativeGeneration: true, session: { status: 'opened' } },
@@ -200,11 +249,11 @@ describe('AgentTavernHost V2 local routes', () => {
       capabilityContext,
     );
     expect(instance.readSessionForViewer()?.storyRequestId).not.toBe(id);
-    instance.stop();
+    await instance.stop();
   });
 
-  it('captures a named preset as an ordered, sanitized snapshot', () => {
-    const facts = host().operations.capture_preset({ name: 'Preset B' }, capabilityContext);
+  it('captures a named preset as an ordered, sanitized snapshot', async () => {
+    const facts = (await host()).operations.capture_preset({ name: 'Preset B' }, capabilityContext);
     const snapshot = captureAgentPresetSnapshot(facts);
     expect(snapshot).toEqual({
       source: 'snapshot',
@@ -225,7 +274,9 @@ describe('AgentTavernHost V2 local routes', () => {
       { role: 'assistant', content: 'Ready' },
     ];
     const requestContext = { executionId: 'manual-1', trigger: 'manual-planning', attemptIndex: 0, intent: 'initial' };
-    const result = (await host().operations.generate(
+    const result = (await (
+      await host()
+    ).operations.generate(
       {
         generationId: 'macros',
         stage: 'planning',
@@ -255,7 +306,7 @@ describe('AgentTavernHost V2 local routes', () => {
   });
 
   it('stores keys locally while exposing only summaries and preserving an empty edit key', async () => {
-    const operations = host().operations;
+    const operations = (await host()).operations;
     const created = (await save(
       operations,
       { id: 'lab-a', name: 'Lab A', apiUrl: 'http://127.0.0.1:4010/v1', keyProvider: () => 'top-secret-key' },
@@ -277,7 +328,7 @@ describe('AgentTavernHost V2 local routes', () => {
   });
 
   it('loads and generates through the selected local profile without returning the key', async () => {
-    const operations = host().operations;
+    const operations = (await host()).operations;
     await save(
       operations,
       { id: 'lab-b', name: 'Lab B', apiUrl: 'http://127.0.0.1:4020/v1', keyProvider: () => 'another-secret' },
@@ -286,7 +337,7 @@ describe('AgentTavernHost V2 local routes', () => {
     const listed = await operations.list_connection_models({ id: 'lab-b' }, capabilityContext);
     expect(listed).toMatchObject({ models: ['model-a', 'model-b'] });
     expect(fetchMock).toHaveBeenCalledWith(
-      '/api/backends/chat-completions/status',
+      'http://tavern.test/api/backends/chat-completions/status',
       expect.objectContaining({
         method: 'POST',
         body: JSON.stringify({
@@ -323,7 +374,7 @@ describe('AgentTavernHost V2 local routes', () => {
   });
 
   it('distinguishes a legitimate empty model list from a failed status request', async () => {
-    const operations = host().operations;
+    const operations = (await host()).operations;
     fetchMock.mockResolvedValueOnce(
       new Response(JSON.stringify({ data: [] }), {
         status: 200,
@@ -348,7 +399,7 @@ describe('AgentTavernHost V2 local routes', () => {
 
   it('never silently falls back when a referenced local profile is missing', async () => {
     await expect(
-      host().operations.generate(
+      (await host()).operations.generate(
         {
           generationId: 'generation-missing',
           userInput: 'plan',

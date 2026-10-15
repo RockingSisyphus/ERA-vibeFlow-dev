@@ -8,7 +8,7 @@
 npm --prefix javascript_project/expression run test:sandbox
 ```
 
-运行器会在系统临时目录构建三份真实入口：直接表达式引擎、Node AOT 与 Browser AOT；每条用例都要求三者产出完全一致的状态、压缩候选和诊断。
+运行前按本项目AGENTS设置开发目录内的本次独立临时目录（TMPDIR/TMP/TEMP），结束后即时清理。运行器会在该目录构建三份真实入口：直接表达式引擎、Node AOT 与 Browser AOT；每条用例都要求三者产出完全一致的状态、压缩候选和诊断。
 
 ## 用例格式
 

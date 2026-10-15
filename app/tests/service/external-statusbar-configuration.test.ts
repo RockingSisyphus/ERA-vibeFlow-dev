@@ -1,3 +1,4 @@
+import { patchCharacter } from '../native-tavern/character-config-fixture.mjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const host = vi.hoisted(() => ({
@@ -8,8 +9,8 @@ const host = vi.hoisted(() => ({
 }));
 vi.mock('../../src/ERA变量框架/service/tavern-browser-host', () => ({ currentTavernContext: () => host }));
 import {
-  patchExternalStatusbar,
   readExternalConfig,
+  refreshExternalStatusbarSelection,
   externalStatusbarSelection,
 } from '../../src/ERA变量框架/service/external-statusbar-configuration';
 
@@ -71,3 +72,7 @@ describe('external statusbar character persistence', () => {
     expect(host.characters[0].data.extensions).toEqual({});
   });
 });
+
+function patchExternalStatusbar(input: Readonly<Record<string, unknown>>, context: { signal: AbortSignal }) {
+  return patchCharacter(input, context, host, 'patch_external_statusbar', refreshExternalStatusbarSelection);
+}

@@ -4,7 +4,7 @@ import {
   functionApiSettlement,
   prepareFunctionApi,
 } from "./function_block_execution.ts";
-import { syncFailure } from "./sync_contracts.ts";
+import { syncFailure, unwrapCapabilityFailure } from "./sync_contracts.ts";
 import {
   blockExecutionIsTerminal,
   forkPosition,
@@ -246,10 +246,7 @@ export function recordHostFailure(
 ): PositionState {
   const position = forkPosition(input),
     state = position.state;
-  const reason =
-    input.failure?.code === "VF_CAPABILITY_FAILED"
-      ? input.failure.cause
-      : input.failure;
+  const reason = unwrapCapabilityFailure(input.failure) as any;
   if (state.functionFrame) {
     try {
       functions.release({ id: state.functionFrame.id });
@@ -290,11 +287,9 @@ export function functionEffect(
 
 /** 跨节点只传可序列化的错误事实，保留能力包装的原始错误码和说明。 */
 function hostFailureFacts(error: any): any {
+  error = unwrapCapabilityFailure(error);
   return {
     ...(typeof error?.code === "string" ? { code: error.code } : {}),
     message: typeof error?.message === "string" ? error.message : String(error),
-    ...(error?.code === "VF_CAPABILITY_FAILED"
-      ? { cause: hostFailureFacts(error.cause) }
-      : {}),
   };
 }

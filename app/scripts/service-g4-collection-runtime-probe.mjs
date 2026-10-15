@@ -2,7 +2,8 @@
 
 import { createHash } from 'node:crypto';
 import { rmSync } from 'node:fs';
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { mkdir, mkdtemp, readFile, rm, writeFile, symlink } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -14,7 +15,8 @@ const reportPath = resolve(projectRoot, 'reports/service-g4-collection-runtime.j
 
 /** 与 G3 探针一致：保持生成物字节不变，但从 app 包解析运行时依赖。 */
 async function importGeneratedWorkflow() {
-  const directory = await mkdtemp(resolve(import.meta.dirname, '.era-generated-workflow-'));
+  const directory = await mkdtemp(resolve(tmpdir(), 'era-generated-workflow-'));
+  await symlink(resolve(import.meta.dirname, '../node_modules'), resolve(directory, 'node_modules'), 'dir');
   process.once('exit', () => rmSync(directory, { recursive: true, force: true }));
   const stagedPath = resolve(directory, 'workflow.mjs');
   await writeFile(stagedPath, await readFile(generatedModuleUrl), 'utf8');
@@ -93,10 +95,14 @@ function createTavernCapabilities() {
       upsert: async () => ({ status: 'committed' }),
     },
     'era.tavern.character': {
-      patch_external_statusbar: async () => { throw new Error('G4 窗口探针不应执行外置配置写入'); },
-      patch_single_floor: async () => { throw new Error('G4 窗口探针不应执行单层配置写入'); },
+      patch_external_statusbar: async () => {
+        throw new Error('G4 窗口探针不应执行外置配置写入');
+      },
+      patch_single_floor: async () => {
+        throw new Error('G4 窗口探针不应执行单层配置写入');
+      },
       read_greeting_refresh_context: () => ({ group: false, tainted: false, length: 2, first: null }),
-      apply_greeting_refresh: async () => ({ status: "refreshed", reason: "fixture" }),
+      apply_greeting_refresh: async () => ({ status: 'refreshed', reason: 'fixture' }),
       read_main_greeting: async input => ({
         ...input,
         status: 'ready',
@@ -281,7 +287,7 @@ function assertBatch(frame, expectedSequences) {
 
 const stagedWorkflow = await importGeneratedWorkflow();
 const workflow = stagedWorkflow.workflow;
-assert(workflow.VIBEFLOW_WORKFLOW_ABI === 'vibeflow.workflow.v5', 'Workflow ABI 不是 v5。');
+assert(workflow.VIBEFLOW_WORKFLOW_ABI === 'vibeflow.workflow.v6', 'Workflow ABI 不是 v6。');
 
 const controller = new AbortController();
 const port = new FakePort();

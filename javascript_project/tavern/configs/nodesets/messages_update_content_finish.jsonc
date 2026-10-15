@@ -1,0 +1,138 @@
+{
+  "type_key": "era.tavern.flow.messages_update_content_finish",
+  "display_name": "更新消息并确认保存完成：等待与确认",
+  "description": "续用同步段已发起资源；保留原等待后的具体处理、结果核对与错误身份。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.call.frame",
+      "cardinality": "exactly_one",
+      "display_name": "本次调用、实例资源与上一节点的事实"
+    }
+  ],
+  "provides": [
+    {
+      "key": "era_tavern_flow_messages_update_content_finish_frame",
+      "type": "era.tavern.call.frame",
+      "display_name": "处理后的资源与事实"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.call.frame",
+        "display_name": "同实例调用与资源",
+        "required": true
+      }
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.call.frame",
+        "cardinality": "exactly_one",
+        "as": "frame",
+        "display_name": "本段明确结果"
+      }
+    ],
+    "max_steps": 12,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.tavern.initialize.start",
+        "display_name": "开始当前原生流程",
+        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+      },
+      {
+        "id": "update_messages",
+        "type_used": "era.tavern.messages_update_content.update_messages",
+        "display_name": "等待本次更新消息并确认保存完成的资源终态",
+        "description": "等待同步原生段已捕获的本次资源；检查所属实例和取消，不重发原 API，不执行后续回读或发布。"
+      },
+      {
+        "id": "await_persistence",
+        "type_used": "era.tavern.messages_update_content.await_persistence",
+        "display_name": "检查原聊天并等待保存",
+        "description": "检查固定文件后保存并等待；无待确认消息时直接交回 committed，取消或保存错误进入内存已写失败路径。"
+      },
+      {
+        "id": "read_saved_chat",
+        "type_used": "era.tavern.messages_update_content_finish.read_saved_chat",
+        "display_name": "回读捕获的原聊天文件",
+        "description": "saveChat 完成后向 /api/chats/get 请求原固定文件并等待；拒绝非成功 HTTP，不改用新选中的聊天。 失败时直接交回原 memory-written 结果，不重复保存或请求。"
+      },
+      {
+        "id": "read_saved_json",
+        "type_used": "era.tavern.messages_update_content_finish.read_saved_json",
+        "display_name": "读取保存回读 JSON",
+        "description": "只等待本次文件 Response.json，不重复保存或 fetch。 失败时直接交回原 memory-written 结果，不重复保存或请求。"
+      },
+      {
+        "id": "check_saved_messages",
+        "type_used": "era.tavern.messages_update_content_finish.check_saved_messages",
+        "display_name": "核对保存内容与写后来源",
+        "description": "逐项确认本次正文、swipe 和 ERA extra；保留 memory-written、persistenceConfirmed 与 sourceChanged 事实供 Service 结算。"
+      },
+      {
+        "id": "project_display",
+        "type_used": "era.tavern.messages_update_content.project_display",
+        "display_name": "按请求刷新技术块显示",
+        "description": "仅在保存 committed 且请求允许时刷新指定消息显示，返回原确认状态。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.tavern.initialize.end",
+        "display_name": "结束当前原生流程",
+        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+      }
+    ],
+    "edges": [
+      [
+        "update_messages",
+        "await_persistence"
+      ],
+      [
+        "check_saved_messages",
+        "project_display"
+      ],
+      [
+        "start",
+        "update_messages"
+      ],
+      [
+        "project_display",
+        "end"
+      ],
+      {
+        "from": "await_persistence",
+        "to": "read_saved_chat",
+        "when": "era_tavern_messages_update_content_await_persistence_route == 'continue'"
+      },
+      {
+        "from": "await_persistence",
+        "to": "project_display",
+        "when": "era_tavern_messages_update_content_await_persistence_route != 'continue'"
+      },
+      {
+        "from": "read_saved_chat",
+        "to": "read_saved_json",
+        "when": "era_tavern_messages_update_content_finish_read_saved_chat_route == 'continue'"
+      },
+      {
+        "from": "read_saved_chat",
+        "to": "project_display",
+        "when": "era_tavern_messages_update_content_finish_read_saved_chat_route != 'continue'"
+      },
+      {
+        "from": "read_saved_json",
+        "to": "check_saved_messages",
+        "when": "era_tavern_messages_update_content_finish_read_saved_json_route == 'continue'"
+      },
+      {
+        "from": "read_saved_json",
+        "to": "project_display",
+        "when": "era_tavern_messages_update_content_finish_read_saved_json_route != 'continue'"
+      }
+    ]
+  }
+}

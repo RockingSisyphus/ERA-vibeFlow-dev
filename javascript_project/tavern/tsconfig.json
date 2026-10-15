@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "paths": {
+      "@vibeflow/plugin": [
+        "../../kernel/javascript/sdk.d.ts"
+      ]
+    }
+  }
+}

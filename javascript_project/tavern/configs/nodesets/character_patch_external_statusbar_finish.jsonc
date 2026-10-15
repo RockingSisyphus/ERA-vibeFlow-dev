@@ -1,0 +1,100 @@
+{
+  "type_key": "era.tavern.flow.character_patch_external_statusbar_finish",
+  "display_name": "更新外置状态栏配置：角色卡与显示配置：等待与确认",
+  "description": "续用同步段已发起资源；保留原等待后的具体处理、结果核对与错误身份。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.call.frame",
+      "cardinality": "exactly_one",
+      "display_name": "本次调用、实例资源与上一节点的事实"
+    }
+  ],
+  "provides": [
+    {
+      "key": "era_tavern_flow_character_patch_external_statusbar_finish_frame",
+      "type": "era.tavern.call.frame",
+      "display_name": "处理后的资源与事实"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.call.frame",
+        "display_name": "同实例调用与资源",
+        "required": true
+      }
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.call.frame",
+        "cardinality": "exactly_one",
+        "as": "frame",
+        "display_name": "本段明确结果"
+      }
+    ],
+    "max_steps": 10,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.tavern.initialize.start",
+        "display_name": "开始当前原生流程",
+        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+      },
+      {
+        "id": "execute",
+        "type_used": "era.tavern.character_patch_external_statusbar.execute",
+        "display_name": "等待本次更新外置状态栏配置：角色卡与显示配置的资源终态",
+        "description": "等待同步原生段已捕获的本次资源；检查所属实例和取消，不重发原 API，不执行后续回读或发布。"
+      },
+      {
+        "id": "check_response",
+        "type_used": "era.tavern.character_patch_external_statusbar_finish.check_response",
+        "display_name": "核对角色设置保存响应",
+        "description": "只接受本次 merge-attributes 的成功响应；失败不能发布镜像。"
+      },
+      {
+        "id": "publish_mirror",
+        "type_used": "era.tavern.character_patch_external_statusbar_finish.publish_mirror",
+        "display_name": "发布已保存角色镜像及 UI 选择",
+        "description": "成功后更新捕获的角色对象和 JSON 草稿，再按原界面职责刷新选择；不重新保存或重绘聊天。"
+      },
+      {
+        "id": "return_result",
+        "type_used": "era.tavern.character_patch_external_statusbar.return_result",
+        "display_name": "交还更新外置状态栏配置结果",
+        "description": "返回原 era.tavern.character.external_statusbar.result 结果；需要脱敏的连接资料只返回摘要。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.tavern.initialize.end",
+        "display_name": "结束当前原生流程",
+        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+      }
+    ],
+    "edges": [
+      [
+        "publish_mirror",
+        "return_result"
+      ],
+      [
+        "execute",
+        "check_response"
+      ],
+      [
+        "check_response",
+        "publish_mirror"
+      ],
+      [
+        "start",
+        "execute"
+      ],
+      [
+        "return_result",
+        "end"
+      ]
+    ]
+  }
+}

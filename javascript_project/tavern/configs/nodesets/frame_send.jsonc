@@ -1,0 +1,256 @@
+{
+  "type_key": "era.tavern.flow.frame_send",
+  "display_name": "处理主 Service 输出帧",
+  "description": "同步处理 collection-control 或 batch-result；重复帧不重复执行，冲突帧保留原错误。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.call.frame",
+      "cardinality": "exactly_one",
+      "display_name": "本次调用及实例资源令牌"
+    }
+  ],
+  "provides": [
+    {
+      "key": "era_tavern_flow_frame_send_frame",
+      "type": "era.tavern.frame.frame_send.final_result",
+      "display_name": "操作结果及后续处理所需的资源令牌"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "sync",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.call.frame",
+        "display_name": "调用与资源资料",
+        "required": true
+      }
+    ],
+    "max_steps": 21,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.tavern.initialize.start",
+        "display_name": "开始当前原生流程",
+        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+      },
+      {
+        "id": "check_frame",
+        "type_used": "era.tavern.frame_send.check_frame",
+        "display_name": "核对出站端口与帧身份",
+        "description": "核对原出站端口、帧类型和 frameId，并取得已处理内容记录。"
+      },
+      {
+        "id": "choose_frame",
+        "type_used": "era.tavern.frame_send.choose_frame",
+        "display_name": "选择定时控制、批次结算或重复帧",
+        "description": "相同 frameId 和内容直接返回；内容冲突报错；新帧按实际 kind 路由。"
+      },
+      {
+        "id": "branch_duplicate",
+        "type_used": "era.tavern.frame_send.branch_duplicate",
+        "display_name": "返回已有帧确认",
+        "description": "保持原幂等返回，不再次启动 timer、结算回执或发送通知。"
+      },
+      {
+        "id": "branch_batch_prepare",
+        "type_used": "era.tavern.frame_send.branch_batch_prepare",
+        "display_name": "准备批次结算列表",
+        "description": "核对事件身份、序号和 high-water 下所有未结算来源的恰好覆盖，再解析通知引用；任何错误均在应用前失败。"
+      },
+      {
+        "id": "branch_batch_shared",
+        "type_used": "era.tavern.flow.settlement",
+        "display_name": "依次结算批次并安排后置通知",
+        "description": "按序号完成批次回执，先设置致命转换标记再允许回执回调重入；通知不占用主 Service 执行等待。"
+      },
+      {
+        "id": "branch_batch",
+        "type_used": "era.tavern.frame_send.branch_batch",
+        "display_name": "交还依次结算批次并安排后置通知结果",
+        "description": "保存共享原生流程的实际结果并继续当前分支；不重新执行准入、计时或结算。"
+      },
+      {
+        "id": "branch_control_prepare",
+        "type_used": "era.tavern.frame_send.branch_control_prepare",
+        "display_name": "准备定时器控制列表",
+        "description": "取出 Service 明确给出的 schedule/cancel 指令，不在此判断收集窗口何时关闭。"
+      },
+      {
+        "id": "branch_control_shared",
+        "type_used": "era.tavern.flow.collection_control",
+        "display_name": "依次处理收集窗口的计时指令",
+        "description": "按原命令顺序处理 collection-control 中的所有 timer 操作，单次延迟准入仍直接使用 timer_control。"
+      },
+      {
+        "id": "branch_control",
+        "type_used": "era.tavern.frame_send.branch_control",
+        "display_name": "交还依次处理收集窗口的计时指令结果",
+        "description": "保存共享原生流程的实际结果并继续当前分支；不重新执行准入、计时或结算。"
+      },
+      {
+        "id": "join_apply_frame",
+        "type_used": "era.tavern.frame_send.join_apply_frame",
+        "display_name": "汇合当前实际激活分支的结果",
+        "description": "接收当前所选路径的结果集合，交还其中唯一实际结果；不选择未激活分支、不重新执行操作。运行实现必须拒绝实际多结果，不以集合契约放宽唯一结果语义。"
+      },
+      {
+        "id": "apply_frame",
+        "type_used": "era.tavern.frame_send.apply_frame",
+        "display_name": "提交所选帧处理结果",
+        "description": "定时控制调用共享定时器流程；批次结果调用共享结算流程；重复帧不再执行副作用。"
+      },
+      {
+        "id": "remember_frame",
+        "type_used": "era.tavern.frame_send.remember_frame",
+        "display_name": "记录成功处理帧",
+        "description": "只在本帧处理成功后保留原去重记录，按现行上限淘汰最旧记录。"
+      },
+      {
+        "id": "prepare_notification_batch",
+        "type_used": "era.tavern.frame_send.prepare_notification_batch",
+        "display_name": "建立本批次通知资源",
+        "description": "只在新 batch 且非 stopping 时准备有序通知组；重复帧、控制帧或无通知形成空列表，不发射回调。"
+      },
+      {
+        "id": "start_notifications_loop",
+        "type_used": "vibeflow.loop.while",
+        "display_name": "按原通知顺序同步发起回调",
+        "description": "每轮只同步发起一个具体原通知或阶段订阅，保存其 Promise 句柄；不等待回调完成。",
+        "requires": [
+          {
+            "type": "era.tavern.frame.notification_batch.begin",
+            "cardinality": "exactly_one",
+            "display_name": "当前帧、实例资源与通知位置"
+          }
+        ],
+        "provides": [
+          {
+            "key": "era_tavern_frame_send_start_notifications_loop_frame",
+            "type": "era.tavern.frame.notification_batch.begin",
+            "display_name": "本次原生步骤产生的资料"
+          }
+        ],
+        "loop": {
+          "body": "era.tavern.flow.notification_start_item",
+          "max_iterations": null,
+          "stop_when": {
+            "from": "done",
+            "equals": true
+          },
+          "carry": [
+            {
+              "from": "era.tavern.frame.notification_batch.begin",
+              "as": "frame",
+              "update": "frame"
+            }
+          ],
+          "outputs": [
+            {
+              "from": "frame",
+              "as": "era_tavern_frame_send_start_notifications_loop_frame"
+            }
+          ]
+        }
+      },
+      {
+        "id": "activate_notification_batch",
+        "type_used": "era.tavern.frame_send.activate_notification_batch",
+        "display_name": "登记通知组并交还发送确认",
+        "description": "全部原回调已经同步发起后，将组的等待资源交给后台原生流程；诊断仍按原批次计数，返回原 null 确认。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.tavern.initialize.end",
+        "display_name": "结束当前原生流程",
+        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+      }
+    ],
+    "edges": [
+      [
+        "check_frame",
+        "choose_frame"
+      ],
+      [
+        "apply_frame",
+        "remember_frame"
+      ],
+      {
+        "from": "choose_frame",
+        "to": "branch_control_prepare",
+        "when": "era_tavern_frame_send_choose_frame_route == 'control'"
+      },
+      [
+        "branch_control",
+        "join_apply_frame"
+      ],
+      {
+        "from": "choose_frame",
+        "to": "branch_batch_prepare",
+        "when": "era_tavern_frame_send_choose_frame_route == 'batch'"
+      },
+      [
+        "branch_batch",
+        "join_apply_frame"
+      ],
+      {
+        "from": "choose_frame",
+        "to": "branch_duplicate",
+        "when": "era_tavern_frame_send_choose_frame_route == 'duplicate'"
+      },
+      [
+        "branch_duplicate",
+        "join_apply_frame"
+      ],
+      [
+        "branch_batch_prepare",
+        "branch_batch_shared"
+      ],
+      [
+        "branch_batch_shared",
+        "branch_batch"
+      ],
+      [
+        "branch_control_prepare",
+        "branch_control_shared"
+      ],
+      [
+        "branch_control_shared",
+        "branch_control"
+      ],
+      [
+        "join_apply_frame",
+        "apply_frame"
+      ],
+      [
+        "remember_frame",
+        "prepare_notification_batch"
+      ],
+      [
+        "prepare_notification_batch",
+        "start_notifications_loop"
+      ],
+      [
+        "start_notifications_loop",
+        "activate_notification_batch"
+      ],
+      [
+        "start",
+        "check_frame"
+      ],
+      [
+        "activate_notification_batch",
+        "end"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.frame.frame_send.final_result",
+        "cardinality": "exactly_one",
+        "display_name": "完成后的操作资料",
+        "as": "frame"
+      }
+    ]
+  }
+}

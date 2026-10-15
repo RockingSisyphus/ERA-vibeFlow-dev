@@ -1,0 +1,100 @@
+{
+  "type_key": "era.tavern.flow.author_tool",
+  "display_name": "执行已安排的作者原生工具",
+  "description": "执行 begin 安排的 ToolManager 调用；异常形成作者诊断，完成后唤醒 next，不把此工具排进业务 FIFO。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.call.frame",
+      "cardinality": "exactly_one",
+      "display_name": "本次调用及实例资源令牌"
+    }
+  ],
+  "provides": [
+    {
+      "key": "era_tavern_flow_author_tool_frame",
+      "type": "era.tavern.task.finished",
+      "display_name": "操作结果及后续处理所需的资源令牌"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.call.frame",
+        "display_name": "调用与资源资料",
+        "required": true
+      }
+    ],
+    "max_steps": 10,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.tavern.initialize.start",
+        "display_name": "开始当前原生流程",
+        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+      },
+      {
+        "id": "read_call",
+        "type_used": "era.tavern.author_tool.read_call",
+        "display_name": "取得作者参数与有效性",
+        "description": "取得本实例已绑定的参数对象和调用身份，拒绝停止或失效上下文。"
+      },
+      {
+        "id": "invoke_tool",
+        "type_used": "era.tavern.author_tool.invoke_tool",
+        "display_name": "调用 Tavern 原生作者工具",
+        "description": "执行 ToolManager.invokeFunctionTool；跨窗口 Error 仍按现有方式识别。"
+      },
+      {
+        "id": "record_terminal",
+        "type_used": "era.tavern.author_tool.record_terminal",
+        "display_name": "保存作者调用终态",
+        "description": "记录 finished 或原错误诊断，保留已成功应用的此前请求。"
+      },
+      {
+        "id": "wake_next",
+        "type_used": "era.tavern.author_tool.wake_next",
+        "display_name": "唤醒作者请求等待者",
+        "description": "完成当前实际工作和应有收尾后只交回小的完成摘要；框架缓存不再持有本次请求、会话或私密函数引用。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.tavern.initialize.end",
+        "display_name": "结束当前原生流程",
+        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+      }
+    ],
+    "edges": [
+      [
+        "read_call",
+        "invoke_tool"
+      ],
+      [
+        "invoke_tool",
+        "record_terminal"
+      ],
+      [
+        "record_terminal",
+        "wake_next"
+      ],
+      [
+        "start",
+        "read_call"
+      ],
+      [
+        "wake_next",
+        "end"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.task.finished",
+        "cardinality": "exactly_one",
+        "display_name": "完成后的操作资料",
+        "as": "frame"
+      }
+    ]
+  }
+}

@@ -1,0 +1,146 @@
+{
+  "type_key": "era.tavern.flow.variables_commit",
+  "display_name": "应用 Service 指定的变量写入并回读",
+  "description": "实现 era.tavern.variables.commit；输入沿用 era.tavern.variables.commit.request，输出沿用 era.tavern.variables.commit.result，完成方式保持 suspend。 原接口虽返回 Promise，但内部没有实际等待；完整原流程同步完成。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.call.frame",
+      "cardinality": "exactly_one",
+      "display_name": "当前实例与调用资料"
+    }
+  ],
+  "provides": [
+    {
+      "key": "era_tavern_flow_variables_commit_frame",
+      "type": "era.tavern.call.frame",
+      "display_name": "当前步骤的资源与已捕获事实"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "sync",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.call.frame",
+        "display_name": "调用与资源资料",
+        "required": true
+      }
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.call.frame",
+        "cardinality": "exactly_one",
+        "display_name": "完成后的操作资料",
+        "as": "frame"
+      }
+    ],
+    "max_steps": 14,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.tavern.initialize.start",
+        "display_name": "开始当前原生流程",
+        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+      },
+      {
+        "id": "check_scope",
+        "type_used": "era.tavern.variables_commit.check_scope",
+        "display_name": "检查变量作用域及明确写入内容",
+        "description": "检查 chat/script/message 作用域，复制 Service 给出的整对象或明确变更，不自行计算 ERA 变量。"
+      },
+      {
+        "id": "choose_write",
+        "type_used": "era.tavern.variables_commit.choose_write",
+        "display_name": "选择整对象替换或明确字段更新",
+        "description": "输入携带 variables 时整体替换；否则只应用已声明的 stat/meta/changes。"
+      },
+      {
+        "id": "select_patch",
+        "type_used": "era.tavern.variables_commit.select_patch",
+        "display_name": "只应用明确字段更新",
+        "description": "对指定作用域调用 updateVariablesWith，只合入 Service 给出的 stat/meta/changes。"
+      },
+      {
+        "id": "select_replace",
+        "type_used": "era.tavern.variables_commit.select_replace",
+        "display_name": "执行明确整对象替换",
+        "description": "对指定作用域调用 replaceVariables，原样使用 Service 提供的 variables。"
+      },
+      {
+        "id": "join_write",
+        "type_used": "era.tavern.variables_commit.join_write",
+        "display_name": "汇合当前实际激活分支的结果",
+        "description": "接收当前所选路径的结果集合，交还其中唯一实际结果；不选择未激活分支、不重新执行操作。运行实现必须拒绝实际多结果，不以集合契约放宽唯一结果语义。"
+      },
+      {
+        "id": "write",
+        "type_used": "era.tavern.variables_commit.write",
+        "display_name": "执行明确的变量写入",
+        "description": "按前面选择的整对象替换或字段补丁执行原变量 API；不自行计算领域变量。"
+      },
+      {
+        "id": "read_back",
+        "type_used": "era.tavern.variables_commit.read_back",
+        "display_name": "回读实际变量",
+        "description": "从同一作用域重新读取已写入值，供主 Service 核对确认。"
+      },
+      {
+        "id": "publish_settings",
+        "type_used": "era.tavern.variables_commit.publish_settings",
+        "display_name": "通知脚本设置更新",
+        "description": "只有脚本变量提交才刷新设置和对应事件，返回 committed 与实际 variables。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.tavern.initialize.end",
+        "display_name": "结束当前原生流程",
+        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+      }
+    ],
+    "edges": [
+      [
+        "check_scope",
+        "choose_write"
+      ],
+      [
+        "write",
+        "read_back"
+      ],
+      [
+        "read_back",
+        "publish_settings"
+      ],
+      {
+        "from": "choose_write",
+        "to": "select_replace",
+        "when": "era_tavern_variables_commit_choose_write_route == 'replace'"
+      },
+      [
+        "select_replace",
+        "join_write"
+      ],
+      {
+        "from": "choose_write",
+        "to": "select_patch",
+        "when": "era_tavern_variables_commit_choose_write_route == 'patch'"
+      },
+      [
+        "select_patch",
+        "join_write"
+      ],
+      [
+        "join_write",
+        "write"
+      ],
+      [
+        "start",
+        "check_scope"
+      ],
+      [
+        "publish_settings",
+        "end"
+      ]
+    ]
+  }
+}

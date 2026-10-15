@@ -4,8 +4,12 @@ import { normalizeAgentConfiguration } from '../../../javascript_project/service
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { runInNewContext } from 'node:vm';
 import { contextWith, identity, sidecarId } from './memory-lifecycle-fixture';
-import { createFunctionCallAdapter } from '../../src/ERA变量框架/service/function-call-adapter';
-import { getInstalledEraPublicApi, installEraPublicApi } from '../../src/ERA变量框架/service/public-api';
+import { fixture } from '../native-tavern/native-fixture.mjs';
+import {
+  createFunctionFacade,
+  getInstalledEraPublicApi,
+  installEraPublicApi,
+} from '../../src/ERA变量框架/service/public-api';
 import { installEraServiceClient } from '../../src/ERA变量框架/service/client';
 import {
   publishSidecarRuntimeSnapshot,
@@ -17,9 +21,9 @@ import { PublishBlockApplicationNode as publish } from '../../../javascript_proj
 import { recordFor } from '../../../javascript_project/service/base_lib/sidecar_binding';
 import { planEraSync } from '../../../javascript_project/service/base_lib/sync/sync_planning';
 
-const cleanup: (() => void)[] = [];
-afterEach(() => {
-  for (const stop of cleanup.splice(0).reverse()) stop();
+const cleanup: (() => void | Promise<void>)[] = [];
+afterEach(async () => {
+  for (const stop of cleanup.splice(0).reverse()) await stop();
   clearSidecarRuntimeSnapshot();
   vi.unstubAllGlobals();
 });
@@ -47,10 +51,19 @@ async function execute(
   });
   vi.stubGlobal('getChatMessages', () => structuredClone(original));
   vi.stubGlobal('initializeGlobal', () => undefined);
+  const owner = await fixture(undefined, {
+    createFunctionFacade,
+    api: { SillyTavern, getChatMessages, getCurrentCharacterId },
+  });
+  const functions = owner.caps!['era.tavern.functions'];
+  cleanup.push(async () => {
+    owner.page.dispatchEvent(new Event('pagehide'));
+    await owner.work;
+  });
   cleanup.push(
     installEraServiceClient({
       currentLifecycleToken: () => 7,
-      stopAccepting: () => undefined,
+      forCall: parameters => owner.client.forCall(parameters),
       enqueue: () => {
         throw new Error('function commit must not enter outer FIFO');
       },
@@ -65,8 +78,6 @@ async function execute(
       stop: () => {},
     })),
   );
-  const functions = createFunctionCallAdapter();
-  cleanup.push(() => functions.stop());
   const signal = new AbortController().signal;
   const record = recordFor(
     sidecarId,

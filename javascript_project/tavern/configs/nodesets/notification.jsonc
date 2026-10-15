@@ -1,0 +1,192 @@
+{
+  "type_key": "era.tavern.flow.notification",
+  "display_name": "执行一个后置通知",
+  "description": "普通事件或交接均等待同步发起的公开通知资源，再按原位置记录组终态；交接的原始续体使用同root的async入口。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.call.frame",
+      "cardinality": "exactly_one",
+      "display_name": "本次调用及实例资源令牌"
+    }
+  ],
+  "provides": [
+    {
+      "key": "era_tavern_flow_notification_frame",
+      "type": "era.tavern.task.finished",
+      "display_name": "操作结果及后续处理所需的资源令牌"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.call.frame",
+        "display_name": "调用与资源资料",
+        "required": true
+      }
+    ],
+    "max_steps": 40,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.tavern.initialize.start",
+        "display_name": "开始当前原生流程",
+        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+      },
+      {
+        "id": "read_notification",
+        "type_used": "era.tavern.notification.read_notification",
+        "display_name": "取得通知参数和取消来源",
+        "description": "从实例资源取出已解析参数和调用 signal，引用不重新编码。"
+      },
+      {
+        "id": "choose_notification",
+        "type_used": "era.tavern.notification.choose_notification",
+        "display_name": "识别普通通知或阶段交接",
+        "description": "按原通知类型选择 eventEmit 或阶段完成订阅流程，不重新选择领域任务。"
+      },
+      {
+        "id": "select_handoff_prepare",
+        "type_used": "era.tavern.notification.select_handoff_prepare",
+        "display_name": "等待已经同步发起的交接通知资源",
+        "description": "只等待本通知的公开可取消Promise并保存其终态；原始生成交接已经进入编译后的独立async路径，不在这里重复发起或丢弃原始续体。"
+      },
+      {
+        "id": "select_handoff",
+        "type_used": "era.tavern.notification.select_handoff",
+        "display_name": "交还完成生成阶段订阅与续体交接结果",
+        "description": "保存共享原生流程的实际结果并继续当前分支；不重新执行准入、计时或结算。"
+      },
+      {
+        "id": "select_event",
+        "type_used": "era.tavern.notification.select_event",
+        "display_name": "发射原普通通知",
+        "description": "只等待同步发起的原 eventEmit 资源，不再次发射通知。"
+      },
+      {
+        "id": "join_emit_notification",
+        "type_used": "era.tavern.notification.join_emit_notification",
+        "display_name": "汇合当前实际激活分支的结果",
+        "description": "接收当前所选路径的结果集合，交还其中唯一实际结果；不选择未激活分支、不重新执行操作。运行实现必须拒绝实际多结果，不以集合契约放宽唯一结果语义。"
+      },
+      {
+        "id": "emit_notification",
+        "type_used": "era.tavern.notification.emit_notification",
+        "display_name": "执行本次通知并等待回调",
+        "description": "保存所选 continuation 的终态，不第二次执行 eventEmit。"
+      },
+      {
+        "id": "record_result",
+        "type_used": "era.tavern.notification.record_result",
+        "display_name": "记录当前回调终态并减少组待结数量",
+        "description": "把终态存入原位置并更新待结数量，不提前报告失败。"
+      },
+      {
+        "id": "choose_batch_complete",
+        "type_used": "era.tavern.notification.choose_batch_complete",
+        "display_name": "判断当前通知组是否全部终态",
+        "description": "组中仍有未结回调时只结束本次 continuation；全部终态时才安排有序失败报告和组释放。"
+      },
+      {
+        "id": "keep_group",
+        "type_used": "era.tavern.notification.keep_group",
+        "display_name": "保留其他回调仍拥有的通知组",
+        "description": "不报告部分失败，也不提前解析本组完成 Promise。"
+      },
+      {
+        "id": "schedule_group_finish",
+        "type_used": "era.tavern.notification.schedule_group_finish",
+        "display_name": "安排当前已完成通知组的原生收尾",
+        "description": "只把已完成组交给后台 notification_finalize 路径；有序警告和资源释放在真实流程中执行。"
+      },
+      {
+        "id": "join_batch_result",
+        "type_used": "era.tavern.notification.join_batch_result",
+        "display_name": "汇合当前唯一通知组结论",
+        "description": "完成当前实际工作和应有收尾后只交回小的完成摘要；框架缓存不再持有本次请求、会话或私密函数引用。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.tavern.initialize.end",
+        "display_name": "结束当前原生流程",
+        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+      }
+    ],
+    "edges": [
+      [
+        "read_notification",
+        "choose_notification"
+      ],
+      [
+        "emit_notification",
+        "record_result"
+      ],
+      {
+        "from": "choose_notification",
+        "to": "select_event",
+        "when": "era_tavern_notification_choose_notification_route == 'event'"
+      },
+      [
+        "select_event",
+        "join_emit_notification"
+      ],
+      {
+        "from": "choose_notification",
+        "to": "select_handoff_prepare",
+        "when": "era_tavern_notification_choose_notification_route == 'handoff'"
+      },
+      [
+        "select_handoff",
+        "join_emit_notification"
+      ],
+      [
+        "join_emit_notification",
+        "emit_notification"
+      ],
+      [
+        "record_result",
+        "choose_batch_complete"
+      ],
+      {
+        "from": "choose_batch_complete",
+        "to": "keep_group",
+        "when": "era_tavern_notification_choose_batch_complete_route == 'pending'"
+      },
+      {
+        "from": "choose_batch_complete",
+        "to": "schedule_group_finish",
+        "when": "era_tavern_notification_choose_batch_complete_route == 'complete'"
+      },
+      [
+        "keep_group",
+        "join_batch_result"
+      ],
+      [
+        "schedule_group_finish",
+        "join_batch_result"
+      ],
+      [
+        "start",
+        "read_notification"
+      ],
+      [
+        "join_batch_result",
+        "end"
+      ],
+      [
+        "select_handoff_prepare",
+        "select_handoff"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.task.finished",
+        "cardinality": "exactly_one",
+        "display_name": "完成后的操作资料",
+        "as": "frame"
+      }
+    ]
+  }
+}

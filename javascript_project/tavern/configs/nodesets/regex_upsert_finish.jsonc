@@ -1,0 +1,126 @@
+{
+  "type_key": "era.tavern.flow.regex_upsert_finish",
+  "display_name": "写入：角色正则：等待与确认",
+  "description": "续用同步段已发起资源；保留原等待后的具体处理、结果核对与错误身份。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.call.frame",
+      "cardinality": "exactly_one",
+      "display_name": "本次调用、实例资源与上一节点的事实"
+    }
+  ],
+  "provides": [
+    {
+      "key": "era_tavern_flow_regex_upsert_finish_frame",
+      "type": "era.tavern.call.frame",
+      "display_name": "处理后的资源与事实"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.call.frame",
+        "display_name": "同实例调用与资源",
+        "required": true
+      }
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.call.frame",
+        "cardinality": "exactly_one",
+        "as": "frame",
+        "display_name": "本段明确结果"
+      }
+    ],
+    "max_steps": 12,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.tavern.initialize.start",
+        "display_name": "开始当前原生流程",
+        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+      },
+      {
+        "id": "execute",
+        "type_used": "era.tavern.regex_upsert.execute",
+        "display_name": "等待本次写入：角色正则的资源终态",
+        "description": "等待同步原生段已捕获的本次资源；检查所属实例和取消，不重发原 API，不执行后续回读或发布。"
+      },
+      {
+        "id": "choose_enabled",
+        "type_used": "era.tavern.regex_upsert_finish.choose_enabled",
+        "display_name": "读取正则开关并选择是否开启",
+        "description": "字段写入完成后检查当前脚本设置，未开启才更新 disabledExtensions 并保存设置。"
+      },
+      {
+        "id": "enable_and_save",
+        "type_used": "era.tavern.regex_upsert_finish.enable_and_save",
+        "display_name": "开启角色正则并等待设置保存",
+        "description": "仅需开启时调用 saveSettings 并等待；已开启时直接交还原事实，不增加保存次数。"
+      },
+      {
+        "id": "reload_chat",
+        "type_used": "era.tavern.regex_upsert_finish.reload_chat",
+        "display_name": "等待角色正则生效重绘",
+        "description": "开关保存完成后调用一次 reloadCurrentChat 并等待，然后交还 count/enabled 确认。"
+      },
+      {
+        "id": "return_result",
+        "type_used": "era.tavern.regex_upsert.return_result",
+        "display_name": "交还写入结果",
+        "description": "返回原 era.tavern.regex.upsert.result 结果；需要脱敏的连接资料只返回摘要。"
+      },
+      {
+        "id": "already_enabled",
+        "type_used": "era.tavern.regex_upsert_finish.already_enabled",
+        "display_name": "保留已经开启的正则开关",
+        "description": "当前已开启，直接交还相同事实，不保存设置。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.tavern.initialize.end",
+        "display_name": "结束当前原生流程",
+        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+      }
+    ],
+    "edges": [
+      [
+        "reload_chat",
+        "return_result"
+      ],
+      [
+        "execute",
+        "choose_enabled"
+      ],
+      [
+        "enable_and_save",
+        "reload_chat"
+      ],
+      {
+        "from": "choose_enabled",
+        "to": "enable_and_save",
+        "when": "era_tavern_regex_upsert_finish_choose_enabled_route == 'enable'"
+      },
+      {
+        "from": "choose_enabled",
+        "to": "already_enabled",
+        "when": "era_tavern_regex_upsert_finish_choose_enabled_route == 'enabled'"
+      },
+      [
+        "already_enabled",
+        "reload_chat"
+      ],
+      [
+        "start",
+        "execute"
+      ],
+      [
+        "return_result",
+        "end"
+      ]
+    ]
+  }
+}

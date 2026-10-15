@@ -1,0 +1,1667 @@
+{
+  "status": "implemented_owned_lifetime",
+  "binding_policy": "generated_native_workflow_calls_only",
+  "capabilities": [
+    {
+      "capability": "era.tavern.agent",
+      "operation": "await_native_completion",
+      "completion": "suspend",
+      "input_type": "era.agent.host.request",
+      "output_type": "era.agent.host.result",
+      "nodeset": "era.tavern.flow.cap_sync_agent",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "agent",
+      "invocation": "promise_from_native_completion_callback",
+      "prepare": {
+        "workflow": "configs/era.tavern.sync.jsonc",
+        "action": "capability",
+        "nodeset": "era.tavern.flow.cap_sync_agent",
+        "operation_path": [
+          "route_await_native_completion__check_identity",
+          "route_await_native_completion__start_operation"
+        ]
+      },
+      "resume": {
+        "workflow": "configs/era.tavern.async.jsonc",
+        "action": "capability",
+        "nodeset": "era.tavern.flow.cap_async_agent",
+        "forward": "entire_prepared_frame",
+        "operation_path": [
+          "route_await_native_completion__wait_terminal",
+          "route_await_native_completion__read_current",
+          "route_await_native_completion__return_native"
+        ],
+        "trigger": "raw_operation_terminal"
+      },
+      "operation_path": [
+        "route_await_native_completion__check_identity",
+        "route_await_native_completion__start_operation"
+      ]
+    },
+    {
+      "capability": "era.tavern.agent",
+      "operation": "read_context",
+      "completion": "suspend",
+      "input_type": "era.agent.host.request",
+      "output_type": "era.agent.host.result",
+      "nodeset": "era.tavern.flow.cap_sync_agent",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "agent",
+      "invocation": "promise_from_sync_result",
+      "operation_path": [
+        "route_read_context__check_request",
+        "route_read_context__execute",
+        "route_read_context__return_result"
+      ]
+    },
+    {
+      "capability": "era.tavern.agent",
+      "operation": "write_configuration",
+      "completion": "suspend",
+      "input_type": "era.agent.host.request",
+      "output_type": "era.agent.host.result",
+      "nodeset": "era.tavern.flow.cap_sync_agent",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "agent",
+      "invocation": "promise_from_native_completion_callback",
+      "prepare": {
+        "workflow": "configs/era.tavern.sync.jsonc",
+        "action": "capability",
+        "nodeset": "era.tavern.flow.cap_sync_agent",
+        "operation_path": [
+          "route_write_configuration__check_request",
+          "route_write_configuration__start_operation"
+        ]
+      },
+      "resume": {
+        "workflow": "configs/era.tavern.async.jsonc",
+        "action": "capability",
+        "nodeset": "era.tavern.flow.cap_async_agent",
+        "forward": "entire_prepared_frame",
+        "operation_path": [
+          "route_write_configuration__execute",
+          "route_write_configuration__return_result"
+        ],
+        "trigger": "raw_operation_terminal"
+      },
+      "operation_path": [
+        "route_write_configuration__check_request",
+        "route_write_configuration__start_operation"
+      ]
+    },
+    {
+      "capability": "era.tavern.agent",
+      "operation": "capture_preset",
+      "completion": "immediate",
+      "input_type": "era.agent.host.request",
+      "output_type": "era.agent.host.result",
+      "nodeset": "era.tavern.flow.cap_sync_agent",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "agent",
+      "operation_path": [
+        "route_capture_preset__check_request",
+        "route_capture_preset__execute",
+        "route_capture_preset__return_result"
+      ]
+    },
+    {
+      "capability": "era.tavern.agent",
+      "operation": "read_configuration_sources",
+      "completion": "immediate",
+      "input_type": "era.agent.host.request",
+      "output_type": "era.agent.host.result",
+      "nodeset": "era.tavern.flow.cap_sync_agent",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "agent",
+      "operation_path": [
+        "route_read_configuration_sources__check_request",
+        "route_read_configuration_sources__execute",
+        "route_read_configuration_sources__return_result"
+      ]
+    },
+    {
+      "capability": "era.tavern.agent",
+      "operation": "read_connection_state",
+      "completion": "immediate",
+      "input_type": "era.agent.host.request",
+      "output_type": "era.agent.connection.state",
+      "nodeset": "era.tavern.flow.cap_sync_agent",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "agent",
+      "operation_path": [
+        "route_read_connection_state__check_request",
+        "route_read_connection_state__execute",
+        "route_read_connection_state__return_result"
+      ]
+    },
+    {
+      "capability": "era.tavern.agent",
+      "operation": "upsert_connection_profile",
+      "completion": "suspend",
+      "input_type": "era.agent.host.request",
+      "output_type": "era.agent.host.result",
+      "nodeset": "era.tavern.flow.cap_sync_agent",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "agent",
+      "invocation": "promise_from_native_completion_callback",
+      "prepare": {
+        "workflow": "configs/era.tavern.sync.jsonc",
+        "action": "capability",
+        "nodeset": "era.tavern.flow.cap_sync_agent",
+        "operation_path": [
+          "route_upsert_connection_profile__check_request",
+          "route_upsert_connection_profile__start_operation"
+        ]
+      },
+      "resume": {
+        "workflow": "configs/era.tavern.async.jsonc",
+        "action": "capability",
+        "nodeset": "era.tavern.flow.cap_async_agent",
+        "forward": "entire_prepared_frame",
+        "operation_path": [
+          "route_upsert_connection_profile__execute",
+          "route_upsert_connection_profile__return_result"
+        ],
+        "trigger": "raw_operation_terminal"
+      },
+      "operation_path": [
+        "route_upsert_connection_profile__check_request",
+        "route_upsert_connection_profile__start_operation"
+      ]
+    },
+    {
+      "capability": "era.tavern.agent",
+      "operation": "delete_connection_profile",
+      "completion": "suspend",
+      "input_type": "era.agent.host.request",
+      "output_type": "era.agent.host.result",
+      "nodeset": "era.tavern.flow.cap_sync_agent",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "agent",
+      "invocation": "promise_from_native_completion_callback",
+      "prepare": {
+        "workflow": "configs/era.tavern.sync.jsonc",
+        "action": "capability",
+        "nodeset": "era.tavern.flow.cap_sync_agent",
+        "operation_path": [
+          "route_delete_connection_profile__check_request",
+          "route_delete_connection_profile__start_operation"
+        ]
+      },
+      "resume": {
+        "workflow": "configs/era.tavern.async.jsonc",
+        "action": "capability",
+        "nodeset": "era.tavern.flow.cap_async_agent",
+        "forward": "entire_prepared_frame",
+        "operation_path": [
+          "route_delete_connection_profile__execute",
+          "route_delete_connection_profile__return_result"
+        ],
+        "trigger": "raw_operation_terminal"
+      },
+      "operation_path": [
+        "route_delete_connection_profile__check_request",
+        "route_delete_connection_profile__start_operation"
+      ]
+    },
+    {
+      "capability": "era.tavern.agent",
+      "operation": "clear_connection_profile_key",
+      "completion": "suspend",
+      "input_type": "era.agent.host.request",
+      "output_type": "era.agent.host.result",
+      "nodeset": "era.tavern.flow.cap_sync_agent",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "agent",
+      "invocation": "promise_from_native_completion_callback",
+      "prepare": {
+        "workflow": "configs/era.tavern.sync.jsonc",
+        "action": "capability",
+        "nodeset": "era.tavern.flow.cap_sync_agent",
+        "operation_path": [
+          "route_clear_connection_profile_key__check_request",
+          "route_clear_connection_profile_key__start_operation"
+        ]
+      },
+      "resume": {
+        "workflow": "configs/era.tavern.async.jsonc",
+        "action": "capability",
+        "nodeset": "era.tavern.flow.cap_async_agent",
+        "forward": "entire_prepared_frame",
+        "operation_path": [
+          "route_clear_connection_profile_key__execute",
+          "route_clear_connection_profile_key__return_result"
+        ],
+        "trigger": "raw_operation_terminal"
+      },
+      "operation_path": [
+        "route_clear_connection_profile_key__check_request",
+        "route_clear_connection_profile_key__start_operation"
+      ]
+    },
+    {
+      "capability": "era.tavern.agent",
+      "operation": "list_connection_models",
+      "completion": "suspend",
+      "input_type": "era.agent.host.request",
+      "output_type": "era.agent.host.result",
+      "nodeset": "era.tavern.flow.cap_sync_agent",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "agent",
+      "invocation": "promise_from_native_completion_callback",
+      "prepare": {
+        "workflow": "configs/era.tavern.sync.jsonc",
+        "action": "capability",
+        "nodeset": "era.tavern.flow.cap_sync_agent",
+        "operation_path": [
+          "route_list_connection_models__check_request",
+          "route_list_connection_models__start_operation"
+        ]
+      },
+      "resume": {
+        "workflow": "configs/era.tavern.async.jsonc",
+        "action": "capability",
+        "nodeset": "era.tavern.flow.agent_list_connection_models_finish",
+        "forward": "entire_prepared_frame",
+        "trigger": "raw_operation_terminal"
+      },
+      "operation_path": [
+        "route_list_connection_models__check_request",
+        "route_list_connection_models__start_operation"
+      ]
+    },
+    {
+      "capability": "era.tavern.agent",
+      "operation": "list_connection_models_draft",
+      "completion": "suspend",
+      "input_type": "era.agent.host.request",
+      "output_type": "era.agent.host.result",
+      "nodeset": "era.tavern.flow.cap_sync_agent",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "agent",
+      "invocation": "promise_from_native_completion_callback",
+      "prepare": {
+        "workflow": "configs/era.tavern.sync.jsonc",
+        "action": "capability",
+        "nodeset": "era.tavern.flow.cap_sync_agent",
+        "operation_path": [
+          "route_list_connection_models_draft__check_request",
+          "route_list_connection_models_draft__start_operation"
+        ]
+      },
+      "resume": {
+        "workflow": "configs/era.tavern.async.jsonc",
+        "action": "capability",
+        "nodeset": "era.tavern.flow.agent_list_connection_models_draft_finish",
+        "forward": "entire_prepared_frame",
+        "trigger": "raw_operation_terminal"
+      },
+      "operation_path": [
+        "route_list_connection_models_draft__check_request",
+        "route_list_connection_models_draft__start_operation"
+      ]
+    },
+    {
+      "capability": "era.tavern.agent",
+      "operation": "generate",
+      "completion": "suspend",
+      "input_type": "era.agent.host.request",
+      "output_type": "era.agent.host.result",
+      "nodeset": "era.tavern.flow.agent_generate",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "agent",
+      "invocation": "promise_from_native_completion_callback",
+      "prepare": {
+        "workflow": "configs/era.tavern.sync.jsonc",
+        "action": "capability",
+        "nodeset": "era.tavern.flow.agent_generate"
+      },
+      "resume": {
+        "workflow": "configs/era.tavern.async.jsonc",
+        "action": "capability",
+        "nodeset": "era.tavern.flow.agent_generate_finish",
+        "forward": "entire_prepared_frame"
+      }
+    },
+    {
+      "capability": "era.tavern.agent",
+      "operation": "generate_story",
+      "completion": "suspend",
+      "input_type": "era.agent.host.request",
+      "output_type": "era.agent.host.result",
+      "nodeset": "era.tavern.flow.agent_generate_story",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "agent",
+      "invocation": "promise_from_native_completion_callback",
+      "prepare": {
+        "workflow": "configs/era.tavern.sync.jsonc",
+        "action": "capability",
+        "nodeset": "era.tavern.flow.agent_generate_story"
+      },
+      "resume": {
+        "workflow": "configs/era.tavern.async.jsonc",
+        "action": "capability",
+        "nodeset": "era.tavern.flow.agent_generate_story_finish",
+        "forward": "entire_prepared_frame"
+      }
+    },
+    {
+      "capability": "era.tavern.agent",
+      "operation": "inject_once",
+      "completion": "immediate",
+      "input_type": "era.agent.host.request",
+      "output_type": "era.agent.host.result",
+      "nodeset": "era.tavern.flow.cap_sync_agent",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "agent",
+      "operation_path": [
+        "route_inject_once__check_request",
+        "route_inject_once__execute",
+        "route_inject_once__return_result"
+      ]
+    },
+    {
+      "capability": "era.tavern.agent",
+      "operation": "write_session",
+      "completion": "immediate",
+      "input_type": "era.agent.host.request",
+      "output_type": "era.agent.host.result",
+      "nodeset": "era.tavern.flow.agent_write_session",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "agent"
+    },
+    {
+      "capability": "era.tavern.agent",
+      "operation": "clear_session",
+      "completion": "immediate",
+      "input_type": "era.agent.host.request",
+      "output_type": "era.agent.host.result",
+      "nodeset": "era.tavern.flow.cap_sync_agent",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "agent",
+      "operation_path": [
+        "route_clear_session__check_request",
+        "route_clear_session__execute",
+        "route_clear_session__return_result"
+      ]
+    },
+    {
+      "capability": "era.tavern.agent",
+      "operation": "create_error_message",
+      "completion": "suspend",
+      "input_type": "era.agent.host.request",
+      "output_type": "era.agent.host.result",
+      "nodeset": "era.tavern.flow.cap_sync_agent",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "agent",
+      "invocation": "promise_from_native_completion_callback",
+      "prepare": {
+        "workflow": "configs/era.tavern.sync.jsonc",
+        "action": "capability",
+        "nodeset": "era.tavern.flow.cap_sync_agent",
+        "operation_path": [
+          "route_create_error_message__check_request",
+          "route_create_error_message__start_operation"
+        ]
+      },
+      "resume": {
+        "workflow": "configs/era.tavern.async.jsonc",
+        "action": "capability",
+        "nodeset": "era.tavern.flow.cap_async_agent",
+        "forward": "entire_prepared_frame",
+        "operation_path": [
+          "route_create_error_message__execute",
+          "route_create_error_message__return_result"
+        ],
+        "trigger": "raw_operation_terminal"
+      },
+      "operation_path": [
+        "route_create_error_message__check_request",
+        "route_create_error_message__start_operation"
+      ]
+    },
+    {
+      "capability": "era.tavern.agent",
+      "operation": "stop_native_generation",
+      "completion": "immediate",
+      "input_type": "era.agent.host.request",
+      "output_type": "era.agent.host.result",
+      "nodeset": "era.tavern.flow.cap_sync_agent",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "agent",
+      "operation_path": [
+        "route_stop_native_generation__check_request",
+        "route_stop_native_generation__execute",
+        "route_stop_native_generation__return_result"
+      ]
+    },
+    {
+      "capability": "era.tavern.agent",
+      "operation": "read_session_binding",
+      "completion": "immediate",
+      "input_type": "era.agent.host.request",
+      "output_type": "era.agent.session.binding.facts",
+      "nodeset": "era.tavern.flow.cap_sync_agent",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "agent",
+      "operation_path": [
+        "route_read_session_binding__check_request",
+        "route_read_session_binding__execute",
+        "route_read_session_binding__return_result"
+      ]
+    },
+    {
+      "capability": "era.tavern.character",
+      "operation": "patch_single_floor",
+      "completion": "suspend",
+      "input_type": "era.tavern.character.single_floor.request",
+      "output_type": "era.tavern.character.single_floor.result",
+      "nodeset": "era.tavern.flow.cap_sync_character",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "character",
+      "invocation": "promise_from_native_completion_callback",
+      "prepare": {
+        "workflow": "configs/era.tavern.sync.jsonc",
+        "action": "capability",
+        "nodeset": "era.tavern.flow.cap_sync_character",
+        "operation_path": [
+          "route_patch_single_floor__check_request",
+          "route_patch_single_floor__start_operation"
+        ]
+      },
+      "resume": {
+        "workflow": "configs/era.tavern.async.jsonc",
+        "action": "capability",
+        "nodeset": "era.tavern.flow.character_patch_single_floor_finish",
+        "forward": "entire_prepared_frame",
+        "trigger": "raw_operation_terminal"
+      },
+      "operation_path": [
+        "route_patch_single_floor__check_request",
+        "route_patch_single_floor__start_operation"
+      ]
+    },
+    {
+      "capability": "era.tavern.character",
+      "operation": "patch_external_statusbar",
+      "completion": "suspend",
+      "input_type": "era.tavern.character.external_statusbar.request",
+      "output_type": "era.tavern.character.external_statusbar.result",
+      "nodeset": "era.tavern.flow.cap_sync_character",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "character",
+      "invocation": "promise_from_native_completion_callback",
+      "prepare": {
+        "workflow": "configs/era.tavern.sync.jsonc",
+        "action": "capability",
+        "nodeset": "era.tavern.flow.cap_sync_character",
+        "operation_path": [
+          "route_patch_external_statusbar__check_request",
+          "route_patch_external_statusbar__start_operation"
+        ]
+      },
+      "resume": {
+        "workflow": "configs/era.tavern.async.jsonc",
+        "action": "capability",
+        "nodeset": "era.tavern.flow.character_patch_external_statusbar_finish",
+        "forward": "entire_prepared_frame",
+        "trigger": "raw_operation_terminal"
+      },
+      "operation_path": [
+        "route_patch_external_statusbar__check_request",
+        "route_patch_external_statusbar__start_operation"
+      ]
+    },
+    {
+      "capability": "era.tavern.character",
+      "operation": "read_main_greeting",
+      "completion": "suspend",
+      "input_type": "era.tavern.character.read_main_greeting.request",
+      "output_type": "era.tavern.character.read_main_greeting.result",
+      "nodeset": "era.tavern.flow.cap_sync_character",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "character",
+      "invocation": "promise_from_native_completion_callback",
+      "prepare": {
+        "workflow": "configs/era.tavern.sync.jsonc",
+        "action": "capability",
+        "nodeset": "era.tavern.flow.cap_sync_character",
+        "operation_path": [
+          "route_read_main_greeting__check_request",
+          "route_read_main_greeting__start_operation"
+        ]
+      },
+      "resume": {
+        "workflow": "configs/era.tavern.async.jsonc",
+        "action": "capability",
+        "nodeset": "era.tavern.flow.cap_async_character",
+        "forward": "entire_prepared_frame",
+        "operation_path": [
+          "route_read_main_greeting__execute",
+          "route_read_main_greeting__return_result"
+        ],
+        "trigger": "raw_operation_terminal"
+      },
+      "operation_path": [
+        "route_read_main_greeting__check_request",
+        "route_read_main_greeting__start_operation"
+      ]
+    },
+    {
+      "capability": "era.tavern.character",
+      "operation": "write_main_greeting",
+      "completion": "suspend",
+      "input_type": "era.tavern.character.write_main_greeting.request",
+      "output_type": "era.tavern.character.write_main_greeting.result",
+      "nodeset": "era.tavern.flow.cap_sync_character",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "character",
+      "invocation": "promise_from_native_completion_callback",
+      "prepare": {
+        "workflow": "configs/era.tavern.sync.jsonc",
+        "action": "capability",
+        "nodeset": "era.tavern.flow.cap_sync_character",
+        "operation_path": [
+          "route_write_main_greeting__check_request",
+          "route_write_main_greeting__start_operation"
+        ]
+      },
+      "resume": {
+        "workflow": "configs/era.tavern.async.jsonc",
+        "action": "capability",
+        "nodeset": "era.tavern.flow.character_write_main_greeting_finish",
+        "forward": "entire_prepared_frame",
+        "trigger": "raw_operation_terminal"
+      },
+      "operation_path": [
+        "route_write_main_greeting__check_request",
+        "route_write_main_greeting__start_operation"
+      ]
+    },
+    {
+      "capability": "era.tavern.character",
+      "operation": "read_greeting_refresh_context",
+      "completion": "immediate",
+      "input_type": "era.tavern.character.read_main_greeting.request",
+      "output_type": "era.tavern.character.greeting_refresh.facts",
+      "nodeset": "era.tavern.flow.cap_sync_character",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "character",
+      "operation_path": [
+        "route_read_greeting_refresh_context__check_request",
+        "route_read_greeting_refresh_context__execute",
+        "route_read_greeting_refresh_context__return_result"
+      ]
+    },
+    {
+      "capability": "era.tavern.character",
+      "operation": "apply_greeting_refresh",
+      "completion": "suspend",
+      "input_type": "era.tavern.character.greeting_refresh.plan",
+      "output_type": "era.tavern.character.greeting_refresh.result",
+      "nodeset": "era.tavern.flow.cap_sync_character",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "character",
+      "invocation": "promise_from_native_completion_callback",
+      "prepare": {
+        "workflow": "configs/era.tavern.sync.jsonc",
+        "action": "capability",
+        "nodeset": "era.tavern.flow.cap_sync_character",
+        "operation_path": [
+          "route_apply_greeting_refresh__check_request",
+          "route_apply_greeting_refresh__start_operation"
+        ]
+      },
+      "resume": {
+        "workflow": "configs/era.tavern.async.jsonc",
+        "action": "capability",
+        "nodeset": "era.tavern.flow.character_apply_greeting_refresh_finish",
+        "forward": "entire_prepared_frame",
+        "trigger": "raw_operation_terminal"
+      },
+      "operation_path": [
+        "route_apply_greeting_refresh__check_request",
+        "route_apply_greeting_refresh__start_operation"
+      ]
+    },
+    {
+      "capability": "era.tavern.functions",
+      "operation": "begin",
+      "completion": "immediate",
+      "input_type": "era.working.request",
+      "output_type": "era.working.result",
+      "nodeset": "era.tavern.flow.functions_begin",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "functions"
+    },
+    {
+      "capability": "era.tavern.functions",
+      "operation": "next",
+      "completion": "suspend",
+      "input_type": "era.working.request",
+      "output_type": "era.working.result",
+      "nodeset": "era.tavern.flow.cap_sync_functions",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "functions",
+      "invocation": "promise_from_native_workflow_wait",
+      "prepare": {
+        "workflow": "configs/era.tavern.sync.jsonc",
+        "action": "capability",
+        "nodeset": "era.tavern.flow.cap_sync_functions",
+        "operation_path": [
+          "route_next__check_active",
+          "route_next__capture_next",
+          "route_next__start_wait"
+        ]
+      },
+      "resume": {
+        "workflow": "configs/era.tavern.async.jsonc",
+        "action": "capability",
+        "nodeset": "era.tavern.flow.functions_next_finish",
+        "forward": "entire_prepared_frame",
+        "trigger": "raw_operation_terminal"
+      },
+      "operation_path": [
+        "route_next__check_active",
+        "route_next__capture_next"
+      ]
+    },
+    {
+      "capability": "era.tavern.functions",
+      "operation": "acknowledge",
+      "completion": "immediate",
+      "input_type": "era.working.request",
+      "output_type": "era.working.result",
+      "nodeset": "era.tavern.flow.cap_sync_functions",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "functions",
+      "operation_path": [
+        "route_acknowledge__find_request",
+        "route_acknowledge__resolve_request",
+        "route_acknowledge__return_ack"
+      ]
+    },
+    {
+      "capability": "era.tavern.functions",
+      "operation": "release",
+      "completion": "immediate",
+      "input_type": "era.working.request",
+      "output_type": "era.working.result",
+      "nodeset": "era.tavern.flow.functions_release",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "functions"
+    },
+    {
+      "capability": "era.tavern.identity",
+      "operation": "read",
+      "completion": "immediate",
+      "input_type": "era.tavern.identity.read.request",
+      "output_type": "era.tavern.identity.read.result",
+      "nodeset": "era.tavern.flow.cap_sync_identity",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "identity",
+      "operation_path": [
+        "route_read__check_request",
+        "route_read__execute",
+        "route_read__return_result"
+      ]
+    },
+    {
+      "capability": "era.tavern.installation_scope",
+      "operation": "read",
+      "completion": "immediate",
+      "input_type": "era.tavern.installation_scope.read.request",
+      "output_type": "era.installation.scope.facts",
+      "nodeset": "era.tavern.flow.cap_sync_installation_scope",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "installation_scope",
+      "operation_path": [
+        "route_read__check_request",
+        "route_read__execute",
+        "route_read__return_result"
+      ]
+    },
+    {
+      "capability": "era.lifecycle.admission",
+      "operation": "schedule",
+      "completion": "immediate",
+      "input_type": "era.working.request",
+      "output_type": "era.working.result",
+      "nodeset": "era.tavern.flow.timer_control",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "admission"
+    },
+    {
+      "capability": "era.lifecycle.admission",
+      "operation": "cancel",
+      "completion": "immediate",
+      "input_type": "era.working.request",
+      "output_type": "era.working.result",
+      "nodeset": "era.tavern.flow.timer_control",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "admission"
+    },
+    {
+      "capability": "era.tavern.messages",
+      "operation": "read_context",
+      "completion": "suspend",
+      "input_type": "era.tavern.messages.read_context.request",
+      "output_type": "era.tavern.messages.read_context.result",
+      "nodeset": "era.tavern.flow.cap_sync_messages",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "messages",
+      "invocation": "promise_from_sync_result",
+      "operation_path": [
+        "route_read_context__check_request",
+        "route_read_context__execute",
+        "route_read_context__return_result"
+      ]
+    },
+    {
+      "capability": "era.tavern.messages",
+      "operation": "update_content",
+      "completion": "suspend",
+      "input_type": "era.tavern.messages.update_content.request",
+      "output_type": "era.tavern.messages.update_content.result",
+      "nodeset": "era.tavern.flow.messages_update_content",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "messages",
+      "invocation": "promise_from_native_completion_callback",
+      "prepare": {
+        "workflow": "configs/era.tavern.sync.jsonc",
+        "action": "capability",
+        "nodeset": "era.tavern.flow.messages_update_content"
+      },
+      "resume": {
+        "workflow": "configs/era.tavern.async.jsonc",
+        "action": "capability",
+        "nodeset": "era.tavern.flow.messages_update_content_finish",
+        "forward": "entire_prepared_frame",
+        "trigger": "raw_operation_terminal"
+      }
+    },
+    {
+      "capability": "era.tavern.messages",
+      "operation": "refresh",
+      "completion": "suspend",
+      "input_type": "era.tavern.messages.refresh.request",
+      "output_type": "era.tavern.messages.refresh.result",
+      "nodeset": "era.tavern.flow.messages_refresh",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "messages",
+      "invocation": "promise_from_native_completion_callback",
+      "prepare": {
+        "workflow": "configs/era.tavern.sync.jsonc",
+        "action": "capability",
+        "nodeset": "era.tavern.flow.messages_refresh"
+      },
+      "resume": {
+        "workflow": "configs/era.tavern.async.jsonc",
+        "action": "capability",
+        "nodeset": "era.tavern.flow.cap_async_messages",
+        "forward": "entire_prepared_frame",
+        "operation_path": [
+          "route_refresh__refresh",
+          "route_refresh__return_refresh"
+        ],
+        "trigger": "raw_operation_terminal"
+      }
+    },
+    {
+      "capability": "era.tavern.regex",
+      "operation": "read",
+      "completion": "suspend",
+      "input_type": "era.tavern.regex.read.request",
+      "output_type": "era.tavern.regex.read.result",
+      "nodeset": "era.tavern.flow.cap_sync_regex",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "regex",
+      "invocation": "promise_from_sync_result",
+      "operation_path": [
+        "route_read__check_request",
+        "route_read__execute",
+        "route_read__return_result"
+      ]
+    },
+    {
+      "capability": "era.tavern.regex",
+      "operation": "upsert",
+      "completion": "suspend",
+      "input_type": "era.tavern.regex.upsert.request",
+      "output_type": "era.tavern.regex.upsert.result",
+      "nodeset": "era.tavern.flow.cap_sync_regex",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "regex",
+      "invocation": "promise_from_native_completion_callback",
+      "prepare": {
+        "workflow": "configs/era.tavern.sync.jsonc",
+        "action": "capability",
+        "nodeset": "era.tavern.flow.cap_sync_regex",
+        "operation_path": [
+          "route_upsert__check_request",
+          "route_upsert__start_operation"
+        ]
+      },
+      "resume": {
+        "workflow": "configs/era.tavern.async.jsonc",
+        "action": "capability",
+        "nodeset": "era.tavern.flow.regex_upsert_finish",
+        "forward": "entire_prepared_frame",
+        "trigger": "raw_operation_terminal"
+      },
+      "operation_path": [
+        "route_upsert__check_request",
+        "route_upsert__start_operation"
+      ]
+    },
+    {
+      "capability": "era.tavern.sidecar",
+      "operation": "read_current",
+      "completion": "suspend",
+      "input_type": "era.tavern.sidecar.read_current.request",
+      "output_type": "era.tavern.sidecar.read_current.result",
+      "nodeset": "era.tavern.flow.cap_sync_sidecar",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "sidecar",
+      "invocation": "promise_from_sync_result",
+      "operation_path": [
+        "route_read_current__check_request",
+        "route_read_current__execute",
+        "route_read_current__return_result"
+      ]
+    },
+    {
+      "capability": "era.tavern.sidecar",
+      "operation": "read_record",
+      "completion": "suspend",
+      "input_type": "era.tavern.sidecar.read_record.request",
+      "output_type": "era.tavern.sidecar.read_record.result",
+      "nodeset": "era.tavern.flow.cap_sync_sidecar",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "sidecar",
+      "invocation": "promise_from_native_completion_callback",
+      "prepare": {
+        "workflow": "configs/era.tavern.sync.jsonc",
+        "action": "capability",
+        "nodeset": "era.tavern.flow.cap_sync_sidecar",
+        "operation_path": [
+          "route_read_record__check_request",
+          "route_read_record__start_operation"
+        ]
+      },
+      "resume": {
+        "workflow": "configs/era.tavern.async.jsonc",
+        "action": "capability",
+        "nodeset": "era.tavern.flow.sidecar_read_record_finish",
+        "forward": "entire_prepared_frame",
+        "trigger": "raw_operation_terminal"
+      },
+      "operation_path": [
+        "route_read_record__check_request",
+        "route_read_record__start_operation"
+      ]
+    },
+    {
+      "capability": "era.tavern.sidecar",
+      "operation": "write_record",
+      "completion": "suspend",
+      "input_type": "era.tavern.sidecar.write_record.request",
+      "output_type": "era.tavern.sidecar.write_record.result",
+      "nodeset": "era.tavern.flow.sidecar_write_record",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "sidecar",
+      "invocation": "promise_from_native_completion_callback",
+      "prepare": {
+        "workflow": "configs/era.tavern.sync.jsonc",
+        "action": "capability",
+        "nodeset": "era.tavern.flow.sidecar_write_record"
+      },
+      "resume": {
+        "workflow": "configs/era.tavern.async.jsonc",
+        "action": "capability",
+        "nodeset": "era.tavern.flow.cap_async_sidecar",
+        "forward": "entire_prepared_frame",
+        "operation_path": [
+          "route_write_record__upload_file",
+          "route_write_record__return_file"
+        ],
+        "trigger": "raw_operation_terminal"
+      }
+    },
+    {
+      "capability": "era.tavern.sidecar",
+      "operation": "commit_metadata",
+      "completion": "suspend",
+      "input_type": "era.tavern.sidecar.commit_metadata.request",
+      "output_type": "era.tavern.sidecar.commit_metadata.result",
+      "nodeset": "era.tavern.flow.sidecar_commit_metadata",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "sidecar",
+      "invocation": "promise_from_sync_result"
+    },
+    {
+      "capability": "era.tavern.sidecar",
+      "operation": "publish_snapshot",
+      "completion": "immediate",
+      "input_type": "era.tavern.sidecar.commit_metadata.request",
+      "output_type": "era.tavern.sidecar.commit_metadata.result",
+      "nodeset": "era.tavern.flow.cap_sync_sidecar",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "sidecar",
+      "operation_path": [
+        "route_publish_snapshot__check_request",
+        "route_publish_snapshot__execute",
+        "route_publish_snapshot__return_result"
+      ]
+    },
+    {
+      "capability": "era.tavern.sidecar",
+      "operation": "create_id",
+      "completion": "immediate",
+      "input_type": "era.tavern.sidecar.create_id.request",
+      "output_type": "era.tavern.sidecar.create_id.result",
+      "nodeset": "era.tavern.flow.cap_sync_sidecar",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "sidecar",
+      "operation_path": [
+        "route_create_id__check_request",
+        "route_create_id__execute",
+        "route_create_id__return_result"
+      ]
+    },
+    {
+      "capability": "era.tavern.sidecar",
+      "operation": "present_prompt",
+      "completion": "immediate",
+      "input_type": "era.tavern.sidecar.present_prompt.request",
+      "output_type": "era.tavern.sidecar.present_prompt.result",
+      "nodeset": "era.tavern.flow.cap_sync_sidecar",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "sidecar",
+      "operation_path": [
+        "route_present_prompt__check_request",
+        "route_present_prompt__execute",
+        "route_present_prompt__return_result"
+      ]
+    },
+    {
+      "capability": "era.tavern.sidecar",
+      "operation": "clear_prompt",
+      "completion": "immediate",
+      "input_type": "era.tavern.sidecar.clear_prompt.request",
+      "output_type": "era.tavern.sidecar.clear_prompt.result",
+      "nodeset": "era.tavern.flow.cap_sync_sidecar",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "sidecar",
+      "operation_path": [
+        "route_clear_prompt__check_request",
+        "route_clear_prompt__execute",
+        "route_clear_prompt__return_result"
+      ]
+    },
+    {
+      "capability": "era.tavern.sidecar",
+      "operation": "read_working",
+      "completion": "immediate",
+      "input_type": "era.working.request",
+      "output_type": "era.working.result",
+      "nodeset": "era.tavern.flow.cap_sync_sidecar",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "sidecar",
+      "operation_path": [
+        "route_read_working__check_request",
+        "route_read_working__execute",
+        "route_read_working__return_result"
+      ]
+    },
+    {
+      "capability": "era.tavern.sidecar",
+      "operation": "write_working",
+      "completion": "immediate",
+      "input_type": "era.working.request",
+      "output_type": "era.working.result",
+      "nodeset": "era.tavern.flow.cap_sync_sidecar",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "sidecar",
+      "operation_path": [
+        "route_write_working__check_request",
+        "route_write_working__execute",
+        "route_write_working__return_result"
+      ]
+    },
+    {
+      "capability": "era.tavern.startup_gate",
+      "operation": "activate",
+      "completion": "immediate",
+      "input_type": "era.installation.scope.decision",
+      "output_type": "era.tavern.startup_gate.result",
+      "nodeset": "era.tavern.flow.activate",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "startup_gate"
+    },
+    {
+      "capability": "era.tavern.startup_gate",
+      "operation": "dormant",
+      "completion": "immediate",
+      "input_type": "era.installation.scope.decision",
+      "output_type": "era.tavern.startup_gate.result",
+      "nodeset": "era.tavern.flow.activate",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "startup_gate"
+    },
+    {
+      "capability": "era.tavern.variables",
+      "operation": "read",
+      "completion": "suspend",
+      "input_type": "era.tavern.variables.read.request",
+      "output_type": "era.tavern.variables.read.result",
+      "nodeset": "era.tavern.flow.cap_async_variables",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "variables",
+      "invocation": "promise_from_sync_result",
+      "operation_path": [
+        "route_read__check_request",
+        "route_read__execute",
+        "route_read__return_result"
+      ]
+    },
+    {
+      "capability": "era.tavern.variables",
+      "operation": "commit",
+      "completion": "suspend",
+      "input_type": "era.tavern.variables.commit.request",
+      "output_type": "era.tavern.variables.commit.result",
+      "nodeset": "era.tavern.flow.variables_commit",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "variables",
+      "invocation": "promise_from_sync_result"
+    },
+    {
+      "capability": "era.tavern.worldbook",
+      "operation": "read",
+      "completion": "suspend",
+      "input_type": "era.tavern.worldbook.read.request",
+      "output_type": "era.tavern.worldbook.read.result",
+      "nodeset": "era.tavern.flow.cap_sync_worldbook",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "worldbook",
+      "invocation": "promise_from_native_completion_callback",
+      "prepare": {
+        "workflow": "configs/era.tavern.sync.jsonc",
+        "action": "capability",
+        "nodeset": "era.tavern.flow.cap_sync_worldbook",
+        "operation_path": [
+          "route_read__check_request",
+          "route_read__start_operation"
+        ]
+      },
+      "resume": {
+        "workflow": "configs/era.tavern.async.jsonc",
+        "action": "capability",
+        "nodeset": "era.tavern.flow.cap_async_worldbook",
+        "forward": "entire_prepared_frame",
+        "operation_path": [
+          "route_read__execute",
+          "route_read__return_result"
+        ],
+        "trigger": "raw_operation_terminal"
+      },
+      "operation_path": [
+        "route_read__check_request",
+        "route_read__start_operation"
+      ]
+    },
+    {
+      "capability": "era.tavern.worldbook",
+      "operation": "create",
+      "completion": "suspend",
+      "input_type": "era.tavern.worldbook.create.request",
+      "output_type": "era.tavern.worldbook.create.result",
+      "nodeset": "era.tavern.flow.cap_sync_worldbook",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "worldbook",
+      "invocation": "promise_from_native_completion_callback",
+      "prepare": {
+        "workflow": "configs/era.tavern.sync.jsonc",
+        "action": "capability",
+        "nodeset": "era.tavern.flow.cap_sync_worldbook",
+        "operation_path": [
+          "route_create__check_request",
+          "route_create__start_operation"
+        ]
+      },
+      "resume": {
+        "workflow": "configs/era.tavern.async.jsonc",
+        "action": "capability",
+        "nodeset": "era.tavern.flow.cap_async_worldbook",
+        "forward": "entire_prepared_frame",
+        "operation_path": [
+          "route_create__execute",
+          "route_create__return_result"
+        ],
+        "trigger": "raw_operation_terminal"
+      },
+      "operation_path": [
+        "route_create__check_request",
+        "route_create__start_operation"
+      ]
+    },
+    {
+      "capability": "era.tavern.worldbook",
+      "operation": "bind",
+      "completion": "suspend",
+      "input_type": "era.tavern.worldbook.bind.request",
+      "output_type": "era.tavern.worldbook.bind.result",
+      "nodeset": "era.tavern.flow.cap_sync_worldbook",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "worldbook",
+      "invocation": "promise_from_native_completion_callback",
+      "prepare": {
+        "workflow": "configs/era.tavern.sync.jsonc",
+        "action": "capability",
+        "nodeset": "era.tavern.flow.cap_sync_worldbook",
+        "operation_path": [
+          "route_bind__check_request",
+          "route_bind__start_operation"
+        ]
+      },
+      "resume": {
+        "workflow": "configs/era.tavern.async.jsonc",
+        "action": "capability",
+        "nodeset": "era.tavern.flow.cap_async_worldbook",
+        "forward": "entire_prepared_frame",
+        "operation_path": [
+          "route_bind__execute",
+          "route_bind__read_back",
+          "route_bind__return_result"
+        ],
+        "trigger": "raw_operation_terminal"
+      },
+      "operation_path": [
+        "route_bind__check_request",
+        "route_bind__start_operation"
+      ]
+    },
+    {
+      "capability": "era.tavern.worldbook",
+      "operation": "replace_entries",
+      "completion": "suspend",
+      "input_type": "era.tavern.worldbook.replace_entries.request",
+      "output_type": "era.tavern.worldbook.replace_entries.result",
+      "nodeset": "era.tavern.flow.cap_sync_worldbook",
+      "declaration": "javascript_project/service/plugins/era-capability-1.ts",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "capability",
+      "family": "worldbook",
+      "invocation": "promise_from_native_completion_callback",
+      "prepare": {
+        "workflow": "configs/era.tavern.sync.jsonc",
+        "action": "capability",
+        "nodeset": "era.tavern.flow.cap_sync_worldbook",
+        "operation_path": [
+          "route_replace_entries__check_request",
+          "route_replace_entries__start_operation"
+        ]
+      },
+      "resume": {
+        "workflow": "configs/era.tavern.async.jsonc",
+        "action": "capability",
+        "nodeset": "era.tavern.flow.cap_async_worldbook",
+        "forward": "entire_prepared_frame",
+        "operation_path": [
+          "route_replace_entries__execute",
+          "route_replace_entries__return_result"
+        ],
+        "trigger": "raw_operation_terminal"
+      },
+      "operation_path": [
+        "route_replace_entries__check_request",
+        "route_replace_entries__start_operation"
+      ]
+    },
+    {
+      "capability": "vibeflow.port",
+      "operation": "receive",
+      "completion": "suspend",
+      "workflow": "configs/era.tavern.async.jsonc",
+      "action": "receive",
+      "nodeset": "era.tavern.flow.frame_receive"
+    },
+    {
+      "capability": "vibeflow.port",
+      "operation": "send",
+      "completion": "immediate",
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "send",
+      "nodeset": "era.tavern.flow.frame_send"
+    }
+  ],
+  "lifecycle": [
+    {
+      "action": "initialize",
+      "workflow": "configs/era.tavern.sync.jsonc"
+    },
+    {
+      "action": "event",
+      "workflow": "configs/era.tavern.sync.jsonc"
+    },
+    {
+      "action": "admit",
+      "workflow": "configs/era.tavern.sync.jsonc"
+    },
+    {
+      "action": "stop_accepting",
+      "workflow": "configs/era.tavern.sync.jsonc"
+    },
+    {
+      "action": "diagnostics",
+      "workflow": "configs/era.tavern.sync.jsonc"
+    },
+    {
+      "action": "wait_through",
+      "workflow": "configs/era.tavern.async.jsonc"
+    },
+    {
+      "action": "stop",
+      "workflow": "configs/era.tavern.async.jsonc"
+    }
+  ],
+  "mechanical_sequence": "各函数配方固定调用同步 AOT；仅真实等待操作转交同实例 prepared frame 给异步 AOT。同步完成的 suspend 接口由生成 async 函数转交结果/异常；不在接线中判断分支或管理资源。",
+  "port_recipes": {
+    "receive": {
+      "prepare_action": "prepare_receive",
+      "resume_action": "receive"
+    },
+    "waitThrough": {
+      "prepare_action": "prepare_wait_through",
+      "resume_action": "wait_through"
+    },
+    "stop": {
+      "prepare_action": "prepare_stop",
+      "resume_action": "stop"
+    }
+  },
+  "model_completion_callback": {
+    "status": "planned",
+    "trigger": "raw_model_terminal",
+    "first": {
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "auxiliary_terminal"
+    },
+    "then": {
+      "workflow": "configs/era.tavern.async.jsonc",
+      "forward": "completed_prepared_frame",
+      "action": "capability"
+    },
+    "policy": "generated_parameter_forwarding_only; public cancellation does not invoke the terminal callback"
+  },
+  "capability_completion_callback": {
+    "status": "planned",
+    "trigger": "raw_operation_terminal",
+    "workflow": "configs/era.tavern.async.jsonc",
+    "forward": "same_prepared_frame",
+    "policy": "generated_parameter_forwarding_only; public cancellation does not discard the raw result or execute a Node implementation directly"
+  },
+  "function_context_callbacks": {
+    "status": "planned",
+    "lookup": {
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "function_submit",
+      "input_mode": "context"
+    },
+    "submit": {
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "function_submit",
+      "input_mode": "submit"
+    },
+    "abort_release": {
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "function_release"
+    },
+    "policy": "generated_parameter_forwarding_only; instance context table and validation owned by native Nodes"
+  },
+  "subscription_callbacks": {
+    "status": "planned",
+    "control": {
+      "workflow": "configs/era.tavern.sync.jsonc",
+      "action": "subscription_control"
+    },
+    "publish": {
+      "workflow": "configs/era.tavern.async.jsonc",
+      "action": "subscription_publish"
+    },
+    "policy": "generated_parameter_forwarding_only; resources and sequential listener scheduling owned by native Nodes and Loop"
+  },
+  "generation_receipt_callback": {
+    "status": "planned",
+    "workflow": "configs/era.tavern.async.jsonc",
+    "action": "generation_receipt",
+    "policy": "native receipt and handoff wait; no then/branch policy in generated binding"
+  },
+  "handoff_callback": {
+    "status": "planned",
+    "workflow": "configs/era.tavern.async.jsonc",
+    "action": "generation_handoff",
+    "policy": "fixed native workflow invocation; public notification cancellation does not discard raw handoff continuation"
+  },
+  "startup_wait_callback": {
+    "status": "planned",
+    "workflow": "configs/era.tavern.async.jsonc",
+    "action": "wait_startup",
+    "policy": "fixed native startup wait; no Promise/resource management in App binding"
+  },
+  "dispatch_recipes": [
+    {
+      "name": "sync",
+      "steps": [
+        {
+          "entry": "sync",
+          "projection": "frame"
+        }
+      ]
+    },
+    {
+      "name": "async",
+      "steps": [
+        {
+          "entry": "async",
+          "projection": "frame"
+        }
+      ]
+    },
+    {
+      "name": "finishCapability",
+      "steps": [
+        {
+          "entry": "async",
+          "projection": "value"
+        }
+      ]
+    },
+    {
+      "name": "modelComplete",
+      "steps": [
+        {
+          "entry": "sync",
+          "action": "auxiliary_terminal",
+          "projection": "frame"
+        },
+        {
+          "entry": "async",
+          "action": "capability",
+          "projection": "value"
+        }
+      ]
+    },
+    {
+      "name": "functionSubmit",
+      "steps": [
+        {
+          "entry": "sync",
+          "action": "function_submit",
+          "projection": "value"
+        }
+      ]
+    },
+    {
+      "name": "functionContext",
+      "steps": [
+        {
+          "entry": "sync",
+          "action": "function_submit",
+          "projection": "value"
+        }
+      ]
+    },
+    {
+      "name": "functionRelease",
+      "steps": [
+        {
+          "entry": "sync",
+          "action": "function_release",
+          "projection": "value"
+        }
+      ]
+    },
+    {
+      "name": "subscriptionControl",
+      "steps": [
+        {
+          "entry": "sync",
+          "action": "subscription_control",
+          "projection": "value"
+        }
+      ]
+    },
+    {
+      "name": "subscriptionPublish",
+      "steps": [
+        {
+          "entry": "async",
+          "action": "subscription_publish",
+          "projection": "value"
+        }
+      ]
+    },
+    {
+      "name": "generationReceipt",
+      "steps": [
+        {
+          "entry": "async",
+          "action": "generation_receipt",
+          "projection": "value"
+        }
+      ]
+    },
+    {
+      "name": "handoff",
+      "steps": [
+        {
+          "entry": "async",
+          "action": "generation_handoff",
+          "projection": "frame"
+        }
+      ]
+    },
+    {
+      "name": "eventIngress",
+      "steps": [
+        {
+          "entry": "sync",
+          "action": "event",
+          "projection": "value"
+        }
+      ]
+    },
+    {
+      "name": "timerFired",
+      "steps": [
+        {
+          "entry": "sync",
+          "action": "timer_fired",
+          "projection": "frame"
+        }
+      ]
+    },
+    {
+      "name": "stopPrefix",
+      "steps": [
+        {
+          "entry": "sync",
+          "action": "prepare_stop",
+          "projection": "frame"
+        }
+      ]
+    },
+    {
+      "name": "finishStop",
+      "steps": [
+        {
+          "entry": "async",
+          "action": "stop",
+          "projection": "value"
+        }
+      ]
+    },
+    {
+      "name": "nativeStopRetry",
+      "steps": [
+        {
+          "entry": "sync",
+          "action": "native_stop_retry",
+          "projection": "value"
+        }
+      ]
+    },
+    {
+      "name": "waitThrough",
+      "steps": [
+        {
+          "entry": "sync",
+          "action": "prepare_wait_through",
+          "projection": "frame"
+        },
+        {
+          "entry": "async",
+          "action": "wait_through",
+          "projection": "value"
+        }
+      ]
+    }
+  ],
+  "capability_call_option_fields": [
+    "signal"
+  ],
+  "native_entry": {
+    "export": "runEra",
+    "entry": "runtime",
+    "policy": "角色卡局部脚本仅调用一次原生运行入口；初始化、主Service并发和卸载清理均由原生流程拥有，不导出start/stop对象。",
+    "binding_callback": "bindSession",
+    "service_callback": "runService"
+  },
+  "presentation_client": {
+    "admit_action": "admit",
+    "admission_origin": "presentation",
+    "context_action": "function_submit",
+    "subscription_action": "subscription_control",
+    "diagnostics_action": "diagnostics",
+    "lifecycle_field": "lifecycleToken",
+    "clear_subscription_operation": "cancel",
+    "agent_context": {
+      "action": "capability",
+      "family": "agent",
+      "operation": "read_context"
+    }
+  },
+  "capability_origin": "service"
+}

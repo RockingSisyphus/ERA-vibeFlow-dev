@@ -12,9 +12,8 @@ const sync_contracts = await import(
 );
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { updateEraMessageContent } from '../../src/ERA变量框架/service/message-writer';
+import { writeMessage } from '../native-tavern/message-fixture.mjs';
 import { assertCurrentMessageBasis } from '../../src/ERA变量框架/service/message-write-target';
-import { prepareMessagePersistence } from '../../src/ERA变量框架/service/message-persistence';
 
 const transaction = await import(
   /* @vite-ignore */ new URL('../../../javascript_project/service/base_lib/sync/sync_planning.ts', import.meta.url).href
@@ -117,8 +116,7 @@ function fixture(source = 'tavern', eventType = 'message_swiped', placeholder = 
   const capabilities = {
     'era.tavern.messages': {
       update_content: async (input: Record<string, unknown>) => {
-        await updateEraMessageContent(input, new Map());
-        return { status: 'committed' };
+        return await writeMessage(input);
       },
       refresh: vi.fn(async () => {
         trace.push('render');
@@ -181,9 +179,7 @@ function fixture(source = 'tavern', eventType = 'message_swiped', placeholder = 
         })),
       );
       capabilities['era.tavern.messages'].update_content = async input => {
-        const confirm = prepareMessagePersistence(input, new AbortController().signal);
-        await updateEraMessageContent(input, new Map());
-        return confirm();
+        return await writeMessage(input);
       };
     },
     run: async () =>

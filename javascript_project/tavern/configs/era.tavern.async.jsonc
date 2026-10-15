@@ -1,0 +1,384 @@
+{
+  "nodeset_imports": [
+    {
+      "path": "nodesets/agent_generate_finish.jsonc"
+    },
+    {
+      "path": "nodesets/agent_generate_story_finish.jsonc"
+    },
+    {
+      "path": "nodesets/agent_list_connection_models_draft_finish.jsonc"
+    },
+    {
+      "path": "nodesets/agent_list_connection_models_finish.jsonc"
+    },
+    {
+      "path": "nodesets/barrier_wait.jsonc"
+    },
+    {
+      "path": "nodesets/cap_async_agent.jsonc"
+    },
+    {
+      "path": "nodesets/cap_async_character.jsonc"
+    },
+    {
+      "path": "nodesets/cap_async_functions.jsonc"
+    },
+    {
+      "path": "nodesets/cap_async_messages.jsonc"
+    },
+    {
+      "path": "nodesets/cap_async_regex.jsonc"
+    },
+    {
+      "path": "nodesets/cap_async_sidecar.jsonc"
+    },
+    {
+      "path": "nodesets/cap_async_worldbook.jsonc"
+    },
+    {
+      "path": "nodesets/character_apply_greeting_refresh_finish.jsonc"
+    },
+    {
+      "path": "nodesets/character_patch_external_statusbar_finish.jsonc"
+    },
+    {
+      "path": "nodesets/character_patch_single_floor_finish.jsonc"
+    },
+    {
+      "path": "nodesets/character_write_main_greeting_finish.jsonc"
+    },
+    {
+      "path": "nodesets/frame_receive.jsonc"
+    },
+    {
+      "path": "nodesets/functions_next_finish.jsonc"
+    },
+    {
+      "path": "nodesets/functions_next_wait_request_item.jsonc"
+    },
+    {
+      "path": "nodesets/messages_update_content_finish.jsonc"
+    },
+    {
+      "path": "nodesets/regex_upsert_finish.jsonc"
+    },
+    {
+      "path": "nodesets/sidecar_read_record_finish.jsonc"
+    },
+    {
+      "path": "nodesets/stop.jsonc"
+    },
+    {
+      "path": "nodesets/subscription_publish.jsonc"
+    },
+    {
+      "path": "nodesets/generation_receipt.jsonc"
+    },
+    {
+      "path": "nodesets/subscription_cycle.jsonc"
+    },
+    {
+      "path": "nodesets/generation_handoff.jsonc"
+    },
+    {
+      "path": "nodesets/admission.jsonc"
+    }
+  ],
+  "host_extensions": [],
+  "plugins": [
+    {
+      "source": {
+        "kind": "file",
+        "ref": "plugins/tavern.ts",
+        "export": "plugin"
+      }
+    }
+  ],
+  "global_config": {
+    "config": {
+      "max_event_bytes": 262144,
+      "max_fifo_events": 256,
+      "max_fifo_bytes": 8388608,
+      "max_host_refs_per_event": 32,
+      "barrier_watchdog_ms": 5000
+    },
+    "allow_config_override": false
+  },
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "request",
+        "type": "era.tavern.call.frame",
+        "display_name": "本次操作、参数及实例令牌",
+        "required": true
+      }
+    ],
+    "max_steps": 19,
+    "nodes": [
+      {
+        "id": "begin",
+        "type_used": "era.tavern.entry_async.begin",
+        "display_name": "接收async入口请求",
+        "description": "读取当前调用和实例令牌，保留输入参数；资源初始化和所有操作在后续原生 Nodeset 中执行。"
+      },
+      {
+        "id": "choose",
+        "type_used": "era.tavern.async_entry.choose",
+        "display_name": "识别异步宿主请求",
+        "description": "识别本次操作；Capability 直接选择已声明职责组，其他请求沿原准入、结果、等待或停止路径。不再经过 cap 总分组。"
+      },
+      {
+        "id": "route_receive",
+        "type_used": "era.tavern.flow.frame_receive",
+        "display_name": "接收队列事件或挂起等待",
+        "description": "执行入站 Port receive，保持唯一挂起接收者及实例、致命态和单次调用的取消联动。"
+      },
+      {
+        "id": "route_wait_through",
+        "type_used": "era.tavern.flow.barrier_wait",
+        "display_name": "等待 high-water 回执和生成交接",
+        "description": "等待指定序号及之前请求全部到终态，再等待原生生成交接；看门狗只报告等待，不自动放行。"
+      },
+      {
+        "id": "route_stop",
+        "type_used": "era.tavern.flow.stop",
+        "display_name": "释放实例全部运行资源",
+        "description": "在停止状态下释放监听、timer、挂起操作和回执；清理使用仍可执行的专用调用，不因原 signal 已取消而跳过。"
+      },
+      {
+        "id": "route_cap_agent",
+        "type_used": "era.tavern.flow.cap_async_agent",
+        "display_name": "生成、连接及页面会话操作：异步完成",
+        "description": "入口直接调用 agent 的唯一职责组，保留原能力与操作名称。"
+      },
+      {
+        "id": "route_cap_character",
+        "type_used": "era.tavern.flow.cap_async_character",
+        "display_name": "角色卡与显示配置操作：异步完成",
+        "description": "入口直接调用 character 的唯一职责组，保留原能力与操作名称。"
+      },
+      {
+        "id": "route_cap_functions",
+        "type_used": "era.tavern.flow.cap_async_functions",
+        "display_name": "消息内作者函数操作：异步完成",
+        "description": "入口直接调用 functions 的唯一职责组，保留原能力与操作名称。"
+      },
+      {
+        "id": "route_cap_messages",
+        "type_used": "era.tavern.flow.cap_async_messages",
+        "display_name": "聊天消息操作：异步完成",
+        "description": "入口直接调用 messages 的唯一职责组，保留原能力与操作名称。"
+      },
+      {
+        "id": "route_cap_regex",
+        "type_used": "era.tavern.flow.cap_async_regex",
+        "display_name": "角色正则操作：异步完成",
+        "description": "入口直接调用 regex 的唯一职责组，保留原能力与操作名称。"
+      },
+      {
+        "id": "route_cap_sidecar",
+        "type_used": "era.tavern.flow.cap_async_sidecar",
+        "display_name": "独立状态文件与内存快照操作：异步完成",
+        "description": "入口直接调用 sidecar 的唯一职责组，保留原能力与操作名称。"
+      },
+      {
+        "id": "route_cap_worldbook",
+        "type_used": "era.tavern.flow.cap_async_worldbook",
+        "display_name": "世界书操作：异步完成",
+        "description": "入口直接调用 worldbook 的唯一职责组，保留原能力与操作名称。"
+      },
+      {
+        "id": "join_return",
+        "type_used": "era.tavern.era_tavern_async.join_return",
+        "display_name": "汇合当前实际激活分支的结果",
+        "description": "接收当前所选路径的结果集合，交还其中唯一实际结果；不选择未激活分支、不重新执行操作。运行实现必须拒绝实际多结果，不以集合契约放宽唯一结果语义。"
+      },
+      {
+        "id": "route_subscription_publish",
+        "type_used": "era.tavern.flow.subscription_publish",
+        "display_name": "原生发布一个生成阶段",
+        "description": "同步通知发起只捕获资源并调用此编译后的异步workflow；顺序等待不在共享库或旧class内。"
+      },
+      {
+        "id": "route_generation_receipt",
+        "type_used": "era.tavern.flow.generation_receipt",
+        "display_name": "等待公共重试的完整生成回执",
+        "description": "替换图外generationAdmission包装；主Service原始FIFO回执不变。"
+      },
+      {
+        "id": "route_generation_handoff",
+        "type_used": "era.tavern.flow.generation_handoff",
+        "display_name": "等待原始生成订阅并完成阶段交接",
+        "description": "同步发起节点固定调用此原生async路径；通知公开等待取消后，原始订阅与交接仍按原signal复核和收尾，不由图外adapter执行。"
+      },
+      {
+        "id": "route_wait_startup",
+        "type_used": "era.tavern.initialize.wait_startup",
+        "display_name": "等待主Service安装作用域决议",
+        "description": "只等待本实例已经创建的startup Promise；激活或dormant返回原决议，停止解除等待并拒绝晚到挂载，不由App接线管理Promise。"
+      },
+      {
+        "id": "return",
+        "type_used": "era.tavern.async_entry.return",
+        "display_name": "交还异步宿主请求结果",
+        "description": "返回所选分支产生的唯一结果，不再执行其他操作；保留原有错误类别和同步或异步返回约定。"
+      },
+      {
+        "id": "finish",
+        "type_used": "era.tavern.entry_async.finish",
+        "display_name": "交还async入口结果",
+        "description": "将所选原生流程的唯一结果交回生成的机械调用绑定；保持原返回值，不在绑定中补做处理。"
+      }
+    ],
+    "edges": [
+      [
+        "begin",
+        "choose"
+      ],
+      {
+        "from": "choose",
+        "to": "route_receive",
+        "when": "era_tavern_async_entry_choose_route == 'receive'"
+      },
+      [
+        "route_receive",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_wait_through",
+        "when": "era_tavern_async_entry_choose_route == 'wait_through'"
+      },
+      [
+        "route_wait_through",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_stop",
+        "when": "era_tavern_async_entry_choose_route == 'stop'"
+      },
+      [
+        "route_stop",
+        "join_return"
+      ],
+      [
+        "return",
+        "finish"
+      ],
+      [
+        "join_return",
+        "return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_cap_agent",
+        "when": "era_tavern_async_entry_choose_route == 'cap_agent'"
+      },
+      [
+        "route_cap_agent",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_cap_character",
+        "when": "era_tavern_async_entry_choose_route == 'cap_character'"
+      },
+      [
+        "route_cap_character",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_cap_functions",
+        "when": "era_tavern_async_entry_choose_route == 'cap_functions'"
+      },
+      [
+        "route_cap_functions",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_cap_messages",
+        "when": "era_tavern_async_entry_choose_route == 'cap_messages'"
+      },
+      [
+        "route_cap_messages",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_cap_regex",
+        "when": "era_tavern_async_entry_choose_route == 'cap_regex'"
+      },
+      [
+        "route_cap_regex",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_cap_sidecar",
+        "when": "era_tavern_async_entry_choose_route == 'cap_sidecar'"
+      },
+      [
+        "route_cap_sidecar",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_cap_worldbook",
+        "when": "era_tavern_async_entry_choose_route == 'cap_worldbook'"
+      },
+      [
+        "route_cap_worldbook",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_subscription_publish",
+        "when": "era_tavern_async_entry_choose_route == 'subscription_publish'"
+      },
+      [
+        "route_subscription_publish",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_generation_receipt",
+        "when": "era_tavern_async_entry_choose_route == 'generation_receipt'"
+      },
+      [
+        "route_generation_receipt",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_generation_handoff",
+        "when": "era_tavern_async_entry_choose_route == 'generation_handoff'"
+      },
+      [
+        "route_generation_handoff",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_wait_startup",
+        "when": "era_tavern_async_entry_choose_route == 'wait_startup'"
+      },
+      [
+        "route_wait_startup",
+        "join_return"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.call.result",
+        "cardinality": "exactly_one",
+        "display_name": "原操作返回结果",
+        "as": "result"
+      }
+    ]
+  }
+}

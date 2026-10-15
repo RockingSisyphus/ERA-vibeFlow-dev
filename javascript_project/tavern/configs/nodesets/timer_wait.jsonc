@@ -1,0 +1,106 @@
+{
+  "type_key": "era.tavern.flow.timer_wait",
+  "display_name": "原生等待计时资源并交还到期事实",
+  "description": "计时器作为一个原生异步任务；取消和到期通过真实分支表达，无长期计时callback驱动或Host兼容层。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.call.frame",
+      "cardinality": "exactly_one",
+      "display_name": "同步分配的本实例计时资源"
+    }
+  ],
+  "provides": [
+    {
+      "key": "timer_wait_frame",
+      "type": "era.tavern.task.finished",
+      "display_name": "等待终态"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.call.frame",
+        "required": true,
+        "display_name": "计时资源及实例"
+      }
+    ],
+    "max_steps": 8,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.tavern.initialize.start",
+        "display_name": "开始单次计时任务",
+        "description": "标记控制入口。"
+      },
+      {
+        "id": "await_due",
+        "type_used": "era.tavern.timer_wait.await_due",
+        "display_name": "由原生异步任务等待一个计时资源",
+        "description": "原生受管任务只等待当前计时器的绝对截止时间或取消；真实Timeout由受等待的局部Promise持有，取消必清理，不执行准入、告警或循环调度。"
+      },
+      {
+        "id": "dispatch_due",
+        "type_used": "era.tavern.timer_wait.dispatch_due",
+        "display_name": "将到期事实交给已登记同步流程",
+        "description": "只转交本实例资源身份、种类与原输入给编译后timer_fired同步workflow；是否陈旧、准入和屏障告警沿既有图执行。"
+      },
+      {
+        "id": "cancelled",
+        "type_used": "era.tavern.timer_wait.cancelled",
+        "display_name": "结束被替换或停止取消的等待",
+        "description": "计时资源已取消时只交还终态，不发送到期事件、不解除生成屏障。"
+      },
+      {
+        "id": "join",
+        "type_used": "era.tavern.timer_wait.join",
+        "display_name": "汇合计时等待的唯一终态",
+        "description": "完成当前实际工作和应有收尾后只交回小的完成摘要；框架缓存不再持有本次请求、会话或私密函数引用。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.tavern.initialize.end",
+        "display_name": "结束单次计时任务",
+        "description": "标记控制终态。"
+      }
+    ],
+    "edges": [
+      [
+        "start",
+        "await_due"
+      ],
+      {
+        "from": "await_due",
+        "to": "dispatch_due",
+        "when": "timer_wait_await_route == 'due'"
+      },
+      {
+        "from": "await_due",
+        "to": "cancelled",
+        "when": "timer_wait_await_route == 'cancelled'"
+      },
+      [
+        "dispatch_due",
+        "join"
+      ],
+      [
+        "cancelled",
+        "join"
+      ],
+      [
+        "join",
+        "end"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.task.finished",
+        "cardinality": "exactly_one",
+        "display_name": "实际计时终态",
+        "as": "frame"
+      }
+    ]
+  }
+}

@@ -1,7 +1,6 @@
 /** 将实际会话报告送入有界查看仓库；不决定会话转换或业务持久化。 */
 import { agentExecutionRecords, currentAgentRecordChat } from './agent-execution-records';
 import { messageMk } from './statusbar-message-identity';
-import { generationHandoffs } from './generation-handoff-host';
 import type { EraSettlement } from './types';
 function record(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -75,6 +74,4 @@ export function observeAgentSession(session: unknown, eventId: unknown): void {
     const report = stageObservationReport(session, stage, attempts);
     if (key && report) agentExecutionRecords.rememberReport(chat, key, stage, report);
   }
-  if (record(session.pendingStage) && typeof session.pendingStage.completionId === 'string')
-    generationHandoffs.open(session.pendingStage.completionId);
 }

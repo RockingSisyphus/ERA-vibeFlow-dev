@@ -1,0 +1,116 @@
+{
+  "type_key": "era.tavern.flow.cap_async_messages",
+  "display_name": "聊天消息操作：异步完成",
+  "description": "只保留真正等待的操作；完全同步的 Promise 接口没有本入口分支。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.call.frame",
+      "cardinality": "exactly_one",
+      "display_name": "本次调用、实例资源与上一节点的事实"
+    }
+  ],
+  "provides": [
+    {
+      "key": "era_tavern_flow_cap_async_messages_frame",
+      "type": "era.tavern.frame.final.cap_async_messages",
+      "display_name": "处理后的资源与事实"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.call.frame",
+        "display_name": "同实例调用与资源",
+        "required": true
+      }
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.frame.final.cap_async_messages",
+        "cardinality": "exactly_one",
+        "as": "frame",
+        "display_name": "本段明确结果"
+      }
+    ],
+    "max_steps": 11,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.tavern.initialize.start",
+        "display_name": "开始当前原生流程",
+        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+      },
+      {
+        "id": "choose",
+        "type_used": "era.tavern.cap_async_messages.choose",
+        "display_name": "识别聊天消息操作",
+        "description": "按原 Capability 的操作名选择唯一 async 路径，操作原参数、返回类型和错误身份保持。"
+      },
+      {
+        "id": "route_update_content",
+        "type_used": "era.tavern.flow.messages_update_content_finish",
+        "display_name": "更新消息并确认保存完成：等待与确认",
+        "description": "只续用本次同步段已经发起的资源；具体等待与确认在所选原生路径。"
+      },
+      {
+        "id": "route_refresh__refresh",
+        "type_used": "era.tavern.messages_refresh.refresh",
+        "display_name": "按请求刷新当前消息显示：等待与确认：等待本次按请求刷新当前消息显示的资源终态",
+        "description": "检查所选刷新操作完成后的取消状态，保留原错误；不再次刷新。"
+      },
+      {
+        "id": "route_refresh__return_refresh",
+        "type_used": "era.tavern.messages_refresh.return_refresh",
+        "display_name": "按请求刷新当前消息显示：等待与确认：返回显示刷新结果",
+        "description": "返回 completed，不据此改变 ERA 权威状态。"
+      },
+      {
+        "id": "join_return",
+        "type_used": "era.tavern.cap_async_messages.join_return",
+        "display_name": "汇合当前实际激活分支的结果",
+        "description": "接收当前所选路径的结果集合，交还其中唯一实际结果；不选择未激活分支、不重新执行操作。运行实现必须拒绝实际多结果，不以集合契约放宽唯一结果语义。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.tavern.initialize.end",
+        "display_name": "结束当前原生流程",
+        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+      }
+    ],
+    "edges": [
+      {
+        "from": "choose",
+        "to": "route_update_content",
+        "when": "era_tavern_cap_async_messages_choose_route == 'update_content'"
+      },
+      [
+        "route_update_content",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_refresh__refresh",
+        "when": "era_tavern_cap_async_messages_choose_route == 'refresh'"
+      },
+      [
+        "route_refresh__return_refresh",
+        "join_return"
+      ],
+      [
+        "route_refresh__refresh",
+        "route_refresh__return_refresh"
+      ],
+      [
+        "start",
+        "choose"
+      ],
+      [
+        "join_return",
+        "end"
+      ]
+    ]
+  }
+}

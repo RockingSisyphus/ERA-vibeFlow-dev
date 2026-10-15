@@ -1,10 +1,17 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { projectMessage } from '../../src/ERA变量框架/service/message-projection';
 import { assertCurrentMessageBasis } from '../../src/ERA变量框架/service/message-write-target';
-import { TavernEraServiceAdapter } from '../../src/ERA变量框架/service/tavern-adapter';
+import { fixture } from '../native-tavern/native-fixture.mjs';
 
 describe('complete message topology during native Overswipe', () => {
-  afterEach(() => vi.unstubAllGlobals());
+  const owners: any[] = [];
+  afterEach(async () => {
+    for (const owner of owners.splice(0)) {
+      owner.page.dispatchEvent(new Event('pagehide'));
+      await owner.work;
+    }
+    vi.unstubAllGlobals();
+  });
 
   it('keeps the reserved candidate empty instead of borrowing old mes text', () => {
     const message = { message_id: 2, role: 'assistant', swipe_id: 3, swipes: ['A', 'B', 'C'], mes: 'C' };
@@ -26,7 +33,15 @@ describe('complete message topology during native Overswipe', () => {
     vi.stubGlobal('getChatMessages', read);
     vi.stubGlobal('getCurrentCharacterId', () => identity.characterId);
     vi.stubGlobal('SillyTavern', { groupId: null, getCurrentChatId: () => identity.chatId });
-    const adapter = new TavernEraServiceAdapter();
+    const owner = await fixture(undefined, {
+      api: {
+        getChatMessages: read,
+        getCurrentCharacterId: () => identity.characterId,
+        SillyTavern: { groupId: null, getCurrentChatId: () => identity.chatId },
+      },
+    });
+    owners.push(owner);
+    const adapter = { messages: owner.caps!['era.tavern.messages'] };
     const result = await adapter.messages.read_context({ projection: 'era-active-message-v1' }, {
       signal: new AbortController().signal,
     } as never);

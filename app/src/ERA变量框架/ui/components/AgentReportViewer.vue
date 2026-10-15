@@ -60,7 +60,7 @@
 import { computed, onBeforeUnmount, ref } from 'vue';
 import { readMessageStageReport } from '../../service/agent-message-report';
 import { agentExecutionRecords, currentAgentRecordChat } from '../../service/agent-execution-records';
-import { readCurrentAgentSession } from '../../service/agent-tavern-host';
+import { readCurrentAgentSession } from '../../service/client';
 import { requestEraService } from '../../service/client';
 import { ERA_UI_EVENT } from '../../service/types';
 import { formatEraReportForDisplay } from '../../service/technical-report-display';

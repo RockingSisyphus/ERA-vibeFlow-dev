@@ -1,9 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import _ from 'lodash';
-import type { EraWaitThroughResult } from '../../src/ERA变量框架/service/types';
-import { TavernEraServiceAdapter } from '../../src/ERA变量框架/service/tavern-adapter';
-import { createWorkflowHost } from '@era/vibeflow-service';
+import type { EraWaitThroughResult, EraAdmissionResult } from '../../src/ERA变量框架/service/types';
+import { fixture, realService } from '../native-tavern/native-fixture.mjs';
+import { EVENT_CATALOG } from '../../src/ERA变量框架/events/catalog';
+import {
+  publishSidecarRuntimeSnapshot,
+  storeWorkingState,
+} from '../../src/ERA变量框架/service/sidecar-runtime-snapshot';
 
 type EventHandler = (...args: unknown[]) => unknown;
 type MacroReplace = (context: Record<string, unknown>, substring: string) => string;
@@ -41,8 +45,8 @@ function clone<T>(value: T): T {
 
 describe('重新生成的宏与生成栅栏', () => {
   const events = new FakeTavernEvents();
-  let host: ReturnType<typeof createWorkflowHost> | null = null;
-  let adapter: TavernEraServiceAdapter;
+  let owner: Awaited<ReturnType<typeof fixture>> | null = null;
+  let adapter: { enqueue: (type: string, source: string, args: unknown[]) => EraAdmissionResult };
   let executedNodes: string[];
   let execution: Promise<unknown> | null = null;
   let chatVariables: Record<string, unknown>;
@@ -104,7 +108,7 @@ describe('重新生成的宏与生成栅栏', () => {
     });
     vi.stubGlobal('fetch', async (input: string | URL, init?: RequestInit) => {
       const url = String(input);
-      if (url === '/api/chats/get') return new Response(JSON.stringify([{}, ...savedChat]), { status: 200 });
+      if (url.endsWith('/api/chats/get')) return new Response(JSON.stringify([{}, ...savedChat]), { status: 200 });
       if (url.endsWith('/api/files/upload')) {
         const body = JSON.parse(String(init?.body)) as { name: string; data: string };
         const json = decodeURIComponent(escape(atob(body.data)));
@@ -173,28 +177,40 @@ describe('重新生成的宏与生成栅栏', () => {
     vi.stubGlobal('refreshOneMessage', async () => undefined);
     vi.stubGlobal('toastr', { error: vi.fn() });
 
-    adapter = new TavernEraServiceAdapter({ onBarrierFailure: result => barriers.push(result) });
-    vi.stubGlobal('__ERA_VIBEFLOW_SERVICE_ADAPTER__', adapter);
-    host = createWorkflowHost();
-    await host.start();
-    execution = host.runWorkflowAsync(
-      {},
+    owner = await fixture(
+      (inputs: object, options: any) =>
+        realService(inputs, {
+          ...options,
+          trace: 'full',
+          onTrace: (event: any) => {
+            if (typeof event.nodeId === 'string') executedNodes.push(event.nodeId);
+          },
+        }),
       {
-        trace: 'full',
-        onTrace: event => {
-          if (typeof event.nodeId === 'string') executedNodes.push(event.nodeId);
+        dynamicApi: globalThis,
+        api: {
+          ...globalThis,
+          location: { origin: 'http://tavern.test' },
+          getScriptTrees: ({ type }: { type: string }) =>
+            type === 'character' ? [{ type: 'script', id: getScriptId(), enabled: true }] : [],
         },
+        eventDefinitions: [...EVENT_CATALOG.values()],
+        publishSnapshot: publishSidecarRuntimeSnapshot,
+        storeWorkingState,
+        onBarrierFailure: (result: EraWaitThroughResult) => barriers.push(result),
       },
     );
+    adapter = owner.client;
+    execution = owner.work;
     const { registerEraMacro } = await import('../../src/ERA变量框架/macro/registration');
     unregisterMacro = registerEraMacro();
   });
 
   afterEach(async () => {
     unregisterMacro();
-    await host?.stop();
+    owner?.page.dispatchEvent(new Event('pagehide'));
     await execution?.catch(() => undefined);
-    host = null;
+    owner = null;
     execution = null;
     vi.unstubAllGlobals();
     vi.restoreAllMocks();

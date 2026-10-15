@@ -15,6 +15,7 @@
 - [rules-and-nodes](user/rules-and-nodes.md)
 - [rule-system-migration](user/rule-system-migration.md)
 - [runtime-observation](user/runtime-observation.md)
+- [task-management](user/task-management.md)
 - [commands-and-results](user/commands-and-results.md)
 - [product-check-boundaries](user/product-check-boundaries.md)
 - [collaborative](user/profiles/collaborative.md)

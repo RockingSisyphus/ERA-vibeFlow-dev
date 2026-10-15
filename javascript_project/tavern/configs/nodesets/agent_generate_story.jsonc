@@ -1,0 +1,100 @@
+{
+  "type_key": "era.tavern.flow.agent_generate_story",
+  "display_name": "执行酒馆正文重试",
+  "description": "实现 era.tavern.agent.generate_story；输入沿用 era.agent.host.request，输出沿用 era.agent.host.result，完成方式保持 suspend。 原节点保留；仅把首次等待划为同步发起与异步等待，后续处理在对应 finish 流程。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.call.frame",
+      "cardinality": "exactly_one",
+      "display_name": "当前实例与调用资料"
+    }
+  ],
+  "provides": [
+    {
+      "key": "era_tavern_flow_agent_generate_story_frame",
+      "type": "era.tavern.frame.agent_generate_story.started",
+      "display_name": "当前步骤的资源与已捕获事实"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "sync",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.call.frame",
+        "display_name": "调用与资源资料",
+        "required": true
+      }
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.frame.agent_generate_story.started",
+        "cardinality": "exactly_one",
+        "as": "frame",
+        "display_name": "本次已经发起的等待资源"
+      }
+    ],
+    "max_steps": 17,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.tavern.initialize.start",
+        "display_name": "开始当前原生流程",
+        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+      },
+      {
+        "id": "check_request",
+        "type_used": "era.tavern.agent_generate_story.check_request",
+        "display_name": "检查模型请求与取消状态",
+        "description": "保留该操作当前输入检查，读取 Service 指定的提示词、采样、注入和请求上下文。"
+      },
+      {
+        "id": "prepare_request",
+        "type_used": "era.tavern.agent_generate_story.prepare_request",
+        "display_name": "准备路由、请求标识和观察记录",
+        "description": "保持原当前连接或本机连接方案选择、随机请求标识、故事预设及观察记录内容。"
+      },
+      {
+        "id": "enter_auxiliary",
+        "type_used": "era.tavern.agent_generate_story.enter_auxiliary",
+        "display_name": "进入辅助生成重入范围",
+        "description": "递增当前实例的辅助生成深度，防止模型请求发出的事件重入主故事。"
+      },
+      {
+        "id": "start_operation",
+        "type_used": "era.tavern.agent_generate_story.start_operation",
+        "display_name": "同步发起正文重试请求",
+        "description": "在原始模型请求终态回调中只转交本次资料：先调用同步模型终态分支，再调用既有异步结果分类。公开等待拥有独立取消资源，取消不能提前解除仍在运行的辅助生成保护。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.tavern.initialize.end",
+        "display_name": "结束当前原生流程",
+        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+      }
+    ],
+    "edges": [
+      [
+        "check_request",
+        "prepare_request"
+      ],
+      [
+        "prepare_request",
+        "enter_auxiliary"
+      ],
+      [
+        "enter_auxiliary",
+        "start_operation"
+      ],
+      [
+        "start",
+        "check_request"
+      ],
+      [
+        "start_operation",
+        "end"
+      ]
+    ]
+  }
+}

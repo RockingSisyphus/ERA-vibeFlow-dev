@@ -2,8 +2,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { registerEraTechnicalBlockProjection } from '../../src/ERA变量框架/service/technical-block-projection';
 import { registerAgentRequestObservation } from '../../src/ERA变量框架/service/agent-report-host';
-import { NativeGenerationHost } from '../../src/ERA变量框架/service/native-generation-host';
-import { TavernEraServiceAdapter } from '../../src/ERA变量框架/service/tavern-adapter';
+import { fixture } from '../native-tavern/native-fixture.mjs';
+import { EVENT_CATALOG } from '../../src/ERA变量框架/events/catalog';
+const owners: any[] = [];
 
 const registrations = new Map<string, Set<unknown>>();
 let failAt = '';
@@ -30,7 +31,11 @@ beforeEach(() => {
   vi.stubGlobal('eventMakeLast', register);
   vi.stubGlobal('eventRemoveListener', (type: string, handler: unknown) => registrations.get(type)?.delete(handler));
 });
-afterEach(() => {
+afterEach(async () => {
+  for (const owner of owners.splice(0)) {
+    owner.page.dispatchEvent(new Event('pagehide'));
+    await owner.work;
+  }
   cleanup?.();
   cleanup = undefined;
   document.head.querySelectorAll('[data-era-projection-version]').forEach(node => node.remove());
@@ -50,29 +55,33 @@ describe('部分订阅失败的资源归属', () => {
     expect(() => registerAgentRequestObservation()).toThrow('registration failed');
     expect(count()).toBe(0);
   });
-  it('原生结束监听登记失败也能释放宿主已经登记的句柄', () => {
+  it('原生结束监听登记失败也能释放已经登记的句柄', async () => {
     failAt = 'GENERATION_ENDED';
-    const host = new NativeGenerationHost({
-      isAuxiliary: () => false,
-      readSession: () => null,
-      readIdentity: () => null,
-    });
-    expect(() => host.observe()).toThrow('registration failed');
+    await expect(
+      fixture(undefined, { dynamicApi: globalThis, eventDefinitions: [...EVENT_CATALOG.values()] }),
+    ).rejects.toBeDefined();
     expect(count()).toBe(0);
   });
-  it('适配器辅助订阅失败后可重新订阅同一实例且正常卸载', () => {
-    const adapter = new TavernEraServiceAdapter();
-    cleanup = () => adapter.stopAccepting();
-    const listener = () => ({ accepted: false as const, code: 'fixture', message: 'fixture' });
+  it('辅助订阅失败后新实例可正常挂载，重复卸载无残留', async () => {
     failAt = 'HELPER_ENDED';
-    expect(() => adapter.subscribe(listener)).toThrow('registration failed');
-    failAt = '';
-    const stop = adapter.subscribe(listener);
-    cleanup = stop;
-    expect(count()).toBeGreaterThan(0);
-    stop();
-    stop();
+    const options = {
+      dynamicApi: globalThis,
+      eventDefinitions: [...EVENT_CATALOG.values()],
+      registerTechnicalProjection: registerEraTechnicalBlockProjection,
+    };
+    await expect(fixture(undefined, options)).rejects.toBeDefined();
     expect(count()).toBe(0);
+    expect(document.head.querySelector('[data-era-projection-version]')).toBeNull();
+    failAt = '';
+    const owner = await fixture(undefined, options);
+    owners.push(owner);
+    expect(count()).toBeGreaterThan(0);
+    owner.page.dispatchEvent(new Event('pagehide'));
+    await owner.work;
+    owner.page.dispatchEvent(new Event('pagehide'));
+    await owner.work;
+    expect(count()).toBe(0);
+    expect(owner.disposed()).toBe(1);
     expect(document.head.querySelector('[data-era-projection-version]')).toBeNull();
   });
 });

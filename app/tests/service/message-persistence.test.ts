@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { prepareMessagePersistence } from '../../src/ERA变量框架/service/message-persistence';
+import { writeMessage } from '../native-tavern/message-fixture.mjs';
+import { projectMessage } from '../../src/ERA变量框架/service/message-projection';
 
 function fixture(extra?: Record<string, unknown>) {
   const character = { name: 'A', avatar: 'A.png', chat: 'chat-A' };
@@ -31,13 +32,15 @@ function fixture(extra?: Record<string, unknown>) {
   vi.stubGlobal('getCurrentCharacterId', () => '0');
   vi.stubGlobal('getChatMessages', () => [{ message_id: 0, role: 'assistant', ...message }]);
   vi.stubGlobal('fetch', read);
-  const confirm = prepareMessagePersistence(
-    { updates: [{ message_id: 0, message: 'new MK', extra }] },
-    new AbortController().signal,
-  );
   message.mes = 'new MK';
   message.swipes[1] = 'new MK';
   Object.assign(message.extra, extra);
+  vi.stubGlobal('setChatMessages', async () => undefined);
+  const sourceBasis = {
+    identity: { characterId: '0', groupId: null, chatId: 'chat-A' },
+    messages: [projectMessage({ message_id: 0, role: 'assistant', ...message }, 0)],
+  };
+  const confirm = () => writeMessage({ updates: [{ message_id: 0, message: 'new MK', extra }], sourceBasis });
   return {
     character,
     message,
@@ -79,7 +82,7 @@ describe('message persistence completion', () => {
   it('does not select or save another chat if navigation happened after the memory write', async () => {
     const f = fixture();
     f.character.chat = 'chat-B';
-    expect(await f.confirm()).toMatchObject({ status: 'failed' });
+    await expect(f.confirm()).rejects.toMatchObject({ code: 'ERA_MESSAGE_WRITE_TARGET_CHANGED' });
     expect(f.save).not.toHaveBeenCalled();
     expect(f.read).not.toHaveBeenCalled();
   });

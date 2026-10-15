@@ -5,6 +5,7 @@
  * 它为宏和 API 同步投影当前工作状态；聊天记录与 Sidecar 在批次结束时持久化。写入者必须是 Service 通过受限 Host capability；身份不匹配
  * 时读者一律得到空状态，绝不回退到聊天变量或上一聊天快照。
  */
+export const SIDECAR_PROMPT_EVENT = 'era-sidecar-binding-prompt';
 
 /** 当前工作状态的角色、群组和聊天身份，供同步读取严格匹配。 */
 export interface SidecarRuntimeIdentity {

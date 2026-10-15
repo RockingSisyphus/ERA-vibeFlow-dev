@@ -1,18 +1,15 @@
-import { workingCapabilityFixture } from './working-capability-fixture';
-import { describe, expect, it } from 'vitest';
-
-import {
-  createHostExtension,
-  type EraAdmissionResult,
-  type EraInboundEvent,
-  type EraPreparedNotification,
-  type EraTavernClock,
-  type EraTavernHostAdapter,
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Host 差分测试必须直接读取跨 root 的扩展源码。
-  // @ts-ignore TypeScript 会对 app rootDir 外的 VibeFlow 源码报告 TS6059。
-} from '../../../javascript_project/service/host_extensions/service_host_operations';
-
-class FakeClock implements EraTavernClock {
+import { afterEach, describe, expect, it } from 'vitest';
+import { fixture } from '../native-tavern/native-fixture.mjs';
+import type { EraAdmissionResult, EraInboundEvent, EraPreparedNotification } from '../../src/ERA变量框架/service/types';
+const tick = () => new Promise(resolve => setTimeout(resolve, 0));
+const owners: any[] = [];
+afterEach(async () => {
+  for (const owner of owners.splice(0)) {
+    owner.page.dispatchEvent(new Event('pagehide'));
+    await owner.work;
+  }
+});
+class FakeClock {
   private nowValue = 1_000;
   private nextHandle = 1;
   private readonly tasks = new Map<number, { readonly dueAt: number; readonly callback: () => void }>();
@@ -50,174 +47,85 @@ class FakeClock implements EraTavernClock {
   }
 }
 
-class FakeAdapter implements EraTavernHostAdapter {
+/** 只记录原测试的外部事实，不实现队列或生命周期。 */
+class FakeAdapter {
   readonly clock = new FakeClock();
-  readonly warnings: Array<{
-    readonly message: string;
-    readonly details?: Readonly<Record<string, unknown>>;
-  }> = [];
+  readonly warnings: Array<{ message: string; details?: Readonly<Record<string, unknown>> }> = [];
   readonly notifications: EraPreparedNotification[] = [];
   readonly lifecycleOrder: string[] = [];
   sidecarPromptClearCount = 0;
-
-  /** Native tool transport; these host tests do not execute ERA operations. */
-  readonly functions = {
-    begin: () => ({ status: 'started' }),
-    next: async () => ({ kind: 'done', error: null }),
-    acknowledge: () => ({ status: 'acknowledged' }),
-    release: () => ({ released: true }),
-  };
-
-  private listener: ((event: EraInboundEvent) => EraAdmissionResult) | null = null;
+  variables = { read: (_input: any): any => [] };
   notificationImplementation: (notification: EraPreparedNotification, signal: AbortSignal) => void | Promise<void> =
-    () => undefined;
-
-  readonly agent = {
-    read_context: async (input: Readonly<Record<string, unknown>>) => ({ ...input }),
-    write_configuration: async (input: Readonly<Record<string, unknown>>) => ({ ...input }),
-    capture_preset: (input: Readonly<Record<string, unknown>>) => ({ ...input }),
-    read_connection_state: () => ({ entryCount: 0, entryExists: false, profile: null }),
-    read_configuration_sources: (input: Readonly<Record<string, unknown>>) => ({ ...input }),
-    upsert_connection_profile: async (input: Readonly<Record<string, unknown>>) => ({ ...input }),
-    delete_connection_profile: async (input: Readonly<Record<string, unknown>>) => ({ ...input }),
-    clear_connection_profile_key: async (input: Readonly<Record<string, unknown>>) => ({ ...input }),
-    list_connection_models: async (input: Readonly<Record<string, unknown>>) => ({ ...input, models: [] }),
-    list_connection_models_draft: async (input: Readonly<Record<string, unknown>>) => ({ ...input, models: [] }),
-    generate: async (input: Readonly<Record<string, unknown>>) => ({ ...input, response: '{}' }),
-    generate_story: async (input: Readonly<Record<string, unknown>>) => ({ ...input, response: 'story' }),
-    await_native_completion: async () => ({ status: 'completed', messageId: 0 }),
-    inject_once: (input: Readonly<Record<string, unknown>>) => ({ ...input }),
-    read_session_binding: () => ({ active: false, previous: null }),
-    write_session: (input: Readonly<Record<string, unknown>>) => ({ ...input }),
-    clear_session: (input: Readonly<Record<string, unknown>>) => ({ ...input }),
-    create_error_message: async (input: Readonly<Record<string, unknown>>) => ({ ...input }),
-    stop_native_generation: (input: Readonly<Record<string, unknown>>) => ({ ...input }),
+    () => {};
+  emit: (event: EraInboundEvent & { receipt?: { settle: (outcome: any) => unknown } }) => EraAdmissionResult = () => {
+    throw Error('fixture not connected');
   };
-
-  readonly variables = {
-    read: async (input: Readonly<Record<string, unknown>>) => ({ ...input }),
-    commit: async (input: Readonly<Record<string, unknown>>) => ({ ...input }),
-  };
-
-  readonly messages = {
-    read_context: async (input: Readonly<Record<string, unknown>>) => ({ ...input }),
-    update_content: async (input: Readonly<Record<string, unknown>>) => ({ ...input }),
-    refresh: async (input: Readonly<Record<string, unknown>>) => ({ ...input }),
-  };
-
-  readonly worldbook = {
-    read: async (input: Readonly<Record<string, unknown>>) => ({ ...input }),
-    create: async (input: Readonly<Record<string, unknown>>) => ({ ...input }),
-    bind: async (input: Readonly<Record<string, unknown>>) => ({ ...input }),
-    replace_entries: async (input: Readonly<Record<string, unknown>>) => ({ ...input }),
-  };
-
-  readonly regex = {
-    read: async (input: Readonly<Record<string, unknown>>) => ({ ...input }),
-    upsert: async (input: Readonly<Record<string, unknown>>) => ({ ...input }),
-  };
-
-  readonly character = {
-    read_greeting_refresh_context: () => ({ group: false, tainted: false, length: 2, first: null }),
-    apply_greeting_refresh: async () => ({ status: 'refreshed', reason: 'fixture' }),
-    read_main_greeting: async (input: Readonly<Record<string, unknown>>) => ({
-      ...input,
-      status: 'ready',
-      firstMessage: '',
-    }),
-    write_main_greeting: async (input: Readonly<Record<string, unknown>>) => ({ ...input, status: 'updated' }),
-  };
-
-  readonly identity = {
-    read: (input: Readonly<Record<string, unknown>>) => ({ ...input }),
-  };
-
-  readonly installation_scope = {
-    read: (input: Readonly<Record<string, unknown>>) => ({
-      ...input,
-      scriptId: 'era',
-      scopes: ['character'],
-      readStatus: 'complete',
-    }),
-  };
-
-  readonly sidecar = {
-    ...workingCapabilityFixture(),
-    read_current: async (input: Readonly<Record<string, unknown>>) => ({ ...input }),
-    read_record: async (input: Readonly<Record<string, unknown>>) => ({ ...input }),
-    write_record: async (input: Readonly<Record<string, unknown>>) => ({ ...input }),
-    commit_metadata: async (input: Readonly<Record<string, unknown>>) => ({ ...input }),
-    publish_snapshot: (input: Readonly<Record<string, unknown>>) => ({ ...input, status: 'published' }),
-    create_id: () => ({ sidecarId: 'era_chat_fake-id' }),
-    present_prompt: (input: Readonly<Record<string, unknown>>) => ({ ...input }),
-    clear_prompt: (input: Readonly<Record<string, unknown>>) => {
-      this.sidecarPromptClearCount += 1;
-      return { ...input };
-    },
-  };
-
-  subscribe(listener: (event: EraInboundEvent) => EraAdmissionResult): () => void {
-    if (this.listener) throw new Error('重复注册 fake listener');
-    this.listener = listener;
-    this.lifecycleOrder.push('start');
-    return () => {
-      if (!this.listener) return;
-      this.listener = null;
-      this.lifecycleOrder.push('stop');
-    };
-  }
-
-  emit(event: EraInboundEvent): EraAdmissionResult {
-    if (!this.listener) throw new Error('fake listener 尚未注册');
-    return this.listener(event);
-  }
-
-  notify(notification: EraPreparedNotification, context: { readonly signal: AbortSignal }): void | Promise<void> {
-    this.notifications.push(notification);
-    this.lifecycleOrder.push(`notify:${notification.type}`);
-    return this.notificationImplementation(notification, context.signal);
-  }
-
-  warn(message: string, details?: Readonly<Record<string, unknown>>): void {
-    this.warnings.push({ message, details });
-  }
-
-  get listenerCount(): number {
-    return this.listener ? 1 : 0;
-  }
 }
-
-function createFixture(
-  adapter = new FakeAdapter(),
-  limits: {
-    readonly max_fifo_events?: number;
-    readonly max_fifo_bytes?: number;
-    readonly max_event_bytes?: number;
-    readonly max_host_refs_per_event?: number;
-  } = {},
-) {
-  const controller = new AbortController();
-  const host = createHostExtension({
+/** 测试调用点的错误视图：断言领域错误；单独原生入口探针验证VF包装。 */
+function domainError(error: any): any {
+  while (error?.code === 'VF_NODE_FAILED' && error.cause) error = error.cause;
+  return error;
+}
+async function createFixture(adapter = new FakeAdapter(), limits: Record<string, number> = {}, manualStartup = false) {
+  let owner: any;
+  owner = await fixture(undefined, {
+    manualStartup,
     extensionId: 'era.tavern.service_host',
-    config: {
-      ports: {
-        inbound: 'era.service.in',
-        outbound: 'era.service.out',
+    clock: adapter.clock,
+    config: { limits, barrier_watchdog_ms: 5 },
+    warn: (message: string, details: any) => adapter.warnings.push({ message, details }),
+    api: {
+      getWorldbookNames: () => ['fatal-race'],
+      getCharWorldbookNames: () => ({ primary: null, additional: [] }),
+      getWorldbook: () => adapter.variables.read({}),
+      eventEmit: (type: string, ...args: unknown[]) => {
+        const notification = { type, args };
+        adapter.notifications.push(notification);
+        adapter.lifecycleOrder.push(`notify:${type}`);
+        return adapter.notificationImplementation(notification, owner.session.lifecycle.signal);
       },
-      limits: {
-        max_event_bytes: limits.max_event_bytes ?? 262_144,
-        max_fifo_events: limits.max_fifo_events ?? 256,
-        max_fifo_bytes: limits.max_fifo_bytes ?? 8_388_608,
-        max_host_refs_per_event: limits.max_host_refs_per_event ?? 32,
-      },
-      barrier_watchdog_ms: 5,
     },
-    signal: controller.signal,
-    adapter,
   });
-  return { adapter, controller, host };
+  owners.push(owner);
+  owner.page.addEventListener('era-sidecar-binding-prompt', () => adapter.sidecarPromptClearCount++);
+  adapter.emit = event => owner.direct({ action: 'admit', input: event }).result;
+  const capabilities = Object.fromEntries(
+    Object.entries(owner.caps).map(([id, operations]) => [
+      id,
+      Object.fromEntries(
+        Object.entries(operations as object).map(([operation, call]: [string, any]) => [
+          operation,
+          (...args: any[]) => {
+            try {
+              const value = call(...args);
+              return value?.then
+                ? value.catch((error: any) => {
+                    throw domainError(error);
+                  })
+                : value;
+            } catch (error) {
+              throw domainError(error);
+            }
+          },
+        ]),
+      ),
+    ]),
+  );
+  const close = async (_reason?: string) => {
+    owner.page.dispatchEvent(new Event('pagehide'));
+    await owner.work;
+  };
+  return {
+    adapter,
+    owner,
+    host: {
+      capabilities,
+      stop: close,
+      diagnostics: { snapshot: () => owner.direct({ action: 'diagnostics' }).result },
+    },
+    listenerCount: () => [...owner.handlers.values()].reduce((n: number, handlers: any) => n + handlers.size, 0),
+  };
 }
-
 function assertAccepted(result: EraAdmissionResult) {
   expect(result.accepted).toBe(true);
   if (!result.accepted) throw new Error(result.message);
@@ -259,13 +167,12 @@ function fatalBatch(
   } as const;
 }
 
-describe('ERA 服务 Host Extension 核心', () => {
-  it('import/create 无监听副作用，start 与 stop 均幂等', async () => {
-    const { adapter, host } = createFixture();
-
-    expect(adapter.listenerCount).toBe(0);
+describe('ERA 原生辅助workflow核心', () => {
+  it('单次入口按安装决议激活一次，重复卸载只清理一次', async () => {
+    const { owner, host, listenerCount, adapter } = await createFixture(new FakeAdapter(), {}, true);
+    expect(listenerCount()).toBe(0);
     expect(host.diagnostics.snapshot()).toMatchObject({
-      started: false,
+      started: true,
       accepted: 0,
       pendingReceipts: 0,
       timers: 0,
@@ -273,53 +180,37 @@ describe('ERA 服务 Host Extension 核心', () => {
       notifications: 0,
       portWaiters: 0,
     });
-
-    host.start();
-    host.start();
-    expect(adapter.listenerCount).toBe(1);
-
+    const gate = host.capabilities['era.tavern.startup_gate'];
+    gate.activate({ route: 'allow' });
+    const count = listenerCount();
+    expect(count).toBe(4);
+    gate.activate({ route: 'allow' });
+    expect(listenerCount()).toBe(count);
+    owner.page.dispatchEvent(new Event('pagehide'));
+    await owner.work;
     await host.stop();
-    await host.stop();
-    expect(adapter.listenerCount).toBe(0);
-    expect(adapter.lifecycleOrder).toEqual(['start', 'stop']);
+    expect(listenerCount()).toBe(0);
     expect(adapter.sidecarPromptClearCount).toBe(1);
   });
-
-  it('staged startup 在 workflow allow 前绝不订阅 Tavern，dormant 也不订阅', async () => {
-    const adapter = new FakeAdapter();
-    const controller = new AbortController();
-    const host = createHostExtension({
-      extensionId: 'era.tavern.service_host',
-      config: { staged_startup: true },
-      signal: controller.signal,
-      adapter,
-    });
-    host.start();
-    expect(adapter.listenerCount).toBe(0);
+  it('安装位置决议前无监听，dormant不登记，allow登记', async () => {
+    const dormant = await createFixture(new FakeAdapter(), {}, true);
+    expect(dormant.listenerCount()).toBe(0);
     expect(
-      host.capabilities['era.tavern.startup_gate'].dormant({ route: 'dormant', classification: 'global' }),
+      dormant.host.capabilities['era.tavern.startup_gate'].dormant({ route: 'dormant', classification: 'global' }),
     ).toEqual({ activated: false });
-    expect(adapter.listenerCount).toBe(0);
-    await host.stop();
-
-    const allowedAdapter = new FakeAdapter();
-    const allowedHost = createHostExtension({
-      extensionId: 'era.tavern.service_host',
-      config: { staged_startup: true },
-      signal: new AbortController().signal,
-      adapter: allowedAdapter,
-    });
-    allowedHost.start();
+    expect(dormant.listenerCount()).toBe(0);
+    await dormant.host.stop();
+    const allowed = await createFixture(new FakeAdapter(), {}, true);
     expect(
-      allowedHost.capabilities['era.tavern.startup_gate'].activate({ route: 'allow', classification: 'character' }),
+      allowed.host.capabilities['era.tavern.startup_gate'].activate({ route: 'allow', classification: 'character' }),
     ).toEqual({ activated: true });
-    expect(allowedAdapter.listenerCount).toBe(1);
-    await allowedHost.stop();
+    expect(allowed.listenerCount()).toBe(4);
+    await allowed.host.stop();
+    expect(allowed.listenerCount()).toBe(0);
   });
 
   it('无损编码 tagged args，并严格保持结算先于通知启动', async () => {
-    const { adapter, host } = createFixture();
-    host.start();
+    const { adapter, host } = await createFixture();
     const callback = () => '宿主对象';
     const crossRealmLike = Object.assign(Object.create(null) as Record<string, unknown>, {
       iframeDetail: { counter: 1 },
@@ -379,8 +270,7 @@ describe('ERA 服务 Host Extension 核心', () => {
   });
 
   it('同 frameId 同内容重放为 no-op，异内容重放报协议冲突', async () => {
-    const { adapter, host } = createFixture();
-    host.start();
+    const { adapter, host } = await createFixture();
     const admission = assertAccepted(adapter.emit({ type: 'manual_sync', source: 'ui', args: [] }));
     const frame = ignoredBatch('batch:idempotent', admission, [{ type: 'era:test', args: [] }]);
 
@@ -409,11 +299,15 @@ describe('ERA 服务 Host Extension 核心', () => {
   });
 
   it('致命批次先结算再锁存，阻止回执重入、挂起 Port 与 Capability 继续', async () => {
-    const { adapter, host } = createFixture();
-    adapter.variables.read = () => new Promise<never>(() => undefined);
-    host.start();
+    const { adapter, host } = await createFixture();
+    let finishRaw!: () => void;
+    adapter.variables.read = () =>
+      new Promise<void>(resolve => {
+        finishRaw = resolve;
+      });
     const port = host.capabilities['vibeflow.port'];
-    const pendingCapability = host.capabilities['era.tavern.variables'].read({
+    const pendingCapability = host.capabilities['era.tavern.worldbook'].read({
+      name: 'fatal-race',
       purpose: 'fatal-race',
     });
     const pendingCapabilityAssertion = expect(pendingCapability).rejects.toMatchObject({
@@ -450,6 +344,7 @@ describe('ERA 服务 Host Extension 核心', () => {
     await expect(admission.done).resolves.toMatchObject({ status: 'ignored' });
     await pendingReceiveAssertion;
     await pendingCapabilityAssertion;
+    finishRaw();
     expect(reentrantAdmission).toMatchObject({
       accepted: false,
       code: 'ERA_HOST_FATAL',
@@ -459,9 +354,7 @@ describe('ERA 服务 Host Extension 核心', () => {
       accepted: false,
       code: 'ERA_HOST_FATAL',
     });
-    expect(() => port.receive({ port: 'era.service.in' })).toThrowError(
-      expect.objectContaining({ code: 'ERA_HOST_FATAL' }),
-    );
+    await expect(port.receive({ port: 'era.service.in' })).rejects.toMatchObject({ code: 'ERA_HOST_FATAL' });
     expect(() => host.capabilities['era.tavern.identity'].read({})).toThrowError(
       expect.objectContaining({ code: 'ERA_HOST_FATAL' }),
     );
@@ -500,10 +393,9 @@ describe('ERA 服务 Host Extension 核心', () => {
   });
 
   it('容量失败发生在接纳前，不消耗 sequence', async () => {
-    const { adapter, host } = createFixture(new FakeAdapter(), {
+    const { adapter, host } = await createFixture(new FakeAdapter(), {
       max_fifo_events: 1,
     });
-    host.start();
     const first = assertAccepted(adapter.emit({ type: 'first', source: 'ui', args: [] }));
     const rejected = adapter.emit({ type: 'overflow', source: 'ui', args: [] });
     expect(rejected).toMatchObject({
@@ -546,8 +438,7 @@ describe('ERA 服务 Host Extension 核心', () => {
   });
 
   it('高水位 watchdog 只告警，结算后屏障才完成', async () => {
-    const { adapter, host } = createFixture();
-    host.start();
+    const { adapter, host } = await createFixture();
     const admission = assertAccepted(adapter.emit({ type: 'generation_started', source: 'tavern', args: [] }));
     let barrierSettled = false;
     const barrier = admission.waitThrough().then(result => {
@@ -555,7 +446,9 @@ describe('ERA 服务 Host Extension 核心', () => {
       return result;
     });
 
+    await tick();
     adapter.clock.advance(5);
+    await tick();
     expect(barrierSettled).toBe(false);
     expect(adapter.warnings.at(-1)?.message).toContain('不会自动放行');
 
@@ -571,23 +464,25 @@ describe('ERA 服务 Host Extension 核心', () => {
   });
 
   it('屏障告警后 stop 取消原回执并清理 watchdog，不留下永久等待', async () => {
-    const { adapter, host } = createFixture();
-    host.start();
+    const { adapter, host } = await createFixture();
     const admission = assertAccepted(adapter.emit({ type: 'generation_started', source: 'tavern', args: [] }));
     const barrier = admission.waitThrough();
+    await tick();
     adapter.clock.advance(5);
+    await tick();
     const warningsBeforeStop = adapter.warnings.length;
     expect(adapter.warnings.at(-1)?.details).toMatchObject({ throughSequence: 1, pendingSequences: [1] });
     await host.stop('explicit lifecycle stop');
     await expect(admission.done).resolves.toMatchObject({ sequence: 1, status: 'cancelled' });
     await expect(barrier).resolves.toMatchObject({ throughSequence: 1, hasFailures: true });
+    await tick();
     adapter.clock.advance(100);
+    await tick();
     expect(adapter.warnings).toHaveLength(warningsBeforeStop);
   });
 
   it('stop 在告警之前清理定时器并结算全部原回执', async () => {
-    const { adapter, host } = createFixture();
-    host.start();
+    const { adapter, host } = await createFixture();
     const first = assertAccepted(adapter.emit({ type: 'generation_started', source: 'tavern', args: [] }));
     const second = assertAccepted(adapter.emit({ type: 'message_received', source: 'tavern', args: [] }));
     const barrier = second.waitThrough();
@@ -595,13 +490,14 @@ describe('ERA 服务 Host Extension 核心', () => {
     await expect(first.done).resolves.toMatchObject({ sequence: 1, status: 'cancelled' });
     await expect(second.done).resolves.toMatchObject({ sequence: 2, status: 'cancelled' });
     await expect(barrier).resolves.toMatchObject({ throughSequence: 2, hasFailures: true });
+    await tick();
     adapter.clock.advance(100);
+    await tick();
     expect(adapter.warnings.some(item => item.message.includes('高水位屏障'))).toBe(false);
   });
 
   it('绝对 dueAt 定时器产生固定 timer 事件，并拒绝伪 timer 事件', async () => {
-    const { adapter, host } = createFixture();
-    host.start();
+    const { adapter, host } = await createFixture();
     const badTimer = adapter.emit({
       type: 'wrong_timer',
       source: 'timer',
@@ -625,7 +521,9 @@ describe('ERA 服务 Host Extension 核心', () => {
       },
     });
     expect(host.diagnostics.snapshot().timers).toBe(1);
+    await tick();
     adapter.clock.advance(10);
+    await tick();
     expect(host.diagnostics.snapshot().timers).toBe(0);
 
     const received = (await host.capabilities['vibeflow.port'].receive({ port: 'era.service.in' })).value;
@@ -645,10 +543,13 @@ describe('ERA 服务 Host Extension 核心', () => {
     await host.stop();
   });
 
-  it('stop 可终止不遵守 AbortSignal 的通知与挂起 Port', async () => {
-    const { adapter, host } = createFixture();
-    adapter.notificationImplementation = () => new Promise<void>(() => undefined);
-    host.start();
+  it('卸载取消公开等待，并等不遵守AbortSignal的通知真实结束', async () => {
+    const { adapter, host } = await createFixture();
+    let finishNotification!: () => void;
+    adapter.notificationImplementation = () =>
+      new Promise<void>(resolve => {
+        finishNotification = resolve;
+      });
     const pendingReceive = host.capabilities['vibeflow.port'].receive({
       port: 'era.service.in',
     });
@@ -666,8 +567,16 @@ describe('ERA 服务 Host Extension 核心', () => {
       portWaiters: 1,
     });
 
-    await host.stop();
-    await expect(secondReceive).rejects.toBeDefined();
+    const rejectedReceive = expect(secondReceive).rejects.toBeDefined();
+    let exited = false;
+    const closing = host.stop().then(() => {
+      exited = true;
+    });
+    await rejectedReceive;
+    await tick();
+    expect(exited).toBe(false);
+    finishNotification();
+    await closing;
     expect(host.diagnostics.snapshot()).toMatchObject({
       queueEvents: 0,
       queueBytes: 0,
@@ -681,8 +590,7 @@ describe('ERA 服务 Host Extension 核心', () => {
   });
 
   it('处理一万事件无丢失重复，幂等窗口保持有界', async () => {
-    const { adapter, host } = createFixture();
-    host.start();
+    const { adapter, host } = await createFixture();
     const port = host.capabilities['vibeflow.port'];
 
     for (let index = 1; index <= 10_000; index += 1) {
@@ -710,8 +618,7 @@ describe('ERA 服务 Host Extension 核心', () => {
 });
 
 it('工作流延迟准入可防抖，连续请求不超过最长等待，停止时清理', async () => {
-  const { adapter, host } = createFixture();
-  host.start();
+  const { adapter, host } = await createFixture();
   const scheduler = host.capabilities['era.lifecycle.admission'];
   const request = {
     key: 'save',
@@ -722,17 +629,23 @@ it('工作流延迟准入可防抖，连续请求不超过最长等待，停止�
   for (let i = 0; i < 20; i++) {
     const result = scheduler.schedule(request);
     expect(result.dueAt).toBeLessThanOrEqual(3000);
+    await tick();
     adapter.clock.advance(100);
+    await tick();
   }
   expect(host.diagnostics.snapshot().accepted).toBe(1);
   const received = (await host.capabilities['vibeflow.port'].receive({ port: 'era.service.in' })).value;
   expect(received).toMatchObject({ source: 'era-api', type: 'era.facade.sync' });
   scheduler.schedule(request);
   scheduler.cancel({ key: 'save' });
+  await tick();
   adapter.clock.advance(300);
+  await tick();
   expect(host.diagnostics.snapshot().accepted).toBe(1);
   scheduler.schedule(request);
   await host.stop();
+  await tick();
   adapter.clock.advance(300);
+  await tick();
   expect(host.diagnostics.snapshot().timers).toBe(0);
 });

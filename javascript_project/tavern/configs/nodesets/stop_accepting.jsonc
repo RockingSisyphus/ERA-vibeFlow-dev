@@ -1,0 +1,90 @@
+{
+  "type_key": "era.tavern.flow.stop_accepting",
+  "display_name": "立即关闭实例入口",
+  "description": "同步停止接纳新请求，并使旧公共入口失效；后续异步清理不会重新打开监听。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.call.frame",
+      "cardinality": "exactly_one",
+      "display_name": "本次调用及实例资源令牌"
+    }
+  ],
+  "provides": [
+    {
+      "key": "era_tavern_flow_stop_accepting_frame",
+      "type": "era.tavern.call.frame",
+      "display_name": "操作结果及后续处理所需的资源令牌"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "sync",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.call.frame",
+        "display_name": "调用与资源资料",
+        "required": true
+      }
+    ],
+    "max_steps": 9,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.tavern.initialize.start",
+        "display_name": "开始当前原生流程",
+        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+      },
+      {
+        "id": "close_ingress",
+        "type_used": "era.tavern.stop_accepting.close_ingress",
+        "display_name": "标记停止并关闭接纳",
+        "description": "设置停止状态，禁止新事件、能力和监听登记。"
+      },
+      {
+        "id": "cancel_generations",
+        "type_used": "era.tavern.stop_accepting.cancel_generations",
+        "display_name": "取消作者函数与生成交接",
+        "description": "同步取消本实例运行信号及生成资源；已登记的作者与生成释放回调只转交各自原生清理路径，不能保留原型空操作。"
+      },
+      {
+        "id": "return_closed",
+        "type_used": "era.tavern.stop_accepting.return_closed",
+        "display_name": "交还关闭入口确认",
+        "description": "返回原幂等停止接纳结果，后台和 Service 随后进入收尾。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.tavern.initialize.end",
+        "display_name": "结束当前原生流程",
+        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+      }
+    ],
+    "edges": [
+      [
+        "close_ingress",
+        "cancel_generations"
+      ],
+      [
+        "cancel_generations",
+        "return_closed"
+      ],
+      [
+        "start",
+        "close_ingress"
+      ],
+      [
+        "return_closed",
+        "end"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.call.frame",
+        "cardinality": "exactly_one",
+        "display_name": "完成后的操作资料",
+        "as": "frame"
+      }
+    ]
+  }
+}

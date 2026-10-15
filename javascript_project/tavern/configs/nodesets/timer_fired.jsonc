@@ -1,0 +1,161 @@
+{
+  "type_key": "era.tavern.flow.timer_fired",
+  "display_name": "同步处理 timer 到期回调",
+  "description": "原始 timer 回调只转交这个同步原生入口，保持它与同轮后续提交的序号顺序。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.call.frame",
+      "cardinality": "exactly_one",
+      "display_name": "当前帧、实例资源与通知位置"
+    }
+  ],
+  "provides": [
+    {
+      "key": "era_tavern_flow_timer_fired_frame",
+      "type": "era.tavern.frame.timer_fired.final",
+      "display_name": "本次原生步骤产生的资料"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "sync",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.call.frame",
+        "required": true,
+        "display_name": "本次调用与资源"
+      }
+    ],
+    "max_steps": 22,
+    "nodes": [
+      {
+        "id": "start",
+        "type_used": "era.tavern.initialize.start",
+        "display_name": "开始当前原生流程",
+        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+      },
+      {
+        "id": "check_timer",
+        "type_used": "era.tavern.timer_fired.check_timer",
+        "display_name": "检查到期句柄仍有效",
+        "description": "核对 token、当前句柄及运行状态，避免被替换或取消的回调再入队。"
+      },
+      {
+        "id": "choose_timer_kind",
+        "type_used": "era.tavern.timer_fired.choose_timer_kind",
+        "display_name": "区分有效事件、告警或陈旧回调",
+        "description": "有效 collection/delayed timer 才准入；watchdog 只按固定回执范围告警，陈旧或已取消句柄不制造事件。"
+      },
+      {
+        "id": "prepare_event",
+        "type_used": "era.tavern.timer_fired.prepare_event",
+        "display_name": "构造原到期事件",
+        "description": "移除本 timer 记录并构造原 collection timer 或延迟准入事件。"
+      },
+      {
+        "id": "return_event_prepare",
+        "type_used": "era.tavern.timer_fired.return_event_prepare",
+        "display_name": "通过共享准入交付到期事件",
+        "description": "调用同一原生准入流程，保持 timer 与其他来源的序号和容量规则。"
+      },
+      {
+        "id": "return_event_shared",
+        "type_used": "era.tavern.flow.admission",
+        "display_name": "检查事件并接纳到 FIFO",
+        "description": "同步接纳 Tavern、UI、公共 API 和 timer 事件；拒绝不分配序号，接受即返回原有回执句柄。"
+      },
+      {
+        "id": "return_event",
+        "type_used": "era.tavern.timer_fired.return_event",
+        "display_name": "交还检查事件并接纳到 FIFO结果",
+        "description": "保存共享原生流程的实际结果并继续当前分支；不重新执行准入、计时或结算。"
+      },
+      {
+        "id": "warn_watchdog",
+        "type_used": "era.tavern.timer_fired.warn_watchdog",
+        "display_name": "同步报告仍未结算的高水位来源",
+        "description": "在原阈值回调中检查固定范围并记录未完成序号；不解除屏障、不入队业务事件。"
+      },
+      {
+        "id": "ignore_stale",
+        "type_used": "era.tavern.timer_fired.ignore_stale",
+        "display_name": "忽略已取消或被替代的到期句柄",
+        "description": "不准入事件，也不修改当前有效计时器和回执。"
+      },
+      {
+        "id": "join_result",
+        "type_used": "era.tavern.timer_fired.join_result",
+        "display_name": "汇合唯一到期结果",
+        "description": "只交还有效准入、告警或陈旧分支的一个结果。"
+      },
+      {
+        "id": "end",
+        "type_used": "era.tavern.initialize.end",
+        "display_name": "结束当前原生流程",
+        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+      }
+    ],
+    "edges": [
+      [
+        "check_timer",
+        "choose_timer_kind"
+      ],
+      {
+        "from": "choose_timer_kind",
+        "to": "prepare_event",
+        "when": "era_tavern_timer_fired_choose_timer_kind_route == 'admit'"
+      },
+      {
+        "from": "choose_timer_kind",
+        "to": "warn_watchdog",
+        "when": "era_tavern_timer_fired_choose_timer_kind_route == 'watchdog'"
+      },
+      {
+        "from": "choose_timer_kind",
+        "to": "ignore_stale",
+        "when": "era_tavern_timer_fired_choose_timer_kind_route == 'stale'"
+      },
+      [
+        "prepare_event",
+        "return_event_prepare"
+      ],
+      [
+        "return_event_prepare",
+        "return_event_shared"
+      ],
+      [
+        "return_event_shared",
+        "return_event"
+      ],
+      [
+        "return_event",
+        "join_result"
+      ],
+      [
+        "warn_watchdog",
+        "join_result"
+      ],
+      [
+        "ignore_stale",
+        "join_result"
+      ],
+      [
+        "start",
+        "check_timer"
+      ],
+      [
+        "join_result",
+        "end"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.frame.timer_fired.final",
+        "cardinality": "exactly_one",
+        "as": "frame",
+        "display_name": "当前阶段结果"
+      }
+    ]
+  }
+}
