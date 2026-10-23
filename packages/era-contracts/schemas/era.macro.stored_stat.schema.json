@@ -26,6 +26,42 @@
         "kind"
       ],
       "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "view"
+        },
+        "mode": {
+          "enum": [
+            "raw",
+            "lazy",
+            "prompt"
+          ]
+        },
+        "statWithMeta": {},
+        "statWithoutMeta": {}
+      },
+      "required": [
+        "kind",
+        "mode",
+        "statWithMeta",
+        "statWithoutMeta"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "projection-only"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "additionalProperties": false
     }
   ]
 }

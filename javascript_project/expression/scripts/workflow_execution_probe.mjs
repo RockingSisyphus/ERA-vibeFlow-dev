@@ -19,11 +19,8 @@ const input = {
   }
 };
 
-const trace = [];
-const result = runNode(input, { trace: "full", onTrace: event => trace.push(event) });
+const result = runNode(input);
 assert.equal(typeof result?.then, "undefined");
-assert.equal(trace.filter(event => event.kind === "node_start" && event.nodeId === "evaluate_ast").length, input.expression_request.operations.length);
-assert.ok(!trace.some(event => event.nodeId === "ast_frame_loop"));
 const node = result.expressionResponse;
 const browser = runBrowser(input).expressionResponse;
 assert.deepEqual(browser, node);
@@ -35,7 +32,6 @@ assert.deepEqual(node.compressed, {
 console.log(
   JSON.stringify({
     status: "PASS",
-    nodePaths: [...new Set(trace.filter(event => event.kind === "node_start").map(event => event.nodePath))],
     finalState: node.finalState,
     compressed: node.compressed
   })

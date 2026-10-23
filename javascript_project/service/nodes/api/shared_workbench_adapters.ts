@@ -1,5 +1,5 @@
 // Adapters with identical declared base libraries share this source.
-import { type Inspected, rejected, type Draft } from "../../base_lib/domain/workbench_context.ts";
+import { type Inspected, rejected, type Draft } from "../../base_lib/workbench/workbench_context.ts";
 
 // Original node: nodes/api/workbench_publish_preparation.ts
 /** 真实 Nodeset 出口接回已有 Commit 准入或失败分支。 */

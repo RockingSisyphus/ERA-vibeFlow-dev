@@ -1,11 +1,13 @@
 import { execFileSync } from "node:child_process";
 import { mkdtemp, mkdir, rm, symlink, copyFile, cp } from "node:fs/promises";
-import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 const root = fileURLToPath(new URL("..", import.meta.url));
 const repository = path.resolve(root, "../..");
-const temp = await mkdtemp(path.join(os.tmpdir(), "era-expression-package-"));
+const reports = path.join(repository, "reports");
+await mkdir(reports, { recursive: true });
+const temp = await mkdtemp(path.join(reports, ".expression-package-"));
+const buildEnv = { ...process.env, TMPDIR: temp, TMP: temp, TEMP: temp };
 try {
   await symlink(
     path.join(root, "node_modules"),
@@ -30,7 +32,7 @@ try {
         "--out-dir",
         generated,
       ],
-      { cwd: repository, stdio: ["ignore", "ignore", "inherit"] },
+      { cwd: repository, env: buildEnv, stdio: ["ignore", "ignore", "inherit"] },
     );
     execFileSync(
       path.join(root, "node_modules/.bin/esbuild"),
@@ -42,7 +44,7 @@ try {
         "--packages=external",
         `--outfile=${output}/${target}.js`,
       ],
-      { cwd: root, stdio: "pipe" },
+      { cwd: root, env: buildEnv, stdio: "pipe" },
     );
     await copyFile(
       path.join(generated, "workflow.d.ts"),
@@ -68,7 +70,7 @@ try {
       "--external:@stdlib/math-base-special-gamma",
       `--outfile=${output}/engine.js`,
     ],
-    { cwd: root, stdio: "pipe" },
+    { cwd: root, env: buildEnv, stdio: "pipe" },
   );
   const declarations = path.join(temp, "declarations");
   execFileSync(
@@ -83,7 +85,7 @@ try {
       "--outDir",
       declarations,
     ],
-    { cwd: root, stdio: "pipe" },
+    { cwd: root, env: buildEnv, stdio: "pipe" },
   );
   await rm(path.join(output, "types"), { recursive: true, force: true });
   await cp(declarations, path.join(output, "types"), { recursive: true });

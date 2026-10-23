@@ -1,20 +1,20 @@
 {
   "type_key": "era.tavern.flow.agent_generate_story",
-  "display_name": "执行酒馆正文重试",
-  "description": "实现 era.tavern.agent.generate_story；输入沿用 era.agent.host.request，输出沿用 era.agent.host.result，完成方式保持 suspend。 原节点保留；仅把首次等待划为同步发起与异步等待，后续处理在对应 finish 流程。",
+  "display_name": "准备并通过酒馆发起正文重试",
+  "description": "接收正文重试的输入和附加提示，登记本次模型及聊天资料，标记辅助生成并发起酒馆正文生成。后续确认流程在真实完成后返回文字或错误，供阶段处理与保存。",
   "expand": true,
   "requires": [
     {
       "type": "era.tavern.call.frame",
       "cardinality": "exactly_one",
-      "display_name": "当前实例与调用资料"
+      "display_name": "准备并通过酒馆发起正文重试的请求和已有进度"
     }
   ],
   "provides": [
     {
       "key": "era_tavern_flow_agent_generate_story_frame",
       "type": "era.tavern.frame.agent_generate_story.started",
-      "display_name": "当前步骤的资源与已捕获事实"
+      "display_name": "准备并通过酒馆发起正文重试的处理进度及结果"
     }
   ],
   "pipeline": {
@@ -23,7 +23,7 @@
       {
         "key": "frame",
         "type": "era.tavern.call.frame",
-        "display_name": "调用与资源资料",
+        "display_name": "准备并通过酒馆发起正文重试的请求和已有进度",
         "required": true
       }
     ],
@@ -32,46 +32,46 @@
         "type": "era.tavern.frame.agent_generate_story.started",
         "cardinality": "exactly_one",
         "as": "frame",
-        "display_name": "本次已经发起的等待资源"
+        "display_name": "准备并通过酒馆发起正文重试的处理进度及结果"
       }
     ],
     "max_steps": 17,
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.tavern.initialize.start",
-        "display_name": "开始当前原生流程",
-        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+        "display_name": "开始准备并通过酒馆发起正文重试",
+        "description": "标明“准备并通过酒馆发起正文重试”的开始位置。接收正文重试的输入和附加提示，登记本次模型及聊天资料，标记辅助生成并发起酒馆正文生成。后续确认流程在真实完成后返回文字或错误，供阶段处理与保存。",
+        "definition_id": "era.tavern.initialize.start"
       },
       {
         "id": "check_request",
-        "type_used": "era.tavern.agent_generate_story.check_request",
-        "display_name": "检查模型请求与取消状态",
-        "description": "保留该操作当前输入检查，读取 Service 指定的提示词、采样、注入和请求上下文。"
+        "display_name": "检查“正文重试”的调用是否有效",
+        "description": "在“准备并通过酒馆发起正文重试”流程中，接收“正文重试”的请求，确认当前实例仍可运行、调用未取消，且输入确实是一份操作资料。通过后交给对应业务步骤，失败时按实际原因结束。",
+        "definition_id": "era.tavern.agent_generate_story.check_request"
       },
       {
         "id": "prepare_request",
-        "type_used": "era.tavern.agent_generate_story.prepare_request",
-        "display_name": "准备路由、请求标识和观察记录",
-        "description": "保持原当前连接或本机连接方案选择、随机请求标识、故事预设及观察记录内容。"
+        "display_name": "登记正文重试的输入及模型设置",
+        "description": "在“准备并通过酒馆发起正文重试”流程中，读取正文重试的用户输入、附加提示，以及酒馆当前模型、预设和连接来源，为本次重试登记身份。后续据此发起正文生成，并将实际结果对应回这次尝试。",
+        "definition_id": "era.tavern.agent_generate_story.prepare_request"
       },
       {
         "id": "enter_auxiliary",
-        "type_used": "era.tavern.agent_generate_story.enter_auxiliary",
-        "display_name": "进入辅助生成重入范围",
-        "description": "递增当前实例的辅助生成深度，防止模型请求发出的事件重入主故事。"
+        "display_name": "标记辅助生成正在运行（正文重试）",
+        "description": "在“准备并通过酒馆发起正文重试”流程中，本次处理“正文重试”。将当前模型调用记入本实例正在进行的辅助生成数量。事件识别据此避免把辅助请求产生的事件误当作新的主故事生成，直到真实模型调用结束才解除标记。",
+        "definition_id": "era.tavern.agent_generate_story.enter_auxiliary"
       },
       {
         "id": "start_operation",
-        "type_used": "era.tavern.agent_generate_story.start_operation",
-        "display_name": "同步发起正文重试请求",
-        "description": "在原始模型请求终态回调中只转交本次资料：先调用同步模型终态分支，再调用既有异步结果分类。公开等待拥有独立取消资源，取消不能提前解除仍在运行的辅助生成保护。"
+        "display_name": "通过酒馆发起正文重试",
+        "description": "在“准备并通过酒馆发起正文重试”流程中，使用准备好的用户输入和附加提示，通过酒馆当前生成方式重新生成正文。登记本次实际请求及完成后的处理，后续接收正文结果或取消、失败原因。",
+        "definition_id": "era.tavern.agent_generate_story.start_operation"
       },
       {
         "id": "end",
-        "type_used": "era.tavern.initialize.end",
-        "display_name": "结束当前原生流程",
-        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+        "display_name": "结束准备并通过酒馆发起正文重试",
+        "description": "标明“准备并通过酒馆发起正文重试”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.tavern.initialize.end"
       }
     ],
     "edges": [

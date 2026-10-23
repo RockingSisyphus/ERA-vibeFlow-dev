@@ -1,20 +1,20 @@
 {
   "type_key": "era.tavern.flow.agent_list_connection_models_draft_finish",
-  "display_name": "列出草稿连接的模型：生成、连接及页面会话：等待与确认",
-  "description": "续用同步段已发起资源；保留原等待后的具体处理、结果核对与错误身份。",
+  "display_name": "读取未保存连接草稿的模型查询结果",
+  "description": "接收连接草稿已经发起的模型查询，等待响应，检查成功后读取并整理模型名称。失败带回具体原因，成功列表供用户选模型，无需先保存草稿。",
   "expand": true,
   "requires": [
     {
       "type": "era.tavern.call.frame",
       "cardinality": "exactly_one",
-      "display_name": "本次调用、实例资源与上一节点的事实"
+      "display_name": "读取未保存连接草稿的模型查询结果的请求和已有进度"
     }
   ],
   "provides": [
     {
       "key": "era_tavern_flow_agent_list_connection_models_draft_finish_frame",
       "type": "era.tavern.call.frame",
-      "display_name": "处理后的资源与事实"
+      "display_name": "读取未保存连接草稿的模型查询结果的处理进度及结果"
     }
   ],
   "pipeline": {
@@ -23,7 +23,7 @@
       {
         "key": "frame",
         "type": "era.tavern.call.frame",
-        "display_name": "同实例调用与资源",
+        "display_name": "读取未保存连接草稿的模型查询结果的请求和已有进度",
         "required": true
       }
     ],
@@ -32,52 +32,52 @@
         "type": "era.tavern.call.frame",
         "cardinality": "exactly_one",
         "as": "frame",
-        "display_name": "本段明确结果"
+        "display_name": "读取未保存连接草稿的模型查询结果的处理进度及结果"
       }
     ],
     "max_steps": 11,
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.tavern.initialize.start",
-        "display_name": "开始当前原生流程",
-        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+        "display_name": "开始读取未保存连接草稿的模型查询结果",
+        "description": "标明“读取未保存连接草稿的模型查询结果”的开始位置。接收连接草稿已经发起的模型查询，等待响应，检查成功后读取并整理模型名称。失败带回具体原因，成功列表供用户选模型，无需先保存草稿。",
+        "definition_id": "era.tavern.initialize.start"
       },
       {
         "id": "execute",
-        "type_used": "era.tavern.agent_list_connection_models_draft.execute",
-        "display_name": "等待本次列出草稿连接的模型：生成、连接及页面会话的资源终态",
-        "description": "等待同步原生段已捕获的本次资源；检查所属实例和取消，不重发原 API，不执行后续回读或发布。"
+        "display_name": "等待模型列表查询的响应（查询草稿连接的模型）",
+        "description": "在“读取未保存连接草稿的模型查询结果”流程中，本次处理“查询草稿连接的模型”。接收已经发起的连接查询，等待服务返回。请求失败时带回对应连接或草稿的可读原因，成功响应交给后续检查和模型名称整理。",
+        "definition_id": "era.tavern.agent_list_connection_models_draft.execute"
       },
       {
         "id": "check_response",
-        "type_used": "era.tavern.agent_list_connection_models_draft_finish.check_response",
-        "display_name": "核对模型枚举 HTTP 响应",
-        "description": "只核对本次 HTTP 状态；失败保持旧脱敏诊断及 cause，取消保持原原因。"
+        "display_name": "确认模型列表查询成功响应（查询草稿连接的模型）",
+        "description": "在“读取未保存连接草稿的模型查询结果”流程中，本次处理“查询草稿连接的模型”。检查模型服务对本次列表查询的响应是否成功。失败时返回具体连接查询原因，成功时继续读取返回内容，避免把错误页面当成模型列表。",
+        "definition_id": "era.tavern.agent_list_connection_models_draft_finish.check_response"
       },
       {
         "id": "read_json",
-        "type_used": "era.tavern.agent_list_connection_models_draft_finish.read_json",
-        "display_name": "读取模型枚举响应 JSON",
-        "description": "调用本次 Response.json 并等待；不再次 fetch，不读取当前方案或密钥。"
+        "display_name": "读取模型查询返回的内容（查询草稿连接的模型）",
+        "description": "在“读取未保存连接草稿的模型查询结果”流程中，本次处理“查询草稿连接的模型”。接收已经确认成功的模型列表响应，读取其中的数据。读取失败时报告查询问题，成功资料交给模型名称整理步骤。",
+        "definition_id": "era.tavern.agent_list_connection_models_draft_finish.read_json"
       },
       {
         "id": "project_models",
-        "type_used": "era.tavern.agent_list_connection_models_draft_finish.project_models",
-        "display_name": "提取模型列表和脱敏摘要",
-        "description": "按旧模型列表数据格式投影，保存已捕获方案的摘要；不把密钥交给 Service。"
+        "display_name": "整理可供用户选择的模型名称（查询草稿连接的模型）",
+        "description": "在“读取未保存连接草稿的模型查询结果”流程中，本次处理“查询草稿连接的模型”。从连接查询返回的数据中提取可用模型名称，整理成设置界面需要的列表。已保存连接还附上不含密钥的摘要，供用户确认列表来自哪个方案。",
+        "definition_id": "era.tavern.agent_list_connection_models_draft_finish.project_models"
       },
       {
         "id": "return_result",
-        "type_used": "era.tavern.agent_list_connection_models_draft.return_result",
-        "display_name": "交还列出草稿连接的模型结果",
-        "description": "返回原 era.agent.host.result 结果；需要脱敏的连接资料只返回摘要。"
+        "display_name": "交回“查询草稿连接的模型”的实际结果",
+        "description": "在“读取未保存连接草稿的模型查询结果”流程中，接收“查询草稿连接的模型”已经执行得到的结果，复核实例和本次调用尚未取消后交回发起者。调用方据此继续业务或显示结果，取消时按实际原因结束等待。",
+        "definition_id": "era.tavern.agent_list_connection_models_draft.return_result"
       },
       {
         "id": "end",
-        "type_used": "era.tavern.initialize.end",
-        "display_name": "结束当前原生流程",
-        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+        "display_name": "结束读取未保存连接草稿的模型查询结果",
+        "description": "标明“读取未保存连接草稿的模型查询结果”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.tavern.initialize.end"
       }
     ],
     "edges": [

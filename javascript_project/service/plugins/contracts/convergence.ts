@@ -1,0 +1,9 @@
+import {defineDataSchema} from "@vibeflow/plugin";
+export const convergenceSchema0 = defineDataSchema({"type_key": "era.command_compaction.replay.state", "representation": "json", "display_name": "压缩候选校验进度", "description": "供共享操作与只读预演子图交换压缩候选校验进度。", "schema": {"type": "object"}});
+export const convergenceSchema1 = defineDataSchema({"type_key": "era.command_compaction.replay.state.next", "representation": "json", "display_name": "下一候选及校验结果", "description": "供共享操作与只读预演子图交换下一候选及校验结果。", "schema": {"type": "object"}});
+export const convergenceSchema2 = defineDataSchema({"type_key": "era.command_compaction.replay.state.route", "representation": "json", "display_name": "候选选择结果", "description": "供共享操作与只读预演子图交换候选选择结果。", "schema": {"enum": ["replay", "done"]}});
+export const convergenceSchema3 = defineDataSchema({"type_key": "era.sync.preview.state", "representation": "json", "display_name": "只读历史预演进度", "description": "供共享操作与只读预演子图交换只读历史预演进度。", "schema": {"type": "object"}});
+export const convergenceSchema4 = defineDataSchema({"type_key": "era.sync.preview.state.next", "representation": "json", "display_name": "下一历史位置或预演结果", "description": "供共享操作与只读预演子图交换下一历史位置或预演结果。", "schema": {"type": "object"}});
+export const convergenceSchema5 = defineDataSchema({"type_key": "era.sync.preview.state.route", "representation": "json", "display_name": "历史位置选择结果", "description": "供共享操作与只读预演子图交换历史位置选择结果。", "schema": {"enum": ["command", "advance"]}});
+export const convergenceSchema6 = defineDataSchema({"type_key": "era.agent.baseline.state", "representation": "json", "display_name": "生成阶段基线准备事实", "description": "供共享操作与只读预演子图交换生成阶段基线准备事实。", "schema": {"type": "object"}});
+export const convergenceSchema7 = defineDataSchema({"type_key": "era.agent.baseline.state.route", "representation": "json", "display_name": "阶段基线恢复选择", "description": "供共享操作与只读预演子图交换阶段基线恢复选择。", "schema": {"enum": ["preview", "direct"]}});

@@ -91,7 +91,7 @@ assert.equal(s.activeNotifications.size, 1);
 slow.resolve();
 await bounded(group, 'ordinary group');
 assert.equal(s.activeNotifications.size, 0);
-cases.push('native detached waits do not finish group before every callback');
+cases.push('instance-owned waits do not finish group before every callback');
 handler = type => {
   if (type === 'bad1') throw new Error('first');
   return Promise.reject(new Error('second'));
@@ -124,24 +124,12 @@ send(
 await tick();
 assert.equal(s.subscriptionCycles.size, 1);
 assert.equal(s.queue.length, 0);
-executionSignal.abort(new Error('notification cancelled'));
-await bounded([...s.activeNotifications][0], 'public cancelled group');
+executionSignal.abort(new Error('sending node exited'));
+await tick();
+assert.equal(s.activeNotifications.size, 1, 'accepted notification outlives sending node');
 assert.equal(s.handoffs.has('stage'), true);
-cases.push('public notification cancellation releases group while raw subscription remains observed');
+cases.push('sending-node cancellation does not cancel instance-owned notification');
 callbacks.resolve();
-await bounded(Promise.all(rawHandoffs), 'raw cancelled handoff');
-assert.equal(await original.promise, null);
-assert.equal(s.queue.length, 0);
-assert.equal(s.subscriptionCycles.size, 0);
-cases.push('raw handoff checks cancellation after subscriber and cleans without admitting continuation');
-const nextStage = defer();
-s.handoffs.set('active', { ...nextStage });
-send([
-  {
-    type: 'era.agent.stage_completed',
-    args: [{ completionId: 'active', executionId: 'execution', stage: 'story', result: { story: 'text' } }],
-  },
-]);
 while (!s.queue.length) await tick();
 const event = (await nativeOwner.caps['vibeflow.port'].receive({ port: 'era.service.in' })).value;
 assert.equal(event.type, 'era.agent.stage_continue');
@@ -168,18 +156,42 @@ nativeOwner.caps['vibeflow.port'].send({
   },
 });
 await bounded([...s.activeNotifications][0], 'successful handoff group');
-assert.equal((await nextStage.promise).value.final, true);
+assert.equal((await original.promise).value.final, true);
 cases.push('native handoff admits original continuation and resolves final result through real queue');
+const cancelledCallbacks = defer();
+subscribe(() => cancelledCallbacks.promise);
+const cancelledStage = defer();
+s.handoffs.set('cancelled', { ...cancelledStage });
+send([
+  {
+    type: 'era.agent.stage_completed',
+    args: [{ completionId: 'cancelled', executionId: 'execution', stage: 'planning', result: { plan: {} } }],
+  },
+]);
+await tick();
+assert.equal(s.subscriptionCycles.size, 1);
+let stopped = false;
+running.then(() => {
+  stopped = true;
+});
 nativeOwner.page.dispatchEvent(new Event('pagehide'));
+await tick();
+assert.equal(stopped, false, 'runtime must wait for actual subscriber completion');
+cancelledCallbacks.resolve();
+await bounded(Promise.all(rawHandoffs), 'raw cancelled handoff');
+assert.equal(await cancelledStage.promise, null);
+assert.equal(s.queue.length, 0, 'stopped subscription must not admit a continuation');
+assert.equal(s.subscriptionCycles.size, 0);
+cases.push('instance stop cancels handoff, waits raw subscriber and does not admit continuation');
 await bounded(running, 'runtime stop');
-assert.equal(s.tasks.length, 0);
+assert.equal(s.resources, undefined);
 assert.equal(s.activeNotifications.size, 0);
 cases.push('full native runtime stops with no pending notification resources');
 await Promise.all(deliveries);
 const report = {
   status: 'PASS',
   evidence:
-    'actual compiled sync notification prefix, async subscription/handoff and full native runtime; timer branch and production App still pending',
+    'actual compiled sync notification prefix, async subscription/handoff and full native runtime; this probe does not validate production App',
   cases,
 };
 console.log(JSON.stringify(report));

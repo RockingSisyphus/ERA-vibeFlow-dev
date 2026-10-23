@@ -1,0 +1,19 @@
+{
+  "rulesets": [
+    "vibeflow.root.default"
+  ],
+  "rule_params": {
+    "vibeflow.root.layout": {
+      "directories": [
+        {
+          "path": "scripts",
+          "purpose": "构建与生成入口"
+        },
+        {
+          "path": "generated",
+          "purpose": "AOT与机械接线构建产物"
+        }
+      ]
+    }
+  }
+}

@@ -1,20 +1,20 @@
 {
   "type_key": "era.tavern.flow.sidecar_read_record_finish",
-  "display_name": "读取状态文件：独立状态文件与内存快照：等待与确认",
-  "description": "续用同步段已发起资源；保留原等待后的具体处理、结果核对与错误身份。",
+  "display_name": "读取状态文件内容并区分可用或损坏",
+  "description": "接收已发起的文件请求，等待响应，明确区分缺失、成功和服务失败。成功文件读出文字并检查能否解析，交回记录或无效结论，供绑定及修复选择。",
   "expand": true,
   "requires": [
     {
       "type": "era.tavern.call.frame",
       "cardinality": "exactly_one",
-      "display_name": "本次调用、实例资源与上一节点的事实"
+      "display_name": "读取状态文件内容并区分可用或损坏的请求和已有进度"
     }
   ],
   "provides": [
     {
       "key": "era_tavern_flow_sidecar_read_record_finish_frame",
       "type": "era.tavern.call.frame",
-      "display_name": "处理后的资源与事实"
+      "display_name": "读取状态文件内容并区分可用或损坏的处理进度及结果"
     }
   ],
   "pipeline": {
@@ -23,7 +23,7 @@
       {
         "key": "frame",
         "type": "era.tavern.call.frame",
-        "display_name": "同实例调用与资源",
+        "display_name": "读取状态文件内容并区分可用或损坏的请求和已有进度",
         "required": true
       }
     ],
@@ -32,82 +32,82 @@
         "type": "era.tavern.call.frame",
         "cardinality": "exactly_one",
         "as": "frame",
-        "display_name": "本段明确结果"
+        "display_name": "读取状态文件内容并区分可用或损坏的处理进度及结果"
       }
     ],
     "max_steps": 16,
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.tavern.initialize.start",
-        "display_name": "开始当前原生流程",
-        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+        "display_name": "开始读取状态文件内容并区分可用或损坏",
+        "description": "标明“读取状态文件内容并区分可用或损坏”的开始位置。接收已发起的文件请求，等待响应，明确区分缺失、成功和服务失败。成功文件读出文字并检查能否解析，交回记录或无效结论，供绑定及修复选择。",
+        "definition_id": "era.tavern.initialize.start"
       },
       {
         "id": "execute",
-        "type_used": "era.tavern.sidecar_read_record.execute",
-        "display_name": "等待本次读取状态文件：独立状态文件与内存快照的资源终态",
-        "description": "等待同步原生段已捕获的本次资源；检查所属实例和取消，不重发原 API，不执行后续回读或发布。"
+        "display_name": "等待独立状态文件的读取响应",
+        "description": "在“读取状态文件内容并区分可用或损坏”流程中，接收已经发起的状态文件读取，等待酒馆返回响应。实际是否存在及内容是否有效，由后续明确步骤判断。",
+        "definition_id": "era.tavern.sidecar_read_record.execute"
       },
       {
         "id": "choose_response",
-        "type_used": "era.tavern.sidecar_read_record_finish.choose_response",
-        "display_name": "区分缺失、成功和失败响应",
-        "description": "404 产生 missing；成功响应才读取文本；其他状态按原错误拒绝。"
+        "display_name": "区分文件缺失、读取成功或请求失败",
+        "description": "在“读取状态文件内容并区分可用或损坏”流程中，检查状态文件读取响应。文件不存在时返回缺失，成功时继续读取内容，其他失败报告原因，供绑定和修复流程采用正确处理方式。",
+        "definition_id": "era.tavern.sidecar_read_record_finish.choose_response"
       },
       {
         "id": "missing",
-        "type_used": "era.tavern.sidecar_read_record_finish.missing",
-        "display_name": "交还缺失文件确认",
-        "description": "沿用原 sidecarId，形成 missing，不读取正文。"
+        "display_name": "返回独立状态文件不存在的确认",
+        "description": "在“读取状态文件内容并区分可用或损坏”流程中，状态文件读取明确返回不存在时，交出缺失结论和文件身份。主服务据此决定新建、选择其他文件或提示修复。",
+        "definition_id": "era.tavern.sidecar_read_record_finish.missing"
       },
       {
         "id": "failed",
-        "type_used": "era.tavern.sidecar_read_record_finish.failed",
-        "display_name": "拒绝 Sidecar HTTP 失败",
-        "description": "保留原 HTTP 状态和错误类别，不把读取失败当缺失。"
+        "display_name": "报告独立状态文件读取失败",
+        "description": "在“读取状态文件内容并区分可用或损坏”流程中，读取请求未成功且并非文件不存在时，返回对应失败状态。上层据此报告原因，不会把网络或服务问题当成一份空状态。",
+        "definition_id": "era.tavern.sidecar_read_record_finish.failed"
       },
       {
         "id": "read_text",
-        "type_used": "era.tavern.sidecar_read_record_finish.read_text",
-        "display_name": "读取 Sidecar 响应文本",
-        "description": "只调用本次 Response.text 并等待，不重复 fetch。"
+        "display_name": "读出状态文件中的实际文字",
+        "description": "在“读取状态文件内容并区分可用或损坏”流程中，接收成功的文件响应，读取完整文件内容。后续检查它能否解析为状态记录，供加载或损坏处理。",
+        "definition_id": "era.tavern.sidecar_read_record_finish.read_text"
       },
       {
         "id": "choose_json",
-        "type_used": "era.tavern.sidecar_read_record_finish.choose_json",
-        "display_name": "解析并区分有效或无效文件",
-        "description": "解析响应文本为便携记录；语法错误选择 invalid，不抛出替代 missing。"
+        "display_name": "判断状态文件能否正常解析",
+        "description": "在“读取状态文件内容并区分可用或损坏”流程中，尝试读取文件中的结构化内容，成功时交给有效文件分支，失败时交给损坏分支。让主服务能区分文件缺失与文件内容不可用。",
+        "definition_id": "era.tavern.sidecar_read_record_finish.choose_json"
       },
       {
         "id": "found",
-        "type_used": "era.tavern.sidecar_read_record_finish.found",
-        "display_name": "形成已找到的文件结果",
-        "description": "交还本次便携 record 和 sidecarId。"
+        "display_name": "返回读取到的状态文件记录",
+        "description": "在“读取状态文件内容并区分可用或损坏”流程中，将已经读出且能够解析的文件内容与文件身份交回主服务。后续继续检查它的归属、版本和业务结构，再决定采用。",
+        "definition_id": "era.tavern.sidecar_read_record_finish.found"
       },
       {
         "id": "invalid",
-        "type_used": "era.tavern.sidecar_read_record_finish.invalid",
-        "display_name": "形成无效文件确认",
-        "description": "交还原 invalid 状态及 sidecarId，不发布快照。"
+        "display_name": "返回状态文件内容无法解析的确认",
+        "description": "在“读取状态文件内容并区分可用或损坏”流程中，文件存在但内容不能解析时，返回无效结论和文件身份。主服务据此提示用户选择修复方式，而不采用无法读取的数据。",
+        "definition_id": "era.tavern.sidecar_read_record_finish.invalid"
       },
       {
         "id": "join_result",
-        "type_used": "era.tavern.sidecar_read_record_finish.join_result",
-        "display_name": "汇合唯一文件读取结果",
-        "description": "只接收实际激活的一项 missing/found/invalid 结果，拒绝多结果。"
+        "display_name": "交接读取状态文件内容并区分可用或损坏的选中结果",
+        "description": "在“读取状态文件内容并区分可用或损坏”流程中，在“读取状态文件内容并区分可用或损坏”中，接收本次实际选择的分支所产生的唯一结果，交给后续步骤或调用方。每次只允许一份实际结果，避免把互斥分支误当成多个都已执行。",
+        "definition_id": "era.tavern.sidecar_read_record_finish.join_result"
       },
       {
         "id": "return_result",
-        "type_used": "era.tavern.sidecar_read_record.return_result",
-        "display_name": "交还读取状态文件结果",
-        "description": "返回原 era.tavern.sidecar.read_record.result 结果；需要脱敏的连接资料只返回摘要。"
+        "display_name": "交回“读取独立状态文件”的实际结果",
+        "description": "在“读取状态文件内容并区分可用或损坏”流程中，接收“读取独立状态文件”已经执行得到的结果，复核实例和本次调用尚未取消后交回发起者。调用方据此继续业务或显示结果，取消时按实际原因结束等待。",
+        "definition_id": "era.tavern.sidecar_read_record.return_result"
       },
       {
         "id": "end",
-        "type_used": "era.tavern.initialize.end",
-        "display_name": "结束当前原生流程",
-        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+        "display_name": "结束读取状态文件内容并区分可用或损坏",
+        "description": "标明“读取状态文件内容并区分可用或损坏”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.tavern.initialize.end"
       }
     ],
     "edges": [

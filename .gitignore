@@ -38,3 +38,8 @@ reports/native-workflows/
 /references/JS-Slash-Runner/
 /references/MagVarUpdate/
 /references/SillyTavern/
+
+# Regenerable local VibeFlow preview and history
+/vibeflow-preview/
+/vibeflow-preview.html
+/vibeflow-preview.config.js

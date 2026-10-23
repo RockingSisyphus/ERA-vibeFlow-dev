@@ -1,25 +1,25 @@
 {
   "type_key": "era.tavern.flow.stop_cancel_receipts_item",
-  "display_name": "取消未决回执",
-  "description": "每轮完成一个未决来源为 cancelled、释放该来源引用；原有已完成来源不重复结算。",
+  "display_name": "向一项未完成事件返回取消",
+  "description": "从停止时记下的事件清单取下一项，尚未结束则返回实例停止原因并释放相关引用。外层重复到全部完成，已经结算的事件不重复确认。",
   "expand": true,
   "requires": [
     {
       "type": "era.tavern.frame.stop.clear_timers",
       "cardinality": "exactly_one",
-      "display_name": "当前条目、处理位置及实例资源令牌"
+      "display_name": "向一项未完成事件返回取消的请求和已有进度"
     }
   ],
   "provides": [
     {
       "key": "era_tavern_flow_stop_cancel_receipts_item_frame",
       "type": "era.tavern.item.result.stop_cancel_receipts_item",
-      "display_name": "下一条目或当前处理结论"
+      "display_name": "向一项未完成事件返回取消的处理进度及结果"
     },
     {
       "key": "era_tavern_flow_stop_cancel_receipts_item_done",
       "type": "era.tavern.done.stop.cancel_receipts",
-      "display_name": "是否完成"
+      "display_name": "本轮遍历或职责处理是否已经结束"
     }
   ],
   "pipeline": {
@@ -28,7 +28,7 @@
       {
         "key": "frame",
         "type": "era.tavern.frame.stop.clear_timers",
-        "display_name": "当前处理位置",
+        "display_name": "向一项未完成事件返回取消的请求和已有进度",
         "required": true
       }
     ],
@@ -36,39 +36,39 @@
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.tavern.initialize.start",
-        "display_name": "开始当前原生流程",
-        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+        "display_name": "开始向一项未完成事件返回取消",
+        "description": "标明“向一项未完成事件返回取消”的开始位置。从停止时记下的事件清单取下一项，尚未结束则返回实例停止原因并释放相关引用。外层重复到全部完成，已经结算的事件不重复确认。",
+        "definition_id": "era.tavern.initialize.start"
       },
       {
         "id": "choose_item",
-        "type_used": "era.tavern.stop_cancel_receipts_item.choose_item",
-        "display_name": "检查是否还有待处理条目",
-        "description": "有当前条目才进入实际处理；列表为空或已处理完时直接形成完成标记，不调用共享操作。"
+        "display_name": "选择下一项需要返回取消的事件",
+        "description": "在“向一项未完成事件返回取消”流程中，查看停止时记下的未确认事件位置。还有项目时继续取消，全部处理完则结束遍历，让每个发起者都能结束等待。",
+        "definition_id": "era.tavern.stop_cancel_receipts_item.choose_item"
       },
       {
         "id": "one_item",
-        "type_used": "era.tavern.stop_cancel_receipts_item.one_item",
-        "display_name": "取消未决回执",
-        "description": "每轮完成一个未决来源为 cancelled、释放该来源引用；原有已完成来源不重复结算。"
+        "display_name": "向一个未完成事件返回停止取消",
+        "description": "在“向一项未完成事件返回取消”流程中，取出尚未结束的原事件，以本实例停止原因为它完成取消确认，并释放相应资料。随后继续下一项，已经完成的事件不会重复处理。",
+        "definition_id": "era.tavern.stop_cancel_receipts_item.one_item"
       },
       {
         "id": "empty",
-        "type_used": "era.tavern.stop_cancel_receipts_item.empty",
-        "display_name": "完成空列表或已结束的遍历",
-        "description": "保留当前处理资料并返回 done=true，不执行任何条目副作用。"
+        "display_name": "确认本轮事件结果已经逐项处理完",
+        "description": "在“向一项未完成事件返回取消”流程中，事件确认或取消清单已经遍历完时，标记本轮结束。后续进行整批诊断、通知或实例收尾。",
+        "definition_id": "era.tavern.stop_cancel_receipts_item.empty"
       },
       {
         "id": "join_end",
-        "type_used": "era.tavern.stop_cancel_receipts_item.join_end",
-        "display_name": "汇合当前实际激活分支的结果",
-        "description": "接收当前所选路径的结果集合，交还其中唯一实际结果；不选择未激活分支、不重新执行操作。运行实现必须拒绝实际多结果，不以集合契约放宽唯一结果语义。"
+        "display_name": "交接向一项未完成事件返回取消的选中结果",
+        "description": "在“向一项未完成事件返回取消”流程中，在“向一项未完成事件返回取消”中，接收本次实际选择的分支所产生的唯一结果，交给后续步骤或调用方。每次只允许一份实际结果，避免把互斥分支误当成多个都已执行。",
+        "definition_id": "era.tavern.stop_cancel_receipts_item.join_end"
       },
       {
         "id": "end",
-        "type_used": "era.tavern.initialize.end",
-        "display_name": "结束当前原生流程",
-        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+        "display_name": "结束向一项未完成事件返回取消",
+        "description": "标明“向一项未完成事件返回取消”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.tavern.initialize.end"
       }
     ],
     "edges": [
@@ -104,13 +104,13 @@
         "type": "era.tavern.item.result.stop_cancel_receipts_item",
         "cardinality": "exactly_one",
         "as": "frame",
-        "display_name": "更新位置"
+        "display_name": "向一项未完成事件返回取消的处理进度及结果"
       },
       {
         "type": "era.tavern.done.stop.cancel_receipts",
         "cardinality": "exactly_one",
         "as": "done",
-        "display_name": "完成标记"
+        "display_name": "本轮遍历或职责处理是否已经结束"
       }
     ]
   }

@@ -1,20 +1,20 @@
 {
   "type_key": "era.tavern.flow.timer_wait",
-  "display_name": "原生等待计时资源并交还到期事实",
-  "description": "计时器作为一个原生异步任务；取消和到期通过真实分支表达，无长期计时callback驱动或Host兼容层。",
+  "display_name": "等待最近期限并处理到期或取消",
+  "description": "等待选出的最近有效期限，到期时交给统一计时流程，安排变化或停止时结束本轮重新选择。实际计时和监听在本轮退出时释放，避免旧计时继续影响实例。",
   "expand": true,
   "requires": [
     {
       "type": "era.tavern.call.frame",
       "cardinality": "exactly_one",
-      "display_name": "同步分配的本实例计时资源"
+      "display_name": "等待最近期限并处理到期或取消的请求和已有进度"
     }
   ],
   "provides": [
     {
       "key": "timer_wait_frame",
       "type": "era.tavern.task.finished",
-      "display_name": "等待终态"
+      "display_name": "当前职责已真实完成或退出的确认"
     }
   ],
   "pipeline": {
@@ -24,46 +24,46 @@
         "key": "frame",
         "type": "era.tavern.call.frame",
         "required": true,
-        "display_name": "计时资源及实例"
+        "display_name": "等待最近期限并处理到期或取消的请求和已有进度"
       }
     ],
     "max_steps": 8,
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.tavern.initialize.start",
-        "display_name": "开始单次计时任务",
-        "description": "标记控制入口。"
+        "display_name": "开始等待最近期限并处理到期或取消",
+        "description": "标明“等待最近期限并处理到期或取消”的开始位置。等待选出的最近有效期限，到期时交给统一计时流程，安排变化或停止时结束本轮重新选择。实际计时和监听在本轮退出时释放，避免旧计时继续影响实例。",
+        "definition_id": "era.tavern.initialize.start"
       },
       {
         "id": "await_due",
-        "type_used": "era.tavern.timer_wait.await_due",
-        "display_name": "由原生异步任务等待一个计时资源",
-        "description": "原生受管任务只等待当前计时器的绝对截止时间或取消；真实Timeout由受等待的局部Promise持有，取消必清理，不执行准入、告警或循环调度。"
+        "display_name": "等最近期限到达或计时安排改变",
+        "description": "在“等待最近期限并处理到期或取消”流程中，等待当前选定期限；新增、更早、替换或取消安排会唤醒本次等待，实例停止也会结束等待。退出时清除实际计时和监听，后续重新选择或处理到期。",
+        "definition_id": "era.tavern.timer_wait.await_due"
       },
       {
         "id": "dispatch_due",
-        "type_used": "era.tavern.timer_wait.dispatch_due",
-        "display_name": "将到期事实交给已登记同步流程",
-        "description": "只转交本实例资源身份、种类与原输入给编译后timer_fired同步workflow；是否陈旧、准入和屏障告警沿既有图执行。"
+        "display_name": "把实际到期交给计时事件流程",
+        "description": "在“等待最近期限并处理到期或取消”流程中，当前期限确实到达后，从等待集合移除本项，将计时种类、身份及对应事件交给到期处理。后续重新核对有效性，再发业务事件或告警。",
+        "definition_id": "era.tavern.timer_wait.dispatch_due"
       },
       {
         "id": "cancelled",
-        "type_used": "era.tavern.timer_wait.cancelled",
-        "display_name": "结束被替换或停止取消的等待",
-        "description": "计时资源已取消时只交还终态，不发送到期事件、不解除生成屏障。"
+        "display_name": "结束已取消或需要重新选择的计时等待",
+        "description": "在“等待最近期限并处理到期或取消”流程中，等待因安排改变、替换或停止而结束时，返回本轮无到期结果。外层随后按最新状态选择期限或结束计时分支。",
+        "definition_id": "era.tavern.timer_wait.cancelled"
       },
       {
         "id": "join",
-        "type_used": "era.tavern.timer_wait.join",
-        "display_name": "汇合计时等待的唯一终态",
-        "description": "完成当前实际工作和应有收尾后只交回小的完成摘要；框架缓存不再持有本次请求、会话或私密函数引用。"
+        "display_name": "返回本轮计时到期或取消的结论",
+        "description": "在“等待最近期限并处理到期或取消”流程中，接收本轮期限实际到达后的处理结果，或安排变化、停止带来的取消结论。将本轮完成状态交回计时循环，继续选择最新有效期限。",
+        "definition_id": "era.tavern.timer_wait.join"
       },
       {
         "id": "end",
-        "type_used": "era.tavern.initialize.end",
-        "display_name": "结束单次计时任务",
-        "description": "标记控制终态。"
+        "display_name": "结束等待最近期限并处理到期或取消",
+        "description": "标明“等待最近期限并处理到期或取消”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.tavern.initialize.end"
       }
     ],
     "edges": [
@@ -98,7 +98,7 @@
       {
         "type": "era.tavern.task.finished",
         "cardinality": "exactly_one",
-        "display_name": "实际计时终态",
+        "display_name": "当前职责已真实完成或退出的确认",
         "as": "frame"
       }
     ]

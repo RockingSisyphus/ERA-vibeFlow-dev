@@ -8,9 +8,14 @@ import { finalize } from '../../../javascript_project/service/nodes/sync/finaliz
 import { run as save } from '../../../javascript_project/service/nodes/sync/commit_sync';
 import { run as settle } from '../../../javascript_project/service/nodes/sync/settle_saved_batch';
 import { recordFor } from '../../../javascript_project/service/base_lib/sidecar_binding';
-import { applySealedCommandCompactionToWork } from '../../../javascript_project/service/base_lib/sync/command_compaction';
-
-export async function execute(text: string, options: { failSave?: boolean; context?: any } = {}) {
+import { applySealedCommandCompactionToWork } from './native-workflow-fixture';
+export async function execute(
+  text: string,
+  options: {
+    failSave?: boolean;
+    context?: any;
+  } = {},
+) {
   const context = options.context ?? contextWith(text);
   let state = prepare({ 'era.sync.context': { value: context } }).block_step_state;
   let record = recordFor(
@@ -70,7 +75,7 @@ export async function execute(text: string, options: { failSave?: boolean; conte
       .block_step_pending;
     const work = prepareWork({ 'era.sync.block.step.pending': { value: pending } }).expression_command_result;
     state = publish(
-      { 'era.command_compaction.result': { value: applySealedCommandCompactionToWork(work) } },
+      { 'era.command_compaction.result': { value: await applySealedCommandCompactionToWork(work) } },
       {},
       { capabilities },
     ).block_step_state_after;

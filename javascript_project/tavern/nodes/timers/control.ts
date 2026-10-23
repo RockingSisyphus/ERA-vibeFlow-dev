@@ -23,7 +23,7 @@ export function ChooseTimer(inputs:any,params:any):any {
 }
 
 export function CancelTimer(inputs:any,params:any):any {
-  const f=takeFrame(inputs);if(f.previousTimer)f.previousTimer.handle.controller.abort("cancelled");f.timerMap.delete(f.timerKey);return emit({frame:f},params);
+  const f=takeFrame(inputs);if(f.previousTimer)f.previousTimer.handle.controller.abort("cancelled");f.timerMap.delete(f.timerKey);f.session.timerRevision++;f.session.timerWake?.resolve();return emit({frame:f},params);
 }
 export function ReturnTimer(inputs:any,params:any):any {
   const f=takeFrame(inputs);f.result=f.timerKind==="collection"?null:f.timerOperation==="cancel"?{status:"cancelled"}:{status:"scheduled",dueAt:f.timerDueAt};return emit({frame:f},params);
@@ -42,16 +42,16 @@ export function ScheduleTimer(inputs:any,params:any):any {
     Math.min(s.clock.now()+f.timerInput.delayMs,f.firstAt+f.timerInput.maxDelayMs);
   const ticket={controller:new AbortController(),dueAt:f.timerDueAt};
   f.timerMap.set(f.timerKey,{handle:ticket,dueAt:f.timerDueAt,firstAt:f.firstAt});
-  s.tasks.push({kind:"timer_wait",timerKind:f.timerKind,timerKey:f.timerKey,timerTicket:ticket,timerEvent:f.timerInput.event});
-  s.backgroundWaiter?.resolve();return emit({frame:f},params);
+  s.timerRequests.add({timerKind:f.timerKind,timerKey:f.timerKey,timerTicket:ticket,timerEvent:f.timerInput.event});
+  s.timerRevision++;s.timerWake?.resolve();return emit({frame:f},params);
 }
 export function RegisterWatchdog(inputs:any,params:any):any {
   const f=takeFrame(inputs),s=f.session;
   if(s.watchdogMs>0&&f.barrier.records.some((r:any)=>!r.settled)){
     const ticket={controller:new AbortController(),dueAt:s.clock.now()+s.watchdogMs};
     f.watchdog=ticket;s.watchdogs.add(ticket);
-    s.tasks.push({kind:"timer_wait",timerKind:"watchdog",timerTicket:ticket,timerBarrier:f.barrier});
-    s.backgroundWaiter?.resolve();
+    s.timerRequests.add({timerKind:"watchdog",timerTicket:ticket,timerBarrier:f.barrier});
+    s.timerRevision++;s.timerWake?.resolve();
   }
   return emit({frame:f},params);
 }

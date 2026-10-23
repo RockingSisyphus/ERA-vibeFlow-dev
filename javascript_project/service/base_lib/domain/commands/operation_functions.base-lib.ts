@@ -1,0 +1,30 @@
+import {defineBaseLib} from "@vibeflow/plugin";
+
+export const era_command_operation_functions = defineBaseLib({
+  "id": "era.command.operation_functions",
+  "display_name": "整组函数候选",
+  "description": "提供整组函数编辑：检查名称和保护设置、建立临时库、统一检查后应用，字段删除结果归入函数修改。",
+  "version": "1.0.0",
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "source": {
+        "kind": "file",
+        "ref": "base_lib/domain/commands/operation_functions.ts"
+      }
+    }
+  ],
+  "dependencies": [
+    "era.command.operation_state",
+    "era.crud.mutations",
+    "era.crud.parser"
+  ],
+  "external_packages": [],
+  "rulesets": [
+    "vibeflow.base_lib"
+  ]
+});

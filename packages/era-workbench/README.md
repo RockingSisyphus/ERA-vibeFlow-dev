@@ -1,6 +1,6 @@
 # 工作台同步预览包
 
-唯一源码是 `javascript_project/service/base_lib/domain/workbench_operations.ts`、
+唯一源码是 `javascript_project/service/base_lib/workbench/workbench_operations.ts`、
 `workbench_draft.ts`、`workbench_protection.ts`。Service 的实际 Commit 准备节点直接引用
 这些源码；UI 使用本包执行同源同步预览。包内 JS 和声明均为生成物，不应手工修改。
 

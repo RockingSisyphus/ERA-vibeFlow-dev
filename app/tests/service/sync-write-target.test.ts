@@ -11,13 +11,9 @@ const sync_contracts = await import(
     .href
 );
 import { afterEach, describe, expect, it, vi } from 'vitest';
-
 import { writeMessage } from '../native-tavern/message-fixture.mjs';
 import { assertCurrentMessageBasis } from '../../src/ERA变量框架/service/message-write-target';
-
-const transaction = await import(
-  /* @vite-ignore */ new URL('../../../javascript_project/service/base_lib/sync/sync_planning.ts', import.meta.url).href
-);
+const transaction = await import(/* @vite-ignore */ new URL('./native-workflow-fixture.ts', import.meta.url).href);
 const preparation = await import(
   /* @vite-ignore */ new URL('../../../javascript_project/service/base_lib/dispatch_preparation.ts', import.meta.url)
     .href
@@ -38,11 +34,9 @@ const presentation = await import(
 const sidecar = await import(
   /* @vite-ignore */ new URL('../../../javascript_project/service/base_lib/sidecar_binding.ts', import.meta.url).href
 );
-
 const identity = { characterId: 'card-a', chatId: 'chat-a', groupId: null };
 const sidecarId = 'era_chat_12345678-1234-4234-8234-123456789abc';
-
-function fixture(source = 'tavern', eventType = 'message_swiped', placeholder = true) {
+async function fixture(source = 'tavern', eventType = 'message_swiped', placeholder = true) {
   const original = '<VariableInsert>{"branch":"B"}</VariableInsert>';
   const event = {
     schemaVersion: 1,
@@ -86,7 +80,7 @@ function fixture(source = 'tavern', eventType = 'message_swiped', placeholder = 
     ),
   );
   const dispatchContext = preparation.dispatchContextOf(preparation.preserveDispatchPreparation(plan));
-  const work = transaction.planSyncWork({
+  const work = await transaction.planSyncWork({
     schemaVersion: 1,
     step: { ...step, dispatchContext },
     consecutive: sync_contracts.consecutiveFacts(state),
@@ -106,10 +100,17 @@ function fixture(source = 'tavern', eventType = 'message_swiped', placeholder = 
   const trace: string[] = [];
   vi.stubGlobal(
     'setChatMessages',
-    vi.fn(async (updates: Array<{ message_id: number; message: string }>) => {
-      trace.push('message');
-      for (const update of updates) current.texts[current.swipe] = update.message;
-    }),
+    vi.fn(
+      async (
+        updates: Array<{
+          message_id: number;
+          message: string;
+        }>,
+      ) => {
+        trace.push('message');
+        for (const update of updates) current.texts[current.swipe] = update.message;
+      },
+    ),
   );
   let record = sidecar.recordFor(sidecarId, identity, { statData: {}, statFunc: {}, eraMeta: {} }, null);
   const hooks = { beforeFile: () => {}, afterFile: () => {} };
@@ -187,14 +188,12 @@ function fixture(source = 'tavern', eventType = 'message_swiped', placeholder = 
         .sync_commit_result,
   };
 }
-
 describe('sync source survives asynchronous host interleaving', () => {
   afterEach(() => vi.unstubAllGlobals());
-
   it.each(['tavern', 'era-api', 'agent'])(
     'separates saved B from current C through the real persistence boundary (%s)',
     async source => {
-      const f = fixture(source === 'agent' ? 'tavern' : source);
+      const f = await fixture(source === 'agent' ? 'tavern' : source);
       if (source === 'agent')
         f.request.agentFloorCandidate = {
           ...f.request.floorIdentity,
@@ -234,9 +233,8 @@ describe('sync source survives asynchronous host interleaving', () => {
       }
     },
   );
-
   it.each(['swallowed-save', 'readback'])('retains real %s failure even after selecting C', async fault => {
-    const f = fixture();
+    const f = await fixture();
     f.usePersistence(async () => {
       f.current.swipe = 2;
     });
@@ -259,7 +257,6 @@ describe('sync source survives asynchronous host interleaving', () => {
     expect(f.trace).toEqual(['message']);
     expect(f.current.texts[2]).toBe('C');
   });
-
   it('preserves a prior block failure while scheduling replacement of a saved stale batch', () => {
     const failure = {
       code: 'ERA_EXPR_REFERENCE_NON_NUMERIC',
@@ -285,9 +282,8 @@ describe('sync source survives asynchronous host interleaving', () => {
     expect(result).toMatchObject({ status: 'failed', failure });
     expect(schedule).toHaveBeenCalledOnce();
   });
-
   it('presents a native finalized floor only after message, Sidecar and publication', async () => {
-    const f = fixture('tavern', 'message_received');
+    const f = await fixture('tavern', 'message_received');
     expect(f.request.agentFloorCandidate).toBeNull();
     expect(f.request.initialPresentation).toEqual(f.request.floorIdentity);
     expect(sync_commit_policy.validateSyncCommitEnvelope({ mode: 'commit', request: f.request }).route).toBe('valid');
@@ -304,18 +300,15 @@ describe('sync source survives asynchronous host interleaving', () => {
     await presentation.run({ 'era.tavern.commit.result': { value: outcome } }, {}, { capabilities: f.capabilities });
     expect(f.trace).toEqual(['message', 'file', 'publish', 'render']);
   });
-
-  it.each(['message_swiped', 'message_edited', 'chat_changed', 'ui:sync'])('does not redraw for %s', type => {
-    expect(fixture('tavern', type).request.initialPresentation).toBeNull();
+  it.each(['message_swiped', 'message_edited', 'chat_changed', 'ui:sync'])('does not redraw for %s', async type => {
+    expect((await fixture('tavern', type)).request.initialPresentation).toBeNull();
   });
-
-  it('does not render an MK-only write or an API commit as initial presentation', () => {
-    expect(fixture('tavern', 'message_received', false).request.initialPresentation).toBeNull();
-    expect(fixture('era-api', 'message_received').request.initialPresentation).toBeNull();
+  it('does not render an MK-only write or an API commit as initial presentation', async () => {
+    expect((await fixture('tavern', 'message_received', false)).request.initialPresentation).toBeNull();
+    expect((await fixture('era-api', 'message_received')).request.initialPresentation).toBeNull();
   });
-
   it('presents a per-block-committed floor from a non-commit tail when an intent is carried', async () => {
-    const f = fixture('tavern', 'message_received');
+    const f = await fixture('tavern', 'message_received');
     const work = {
       schemaVersion: 1,
       disposition: 'no-op',
@@ -332,13 +325,14 @@ describe('sync source survives asynchronous host interleaving', () => {
     expect(f.capabilities['era.tavern.messages'].refresh).toHaveBeenCalledTimes(1);
     const calls = (
       f.capabilities['era.tavern.messages'].refresh as {
-        mock: { calls: unknown[][] };
+        mock: {
+          calls: unknown[][];
+        };
       }
     ).mock.calls;
     expect(calls[0]?.[0]).toMatchObject({ messageId: 1, mode: 'affected' });
-
     // 不带意图（null）时不刷新：逐块提交的普通收尾不该产生额外宿主调用。
-    const withoutIntent = fixture('tavern', 'message_received');
+    const withoutIntent = await fixture('tavern', 'message_received');
     await presentation.run(
       {
         'era.tavern.commit.result': {
@@ -350,16 +344,14 @@ describe('sync source survives asynchronous host interleaving', () => {
     );
     expect(withoutIntent.capabilities['era.tavern.messages'].refresh).not.toHaveBeenCalled();
   });
-
   it('does not present a failed or unpublished native floor', async () => {
-    const f = fixture('tavern', 'message_received');
+    const f = await fixture('tavern', 'message_received');
     const outcome = { ...f.request, status: 'failed', variablesCommitted: false };
     await presentation.run({ 'era.tavern.commit.result': { value: outcome } }, {}, { capabilities: f.capabilities });
     expect(f.capabilities['era.tavern.messages'].refresh).not.toHaveBeenCalled();
   });
-
   it('keeps an unconfirmed disk save recoverable without committing or presenting Sidecar', async () => {
-    const f = fixture('tavern', 'message_received');
+    const f = await fixture('tavern', 'message_received');
     f.capabilities['era.tavern.messages'].update_content = async () => {
       f.trace.push('message');
       return {
@@ -381,9 +373,8 @@ describe('sync source survives asynchronous host interleaving', () => {
       prompt: expect.objectContaining({ kind: 'repair', reason: 'message-persistence-unconfirmed' }),
     });
   });
-
   it('retains the source before MK/placeholder preparation and commits the matching branch', async () => {
-    const f = fixture();
+    const f = await fixture();
     expect(f.request.sourceBasis.messages[0].activeText).toBe(f.original);
     expect(f.request.messageWrites[0].content).not.toBe(f.original);
     expect(await f.run()).toMatchObject({ status: 'committed', confirmedMessageWrites: 1, variablesCommitted: true });
@@ -391,11 +382,10 @@ describe('sync source survives asynchronous host interleaving', () => {
     expect(f.current.texts[0]).toBe('A');
     expect(f.current.texts[2]).toBe('C');
   });
-
   it.each(['swipe', 'edit', 'delete', 'chat'])(
     'settles ordinary stale %s without writing or publishing old state',
     async kind => {
-      const f = fixture();
+      const f = await fixture();
       if (kind === 'swipe') f.current.swipe = 2;
       if (kind === 'edit') f.current.texts[1] = 'user edited B';
       if (kind === 'delete') f.current.deleted = true;
@@ -434,9 +424,8 @@ describe('sync source survives asynchronous host interleaving', () => {
       );
     },
   );
-
   it.each(['api', 'agent'])('does not silently discard an explicit %s operation', async kind => {
-    const f = fixture(kind === 'api' ? 'era-api' : 'tavern');
+    const f = await fixture(kind === 'api' ? 'era-api' : 'tavern');
     if (kind === 'agent')
       f.request.agentFloorCandidate = {
         ...f.request.floorIdentity,
@@ -449,9 +438,8 @@ describe('sync source survives asynchronous host interleaving', () => {
     expect(await f.run()).toMatchObject({ status: 'failed', confirmedMessageWrites: 0, sourceChanged: true });
     expect(f.trace).toEqual([]);
   });
-
   it('does not write an old Sidecar after a branch change following a confirmed message write', async () => {
-    const f = fixture();
+    const f = await fixture();
     f.hooks.beforeFile = () => {
       f.current.swipe = 2;
     };
@@ -466,9 +454,8 @@ describe('sync source survives asynchronous host interleaving', () => {
     expect(f.current.texts[2]).toBe('C');
     expect(f.current.texts[1]).toBe(f.request.messageWrites[0].content);
   });
-
   it('does not attach a false failure when the ordinary branch changes after Sidecar is saved', async () => {
-    const f = fixture();
+    const f = await fixture();
     f.hooks.afterFile = () => {
       f.current.swipe = 2;
     };
@@ -484,9 +471,8 @@ describe('sync source survives asynchronous host interleaving', () => {
     expect(settled).not.toHaveProperty('stateUpdate');
     expect(f.trace).toEqual(['message', 'file']);
   });
-
   it('reports a committed old branch without publishing or presenting it into a newly selected branch', async () => {
-    const f = fixture();
+    const f = await fixture();
     f.request.agentFloorCandidate = {
       ...f.request.floorIdentity,
       content: f.request.messageWrites[0].content,
@@ -504,7 +490,6 @@ describe('sync source survives asynchronous host interleaving', () => {
     expect(sync_result_policy.buildSyncCommittedResult(outcome)).not.toHaveProperty('stateUpdate');
   });
 });
-
 it('函数执行发现目标失效而尚未形成消息写回时，也进入普通历史恢复', async () => {
   const work = {
     disposition: 'failed',

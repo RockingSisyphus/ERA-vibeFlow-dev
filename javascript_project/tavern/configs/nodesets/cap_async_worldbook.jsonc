@@ -1,20 +1,20 @@
 {
   "type_key": "era.tavern.flow.cap_async_worldbook",
-  "display_name": "世界书操作：异步完成",
-  "description": "只保留真正等待的操作；完全同步的 Promise 接口没有本入口分支。",
+  "display_name": "完成世界书操作",
+  "description": "接收已经发起、需要等待的世界书操作，按具体请求接续对应流程，等实际完成并检查结果后返回。各分支分别保持自己的目标检查和实际结果，最后把本次选中操作的唯一结果交给调用方。",
   "expand": true,
   "requires": [
     {
       "type": "era.tavern.call.frame",
       "cardinality": "exactly_one",
-      "display_name": "本次调用、实例资源与上一节点的事实"
+      "display_name": "完成世界书操作的请求和已有进度"
     }
   ],
   "provides": [
     {
       "key": "era_tavern_flow_cap_async_worldbook_frame",
       "type": "era.tavern.frame.final.cap_async_worldbook",
-      "display_name": "处理后的资源与事实"
+      "display_name": "完成世界书操作的处理进度及结果"
     }
   ],
   "pipeline": {
@@ -23,7 +23,7 @@
       {
         "key": "frame",
         "type": "era.tavern.call.frame",
-        "display_name": "同实例调用与资源",
+        "display_name": "完成世界书操作的请求和已有进度",
         "required": true
       }
     ],
@@ -32,88 +32,88 @@
         "type": "era.tavern.frame.final.cap_async_worldbook",
         "cardinality": "exactly_one",
         "as": "frame",
-        "display_name": "本段明确结果"
+        "display_name": "完成世界书操作的处理进度及结果"
       }
     ],
     "max_steps": 17,
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.tavern.initialize.start",
-        "display_name": "开始当前原生流程",
-        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+        "display_name": "开始完成世界书操作",
+        "description": "标明“完成世界书操作”的开始位置。接收已经发起、需要等待的世界书操作，按具体请求接续对应流程，等实际完成并检查结果后返回。各分支分别保持自己的目标检查和实际结果，最后把本次选中操作的唯一结果交给调用方。",
+        "definition_id": "era.tavern.initialize.start"
       },
       {
         "id": "choose",
-        "type_used": "era.tavern.cap_async_worldbook.choose",
-        "display_name": "识别世界书操作",
-        "description": "按原 Capability 的操作名选择唯一 async 路径，操作原参数、返回类型和错误身份保持。"
+        "display_name": "选择世界书的具体操作",
+        "description": "在“完成世界书操作”流程中，接收世界书请求，读取明确操作种类，选择本组已声明的一条处理路径。未知操作报告原因，有效操作交给对应步骤完成，并返回实际结果。",
+        "definition_id": "era.tavern.cap_async_worldbook.choose"
       },
       {
         "id": "route_read__execute",
-        "type_used": "era.tavern.worldbook_read.execute",
-        "display_name": "读取：世界书：等待与确认：等待本次读取：世界书的资源终态",
-        "description": "在酒馆页面执行该操作的实际 API 或资源动作；保留未知字段、现有错误类别及原同步/异步约定。"
+        "display_name": "返回已读取的世界书及条目",
+        "description": "在“完成世界书操作”流程中，等待指定世界书内容读取完成，连同名称列表、角色绑定和实际读取对象返回。主服务据此决定是否需要建立或更新资源。",
+        "definition_id": "era.tavern.worldbook_read.execute"
       },
       {
         "id": "route_read__return_result",
-        "type_used": "era.tavern.worldbook_read.return_result",
-        "display_name": "读取：世界书：等待与确认：交还读取结果",
-        "description": "返回原 era.tavern.worldbook.read.result 结果；需要脱敏的连接资料只返回摘要。"
+        "display_name": "交回“读取世界书”的实际结果",
+        "description": "在“完成世界书操作”流程中，接收“读取世界书”已经执行得到的结果，复核实例和本次调用尚未取消后交回发起者。调用方据此继续业务或显示结果，取消时按实际原因结束等待。",
+        "definition_id": "era.tavern.worldbook_read.return_result"
       },
       {
         "id": "route_create__execute",
-        "type_used": "era.tavern.worldbook_create.execute",
-        "display_name": "创建：世界书：等待与确认：等待本次创建：世界书的资源终态",
-        "description": "在酒馆页面执行该操作的实际 API 或资源动作；保留未知字段、现有错误类别及原同步/异步约定。"
+        "display_name": "确认世界书创建或已经存在",
+        "description": "在“完成世界书操作”流程中，等待世界书创建操作完成，按真实结果返回已创建或已存在及名称。后续资源流程据此写入所需条目。",
+        "definition_id": "era.tavern.worldbook_create.execute"
       },
       {
         "id": "route_create__return_result",
-        "type_used": "era.tavern.worldbook_create.return_result",
-        "display_name": "创建：世界书：等待与确认：交还创建结果",
-        "description": "返回原 era.tavern.worldbook.create.result 结果；需要脱敏的连接资料只返回摘要。"
+        "display_name": "交回“创建世界书”的实际结果",
+        "description": "在“完成世界书操作”流程中，接收“创建世界书”已经执行得到的结果，复核实例和本次调用尚未取消后交回发起者。调用方据此继续业务或显示结果，取消时按实际原因结束等待。",
+        "definition_id": "era.tavern.worldbook_create.return_result"
       },
       {
         "id": "route_bind__execute",
-        "type_used": "era.tavern.worldbook_bind.execute",
-        "display_name": "绑定：世界书：等待与确认：等待本次绑定：世界书的资源终态",
-        "description": "在酒馆页面执行该操作的实际 API 或资源动作；保留未知字段、现有错误类别及原同步/异步约定。"
+        "display_name": "等待角色的世界书绑定保存",
+        "description": "在“完成世界书操作”流程中，接收已经发起的主世界书绑定，等待酒馆实际保存结束。成功后进入界面确认，失败原因交回资源流程。",
+        "definition_id": "era.tavern.worldbook_bind.execute"
       },
       {
         "id": "route_bind__read_back",
-        "type_used": "era.tavern.worldbook_bind_finish.read_back",
-        "display_name": "更新世界书下拉框并交还绑定确认",
-        "description": "只更新原下拉框并交还 name/bound，不新增读回 API。"
+        "display_name": "更新世界书选择显示并返回确认",
+        "description": "在“完成世界书操作”流程中，角色绑定保存完成后，将页面世界书选择框更新为本次名称，返回绑定完成。使界面与刚保存的角色资源一致。",
+        "definition_id": "era.tavern.worldbook_bind_finish.read_back"
       },
       {
         "id": "route_bind__return_result",
-        "type_used": "era.tavern.worldbook_bind.return_result",
-        "display_name": "绑定：世界书：等待与确认：交还绑定结果",
-        "description": "返回原 era.tavern.worldbook.bind.result 结果；需要脱敏的连接资料只返回摘要。"
+        "display_name": "交回“绑定角色主世界书”的实际结果",
+        "description": "在“完成世界书操作”流程中，接收“绑定角色主世界书”已经执行得到的结果，复核实例和本次调用尚未取消后交回发起者。调用方据此继续业务或显示结果，取消时按实际原因结束等待。",
+        "definition_id": "era.tavern.worldbook_bind.return_result"
       },
       {
         "id": "route_replace_entries__execute",
-        "type_used": "era.tavern.worldbook_replace_entries.execute",
-        "display_name": "替换条目：世界书：等待与确认：等待本次替换条目：世界书的资源终态",
-        "description": "在酒馆页面执行该操作的实际 API 或资源动作；保留未知字段、现有错误类别及原同步/异步约定。"
+        "display_name": "确认世界书条目保存完成",
+        "description": "在“完成世界书操作”流程中，等待已发起的条目替换结束，返回世界书名称和提交条目数。主服务据此记录资源初始化的实际进度。",
+        "definition_id": "era.tavern.worldbook_replace_entries.execute"
       },
       {
         "id": "route_replace_entries__return_result",
-        "type_used": "era.tavern.worldbook_replace_entries.return_result",
-        "display_name": "替换条目：世界书：等待与确认：交还替换条目结果",
-        "description": "返回原 era.tavern.worldbook.replace_entries.result 结果；需要脱敏的连接资料只返回摘要。"
+        "display_name": "交回“替换世界书条目”的实际结果",
+        "description": "在“完成世界书操作”流程中，接收“替换世界书条目”已经执行得到的结果，复核实例和本次调用尚未取消后交回发起者。调用方据此继续业务或显示结果，取消时按实际原因结束等待。",
+        "definition_id": "era.tavern.worldbook_replace_entries.return_result"
       },
       {
         "id": "join_return",
-        "type_used": "era.tavern.cap_async_worldbook.join_return",
-        "display_name": "汇合当前实际激活分支的结果",
-        "description": "接收当前所选路径的结果集合，交还其中唯一实际结果；不选择未激活分支、不重新执行操作。运行实现必须拒绝实际多结果，不以集合契约放宽唯一结果语义。"
+        "display_name": "交接完成世界书操作的选中结果",
+        "description": "在“完成世界书操作”流程中，在“完成世界书操作”中，接收本次实际选择的分支所产生的唯一结果，交给后续步骤或调用方。每次只允许一份实际结果，避免把互斥分支误当成多个都已执行。",
+        "definition_id": "era.tavern.cap_async_worldbook.join_return"
       },
       {
         "id": "end",
-        "type_used": "era.tavern.initialize.end",
-        "display_name": "结束当前原生流程",
-        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+        "display_name": "结束完成世界书操作",
+        "description": "标明“完成世界书操作”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.tavern.initialize.end"
       }
     ],
     "edges": [

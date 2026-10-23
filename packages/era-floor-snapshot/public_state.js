@@ -1,4 +1,4 @@
-// Generated from Service base_lib/domain; do not edit.
+// Generated from Service base_lib/snapshot; do not edit.
 import { transformEraData, removeMetaFields, selectedMks } from './data_view.js';
 function record(value) { return value !== null && typeof value === 'object' && !Array.isArray(value); }
 function currentMessage(selected) {

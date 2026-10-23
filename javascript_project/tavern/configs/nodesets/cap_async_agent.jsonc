@@ -1,20 +1,20 @@
 {
   "type_key": "era.tavern.flow.cap_async_agent",
-  "display_name": "生成、连接及页面会话操作：异步完成",
-  "description": "只保留真正等待的操作；完全同步的 Promise 接口没有本入口分支。",
+  "display_name": "完成模型生成和生成设置操作",
+  "description": "接收已经发起、需要等待的模型生成和生成设置操作，按具体请求接续对应流程，等实际完成并检查结果后返回。各分支分别保持自己的目标检查和实际结果，最后把本次选中操作的唯一结果交给调用方。",
   "expand": true,
   "requires": [
     {
       "type": "era.tavern.call.frame",
       "cardinality": "exactly_one",
-      "display_name": "本次调用、实例资源与上一节点的事实"
+      "display_name": "完成模型生成和生成设置操作的请求和已有进度"
     }
   ],
   "provides": [
     {
       "key": "era_tavern_flow_cap_async_agent_frame",
       "type": "era.tavern.frame.final.cap_async_agent",
-      "display_name": "处理后的资源与事实"
+      "display_name": "完成模型生成和生成设置操作的处理进度及结果"
     }
   ],
   "pipeline": {
@@ -23,7 +23,7 @@
       {
         "key": "frame",
         "type": "era.tavern.call.frame",
-        "display_name": "同实例调用与资源",
+        "display_name": "完成模型生成和生成设置操作的请求和已有进度",
         "required": true
       }
     ],
@@ -32,136 +32,136 @@
         "type": "era.tavern.frame.final.cap_async_agent",
         "cardinality": "exactly_one",
         "as": "frame",
-        "display_name": "本段明确结果"
+        "display_name": "完成模型生成和生成设置操作的处理进度及结果"
       }
     ],
     "max_steps": 25,
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.tavern.initialize.start",
-        "display_name": "开始当前原生流程",
-        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+        "display_name": "开始完成模型生成和生成设置操作",
+        "description": "标明“完成模型生成和生成设置操作”的开始位置。接收已经发起、需要等待的模型生成和生成设置操作，按具体请求接续对应流程，等实际完成并检查结果后返回。各分支分别保持自己的目标检查和实际结果，最后把本次选中操作的唯一结果交给调用方。",
+        "definition_id": "era.tavern.initialize.start"
       },
       {
         "id": "choose",
-        "type_used": "era.tavern.cap_async_agent.choose",
-        "display_name": "识别生成、连接及页面会话操作",
-        "description": "按原 Capability 的操作名选择唯一 async 路径，操作原参数、返回类型和错误身份保持。"
+        "display_name": "选择模型生成和生成设置的具体操作",
+        "description": "在“完成模型生成和生成设置操作”流程中，接收模型生成和生成设置请求，读取明确操作种类，选择本组已声明的一条处理路径。未知操作报告原因，有效操作交给对应步骤完成，并返回实际结果。",
+        "definition_id": "era.tavern.cap_async_agent.choose"
       },
       {
         "id": "route_await_native_completion__wait_terminal",
-        "type_used": "era.tavern.agent_await_native_completion.wait_terminal",
-        "display_name": "等待原生生成结束后重读上下文：等待与确认：等待本次等待原生生成结束后重读上下文的资源终态",
-        "description": "等待对应真实 GENERATION_ENDED，排除辅助生成结束；非原生会话返回原 not-native 结论。"
+        "display_name": "等待已登记的酒馆生成结束",
+        "description": "在“完成模型生成和生成设置操作”流程中，接收已经绑定到某次聊天生成的等待，取得其完成、取消或非酒馆生成状态。随后重新读取聊天及最新消息，供主服务判断正文是否仍适用。",
+        "definition_id": "era.tavern.agent_await_native_completion.wait_terminal"
       },
       {
         "id": "route_await_native_completion__read_current",
-        "type_used": "era.tavern.agent_await_native_completion.read_current",
-        "display_name": "等待原生生成结束后重读上下文：等待与确认：重新读取会话、身份和最新消息",
-        "description": "等待完成后重新读取当前事实，不沿用等待前可能已失效的会话。"
+        "display_name": "生成结束后重新读取聊天和最新消息",
+        "description": "在“完成模型生成和生成设置操作”流程中，指定生成结束后，重新读取当前会话进度、聊天身份及最新消息，连同结束结论返回。主服务据此确认结果仍属于原聊天和原次生成，再继续规划或结算。",
+        "definition_id": "era.tavern.agent_await_native_completion.read_current"
       },
       {
         "id": "route_await_native_completion__return_native",
-        "type_used": "era.tavern.agent_await_native_completion.return_native",
-        "display_name": "等待原生生成结束后重读上下文：等待与确认：返回原生结束关联结果",
-        "description": "返回原 status、executionId、identity、latestMessage，保持跨聊天取消边界。"
+        "display_name": "返回指定酒馆生成的结束及最新消息",
+        "description": "在“完成模型生成和生成设置操作”流程中，接收本次生成结束状态和重新读取的聊天、最新消息，交回主服务。主服务可据此确认正文仍属于原生成，再继续规划或结算。",
+        "definition_id": "era.tavern.agent_await_native_completion.return_native"
       },
       {
         "id": "route_write_configuration__execute",
-        "type_used": "era.tavern.agent_write_configuration.execute",
-        "display_name": "写入角色生成配置：生成、连接及页面会话：等待与确认：等待本次写入角色生成配置：生成、连接及页面会话的资源终态",
-        "description": "在酒馆页面执行该操作的实际 API 或资源动作；保留未知字段、现有错误类别及原同步/异步约定。"
+        "display_name": "等待角色生成配置保存完成",
+        "description": "在“完成模型生成和生成设置操作”流程中，接收已经发起的角色配置写入，等待酒馆保存完成。保留成功或失败结果，供设置请求返回真实确认。",
+        "definition_id": "era.tavern.agent_write_configuration.execute"
       },
       {
         "id": "route_write_configuration__return_result",
-        "type_used": "era.tavern.agent_write_configuration.return_result",
-        "display_name": "写入角色生成配置：生成、连接及页面会话：等待与确认：交还写入角色生成配置结果",
-        "description": "返回原 era.agent.host.result 结果；需要脱敏的连接资料只返回摘要。"
+        "display_name": "交回“保存角色生成配置”的实际结果",
+        "description": "在“完成模型生成和生成设置操作”流程中，接收“保存角色生成配置”已经执行得到的结果，复核实例和本次调用尚未取消后交回发起者。调用方据此继续业务或显示结果，取消时按实际原因结束等待。",
+        "definition_id": "era.tavern.agent_write_configuration.return_result"
       },
       {
         "id": "route_upsert_connection_profile__execute",
-        "type_used": "era.tavern.agent_upsert_connection_profile.execute",
-        "display_name": "保存本机连接方案：生成、连接及页面会话：等待与确认：等待本次保存本机连接方案：生成、连接及页面会话的资源终态",
-        "description": "在酒馆页面执行该操作的实际 API 或资源动作；保留未知字段、现有错误类别及原同步/异步约定。"
+        "display_name": "等待本机连接设置保存完成（保存本机连接方案）",
+        "description": "在“完成模型生成和生成设置操作”流程中，本次处理“保存本机连接方案”。接收已经发起的连接方案保存操作，等待实际保存结束。完成或失败后保留相应结果，供连接管理请求返回确认。",
+        "definition_id": "era.tavern.agent_upsert_connection_profile.execute"
       },
       {
         "id": "route_upsert_connection_profile__return_result",
-        "type_used": "era.tavern.agent_upsert_connection_profile.return_result",
-        "display_name": "保存本机连接方案：生成、连接及页面会话：等待与确认：交还保存本机连接方案结果",
-        "description": "返回原 era.agent.host.result 结果；需要脱敏的连接资料只返回摘要。"
+        "display_name": "交回“保存本机连接方案”的实际结果",
+        "description": "在“完成模型生成和生成设置操作”流程中，接收“保存本机连接方案”已经执行得到的结果，复核实例和本次调用尚未取消后交回发起者。调用方据此继续业务或显示结果，取消时按实际原因结束等待。",
+        "definition_id": "era.tavern.agent_upsert_connection_profile.return_result"
       },
       {
         "id": "route_delete_connection_profile__execute",
-        "type_used": "era.tavern.agent_delete_connection_profile.execute",
-        "display_name": "删除本机连接方案：生成、连接及页面会话：等待与确认：等待本次删除本机连接方案：生成、连接及页面会话的资源终态",
-        "description": "在酒馆页面执行该操作的实际 API 或资源动作；保留未知字段、现有错误类别及原同步/异步约定。"
+        "display_name": "等待本机连接设置保存完成（删除本机连接方案）",
+        "description": "在“完成模型生成和生成设置操作”流程中，本次处理“删除本机连接方案”。接收已经发起的连接方案保存操作，等待实际保存结束。完成或失败后保留相应结果，供连接管理请求返回确认。",
+        "definition_id": "era.tavern.agent_delete_connection_profile.execute"
       },
       {
         "id": "route_delete_connection_profile__return_result",
-        "type_used": "era.tavern.agent_delete_connection_profile.return_result",
-        "display_name": "删除本机连接方案：生成、连接及页面会话：等待与确认：交还删除本机连接方案结果",
-        "description": "返回原 era.agent.host.result 结果；需要脱敏的连接资料只返回摘要。"
+        "display_name": "交回“删除本机连接方案”的实际结果",
+        "description": "在“完成模型生成和生成设置操作”流程中，接收“删除本机连接方案”已经执行得到的结果，复核实例和本次调用尚未取消后交回发起者。调用方据此继续业务或显示结果，取消时按实际原因结束等待。",
+        "definition_id": "era.tavern.agent_delete_connection_profile.return_result"
       },
       {
         "id": "route_clear_connection_profile_key__execute",
-        "type_used": "era.tavern.agent_clear_connection_profile_key.execute",
-        "display_name": "清除本机密钥：生成、连接及页面会话：等待与确认：等待本次清除本机密钥：生成、连接及页面会话的资源终态",
-        "description": "在酒馆页面执行该操作的实际 API 或资源动作；保留未知字段、现有错误类别及原同步/异步约定。"
+        "display_name": "等待本机连接设置保存完成（清除本机连接密钥）",
+        "description": "在“完成模型生成和生成设置操作”流程中，本次处理“清除本机连接密钥”。接收已经发起的连接方案保存操作，等待实际保存结束。完成或失败后保留相应结果，供连接管理请求返回确认。",
+        "definition_id": "era.tavern.agent_clear_connection_profile_key.execute"
       },
       {
         "id": "route_clear_connection_profile_key__return_result",
-        "type_used": "era.tavern.agent_clear_connection_profile_key.return_result",
-        "display_name": "清除本机密钥：生成、连接及页面会话：等待与确认：交还清除本机密钥结果",
-        "description": "返回原 era.agent.host.result 结果；需要脱敏的连接资料只返回摘要。"
+        "display_name": "交回“清除本机连接密钥”的实际结果",
+        "description": "在“完成模型生成和生成设置操作”流程中，接收“清除本机连接密钥”已经执行得到的结果，复核实例和本次调用尚未取消后交回发起者。调用方据此继续业务或显示结果，取消时按实际原因结束等待。",
+        "definition_id": "era.tavern.agent_clear_connection_profile_key.return_result"
       },
       {
         "id": "route_list_connection_models",
-        "type_used": "era.tavern.flow.agent_list_connection_models_finish",
-        "display_name": "列出已保存方案的模型：生成、连接及页面会话：等待与确认",
-        "description": "只续用本次同步段已经发起的资源；具体等待与确认在所选原生路径。"
+        "display_name": "读取已保存连接的模型查询结果",
+        "description": "本环节用于“完成模型生成和生成设置操作”：接收本机连接已经发起的模型查询，等待响应并整理有效模型名称。结果附上不含密钥的连接摘要，失败时说明哪项连接查询没有完成。",
+        "definition_id": "era.tavern.flow.agent_list_connection_models_finish"
       },
       {
         "id": "route_list_connection_models_draft",
-        "type_used": "era.tavern.flow.agent_list_connection_models_draft_finish",
-        "display_name": "列出草稿连接的模型：生成、连接及页面会话：等待与确认",
-        "description": "只续用本次同步段已经发起的资源；具体等待与确认在所选原生路径。"
+        "display_name": "读取未保存连接草稿的模型查询结果",
+        "description": "本环节用于“完成模型生成和生成设置操作”：接收连接草稿已经发起的模型查询，等待响应，检查成功后读取并整理模型名称。失败带回具体原因，成功列表供用户选模型，无需先保存草稿。",
+        "definition_id": "era.tavern.flow.agent_list_connection_models_draft_finish"
       },
       {
         "id": "route_generate",
-        "type_used": "era.tavern.flow.agent_generate_finish",
-        "display_name": "执行独立阶段模型请求：等待与确认",
-        "description": "只续用本次同步段已经发起的资源；具体等待与确认在所选原生路径。"
+        "display_name": "整理独立模型请求完成后的结果",
+        "description": "本环节用于“完成模型生成和生成设置操作”：接收已发起模型调用的真实完成资料，检查辅助生成标记已解除，区分文字、取消和失败。返回文字及连接摘要或具体失败，使主服务继续检查该阶段输出。",
+        "definition_id": "era.tavern.flow.agent_generate_finish"
       },
       {
         "id": "route_generate_story",
-        "type_used": "era.tavern.flow.agent_generate_story_finish",
-        "display_name": "执行酒馆正文重试：等待与确认",
-        "description": "只续用本次同步段已经发起的资源；具体等待与确认在所选原生路径。"
+        "display_name": "整理正文重试完成后的文字或错误",
+        "description": "本环节用于“完成模型生成和生成设置操作”：接收酒馆正文生成的真实结束资料，确认辅助标记已解除，按取消、失败或文字响应返回。主服务据此继续处理本次正文的变量和函数指令。",
+        "definition_id": "era.tavern.flow.agent_generate_story_finish"
       },
       {
         "id": "route_create_error_message__execute",
-        "type_used": "era.tavern.agent_create_error_message.execute",
-        "display_name": "建立生成错误消息：生成、连接及页面会话：等待与确认：等待本次建立生成错误消息：生成、连接及页面会话的资源终态",
-        "description": "在酒馆页面执行该操作的实际 API 或资源动作；保留未知字段、现有错误类别及原同步/异步约定。"
+        "display_name": "等待生成失败提示写入聊天",
+        "description": "在“完成模型生成和生成设置操作”流程中，接收已经发起的系统错误消息创建，等待实际结束后返回创建确认。上层据此知道失败说明是否已经显示在聊天中。",
+        "definition_id": "era.tavern.agent_create_error_message.execute"
       },
       {
         "id": "route_create_error_message__return_result",
-        "type_used": "era.tavern.agent_create_error_message.return_result",
-        "display_name": "建立生成错误消息：生成、连接及页面会话：等待与确认：交还建立生成错误消息结果",
-        "description": "返回原 era.agent.host.result 结果；需要脱敏的连接资料只返回摘要。"
+        "display_name": "交回“创建生成失败提示”的实际结果",
+        "description": "在“完成模型生成和生成设置操作”流程中，接收“创建生成失败提示”已经执行得到的结果，复核实例和本次调用尚未取消后交回发起者。调用方据此继续业务或显示结果，取消时按实际原因结束等待。",
+        "definition_id": "era.tavern.agent_create_error_message.return_result"
       },
       {
         "id": "join_return",
-        "type_used": "era.tavern.cap_async_agent.join_return",
-        "display_name": "汇合当前实际激活分支的结果",
-        "description": "接收当前所选路径的结果集合，交还其中唯一实际结果；不选择未激活分支、不重新执行操作。运行实现必须拒绝实际多结果，不以集合契约放宽唯一结果语义。"
+        "display_name": "交接完成模型生成和生成设置操作的选中结果",
+        "description": "在“完成模型生成和生成设置操作”流程中，在“完成模型生成和生成设置操作”中，接收本次实际选择的分支所产生的唯一结果，交给后续步骤或调用方。每次只允许一份实际结果，避免把互斥分支误当成多个都已执行。",
+        "definition_id": "era.tavern.cap_async_agent.join_return"
       },
       {
         "id": "end",
-        "type_used": "era.tavern.initialize.end",
-        "display_name": "结束当前原生流程",
-        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+        "display_name": "结束完成模型生成和生成设置操作",
+        "description": "标明“完成模型生成和生成设置操作”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.tavern.initialize.end"
       }
     ],
     "edges": [

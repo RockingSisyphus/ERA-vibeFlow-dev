@@ -144,7 +144,7 @@ export async function ReadInitializationContextNode(
   context: Context,
 ): Promise<any> {
   const step = inputs["era.step.request.routed"].value as PlannedStepV1;
-  const dispatchContext = step.dispatchContext as
+  const dispatchContext = ("dispatchContext" in step ? step.dispatchContext : undefined) as
     Readonly<Record<string, unknown>> | undefined;
   let identityRaw: unknown = null;
   let scriptVariablesRaw: unknown = null;

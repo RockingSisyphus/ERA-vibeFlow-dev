@@ -1,25 +1,30 @@
 {
-  "policy": {},
   "roots": [
     {
       "id": "era-tavern",
-      "path": "javascript_project/tavern"
+      "path": "javascript_project/tavern",
+      "purpose": "酒馆宿主操作与实例资源生命周期"
     },
     {
       "id": "era-service",
-      "path": "javascript_project/service"
+      "path": "javascript_project/service",
+      "purpose": "ERA领域服务与状态修改"
     },
     {
       "id": "era-macro",
-      "path": "javascript_project/macro"
+      "path": "javascript_project/macro",
+      "purpose": "同步宏解析与只读快照投影"
     },
     {
       "id": "era-expression",
-      "path": "javascript_project/expression"
+      "path": "javascript_project/expression",
+      "purpose": "纯表达式解析求值"
     },
     {
       "id": "era-command-compaction",
-      "path": "javascript_project/compaction"
+      "path": "javascript_project/compaction",
+      "purpose": "变量操作压缩与等价性校验"
     }
-  ]
+  ],
+  "purpose": "ERA变量框架：领域状态、同步宏、表达式、压缩与酒馆资源生命周期"
 }

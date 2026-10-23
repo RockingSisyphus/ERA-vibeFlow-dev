@@ -1,20 +1,20 @@
 {
   "type_key": "era.tavern.flow.admission",
-  "display_name": "检查事件并接纳到 FIFO",
-  "description": "同步接纳 Tavern、UI、公共 API 和 timer 事件；拒绝不分配序号，接受即返回原有回执句柄。",
+  "display_name": "检查新事件并按序交给主服务",
+  "description": "接收聊天、界面、脚本或到期事件，检查实例状态、内容和容量。有效事件登记序号及结果等待，交给服务或进入队列；拒绝时返回具体原因，不进入队列。",
   "expand": true,
   "requires": [
     {
       "type": "era.tavern.call.frame",
       "cardinality": "exactly_one",
-      "display_name": "本次调用及实例资源令牌"
+      "display_name": "检查新事件并按序交给主服务的请求和已有进度"
     }
   ],
   "provides": [
     {
       "key": "era_tavern_flow_admission_frame",
       "type": "era.tavern.call.frame",
-      "display_name": "操作结果及后续处理所需的资源令牌"
+      "display_name": "检查新事件并按序交给主服务的处理进度及结果"
     }
   ],
   "pipeline": {
@@ -23,7 +23,7 @@
       {
         "key": "frame",
         "type": "era.tavern.call.frame",
-        "display_name": "调用与资源资料",
+        "display_name": "检查新事件并按序交给主服务的请求和已有进度",
         "required": true
       }
     ],
@@ -31,63 +31,63 @@
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.tavern.initialize.start",
-        "display_name": "开始当前原生流程",
-        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+        "display_name": "开始检查新事件并按序交给主服务",
+        "description": "标明“检查新事件并按序交给主服务”的开始位置。接收聊天、界面、脚本或到期事件，检查实例状态、内容和容量。有效事件登记序号及结果等待，交给服务或进入队列；拒绝时返回具体原因，不进入队列。",
+        "definition_id": "era.tavern.initialize.start"
       },
       {
         "id": "check_event",
-        "type_used": "era.tavern.admission.check_event",
-        "display_name": "检查生命周期与事件格式",
-        "description": "检查启动、停止和致命态，以及事件类型、来源、时间和参数；保留原拒绝码。"
+        "display_name": "检查事件内容及服务是否仍可接收",
+        "description": "在“检查新事件并按序交给主服务”流程中，接收来自聊天、界面、脚本或计时器的事件，检查来源和基本资料，并确认服务没有停止或进入严重故障。发现问题时记下拒绝原因，供后续返回给发起者。",
+        "definition_id": "era.tavern.admission.check_event"
       },
       {
         "id": "encode_event",
-        "type_used": "era.tavern.admission.encode_event",
-        "display_name": "编码 JSON 与实例引用",
-        "description": "复制可移植参数；函数、对象和密钥闭包保存为实例引用令牌，计算原有传输字节数。"
+        "display_name": "为事件准备可传递资料和身份",
+        "description": "在“检查新事件并按序交给主服务”流程中，将事件参数整理为主服务可读取的资料，给不能直接传递的页面对象保留本实例引用，并计算事件大小。格式或引用数量有问题时记录拒绝原因，供容量检查及入队判断使用。",
+        "definition_id": "era.tavern.admission.encode_event"
       },
       {
         "id": "check_capacity",
-        "type_used": "era.tavern.admission.check_capacity",
-        "display_name": "检查事件和队列容量",
-        "description": "按原有限额检查事件大小、引用数和等待队列容量；直接交付等待接收者时保持原容量语义。"
+        "display_name": "检查单事件大小和等待队列容量",
+        "description": "在“检查新事件并按序交给主服务”流程中，读取已整理事件的大小，检查是否超过单事件上限，以及等待队列是否还能容纳。超限时带回拒绝原因，有空间时继续接收，避免无限积累未处理请求。",
+        "definition_id": "era.tavern.admission.check_capacity"
       },
       {
         "id": "choose_admission",
-        "type_used": "era.tavern.admission.choose_admission",
-        "display_name": "选择接纳或拒绝",
-        "description": "前述检查失败时原样返回拒绝；全部有效后才提交序号和回执。"
+        "display_name": "决定接收事件还是返回拒绝原因",
+        "description": "在“检查新事件并按序交给主服务”流程中，查看本次事件的格式、服务状态和容量检查结论。有效事件进入登记分支，有问题的事件直接返回相应原因，使入队与拒绝清楚分开。",
+        "definition_id": "era.tavern.admission.choose_admission"
       },
       {
         "id": "branch_rejected",
-        "type_used": "era.tavern.admission.branch_rejected",
-        "display_name": "保留原拒绝结果",
-        "description": "保留原错误码和说明，不修改事件序号、计数或资源仓库。"
+        "display_name": "返回本次事件未被接收的原因",
+        "description": "在“检查新事件并按序交给主服务”流程中，接收格式、服务状态或容量检查产生的拒绝结论，作为本次请求结果返回。被拒事件不进入待处理队列，调用方可据此说明未执行原因。",
+        "definition_id": "era.tavern.admission.branch_rejected"
       },
       {
         "id": "branch_accepted",
-        "type_used": "era.tavern.admission.branch_accepted",
-        "display_name": "提交序号、引用及回执",
-        "description": "分配原序号、引用和内部回执；仅era.ui.agent_retry的公开done转交原生完整交接等待，其他任务及原始FIFO结算保持不变。"
+        "display_name": "登记事件序号和处理结果等待",
+        "description": "在“检查新事件并按序交给主服务”流程中，给被接收的事件登记正式序号，保存所需页面引用，并建立处理结果的等待记录。发起者得到接收确认后，可以等待本事件结束或此前相关事件全部完成。",
+        "definition_id": "era.tavern.admission.branch_accepted"
       },
       {
         "id": "join_deliver_result",
-        "type_used": "era.tavern.admission.join_deliver_result",
-        "display_name": "汇合当前实际激活分支的结果",
-        "description": "接收当前所选路径的结果集合，交还其中唯一实际结果；不选择未激活分支、不重新执行操作。运行实现必须拒绝实际多结果，不以集合契约放宽唯一结果语义。"
+        "display_name": "交接检查新事件并按序交给主服务的选中结果",
+        "description": "在“检查新事件并按序交给主服务”流程中，在“检查新事件并按序交给主服务”中，接收本次实际选择的分支所产生的唯一结果，交给后续步骤或调用方。每次只允许一份实际结果，避免把互斥分支误当成多个都已执行。",
+        "definition_id": "era.tavern.admission.join_deliver_result"
       },
       {
         "id": "deliver_result",
-        "type_used": "era.tavern.admission.deliver_result",
-        "display_name": "交还同步准入结果",
-        "description": "接受时将事件交给挂起 receive 或压入 FIFO；返回原 accepted/eventId/sequence/done/waitThrough 约定。"
+        "display_name": "把事件交给服务或加入等待队列",
+        "description": "在“检查新事件并按序交给主服务”流程中，本次事件已被接收后，如果服务正在等待事件就立即交付，否则按先来先后放入队列。保留结果观察，让发起者最终能够收到相应处理确认。",
+        "definition_id": "era.tavern.admission.deliver_result"
       },
       {
         "id": "end",
-        "type_used": "era.tavern.initialize.end",
-        "display_name": "结束当前原生流程",
-        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+        "display_name": "结束检查新事件并按序交给主服务",
+        "description": "标明“检查新事件并按序交给主服务”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.tavern.initialize.end"
       }
     ],
     "edges": [
@@ -138,7 +138,7 @@
       {
         "type": "era.tavern.call.frame",
         "cardinality": "exactly_one",
-        "display_name": "完成后的操作资料",
+        "display_name": "检查新事件并按序交给主服务的处理进度及结果",
         "as": "frame"
       }
     ]

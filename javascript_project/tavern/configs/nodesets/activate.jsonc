@@ -1,20 +1,20 @@
 {
   "type_key": "era.tavern.flow.activate",
-  "display_name": "按安装决议登记或休眠",
-  "description": "执行主 Service 给出的 allow/dormant 决议；只有 allow 注册事件，dormant 只完成等待。",
+  "display_name": "按脚本启用决定连接聊天和界面",
+  "description": "接收主服务对安装位置作出的启用或休眠决定，检查实例后只在启用分支登记聊天监听。完成启动决定，按需挂载界面，返回本实例是否已激活。",
   "expand": true,
   "requires": [
     {
       "type": "era.tavern.call.frame",
       "cardinality": "exactly_one",
-      "display_name": "本次调用及实例资源令牌"
+      "display_name": "按脚本启用决定连接聊天和界面的请求和已有进度"
     }
   ],
   "provides": [
     {
       "key": "era_tavern_flow_activate_frame",
       "type": "era.tavern.call.frame",
-      "display_name": "操作结果及后续处理所需的资源令牌"
+      "display_name": "按脚本启用决定连接聊天和界面的处理进度及结果"
     }
   ],
   "pipeline": {
@@ -23,7 +23,7 @@
       {
         "key": "frame",
         "type": "era.tavern.call.frame",
-        "display_name": "调用与资源资料",
+        "display_name": "按脚本启用决定连接聊天和界面的请求和已有进度",
         "required": true
       }
     ],
@@ -31,51 +31,51 @@
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.tavern.initialize.start",
-        "display_name": "开始当前原生流程",
-        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+        "display_name": "开始按脚本启用决定连接聊天和界面",
+        "description": "标明“按脚本启用决定连接聊天和界面”的开始位置。接收主服务对安装位置作出的启用或休眠决定，检查实例后只在启用分支登记聊天监听。完成启动决定，按需挂载界面，返回本实例是否已激活。",
+        "definition_id": "era.tavern.initialize.start"
       },
       {
         "id": "check_instance",
-        "type_used": "era.tavern.activate.check_instance",
-        "display_name": "检查当前启动实例",
-        "description": "确认当前实例尚未停止，不允许已清理实例再次注册监听。"
+        "display_name": "确认当前实例可以启用监听",
+        "description": "在“按脚本启用决定连接聊天和界面”流程中，检查本次 ERA 实例是否已经启动、是否正在停止。只有可用实例才继续登记聊天事件，避免已关闭的实例重新开始接收请求。",
+        "definition_id": "era.tavern.activate.check_instance"
       },
       {
         "id": "choose_scope",
-        "type_used": "era.tavern.activate.choose_scope",
-        "display_name": "区分启用与休眠决议",
-        "description": "读取已经由主 Service 决定的安装结论，不在辅助流程重新选择角色卡或全局脚本的业务策略。"
+        "display_name": "选择启用监听或保持休眠",
+        "description": "在“按脚本启用决定连接聊天和界面”流程中，读取主服务对脚本安装位置作出的决定，选择启用或休眠分支。后续据此安装监听，或仅确认该实例保持未启用状态。",
+        "definition_id": "era.tavern.activate.choose_scope"
       },
       {
         "id": "branch_dormant",
-        "type_used": "era.tavern.activate.branch_dormant",
-        "display_name": "保留无监听休眠状态",
-        "description": "不注册任何 Tavern listener，记录主 Service 给出的休眠原因。"
+        "display_name": "确认本实例保持休眠",
+        "description": "在“按脚本启用决定连接聊天和界面”流程中，接收不应启用的实例，返回未激活的确认。当前实例保持不监听聊天，随后完成启动决定的等待与提示。",
+        "definition_id": "era.tavern.activate.branch_dormant"
       },
       {
         "id": "branch_allow",
-        "type_used": "era.tavern.activate.branch_allow",
-        "display_name": "登记唯一监听集合",
-        "description": "按现行事件目录和监听优先级登记普通事件、生成屏障及按钮；已登记则保持同一集合。"
+        "display_name": "安装本实例的聊天和按钮监听",
+        "description": "在“按脚本启用决定连接聊天和界面”流程中，接收允许启用的实例，为聊天变化、生成事件和 ERA 按钮安装监听，并连接内部内容的显示处理。已安装时沿用同一组监听；登记失败会撤销本次已装部分，供后续安全启动。",
+        "definition_id": "era.tavern.activate.branch_allow"
       },
       {
         "id": "join_settle_startup",
-        "type_used": "era.tavern.activate.join_settle_startup",
-        "display_name": "汇合当前实际激活分支的结果",
-        "description": "接收当前所选路径的结果集合，交还其中唯一实际结果；不选择未激活分支、不重新执行操作。运行实现必须拒绝实际多结果，不以集合契约放宽唯一结果语义。"
+        "display_name": "交接按脚本启用决定连接聊天和界面的选中结果",
+        "description": "在“按脚本启用决定连接聊天和界面”流程中，在“按脚本启用决定连接聊天和界面”中，接收本次实际选择的分支所产生的唯一结果，交给后续步骤或调用方。每次只允许一份实际结果，避免把互斥分支误当成多个都已执行。",
+        "definition_id": "era.tavern.activate.join_settle_startup"
       },
       {
         "id": "settle_startup",
-        "type_used": "era.tavern.activate.settle_startup",
-        "display_name": "完成安装决议等待",
-        "description": "完成启动 Promise，返回 activated 状态；UI、宏和公共入口按既有启动顺序继续装配。"
+        "display_name": "公布启动决定并按需挂载界面",
+        "description": "在“按脚本启用决定连接聊天和界面”流程中，接收启用或休眠结果，结束等待中的启动决定；启用且尚未呈现时挂载该实例界面。使启动调用方和页面都能知道当前实例已经进入哪种状态。",
+        "definition_id": "era.tavern.activate.settle_startup"
       },
       {
         "id": "end",
-        "type_used": "era.tavern.initialize.end",
-        "display_name": "结束当前原生流程",
-        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+        "display_name": "结束按脚本启用决定连接聊天和界面",
+        "description": "标明“按脚本启用决定连接聊天和界面”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.tavern.initialize.end"
       }
     ],
     "edges": [
@@ -118,7 +118,7 @@
       {
         "type": "era.tavern.call.frame",
         "cardinality": "exactly_one",
-        "display_name": "完成后的操作资料",
+        "display_name": "按脚本启用决定连接聊天和界面的处理进度及结果",
         "as": "frame"
       }
     ]

@@ -1,20 +1,20 @@
 {
   "type_key": "era.tavern.flow.receive_prefix",
-  "display_name": "接收队列事件或挂起等待：同步准备",
-  "description": "复用原节点完成返回 Promise 前的立即资源变更；不引入第二份准入、回执或清理实现。",
+  "display_name": "检查队列并立即捕获事件接收状态",
+  "description": "确认实例和事件入口有效，已有事件时立即取出，没有事件时先登记一次等待。异步接收流程随后取得结果，保持接收准备与事件到达之间的顺序。",
   "expand": true,
   "requires": [
     {
       "type": "era.tavern.call.frame",
       "cardinality": "exactly_one",
-      "display_name": "本次调用、实例资源与上一节点的事实"
+      "display_name": "检查队列并立即捕获事件接收状态的请求和已有进度"
     }
   ],
   "provides": [
     {
       "key": "era_tavern_flow_receive_prefix_frame",
       "type": "era.tavern.frame.frame_receive.read_queue",
-      "display_name": "处理后的资源与事实"
+      "display_name": "检查队列并立即捕获事件接收状态的处理进度及结果"
     }
   ],
   "pipeline": {
@@ -23,7 +23,7 @@
       {
         "key": "frame",
         "type": "era.tavern.call.frame",
-        "display_name": "同实例调用与资源",
+        "display_name": "检查队列并立即捕获事件接收状态的请求和已有进度",
         "required": true
       }
     ],
@@ -32,34 +32,34 @@
         "type": "era.tavern.frame.frame_receive.read_queue",
         "cardinality": "exactly_one",
         "as": "frame",
-        "display_name": "本段明确结果"
+        "display_name": "检查队列并立即捕获事件接收状态的处理进度及结果"
       }
     ],
     "max_steps": 8,
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.tavern.initialize.start",
-        "display_name": "开始当前原生流程",
-        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+        "display_name": "开始检查队列并立即捕获事件接收状态",
+        "description": "标明“检查队列并立即捕获事件接收状态”的开始位置。确认实例和事件入口有效，已有事件时立即取出，没有事件时先登记一次等待。异步接收流程随后取得结果，保持接收准备与事件到达之间的顺序。",
+        "definition_id": "era.tavern.initialize.start"
       },
       {
         "id": "check_port",
-        "type_used": "era.tavern.frame_receive.check_port",
-        "display_name": "检查入站口和当前实例",
-        "description": "检查端口、监听激活、停止及致命态，并拒绝第二个同时挂起的 receive。"
+        "display_name": "确认事件入口已启用且没有重复等待",
+        "description": "在“检查队列并立即捕获事件接收状态”流程中，检查当前实例仍可用，聊天监听已经启用，且本次使用正确事件通道。同一实例已有等待接收者时报告问题，避免两个接收者争抢同一事件。",
+        "definition_id": "era.tavern.frame_receive.check_port"
       },
       {
         "id": "read_queue",
-        "type_used": "era.tavern.frame_receive.read_queue",
-        "display_name": "取出队首或登记等待",
-        "description": "队列有事件时原子取出队首；为空时登记唯一接收 Promise，联动实例和调用取消。"
+        "display_name": "取出最早事件或登记等待",
+        "description": "在“检查队列并立即捕获事件接收状态”流程中，事件队列非空时取出最早一项，队列为空时登记一次随实例或调用取消的等待。后续接收步骤据此取得事件，保持处理顺序。",
+        "definition_id": "era.tavern.frame_receive.read_queue"
       },
       {
         "id": "end",
-        "type_used": "era.tavern.initialize.end",
-        "display_name": "结束当前原生流程",
-        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+        "display_name": "结束检查队列并立即捕获事件接收状态",
+        "description": "标明“检查队列并立即捕获事件接收状态”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.tavern.initialize.end"
       }
     ],
     "edges": [

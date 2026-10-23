@@ -11,12 +11,6 @@ declare module '@era/vibeflow-tavern-sync' {
 declare module '@era/vibeflow-tavern-async' {
   export function runWorkflowAsync(
     inputs: Readonly<{ request: unknown }>,
-    options?: Readonly<{ signal?: AbortSignal }>,
-  ): Promise<Readonly<{ result: unknown }>>;
-}
-declare module '@era/vibeflow-tavern-runtime' {
-  export function runWorkflowAsync(
-    inputs: Readonly<{ request: unknown }>,
-    options?: Readonly<{ signal?: AbortSignal }>,
+    options: Readonly<{ entry: 'operation' | 'runtime'; signal?: AbortSignal }>,
   ): Promise<Readonly<{ result: unknown }>>;
 }

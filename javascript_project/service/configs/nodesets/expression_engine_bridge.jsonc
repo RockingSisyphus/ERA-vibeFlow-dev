@@ -1,7 +1,7 @@
 {
   "type_key": "era.expression.execute_era_commands",
-  "display_name": "含表达式的同步规划",
-  "description": "将聊天历史、变量起点和处理范围交给历史同步规划器。公式由表达式引擎求值，输出后续可执行的同步工作项，并携带随机使用进度。",
+  "display_name": "未接入：历史同步规划声明",
+  "description": "这份声明原本描述按消息历史和变量起点生成同步计划，但当前没有被正式工作流引用，内部计算节点也未登记。它不属于现行执行架构，不能把这份声明视为已经实现的公式或同步流程。",
   "requires": [
     {
       "type": "era.expression.command.request",
@@ -13,7 +13,7 @@
     {
       "key": "expression_command_result",
       "type": "era.expression.command.result",
-      "display_name": "表达式命令结果"
+      "display_name": "消息处理后待核对的历史压缩资料"
     }
   ],
   "pipeline": {
@@ -30,21 +30,21 @@
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.service.terminal",
-        "display_name": "表达式命令开始",
-        "description": "开始含表达式的同步规划。"
+        "display_name": "开始未接入：历史同步规划声明",
+        "description": "标明“未接入：历史同步规划声明”的开始位置。这份声明原本描述按消息历史和变量起点生成同步计划，但当前没有被正式工作流引用，内部计算节点也未登记。它不属于现行执行架构，不能把这份声明视为已经实现的公式或同步流程。",
+        "definition_id": "era.service.terminal"
       },
       {
         "id": "execute",
-        "type_used": "era.expression.execute_era_commands.bridge",
-        "display_name": "计算历史同步计划",
-        "description": "根据给定的聊天历史、变量起点及消息范围计算后续同步工作项，其中的数值公式由表达式引擎完成。输出计算计划及随机进度，供共享消息流程执行和保存。"
+        "display_name": "未接入：历史同步计算占位",
+        "description": "这是一份未被正式服务引用的历史同步规划声明，所指的计算节点当前也未登记。此处只说明原声明想根据消息和变量起点生成同步计划，不能作为现行可执行步骤阅读。",
+        "definition_id": "era.expression.execute_era_commands.bridge"
       },
       {
         "id": "end",
-        "type_used": "era.service.terminal",
-        "display_name": "表达式命令结束",
-        "description": "结束含表达式的同步规划，输出本段流程的处理结果。"
+        "display_name": "结束未接入：历史同步规划声明",
+        "description": "标明“未接入：历史同步规划声明”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.service.terminal"
       }
     ],
     "edges": [
@@ -61,7 +61,7 @@
       {
         "type": "era.expression.command.result",
         "cardinality": "exactly_one",
-        "display_name": "表达式命令结果",
+        "display_name": "消息处理后待核对的历史压缩资料",
         "as": "expressionCommandResult"
       }
     ]

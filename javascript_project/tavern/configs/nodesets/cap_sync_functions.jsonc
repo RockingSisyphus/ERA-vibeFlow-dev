@@ -1,20 +1,20 @@
 {
   "type_key": "era.tavern.flow.cap_sync_functions",
-  "display_name": "消息内作者函数操作",
-  "description": "共享同一职责组的原操作与必要的等待前发起；无额外 cap 总分组。",
+  "display_name": "分派消息中的作者函数操作",
+  "description": "接收消息中的作者函数请求，按操作种类选择读取、修改或异步请求的发起流程。各分支分别保持自己的目标检查和实际结果，最后把本次选中操作的唯一结果交给调用方。",
   "expand": true,
   "requires": [
     {
       "type": "era.tavern.call.frame",
       "cardinality": "exactly_one",
-      "display_name": "本次调用、实例资源与上一节点的事实"
+      "display_name": "分派消息中的作者函数操作的请求和已有进度"
     }
   ],
   "provides": [
     {
       "key": "era_tavern_flow_cap_sync_functions_frame",
       "type": "era.tavern.frame.final.cap_sync_functions",
-      "display_name": "处理后的资源与事实"
+      "display_name": "分派消息中的作者函数操作的处理进度及结果"
     }
   ],
   "pipeline": {
@@ -23,7 +23,7 @@
       {
         "key": "frame",
         "type": "era.tavern.call.frame",
-        "display_name": "同实例调用与资源",
+        "display_name": "分派消息中的作者函数操作的请求和已有进度",
         "required": true
       }
     ],
@@ -32,82 +32,82 @@
         "type": "era.tavern.frame.final.cap_sync_functions",
         "cardinality": "exactly_one",
         "as": "frame",
-        "display_name": "本段明确结果"
+        "display_name": "分派消息中的作者函数操作的处理进度及结果"
       }
     ],
     "max_steps": 15,
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.tavern.initialize.start",
-        "display_name": "开始当前原生流程",
-        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+        "display_name": "开始分派消息中的作者函数操作",
+        "description": "标明“分派消息中的作者函数操作”的开始位置。接收消息中的作者函数请求，按操作种类选择读取、修改或异步请求的发起流程。各分支分别保持自己的目标检查和实际结果，最后把本次选中操作的唯一结果交给调用方。",
+        "definition_id": "era.tavern.initialize.start"
       },
       {
         "id": "choose",
-        "type_used": "era.tavern.cap_sync_functions.choose",
-        "display_name": "识别消息内作者函数操作",
-        "description": "按已声明操作名选择唯一原生路径；即时操作、同步完成的 Promise 操作及真正等待前的发起共享本职责组，不重复分组。"
+        "display_name": "选择消息中的作者函数的具体操作",
+        "description": "在“分派消息中的作者函数操作”流程中，接收消息中的作者函数请求，读取明确操作种类，选择本组已声明的一条处理路径。未知操作报告原因，有效操作交给对应步骤完成，并返回实际结果。",
+        "definition_id": "era.tavern.cap_sync_functions.choose"
       },
       {
         "id": "route_begin",
-        "type_used": "era.tavern.flow.functions_begin",
-        "display_name": "建立作者函数上下文并安排调用",
-        "description": "沿原 era.tavern.functions.begin 合同执行当前唯一操作。"
+        "display_name": "建立作者函数调用并安排执行",
+        "description": "本环节用于“分派消息中的作者函数操作”：检查调用身份和目标消息，建立参数、操作接口及取消关联，再把函数加入作者队列。返回已安排确认，消息流程随后等待作者操作或结束。",
+        "definition_id": "era.tavern.flow.functions_begin"
       },
       {
         "id": "route_next__check_active",
-        "type_used": "era.tavern.functions_next.check_active",
-        "display_name": "取得下一个作者请求或最终结论：检查作者上下文仍有效",
-        "description": "检查调用状态、signal 和当前消息依据。"
+        "display_name": "确认作者调用仍属于当前消息",
+        "description": "在“分派消息中的作者函数操作”流程中，读取主服务要继续等待的作者函数，检查调用仍有效、未取消且消息来源未变化。通过后再读取请求或完成状态，防止接续过期函数。",
+        "definition_id": "era.tavern.functions_next.check_active"
       },
       {
         "id": "route_next__capture_next",
-        "type_used": "era.tavern.flow.functions_next_capture",
-        "display_name": "取得下一个作者请求或最终结论：同步捕获作者请求、完成或等待资源",
-        "description": "当前同步调用内读取请求或完成状态；无结果才登记本次唤醒资源。"
+        "display_name": "检查作者是否有请求或已经结束",
+        "description": "本环节用于“分派消息中的作者函数操作”：确认当前作者调用仍有效，优先取出待处理操作，全部完成时返回结束，否则登记一次唤醒等待。外层据此决定立即返回还是继续异步等待。",
+        "definition_id": "era.tavern.flow.functions_next_capture"
       },
       {
         "id": "route_acknowledge__find_request",
-        "type_used": "era.tavern.functions_acknowledge.find_request",
-        "display_name": "完成作者接口请求回执：查找当前调用的待确认请求",
-        "description": "按 id/requestId 查找原 pending 记录；已失效或不存在按原错误返回。"
+        "display_name": "找到作者正在等待确认的操作",
+        "description": "在“分派消息中的作者函数操作”流程中，根据作者调用身份和请求编号，找到本次尚未确认的操作。找不到时报告对应错误，找到后交给结果回告，避免确认到其他操作。",
+        "definition_id": "era.tavern.functions_acknowledge.find_request"
       },
       {
         "id": "route_acknowledge__resolve_request",
-        "type_used": "era.tavern.functions_acknowledge.resolve_request",
-        "display_name": "完成作者接口请求回执：完成作者请求并移除 pending",
-        "description": "复制 Service 的应用结算，完成请求 Promise，使作者函数继续执行。"
+        "display_name": "把操作处理结果回告作者函数",
+        "description": "在“分派消息中的作者函数操作”流程中，从待确认列表移除对应作者操作，把主服务实际处理的结论复制返回给函数。等待该操作的作者代码随后可以继续执行。",
+        "definition_id": "era.tavern.functions_acknowledge.resolve_request"
       },
       {
         "id": "route_acknowledge__return_ack",
-        "type_used": "era.tavern.functions_acknowledge.return_ack",
-        "display_name": "完成作者接口请求回执：返回请求确认",
-        "description": "保持原 acknowledged 返回形状。"
+        "display_name": "确认作者操作已回告完成",
+        "description": "在“分派消息中的作者函数操作”流程中，返回作者操作确认已交付的结果，供主服务继续消息处理。本环节承接已经完成的回告，不再执行变量操作。",
+        "definition_id": "era.tavern.functions_acknowledge.return_ack"
       },
       {
         "id": "route_release",
-        "type_used": "era.tavern.flow.functions_release",
-        "display_name": "释放作者函数上下文",
-        "description": "沿原 era.tavern.functions.release 合同执行当前唯一操作。"
+        "display_name": "结束作者调用并释放相关等待",
+        "description": "本环节用于“分派消息中的作者函数操作”：先使当前作者调用失效，逐项以过期原因结束未确认请求，再解除参数和取消监听并唤醒等待者。返回释放确认，让消息流程能完整收尾。",
+        "definition_id": "era.tavern.flow.functions_release"
       },
       {
         "id": "route_next__start_wait",
-        "type_used": "era.tavern.functions_next.start_wait",
-        "display_name": "发起作者next的公开可取消等待",
-        "description": "在同步捕获之后固定调用原生async续体，交还本次publicPromise；保持单次next取消与作者调用整体取消的原区分，接线不管理Promise或队列。"
+        "display_name": "发起对作者下一请求或结束的等待",
+        "description": "在“分派消息中的作者函数操作”流程中，为当前作者函数登记一次可取消的等待，交给后续流程检查请求队列和结束状态。主服务据此等待函数提出变量操作或真正运行结束。",
+        "definition_id": "era.tavern.functions_next.start_wait"
       },
       {
         "id": "join_return",
-        "type_used": "era.tavern.cap_sync_functions.join_return",
-        "display_name": "汇合当前实际激活分支的结果",
-        "description": "接收当前所选路径的结果集合，交还其中唯一实际结果；不选择未激活分支、不重新执行操作。运行实现必须拒绝实际多结果，不以集合契约放宽唯一结果语义。"
+        "display_name": "交接分派消息中的作者函数操作的选中结果",
+        "description": "在“分派消息中的作者函数操作”流程中，在“分派消息中的作者函数操作”中，接收本次实际选择的分支所产生的唯一结果，交给后续步骤或调用方。每次只允许一份实际结果，避免把互斥分支误当成多个都已执行。",
+        "definition_id": "era.tavern.cap_sync_functions.join_return"
       },
       {
         "id": "end",
-        "type_used": "era.tavern.initialize.end",
-        "display_name": "结束当前原生流程",
-        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+        "display_name": "结束分派消息中的作者函数操作",
+        "description": "标明“分派消息中的作者函数操作”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.tavern.initialize.end"
       }
     ],
     "edges": [

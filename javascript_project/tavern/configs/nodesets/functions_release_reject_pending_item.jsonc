@@ -1,25 +1,25 @@
 {
   "type_key": "era.tavern.flow.functions_release_reject_pending_item",
-  "display_name": "逐项拒绝作者未决请求",
-  "description": "每轮拒绝一个未完成请求；全部完成后解绑当前作者上下文。",
+  "display_name": "结束一项尚未确认的作者操作",
+  "description": "当前作者调用已经释放时，取出一项未完成请求并以调用失效结束。外层重复直到没有剩余项目，再进入最终解绑。",
   "expand": true,
   "requires": [
     {
       "type": "era.tavern.frame.functions_release.close_call",
       "cardinality": "exactly_one",
-      "display_name": "当前条目、处理位置及实例资源令牌"
+      "display_name": "结束一项尚未确认的作者操作的请求和已有进度"
     }
   ],
   "provides": [
     {
       "key": "era_tavern_flow_functions_release_reject_pending_item_frame",
       "type": "era.tavern.item.result.functions_release_reject_pending_item",
-      "display_name": "下一条目或当前处理结论"
+      "display_name": "结束一项尚未确认的作者操作的处理进度及结果"
     },
     {
       "key": "era_tavern_flow_functions_release_reject_pending_item_done",
       "type": "era.tavern.done.functions_release.reject_pending",
-      "display_name": "是否完成"
+      "display_name": "本轮遍历或职责处理是否已经结束"
     }
   ],
   "pipeline": {
@@ -28,7 +28,7 @@
       {
         "key": "frame",
         "type": "era.tavern.frame.functions_release.close_call",
-        "display_name": "当前处理位置",
+        "display_name": "结束一项尚未确认的作者操作的请求和已有进度",
         "required": true
       }
     ],
@@ -36,39 +36,39 @@
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.tavern.initialize.start",
-        "display_name": "开始当前原生流程",
-        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+        "display_name": "开始结束一项尚未确认的作者操作",
+        "description": "标明“结束一项尚未确认的作者操作”的开始位置。当前作者调用已经释放时，取出一项未完成请求并以调用失效结束。外层重复直到没有剩余项目，再进入最终解绑。",
+        "definition_id": "era.tavern.initialize.start"
       },
       {
         "id": "choose_item",
-        "type_used": "era.tavern.functions_release_reject_pending_item.choose_item",
-        "display_name": "检查是否还有待处理条目",
-        "description": "有当前条目才进入实际处理；列表为空或已处理完时直接形成完成标记，不调用共享操作。"
+        "display_name": "检查还有哪些作者请求需要结束",
+        "description": "在“结束一项尚未确认的作者操作”流程中，查看当前已关闭函数是否仍有等待确认的操作。还有时进入逐项拒绝，全部结束后进入解绑，避免作者一直等待无法完成的请求。",
+        "definition_id": "era.tavern.functions_release_reject_pending_item.choose_item"
       },
       {
         "id": "one_item",
-        "type_used": "era.tavern.functions_release_reject_pending_item.one_item",
-        "display_name": "逐项拒绝作者未决请求",
-        "description": "每轮拒绝一个未完成请求；全部完成后解绑当前作者上下文。"
+        "display_name": "结束一项尚未确认的作者请求",
+        "description": "在“结束一项尚未确认的作者操作”流程中，取出当前函数一项未决请求，以调用已失效的原因结束它。外层重复本步骤直到清空，让所有等待该函数提交的调用都能结束。",
+        "definition_id": "era.tavern.functions_release_reject_pending_item.one_item"
       },
       {
         "id": "empty",
-        "type_used": "era.tavern.functions_release_reject_pending_item.empty",
-        "display_name": "完成空列表或已结束的遍历",
-        "description": "保留当前处理资料并返回 done=true，不执行任何条目副作用。"
+        "display_name": "确认没有剩余作者请求需要结束",
+        "description": "在“结束一项尚未确认的作者操作”流程中，当前作者调用的待确认列表已经为空时，标记本轮遍历结束。后续解除参数关联与取消监听，完成作者资料释放。",
+        "definition_id": "era.tavern.functions_release_reject_pending_item.empty"
       },
       {
         "id": "join_end",
-        "type_used": "era.tavern.functions_release_reject_pending_item.join_end",
-        "display_name": "汇合当前实际激活分支的结果",
-        "description": "接收当前所选路径的结果集合，交还其中唯一实际结果；不选择未激活分支、不重新执行操作。运行实现必须拒绝实际多结果，不以集合契约放宽唯一结果语义。"
+        "display_name": "交接结束一项尚未确认的作者操作的选中结果",
+        "description": "在“结束一项尚未确认的作者操作”流程中，在“结束一项尚未确认的作者操作”中，接收本次实际选择的分支所产生的唯一结果，交给后续步骤或调用方。每次只允许一份实际结果，避免把互斥分支误当成多个都已执行。",
+        "definition_id": "era.tavern.functions_release_reject_pending_item.join_end"
       },
       {
         "id": "end",
-        "type_used": "era.tavern.initialize.end",
-        "display_name": "结束当前原生流程",
-        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+        "display_name": "结束结束一项尚未确认的作者操作",
+        "description": "标明“结束一项尚未确认的作者操作”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.tavern.initialize.end"
       }
     ],
     "edges": [
@@ -104,13 +104,13 @@
         "type": "era.tavern.item.result.functions_release_reject_pending_item",
         "cardinality": "exactly_one",
         "as": "frame",
-        "display_name": "更新位置"
+        "display_name": "结束一项尚未确认的作者操作的处理进度及结果"
       },
       {
         "type": "era.tavern.done.functions_release.reject_pending",
         "cardinality": "exactly_one",
         "as": "done",
-        "display_name": "完成标记"
+        "display_name": "本轮遍历或职责处理是否已经结束"
       }
     ]
   }

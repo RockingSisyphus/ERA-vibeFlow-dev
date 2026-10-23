@@ -1,0 +1,35 @@
+import {defineBaseLib} from "@vibeflow/plugin";
+
+export const era_service_agent_generation_settlement = defineBaseLib({
+  "id": "era.service.agent_generation_settlement",
+  "display_name": "agent-generation-settlement",
+  "description": "Service Agent stage execution with injected capability and no module state.",
+  "version": "1.0.0",
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "source": {
+        "kind": "file",
+        "ref": "base_lib/agent/agent_generation_settlement.ts"
+      }
+    }
+  ],
+  "dependencies": [
+    "era.service.message_function_calls",
+    "era.service.agent_stage_text",
+    "era.service.agent_stage_handoff",
+    "era.service.agent_configuration",
+    "era.service.agent_report_text",
+    "era.service.agent_generation_context"
+  ],
+  "external_packages": [
+    "@era/vibeflow-contracts"
+  ],
+  "rulesets": [
+    "vibeflow.base_lib"
+  ]
+});

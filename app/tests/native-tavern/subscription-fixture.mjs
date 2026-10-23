@@ -21,8 +21,12 @@ export async function subscriptionRegistry(onError) {
         completion,
       };
       session.subscriptionCycles.add(cycle);
-      return (await asyncEntry({ request: { session, action: 'subscription_publish', subscriptionCycle: cycle } }))
-        .result.result;
+      return (
+        await asyncEntry(
+          { request: { session, action: 'subscription_publish', subscriptionCycle: cycle } },
+          { entry: 'operation' },
+        )
+      ).result.result;
     },
     hold: () => {
       const d = deferred();

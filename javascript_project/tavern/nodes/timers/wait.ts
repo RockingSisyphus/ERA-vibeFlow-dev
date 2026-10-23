@@ -1,18 +1,21 @@
 import {takeFrame,emit,route} from "../../base_lib/frames.ts";
-import {linkedSignals} from "../../base_lib/resources.ts";
+import {deferred,linkedSignals} from "../../base_lib/resources.ts";
 
 /** 真实Timeout只存在于此受管Node的挂起作用域。 */
 export async function AwaitDue(inputs:any,params:any,context:any):Promise<any> {
   const f=takeFrame(inputs),s=f.session,ticket=f.timerTicket;
-  const linked=linkedSignals([context.signal,s.lifecycle.signal,ticket.controller.signal]);
+  const linked=linkedSignals([context.signal,s.lifecycle.signal,ticket?.controller.signal]);
   let handle:any,onAbort:any;
+  const changed=deferred();s.timerWake=changed;
   try {
     f.timerElapsed=await new Promise<boolean>(resolve=>{
       onAbort=()=>resolve(false);linked.signal.addEventListener("abort",onAbort,{once:true});
-      if(linked.signal.aborted)onAbort();
-      else handle=s.clock.setTimeout(()=>resolve(true),Math.max(0,ticket.dueAt-s.clock.now()));
+      if(linked.signal.aborted||f.timerRevision!==s.timerRevision)onAbort();
+      else if(ticket)handle=s.clock.setTimeout(()=>resolve(true),Math.max(0,ticket.dueAt-s.clock.now()));
+      changed.promise.then(()=>resolve(false));
     });
   } finally {
+    if(s.timerWake===changed)s.timerWake=null;
     if(handle!==undefined)s.clock.clearTimeout(handle);
     linked.signal.removeEventListener("abort",onAbort);linked.cleanup();
   }
@@ -20,6 +23,7 @@ export async function AwaitDue(inputs:any,params:any,context:any):Promise<any> {
 }
 export function DispatchDue(inputs:any,params:any):any {
   const f=takeFrame(inputs);
+  f.session.timerRequests.delete(f.timerRequest);
   f.result=f.session.dispatch.timerFired({session:f.session,input:{kind:f.timerKind,key:f.timerKey,handle:f.timerTicket,event:f.timerEvent,barrier:f.timerBarrier}}).result;
   return emit({frame:f},params);
 }

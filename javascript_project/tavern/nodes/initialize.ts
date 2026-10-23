@@ -28,7 +28,7 @@ export function AllocateSession(inputs: any, params: any): any {
   f.session = {
     ...f.limits, api: f.api ?? browserApi(), log: f.log ?? console, clock: f.clock ?? clock(),
     ownerReady: deferred(), onDispose: f.onDispose, warn: f.warn,
-    eventDefinitions: f.eventDefinitions ?? [], onRuntimeFailure:f.onRuntimeFailure,
+    eventDefinitions: f.eventDefinitions ?? [],
     registerTechnicalProjection:f.registerTechnicalProjection,
     onActivated:f.onActivated,presentationClient:f.presentationClient,
     onStartupDecision:f.onStartupDecision,storeWorkingState:f.storeWorkingState,observeSettlement:f.observeSettlement,
@@ -42,7 +42,8 @@ export function AllocateSession(inputs: any, params: any): any {
     queue: [], queueBytes: 0, refs: new Map(), refsBySequence: new Map(),
     receipts: new Map(), failureLedger: new Map(), processedFrames: new Map(),
     timers: new Map(), delayedAdmissions: new Map(), watchdogs: new Set(),
-    activeNotifications: new Set(), tasks: [], pendingReceive: null, unsubscribe: null,
+    activeNotifications: new Set(), authorCalls: [], notificationEvents: [], timerRequests: new Set(),
+    authorWake: null, notificationWake: null, timerWake: null, timerRevision: 0, pendingReceive: null, unsubscribe: null,
     lifecycleToken: 1, handoffs: new Map(), sessions: new Map(), functionCalls: new Map(),
     onScriptVariablesCommitted: f.onScriptVariablesCommitted,
     projectTechnicalBlocks: f.projectTechnicalBlocks, publishSnapshot: f.publishSnapshot,

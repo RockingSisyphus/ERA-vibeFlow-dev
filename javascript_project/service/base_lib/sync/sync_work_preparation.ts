@@ -181,7 +181,6 @@ export function payloadFor(
 /** 从两个 Capability 读取结果生成唯一、无副作用的同步工作项。 */
 export function planSyncWork(
   context: SyncPlanningInput,
-  planner: typeof prepareEraSync = prepareEraSync,
 ): SyncWorkV1 {
   const step = assertSyncStep(context.step);
   if (context.status === "failed") {
@@ -232,7 +231,7 @@ export function planSyncWork(
     const meta = cloneSyncJson(metaCandidate);
     const messages = messageArray(context.messagesRaw).map(normalizeMessage);
     if (messages.length === 0) {
-      const plan = planner({
+      const plan = prepareEraSync({
         messages: [],
         stat,
         statFunc,
@@ -295,7 +294,7 @@ export function planSyncWork(
     );
     const planned = applyDispatchStatePolicy(
       normalizePlan(
-        planner({
+        prepareEraSync({
           messages: preparedMessages,
           stat,
           statFunc,

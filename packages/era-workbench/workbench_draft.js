@@ -1,4 +1,4 @@
-// Generated from Service base_lib/domain; do not edit.
+// Generated from Service base_lib/workbench; do not edit.
 /** 工作台共享纯计算；生产 Service 节点与 UI 预览由同一源码构建。 */
 import { defineOwn, isRecord, jsonEqual, operation, pathLabel } from './workbench_operations.js';
 function diffAtPath(original, draft, path, operations, changedPaths, changes) {

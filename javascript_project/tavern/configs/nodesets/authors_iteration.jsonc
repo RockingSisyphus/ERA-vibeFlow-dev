@@ -1,0 +1,131 @@
+{
+  "type_key": "era.tavern.flow.authors_iteration",
+  "display_name": "按顺序完成一次作者函数调用",
+  "description": "等待作者队列中的下一项，执行对应函数并等待这项真正结束，然后回到队列。实例停止时交出分支退出确认，外层循环据此结束，不会同时执行后到的作者调用。",
+  "requires": [
+    {
+      "type": "era.tavern.call.frame",
+      "cardinality": "exactly_one",
+      "display_name": "按顺序完成一次作者函数调用的请求和已有进度"
+    }
+  ],
+  "provides": [
+    {
+      "key": "next_frame",
+      "type": "era.tavern.runtime.state.next",
+      "display_name": "按顺序完成一次作者函数调用的处理进度及结果"
+    },
+    {
+      "key": "iteration_done",
+      "type": "era.tavern.runtime.done",
+      "display_name": "本轮遍历或职责处理是否已经结束"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.call.frame",
+        "display_name": "按顺序完成一次作者函数调用的请求和已有进度",
+        "required": true
+      }
+    ],
+    "max_steps": 12,
+    "nodes": [
+      {
+        "id": "start",
+        "definition_id": "era.tavern.initialize.start",
+        "display_name": "开始按顺序完成一次作者函数调用",
+        "description": "标明“按顺序完成一次作者函数调用”的开始位置。等待作者队列中的下一项，执行对应函数并等待这项真正结束，然后回到队列。实例停止时交出分支退出确认，外层循环据此结束，不会同时执行后到的作者调用。"
+      },
+      {
+        "id": "ready",
+        "definition_id": "era.tavern.owned.wait_owner",
+        "display_name": "等待本实例页面资源准备就绪",
+        "description": "在“按顺序完成一次作者函数调用”流程中，等待资源管理分支完成运行资源登记，取消时结束等待。后续主服务只在同一实例资源可用后启动，避免尚未就绪就调用页面能力。"
+      },
+      {
+        "id": "choose",
+        "definition_id": "era.tavern.runtime.take_authors",
+        "display_name": "等待并取出下一项作者函数调用",
+        "description": "在“按顺序完成一次作者函数调用”流程中，等待本实例作者队列出现任务，取出最早安排的调用交给作者执行流程。实例停止时改走结束分支；每次作者调用完成后才继续取下一项。"
+      },
+      {
+        "id": "work",
+        "definition_id": "era.tavern.flow.author_tool",
+        "display_name": "实际运行已安排的作者函数",
+        "description": "本环节用于“按顺序完成一次作者函数调用”：接收作者执行队列取出的函数和参数，调用酒馆注册的作者 JavaScript 工具并等待结束。记录实际错误或完成状态，再唤醒消息流程确认函数是否还有未处理操作。"
+      },
+      {
+        "id": "advance",
+        "definition_id": "era.tavern.runtime.advance",
+        "display_name": "本轮处理完成后继续等待下一项",
+        "description": "在“按顺序完成一次作者函数调用”流程中，接收当前职责一次实际处理结束的结果，将同一实例交回外层循环并标记继续。下一轮再读取该职责队列，保持任务顺序及实例归属。"
+      },
+      {
+        "id": "stop",
+        "definition_id": "era.tavern.runtime.end_loop",
+        "display_name": "结束当前长期职责分支",
+        "description": "在“按顺序完成一次作者函数调用”流程中，实例停止后，将当前作者、通知或计时循环标为结束，并交出该分支已退出的确认。最终汇合据此等待所有职责真正结束。"
+      },
+      {
+        "id": "end",
+        "definition_id": "era.tavern.initialize.end",
+        "display_name": "结束按顺序完成一次作者函数调用",
+        "description": "标明“按顺序完成一次作者函数调用”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。"
+      }
+    ],
+    "edges": [
+      [
+        "start",
+        "ready"
+      ],
+      [
+        "ready",
+        "choose"
+      ],
+      {
+        "from": "choose",
+        "to": "work",
+        "when": "era_tavern_runtime_take_authors_route == 'work'"
+      },
+      {
+        "from": "choose",
+        "to": "stop",
+        "when": "era_tavern_runtime_take_authors_route == 'stop'"
+      },
+      {
+        "from": "ready",
+        "to": "advance",
+        "schedule": false
+      },
+      [
+        "work",
+        "advance"
+      ],
+      [
+        "advance",
+        "end"
+      ],
+      [
+        "stop",
+        "end"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.runtime.state.next",
+        "cardinality": "exactly_one",
+        "display_name": "按顺序完成一次作者函数调用的处理进度及结果",
+        "as": "frame"
+      },
+      {
+        "type": "era.tavern.runtime.done",
+        "cardinality": "exactly_one",
+        "display_name": "本轮遍历或职责处理是否已经结束",
+        "as": "done"
+      }
+    ]
+  }
+}

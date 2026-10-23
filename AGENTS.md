@@ -1,30 +1,31 @@
 # VibeFlow 开发入口
 
-本项目内核为 VibeFlow 0.20.0，已实施五个 JavaScript AOT root：异步领域服务 `javascript_project/service`、同步宏 `javascript_project/macro`、表达式 `javascript_project/expression`、命令压缩 `javascript_project/compaction` 和酒馆辅助流程 `javascript_project/tavern`。旧 Host 已由辅助 root 的原生 Node/Nodeset 替换并接入生产；局部脚本单次入口、三个任务控制边界及资源归属保持获批结构。同最终 bundle 综合495/495、细则924分段覆盖通过，日常酒馆未单独联调，完整证据与限制见交接。先阅读所选 root 的 `vibeflow_project.jsonc` 和已登记的 `ARCHITECTURE.jsonc`，沿 Architecture 的 source 定位并修改真实 Config、Nodeset、SDK声明或 Node source；生成文档只通过 VibeFlow 命令更新。
+本项目工具链已升级到 VibeFlow 1.3.8，包含五个 JavaScript AOT root：异步领域服务 `javascript_project/service`、同步宏 `javascript_project/macro`、表达式 `javascript_project/expression`、命令压缩 `javascript_project/compaction` 和酒馆辅助流程 `javascript_project/tavern`。酒馆sync保持独立，async Config含operation/runtime两个命名入口，调用须显式填写options.entry。工具链与等价声明迁移已完成；Macro共享转换和Tavern五职责普通分支已实现并通过原生执行探针。剩余结构整治和当前业务验收状态见交接；旧0.20.0的495/924历史成绩不构成新版验收。先阅读所选root的 `vibeflow_project.jsonc`、`root_rules.jsonc` 和已登记的Architecture，沿真实source定位Config、NodesetType、Node、BaseLib或Plugin包。生成文档只通过VibeFlow命令更新，具体状态见交接。
 
 按任务阅读规范：
 
 - 修改 workflow、Config 或 edge：[`kernel/docs/user/workflow-and-config.md`](kernel/docs/user/workflow-and-config.md)
 - 查阅 Python Target 接口（本项目当前不使用）：[`kernel/docs/user/python-development.md`](kernel/docs/user/python-development.md)
 - 开发 JavaScript/TypeScript Node：[`kernel/docs/user/javascript-development.md`](kernel/docs/user/javascript-development.md)
-- 开发 Nodeset 或 Loop：[`kernel/docs/user/nodesets-and-loops.md`](kernel/docs/user/nodesets-and-loops.md)
+- 开发 Nodeset 或 Loop：[`kernel/docs/user/nodeset-types-and-loops.md`](kernel/docs/user/nodeset-types-and-loops.md)
 - 定义或选择 Rule / Ruleset：[`kernel/docs/user/rules-and-nodes.md`](kernel/docs/user/rules-and-nodes.md)
 - 开发 Plugin、Capability 或 Host Extension：[`kernel/docs/user/plugins-and-integrations.md`](kernel/docs/user/plugins-and-integrations.md)
 - 登记多文件实现与源码归属：[`kernel/docs/user/multifile-resources.md`](kernel/docs/user/multifile-resources.md)
 - 升级旧资源声明及 API：[`kernel/docs/user/rule-system-migration.md`](kernel/docs/user/rule-system-migration.md)
 - 查询运行日志与状态：[`kernel/docs/user/runtime-observation.md`](kernel/docs/user/runtime-observation.md)
-- 开发并发任务、协作停止或等待退出：[`kernel/docs/user/task-management.md`](kernel/docs/user/task-management.md)
+- 配置命名入口或独立 Workflow 通信：[`kernel/docs/user/workflow-coordination.md`](kernel/docs/user/workflow-coordination.md)
+- 开发并发任务、协作停止或等待退出：[`kernel/docs/user/graph-concurrency.md`](kernel/docs/user/graph-concurrency.md)
 - 运行检查或解释结果：[`kernel/docs/user/commands-and-results.md`](kernel/docs/user/commands-and-results.md)
 
-0.20.0 沿用 `@vibeflow/plugin` 的固定 SDK 插件，由顶层 workflow 显式选择；项目级 `descriptors` 登记已退役。Node 明确选择自己的 Ruleset，支撑源码通过 `implementation_files` 登记；共享库引用使用 `base_libs`。每项 `pipeline.inputs` 显式填写布尔 `required`。Workflow / Plugin / Rule ABI 分别为 v6 / v3 / v2，AOT manifest 为 v2；升级前生成的 AOT 与业务验收不能作为新版执行证据。当前迁移是否已实施，以交接说明和真实 Config 中的 planned 状态为准。
+1.3.8使用固定 `@vibeflow/plugin` SDK。业务Node位于 `nodes/`，以 `id` 声明并引用 `node_type`；Config调用以 `definition_id` 引用业务定义或NodesetType。Plugin位于独立 `plugins/<包名>/`，只贡献类型、规则、Schema、Capability及包内支持资源；独立BaseLib位于 `base_lib/`。支撑源码通过 `implementation_files` 登记，路径相对声明模块；源码实现引用沿用所属root路径。Node明确选择Ruleset，库引用用 `base_libs`。两级治理由 `project_rules.jsonc` 和 `root_rules.jsonc` 承担，不能用关闭默认规则掩盖归属错误。
 
-并发控制使用 `flow_kind="task_manager"`、`vibeflow.task_manager`、调用点 `task_targets` 和 `context.tasks`。旧调用级 `async`、`result_key`、`detached` 及停止等待超时选项已移除。TaskRef 只属于本次 workflow 运行；不得将 context 或控制接口存入 Session，也不得在 Node 返回后的回调中调用它。0.20.0 的 waitAny/waitAllExited 一次交付结果即回收任务记录；接收后从待处理名单删除引用，不得再次等待或停止该引用。普通 Node 接入取消并在 `finally` 完成资源释放，workflow 结束须等待实际任务和异步清理，不把请求停止或超时当作已退出。
+Workflow / Plugin / Rule ABI分别为v10 / v4 / v3，AOT为v4。每项 `pipeline.inputs` 显式填写布尔 `required`。task_manager、task_targets、TaskRef、context.tasks、Host Extension与原生io调用已退役；普通Node通过授权的Capability完成收发。并发使用显式普通分支与独立all汇合，取消后须等待实际执行和异步finally完成。不得引入旧执行器回退、把context存入Session或在Node返回后用context回调遥控流程。作者函数按消息位置串行执行，并与当前Service任务协作完成提交和回执；通知终态及计时分别由自己的普通Loop处理。新一批planned图只用于审查，不作为运行证据。
 
 完成修改后更新 Architecture，并执行适用的 validate、quality、build 和工作流执行探针。按结果中的实际证据报告完成状态。
 
 # Collaborative profile
 
-遵循[`人机协同开发协议`](kernel/docs/user/profiles/collaborative.md)：维护四类变更清单，以 planned 内容生成正式审核图，等待人类明确批准后实施获批变化。机器检查与人工批准分别报告。
+遵循[`人机协同开发协议`](kernel/docs/user/profiles/collaborative.md)：维护四类变更清单，以 planned 内容生成正式HTML审核快照，等待人类明确批准后实施获批变化。机器检查与人工批准分别报告。
 
 # 酒馆运行时与 ERA 宿主路由
 
@@ -62,3 +63,5 @@ SillyTavern、Tavern Helper、浏览器事件、ERA 宏、UI 或真实酒馆联�
 ## 本项目资料存放与清理
 
 用户明确要求：本项目的源码、文档、报告、日志、备份、归档及临时资料只保存在当前开发目录内。不得向项目旁边、外部归档目录或其他项目目录写入本项目资料；过时内容直接删除，不以迁出归档代替清理。需要中间处理时优先使用内存，确需落盘则在本项目内使用独立临时位置并及时删除。此用户约束优先于通用临时目录skill的默认位置。已有外部工具链的共享服务及其自身数据不因本规则获得清理或搬移授权。
+
+独立BaseLib需由每个workflow的 `base_lib.modules` 显式选择，包含实际使用的传递依赖；Node的 `base_libs` 和库的 `dependencies` 只描述依赖关系，不自动授予使用权限。Plugin贡献的库只随Plugin整包选择。

@@ -1,0 +1,28 @@
+import {defineBaseLib} from "@vibeflow/plugin";
+
+export const era_service_message_function_calls = defineBaseLib({
+  "id": "era.service.message_function_calls",
+  "display_name": "ERA 消息内函数调用语法与块步进",
+  "description": "按正文位置解析作者函数调用标签与变量命令，读取调用完成标记，并维护消息处理中的临时进度。",
+  "version": "1.0.0",
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "source": {
+        "kind": "file",
+        "ref": "base_lib/domain/commands/message_function_calls.ts"
+      }
+    }
+  ],
+  "dependencies": [
+    "era.crud.parser"
+  ],
+  "external_packages": [],
+  "rulesets": [
+    "vibeflow.base_lib"
+  ]
+});

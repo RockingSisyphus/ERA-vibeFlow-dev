@@ -1,19 +1,19 @@
 {
   "type_key": "era.service.iteration",
-  "display_name": "收集事件或完成当前批次任务",
-  "description": "完成 ERA 服务的一轮工作：空闲时收集聊天事件和脚本请求；执行时准备当前任务，选择提交、历史同步、生成或简单任务入口。模型生成完成后再处理其后续请求，最终把回执合入批次，继续下一项任务或返回事件收集。",
+  "display_name": "完成一轮事件收集或任务执行",
+  "description": "服务处于收集阶段时，等待并整理事件；处于执行阶段时，准备并执行当前任务，按需完成生成后续处理。结果合入批次后继续下一项，批次结束则回到事件收集。",
   "requires": [
     {
       "type": "era.service.cycle.state",
       "cardinality": "exactly_one",
-      "display_name": "当前阶段状态"
+      "display_name": "服务当前处于收集还是执行及相应进度"
     }
   ],
   "provides": [
     {
       "key": "cycle_state_next",
       "type": "era.service.cycle.state",
-      "display_name": "下一阶段状态"
+      "display_name": "服务当前处于收集还是执行及相应进度"
     }
   ],
   "pipeline": {
@@ -22,7 +22,7 @@
       {
         "key": "cycle_state",
         "type": "era.service.cycle.state",
-        "display_name": "当前阶段状态",
+        "display_name": "服务当前处于收集还是执行及相应进度",
         "required": true
       }
     ],
@@ -30,63 +30,62 @@
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.service.terminal",
-        "display_name": "阶段迭代开始",
-        "description": "开始收集事件或完成当前批次任务。"
+        "display_name": "开始完成一轮事件收集或任务执行",
+        "description": "标明“完成一轮事件收集或任务执行”的开始位置。服务处于收集阶段时，等待并整理事件；处于执行阶段时，准备并执行当前任务，按需完成生成后续处理。结果合入批次后继续下一项，批次结束则回到事件收集。",
+        "definition_id": "era.service.terminal"
       },
       {
         "id": "route_phase",
-        "type_used": "era.service.cycle.route",
-        "display_name": "选择当前阶段",
-        "description": "根据服务当前处于收集还是执行阶段选择对应入口；阶段状态无效时报告流程错误。"
+        "display_name": "选择收集事件或执行任务",
+        "description": "在“完成一轮事件收集或任务执行”流程中，读取服务当前阶段，选择收集新事件或处理已规划任务。阶段资料无效时报告流程问题，防止把收集状态误当成可执行批次。",
+        "definition_id": "era.service.cycle.route"
       },
       {
         "id": "collect_cycle_phase",
-        "type_used": "era.service.collect_cycle_phase",
-        "display_name": "收集事件并判断是否开始执行",
-        "description": "完成一轮事件收集：接收和整理事件，发出定时器控制，再检查是否已经可以执行。就绪时把事件编成任务列表并检查每个来源都有安排；有效计划进入执行阶段，计划有误则向全部来源返回失败。"
+        "display_name": "收一轮事件并决定等待还是开始批次",
+        "description": "本环节用于“完成一轮事件收集或任务执行”：接收并整理一个新事件，把计时安排送回页面，再检查本批是否就绪。就绪时规划有序任务并核对每个事件都有安排，通过则进入执行，计划有问题则统一回告失败。",
+        "definition_id": "era.service.collect_cycle_phase"
       },
       {
         "id": "unpack_execution",
-        "type_used": "era.service.cycle.unpack_execution",
-        "display_name": "验证在途批次状态",
-        "description": "从执行阶段状态取出任务列表、当前位置、累计结果和消息处理进度，供本次任务执行。"
+        "display_name": "取出本轮任务执行的进度",
+        "description": "在“完成一轮事件收集或任务执行”流程中，从服务状态取出当前任务列表、执行位置、累计结果和消息处理进度。任务执行流程据此处理正确的一项，并延续已有成果。",
+        "definition_id": "era.service.cycle.unpack_execution"
       },
       {
         "id": "prepare_task",
-        "type_used": "era.task.prepare",
-        "display_name": "准备当前任务及执行所需资料",
-        "description": "从批次取出当前任务，读取所需聊天资料，再按任务类型准备初始化、脚本接口、模型生成、历史同步或简单任务请求。输出下一步执行请求，并保留原事件和回执资料。"
+        "display_name": "为当前任务选路并备齐执行资料",
+        "description": "本环节用于“完成一轮事件收集或任务执行”：接收批次当前任务，读取必要聊天资料，再按种类准备初始化、脚本提交、生成、历史同步或简单任务。交出明确执行请求，并保留原事件和处理确认所需资料。",
+        "definition_id": "era.task.prepare"
       },
       {
         "id": "choose_action",
-        "type_used": "era.task.select_action",
-        "display_name": "选择执行动作并交付对应请求",
-        "description": "读取当前任务的准备结果，选择变量提交、历史同步、模型生成、简单任务或直接返回；把对应请求和原任务资料交给选定入口。"
+        "display_name": "按准备结果选择实际执行流程",
+        "description": "在“完成一轮事件收集或任务执行”流程中，接收当前任务已准备的资料，选择变量提交、历史同步、模型生成、简单任务或直接返回。把对应请求和原任务一起交给选定分支，供完成后统一结算。",
+        "definition_id": "era.task.select_action"
       },
       {
         "id": "execute_commit",
-        "type_used": "era.api.commit",
-        "display_name": "应用脚本或界面的变量提交",
-        "description": "处理公共接口提交的变量和函数操作。先检查聊天目标与允许执行的范围，工作台草稿先转成有序操作；有效请求转成消息事务，由共享消息流程在内存应用。已经处理过的范围返回跳过，输入无效返回失败；应用回执之后由相应任务安排保存。"
+        "display_name": "应用脚本或界面提交的变量操作",
+        "description": "本环节用于“完成一轮事件收集或任务执行”：接收变量或函数提交，检查目标聊天和允许范围，工作台草稿先比较成有序操作。有效请求在统一消息流程中按序计算；重复范围按规则跳过，无效内容返回原因，之后由任务流程安排保存。",
+        "definition_id": "era.api.commit"
       },
       {
         "id": "candidate_loop",
-        "type_used": "vibeflow.loop.while",
-        "display_name": "生成并检查，必要时重试",
-        "description": "反复尝试当前生成阶段：请求模型文本，应用其中的命令，再检查整体结果。可重试的失败先恢复本次尝试起点，再请求新文本；成功或无法继续重试时退出，进入阶段交接。",
+        "display_name": "生成并检查，允许时恢复起点重试",
+        "description": "对当前生成阶段请求文字并应用其中指令，再检查整体结论。可重试错误先恢复本次起点再尝试，较早阶段成果保留；成功、取消或无法再重试时结束，交给阶段交接。",
         "requires": [
           {
             "type": "era.agent.candidate.state.selected",
             "cardinality": "exactly_one",
-            "display_name": "本次模型尝试的请求、起点和进度"
+            "display_name": "本次选中的模型请求和恢复起点"
           }
         ],
         "provides": [
           {
             "key": "candidate_outcome",
             "type": "era.agent.candidate.outcome",
-            "display_name": "候选执行结果"
+            "display_name": "生成尝试结束后的完整结果"
           }
         ],
         "loop": {
@@ -109,55 +108,56 @@
               "as": "candidate_outcome"
             }
           ]
-        }
+        },
+        "definition_id": "vibeflow.loop.while"
       },
       {
         "id": "finish_agent_phase",
-        "type_used": "era.agent.finish_phase",
-        "display_name": "整理生成阶段结果和下一阶段交接",
-        "description": "在生成候选达到最终结论后整理阶段交接。生成完成标识及下一阶段恢复资料，页面执行订阅回调后可以请求继续；需要保存或消息历史结算的结果交回相应流程，取消或失败返回原任务结果。"
+        "display_name": "结束当前生成阶段并准备下一步",
+        "description": "本环节用于“完成一轮事件收集或任务执行”：接收已经结束的生成尝试，整理阶段完成资料及后续恢复依据。需要保存或历史同步时交给相应流程，其他结果直接回告；页面执行订阅回调后可按这些资料继续下一阶段。",
+        "definition_id": "era.agent.finish_phase"
       },
       {
         "id": "choose_followup",
-        "type_used": "era.task.select_followup",
-        "display_name": "选择生成完成后的处理动作",
-        "description": "根据模型生成阶段的结论，选择历史同步、消息标识结算或直接返回阶段结果，并保留原任务、批次和回执资料。"
+        "display_name": "决定生成结束后还要处理什么",
+        "description": "在“完成一轮事件收集或任务执行”流程中，接收模型阶段的结论，选择继续历史同步、确认消息标识或直接返回结果。保留原任务、批次及发起来源，让生成后续处理仍能正确回告。",
+        "definition_id": "era.task.select_followup"
       },
       {
         "id": "execute_sync",
-        "type_used": "era.task.sync",
-        "display_name": "按聊天历史更新变量并保存",
-        "description": "使聊天中的变量和函数与当前消息历史一致。读取并核对状态文件及当前内存结果，找出历史变更处，撤销旧效果后按正文顺序重算；处理指令和作者函数，准备历史压缩，最后保存消息和独立状态文件，再刷新显示并返回结果。"
+        "display_name": "按当前聊天历史恢复变量并保存",
+        "description": "本环节用于“完成一轮事件收集或任务执行”：读取聊天消息及独立状态文件，找出历史变化处，撤回旧效果后按正文顺序执行变量指令和作者函数。整理可压缩历史，保存消息及状态文件，确认后刷新显示并返回真实结果。",
+        "definition_id": "era.task.sync"
       },
       {
         "id": "execute_simple_task",
-        "type_used": "era.service.step",
-        "display_name": "处理标识、设置或忽略任务",
-        "description": "执行已经准备好的三类简单任务：确认消息历史标识、处理多阶段生成设置，或为无需处理的事件返回忽略原因。选定分支返回一个任务结果，供批次统一合并。"
+        "display_name": "完成消息标识、生成设置或忽略任务",
+        "description": "本环节用于“完成一轮事件收集或任务执行”：接收已准备的简单任务，按种类确认消息历史标识、管理生成设置，或回告无需处理的原因。选中分支返回一个真实任务结果，交给批次统一汇总。",
+        "definition_id": "era.service.step"
       },
       {
         "id": "execute_agent_mk",
-        "type_used": "era.task.update_mk",
-        "display_name": "结算消息历史标识更新",
-        "description": "结算消息历史标识准备的结果。历史标识用于把每条聊天消息与变量变更日志对应起来；读取、生成和必要写入已在任务资料准备时完成。本流程检查该结果，再向任务的原始事件返回无变化、成功或失败回执。"
+        "display_name": "确认消息历史身份准备的结果",
+        "description": "本环节用于“完成一轮事件收集或任务执行”：消息身份标识把聊天消息与变量变更记录对应起来，本流程接收任务准备阶段已有的标识、占位及写入结论。检查后向原事件返回成功、无变化或失败确认，供批次汇总。",
+        "definition_id": "era.task.update_mk"
       },
       {
         "id": "complete_task",
-        "type_used": "era.task.finish_result",
-        "display_name": "形成原调用方需要的任务回执",
-        "description": "接收变量提交、历史同步、简单任务或生成阶段的实际结果，按原调用方形成回执。脚本接口使用原有接口格式，其余任务使用批次任务格式；随后交给批次汇总。"
+        "display_name": "按原发起方式返回本项任务结果",
+        "description": "在“完成一轮事件收集或任务执行”流程中，接收变量提交、历史同步、生成或简单任务的实际结论，按脚本接口或普通事件需要的形式整理处理确认。保留成功值与失败原因，再交给批次汇总。",
+        "definition_id": "era.task.finish_result"
       },
       {
         "id": "settle_step",
-        "type_used": "era.service.settle_step_phase",
-        "display_name": "整理当前任务结果并继续批次",
-        "description": "接收刚完成任务的回执、诊断和消息进度，合入当前批次并推进任务索引。仍有任务时继续执行；全部完成时汇总并发布整批结果，再返回事件收集阶段。"
+        "display_name": "收下本项结果并判断批次是否结束",
+        "description": "本环节用于“完成一轮事件收集或任务执行”：将刚完成任务的确认、通知和消息进度合入批次并推进位置。有剩余任务时继续执行，全部完成时汇总发回页面，再恢复事件收集。",
+        "definition_id": "era.service.settle_step_phase"
       },
       {
         "id": "end",
-        "type_used": "era.service.terminal",
-        "display_name": "阶段迭代结束",
-        "description": "结束收集事件或完成当前批次任务，输出本段流程的处理结果。"
+        "display_name": "结束完成一轮事件收集或任务执行",
+        "description": "标明“完成一轮事件收集或任务执行”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.service.terminal"
       }
     ],
     "edges": [
@@ -210,7 +210,8 @@
       {
         "from": "choose_action",
         "to": "complete_task",
-        "when": "action_route != 'candidate'"
+        "when": "action_route != 'candidate'",
+        "schedule": false
       },
       [
         "candidate_loop",
@@ -239,7 +240,8 @@
       {
         "from": "choose_followup",
         "to": "complete_task",
-        "when": "followup_route != ''"
+        "when": "followup_route != ''",
+        "schedule": false
       },
       [
         "execute_commit",
@@ -270,13 +272,25 @@
       [
         "settle_step",
         "end"
-      ]
+      ],
+      {
+        "from": "choose_action",
+        "to": "complete_task",
+        "when": "action_route == 'direct'",
+        "transfer": false
+      },
+      {
+        "from": "choose_followup",
+        "to": "complete_task",
+        "when": "followup_route == 'direct'",
+        "transfer": false
+      }
     ],
     "outputs": [
       {
         "type": "era.service.cycle.state",
         "cardinality": "exactly_one",
-        "display_name": "下一阶段状态",
+        "display_name": "服务当前处于收集还是执行及相应进度",
         "as": "cycleStateNext"
       }
     ]

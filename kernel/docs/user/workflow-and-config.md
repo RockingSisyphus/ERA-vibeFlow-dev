@@ -1,10 +1,10 @@
 # Workflow 与 Config
 
-Config 描述工作流中的调用实例、公共输入输出、资源选择和显式连接。Node 类型或 Nodeset 定义提供已实现调用的端口契约。
+Config 描述工作流中的调用实例、公共输入输出、资源选择和显式连接。业务 Node 或 NodesetType 定义提供已实现调用的端口契约。
 
-## Config 与正式审核图
+## Config 与正式 HTML 审核
 
-Config 提供实际构建和执行的工作流结构。修改已有环节时，沿已登记 Architecture 的 source 在原工作流的实际位置表达 planned Node 或 Nodeset，再对保留上下游关系的完整工作流生成正式审核图。
+Config 提供实际构建和执行的工作流结构。修改已有环节时，沿已登记 Architecture 的 source 在原工作流的实际位置表达 planned Node 或 Nodeset，再对保留上下游关系的完整工作流运行 `review`，交付当次 HTML 快照定位链接，供用户查看 workflow 及其依赖。
 
 协同模式对新增独立工作流、共享资源变更，以及 planned 与已执行状态的具体要求见其 profile 文档。
 
@@ -25,19 +25,19 @@ Config 提供实际构建和执行的工作流结构。修改已有环节时，�
     "nodes": [
       {
         "id": "start",
-        "type_used": "example.start",
+        "definition_id": "example.start",
         "display_name": "Start request",
         "description": "Starts this request workflow."
       },
       {
         "id": "process",
-        "type_used": "example.process",
+        "definition_id": "example.process",
         "display_name": "Process request",
         "description": "Applies the business transformation."
       },
       {
         "id": "end",
-        "type_used": "example.end",
+        "definition_id": "example.end",
         "display_name": "End request",
         "description": "Ends after the response is available."
       }
@@ -50,9 +50,9 @@ Config 提供实际构建和执行的工作流结构。修改已有环节时，�
 }
 ```
 
-每个调用实例必须有非空 `display_name` 和 `description`。`id` 在当前作用域唯一，`type_used` 指向 Node `type_key`、Nodeset `type_key` 或系统类型。
+每个调用实例必须有非空 `display_name` 和 `description`。`id` 在当前作用域唯一，`definition_id` 指向 业务 Node 的 `id`、NodesetType 的 `type_key` 或系统类型。
 
-已实现普通 Node 和 Nodeset 调用不在 Config 重复写 `requires` / `provides`。planned Node、`vibeflow.io`、`vibeflow.loop.while` 以及 pipeline 公共输入输出继续显式声明其结构。
+已实现普通 Node 和 Nodeset 调用不在 Config 重复写 `requires` / `provides`。planned Node、`vibeflow.loop.while` 以及 pipeline 公共输入输出继续显式声明其结构。
 
 Python Runtime 与 JavaScript/TypeScript AOT 使用同一公共输入契约。每个 `pipeline.inputs` 项都必须显式写布尔值 `required`：`true` 要求调用时提供该 key，`false` 允许省略；两者都拒绝未声明的输入 key。省略 `inputs` 或声明空列表时，调用输入只能是 `{}`。`required` 不能省略或写成 `null`。
 
@@ -72,6 +72,8 @@ Python Runtime 与 JavaScript/TypeScript AOT 使用同一公共输入契约。�
 ```
 
 `schedule: false` 只传数据，`transfer: false` 只调度；两者不能同时为 `false`。同步并行分支需要等待全部分支时，在汇合调用写 `join_policy: "all"`。互斥 decision 分支通常使用默认 safe-OR 合流。
+
+分发调用可以设置 `"config": {"max_concurrency": 4}`；未配置时默认 8。该字段是框架保留的正整数配置，不加入业务 `params_schema`，也不传给业务 `params`。完整的局部额度、排队补位、独立收集及断路规则见[普通图并发](graph-concurrency.md)。
 
 只有起点、终点、`when`、`schedule`、`transfer` 全部相同的重复声明会合并。未填写的角色设置与显式填写的设置保持为不同声明，不推断条件是否等价。同一对节点可以声明多条不同条件的路线，每条路线分别按自己的条件和角色生效；同一次输出不会因为多条路线匹配而重复执行目标或重复接收同一份 envelope。
 
@@ -94,23 +96,23 @@ Decision Node 使用 `flow_kind="decision"`，提供 route-like 输出，例如 
 | `vibeflow.document` / `vibeflow.data_store` Ruleset | 允许文件、网络、数据库等 Python I/O |
 | `vibeflow.global_state` Ruleset | 允许有限效果检查所识别的共享／模块状态操作，仍执行其他所选检查 |
 
-Node 的代码声明直接选择 Ruleset，并通过 workflow 选中的插件贡献。类型声明中的列表提供默认，调用 Config 的缺省使用默认、非空完整替代、空列表取消局部选择；报告中的 `effect_scope` 来自有效规则记录。`flow_kind` 描述执行身份，`external` 标记外部边界，副作用权限由规则表达。详见[Rule 与 Node](rules-and-nodes.md)。需要协调 `global_state` 冲突资源时使用静态命名 `execution_lock`；相同 key 互斥，不同 key 可并行。
+业务 Node 从标准目录发现，引用 NodeType。类型默认规则可由 Node 替换，调用再替换；NodeType 声明中的列表提供默认，调用 Config 的缺省使用默认、非空完整替代、空列表取消局部选择；报告中的 `effect_scope` 来自有效规则记录。`flow_kind` 描述执行身份，`external` 标记外部边界，副作用权限由规则表达。详见[Rule 与 Node](rules-and-nodes.md)。需要协调 `global_state` 冲突资源时使用静态命名 `execution_lock`；相同 key 互斥，不同 key 可并行。
 
 ## 可执行结构示例
 
-以下片段展示三种数据连接方式，其中 `guide.*` Node 由所选插件提供。顺序主线可以用额外 transfer edge 把早期数据送到后续调用：
+以下片段展示三种数据连接方式，其中 `guide.*` 业务 Node 从 nodes/ 声明发现。顺序主线可以用额外 transfer edge 把早期数据送到后续调用：
 
 <!-- vibeflow-executable-example: sequential-bypass -->
 ```jsonc
 {
   "pipeline": {
     "nodes": [
-      {"id":"start","type_used":"guide.start","display_name":"Start","description":"Starts the flow."},
-      {"id":"source","type_used":"guide.source","display_name":"Source","description":"Produces original and current values."},
-      {"id":"normalize","type_used":"guide.normalize","display_name":"Normalize","description":"Normalizes the current value."},
-      {"id":"combine","type_used":"guide.combine","display_name":"Combine","description":"Combines both values."},
-      {"id":"output","type_used":"guide.output_value","display_name":"Output I/O","description":"Adapts the semantic result."},
-      {"id":"end","type_used":"guide.end","display_name":"End","description":"Ends after the response.","similar_to":{"node":"start","relationship":"copy","reason":"Both terminal calls intentionally use the same empty lifecycle implementation."}}
+      {"id":"start","definition_id":"guide.start","display_name":"Start","description":"Starts the flow."},
+      {"id":"source","definition_id":"guide.source","display_name":"Source","description":"Produces original and current values."},
+      {"id":"normalize","definition_id":"guide.normalize","display_name":"Normalize","description":"Normalizes the current value."},
+      {"id":"combine","definition_id":"guide.combine","display_name":"Combine","description":"Combines both values."},
+      {"id":"output","definition_id":"guide.output_value","display_name":"Output I/O","description":"Adapts the semantic result."},
+      {"id":"end","definition_id":"guide.end","display_name":"End","description":"Ends after the response.","similar_to":{"node":"start","relationship":"copy","reason":"Both terminal calls intentionally use the same empty lifecycle implementation."}}
     ],
     "edges":[["start","source"],["source","normalize"],["normalize","combine"],["source","combine"],["combine","output"],["output","end"]],
     "outputs":[{"type":"response.value","cardinality":"exactly_one","display_name":"Response"}]
@@ -125,12 +127,12 @@ Node 的代码声明直接选择 Ruleset，并通过 workflow 选中的插件贡
 {
   "pipeline": {
     "nodes": [
-      {"id":"start","type_used":"guide.start","display_name":"Start","description":"Starts both branches."},
-      {"id":"left","type_used":"guide.left","display_name":"Left","description":"Produces the left value."},
-      {"id":"right","type_used":"guide.right","display_name":"Right","description":"Produces the right value.","similar_to":{"node":"left","relationship":"variant","reason":"The parallel branches intentionally share the same pure constant-source shape."}},
-      {"id":"merge","type_used":"guide.merge","display_name":"Merge","description":"Waits for both branches.","join_policy":"all"},
-      {"id":"output","type_used":"guide.output_merged","display_name":"Output I/O","description":"Adapts the merged value."},
-      {"id":"end","type_used":"guide.end","display_name":"End","description":"Ends after the response.","similar_to":{"node":"start","relationship":"copy","reason":"Both terminal calls intentionally use the same empty lifecycle implementation."}}
+      {"id":"start","definition_id":"guide.start","display_name":"Start","description":"Starts both branches."},
+      {"id":"left","definition_id":"guide.left","display_name":"Left","description":"Produces the left value."},
+      {"id":"right","definition_id":"guide.right","display_name":"Right","description":"Produces the right value.","similar_to":{"node":"left","relationship":"variant","reason":"The parallel branches intentionally share the same pure constant-source shape."}},
+      {"id":"merge","definition_id":"guide.merge","display_name":"Merge","description":"Waits for both branches.","join_policy":"all"},
+      {"id":"output","definition_id":"guide.output_merged","display_name":"Output I/O","description":"Adapts the merged value."},
+      {"id":"end","definition_id":"guide.end","display_name":"End","description":"Ends after the response.","similar_to":{"node":"start","relationship":"copy","reason":"Both terminal calls intentionally use the same empty lifecycle implementation."}}
     ],
     "edges":[["start","left"],["start","right"],["left","merge"],["right","merge"],["merge","output"],["output","end"]],
     "outputs":[{"type":"response.value","cardinality":"exactly_one","display_name":"Response"}]
@@ -146,11 +148,11 @@ Node 的代码声明直接选择 Ruleset，并通过 workflow 选中的插件贡
   "pipeline": {
     "inputs":[{"key":"request.raw","type":"request.raw","display_name":"Raw Request","required":true}],
     "nodes": [
-      {"id":"start","type_used":"guide.start","display_name":"Start","description":"Starts the boundary flow."},
-      {"id":"input","type_used":"guide.input","display_name":"Input I/O","description":"Decodes the external representation."},
-      {"id":"semantic","type_used":"guide.semantic","display_name":"Semantic Process","description":"Produces a typed internal value."},
-      {"id":"output","type_used":"guide.output_number","display_name":"Output I/O","description":"Adapts the internal value."},
-      {"id":"end","type_used":"guide.end","display_name":"End","description":"Ends after the response.","similar_to":{"node":"start","relationship":"copy","reason":"Both terminal calls intentionally use the same empty lifecycle implementation."}}
+      {"id":"start","definition_id":"guide.start","display_name":"Start","description":"Starts the boundary flow."},
+      {"id":"input","definition_id":"guide.input","display_name":"Input I/O","description":"Decodes the external representation."},
+      {"id":"semantic","definition_id":"guide.semantic","display_name":"Semantic Process","description":"Produces a typed internal value."},
+      {"id":"output","definition_id":"guide.output_number","display_name":"Output I/O","description":"Adapts the internal value."},
+      {"id":"end","definition_id":"guide.end","display_name":"End","description":"Ends after the response.","similar_to":{"node":"start","relationship":"copy","reason":"Both terminal calls intentionally use the same empty lifecycle implementation."}}
     ],
     "edges":[["start","input"],["input","semantic"],["semantic","output"],["output","end"]],
     "outputs":[{"type":"response.number","cardinality":"exactly_one","display_name":"Response Number"}]
@@ -171,7 +173,7 @@ workspace 根的 `vibeflow_config.jsonc` 登记项目 root。每个 root 的 `vi
 }
 ```
 
-自定义资源由各 workflow 的 `plugins` 选择固定代码插件。插件 source 相对所属 root；资源的 `implementation_files` 相对 SDK 声明模块。节点调用、Host 选择和 BaseLib 引用使用已启用资源的 ID。插件选择见[插件与宿主集成](plugins-and-integrations.md#选择与配置)，支撑文件及使用处样式见[多文件资源](multifile-resources.md)。
+自定义资源由各 workflow 的 `plugins` 选择固定代码插件。插件 source 相对所属 root；资源的 `implementation_files` 相对 SDK 声明模块。节点调用引用业务 Node 或 NodesetType，BaseLib 引用使用可见资源的 ID。插件选择见[插件与宿主集成](plugins-and-integrations.md#声明与选择)，支撑文件及使用处样式见[多文件资源](multifile-resources.md)。
 
 验证修改：
 
@@ -184,4 +186,6 @@ python run.py validate --config <root>/configs/main.jsonc
 
 Workflow 顶层的 `rulesets` 未填写时，使用内置及所选 Plugin 的 Workflow 默认；非空列表替代全部默认，`[]` 取消根图规则。Node 调用自身的 `rulesets` 独立控制局部规则，不解除图级约束。需要同时保留内置 Workflow 审查与自定义图规则时，应显式列出 `["vibeflow.workflow", "example.graph"]`。定义和接入方法见 [规则选择与插件示例](rules-and-nodes.md)。
 
-并发启动、任务引用、停止与实际收尾合同见[原生任务管理](task-management.md)。
+普通节点的并发分发、显式汇合、取消与实际收尾合同见[普通图并发](graph-concurrency.md)。
+
+命名入口、独立 workflow 调用与消息、普通端口节点迁移见[多入口与通信](workflow-coordination.md)。旧原生 `vibeflow.io` / `io` 配置不再执行；`vibeflow.io` Ruleset 继续保留。

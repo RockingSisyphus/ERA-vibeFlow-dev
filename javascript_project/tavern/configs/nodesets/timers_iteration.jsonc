@@ -1,0 +1,131 @@
+{
+  "type_key": "era.tavern.flow.timers_iteration",
+  "display_name": "选一次最近期限并等待处理",
+  "description": "剔除已取消计时，选出最近期限并等待；新增、替换或取消安排会使等待重选。到期交给统一处理，实例停止则结束分支，外层循环据此持续管理当前有效期限。",
+  "requires": [
+    {
+      "type": "era.tavern.call.frame",
+      "cardinality": "exactly_one",
+      "display_name": "选一次最近期限并等待处理的请求和已有进度"
+    }
+  ],
+  "provides": [
+    {
+      "key": "next_frame",
+      "type": "era.tavern.runtime.state.next",
+      "display_name": "选一次最近期限并等待处理的处理进度及结果"
+    },
+    {
+      "key": "iteration_done",
+      "type": "era.tavern.runtime.done",
+      "display_name": "本轮遍历或职责处理是否已经结束"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.call.frame",
+        "display_name": "选一次最近期限并等待处理的请求和已有进度",
+        "required": true
+      }
+    ],
+    "max_steps": 12,
+    "nodes": [
+      {
+        "id": "start",
+        "definition_id": "era.tavern.initialize.start",
+        "display_name": "开始选一次最近期限并等待处理",
+        "description": "标明“选一次最近期限并等待处理”的开始位置。剔除已取消计时，选出最近期限并等待；新增、替换或取消安排会使等待重选。到期交给统一处理，实例停止则结束分支，外层循环据此持续管理当前有效期限。"
+      },
+      {
+        "id": "ready",
+        "definition_id": "era.tavern.owned.wait_owner",
+        "display_name": "等待本实例页面资源准备就绪",
+        "description": "在“选一次最近期限并等待处理”流程中，等待资源管理分支完成运行资源登记，取消时结束等待。后续主服务只在同一实例资源可用后启动，避免尚未就绪就调用页面能力。"
+      },
+      {
+        "id": "choose",
+        "definition_id": "era.tavern.runtime.take_timers",
+        "display_name": "选出最近需要处理的有效期限",
+        "description": "在“选一次最近期限并等待处理”流程中，清除已经取消的计时安排，从剩余项选出最早期限。将期限和当前安排版本交给等待步骤；实例停止时结束，安排改变时会重新选择。"
+      },
+      {
+        "id": "work",
+        "definition_id": "era.tavern.flow.timer_wait",
+        "display_name": "等待最近期限并处理到期或取消",
+        "description": "本环节用于“选一次最近期限并等待处理”：等待选出的最近有效期限，到期时交给统一计时流程，安排变化或停止时结束本轮重新选择。实际计时和监听在本轮退出时释放，避免旧计时继续影响实例。"
+      },
+      {
+        "id": "advance",
+        "definition_id": "era.tavern.runtime.advance",
+        "display_name": "本轮处理完成后继续等待下一项",
+        "description": "在“选一次最近期限并等待处理”流程中，接收当前职责一次实际处理结束的结果，将同一实例交回外层循环并标记继续。下一轮再读取该职责队列，保持任务顺序及实例归属。"
+      },
+      {
+        "id": "stop",
+        "definition_id": "era.tavern.runtime.end_loop",
+        "display_name": "结束当前长期职责分支",
+        "description": "在“选一次最近期限并等待处理”流程中，实例停止后，将当前作者、通知或计时循环标为结束，并交出该分支已退出的确认。最终汇合据此等待所有职责真正结束。"
+      },
+      {
+        "id": "end",
+        "definition_id": "era.tavern.initialize.end",
+        "display_name": "结束选一次最近期限并等待处理",
+        "description": "标明“选一次最近期限并等待处理”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。"
+      }
+    ],
+    "edges": [
+      [
+        "start",
+        "ready"
+      ],
+      [
+        "ready",
+        "choose"
+      ],
+      {
+        "from": "choose",
+        "to": "work",
+        "when": "era_tavern_runtime_take_timers_route == 'work'"
+      },
+      {
+        "from": "choose",
+        "to": "stop",
+        "when": "era_tavern_runtime_take_timers_route == 'stop'"
+      },
+      {
+        "from": "ready",
+        "to": "advance",
+        "schedule": false
+      },
+      [
+        "work",
+        "advance"
+      ],
+      [
+        "advance",
+        "end"
+      ],
+      [
+        "stop",
+        "end"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.runtime.state.next",
+        "cardinality": "exactly_one",
+        "display_name": "选一次最近期限并等待处理的处理进度及结果",
+        "as": "frame"
+      },
+      {
+        "type": "era.tavern.runtime.done",
+        "cardinality": "exactly_one",
+        "display_name": "本轮遍历或职责处理是否已经结束",
+        "as": "done"
+      }
+    ]
+  }
+}

@@ -1,25 +1,25 @@
 {
   "type_key": "era.tavern.flow.subscription_cycle",
-  "display_name": "逐个执行阶段订阅",
-  "description": "顺序等待作者回调的机制由原生Loop逐轮调度，取消与错误保留原合同。",
+  "display_name": "按序执行本阶段的作者订阅",
+  "description": "逐项检查已捕获订阅是否仍有效且关注本阶段，执行匹配回调并等待，跳过其他项。非取消失败报告后继续，周期取消或全部结束时返回，外层据此决定是否继续生成。",
   "expand": true,
   "requires": [
     {
       "type": "era.tavern.call.frame",
       "cardinality": "exactly_one",
-      "display_name": "本次实例及调用资料"
+      "display_name": "按序执行本阶段的作者订阅的请求和已有进度"
     }
   ],
   "provides": [
     {
       "key": "subscription_cycle_frame",
       "type": "era.tavern.call.frame",
-      "display_name": "本流程实际结果"
+      "display_name": "按序执行本阶段的作者订阅的处理进度及结果"
     },
     {
       "key": "subscription_cycle_done",
       "type": "era.tavern.subscription_cycle.done",
-      "display_name": "循环终态"
+      "display_name": "本轮遍历或职责处理是否已经结束"
     }
   ],
   "pipeline": {
@@ -29,69 +29,69 @@
         "key": "frame",
         "type": "era.tavern.call.frame",
         "required": true,
-        "display_name": "本次实例及调用资料"
+        "display_name": "按序执行本阶段的作者订阅的请求和已有进度"
       }
     ],
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.tavern.initialize.start",
-        "display_name": "开始当前原生流程",
-        "description": "标记本段原生流程的控制边界，不创建资源或重复输出。"
+        "display_name": "开始按序执行本阶段的作者订阅",
+        "description": "标明“按序执行本阶段的作者订阅”的开始位置。逐项检查已捕获订阅是否仍有效且关注本阶段，执行匹配回调并等待，跳过其他项。非取消失败报告后继续，周期取消或全部结束时返回，外层据此决定是否继续生成。",
+        "definition_id": "era.tavern.initialize.start"
       },
       {
         "id": "choose",
-        "type_used": "era.tavern.subscription_cycle.choose",
-        "display_name": "选择当前订阅、跳过或结束",
-        "description": "按捕获的订阅顺序检查周期取消、登记有效性及阶段筛选；仅当前合法订阅进入invoke。"
+        "display_name": "选择本阶段下一个有效作者订阅",
+        "description": "在“按序执行本阶段的作者订阅”流程中，根据本周期取消状态、订阅是否仍登记及关注阶段，选择执行、跳过或结束。只处理当前仍有效且匹配规划、正文或结算阶段的订阅。",
+        "definition_id": "era.tavern.subscription_cycle.choose"
       },
       {
         "id": "skip",
-        "type_used": "era.tavern.subscription_cycle.skip",
-        "display_name": "跳过已注销或不匹配阶段的订阅",
-        "description": "只推进一个捕获位置，不调用回调，不解除其他作者等待。"
+        "display_name": "略过已移除或不匹配阶段的订阅",
+        "description": "在“按序执行本阶段的作者订阅”流程中，当前订阅已停止或不关注本阶段时，推进到下一项。保留本次阶段结果，供其余有效作者回调继续处理。",
+        "definition_id": "era.tavern.subscription_cycle.skip"
       },
       {
         "id": "empty",
-        "type_used": "era.tavern.subscription_cycle.empty",
-        "display_name": "结束当前订阅周期遍历",
-        "description": "周期取消或列表结束时返回done=true；取消不伪造作者原始操作已完成。"
+        "display_name": "确认本阶段订阅周期已经结束",
+        "description": "在“按序执行本阶段的作者订阅”流程中，当前周期取消或所有回调已检查时，标记遍历结束。后续清除周期登记，并返回是否允许继续生成。",
+        "definition_id": "era.tavern.subscription_cycle.empty"
       },
       {
         "id": "invoke",
-        "type_used": "era.tavern.subscription_cycle.invoke",
-        "display_name": "执行当前作者订阅并等待其Promise",
-        "description": "使用只读观察副本和此回调的signal，登记局部取消句柄；取消解除等待但仍观察原始Promise拒绝。同步异常保存为事实。"
+        "display_name": "按顺序执行一个作者阶段回调",
+        "description": "在“按序执行本阶段的作者订阅”流程中，把只读阶段结果和取消状态交给当前作者订阅，并等待其实际返回。记录回调错误，下一作者只有在本项等待结束后才进入处理。",
+        "definition_id": "era.tavern.subscription_cycle.invoke"
       },
       {
         "id": "classify",
-        "type_used": "era.tavern.subscription_cycle.classify",
-        "display_name": "选择报告错误或直接推进",
-        "description": "仅未取消的回调失败需要报告；已取消等待不报告为业务失败。"
+        "display_name": "判断回调失败是否需要报告",
+        "description": "在“按序执行本阶段的作者订阅”流程中，查看当前作者订阅的执行结论，正常结束或取消时直接推进，非取消错误进入报告。后续仍按原顺序处理其他订阅。",
+        "definition_id": "era.tavern.subscription_cycle.classify"
       },
       {
         "id": "report_error",
-        "type_used": "era.tavern.subscription_cycle.report_error",
-        "display_name": "报告原阶段订阅失败",
-        "description": "按原console/toastr格式报告当前错误；保持继续之后的订阅和生成，不修改Service结论。"
+        "display_name": "说明阶段回调失败并继续后续处理",
+        "description": "在“按序执行本阶段的作者订阅”流程中，将本次作者阶段回调的实际错误写入日志并显示提示，按现有规则继续后续生成处理。用户能看到回调问题，而原错误不会被伪装成回调成功。",
+        "definition_id": "era.tavern.subscription_cycle.report_error"
       },
       {
         "id": "advance",
-        "type_used": "era.tavern.subscription_cycle.advance",
-        "display_name": "释放本回调监听并推进一个位置",
-        "description": "汇合当前成功、取消或报告路径，移除本回调局部监听并推进一个位置；下一回调由外层原生Loop选择。"
+        "display_name": "结束本项回调登记并转到下一订阅",
+        "description": "在“按序执行本阶段的作者订阅”流程中，移除当前订阅对本周期的等待关联，推进到下一回调位置。外层循环据此继续，保持作者订阅的先后顺序。",
+        "definition_id": "era.tavern.subscription_cycle.advance"
       },
       {
         "id": "join_result",
-        "type_used": "era.tavern.subscription_cycle.join_result",
-        "display_name": "交还当前轮次资料",
-        "description": "汇合invoke、skip或结束的实际结果；done由所选路径唯一提供。"
+        "display_name": "交接按序执行本阶段的作者订阅的选中结果",
+        "description": "在“按序执行本阶段的作者订阅”流程中，在“按序执行本阶段的作者订阅”中，接收本次实际选择的分支所产生的唯一结果，交给后续步骤或调用方。每次只允许一份实际结果，避免把互斥分支误当成多个都已执行。",
+        "definition_id": "era.tavern.subscription_cycle.join_result"
       },
       {
         "id": "end",
-        "type_used": "era.tavern.initialize.end",
-        "display_name": "结束当前原生流程",
-        "description": "标记本段原生流程的控制边界，不创建资源或重复输出。"
+        "display_name": "结束按序执行本阶段的作者订阅",
+        "description": "标明“按序执行本阶段的作者订阅”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.tavern.initialize.end"
       }
     ],
     "edges": [
@@ -154,13 +154,13 @@
         "type": "era.tavern.call.frame",
         "cardinality": "exactly_one",
         "as": "frame",
-        "display_name": "当前实际结果"
+        "display_name": "按序执行本阶段的作者订阅的处理进度及结果"
       },
       {
         "type": "era.tavern.subscription_cycle.done",
         "cardinality": "exactly_one",
         "as": "done",
-        "display_name": "循环终态"
+        "display_name": "本轮遍历或职责处理是否已经结束"
       }
     ],
     "max_steps": 15

@@ -1,19 +1,19 @@
 {
   "type_key": "era.service.finish_batch",
-  "display_name": "汇总批次结果并发送给酒馆页面",
-  "description": "汇总当前批次所有任务的结论，检查每个原始事件恰有一次回执，再发送结果和通知。普通失败后可以继续接收事件；写入结果未知等致命问题先告知调用方，再停止服务。",
+  "display_name": "汇总整批结果并回告页面",
+  "description": "所有任务结束后，为本批每个原事件整理一次最终确认，附上通知和问题记录，再集中送回页面。普通失败后继续接收事件，需停止的严重问题先回告原因再结束服务。",
   "requires": [
     {
       "type": "era.batch.execution.state.after",
       "cardinality": "exactly_one",
-      "display_name": "待结算批次状态"
+      "display_name": "本批任务结束或计划失败后的状态"
     }
   ],
   "provides": [
     {
       "key": "finished_cycle_state",
       "type": "era.service.cycle.state",
-      "display_name": "收集阶段状态"
+      "display_name": "服务当前处于收集还是执行及相应进度"
     }
   ],
   "pipeline": {
@@ -22,7 +22,7 @@
       {
         "key": "execution_state_after",
         "type": "era.batch.execution.state.after",
-        "display_name": "待结算批次状态",
+        "display_name": "本批任务结束或计划失败后的状态",
         "required": true
       }
     ],
@@ -30,69 +30,75 @@
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.service.terminal",
-        "display_name": "批次收尾开始",
-        "description": "开始汇总批次结果并发送给酒馆页面。"
+        "display_name": "开始汇总整批结果并回告页面",
+        "description": "标明“汇总整批结果并回告页面”的开始位置。所有任务结束后，为本批每个原事件整理一次最终确认，附上通知和问题记录，再集中送回页面。普通失败后继续接收事件，需停止的严重问题先回告原因再结束服务。",
+        "definition_id": "era.service.terminal"
       },
       {
         "id": "finalize_batch",
-        "type_used": "era.service.finalize_batch",
-        "display_name": "结算全部来源",
-        "description": "本次结算已经执行完成的事件批次。汇总批次中各任务的实际结果，为每个原事件生成一次最终回执，并更新已完成批次数。"
+        "display_name": "为整批原事件形成最终处理确认",
+        "description": "在“汇总整批结果并回告页面”流程中，汇总当前批次所有任务的实际结果，为每个原事件形成一次最终确认，并更新完成批次数。后续统一把确认和页面通知送回酒馆。",
+        "definition_id": "era.service.finalize_batch"
       },
       {
         "id": "build_outbound",
-        "type_used": "era.service.build_outbound",
-        "display_name": "构造批次结果帧",
-        "description": "本次结算已经执行完成的事件批次。把已结算批次的事件回执、页面通知、诊断和停止原因组装为带稳定身份的输出消息，同时生成下一轮服务状态。"
+        "display_name": "汇总发回页面的批次消息",
+        "description": "在“汇总整批结果并回告页面”流程中，把已处理事件的确认、页面通知、问题记录和停止原因组装成一份对应本批次的结果，同时准备下一轮服务状态。页面据此完成等待中的请求和后续通知。",
+        "definition_id": "era.service.build_outbound"
       },
       {
         "id": "send_batch_result",
-        "type_used": "vibeflow.io",
-        "display_name": "发送批次结果",
-        "description": "把已结算批次的事件回执、通知、诊断和服务停止原因发送给酒馆页面。需要停止时先发布结果，再结束服务，使原调用方能收到原因。",
-        "requires": [
+        "display_name": "把整批处理确认和通知发回页面",
+        "description": "在“汇总整批结果并回告页面”流程中，将已结算批次的事件确认、通知、问题和停止原因送回酒馆。需要停止服务时也先发出结果，使等待中的脚本和界面能够收到具体原因。",
+        "definition_id": "era.service.port.send_batch_result",
+        "rulesets": [
+          "vibeflow.data_store",
           {
-            "type": "era.batch.result",
-            "cardinality": "exactly_one",
-            "display_name": "批次结果帧"
+            "rule_id": "vibeflow.capability.allow",
+            "params": {
+              "capability": "vibeflow.port",
+              "operations": [
+                "send"
+              ],
+              "actions": [
+                {
+                  "operation": "send",
+                  "port": "era.service.out"
+                }
+              ]
+            }
           }
-        ],
-        "io": {
-          "operation": "send",
-          "port": "era.service.out"
-        },
-        "provides": []
+        ]
       },
       {
         "id": "route_fatal",
-        "type_used": "era.service.route_fatal",
-        "display_name": "路由致命结果",
-        "description": "本次结算已经执行完成的事件批次。检查已经发布的输出是否含服务停止原因，选择继续收集事件或结束当前服务运行。"
+        "display_name": "判断返回结果后是否必须停止服务",
+        "description": "在“汇总整批结果并回告页面”流程中，检查已发送给页面的批次结果是否含有严重停止原因。有则结束本实例服务，没有则继续收集事件，确保调用方先收到处理结果，再进入相应后续状态。",
+        "definition_id": "era.service.route_fatal"
       },
       {
         "id": "continue_state",
-        "type_used": "era.service.continue_state",
-        "display_name": "继续服务",
-        "description": "本次结算已经执行完成的事件批次。将输出发布后的服务状态交给下一轮事件收集，供服务继续运行。"
+        "display_name": "交出下一轮收集事件的状态",
+        "description": "在“汇总整批结果并回告页面”流程中，本批结果已经发布后，将剩余事件、序号和定时安排交给下一轮服务循环。让后续聊天变化接着处理，并保留已经推进的服务进度。",
+        "definition_id": "era.service.continue_state"
       },
       {
         "id": "raise_fatal",
-        "type_used": "era.service.raise_fatal",
-        "display_name": "抛出致命服务错误",
-        "description": "本次结算已经执行完成的事件批次。在结果已发送给页面后，抛出需要停止服务的严重写入错误，使本轮服务结束，并保留已经报告的原因。"
+        "display_name": "在已回告原因后结束严重故障的服务",
+        "description": "在“汇总整批结果并回告页面”流程中，接收已向页面报告的严重故障原因，结束当前服务执行。这样写入状态无法确认等问题不会被当成正常批次继续，而原调用方已能收到发生了什么。",
+        "definition_id": "era.service.raise_fatal"
       },
       {
         "id": "resume_collection",
-        "type_used": "era.service.cycle.resume_collect",
-        "display_name": "恢复收集阶段",
-        "description": "本次结算已经执行完成的事件批次。把已发布批次的下一轮状态送回事件收集阶段，开始处理后续酒馆事件。"
+        "display_name": "批次结束后恢复事件收集",
+        "description": "在“汇总整批结果并回告页面”流程中，接收已发布结果后的下一轮服务状态，将服务切回事件收集。新的聊天变化和脚本请求从这里继续进入处理。",
+        "definition_id": "era.service.cycle.resume_collect"
       },
       {
         "id": "end",
-        "type_used": "era.service.terminal",
-        "display_name": "批次收尾结束",
-        "description": "结束汇总批次结果并发送给酒馆页面，输出本段流程的处理结果。"
+        "display_name": "结束汇总整批结果并回告页面",
+        "description": "标明“汇总整批结果并回告页面”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.service.terminal"
       }
     ],
     "edges": [
@@ -157,7 +163,7 @@
       {
         "type": "era.service.cycle.state",
         "cardinality": "exactly_one",
-        "display_name": "收集阶段状态",
+        "display_name": "服务当前处于收集还是执行及相应进度",
         "as": "cycleStateNext"
       }
     ]

@@ -1,30 +1,30 @@
 {
   "nodeset_imports": [],
   "type_key": "era.task.initialize",
-  "display_name": "初始化角色资源并安排历史同步",
-  "description": "为角色卡准备 ERA 所需的设置、世界书、状态栏正则和开场白：读取现有资源，规划差异，再按顺序提交。启动初始化资源就绪后，交回历史同步请求；其他资源操作或失败直接返回结果。",
+  "display_name": "准备角色 ERA 资源并接续历史同步",
+  "description": "读取现有设置、世界书、正则和开场白，比较后依次安装或更新所需资源。启动资源就绪时继续历史同步，其他资源操作或失败则直接形成任务结果，保留实际完成进度。",
   "requires": [
     {
       "type": "era.step.request.routed",
       "cardinality": "exactly_one",
-      "display_name": "已路由步骤"
+      "display_name": "当前任务及已读取的聊天资料"
     },
     {
       "type": "era.batch.execution.state",
       "cardinality": "exactly_one",
-      "display_name": "当前批次执行状态"
+      "display_name": "当前批次的任务进度与累计结果"
     },
     {
       "type": "era.task.continuation.context",
       "cardinality": "exactly_one",
-      "display_name": "原任务、事件来源、批次和回执资料"
+      "display_name": "执行后回告所需的原任务资料"
     }
   ],
   "provides": [
     {
       "key": "era_task_initialize_prepared_task",
       "type": "era.task.prepared",
-      "display_name": "待执行请求及原任务资料"
+      "display_name": "已备齐的执行请求或直接返回结论"
     }
   ],
   "pipeline": {
@@ -33,19 +33,19 @@
       {
         "key": "routed_step",
         "type": "era.step.request.routed",
-        "display_name": "已路由步骤",
+        "display_name": "当前任务及已读取的聊天资料",
         "required": true
       },
       {
         "key": "execution_state",
         "type": "era.batch.execution.state",
-        "display_name": "当前批次执行状态",
+        "display_name": "当前批次的任务进度与累计结果",
         "required": true
       },
       {
         "key": "continuation",
         "type": "era.task.continuation.context",
-        "display_name": "原任务、事件来源、批次和回执资料",
+        "display_name": "执行后回告所需的原任务资料",
         "required": true
       }
     ],
@@ -53,81 +53,81 @@
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.service.terminal",
-        "display_name": "初始化启动",
-        "description": "开始初始化角色资源并安排历史同步。"
+        "display_name": "开始准备角色 ERA 资源并接续历史同步",
+        "description": "标明“准备角色 ERA 资源并接续历史同步”的开始位置。读取现有设置、世界书、正则和开场白，比较后依次安装或更新所需资源。启动资源就绪时继续历史同步，其他资源操作或失败则直接形成任务结果，保留实际完成进度。",
+        "definition_id": "era.service.terminal"
       },
       {
         "id": "carry_preparation_context",
-        "type_used": "era.task.carry_preparation_context",
-        "display_name": "保留准备阶段的原任务来源",
-        "description": "本次处理酒馆启动或初始化请求。携带原任务、批次和事件来源穿过执行资料准备阶段，供执行与回执使用。"
+        "display_name": "保留任务准备前的原请求资料",
+        "description": "在“准备角色 ERA 资源并接续历史同步”流程中，让原任务、批次和事件来源穿过资料准备流程继续传递。执行和结算环节据此知道正在处理谁的请求，保留正确的回复依据。",
+        "definition_id": "era.task.carry_preparation_context"
       },
       {
         "id": "read_host_resources",
-        "type_used": "era.tavern.initialization_read",
-        "display_name": "读取双模式初始化与现有外置配置",
-        "description": "本次处理酒馆启动或初始化请求。从酒馆读取初始化需要的角色、聊天、设置、世界书、正则、开场白和外置配置。未指定模式时使用传统模式，输出当前资源事实。"
+        "display_name": "读取角色当前的 ERA 初始化资源",
+        "description": "在“准备角色 ERA 资源并接续历史同步”流程中，从酒馆读取角色和聊天资料、相关设置、世界书、正则、开场白及外置配置。把当前资源交给初始化比较，未指定模式时采用传统模式。",
+        "definition_id": "era.tavern.initialization_read"
       },
       {
         "id": "carry_execution_state",
-        "type_used": "era.initialize.carry_execution_state",
-        "display_name": "携带批次执行状态",
-        "description": "本次处理酒馆启动或初始化请求。把原始初始化批次传过资源准备流程，供初始化完成后继续同步及返回原事件回执。"
+        "display_name": "记住初始化请求所属的批次",
+        "description": "在“准备角色 ERA 资源并接续历史同步”流程中，让原初始化任务和批次资料随资源准备流程继续传递。资源完成后用这些资料继续历史同步，并把最终结果返回原发起者。",
+        "definition_id": "era.initialize.carry_execution_state"
       },
       {
         "id": "plan_resources",
-        "type_used": "era.initialize.plan",
-        "display_name": "规划双模式资源与完整围栏边界",
-        "description": "本次处理酒馆启动或初始化请求。比较当前设置、世界书、正则、示例变量、函数和开场白，规划首次使用 ERA 所需的资源变更。按传统或外置模式选择初始化内容，保留已经保存的作者资料。"
+        "display_name": "比较现有资源并规划 ERA 初始化",
+        "description": "在“准备角色 ERA 资源并接续历史同步”流程中，读取当前设置、世界书、状态栏正则、示例变量、函数和开场白，找出启用 ERA 需要的改动。按所选使用模式准备内容，并保留已有作者资料；这里只形成计划，实际写入交给执行环节。",
+        "definition_id": "era.initialize.plan"
       },
       {
         "id": "preserve_resources",
-        "type_used": "era.initialize.no_change",
-        "display_name": "保留现有资源",
-        "description": "本次处理酒馆启动或初始化请求。将无需修改的资源计划或准备失败结果传到提交阶段，保留其具体原因。"
+        "display_name": "保留无需修改或无法准备的资源结果",
+        "description": "在“准备角色 ERA 资源并接续历史同步”流程中，当前资源已经满足要求，或准备阶段已经失败时，将相应计划和原因交给后续结算。让初始化能够准确返回无变化或失败结果。",
+        "definition_id": "era.initialize.no_change"
       },
       {
         "id": "compute_resource_changes",
-        "type_used": "era.initialize.compute",
-        "display_name": "确认资源变更",
-        "description": "本次处理酒馆启动或初始化请求。传递已经生成的初始化资源计划，供后续写入请求组装使用。"
+        "display_name": "传递已准备的初始化计划",
+        "description": "在“准备角色 ERA 资源并接续历史同步”流程中，接收已经生成的资源初始化计划，原样交给写入请求组装环节。保留其中需要修改或不能执行的结论，使下一步使用同一份计划。",
+        "definition_id": "era.initialize.compute"
       },
       {
         "id": "build_resource_commit",
-        "type_used": "era.initialize.build_commit",
-        "display_name": "构造资源提交",
-        "description": "本次处理酒馆启动或初始化请求。将已经准备好的初始化资源变更计划包装为酒馆写入请求，交给浏览器执行。"
+        "display_name": "把初始化变更计划交给酒馆执行",
+        "description": "在“准备角色 ERA 资源并接续历史同步”流程中，接收已规划的 ERA 资源变化，整理成明确的写入请求。浏览器执行环节据此逐项更新资源并报告结果，本环节仍处于提交前的准备阶段。",
+        "definition_id": "era.initialize.build_commit"
       },
       {
         "id": "commit_host_resources",
-        "type_used": "era.tavern.initialization_commit",
-        "display_name": "提交初始化资源并决议首楼刷新",
-        "description": "本次处理酒馆启动或初始化请求。通过酒馆浏览器接口按顺序应用初始化资源计划，记录已确认的每项修改。保存角色开场白后读取当前首条消息，按规则更新、新建或保留，再保存并刷新显示；目标变化或部分失败时记录实际进度。"
+        "display_name": "按计划安装或更新角色的 ERA 资源",
+        "description": "在“准备角色 ERA 资源并接续历史同步”流程中，接收初始化资源变更计划，按顺序写入设置、世界书、正则和开场白等资源，并记录每项实际进度。开场白保存后按实际聊天决定更新、新建或保留首条消息；目标变化或部分失败时带回已完成内容和原因。",
+        "definition_id": "era.tavern.initialization_commit"
       },
       {
         "id": "route_completion",
-        "type_used": "era.initialize.build_result",
-        "display_name": "选择初始化完成方式",
-        "description": "本次处理酒馆启动或初始化请求。根据初始化资源的实际结果选择后续步骤：资源准备成功或无需修改时进入启动历史同步，其余情况返回当前任务结果。"
+        "display_name": "决定初始化后继续同步还是返回结果",
+        "description": "在“准备角色 ERA 资源并接续历史同步”流程中，检查资源初始化的实际结论。资源就绪或本来无需修改时继续历史同步，其余情况交出当前操作结果，避免资源未准备好就继续处理聊天。",
+        "definition_id": "era.initialize.build_result"
       },
       {
         "id": "prepare_startup_continuation",
-        "type_used": "era.initialize.prepare_startup_continuation",
-        "display_name": "返回启动同步请求与原任务",
-        "description": "本次处理酒馆启动或初始化请求。资源准备完成后取出启动历史同步请求和原批次，交给共享消息同步流程。"
+        "display_name": "把资源就绪后的聊天交给历史同步",
+        "description": "在“准备角色 ERA 资源并接续历史同步”流程中，ERA 所需资源已经准备好时，取出启动后的历史同步请求和原任务批次。让统一同步流程接着计算现有聊天中的变量，并保留原启动请求以便返回结果。",
+        "definition_id": "era.initialize.prepare_startup_continuation"
       },
       {
         "id": "prepare_resource_result",
-        "type_used": "era.initialize.prepare_resource_result",
-        "display_name": "返回不需同步的资源结果",
-        "description": "本次处理酒馆启动或初始化请求。将资源操作结果或错误与原事件资料一起整理，供初始化任务返回结果。"
+        "display_name": "整理无需继续同步的初始化结果",
+        "description": "在“准备角色 ERA 资源并接续历史同步”流程中，接收资源操作的成功值或错误，连同原事件交给初始化任务结算。用于本次只处理资源、或因问题不能继续启动历史同步的情况。",
+        "definition_id": "era.initialize.prepare_resource_result"
       },
       {
         "id": "end",
-        "type_used": "era.service.terminal",
-        "display_name": "初始化结束",
-        "description": "结束初始化角色资源并安排历史同步，输出本段流程的处理结果。"
+        "display_name": "结束准备角色 ERA 资源并接续历史同步",
+        "description": "标明“准备角色 ERA 资源并接续历史同步”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.service.terminal"
       }
     ],
     "edges": [
@@ -211,7 +211,7 @@
       {
         "type": "era.task.prepared",
         "cardinality": "exactly_one",
-        "display_name": "待执行请求及原任务资料",
+        "display_name": "已备齐的执行请求或直接返回结论",
         "as": "era_task_initialize_prepared_task"
       }
     ]

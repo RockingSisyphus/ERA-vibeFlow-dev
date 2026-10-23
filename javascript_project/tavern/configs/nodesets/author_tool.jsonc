@@ -1,20 +1,20 @@
 {
   "type_key": "era.tavern.flow.author_tool",
-  "display_name": "执行已安排的作者原生工具",
-  "description": "执行 begin 安排的 ToolManager 调用；异常形成作者诊断，完成后唤醒 next，不把此工具排进业务 FIFO。",
+  "display_name": "实际运行已安排的作者函数",
+  "description": "接收作者执行队列取出的函数和参数，调用酒馆注册的作者 JavaScript 工具并等待结束。记录实际错误或完成状态，再唤醒消息流程确认函数是否还有未处理操作。",
   "expand": true,
   "requires": [
     {
       "type": "era.tavern.call.frame",
       "cardinality": "exactly_one",
-      "display_name": "本次调用及实例资源令牌"
+      "display_name": "实际运行已安排的作者函数的请求和已有进度"
     }
   ],
   "provides": [
     {
       "key": "era_tavern_flow_author_tool_frame",
       "type": "era.tavern.task.finished",
-      "display_name": "操作结果及后续处理所需的资源令牌"
+      "display_name": "当前职责已真实完成或退出的确认"
     }
   ],
   "pipeline": {
@@ -23,7 +23,7 @@
       {
         "key": "frame",
         "type": "era.tavern.call.frame",
-        "display_name": "调用与资源资料",
+        "display_name": "实际运行已安排的作者函数的请求和已有进度",
         "required": true
       }
     ],
@@ -31,39 +31,39 @@
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.tavern.initialize.start",
-        "display_name": "开始当前原生流程",
-        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+        "display_name": "开始实际运行已安排的作者函数",
+        "description": "标明“实际运行已安排的作者函数”的开始位置。接收作者执行队列取出的函数和参数，调用酒馆注册的作者 JavaScript 工具并等待结束。记录实际错误或完成状态，再唤醒消息流程确认函数是否还有未处理操作。",
+        "definition_id": "era.tavern.initialize.start"
       },
       {
         "id": "read_call",
-        "type_used": "era.tavern.author_tool.read_call",
-        "display_name": "取得作者参数与有效性",
-        "description": "取得本实例已绑定的参数对象和调用身份，拒绝停止或失效上下文。"
+        "display_name": "读取已安排的作者函数和参数",
+        "description": "在“实际运行已安排的作者函数”流程中，接收作者执行队列交来的调用，确认本次运行资料存在。将作者函数名称、参数和有效性资料交给实际调用步骤。",
+        "definition_id": "era.tavern.author_tool.read_call"
       },
       {
         "id": "invoke_tool",
-        "type_used": "era.tavern.author_tool.invoke_tool",
-        "display_name": "调用 Tavern 原生作者工具",
-        "description": "执行 ToolManager.invokeFunctionTool；跨窗口 Error 仍按现有方式识别。"
+        "display_name": "执行作者注册的 JavaScript 函数",
+        "description": "在“实际运行已安排的作者函数”流程中，使用本次函数名称和参数调用酒馆注册的作者工具，并等待它实际结束。调用已取消或抛错时保留失败，后续统一记录完成状态并唤醒消息流程。",
+        "definition_id": "era.tavern.author_tool.invoke_tool"
       },
       {
         "id": "record_terminal",
-        "type_used": "era.tavern.author_tool.record_terminal",
-        "display_name": "保存作者调用终态",
-        "description": "记录 finished 或原错误诊断，保留已成功应用的此前请求。"
+        "display_name": "记录作者函数真正结束及错误",
+        "description": "在“实际运行已安排的作者函数”流程中，接收作者工具的实际完成结果，将失败原因写入本次调用并标记函数结束。后续等待方可以区分函数已完成与仍在运行。",
+        "definition_id": "era.tavern.author_tool.record_terminal"
       },
       {
         "id": "wake_next",
-        "type_used": "era.tavern.author_tool.wake_next",
-        "display_name": "唤醒作者请求等待者",
-        "description": "完成当前实际工作和应有收尾后只交回小的完成摘要；框架缓存不再持有本次请求、会话或私密函数引用。"
+        "display_name": "通知消息流程作者函数已结束",
+        "description": "在“实际运行已安排的作者函数”流程中，作者工具结束情况已经记录后，唤醒正在等它下一步的消息流程。返回本轮作者执行完成确认，外层才会取下一个作者调用。",
+        "definition_id": "era.tavern.author_tool.wake_next"
       },
       {
         "id": "end",
-        "type_used": "era.tavern.initialize.end",
-        "display_name": "结束当前原生流程",
-        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+        "display_name": "结束实际运行已安排的作者函数",
+        "description": "标明“实际运行已安排的作者函数”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.tavern.initialize.end"
       }
     ],
     "edges": [
@@ -92,7 +92,7 @@
       {
         "type": "era.tavern.task.finished",
         "cardinality": "exactly_one",
-        "display_name": "完成后的操作资料",
+        "display_name": "当前职责已真实完成或退出的确认",
         "as": "frame"
       }
     ]

@@ -1,0 +1,156 @@
+{
+  "type_key": "era.agent.prepare_generation_facts",
+  "display_name": "准备生成资料并按需还原变量起点",
+  "description": "读取当前正文、配置和生成进度，判断重试仍否有效，以及哪些较早阶段应保留。需要重建时按只读历史流程重算变量，成功后交出下一阶段起点，失败时保留原因。",
+  "requires": [
+    {
+      "type": "era.step.request.routed",
+      "cardinality": "exactly_one",
+      "display_name": "当前任务及已读取的聊天资料"
+    }
+  ],
+  "provides": [
+    {
+      "key": "generation_facts",
+      "type": "era.agent.generation.facts",
+      "display_name": "可用于判断生成阶段的聊天资料"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "input_0",
+        "type": "era.step.request.routed",
+        "display_name": "当前任务及已读取的聊天资料",
+        "required": true
+      }
+    ],
+    "max_steps": 35,
+    "nodes": [
+      {
+        "id": "start",
+        "definition_id": "era.service.terminal",
+        "display_name": "开始准备生成资料并按需还原变量起点",
+        "description": "标明“准备生成资料并按需还原变量起点”的开始位置。读取当前正文、配置和生成进度，判断重试仍否有效，以及哪些较早阶段应保留。需要重建时按只读历史流程重算变量，成功后交出下一阶段起点，失败时保留原因。"
+      },
+      {
+        "id": "read_facts",
+        "display_name": "确认生成阶段及应保留的正文",
+        "description": "在“准备生成资料并按需还原变量起点”流程中，读取当前生成配置、会话进度和工作正文，检查重试请求是否仍对应同一次生成。确定应保留哪些正文和消息身份，判断下一阶段是否需要先重建变量起点。",
+        "definition_id": "era.prepare_generation_facts.read_facts"
+      },
+      {
+        "id": "prepare_preview",
+        "display_name": "准备只读重算应保留的历史",
+        "description": "在“准备生成资料并按需还原变量起点”流程中，把需要保留的消息正文、变量、函数和历史记录整理成只读重算任务。后续按原顺序计算这些内容，为下一生成阶段还原变量起点，期间不改写聊天。",
+        "definition_id": "era.prepare_generation_facts.prepare_preview"
+      },
+      {
+        "id": "preview_history",
+        "definition_id": "vibeflow.loop.while",
+        "display_name": "只读还原下一生成阶段的变量起点",
+        "description": "逐消息、逐段计算需要保留的历史指令，使用与正式执行相同的操作规则。结束后交出重建变量和问题；不执行作者函数或保存聊天，供下一生成阶段使用可靠起点。",
+        "requires": [
+          {
+            "type": "era.sync.preview.state",
+            "cardinality": "exactly_one",
+            "display_name": "只读历史重算的当前位置和变量"
+          }
+        ],
+        "provides": [
+          {
+            "key": "preview_result",
+            "type": "era.sync.preview.state.next",
+            "display_name": "只读重算后的下一位置或结束结果"
+          }
+        ],
+        "loop": {
+          "body": "era.sync.preview_step",
+          "max_iterations": null,
+          "stop_when": {
+            "from": "iteration_done",
+            "equals": true
+          },
+          "carry": [
+            {
+              "from": "era.sync.preview.state",
+              "as": "preview_state",
+              "update": "state_next"
+            }
+          ],
+          "outputs": [
+            {
+              "from": "state_next",
+              "as": "preview_result"
+            }
+          ]
+        }
+      },
+      {
+        "id": "finish_preview",
+        "display_name": "采用历史重算得到的生成起点",
+        "description": "在“准备生成资料并按需还原变量起点”流程中，接收只读历史重算的结果，成功时用它更新下一生成阶段需要的变量、函数和保留正文。重算失败时返回原有原因，防止模型在未确认的历史状态上继续。",
+        "definition_id": "era.prepare_generation_facts.finish_preview"
+      },
+      {
+        "id": "finish_direct",
+        "display_name": "沿用无需历史重算的生成资料",
+        "description": "在“准备生成资料并按需还原变量起点”流程中，本次生成可以直接继续，或重试已经被判定过期时，原样交出已读取的生成资料与判断结果。让外层选择继续生成或返回原因，而不额外改动历史。",
+        "definition_id": "era.prepare_generation_facts.finish_direct"
+      },
+      {
+        "id": "end",
+        "definition_id": "era.service.terminal",
+        "display_name": "结束准备生成资料并按需还原变量起点",
+        "description": "标明“准备生成资料并按需还原变量起点”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。"
+      }
+    ],
+    "edges": [
+      [
+        "start",
+        "read_facts"
+      ],
+      {
+        "from": "read_facts",
+        "to": "prepare_preview",
+        "when": "route == 'preview'"
+      },
+      [
+        "prepare_preview",
+        "preview_history"
+      ],
+      [
+        "preview_history",
+        "finish_preview"
+      ],
+      {
+        "from": "read_facts",
+        "to": "finish_preview",
+        "schedule": false,
+        "when": "route == 'preview'"
+      },
+      {
+        "from": "read_facts",
+        "to": "finish_direct",
+        "when": "route == 'direct'"
+      },
+      [
+        "finish_preview",
+        "end"
+      ],
+      [
+        "finish_direct",
+        "end"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.agent.generation.facts",
+        "cardinality": "exactly_one",
+        "display_name": "可用于判断生成阶段的聊天资料",
+        "as": "generation_facts"
+      }
+    ]
+  }
+}

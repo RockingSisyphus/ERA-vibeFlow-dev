@@ -7,7 +7,7 @@ vi.hoisted(() => {
 });
 import { requestEraService } from '../../src/ERA变量框架/service/client';
 const view = vi.hoisted(() => ({ order: [] as string[], active: { macro: 0, ui: 0, dom: 0, api: 0 }, mounts: 0 }));
-vi.mock('../../src/ERA变量框架/macro/parser', () => ({
+vi.mock('../../src/ERA变量框架/macro/subsystem', () => ({
   startEraMacroSubsystem: () => {
     view.order.push('macro.start');
     view.active.macro++;

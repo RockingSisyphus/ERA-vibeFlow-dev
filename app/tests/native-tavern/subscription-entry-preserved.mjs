@@ -15,7 +15,8 @@ async function session() {
 const s = await session(),
   s2 = await session();
 const control = ({ request }) => sync({ request: { ...request, action: 'subscription_control' } });
-const publish = ({ request }) => asyncEntry({ request: { ...request, action: 'subscription_publish' } });
+const publish = ({ request }) =>
+  asyncEntry({ request: { ...request, action: 'subscription_publish' } }, { entry: 'operation' });
 const register = (listener, options = {}, owner = s) =>
   control({ request: { session: owner, operation: 'register', input: { listener, options } } }).result.result;
 // 夹具只提供同步捕获的资源，实际逐项调度调用生产Nodeset与原生Loop。
@@ -125,7 +126,7 @@ for (const owner of owners) {
 const report = {
   status: 'PASS',
   evidence:
-    'compiled Browser AOT control and subscription publishing Loop with captured resource fixtures; production not switched',
+    'compiled Browser AOT control and subscription publishing Loop with captured resource fixtures; full production App acceptance is separate',
   cases,
 };
 console.log(JSON.stringify(report));

@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 const cases = [],
   nativeOwner = await fixture(),
   session = nativeOwner.session;
-const receipt = ({ request }) => asyncEntry({ request: { ...request, action: 'generation_receipt' } });
+const receipt = ({ request }) =>
+  asyncEntry({ request: { ...request, action: 'generation_receipt' } }, { entry: 'operation' });
 const original = { eventId: 'original', sequence: 7, status: 'completed', value: { completionId: 'phase' } };
 const run = (result, owner = session) =>
   receipt({ request: { session: owner, originalReceipt: Promise.resolve(result) } }).then(x => x.result.result);
@@ -43,7 +44,7 @@ await nativeOwner.work;
 const report = {
   status: 'PASS',
   evidence:
-    'compiled native receipt workflow with captured original receipt and handoff resources; production not switched',
+    'compiled native receipt workflow with captured original receipt and handoff resources; full production App acceptance is separate',
   cases,
 };
 console.log(JSON.stringify(report));

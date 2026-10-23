@@ -1,20 +1,20 @@
 {
   "type_key": "era.tavern.flow.character_patch_external_statusbar_finish",
-  "display_name": "更新外置状态栏配置：角色卡与显示配置：等待与确认",
-  "description": "续用同步段已发起资源；保留原等待后的具体处理、结果核对与错误身份。",
+  "display_name": "确认外置状态栏配置保存并更新页面",
+  "description": "等待已经发起的角色卡外置状态栏配置保存，检查响应成功后同步页面资料并刷新外置状态栏。失败保留原因，成功返回设置更新确认。",
   "expand": true,
   "requires": [
     {
       "type": "era.tavern.call.frame",
       "cardinality": "exactly_one",
-      "display_name": "本次调用、实例资源与上一节点的事实"
+      "display_name": "确认外置状态栏配置保存并更新页面的请求和已有进度"
     }
   ],
   "provides": [
     {
       "key": "era_tavern_flow_character_patch_external_statusbar_finish_frame",
       "type": "era.tavern.call.frame",
-      "display_name": "处理后的资源与事实"
+      "display_name": "确认外置状态栏配置保存并更新页面的处理进度及结果"
     }
   ],
   "pipeline": {
@@ -23,7 +23,7 @@
       {
         "key": "frame",
         "type": "era.tavern.call.frame",
-        "display_name": "同实例调用与资源",
+        "display_name": "确认外置状态栏配置保存并更新页面的请求和已有进度",
         "required": true
       }
     ],
@@ -32,46 +32,46 @@
         "type": "era.tavern.call.frame",
         "cardinality": "exactly_one",
         "as": "frame",
-        "display_name": "本段明确结果"
+        "display_name": "确认外置状态栏配置保存并更新页面的处理进度及结果"
       }
     ],
     "max_steps": 10,
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.tavern.initialize.start",
-        "display_name": "开始当前原生流程",
-        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+        "display_name": "开始确认外置状态栏配置保存并更新页面",
+        "description": "标明“确认外置状态栏配置保存并更新页面”的开始位置。等待已经发起的角色卡外置状态栏配置保存，检查响应成功后同步页面资料并刷新外置状态栏。失败保留原因，成功返回设置更新确认。",
+        "definition_id": "era.tavern.initialize.start"
       },
       {
         "id": "execute",
-        "type_used": "era.tavern.character_patch_external_statusbar.execute",
-        "display_name": "等待本次更新外置状态栏配置：角色卡与显示配置的资源终态",
-        "description": "等待同步原生段已捕获的本次资源；检查所属实例和取消，不重发原 API，不执行后续回读或发布。"
+        "display_name": "等待角色显示设置保存响应（保存外置状态栏设置）",
+        "description": "在“确认外置状态栏配置保存并更新页面”流程中，本次处理“保存外置状态栏设置”。接收已经发起的角色卡显示设置写入，等待酒馆响应。后续检查成功状态，再让页面采用新的单层显示或外置状态栏设置。",
+        "definition_id": "era.tavern.character_patch_external_statusbar.execute"
       },
       {
         "id": "check_response",
-        "type_used": "era.tavern.character_patch_external_statusbar_finish.check_response",
-        "display_name": "核对角色设置保存响应",
-        "description": "只接受本次 merge-attributes 的成功响应；失败不能发布镜像。"
+        "display_name": "确认角色显示设置已保存成功（保存外置状态栏设置）",
+        "description": "在“确认外置状态栏配置保存并更新页面”流程中，本次处理“保存外置状态栏设置”。检查角色卡设置写入的响应，失败时报告原因。成功后才进入页面资料更新，避免界面显示的配置与真实保存结果不一致。",
+        "definition_id": "era.tavern.character_patch_external_statusbar_finish.check_response"
       },
       {
         "id": "publish_mirror",
-        "type_used": "era.tavern.character_patch_external_statusbar_finish.publish_mirror",
-        "display_name": "发布已保存角色镜像及 UI 选择",
-        "description": "成功后更新捕获的角色对象和 JSON 草稿，再按原界面职责刷新选择；不重新保存或重绘聊天。"
+        "display_name": "让页面采用已保存的角色显示设置（保存外置状态栏设置）",
+        "description": "在“确认外置状态栏配置保存并更新页面”流程中，本次处理“保存外置状态栏设置”。角色卡保存成功后，将新配置同步到当前页面持有的角色资料，并刷新单层显示或外置状态栏。返回更新确认，让用户立即看到已保存设置生效。",
+        "definition_id": "era.tavern.character_patch_external_statusbar_finish.publish_mirror"
       },
       {
         "id": "return_result",
-        "type_used": "era.tavern.character_patch_external_statusbar.return_result",
-        "display_name": "交还更新外置状态栏配置结果",
-        "description": "返回原 era.tavern.character.external_statusbar.result 结果；需要脱敏的连接资料只返回摘要。"
+        "display_name": "交回“保存外置状态栏设置”的实际结果",
+        "description": "在“确认外置状态栏配置保存并更新页面”流程中，接收“保存外置状态栏设置”已经执行得到的结果，复核实例和本次调用尚未取消后交回发起者。调用方据此继续业务或显示结果，取消时按实际原因结束等待。",
+        "definition_id": "era.tavern.character_patch_external_statusbar.return_result"
       },
       {
         "id": "end",
-        "type_used": "era.tavern.initialize.end",
-        "display_name": "结束当前原生流程",
-        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+        "display_name": "结束确认外置状态栏配置保存并更新页面",
+        "description": "标明“确认外置状态栏配置保存并更新页面”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.tavern.initialize.end"
       }
     ],
     "edges": [

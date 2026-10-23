@@ -8,7 +8,7 @@ export function CloseIngress(inputs: any, params: any): any {
   s.stopping = true;
   s.started = false;
   f.result = {closed: true};
-  s.backgroundWaiter?.resolve();
+  s.authorWake?.resolve();s.notificationWake?.resolve();s.timerWake?.resolve();
   return emit({frame: f}, params);
 }
 export function CancelGenerations(inputs: any, params: any): any {
@@ -37,7 +37,7 @@ export function AbortWaiters(inputs: any, params: any): any {
   s.operational.abort(reason);
   s.pendingReceive?.reject(reason);
   s.pendingReceive = null;
-  s.backgroundWaiter?.resolve();
+  s.authorWake?.resolve();s.notificationWake?.resolve();s.timerWake?.resolve();
   return emit({frame: f}, params);
 }
 export function RemoveListeners(inputs: any, params: any): any {
@@ -75,20 +75,5 @@ export function ClearPrompt(inputs: any, params: any): any {
   const f = takeFrame(inputs);
   try { dispatchUi(f.session.api,"era-sidecar-binding-prompt",null); }
   catch (error: any) { warn(f.session, "清理 ERA Sidecar 绑定弹窗时发生异常。", {error: error.message}); }
-  return emit({frame: f}, params);
-}
-export async function AwaitBackground(inputs: any, params: any): Promise<any> {
-  const f = takeFrame(inputs);
-  await Promise.allSettled([...f.session.activeNotifications]);
-  return emit({frame: f}, params);
-}
-export function ReleaseSession(inputs: any, params: any): any {
-  const f = takeFrame(inputs);
-  const s = f.session;
-  s.queue.length = 0; s.queueBytes = 0;
-  s.refs.clear(); s.refsBySequence.clear(); s.failureLedger.clear(); s.processedFrames.clear();
-  s.fatalTransitioning = false; s.fatalLatched = false;
-
-  f.result = undefined;
   return emit({frame: f}, params);
 }

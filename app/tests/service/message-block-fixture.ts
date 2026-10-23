@@ -1,12 +1,7 @@
 import * as source from '../../../javascript_project/service/nodes/sync/core_position_nodes.ts';
 import * as author from '../../../javascript_project/service/nodes/sync/core_author_nodes.ts';
-import * as operation from '../../../javascript_project/service/nodes/sync/core_operation_nodes.ts';
+import { applyOperations } from './native-workflow-fixture';
 import { routeAuthorLifecycle } from '../../../javascript_project/service/base_lib/sync/position_author';
-import {
-  completeOperations,
-  settleOperation,
-  skipOperation,
-} from '../../../javascript_project/service/base_lib/domain/commands/operation_traversal';
 
 /** 生命周期测试使用正式业务动作；正式 Config 的数据连线另由 AOT 探针和真实回归验证。 */
 export async function run(inputs: any, _params: any, context: any): Promise<any> {
@@ -41,39 +36,7 @@ export async function run(inputs: any, _params: any, context: any): Promise<any>
   } else if (selected.message_action === 'operations') {
     const seeded = source.PrepareMessageOperationsNode(positionInput());
     position = seeded.seed_command_operations_position_state;
-    let state = seeded.seed_command_operations_operation_state;
-    while (!state.done) {
-      const next = operation.SelectBusinessOperationNode({ 'era.command.operation.state': { value: state } });
-      state = next.take_next_operation_operation_state;
-      const input = { 'era.command.operation.state': { value: state } };
-      switch (next.take_next_operation_operation_route) {
-        case 'insert':
-          state = operation.ApplyInsertActionNode(input).apply_insert_action_operation_state;
-          break;
-        case 'edit':
-          state = operation.ApplyEditActionNode(input).apply_edit_action_operation_state;
-          break;
-        case 'delete':
-          state = operation.ApplyDeleteActionNode(input).apply_delete_action_operation_state;
-          break;
-        case 'function-group':
-          state = (await operation.ApplyFunctionGroupActionNode(input, {}, context))
-            .apply_function_group_action_operation_state;
-          break;
-        case 'stage-call':
-          state = operation.ApplyStageCallActionNode(input).apply_stage_call_action_operation_state;
-          break;
-        case 'skip':
-          state = skipOperation(state);
-          break;
-        case 'done':
-          state = completeOperations(state);
-          break;
-        default:
-          throw new Error('未知业务操作 ' + next.take_next_operation_operation_route);
-      }
-      if (!state.done) state = settleOperation(state);
-    }
+    const state = await applyOperations(seeded.seed_command_operations_operation_state, context);
     position = source.AcceptMessageOperationsNode({
       ...positionInput(),
       'era.command.operation.result': { value: state },

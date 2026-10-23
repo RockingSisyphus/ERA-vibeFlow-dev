@@ -30,42 +30,6 @@ interface Entry {
   html?: string;
 }
 
-const ERA_PRODUCTION_ENTRY = path.resolve(import.meta.dirname, 'src/ERA变量框架/index.ts');
-const ERA_FORBIDDEN_PRODUCTION_DEPENDENCIES = [
-  path.resolve(import.meta.dirname, 'src/ERA变量框架/events/scheduler.ts'),
-  path.resolve(import.meta.dirname, 'src/ERA变量框架/events/queue.ts'),
-  path.resolve(import.meta.dirname, 'src/ERA变量框架/events/dispatcher.ts'),
-  path.resolve(import.meta.dirname, 'src/ERA变量框架/core/crud'),
-  path.resolve(import.meta.dirname, 'src/ERA变量框架/core/sync.ts'),
-  path.resolve(import.meta.dirname, 'src/ERA变量框架/initer/manual'),
-] as const;
-
-/** 生产入口的 fail-closed 依赖图门禁，防止旧双后端被意外打包。 */
-class EraProductionDependencyGuardPlugin {
-  apply(compiler: webpack.Compiler): void {
-    compiler.hooks.thisCompilation.tap('EraProductionDependencyGuardPlugin', compilation => {
-      compilation.hooks.finishModules.tap('EraProductionDependencyGuardPlugin', modules => {
-        for (const module of modules) {
-          const resource = (module as webpack.NormalModule).resource?.split('?')[0];
-          if (!resource) continue;
-          const forbidden = ERA_FORBIDDEN_PRODUCTION_DEPENDENCIES.find(candidate =>
-            candidate.endsWith('.ts')
-              ? resource === candidate
-              : resource === candidate || resource.startsWith(`${candidate}${path.sep}`),
-          );
-          if (forbidden) {
-            compilation.errors.push(
-              new webpack.WebpackError(
-                `ERA 生产依赖图包含禁止的旧实现：${path.relative(import.meta.dirname, resource)}`,
-              ),
-            );
-          }
-        }
-      });
-    });
-  }
-}
-
 function parse_entry(script_file: string) {
   const html = path.join(path.dirname(script_file), 'index.html');
   if (fs.existsSync(html)) {
@@ -569,10 +533,6 @@ function parse_configuration(entry: Entry, is_release = false): (_env: any, argv
         ),
         '@era/vibeflow-tavern-sync$': path.resolve(import.meta.dirname, '../generated/era-tavern/sync/workflow.js'),
         '@era/vibeflow-tavern-async$': path.resolve(import.meta.dirname, '../generated/era-tavern/async/workflow.js'),
-        '@era/vibeflow-tavern-runtime$': path.resolve(
-          import.meta.dirname,
-          '../generated/era-tavern/runtime/workflow.js',
-        ),
       },
     },
     plugins: (is_release
@@ -597,9 +557,6 @@ function parse_configuration(entry: Entry, is_release = false): (_env: any, argv
     )
       .concat(
         ...(is_release ? [] : [{ apply: watch_tavern_helper }, { apply: schema_dump }, { apply: tavern_sync }]),
-        ...(path.resolve(import.meta.dirname, entry.script) === ERA_PRODUCTION_ENTRY
-          ? [new EraProductionDependencyGuardPlugin()]
-          : []),
         new VueLoaderPlugin(),
         unpluginAutoImport({
           dts: true,

@@ -1,5 +1,4 @@
 {
-  "host_extensions": [],
   "global_config": {
     "config": {},
     "allow_config_override": false
@@ -15,13 +14,13 @@
       {
         "key": "substring",
         "type": "era.macro.substring",
-        "display_name": "宏文本片段",
+        "display_name": "待处理的聊天或提示词文字",
         "required": true
       },
       {
         "key": "storedStat",
         "type": "era.macro.stored_stat",
-        "display_name": "已存 ERA 状态",
+        "display_name": "本次提供的已保存变量资料",
         "required": true
       }
     ],
@@ -29,46 +28,46 @@
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.macro.terminal",
-        "display_name": "开始宏解析",
-        "description": "这是“era.macro”的入口标记。本工作流的结构起点或终点标记，执行时返回空结果，不计算表达式、不替换文本，也不读写酒馆。它只明确流程的入口或出口，业务输入与结果通过已声明的数据通道传递；最终结果由实际处理节点产生。"
+        "display_name": "开始变量宏替换",
+        "description": "标明“变量宏替换”的开始位置。把文字里的 ERA 宏替换为本次变量读数。",
+        "definition_id": "era.macro.terminal"
       },
       {
         "id": "quick_check",
-        "type_used": "era.macro.quick_check",
-        "display_name": "按调用场景准备文本并检测宏",
-        "description": "接收文本和调用方指定的处理模式，先决定本次可替换哪些内容：原始模式检测普通 ERA 宏，延迟模式只检测编码后的延迟标记，提示模式先去掉严格配对的 ERA 技术块再检测延迟标记。没有快照的提示只清除技术块。输出处理后的文本及是否需要替换的标志，不读取宿主状态。"
+        "display_name": "判断这段文字需要替换哪些宏",
+        "description": "在“变量宏替换”流程中，接收聊天文字或发给模型的提示词，按本次用途检查可替换的 ERA 变量标记。提示词会先去掉内部操作内容；没有可替换标记时直接保留整理后的文字，有标记时再读取本次提供的变量资料。",
+        "definition_id": "era.macro.quick_check"
       },
       {
         "id": "identity",
-        "type_used": "era.macro.identity",
-        "display_name": "保留非宏文本",
-        "description": "当快速检查没有发现当前模式允许替换的宏时，直接返回已经准备好的文本，跳过快照和逐项替换。这里不是重新返回最初输入：提示文本可能已在准备阶段去掉技术块，这些处理会保留。不会猜测宏值或读取聊天变量。"
+        "display_name": "直接使用无需替换的文字",
+        "description": "在“变量宏替换”流程中，本次文字没有需要展开的变量宏时，直接采用检查步骤整理好的文字。提示词此前清除的内部操作内容仍保持清除，结果与完成宏替换的分支一起交给统一出口。",
+        "definition_id": "era.macro.identity"
       },
       {
         "id": "build_snapshot",
-        "type_used": "era.macro.build_snapshot",
-        "display_name": "接收已选视图或构建原宏快照",
-        "description": "为宏替换选定同一次调用使用的两种变量视图：已存 JSON 状态先反转义，并生成含元数据和去除美元前缀字段的视图；调用方显式给出的视图则直接沿用，不二次处理。状态缺失保留缺失标记。后续所有匹配共用这份视图，避免一段文本中的宏读到不同时间的变量。"
+        "display_name": "为整段文字选定同一份变量",
+        "description": "在“变量宏替换”流程中，接收已经保存的 ERA 变量，整理出普通显示和需要内部记录时使用的两份读数。调用方已经选好读数时直接采用；资料缺失时记为不可用。整段文字共用这一份资料，避免各个宏显示出不同时间的状态。",
+        "definition_id": "era.macro.build_snapshot"
       },
       {
         "id": "replace_all",
-        "type_used": "era.macro.replace_all",
-        "display_name": "替换全部 ERA 宏",
-        "description": "把一段准备好的文本按本次变量快照展开：扫描普通宏或延迟标记的位置，解析变量路径及含元数据选择，把对象或标量格式化，再拼回字符串。缺失状态或无效编码保留原文，快照可用但路径没有值时替换为空文本，延迟模式不会顺带替换标记外的普通宏。全程是同步纯计算，不读写酒馆，也不会执行消息中的变量指令。"
+        "display_name": "把整段文字中的变量宏替换成读数",
+        "description": "本环节用于“变量宏替换”：接收一段文字及本次选定的变量资料，依次找出宏、读取对应值，再拼回完整文字。资料缺失或延迟标记损坏时保留原文，变量本身缺项时填空；结果供页面显示或模型提示使用。",
+        "definition_id": "era.macro.replace_all"
       },
       {
         "id": "output_join",
-        "type_used": "era.macro.output_join",
-        "display_name": "选择宏结果",
-        "description": "接收已激活分支的唯一文本候选：可能是无需替换时的准备后文本，也可能是完成宏展开后的文本。直接返回稳定的公开结果，不选择另一份候选或再计算一次。该汇合让调用方无需知道走了哪个分支，也不引入宿主读写。",
-        "join_policy": "safe_any"
+        "display_name": "返回本次得到的最终文字",
+        "description": "在“变量宏替换”流程中，接收本次实际走到的文字结果：可能是无需替换的文字，也可能是已填入变量的文字。将这份结果返回调用方，用于状态栏、聊天显示或模型提示。",
+        "join_policy": "safe_any",
+        "definition_id": "era.macro.output_join"
       },
       {
         "id": "end",
-        "type_used": "era.macro.terminal",
-        "display_name": "结束宏解析",
-        "description": "这是“era.macro”的出口标记。本工作流的结构起点或终点标记，执行时返回空结果，不计算表达式、不替换文本，也不读写酒馆。它只明确流程的入口或出口，业务输入与结果通过已声明的数据通道传递；最终结果由实际处理节点产生。"
+        "display_name": "结束变量宏替换",
+        "description": "标明“变量宏替换”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.macro.terminal"
       }
     ],
     "edges": [
@@ -107,7 +106,7 @@
       {
         "type": "era.macro.replacement",
         "cardinality": "exactly_one",
-        "display_name": "宏替换结果",
+        "display_name": "返回给调用方的宏处理文字",
         "as": "replacement"
       }
     ]
@@ -116,16 +115,17 @@
     {
       "source": {
         "kind": "file",
-        "ref": "plugins/schemas.ts",
-        "export": "plugin"
-      }
-    },
-    {
-      "source": {
-        "kind": "file",
-        "ref": "plugins/era.ts",
-        "export": "plugin"
+        "ref": "plugins/contracts/plugin.ts"
       }
     }
-  ]
+  ],
+  "base_lib": {
+    "modules": [
+      "era.data_view",
+      "era.macro.lodash_get",
+      "era.macro.macro_syntax",
+      "era.macro.runtime",
+      "era.macro.technical_blocks"
+    ]
+  }
 }

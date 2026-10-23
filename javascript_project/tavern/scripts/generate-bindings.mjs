@@ -4,7 +4,7 @@ export function generateBindings(declaration) {
   const quote=JSON.stringify;
   const lines=['// GENERATED from bindings.jsonc. Do not edit.','export async function runEra(entries, options = {}) {','  let session;'];
   lines.push('  const syncFrame = frame => entries.sync({request:{...options,...frame,session,dispatch}}).result;');
-  lines.push('  const asyncFrame = async frame => (await entries.async({request:{...options,...frame,session,dispatch}})).result;');
+  lines.push('  const asyncFrame = async frame => (await entries.async({request:{...options,...frame,session,dispatch}},{entry:"operation"})).result;');
   lines.push('  const dispatch = {', '    bindSession: frame => { session = frame.session; return frame; },', '    runService: (inputs, callOptions) => entries.service(inputs, {signal:callOptions.signal,capabilities}),');
   for(const recipe of declaration.dispatch_recipes) {
     const asyncRecipe=recipe.steps.some(step=>step.entry==='async');
@@ -48,6 +48,6 @@ export function generateBindings(declaration) {
     `    readAgentSession: () => syncFrame({...${JSON.stringify(client.agent_context)},input:{}}).result.session,`,
     `    diagnostics: () => syncFrame({action:${quote(client.diagnostics_action)}}).result,`,
     '  };');
-  lines.push(`  return (await entries.${declaration.native_entry.entry}({request:{...options,dispatch,capabilities,presentationClient}},{signal:options.signal})).result;`);
+  lines.push(`  return (await entries.${declaration.native_entry.entry}({request:{...options,dispatch,capabilities,presentationClient}},{entry:${quote(declaration.native_entry.workflow_entry)},signal:options.signal})).result;`);
   lines.push('}','');return lines.join('\n');
 }

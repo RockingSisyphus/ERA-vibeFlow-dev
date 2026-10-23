@@ -1,4 +1,4 @@
-// Generated from Service base_lib/domain; do not edit.
+// Generated from Service base_lib/workbench; do not edit.
 /** 工作台共享纯计算；生产 Service 节点与 UI 预览由同一源码构建。 */
 import { isRecord, jsonEqual, valueAtPath, operation } from './workbench_operations.js';
 function metaAt(value) {

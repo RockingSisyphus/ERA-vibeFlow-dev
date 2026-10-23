@@ -1,20 +1,20 @@
 {
   "type_key": "era.tavern.flow.subscription_publish",
-  "display_name": "原生发布一个生成阶段",
-  "description": "同步通知发起只捕获资源并调用此编译后的异步workflow；顺序等待不在共享库或旧class内。",
+  "display_name": "将阶段结果依次交给作者回调",
+  "description": "接收本次已经捕获的订阅周期，准备同一份只读阶段结果，按原顺序执行有效回调。最后解除周期登记，并返回阶段是否仍可继续，供生成交接使用。",
   "expand": true,
   "requires": [
     {
       "type": "era.tavern.call.frame",
       "cardinality": "exactly_one",
-      "display_name": "本次实例及调用资料"
+      "display_name": "将阶段结果依次交给作者回调的请求和已有进度"
     }
   ],
   "provides": [
     {
       "key": "subscription_publish_frame",
       "type": "era.tavern.frame.subscription_publish.released",
-      "display_name": "本流程实际结果"
+      "display_name": "将阶段结果依次交给作者回调的处理进度及结果"
     }
   ],
   "pipeline": {
@@ -24,39 +24,38 @@
         "key": "frame",
         "type": "era.tavern.call.frame",
         "required": true,
-        "display_name": "本次实例及调用资料"
+        "display_name": "将阶段结果依次交给作者回调的请求和已有进度"
       }
     ],
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.tavern.initialize.start",
-        "display_name": "开始当前原生流程",
-        "description": "标记本段原生流程的控制边界，不创建资源或重复输出。"
+        "display_name": "开始将阶段结果依次交给作者回调",
+        "description": "标明“将阶段结果依次交给作者回调”的开始位置。接收本次已经捕获的订阅周期，准备同一份只读阶段结果，按原顺序执行有效回调。最后解除周期登记，并返回阶段是否仍可继续，供生成交接使用。",
+        "definition_id": "era.tavern.initialize.start"
       },
       {
         "id": "read_cycle",
-        "type_used": "era.tavern.subscription_publish.read_cycle",
-        "display_name": "读取同步捕获的订阅周期",
-        "description": "复核属于此实例的周期资源；列表、只读completion及周期控制器已经由同步通知发起节点固定。"
+        "display_name": "准备本阶段只读结果和回调顺序",
+        "description": "在“将阶段结果依次交给作者回调”流程中，确认订阅周期属于当前实例，复制并冻结本阶段完成资料，从第一个已捕获回调开始。后续作者按序读到同一份阶段结果。",
+        "definition_id": "era.tavern.subscription_publish.read_cycle"
       },
       {
         "id": "publish_loop",
-        "type_used": "vibeflow.loop.while",
-        "display_name": "按原顺序等待当前阶段订阅",
-        "description": "每轮只处理一个捕获的订阅；无忙轮询，取消或列表终态后退出。",
+        "display_name": "按序等待本阶段所有有效作者回调",
+        "description": "按本阶段捕获的订阅清单逐项检查并执行匹配回调，等待本项结束后再处理下一项。取消或清单结束时退出，返回本阶段是否仍允许继续生成。",
         "requires": [
           {
             "type": "era.tavern.frame.subscription_publish.read_cycle",
             "cardinality": "exactly_one",
-            "display_name": "捕获的订阅周期资源"
+            "display_name": "将阶段结果依次交给作者回调的请求和已有进度"
           }
         ],
         "provides": [
           {
             "key": "subscription_publish_loop_frame",
             "type": "era.tavern.call.frame",
-            "display_name": "完成的订阅周期"
+            "display_name": "将阶段结果依次交给作者回调的处理进度及结果"
           }
         ],
         "loop": {
@@ -79,19 +78,20 @@
               "as": "subscription_publish_loop_frame"
             }
           ]
-        }
+        },
+        "definition_id": "vibeflow.loop.while"
       },
       {
         "id": "release_cycle",
-        "type_used": "era.tavern.subscription_publish.release_cycle",
-        "display_name": "释放周期并交还是否继续生成",
-        "description": "移除本实例active周期；只有周期未取消才返回proceed=true，注销单个订阅不会取消整个生成。"
+        "display_name": "结束阶段订阅并返回能否继续生成",
+        "description": "在“将阶段结果依次交给作者回调”流程中，全部阶段回调结束或取消后，从实例移除本周期记录，返回周期是否仍有效。阶段交接流程据此提交继续或取消请求。",
+        "definition_id": "era.tavern.subscription_publish.release_cycle"
       },
       {
         "id": "end",
-        "type_used": "era.tavern.initialize.end",
-        "display_name": "结束当前原生流程",
-        "description": "标记本段原生流程的控制边界，不创建资源或重复输出。"
+        "display_name": "结束将阶段结果依次交给作者回调",
+        "description": "标明“将阶段结果依次交给作者回调”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.tavern.initialize.end"
       }
     ],
     "edges": [
@@ -117,7 +117,7 @@
         "type": "era.tavern.frame.subscription_publish.released",
         "cardinality": "exactly_one",
         "as": "frame",
-        "display_name": "当前实际结果"
+        "display_name": "将阶段结果依次交给作者回调的处理进度及结果"
       }
     ],
     "max_steps": 8

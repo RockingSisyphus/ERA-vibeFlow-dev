@@ -1,20 +1,20 @@
 {
   "type_key": "era.tavern.flow.function_submit",
-  "display_name": "同步接纳作者函数请求",
-  "description": "作者 Facade 回调只转交此原生同步入口；准入、序号、回执、入队和唤醒都由 Node 执行。",
+  "display_name": "接收作者函数提出的变量操作",
+  "description": "确认作者函数仍有效，读取上下文时交出它的接口，提交操作时分配编号、加入本次调用请求队列并唤醒消息流程。返回对应结果等待，实际变量计算由主服务在原正文位置完成。",
   "expand": true,
   "requires": [
     {
       "type": "era.tavern.call.frame",
       "cardinality": "exactly_one",
-      "display_name": "本次调用、资源句柄与处理位置"
+      "display_name": "接收作者函数提出的变量操作的请求和已有进度"
     }
   ],
   "provides": [
     {
       "key": "era_tavern_flow_function_submit_frame",
       "type": "era.tavern.frame.function_submit.return_request",
-      "display_name": "本次原生步骤的资源与事实"
+      "display_name": "接收作者函数提出的变量操作的处理进度及结果"
     }
   ],
   "pipeline": {
@@ -24,45 +24,45 @@
         "key": "frame",
         "type": "era.tavern.call.frame",
         "required": true,
-        "display_name": "原作者请求"
+        "display_name": "接收作者函数提出的变量操作的请求和已有进度"
       }
     ],
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.tavern.initialize.start",
-        "display_name": "开始当前原生流程",
-        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+        "display_name": "开始接收作者函数提出的变量操作",
+        "description": "标明“接收作者函数提出的变量操作”的开始位置。确认作者函数仍有效，读取上下文时交出它的接口，提交操作时分配编号、加入本次调用请求队列并唤醒消息流程。返回对应结果等待，实际变量计算由主服务在原正文位置完成。",
+        "definition_id": "era.tavern.initialize.start"
       },
       {
         "id": "check_call",
-        "type_used": "era.tavern.function_submit.check_call",
-        "display_name": "检查作者调用并区分上下文读取与请求提交",
-        "description": "从本实例参数绑定表或调用ID取得调用，复核活跃状态、取消信号和消息依据；上下文读取直接返回已有Facade，请求提交才分配序号和回执。"
+        "display_name": "确认作者函数仍可提交请求",
+        "description": "在“接收作者函数提出的变量操作”流程中，根据函数参数或调用身份找到当前有效的作者运行资料，必要时检查目标消息仍一致。区分读取函数上下文与提交操作，过期调用返回原因，避免旧函数继续修改当前聊天。",
+        "definition_id": "era.tavern.function_submit.check_call"
       },
       {
         "id": "allocate_request",
-        "type_used": "era.tavern.function_submit.allocate_request",
-        "display_name": "分配当前调用请求与回执",
-        "description": "只为该作者调用递增请求 ID、克隆 payload 并建立局部 Promise，不进入外部业务 FIFO。"
+        "display_name": "为作者提出的操作建立结果等待",
+        "description": "在“接收作者函数提出的变量操作”流程中，接收作者函数要提交的操作种类和内容，为它分配本次调用内的编号并保存结果等待。后续执行完成后能把相应处理确认返回给正确的一项请求。",
+        "definition_id": "era.tavern.function_submit.allocate_request"
       },
       {
         "id": "enqueue_request",
-        "type_used": "era.tavern.function_submit.enqueue_request",
-        "display_name": "将请求交给原作者通道",
-        "description": "按顺序入队到当前调用的 requests/pending，随后唤醒已登记的 next 等待。"
+        "display_name": "把作者操作交给当前消息流程",
+        "description": "在“接收作者函数提出的变量操作”流程中，将作者刚提出的变量提交等操作放入本次函数的请求队列，登记待确认记录并唤醒主服务等待。主服务可以在当前正文位置处理它，再回告函数结果。",
+        "definition_id": "era.tavern.function_submit.enqueue_request"
       },
       {
         "id": "return_request",
-        "type_used": "era.tavern.function_submit.return_request",
-        "display_name": "交还作者上下文或本次请求回执",
-        "description": "上下文路径交还已绑定Facade，提交路径交还新请求Promise；均不执行Service变量规则。"
+        "display_name": "交回作者接口或本次操作的等待结果",
+        "description": "在“接收作者函数提出的变量操作”流程中，读取作者上下文时交出本次有效接口；提交操作时交出这项操作的结果等待。作者函数可以等到消息流程实际处理后继续执行。",
+        "definition_id": "era.tavern.function_submit.return_request"
       },
       {
         "id": "end",
-        "type_used": "era.tavern.initialize.end",
-        "display_name": "结束当前原生流程",
-        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+        "display_name": "结束接收作者函数提出的变量操作",
+        "description": "标明“接收作者函数提出的变量操作”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.tavern.initialize.end"
       }
     ],
     "edges": [
@@ -98,7 +98,7 @@
         "type": "era.tavern.frame.function_submit.return_request",
         "cardinality": "exactly_one",
         "as": "frame",
-        "display_name": "作者请求 done"
+        "display_name": "接收作者函数提出的变量操作的处理进度及结果"
       }
     ],
     "max_steps": 10

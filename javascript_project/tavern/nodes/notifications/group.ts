@@ -20,7 +20,7 @@ export function RecordResult(inputs:any,params:any):any {
 }
 export function ChooseComplete(inputs:any,params:any):any {const f=takeFrame(inputs);return emit(route(f,f.notificationGroup.remaining?"pending":"complete"),params);}
 export function ScheduleFinish(inputs:any,params:any):any {
-  const f=takeFrame(inputs),s=f.session;s.tasks.push({kind:"notification_finalize",notificationGroup:f.notificationGroup});s.backgroundWaiter?.resolve();
+  const f=takeFrame(inputs),s=f.session;s.notificationEvents.push({kind:"notification_finalize",notificationGroup:f.notificationGroup});s.notificationWake?.resolve();
   return emit({frame:f},params);
 }
 export function ReadGroup(inputs:any,params:any):any {const f=takeFrame(inputs);f.reportIndex=0;return emit({frame:f},params);}

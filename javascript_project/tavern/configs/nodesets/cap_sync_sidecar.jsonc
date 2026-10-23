@@ -1,20 +1,20 @@
 {
   "type_key": "era.tavern.flow.cap_sync_sidecar",
-  "display_name": "独立状态文件与内存快照操作",
-  "description": "共享同一职责组的原操作与必要的等待前发起；无额外 cap 总分组。",
+  "display_name": "分派独立状态文件和变量快照操作",
+  "description": "接收独立状态文件和变量快照请求，按操作种类选择读取、修改或异步请求的发起流程。各分支分别保持自己的目标检查和实际结果，最后把本次选中操作的唯一结果交给调用方。",
   "expand": true,
   "requires": [
     {
       "type": "era.tavern.call.frame",
       "cardinality": "exactly_one",
-      "display_name": "本次调用、实例资源与上一节点的事实"
+      "display_name": "分派独立状态文件和变量快照操作的请求和已有进度"
     }
   ],
   "provides": [
     {
       "key": "era_tavern_flow_cap_sync_sidecar_frame",
       "type": "era.tavern.frame.final.cap_sync_sidecar",
-      "display_name": "处理后的资源与事实"
+      "display_name": "分派独立状态文件和变量快照操作的处理进度及结果"
     }
   ],
   "pipeline": {
@@ -23,7 +23,7 @@
       {
         "key": "frame",
         "type": "era.tavern.call.frame",
-        "display_name": "同实例调用与资源",
+        "display_name": "分派独立状态文件和变量快照操作的请求和已有进度",
         "required": true
       }
     ],
@@ -32,184 +32,184 @@
         "type": "era.tavern.frame.final.cap_sync_sidecar",
         "cardinality": "exactly_one",
         "as": "frame",
-        "display_name": "本段明确结果"
+        "display_name": "分派独立状态文件和变量快照操作的处理进度及结果"
       }
     ],
     "max_steps": 33,
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.tavern.initialize.start",
-        "display_name": "开始当前原生流程",
-        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+        "display_name": "开始分派独立状态文件和变量快照操作",
+        "description": "标明“分派独立状态文件和变量快照操作”的开始位置。接收独立状态文件和变量快照请求，按操作种类选择读取、修改或异步请求的发起流程。各分支分别保持自己的目标检查和实际结果，最后把本次选中操作的唯一结果交给调用方。",
+        "definition_id": "era.tavern.initialize.start"
       },
       {
         "id": "choose",
-        "type_used": "era.tavern.cap_sync_sidecar.choose",
-        "display_name": "识别独立状态文件与内存快照操作",
-        "description": "按已声明操作名选择唯一原生路径；即时操作、同步完成的 Promise 操作及真正等待前的发起共享本职责组，不重复分组。"
+        "display_name": "选择独立状态文件和变量快照的具体操作",
+        "description": "在“分派独立状态文件和变量快照操作”流程中，接收独立状态文件和变量快照请求，读取明确操作种类，选择本组已声明的一条处理路径。未知操作报告原因，有效操作交给对应步骤完成，并返回实际结果。",
+        "definition_id": "era.tavern.cap_sync_sidecar.choose"
       },
       {
         "id": "route_read_current__check_request",
-        "type_used": "era.tavern.sidecar_read_current.check_request",
-        "display_name": "读取当前聊天状态：独立状态文件与内存快照：检查读取当前聊天状态请求",
-        "description": "保持 era.tavern.sidecar.read_current 的现行参数、取消和目标复核；不新增资格条件。"
+        "display_name": "检查“读取当前文件绑定”的调用是否有效",
+        "description": "在“分派独立状态文件和变量快照操作”流程中，接收“读取当前文件绑定”的请求，确认当前实例仍可运行、调用未取消，且输入确实是一份操作资料。通过后交给对应业务步骤，失败时按实际原因结束。",
+        "definition_id": "era.tavern.sidecar_read_current.check_request"
       },
       {
         "id": "route_read_current__execute",
-        "type_used": "era.tavern.sidecar_read_current.execute",
-        "display_name": "读取当前聊天状态：独立状态文件与内存快照：执行读取当前聊天状态操作",
-        "description": "在酒馆页面执行该操作的实际 API 或资源动作；保留未知字段、现有错误类别及原同步/异步约定。"
+        "display_name": "读取当前聊天的状态文件绑定",
+        "description": "在“分派独立状态文件和变量快照操作”流程中，读取当前聊天身份及它保存的独立状态文件指向，同时带上尚存的旧变量资料。主服务据此判断正常加载、旧数据迁移或文件绑定修复。",
+        "definition_id": "era.tavern.sidecar_read_current.execute"
       },
       {
         "id": "route_read_current__return_result",
-        "type_used": "era.tavern.sidecar_read_current.return_result",
-        "display_name": "读取当前聊天状态：独立状态文件与内存快照：交还读取当前聊天状态结果",
-        "description": "返回原 era.tavern.sidecar.read_current.result 结果；需要脱敏的连接资料只返回摘要。"
+        "display_name": "交回“读取当前文件绑定”的实际结果",
+        "description": "在“分派独立状态文件和变量快照操作”流程中，接收“读取当前文件绑定”已经执行得到的结果，复核实例和本次调用尚未取消后交回发起者。调用方据此继续业务或显示结果，取消时按实际原因结束等待。",
+        "definition_id": "era.tavern.sidecar_read_current.return_result"
       },
       {
         "id": "route_read_record__check_request",
-        "type_used": "era.tavern.sidecar_read_record.check_request",
-        "display_name": "读取状态文件：独立状态文件与内存快照：检查读取状态文件请求",
-        "description": "保持 era.tavern.sidecar.read_record 的现行参数、取消和目标复核；不新增资格条件。"
+        "display_name": "检查“读取独立状态文件”的调用是否有效",
+        "description": "在“分派独立状态文件和变量快照操作”流程中，接收“读取独立状态文件”的请求，确认当前实例仍可运行、调用未取消，且输入确实是一份操作资料。通过后交给对应业务步骤，失败时按实际原因结束。",
+        "definition_id": "era.tavern.sidecar_read_record.check_request"
       },
       {
         "id": "route_read_record__start_operation",
-        "type_used": "era.tavern.sidecar_read_record.start_operation",
-        "display_name": "读取状态文件：独立状态文件与内存快照：发起指定 Sidecar 文件读取",
-        "description": "同步校验 SidecarId，捕获请求头并发起一次文件 fetch；404、失败和 JSON 结果由后续真实分支判断。 此 Node 只发起原始操作并创建等待资源；不执行异步续体。"
+        "display_name": "读取指定的独立状态文件",
+        "description": "在“分派独立状态文件和变量快照操作”流程中，检查请求的文件身份，向酒馆发起文件读取。后续等待响应，区分不存在、可读取或读取失败，供主服务选择加载或恢复。",
+        "definition_id": "era.tavern.sidecar_read_record.start_operation"
       },
       {
         "id": "route_write_record",
-        "type_used": "era.tavern.flow.sidecar_write_record",
-        "display_name": "保存独立状态文件",
-        "description": "沿原 era.tavern.sidecar.write_record 合同执行当前唯一操作。"
+        "display_name": "检查并发起独立状态文件保存",
+        "description": "本环节用于“分派独立状态文件和变量快照操作”：接收变量、函数和历史记录，检查文件身份及当前消息来源，整理上传内容后再核对一次目标并发起保存。异步完成流程检查真实响应，返回文件地址或失败原因。",
+        "definition_id": "era.tavern.flow.sidecar_write_record"
       },
       {
         "id": "route_commit_metadata",
-        "type_used": "era.tavern.flow.sidecar_commit_metadata",
-        "display_name": "提交聊天指针并发布已验证快照",
-        "description": "沿原 era.tavern.sidecar.commit_metadata 合同执行当前唯一操作。"
+        "display_name": "绑定状态文件并按版本发布变量快照",
+        "description": "本环节用于“分派独立状态文件和变量快照操作”：核对当前聊天、消息和状态文件归属，保存聊天指向，再检查工作版本是否仍匹配。可发布时更新只读变量资料，最后回读实际绑定并返回确认，避免旧状态覆盖新状态。",
+        "definition_id": "era.tavern.flow.sidecar_commit_metadata"
       },
       {
         "id": "route_publish_snapshot__check_request",
-        "type_used": "era.tavern.sidecar_publish_snapshot.check_request",
-        "display_name": "发布快照：独立状态文件与内存快照：检查发布快照请求",
-        "description": "保持 era.tavern.sidecar.publish_snapshot 的现行参数、取消和目标复核；不新增资格条件。"
+        "display_name": "检查“发布变量只读快照”的调用是否有效",
+        "description": "在“分派独立状态文件和变量快照操作”流程中，接收“发布变量只读快照”的请求，确认当前实例仍可运行、调用未取消，且输入确实是一份操作资料。通过后交给对应业务步骤，失败时按实际原因结束。",
+        "definition_id": "era.tavern.sidecar_publish_snapshot.check_request"
       },
       {
         "id": "route_publish_snapshot__execute",
-        "type_used": "era.tavern.sidecar_publish_snapshot.execute",
-        "display_name": "发布快照：独立状态文件与内存快照：执行发布快照操作",
-        "description": "在酒馆页面执行该操作的实际 API 或资源动作；保留未知字段、现有错误类别及原同步/异步约定。"
+        "display_name": "发布当前聊天已确认的变量读数（发布变量只读快照）",
+        "description": "在“分派独立状态文件和变量快照操作”流程中，本次处理“发布变量只读快照”。将本次已确认的变量、函数及历史资料整理成只读快照，只有所属聊天仍是当前聊天时才更新页面并按需通知订阅者。其他聊天的迟到结果返回忽略确认。",
+        "definition_id": "era.tavern.sidecar_publish_snapshot.execute"
       },
       {
         "id": "route_publish_snapshot__return_result",
-        "type_used": "era.tavern.sidecar_publish_snapshot.return_result",
-        "display_name": "发布快照：独立状态文件与内存快照：交还发布快照结果",
-        "description": "返回原 era.tavern.sidecar.commit_metadata.result 结果；需要脱敏的连接资料只返回摘要。"
+        "display_name": "交回“发布变量只读快照”的实际结果",
+        "description": "在“分派独立状态文件和变量快照操作”流程中，接收“发布变量只读快照”已经执行得到的结果，复核实例和本次调用尚未取消后交回发起者。调用方据此继续业务或显示结果，取消时按实际原因结束等待。",
+        "definition_id": "era.tavern.sidecar_publish_snapshot.return_result"
       },
       {
         "id": "route_create_id__check_request",
-        "type_used": "era.tavern.sidecar_create_id.check_request",
-        "display_name": "建立文件标识：独立状态文件与内存快照：检查建立文件标识请求",
-        "description": "保持 era.tavern.sidecar.create_id 的现行参数、取消和目标复核；不新增资格条件。"
+        "display_name": "检查“建立新状态文件身份”的调用是否有效",
+        "description": "在“分派独立状态文件和变量快照操作”流程中，接收“建立新状态文件身份”的请求，确认当前实例仍可运行、调用未取消，且输入确实是一份操作资料。通过后交给对应业务步骤，失败时按实际原因结束。",
+        "definition_id": "era.tavern.sidecar_create_id.check_request"
       },
       {
         "id": "route_create_id__execute",
-        "type_used": "era.tavern.sidecar_create_id.execute",
-        "display_name": "建立文件标识：独立状态文件与内存快照：执行建立文件标识操作",
-        "description": "在酒馆页面执行该操作的实际 API 或资源动作；保留未知字段、现有错误类别及原同步/异步约定。"
+        "display_name": "生成新独立状态文件的身份",
+        "description": "在“分派独立状态文件和变量快照操作”流程中，为即将新建的聊天状态文件分配唯一身份，交给主服务的绑定方案。这里只确定文件名称依据，实际文件内容与保存稍后执行。",
+        "definition_id": "era.tavern.sidecar_create_id.execute"
       },
       {
         "id": "route_create_id__return_result",
-        "type_used": "era.tavern.sidecar_create_id.return_result",
-        "display_name": "建立文件标识：独立状态文件与内存快照：交还建立文件标识结果",
-        "description": "返回原 era.tavern.sidecar.create_id.result 结果；需要脱敏的连接资料只返回摘要。"
+        "display_name": "交回“建立新状态文件身份”的实际结果",
+        "description": "在“分派独立状态文件和变量快照操作”流程中，接收“建立新状态文件身份”已经执行得到的结果，复核实例和本次调用尚未取消后交回发起者。调用方据此继续业务或显示结果，取消时按实际原因结束等待。",
+        "definition_id": "era.tavern.sidecar_create_id.return_result"
       },
       {
         "id": "route_present_prompt__check_request",
-        "type_used": "era.tavern.sidecar_present_prompt.check_request",
-        "display_name": "显示绑定提示：独立状态文件与内存快照：检查显示绑定提示请求",
-        "description": "保持 era.tavern.sidecar.present_prompt 的现行参数、取消和目标复核；不新增资格条件。"
+        "display_name": "检查“显示状态文件选择提示”的调用是否有效",
+        "description": "在“分派独立状态文件和变量快照操作”流程中，接收“显示状态文件选择提示”的请求，确认当前实例仍可运行、调用未取消，且输入确实是一份操作资料。通过后交给对应业务步骤，失败时按实际原因结束。",
+        "definition_id": "era.tavern.sidecar_present_prompt.check_request"
       },
       {
         "id": "route_present_prompt__execute",
-        "type_used": "era.tavern.sidecar_present_prompt.execute",
-        "display_name": "显示绑定提示：独立状态文件与内存快照：执行显示绑定提示操作",
-        "description": "在酒馆页面执行该操作的实际 API 或资源动作；保留未知字段、现有错误类别及原同步/异步约定。"
+        "display_name": "显示状态文件绑定或修复选项",
+        "description": "在“分派独立状态文件和变量快照操作”流程中，接收主服务已准备的弹窗内容，复制后通知页面显示。用户可据此选择文件归属或修复方式，本环节返回提示已呈现的确认。",
+        "definition_id": "era.tavern.sidecar_present_prompt.execute"
       },
       {
         "id": "route_present_prompt__return_result",
-        "type_used": "era.tavern.sidecar_present_prompt.return_result",
-        "display_name": "显示绑定提示：独立状态文件与内存快照：交还显示绑定提示结果",
-        "description": "返回原 era.tavern.sidecar.present_prompt.result 结果；需要脱敏的连接资料只返回摘要。"
+        "display_name": "交回“显示状态文件选择提示”的实际结果",
+        "description": "在“分派独立状态文件和变量快照操作”流程中，接收“显示状态文件选择提示”已经执行得到的结果，复核实例和本次调用尚未取消后交回发起者。调用方据此继续业务或显示结果，取消时按实际原因结束等待。",
+        "definition_id": "era.tavern.sidecar_present_prompt.return_result"
       },
       {
         "id": "route_clear_prompt__check_request",
-        "type_used": "era.tavern.sidecar_clear_prompt.check_request",
-        "display_name": "清理绑定提示：独立状态文件与内存快照：检查清理绑定提示请求",
-        "description": "保持 era.tavern.sidecar.clear_prompt 的现行参数、取消和目标复核；不新增资格条件。"
+        "display_name": "检查“关闭状态文件选择提示”的调用是否有效",
+        "description": "在“分派独立状态文件和变量快照操作”流程中，接收“关闭状态文件选择提示”的请求，确认当前实例仍可运行、调用未取消，且输入确实是一份操作资料。通过后交给对应业务步骤，失败时按实际原因结束。",
+        "definition_id": "era.tavern.sidecar_clear_prompt.check_request"
       },
       {
         "id": "route_clear_prompt__execute",
-        "type_used": "era.tavern.sidecar_clear_prompt.execute",
-        "display_name": "清理绑定提示：独立状态文件与内存快照：执行清理绑定提示操作",
-        "description": "在酒馆页面执行该操作的实际 API 或资源动作；保留未知字段、现有错误类别及原同步/异步约定。"
+        "display_name": "确认目标后关闭状态文件提示",
+        "description": "在“分派独立状态文件和变量快照操作”流程中，核对当前消息及预期状态文件绑定仍匹配，再清除页面选择弹窗。返回提示已关闭的确认，避免旧任务误关闭新聊天的提示。",
+        "definition_id": "era.tavern.sidecar_clear_prompt.execute"
       },
       {
         "id": "route_clear_prompt__return_result",
-        "type_used": "era.tavern.sidecar_clear_prompt.return_result",
-        "display_name": "清理绑定提示：独立状态文件与内存快照：交还清理绑定提示结果",
-        "description": "返回原 era.tavern.sidecar.clear_prompt.result 结果；需要脱敏的连接资料只返回摘要。"
+        "display_name": "交回“关闭状态文件选择提示”的实际结果",
+        "description": "在“分派独立状态文件和变量快照操作”流程中，接收“关闭状态文件选择提示”已经执行得到的结果，复核实例和本次调用尚未取消后交回发起者。调用方据此继续业务或显示结果，取消时按实际原因结束等待。",
+        "definition_id": "era.tavern.sidecar_clear_prompt.return_result"
       },
       {
         "id": "route_read_working__check_request",
-        "type_used": "era.tavern.sidecar_read_working.check_request",
-        "display_name": "读取工作状态：独立状态文件与内存快照：检查读取工作状态请求",
-        "description": "保持 era.tavern.sidecar.read_working 的现行参数、取消和目标复核；不新增资格条件。"
+        "display_name": "检查“读取内存工作进度”的调用是否有效",
+        "description": "在“分派独立状态文件和变量快照操作”流程中，接收“读取内存工作进度”的请求，确认当前实例仍可运行、调用未取消，且输入确实是一份操作资料。通过后交给对应业务步骤，失败时按实际原因结束。",
+        "definition_id": "era.tavern.sidecar_read_working.check_request"
       },
       {
         "id": "route_read_working__execute",
-        "type_used": "era.tavern.sidecar_read_working.execute",
-        "display_name": "读取工作状态：独立状态文件与内存快照：执行读取工作状态操作",
-        "description": "在酒馆页面执行该操作的实际 API 或资源动作；保留未知字段、现有错误类别及原同步/异步约定。"
+        "display_name": "读取当前聊天尚在处理的内存状态",
+        "description": "在“分派独立状态文件和变量快照操作”流程中，按当前聊天身份查找本页保存的工作状态，返回变量、函数及待处理进度；没有时返回缺失。主服务据此继续未保存工作或重新加载独立状态文件。",
+        "definition_id": "era.tavern.sidecar_read_working.execute"
       },
       {
         "id": "route_read_working__return_result",
-        "type_used": "era.tavern.sidecar_read_working.return_result",
-        "display_name": "读取工作状态：独立状态文件与内存快照：交还读取工作状态结果",
-        "description": "返回原 era.working.result 结果；需要脱敏的连接资料只返回摘要。"
+        "display_name": "交回“读取内存工作进度”的实际结果",
+        "description": "在“分派独立状态文件和变量快照操作”流程中，接收“读取内存工作进度”已经执行得到的结果，复核实例和本次调用尚未取消后交回发起者。调用方据此继续业务或显示结果，取消时按实际原因结束等待。",
+        "definition_id": "era.tavern.sidecar_read_working.return_result"
       },
       {
         "id": "route_write_working__check_request",
-        "type_used": "era.tavern.sidecar_write_working.check_request",
-        "display_name": "更新工作状态：独立状态文件与内存快照：检查更新工作状态请求",
-        "description": "保持 era.tavern.sidecar.write_working 的现行参数、取消和目标复核；不新增资格条件。"
+        "display_name": "检查内存状态更新的归属和版本",
+        "description": "在“分派独立状态文件和变量快照操作”流程中，核对本次工作记录所属聊天、状态文件、目标消息及预期版本，准备递增版本的内存状态。资料已变化时拒绝旧更新，避免覆盖其他任务的新进度。",
+        "definition_id": "era.tavern.sidecar_write_working.check_request"
       },
       {
         "id": "route_write_working__execute",
-        "type_used": "era.tavern.sidecar_write_working.execute",
-        "display_name": "更新工作状态：独立状态文件与内存快照：执行更新工作状态操作",
-        "description": "在酒馆页面执行该操作的实际 API 或资源动作；保留未知字段、现有错误类别及原同步/异步约定。"
+        "display_name": "保存本聊天新的内存工作进度",
+        "description": "在“分派独立状态文件和变量快照操作”流程中，将检查通过的变量、函数、消息进度和待保存内容存入当前实例，清理其他聊天无需保留的干净缓存。供后续同步、阶段恢复和实际保存继续使用。",
+        "definition_id": "era.tavern.sidecar_write_working.execute"
       },
       {
         "id": "route_write_working__return_result",
-        "type_used": "era.tavern.sidecar_write_working.return_result",
-        "display_name": "更新工作状态：独立状态文件与内存快照：交还更新工作状态结果",
-        "description": "返回原 era.working.result 结果；需要脱敏的连接资料只返回摘要。"
+        "display_name": "发布当前内存变量读数及工作进度",
+        "description": "在“分派独立状态文件和变量快照操作”流程中，用新的内存工作记录更新页面可读取的变量快照，并按请求决定是否通知订阅者。返回最新工作状态；这些资料是否已写入文件由后续保存流程确认。",
+        "definition_id": "era.tavern.sidecar_write_working.return_result"
       },
       {
         "id": "join_return",
-        "type_used": "era.tavern.cap_sync_sidecar.join_return",
-        "display_name": "汇合当前实际激活分支的结果",
-        "description": "接收当前所选路径的结果集合，交还其中唯一实际结果；不选择未激活分支、不重新执行操作。运行实现必须拒绝实际多结果，不以集合契约放宽唯一结果语义。"
+        "display_name": "交接分派独立状态文件和变量快照操作的选中结果",
+        "description": "在“分派独立状态文件和变量快照操作”流程中，在“分派独立状态文件和变量快照操作”中，接收本次实际选择的分支所产生的唯一结果，交给后续步骤或调用方。每次只允许一份实际结果，避免把互斥分支误当成多个都已执行。",
+        "definition_id": "era.tavern.cap_sync_sidecar.join_return"
       },
       {
         "id": "end",
-        "type_used": "era.tavern.initialize.end",
-        "display_name": "结束当前原生流程",
-        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+        "display_name": "结束分派独立状态文件和变量快照操作",
+        "description": "标明“分派独立状态文件和变量快照操作”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.tavern.initialize.end"
       }
     ],
     "edges": [

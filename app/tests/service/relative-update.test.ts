@@ -1,39 +1,30 @@
+import { inspectRelativePatch } from '../../../javascript_project/service/base_lib/domain/commands/operation_traversal';
 import { findSyncDivergence } from '../../../javascript_project/service/base_lib/domain/sync/sync_divergence_detection';
 import { describe, expect, it } from 'vitest';
-
 import {
   applyMessageCommands,
   parseMessageCommands,
-  resolveRelativeEdit,
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- 产品测试直接验证 VibeFlow 纯领域源码。
-  // @ts-ignore TypeScript 会对 app rootDir 外的 VibeFlow 源码报告 TS6059。
-} from '../../../javascript_project/service/base_lib/domain/commands/crud_engine';
-import {
   planEraSync,
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- 产品测试直接验证 VibeFlow 纯领域源码。
-  // @ts-ignore TypeScript 会对 app rootDir 外的 VibeFlow 源码报告 TS6059。
-} from '../../../javascript_project/service/base_lib/sync/sync_planning';
-import {
   applySealedCommandCompaction,
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- 产品测试直接验证 VibeFlow 纯编排源码。
   // @ts-ignore TypeScript 会对 app rootDir 外的 VibeFlow 源码报告 TS6059。
-} from '../../../javascript_project/service/base_lib/sync/command_compaction';
+
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- 产品测试直接验证 VibeFlow 纯领域源码。
+  // @ts-ignore TypeScript 会对 app rootDir 外的 VibeFlow 源码报告 TS6059。
+} from './native-workflow-fixture';
 import {
   deterministicRandomUnit,
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- 产品测试验证跨 root 的固定随机 ABI。
   // @ts-ignore TypeScript 会对 app rootDir 外的 VibeFlow 源码报告 TS6059。
 } from '../../../javascript_project/expression/base_lib/expression_primitives';
-
 function tag(name: string, value: unknown): string {
   return `<${name}>${JSON.stringify(value)}</${name}>`;
 }
-
 function edit(value: unknown): string {
   return tag('VariableEdit', value);
 }
-
-function apply(content: string, initialStat: unknown, initialStatFunc: Record<string, unknown> = {}) {
-  return applyMessageCommands({
+async function apply(content: string, initialStat: unknown, initialStatFunc: Record<string, unknown> = {}) {
+  return await applyMessageCommands({
     content,
     messageId: 1,
     initialStat,
@@ -41,11 +32,9 @@ function apply(content: string, initialStat: unknown, initialStatFunc: Record<st
     meta: { SelectedMks: [], EditLogs: {}, FunctionEditLogs: {} },
   });
 }
-
 function mkBlock(mk: string): string {
   return `<era_data>{"era-message-key"="${mk}","era-message-type"="assistant"}</era_data>`;
 }
-
 function message(messageId: number, mk: string, body: string) {
   return {
     messageId,
@@ -53,15 +42,14 @@ function message(messageId: number, mk: string, body: string) {
     content: { kind: 'text' as const, text: `${body}\n${mkBlock(mk)}` },
   };
 }
-
 describe('ERA $expr 与函数指令', () => {
-  it('整条消息以 MK 为种子并跨标签、era_tx 与函数调用连续抽取', () => {
+  it('整条消息以 MK 为种子并跨标签、era_tx 与函数调用连续抽取', async () => {
     const content = [
       edit({ first: { $expr: 'random()' } }),
       '<era_tx s="a">' + edit({ pair: { $expr: 'dice(1,6)+dice(1,6)' } }) + '</era_tx>',
       edit({ explicit: { $expr: 'random(42,7)' }, last: { $expr: 'random()' } }),
     ].join('\n');
-    const result = applyMessageCommands({
+    const result = await applyMessageCommands({
       content,
       messageId: 1,
       randomSourceKey: 'mk-alpha',
@@ -82,8 +70,7 @@ describe('ERA $expr 与函数指令', () => {
     expect(result.nextRandomDrawOffset).toBe(4);
     expect(result.diagnostics).toEqual([]);
   });
-
-  it('full sync 对同一 MK 重放随机值稳定，不把游标写入 Sidecar meta', () => {
+  it('full sync 对同一 MK 重放随机值稳定，不把游标写入 Sidecar meta', async () => {
     const messages = [message(0, 'mk-random-replay', edit({ roll: { $expr: 'random()' } }))];
     const input = {
       messages,
@@ -95,8 +82,8 @@ describe('ERA $expr 与函数指令', () => {
       processingMk: 'mk-random-replay',
       consecutiveState: null,
     };
-    const first = planEraSync(input);
-    const second = planEraSync({
+    const first = await planEraSync(input);
+    const second = await planEraSync({
       ...input,
       stat: first.stat,
       meta: first.meta,
@@ -107,16 +94,14 @@ describe('ERA $expr 与函数指令', () => {
     expect(first.meta).not.toHaveProperty('RandomCursor');
     expect(first.meta).not.toHaveProperty('randomContext');
   });
-
-  it('按原文顺序执行 $expr，并记录具体 old/new', () => {
-    const result = apply(
+  it('按原文顺序执行 $expr，并记录具体 old/new', async () => {
+    const result = await apply(
       [
         edit({ player: { hp: { $expr: 'player.hp + 2' } } }),
         edit({ player: { hp: { $expr: 'player.hp * 1.25 - 1.5' } } }),
       ].join('\n'),
       { player: { hp: 10 } },
     );
-
     expect(result.finalStat).toEqual({ player: { hp: 13.5 } });
     expect(result.editLog).toEqual([
       { op: 'update', path: 'player.hp', value_old: 10, value_new: 12 },
@@ -124,17 +109,15 @@ describe('ERA $expr 与函数指令', () => {
     ]);
     expect(result.diagnostics).toEqual([]);
   });
-
-  it('动态变量与 @变量快照遵循同一消息层的开始状态', () => {
-    const result = apply(
+  it('动态变量与 @变量快照遵循同一消息层的开始状态', async () => {
+    const result = await apply(
       [edit({ a: { $expr: '@a + 1' } }), edit({ b: { $expr: 'a * 2' } }), edit({ a: { $expr: 'a + 1' } })].join('\n'),
       { a: 1, b: 0 },
     );
     expect(result.finalStat).toEqual({ a: 3, b: 4 });
   });
-
-  it('保留普通 JSON 赋值，旧运算符全部 fail-closed', () => {
-    const result = apply(
+  it('保留普通 JSON 赋值，旧运算符全部 fail-closed', async () => {
+    const result = await apply(
       edit({
         direct: 2,
         text: '+=2',
@@ -149,13 +132,12 @@ describe('ERA $expr 与函数指令', () => {
       { code: 'ERA_EDIT_OPERATOR_INVALID', path: 'legacy' },
       { code: 'ERA_EDIT_OPERATOR_INVALID', path: 'malformed' },
     ]);
-    expect(resolveRelativeEdit({ $set: 1 }, 1, 'a')).toMatchObject({
+    expect(inspectRelativePatch({ $set: 1 }, 1, 'a', {})).toMatchObject({
       kind: 'invalid',
       diagnostic: { code: 'ERA_EDIT_OPERATOR_INVALID', path: 'a' },
     });
   });
-
-  it('Function Insert/Edit/Delete 与变量命令按原文交错，并支持 @函数快照闭包', () => {
+  it('Function Insert/Edit/Delete 与变量命令按原文交错，并支持 @函数快照闭包', async () => {
     const content = [
       tag('FunctionEdit', { f: { params: ['x'], expr: 'g(x) + 1' } }),
       tag('FunctionEdit', { g: { params: ['x'], expr: 'x * 3' } }),
@@ -163,7 +145,7 @@ describe('ERA $expr 与函数指令', () => {
       edit({ current: { $expr: 'f(a)' } }),
       tag('FunctionDelete', { f: {} }),
     ].join('\n');
-    const result = apply(
+    const result = await apply(
       content,
       { a: 2, snapshot: 0, current: 0 },
       {
@@ -171,7 +153,6 @@ describe('ERA $expr 与函数指令', () => {
         g: { params: ['x'], expr: 'x * 2' },
       },
     );
-
     expect(result.finalStat).toEqual({ a: 2, snapshot: 5, current: 7 });
     expect(result.finalStatFunc).toEqual({ g: { params: ['x'], expr: 'x * 3' } });
     expect(result.functionEditLog).toEqual([
@@ -190,9 +171,8 @@ describe('ERA $expr 与函数指令', () => {
       { op: 'delete', name: 'f', value_old: { params: ['x'], expr: 'g(x) + 1' } },
     ]);
   });
-
-  it('函数库变更是原子的：递归、缺失和错误删除均不污染当前库', () => {
-    const result = apply(
+  it('函数库变更是原子的：递归、缺失和错误删除均不污染当前库', async () => {
+    const result = await apply(
       [
         tag('FunctionInsert', { f: { params: ['x'], expr: 'f(x)' } }),
         tag('FunctionEdit', { absent: { params: ['x'], expr: 'x' } }),
@@ -212,8 +192,7 @@ describe('ERA $expr 与函数指令', () => {
       'ERA_FUNCTION_DELETE_INVALID',
     ]);
   });
-
-  it('函数 $meta.updatable 与变量一致：锁住编辑，但同次显式解锁可以更新定义', () => {
+  it('函数 $meta.updatable 与变量一致：锁住编辑，但同次显式解锁可以更新定义', async () => {
     const initial = {
       f: {
         params: ['x'],
@@ -221,7 +200,7 @@ describe('ERA $expr 与函数指令', () => {
         $meta: { updatable: false, note: 'locked' },
       },
     };
-    const result = apply(
+    const result = await apply(
       [
         tag('FunctionEdit', { f: { params: ['x'], expr: 'x + 2' } }),
         tag('FunctionEdit', {
@@ -235,7 +214,6 @@ describe('ERA $expr 与函数指令', () => {
       {},
       initial,
     );
-
     expect(result.finalStatFunc).toEqual({
       f: {
         params: ['x'],
@@ -256,8 +234,7 @@ describe('ERA $expr 与函数指令', () => {
       },
     ]);
   });
-
-  it('函数 $meta.necessary 可维护后删除，且元数据编辑不会改写函数数学定义', () => {
+  it('函数 $meta.necessary 可维护后删除，且元数据编辑不会改写函数数学定义', async () => {
     const initial = {
       f: {
         params: ['x'],
@@ -265,7 +242,7 @@ describe('ERA $expr 与函数指令', () => {
         $meta: { necessary: 'all', note: 'keep until unlocked' },
       },
     };
-    const result = apply(
+    const result = await apply(
       [
         tag('FunctionEdit', { f: { $meta: { note: 'still protected' } } }),
         tag('FunctionDelete', { f: {} }),
@@ -275,7 +252,6 @@ describe('ERA $expr 与函数指令', () => {
       {},
       initial,
     );
-
     expect(result.finalStatFunc).toEqual({});
     expect(result.functionEditLog).toEqual([
       {
@@ -313,9 +289,8 @@ describe('ERA $expr 与函数指令', () => {
       },
     ]);
   });
-
-  it('函数不支持变量树专属元数据，并对整个标签 fail-closed', () => {
-    const result = apply(
+  it('函数不支持变量树专属元数据，并对整个标签 fail-closed', async () => {
+    const result = await apply(
       tag('FunctionInsert', {
         valid: { params: ['x'], expr: 'x + 1' },
         invalid: { params: ['x'], expr: 'x', $meta: { unInsertAble: 'all' } },
@@ -326,9 +301,8 @@ describe('ERA $expr 与函数指令', () => {
     expect(result.functionEditLog).toEqual([]);
     expect(result.diagnostics).toMatchObject([{ code: 'ERA_FUNCTION_META_UNSUPPORTED', path: 'invalid' }]);
   });
-
-  it('同一 FunctionInsert 支持前向声明与嵌套调用，并拒绝整体递归库', () => {
-    const accepted = apply(
+  it('同一 FunctionInsert 支持前向声明与嵌套调用，并拒绝整体递归库', async () => {
+    const accepted = await apply(
       `${tag('FunctionInsert', {
         f: { params: ['x'], expr: 'g(x) + 1' },
         g: { params: ['x'], expr: 'x * 2' },
@@ -337,7 +311,7 @@ describe('ERA $expr 与函数指令', () => {
     );
     expect(accepted.finalStat).toEqual({ value: 3, result: 7 });
     expect(accepted.finalStatFunc).toMatchObject({ f: expect.any(Object), g: expect.any(Object) });
-    const rejected = apply(
+    const rejected = await apply(
       tag('FunctionInsert', {
         f: { params: ['x'], expr: 'g(x)' },
         g: { params: ['x'], expr: 'f(x)' },
@@ -348,13 +322,12 @@ describe('ERA $expr 与函数指令', () => {
     expect(rejected.finalStatFunc).toEqual({});
     expect(rejected.diagnostics.map(item => item.code)).toEqual(['ERA_EXPR_FUNCTION_RECURSION']);
   });
-
-  it('完整同步会重放函数库和变量，而不是在第二次 full rebuild 中重复累计', () => {
+  it('完整同步会重放函数库和变量，而不是在第二次 full rebuild 中重复累计', async () => {
     const messages = [
       message(0, 'mk-functions', tag('FunctionInsert', { f: { params: ['x'], expr: 'x + 5' } })),
       message(1, 'mk-expression', edit({ hp: { $expr: 'f(hp)' } })),
     ];
-    const first = planEraSync({
+    const first = await planEraSync({
       messages,
       stat: { hp: 10 },
       statFunc: {},
@@ -366,7 +339,7 @@ describe('ERA $expr 与函数指令', () => {
     });
     expect(first.stat).toEqual({ hp: 15 });
     expect(first.statFunc).toEqual({ f: { params: ['x'], expr: 'x + 5' } });
-    const replay = planEraSync({
+    const replay = await planEraSync({
       messages,
       stat: first.stat,
       statFunc: first.statFunc,
@@ -379,8 +352,7 @@ describe('ERA $expr 与函数指令', () => {
     expect(replay.stat).toEqual({ hp: 15 });
     expect(replay.statFunc).toEqual(first.statFunc);
   });
-
-  it('仅封存的 AI 楼层会压缩为从 @快照可重放的最小命令', () => {
+  it('仅封存的 AI 楼层会压缩为从 @快照可重放的最小命令', async () => {
     const messages = [
       message(
         0,
@@ -393,7 +365,7 @@ describe('ERA $expr 与函数指令', () => {
       ),
       message(1, 'mk-latest', '最新 AI 楼层保持原样。'),
     ];
-    const rawPlan = planEraSync({
+    const rawPlan = await planEraSync({
       messages,
       stat: { a: 1 },
       statFunc: {},
@@ -403,17 +375,23 @@ describe('ERA $expr 与函数指令', () => {
       processingMk: 'mk-latest',
       consecutiveState: null,
     });
-    const plan = applySealedCommandCompaction(rawPlan);
+    const plan = await applySealedCommandCompaction(rawPlan);
     expect(plan.status).toBe('recalculated');
     expect(plan.stat).toEqual({ a: 4 });
     expect(plan.statFunc).toEqual({ f: { params: ['x'], expr: 'x + 3' } });
     expect(plan.messageUpdates).toHaveLength(1);
-    const compact = (plan.messageUpdates[0] as { content: { text: string } }).content.text;
+    const compact = (
+      plan.messageUpdates[0] as {
+        content: {
+          text: string;
+        };
+      }
+    ).content.text;
     expect(compact).toContain('"$expr":"@a + 3"');
     expect(compact).toContain('<FunctionInsert>');
     expect(compact).not.toContain('a + 1');
     expect((plan.meta.CommandCompaction as Record<string, unknown>)['mk-sealed']).toMatchObject({ version: 1 });
-    const replay = planEraSync({
+    const replay = await planEraSync({
       messages: plan.messages,
       stat: { a: 1 },
       statFunc: {},
@@ -426,7 +404,6 @@ describe('ERA $expr 与函数指令', () => {
     expect(replay.stat).toEqual(plan.stat);
     expect(replay.statFunc).toEqual(plan.statFunc);
   });
-
   it('追加新的 AI 楼层时会重算最早未压缩的封存指令楼层', () => {
     const messages = [
       message(0, 'mk-sealed', edit({ a: { $expr: 'a + 1' } })),
@@ -456,8 +433,7 @@ describe('ERA $expr 与函数指令', () => {
       }),
     ).toEqual({ type: 'FULL_RECALC', recalcId: 0, cause: 'divergence' });
   });
-
-  it('压缩后的中间楼层在更早楼层编辑后仍按 @快照重放', () => {
+  it('压缩后的中间楼层在更早楼层编辑后仍按 @快照重放', async () => {
     const original = [
       message(0, 'mk-base', edit({ a: { $expr: 'a + 2' } })),
       message(
@@ -467,8 +443,8 @@ describe('ERA $expr 与函数指令', () => {
       ),
       message(2, 'mk-latest', '用于封存前一条 AI 消息。'),
     ];
-    const compacted = applySealedCommandCompaction(
-      planEraSync({
+    const compacted = await applySealedCommandCompaction(
+      await planEraSync({
         messages: original,
         stat: { a: 10, b: 0 },
         statFunc: {},
@@ -479,13 +455,18 @@ describe('ERA $expr 与函数指令', () => {
         consecutiveState: null,
       }),
     );
-    const sealed = (compacted.messages[1] as { content: { text: string } }).content.text;
+    const sealed = (
+      compacted.messages[1] as {
+        content: {
+          text: string;
+        };
+      }
+    ).content.text;
     expect(sealed).toContain('"b":{"$expr":"(@a + 1) * 2"}');
-
     const editedHistory = compacted.messages.map(item => ({ ...item }));
     editedHistory[0] = message(0, 'mk-base', edit({ a: { $expr: 'a + 5' } }));
-    const replay = applySealedCommandCompaction(
-      planEraSync({
+    const replay = await applySealedCommandCompaction(
+      await planEraSync({
         messages: editedHistory,
         stat: { a: 10, b: 0 },
         statFunc: {},
@@ -498,7 +479,6 @@ describe('ERA $expr 与函数指令', () => {
     );
     expect(replay.stat).toEqual({ a: 17, b: 32 });
   });
-
   it('解析器保留六类标签的确切出现顺序', () => {
     const types = parseMessageCommands({
       content: [
@@ -510,9 +490,8 @@ describe('ERA $expr 与函数指令', () => {
     expect(types).toEqual(['function-insert', 'edit', 'function-delete']);
   });
 });
-
 describe('ERA 消息内函数调用：封存压缩边界保护', () => {
-  it('含调用块的楼层可以参与压缩，但压缩结果必须通过真实重放门（终值不变）', () => {
+  it('含调用块的楼层可以参与压缩，但压缩结果必须通过真实重放门（终值不变）', async () => {
     const messages = [
       message(
         0,
@@ -527,7 +506,7 @@ describe('ERA 消息内函数调用：封存压缩边界保护', () => {
       ),
       message(1, 'mk-latest', '最新 AI 楼层保持原样。'),
     ];
-    const rawPlan = planEraSync({
+    const rawPlan = await planEraSync({
       messages,
       stat: { a: 1 },
       statFunc: {},
@@ -537,8 +516,7 @@ describe('ERA 消息内函数调用：封存压缩边界保护', () => {
       processingMk: 'mk-latest',
       consecutiveState: null,
     });
-    const compacted = applySealedCommandCompaction(rawPlan);
-
+    const compacted = await applySealedCommandCompaction(rawPlan);
     // 人工决定（2026-09-11）：不再对含调用块的楼层整层跳过。安全性由真实重放门承担——
     // 无论这一层被压缩还是保持原样，重放终值都必须与未压缩时一致，且调用块本身不得消失。
     const sealed = compacted.messages[0];
@@ -546,7 +524,7 @@ describe('ERA 消息内函数调用：封存压缩边界保护', () => {
     const text = sealed && sealed.content.kind === 'text' ? sealed.content.text : '';
     expect(text).toContain('<EraFCall');
     // 压缩可以改写指令的写法（例如把 a+1、a+2 合并成 @a+3），但重放终值必须一模一样。
-    const compactedReplay = planEraSync({
+    const compactedReplay = await planEraSync({
       messages: compacted.messages,
       stat: { a: 1 },
       statFunc: {},
@@ -559,13 +537,12 @@ describe('ERA 消息内函数调用：封存压缩边界保护', () => {
     if (compactedReplay.status === 'failed') throw new Error(compactedReplay.error.message);
     expect(compactedReplay.stat).toEqual(rawPlan.status === 'failed' ? null : { a: 4 });
   });
-
-  it('不含调用块的楼层仍按原语义压缩', () => {
+  it('不含调用块的楼层仍按原语义压缩', async () => {
     const messages = [
       message(0, 'mk-sealed', [edit({ a: { $expr: 'a + 1' } }), edit({ a: { $expr: 'a + 2' } })].join('\n')),
       message(1, 'mk-latest', '最新 AI 楼层保持原样。'),
     ];
-    const rawPlan = planEraSync({
+    const rawPlan = await planEraSync({
       messages,
       stat: { a: 1 },
       statFunc: {},
@@ -575,10 +552,9 @@ describe('ERA 消息内函数调用：封存压缩边界保护', () => {
       processingMk: 'mk-latest',
       consecutiveState: null,
     });
-    const compacted = applySealedCommandCompaction(rawPlan);
+    const compacted = await applySealedCommandCompaction(rawPlan);
     const sealed = compacted.messages[0];
     const text = sealed && sealed.content.kind === 'text' ? sealed.content.text : '';
-
     // 两个顺序 edit 合并为一条基于 @快照的表达式，压缩确实生效。
     expect(text).toContain('$expr');
     expect(text).not.toContain('a + 1');

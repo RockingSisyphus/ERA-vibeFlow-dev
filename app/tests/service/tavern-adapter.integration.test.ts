@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { INPUT_EVENT } from '../../src/ERA变量框架/events/catalog';
+import { INPUT_EVENT, EVENT_CATALOG } from '../../src/ERA变量框架/events/catalog';
 import { fixture } from '../native-tavern/native-fixture.mjs';
-import { EVENT_CATALOG } from '../../src/ERA变量框架/events/catalog';
 const ERA_TAVERN_LISTENER_COUNT = 13;
 const owners: any[] = [];
 import type { EraInboundEvent } from '../../src/ERA变量框架/service/types';

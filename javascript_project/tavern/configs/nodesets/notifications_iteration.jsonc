@@ -1,0 +1,147 @@
+{
+  "type_key": "era.tavern.flow.notifications_iteration",
+  "display_name": "处理一次通知完成或整组收尾",
+  "description": "等待通知队列出现单项完成事实或整组收尾要求，交给对应流程后继续下一轮。实例停止时结束本分支，最终资源收尾仍会等待实际通知操作。",
+  "requires": [
+    {
+      "type": "era.tavern.call.frame",
+      "cardinality": "exactly_one",
+      "display_name": "处理一次通知完成或整组收尾的请求和已有进度"
+    }
+  ],
+  "provides": [
+    {
+      "key": "next_frame",
+      "type": "era.tavern.runtime.state.next",
+      "display_name": "处理一次通知完成或整组收尾的处理进度及结果"
+    },
+    {
+      "key": "iteration_done",
+      "type": "era.tavern.runtime.done",
+      "display_name": "本轮遍历或职责处理是否已经结束"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.call.frame",
+        "display_name": "处理一次通知完成或整组收尾的请求和已有进度",
+        "required": true
+      }
+    ],
+    "max_steps": 12,
+    "nodes": [
+      {
+        "id": "start",
+        "definition_id": "era.tavern.initialize.start",
+        "display_name": "开始处理一次通知完成或整组收尾",
+        "description": "标明“处理一次通知完成或整组收尾”的开始位置。等待通知队列出现单项完成事实或整组收尾要求，交给对应流程后继续下一轮。实例停止时结束本分支，最终资源收尾仍会等待实际通知操作。"
+      },
+      {
+        "id": "ready",
+        "definition_id": "era.tavern.owned.wait_owner",
+        "display_name": "等待本实例页面资源准备就绪",
+        "description": "在“处理一次通知完成或整组收尾”流程中，等待资源管理分支完成运行资源登记，取消时结束等待。后续主服务只在同一实例资源可用后启动，避免尚未就绪就调用页面能力。"
+      },
+      {
+        "id": "choose",
+        "definition_id": "era.tavern.runtime.take_notifications",
+        "display_name": "等待下一条通知完成或收尾记录",
+        "description": "在“处理一次通知完成或整组收尾”流程中，等待本实例通知完成队列，区分单条通知结果与整组收尾任务，再交给对应处理。实例停止时结束本职责分支，通知未完成的顺序不会妨碍已经完成项进入队列。"
+      },
+      {
+        "id": "work",
+        "definition_id": "era.tavern.flow.notification",
+        "display_name": "收集一条已发起通知的完成结果",
+        "description": "本环节用于“处理一次通知完成或整组收尾”：区分普通事件与生成阶段交接，等待对应已发起操作结束，记入通知组原位置。全部通知齐全时安排整组收尾，尚有未完成项时保留组状态等待。"
+      },
+      {
+        "id": "finalize",
+        "definition_id": "era.tavern.flow.notification_finalize",
+        "display_name": "按原顺序报告并释放已完成通知组",
+        "description": "本环节用于“处理一次通知完成或整组收尾”：接收全部结束的通知组，按原清单顺序查看结果并报告失败，最后清理取消关联和运行登记，完成整组等待。只处理已固定结果，不再重发通知。"
+      },
+      {
+        "id": "advance",
+        "definition_id": "era.tavern.runtime.advance",
+        "display_name": "本轮处理完成后继续等待下一项",
+        "description": "在“处理一次通知完成或整组收尾”流程中，接收当前职责一次实际处理结束的结果，将同一实例交回外层循环并标记继续。下一轮再读取该职责队列，保持任务顺序及实例归属。",
+        "join_policy": "safe_any"
+      },
+      {
+        "id": "stop",
+        "definition_id": "era.tavern.runtime.end_loop",
+        "display_name": "结束当前长期职责分支",
+        "description": "在“处理一次通知完成或整组收尾”流程中，实例停止后，将当前作者、通知或计时循环标为结束，并交出该分支已退出的确认。最终汇合据此等待所有职责真正结束。"
+      },
+      {
+        "id": "end",
+        "definition_id": "era.tavern.initialize.end",
+        "display_name": "结束处理一次通知完成或整组收尾",
+        "description": "标明“处理一次通知完成或整组收尾”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。"
+      }
+    ],
+    "edges": [
+      [
+        "start",
+        "ready"
+      ],
+      [
+        "ready",
+        "choose"
+      ],
+      {
+        "from": "choose",
+        "to": "work",
+        "when": "era_tavern_runtime_take_notifications_route == 'work'"
+      },
+      {
+        "from": "choose",
+        "to": "stop",
+        "when": "era_tavern_runtime_take_notifications_route == 'stop'"
+      },
+      {
+        "from": "ready",
+        "to": "advance",
+        "schedule": false
+      },
+      [
+        "work",
+        "advance"
+      ],
+      [
+        "advance",
+        "end"
+      ],
+      [
+        "stop",
+        "end"
+      ],
+      {
+        "from": "choose",
+        "to": "finalize",
+        "when": "era_tavern_runtime_take_notifications_route == 'finalize'"
+      },
+      [
+        "finalize",
+        "advance"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.runtime.state.next",
+        "cardinality": "exactly_one",
+        "display_name": "处理一次通知完成或整组收尾的处理进度及结果",
+        "as": "frame"
+      },
+      {
+        "type": "era.tavern.runtime.done",
+        "cardinality": "exactly_one",
+        "display_name": "本轮遍历或职责处理是否已经结束",
+        "as": "done"
+      }
+    ]
+  }
+}

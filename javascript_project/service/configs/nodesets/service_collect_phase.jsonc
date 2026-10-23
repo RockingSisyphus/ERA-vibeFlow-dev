@@ -1,19 +1,19 @@
 {
   "type_key": "era.service.collect_phase",
-  "display_name": "接收并整理一个酒馆事件",
-  "description": "接收一个聊天或 调用接口（API） 事件，检查它的传输格式，并加入待处理事件集合。根据收集期限和容量决定继续等待还是形成批次，同时输出应启动或取消的定时器。结果供服务循环安排后续任务。",
+  "display_name": "接收并合并一个聊天或脚本事件",
+  "description": "等待聊天变化、脚本请求或到期事件，检查后合入当前收集范围。根据期限和容量决定继续等相关事件还是组批，并交出需要启动或取消的计时要求。",
   "requires": [
     {
       "type": "era.service.cycle.routed",
       "cardinality": "exactly_one",
-      "display_name": "收集阶段状态"
+      "display_name": "已选择阶段的服务状态"
     }
   ],
   "provides": [
     {
       "key": "collection_reduction",
       "type": "era.collection.reduction",
-      "display_name": "事件集归约结果"
+      "display_name": "新事件合并后的等待与组批决定"
     }
   ],
   "pipeline": {
@@ -22,7 +22,7 @@
       {
         "key": "cycle_state",
         "type": "era.service.cycle.routed",
-        "display_name": "收集阶段状态",
+        "display_name": "已选择阶段的服务状态",
         "required": true
       }
     ],
@@ -30,69 +30,81 @@
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.service.terminal",
-        "display_name": "收集阶段开始",
-        "description": "开始接收并整理一个酒馆事件。"
+        "display_name": "开始接收并合并一个聊天或脚本事件",
+        "description": "标明“接收并合并一个聊天或脚本事件”的开始位置。等待聊天变化、脚本请求或到期事件，检查后合入当前收集范围。根据期限和容量决定继续等相关事件还是组批，并交出需要启动或取消的计时要求。",
+        "definition_id": "era.service.terminal"
       },
       {
         "id": "unpack_service_state",
-        "type_used": "era.service.cycle.unpack_collect",
-        "display_name": "验证服务状态",
-        "description": "本次接收和整理一个酒馆事件。从收集阶段状态取出待处理事件、事件序号和定时器资料，供新事件合并判断。"
+        "display_name": "取出本轮事件收集的进度",
+        "description": "在“接收并合并一个聊天或脚本事件”流程中，从服务状态中取出已等待的事件、当前事件序号及定时安排，供下一次事件合并使用。保持同一批收集过程的连续性。",
+        "definition_id": "era.service.cycle.unpack_collect"
       },
       {
         "id": "receive_event",
-        "type_used": "vibeflow.io",
-        "display_name": "接收服务事件",
-        "description": "等待并接收酒馆页面队列中的一个事件，例如聊天变化、接口请求或定时器到期。收到后交给输入检查和任务规划；没有事件时保持等待。",
-        "requires": [],
-        "provides": [
+        "display_name": "等待并取入下一个聊天事件",
+        "description": "在“接收并合并一个聊天或脚本事件”流程中，从页面的先进先出队列接收一条聊天变化、脚本请求或到期事件。没有事件时等待，收到后交给检查和收集流程，为统一任务规划提供输入。",
+        "definition_id": "era.service.port.receive_event",
+        "rulesets": [
+          "vibeflow.data_store",
           {
-            "key": "transport_event_raw",
-            "type": "era.transport.event.raw",
-            "display_name": "原始传输事件"
+            "rule_id": "vibeflow.capability.allow",
+            "params": {
+              "capability": "vibeflow.port",
+              "operations": [
+                "receive"
+              ],
+              "actions": [
+                {
+                  "operation": "receive",
+                  "port": "era.service.in"
+                }
+              ]
+            }
           }
-        ],
-        "io": {
-          "operation": "receive",
-          "port": "era.service.in"
-        }
+        ]
       },
       {
         "id": "validate_transport",
-        "type_used": "era.service.validate_transport",
-        "display_name": "校验传输事件",
-        "description": "本次接收和整理一个酒馆事件。检查收到的页面消息结构、大小和宿主引用，输出可处理的事件资料或输入诊断。"
+        "display_name": "检查页面送来的事件是否可处理",
+        "description": "在“接收并合并一个聊天或脚本事件”流程中，检查新事件的结构、大小和所附资料引用，整理成服务可读取的业务事件。无法处理的输入保留具体问题，供事件收集和调用方获知原因。",
+        "definition_id": "era.service.validate_transport"
       },
       {
         "id": "reduce_collection",
-        "type_used": "era.service.reduce_collection",
-        "display_name": "归约有界事件集",
-        "description": "本次接收和整理一个酒馆事件。把新事件合入待处理事件，结合事件序号、等待期限和批次容量判断继续等待还是开始执行，输出相应定时器安排。"
+        "display_name": "合并新事件并判断何时组成一批",
+        "description": "在“接收并合并一个聊天或脚本事件”流程中，将新收到的事件加入等待集合，结合事件先后顺序、等待期限和容量决定继续收集还是开始执行。输出更新后的事件集合及定时安排，使相关聊天变化可以统一规划。",
+        "definition_id": "era.service.reduce_collection"
       },
       {
         "id": "send_collection_control",
-        "type_used": "vibeflow.io",
-        "display_name": "发送事件集控制",
-        "description": "把本轮决定的定时器安排发送给酒馆页面，要求启动、取消或保留事件收集定时器，供服务按期限形成批次。",
-        "requires": [
+        "display_name": "把事件收集的计时安排交给页面",
+        "description": "在“接收并合并一个聊天或脚本事件”流程中，接收本轮收集阶段决定的定时要求，通知页面启动、取消或保留相应计时。到期事件会重新进入服务，帮助等待中的事件按期限组成批次。",
+        "definition_id": "era.service.port.send_collection_control",
+        "rulesets": [
+          "vibeflow.data_store",
           {
-            "type": "era.collection.control",
-            "cardinality": "exactly_one",
-            "display_name": "事件集控制"
+            "rule_id": "vibeflow.capability.allow",
+            "params": {
+              "capability": "vibeflow.port",
+              "operations": [
+                "send"
+              ],
+              "actions": [
+                {
+                  "operation": "send",
+                  "port": "era.service.out"
+                }
+              ]
+            }
           }
-        ],
-        "provides": [],
-        "io": {
-          "operation": "send",
-          "port": "era.service.out"
-        }
+        ]
       },
       {
         "id": "end",
-        "type_used": "era.service.terminal",
-        "display_name": "收集阶段结束",
-        "description": "结束接收并整理一个酒馆事件，输出本段流程的处理结果。"
+        "display_name": "结束接收并合并一个聊天或脚本事件",
+        "description": "标明“接收并合并一个聊天或脚本事件”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.service.terminal"
       }
     ],
     "edges": [
@@ -132,7 +144,7 @@
       {
         "type": "era.collection.reduction",
         "cardinality": "exactly_one",
-        "display_name": "事件集归约结果",
+        "display_name": "新事件合并后的等待与组批决定",
         "as": "collectionReduction"
       }
     ]

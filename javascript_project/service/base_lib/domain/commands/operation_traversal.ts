@@ -16,7 +16,7 @@ import {
   applyTemplate,
   editDiagnostic,
 } from "./crud_mutations.ts";
-import { findLatestNewValue } from "../snapshot_history.ts";
+import { findLatestNewValue } from "../../snapshot/snapshot_history.ts";
 import {
   forkOperation,
   type OperationState,

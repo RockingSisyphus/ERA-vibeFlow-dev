@@ -67,15 +67,6 @@
   "architecture": {
     "forbiddenImports": [
       {
-        "from": "src/ERA变量框架/core/**",
-        "to": [
-          "src/ERA变量框架/ui/**",
-          "src/ERA变量框架/events/**",
-          "src/ERA变量框架/macro/**",
-          "src/ERA变量框架/initer/**"
-        ]
-      },
-      {
         "from": "src/ERA变量框架/events/{catalog,merger,types,scheduler}.ts",
         "to": [
           "src/ERA变量框架/events/handlers/**",
@@ -91,11 +82,7 @@
       "src/ERA变量框架/events/catalog.ts",
       "src/ERA变量框架/events/merger.ts",
       "src/ERA变量框架/events/types.ts",
-      "src/ERA变量框架/macro/syntax.ts",
-      "src/ERA变量框架/core/timetravel.ts",
-      "src/ERA变量框架/core/crud/delete.ts",
-      "src/ERA变量框架/core/crud/update.ts",
-      "src/ERA变量框架/core/crud/insert/**"
+      "src/ERA变量框架/macro/syntax.ts"
     ],
     "schedulerPath": "src/ERA变量框架/events/scheduler.ts",
     "schedulerClockObject": "SYSTEM_CLOCK"

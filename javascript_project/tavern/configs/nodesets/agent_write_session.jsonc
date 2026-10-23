@@ -1,20 +1,20 @@
 {
   "type_key": "era.tavern.flow.agent_write_session",
-  "display_name": "写入页面生成会话并完成观察通知",
-  "description": "实现 era.tavern.agent.write_session；输入沿用 era.agent.host.request，输出沿用 era.agent.host.result，完成方式保持 immediate。",
+  "display_name": "更新本聊天在页面中的生成进度",
+  "description": "接收主服务给出的生成会话，按需建立正文观察和结束等待，复制保存本页聊天进度并通知界面。返回更新确认，后续阶段可继续读取这份进度。",
   "expand": true,
   "requires": [
     {
       "type": "era.tavern.call.frame",
       "cardinality": "exactly_one",
-      "display_name": "本次调用及实例资源令牌"
+      "display_name": "更新本聊天在页面中的生成进度的请求和已有进度"
     }
   ],
   "provides": [
     {
       "key": "era_tavern_flow_agent_write_session_frame",
       "type": "era.tavern.call.frame",
-      "display_name": "操作结果及后续处理所需的资源令牌"
+      "display_name": "更新本聊天在页面中的生成进度的处理进度及结果"
     }
   ],
   "pipeline": {
@@ -23,7 +23,7 @@
       {
         "key": "frame",
         "type": "era.tavern.call.frame",
-        "display_name": "调用与资源资料",
+        "display_name": "更新本聊天在页面中的生成进度的请求和已有进度",
         "required": true
       }
     ],
@@ -31,63 +31,63 @@
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.tavern.initialize.start",
-        "display_name": "开始当前原生流程",
-        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+        "display_name": "开始更新本聊天在页面中的生成进度",
+        "description": "标明“更新本聊天在页面中的生成进度”的开始位置。接收主服务给出的生成会话，按需建立正文观察和结束等待，复制保存本页聊天进度并通知界面。返回更新确认，后续阶段可继续读取这份进度。",
+        "definition_id": "era.tavern.initialize.start"
       },
       {
         "id": "check_chat",
-        "type_used": "era.tavern.agent_write_session.check_chat",
-        "display_name": "检查聊天键及会话输入",
-        "description": "读取 Service 指定的 chatKey、session、storageSession 与观察意图。"
+        "display_name": "检查生成进度要保存到哪个聊天",
+        "description": "在“更新本聊天在页面中的生成进度”流程中，确认页面生成进度的写入请求明确指定聊天。有效后继续更新该聊天的会话记录，避免把不同聊天的阶段进度混在一起。",
+        "definition_id": "era.tavern.agent_write_session.check_chat"
       },
       {
         "id": "choose_observation",
-        "type_used": "era.tavern.agent_write_session.choose_observation",
-        "display_name": "选择是否启动故事观察",
-        "description": "只根据 startStoryObservation 执行已给出的观察意图，不重新规划故事阶段。"
+        "display_name": "判断是否开始跟踪新的正文生成",
+        "description": "在“更新本聊天在页面中的生成进度”流程中，读取本次生成进度写入要求，区分需要新建正文观察记录，还是继续使用提供的会话。后续据此登记或保留本次生成。",
+        "definition_id": "era.tavern.agent_write_session.choose_observation"
       },
       {
         "id": "select_keep",
-        "type_used": "era.tavern.agent_write_session.select_keep",
-        "display_name": "保留 Service 提供的会话",
-        "description": "不重新生成观察标识，沿用本次给出的 session/storageSession。"
+        "display_name": "沿用本次提供的生成进度",
+        "description": "在“更新本聊天在页面中的生成进度”流程中，接收主服务已提供的生成会话，交给后续观察及存储。适用于不需要重新建立正文生成观察的进度更新。",
+        "definition_id": "era.tavern.agent_write_session.select_keep"
       },
       {
         "id": "select_start",
-        "type_used": "era.tavern.agent_write_session.select_start",
-        "display_name": "建立本次故事观察",
-        "description": "生成本次故事请求关联，保留现行观察记录和原生正文关联。"
+        "display_name": "建立本次正文生成的观察记录",
+        "description": "在“更新本聊天在页面中的生成进度”流程中，为当前正文生成登记请求身份、聊天、模型和预设，并把它附到生成会话。后续可以将正文完成情况对应到正确的这次生成。",
+        "definition_id": "era.tavern.agent_write_session.select_start"
       },
       {
         "id": "join_begin_observation",
-        "type_used": "era.tavern.agent_write_session.join_begin_observation",
-        "display_name": "汇合当前实际激活分支的结果",
-        "description": "接收当前所选路径的结果集合，交还其中唯一实际结果；不选择未激活分支、不重新执行操作。运行实现必须拒绝实际多结果，不以集合契约放宽唯一结果语义。"
+        "display_name": "交接更新页面生成进度的选中结果",
+        "description": "在“更新本聊天在页面中的生成进度”流程中，在“更新页面生成进度”中，接收本次实际选择的分支所产生的唯一结果，交给后续步骤或调用方。每次只允许一份实际结果，避免把互斥分支误当成多个都已执行。",
+        "definition_id": "era.tavern.agent_write_session.join_begin_observation"
       },
       {
         "id": "begin_observation",
-        "type_used": "era.tavern.agent_write_session.begin_observation",
-        "display_name": "登记故事和原生结束等待",
-        "description": "保持请求记录、storyRequestId 和 nativeExecutionId 的既有顺序。"
+        "display_name": "登记生成结束和阶段完成的等待",
+        "description": "在“更新本聊天在页面中的生成进度”流程中，接收生成会话更新，按需建立本次酒馆生成结束及阶段交接的等待记录。新周期会结束被替换的旧周期等待，让后续请求只跟随当前有效生成。",
+        "definition_id": "era.tavern.agent_write_session.begin_observation"
       },
       {
         "id": "store_session",
-        "type_used": "era.tavern.agent_write_session.store_session",
-        "display_name": "保存克隆后的本页会话",
-        "description": "按现行 storageSession 选择保存当前聊天会话，并完成已有故事文本记录。"
+        "display_name": "保存本聊天在当前页面的生成进度",
+        "description": "在“更新本聊天在页面中的生成进度”流程中，将本次会话资料复制保存到当前实例的聊天记录，正文已完成时同步更新观察结果。后续阶段读取这一进度来继续生成；它是本页运行资料，并非聊天消息的保存操作。",
+        "definition_id": "era.tavern.agent_write_session.store_session"
       },
       {
         "id": "publish_session",
-        "type_used": "era.tavern.agent_write_session.publish_session",
-        "display_name": "发布会话更新通知",
-        "description": "发出原 era-agent-session-updated 通知，返回原写入确认。"
+        "display_name": "通知页面生成进度已经更新",
+        "description": "在“更新本聊天在页面中的生成进度”流程中，生成会话已经更新后，通知观察界面重新读取进度，并返回该聊天更新完成的确认。使用户能看到当前规划、正文或结算阶段状态。",
+        "definition_id": "era.tavern.agent_write_session.publish_session"
       },
       {
         "id": "end",
-        "type_used": "era.tavern.initialize.end",
-        "display_name": "结束当前原生流程",
-        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+        "display_name": "结束更新本聊天在页面中的生成进度",
+        "description": "标明“更新本聊天在页面中的生成进度”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.tavern.initialize.end"
       }
     ],
     "edges": [
@@ -138,7 +138,7 @@
       {
         "type": "era.tavern.call.frame",
         "cardinality": "exactly_one",
-        "display_name": "完成后的操作资料",
+        "display_name": "更新本聊天在页面中的生成进度的处理进度及结果",
         "as": "frame"
       }
     ]

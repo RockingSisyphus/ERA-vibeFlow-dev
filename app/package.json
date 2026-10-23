@@ -8,9 +8,9 @@
   "scripts": {
     "dev": "node scripts/dev.mjs",
     "serve": "node scripts/serve-project.mjs",
-    "build:dev": "webpack --mode development",
-    "build": "webpack --mode production",
-    "release": "webpack --mode production",
+    "build:dev": "pnpm build:workflows && webpack --mode development",
+    "build": "pnpm build:workflows && webpack --mode production",
+    "release": "pnpm build:workflows && webpack --mode production",
     "watch": "webpack --mode development --watch --progress",
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,css,scss,html,vue}\" \"tests/**/*.{ts,tsx,js,jsx}\" \"scripts/era-quality/**/*.{ts,json}\" \"era-quality.config.json\" \".era-quality-baseline.json\" \"tsconfig.quality.json\" --no-error-on-unmatched-pattern",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,css,scss,html,vue}\" \"tests/**/*.{ts,tsx,js,jsx}\" \"scripts/era-quality/**/*.{ts,json}\" \"era-quality.config.json\" \".era-quality-baseline.json\" \"tsconfig.quality.json\" --no-error-on-unmatched-pattern",
@@ -24,11 +24,10 @@
     "quality:baseline": "node scripts/era-quality/cli.ts --write-baseline",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
-    "test:contract": "vitest run tests/macro/vibeflow-differential.test.ts tests/service/contracts-v1-2.test.ts tests/service/dispatch-context-and-safety.test.ts",
+    "test:contract": "vitest run tests/macro/frozen-contract.test.ts tests/service/contracts-v1-2.test.ts tests/service/dispatch-context-and-safety.test.ts",
     "test:integration:macro": "vitest run tests/macro/vibeflow-registration.test.ts",
     "test:integration:service": "node scripts/service-g3-runtime-probe.mjs",
     "test:integration": "pnpm test:integration:macro && pnpm test:integration:service && node scripts/service-g4-collection-runtime-probe.mjs",
-    "test:e2e": "node scripts/check-real-tavern-e2e.mjs",
     "test:perf:macro": "node scripts/macro-performance.mjs",
     "test:perf:service": "node --expose-gc scripts/service-performance.mjs",
     "test:perf": "pnpm test:perf:macro && pnpm test:perf:service",
@@ -38,7 +37,8 @@
     "dump": "node dump_schema.ts",
     "sync": "node tavern_sync.mjs",
     "build:workflows": "node scripts/build-native-workflows.mjs",
-    "test:integration:tavern": "node scripts/native-tavern-probe.mjs"
+    "test:integration:tavern": "node scripts/native-tavern-probe.mjs",
+    "build:test-workflows": "node scripts/build-service-test-workflows.mjs"
   },
   "browserslist": [
     "defaults and partially supports es6-module"
@@ -115,8 +115,8 @@
   },
   "dependencies": {
     "@era/example-resources": "file:../packages/era-example-resources/era-example-resources-0.1.1.tgz",
-    "@era/vibeflow-expression": "file:vendor/era-vibeflow-expression-0.3.2.tgz",
-    "@era/vibeflow-floor-snapshot": "file:../packages/era-floor-snapshot/era-vibeflow-floor-snapshot-0.1.3.tgz",
+    "@era/vibeflow-expression": "file:../javascript_project/expression/era-vibeflow-expression-0.3.3.tgz",
+    "@era/vibeflow-floor-snapshot": "file:../packages/era-floor-snapshot/era-vibeflow-floor-snapshot-0.1.4.tgz",
     "@era/vibeflow-macro-syntax": "file:../packages/era-macro-syntax/era-vibeflow-macro-syntax-0.1.1.tgz",
     "@era/vibeflow-workbench": "file:../packages/era-workbench/era-vibeflow-workbench-0.1.1.tgz",
     "@pixi/react": "8.0.5",

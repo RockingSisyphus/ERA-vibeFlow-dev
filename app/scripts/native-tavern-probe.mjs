@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 const groups = [
   'entry-probe',
+  'named-entries',
   'models-preserved',
   'message-entry-preserved',
   'io-entry-preserved',
@@ -25,7 +26,10 @@ const groups = [
 const selected = process.argv.slice(2);
 for (const name of selected) if (!groups.includes(name)) throw new Error(`未知探针组：${name}`);
 const output = resolve(
-  process.env.ERA_NATIVE_PROBE_OUT ?? `artifact/native-tavern/${new Date().toISOString().replaceAll(':', '-')}`,
+  process.env.ERA_NATIVE_PROBE_OUT ??
+    fileURLToPath(
+      new URL(`../../reports/native-tavern/${new Date().toISOString().replaceAll(':', '-')}/`, import.meta.url),
+    ),
 );
 mkdirSync(output, { recursive: true });
 const results = [];

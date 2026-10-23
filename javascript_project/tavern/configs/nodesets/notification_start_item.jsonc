@@ -1,25 +1,25 @@
 {
   "type_key": "era.tavern.flow.notification_start_item",
-  "display_name": "逐项同步发起后置通知",
-  "description": "只发起，不等待；通知回调重入发生在同一 send 调用，且结果帧已先登记去重。",
+  "display_name": "按清单发起一条页面或阶段通知",
+  "description": "取出当前通知，普通事件立即发送，阶段完成通知启动作者订阅及交接；登记其完成位置后推进。没有剩余通知时结束，真实完成由独立通知分支收集。",
   "expand": true,
   "requires": [
     {
       "type": "era.tavern.frame.notification_batch.begin",
       "cardinality": "exactly_one",
-      "display_name": "当前帧、实例资源与通知位置"
+      "display_name": "按清单发起一条页面或阶段通知的请求和已有进度"
     }
   ],
   "provides": [
     {
       "key": "era_tavern_flow_notification_start_item_frame",
       "type": "era.tavern.call.frame",
-      "display_name": "本次原生步骤产生的资料"
+      "display_name": "按清单发起一条页面或阶段通知的处理进度及结果"
     },
     {
       "key": "era_tavern_flow_notification_start_item_done",
       "type": "era.tavern.done.notification_start",
-      "display_name": "本次原生步骤产生的资料"
+      "display_name": "本轮遍历或职责处理是否已经结束"
     }
   ],
   "pipeline": {
@@ -29,52 +29,52 @@
         "key": "frame",
         "type": "era.tavern.frame.notification_batch.begin",
         "required": true,
-        "display_name": "本次调用与资源"
+        "display_name": "按清单发起一条页面或阶段通知的请求和已有进度"
       }
     ],
     "max_steps": 14,
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.tavern.initialize.start",
-        "display_name": "开始当前原生流程",
-        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+        "display_name": "开始按清单发起一条页面或阶段通知",
+        "description": "标明“按清单发起一条页面或阶段通知”的开始位置。取出当前通知，普通事件立即发送，阶段完成通知启动作者订阅及交接；登记其完成位置后推进。没有剩余通知时结束，真实完成由独立通知分支收集。",
+        "definition_id": "era.tavern.initialize.start"
       },
       {
         "id": "choose_item",
-        "type_used": "era.tavern.notification_start_item.choose_item",
-        "display_name": "选择普通通知、阶段订阅或结束",
-        "description": "有当前通知才进入发起路径；按其原 type 选择 event 或 handoff；列表结束直接返回 done。"
+        "display_name": "选择下一条普通通知或阶段通知",
+        "description": "在“按清单发起一条页面或阶段通知”流程中，读取通知组当前位置，选择发出普通事件或启动生成阶段订阅；没有剩余通知时结束本轮。所有通知按原清单发起，完成结果另行收集。",
+        "definition_id": "era.tavern.notification_start_item.choose_item"
       },
       {
         "id": "start_event",
-        "type_used": "era.tavern.notification_start_item.start_event",
-        "display_name": "同步发起原 eventEmit",
-        "description": "立即以原参数调用 eventEmit，回调重入也在同轮接纳；把返回 Promise 或启动异常保存为受控资源，不等待也不抛给发送者。"
+        "display_name": "立即发出一条普通页面通知",
+        "description": "在“按清单发起一条页面或阶段通知”流程中，将本条通知及参数发送给酒馆监听者，同时登记实际回调及完成后的记录位置，再移到下一条。后续通知分支读取成功或失败，使发起顺序和完成顺序各自明确。",
+        "definition_id": "era.tavern.notification_start_item.start_event"
       },
       {
         "id": "start_handoff",
-        "type_used": "era.tavern.notification_start_item.start_handoff",
-        "display_name": "同步发起阶段完成订阅",
-        "description": "核对completionId仍待交接后，同步捕获订阅顺序、只读观察副本与周期控制器；固定机械调用进入本root异步原生订阅Loop，保存proceed等待，不调用旧GenerationSubscriptions.publish。"
+        "display_name": "发起阶段订阅及后续生成交接",
+        "description": "在“按清单发起一条页面或阶段通知”流程中，阶段完成通知仍有效时，捕获本次应执行的订阅列表，启动按序回调及生成交接等待。登记完成位置后继续发起其他通知，最终结果由通知分支统一收集。",
+        "definition_id": "era.tavern.notification_start_item.start_handoff"
       },
       {
         "id": "empty",
-        "type_used": "era.tavern.notification_start_item.empty",
-        "display_name": "返回通知发起完成标记",
-        "description": "没有条目时不发射回调，也不创建额外通知组。"
+        "display_name": "确认本组通知已全部发起",
+        "description": "在“按清单发起一条页面或阶段通知”流程中，通知清单已遍历完成时，标记发起循环结束。实际回调可能仍在运行，后续通知完成分支会等待并汇总各项结果。",
+        "definition_id": "era.tavern.notification_start_item.empty"
       },
       {
         "id": "join_result",
-        "type_used": "era.tavern.notification_start_item.join_result",
-        "display_name": "汇合当前唯一通知发起结果",
-        "description": "严格交还当前实际分支的一个资源和处理位置。"
+        "display_name": "交接按清单发起一条页面或阶段通知的选中结果",
+        "description": "在“按清单发起一条页面或阶段通知”流程中，在“按清单发起一条页面或阶段通知”中，接收本次实际选择的分支所产生的唯一结果，交给后续步骤或调用方。每次只允许一份实际结果，避免把互斥分支误当成多个都已执行。",
+        "definition_id": "era.tavern.notification_start_item.join_result"
       },
       {
         "id": "end",
-        "type_used": "era.tavern.initialize.end",
-        "display_name": "结束当前原生流程",
-        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+        "display_name": "结束按清单发起一条页面或阶段通知",
+        "description": "标明“按清单发起一条页面或阶段通知”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.tavern.initialize.end"
       }
     ],
     "edges": [
@@ -119,13 +119,13 @@
         "type": "era.tavern.frame.notification_start_item.final",
         "cardinality": "exactly_one",
         "as": "frame",
-        "display_name": "当前阶段结果"
+        "display_name": "按清单发起一条页面或阶段通知的处理进度及结果"
       },
       {
         "type": "era.tavern.done.notification_start",
         "cardinality": "exactly_one",
         "as": "done",
-        "display_name": "是否完成遍历"
+        "display_name": "本轮遍历或职责处理是否已经结束"
       }
     ]
   }

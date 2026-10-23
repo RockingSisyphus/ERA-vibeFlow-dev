@@ -1,0 +1,32 @@
+import {defineBaseLib} from "@vibeflow/plugin";
+
+export const era_expression_execution = defineBaseLib({
+  "id": "era.expression.execution",
+  "display_name": "表达式执行",
+  "description": "表达式执行的独立算法与类型，不依赖工作流端口或公共完整求值入口。",
+  "version": "1.0.0",
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "source": {
+        "kind": "file",
+        "ref": "base_lib/expression_execution.ts"
+      }
+    }
+  ],
+  "dependencies": [
+    "era.expression.types",
+    "era.expression.primitives",
+    "era.expression.execution_core"
+  ],
+  "external_packages": [
+    "mathjs"
+  ],
+  "rulesets": [
+    "vibeflow.base_lib"
+  ]
+});

@@ -14,7 +14,13 @@
               "const": "present"
             },
             "statWithMeta": {},
-            "statWithoutMeta": {}
+            "statWithoutMeta": {},
+            "mode": {
+              "enum": [
+                "raw",
+                "lazy"
+              ]
+            }
           },
           "required": [
             "kind",
@@ -28,6 +34,12 @@
           "properties": {
             "kind": {
               "const": "missing"
+            },
+            "mode": {
+              "enum": [
+                "raw",
+                "lazy"
+              ]
             }
           },
           "required": [
@@ -60,6 +72,12 @@
             "type": "integer",
             "minimum": 0,
             "maximum": 9007199254740991
+          },
+          "decoded": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "required": [

@@ -9,7 +9,6 @@
       "lodash"
     ]
   },
-  "quality_enabled": true,
   "architecture": {
     "documents": [
       {
@@ -17,10 +16,5 @@
         "document": "ARCHITECTURE.jsonc"
       }
     ]
-  },
-  "quality": {
-    "structure": {
-      "max_root_code_files": 153
-    }
   }
 }

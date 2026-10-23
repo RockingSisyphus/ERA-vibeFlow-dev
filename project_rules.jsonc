@@ -1,0 +1,59 @@
+{
+  "rulesets": [
+    "vibeflow.project.default"
+  ],
+  "rule_params": {
+    "vibeflow.project.layout": {
+      "directories": [
+        {
+          "path": "app",
+          "purpose": "酒馆局部脚本、展示界面与应用测试"
+        },
+        {
+          "path": "packages",
+          "purpose": "对外共享合同与公共包"
+        },
+        {
+          "path": "generated",
+          "purpose": "当前工作流AOT输出"
+        },
+        {
+          "path": "reports",
+          "purpose": "当前任务检查与审核记录"
+        },
+        {
+          "path": "docs",
+          "purpose": "开发与作者文档"
+        },
+        {
+          "path": "references",
+          "purpose": "算法与接口参考资料"
+        },
+        {
+          "path": "tools",
+          "purpose": "开发和测试工具入口"
+        },
+        {
+          "path": "javascript_project",
+          "purpose": "五个已登记JavaScript root的容器"
+        },
+        {
+          "path": ".agents",
+          "purpose": "项目代理技能与规则配置"
+        },
+        {
+          "path": ".codex",
+          "purpose": "Codex项目开发环境配置"
+        },
+        {
+          "path": "examples",
+          "purpose": "公开包行为演示与沙箱样例"
+        },
+        {
+          "path": "kernel",
+          "purpose": "受发行清单保护的VibeFlow工具链"
+        }
+      ]
+    }
+  }
+}

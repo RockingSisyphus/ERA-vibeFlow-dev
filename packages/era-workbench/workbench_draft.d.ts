@@ -1,4 +1,4 @@
-// Generated from Service base_lib/domain; do not edit.
+// Generated from Service base_lib/workbench; do not edit.
 /** 工作台共享纯计算；生产 Service 节点与 UI 预览由同一源码构建。 */
 import { type EraCommitOperation, type VariablePlan } from './workbench_operations.js';
 export declare function planVariableDiff(original: unknown, draft: unknown, path?: readonly string[]): VariablePlan;

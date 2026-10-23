@@ -1,0 +1,32 @@
+import {defineBaseLib} from "@vibeflow/plugin";
+
+export const era_expression_operation = defineBaseLib({
+  "id": "era.expression.operation",
+  "display_name": "表达式操作提交",
+  "description": "按操作顺序提交状态与随机游标，并提供独立求值入口。",
+  "version": "1.0.0",
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "source": {
+        "kind": "file",
+        "ref": "base_lib/expression_operation.ts"
+      }
+    }
+  ],
+  "dependencies": [
+    "era.expression.types",
+    "era.expression.primitives",
+    "era.expression.functions",
+    "era.expression.execution_core",
+    "era.expression.execution"
+  ],
+  "external_packages": [],
+  "rulesets": [
+    "vibeflow.base_lib"
+  ]
+});

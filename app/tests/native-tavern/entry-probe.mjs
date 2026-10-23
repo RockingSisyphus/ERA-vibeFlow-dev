@@ -215,20 +215,23 @@ const checks = [];
   await entered.first.promise;
   const first = await fn.next({ id: 'first' });
   fn.begin({ id: 'second', name: 'second', args: {}, sourceBasis: basis });
+  let secondStarted = false;
+  entered.second.promise.then(() => { secondStarted = true; });
+  await delay(10);
+  assert.equal(secondStarted, false, '当前作者等待提交回执时，后续作者不得提前启动');
+  assert.equal(first.payload.name, 'first');
+  fn.acknowledge({ id: 'first', requestId: first.id, settlement: { status: 'completed' } });
+  assert.equal((await fn.next({ id: 'first' })).kind, 'done');
   await entered.second.promise;
   const second = await fn.next({ id: 'second' });
-  assert.equal(f.session.functionCalls.get('first').finished, false);
-  assert.equal(f.session.functionCalls.get('second').finished, false);
-  assert.equal(first.payload.name, 'first');
   assert.equal(second.payload.name, 'second');
-  for (const id of ['first', 'second']) fn.acknowledge({ id, requestId: 1, settlement: { status: 'completed' } });
-  assert.equal((await fn.next({ id: 'first' })).kind, 'done');
+  fn.acknowledge({ id: 'second', requestId: second.id, settlement: { status: 'completed' } });
   assert.equal((await fn.next({ id: 'second' })).kind, 'done');
   f.page.dispatchEvent(new Event('pagehide'));
   await f.work;
   assert.equal(f.session.functionCalls.size, 0);
-  assert.equal(f.session.backgroundWaiter, null);
-  checks.push('保留原作者并发断言：两调用各等自身回执、互不阻塞、分别ack唤醒，卸载释放上下文');
+  assert.equal(f.disposed(), 1);
+  checks.push('作者串行：当前函数等待提交回执时下一调用不启动，分别ack后按顺序完成，卸载释放上下文');
 }
 
 {
@@ -236,18 +239,13 @@ const checks = [];
   const raw = deferred(),
     entered = deferred();
   const f = await fixture(undefined, {
-    runtimeOptions: {
-      trace: 'full',
-      onTrace: event => {
-        if (event.nodeId === 'launch') launches++;
-      },
-    },
     api: {
       SillyTavern: {
         groupId: null,
         getCurrentChatId: () => 'chat',
         ToolManager: {
           invokeFunctionTool: () => {
+            launches++;
             entered.resolve();
             return raw.promise;
           },

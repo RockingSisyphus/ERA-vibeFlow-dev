@@ -8,30 +8,30 @@
     }
   ],
   "type_key": "era.service.step",
-  "display_name": "处理标识、设置或忽略任务",
-  "description": "执行已经准备好的三类简单任务：确认消息历史标识、处理多阶段生成设置，或为无需处理的事件返回忽略原因。选定分支返回一个任务结果，供批次统一合并。",
+  "display_name": "完成消息标识、生成设置或忽略任务",
+  "description": "接收已准备的简单任务，按种类确认消息历史标识、管理生成设置，或回告无需处理的原因。选中分支返回一个真实任务结果，交给批次统一汇总。",
   "requires": [
     {
       "type": "era.step.request.routed",
       "cardinality": "exactly_one",
-      "display_name": "已准备路由步骤"
+      "display_name": "当前任务及已读取的聊天资料"
     },
     {
       "type": "era.task.route.selected",
       "cardinality": "exactly_one",
-      "display_name": "已准备任务路由"
+      "display_name": "已选中的简单任务处理种类"
     },
     {
       "type": "era.batch.execution.state",
       "cardinality": "exactly_one",
-      "display_name": "当前批次执行状态"
+      "display_name": "当前批次的任务进度与累计结果"
     }
   ],
   "provides": [
     {
       "key": "simple_task_result",
       "type": "era.task.result",
-      "display_name": "简单任务结果"
+      "display_name": "本项任务对应原事件的处理结果"
     }
   ],
   "pipeline": {
@@ -40,19 +40,19 @@
       {
         "key": "routed_step",
         "type": "era.step.request.routed",
-        "display_name": "已准备路由步骤",
+        "display_name": "当前任务及已读取的聊天资料",
         "required": true
       },
       {
         "key": "task_route",
         "type": "era.task.route.selected",
-        "display_name": "已准备任务路由",
+        "display_name": "已选中的简单任务处理种类",
         "required": true
       },
       {
         "key": "execution_state",
         "type": "era.batch.execution.state",
-        "display_name": "当前批次执行状态",
+        "display_name": "当前批次的任务进度与累计结果",
         "required": true
       }
     ],
@@ -60,39 +60,39 @@
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.service.terminal",
-        "display_name": "步骤启动",
-        "description": "开始处理标识、设置或忽略任务。"
+        "display_name": "开始完成消息标识、生成设置或忽略任务",
+        "description": "标明“完成消息标识、生成设置或忽略任务”的开始位置。接收已准备的简单任务，按种类确认消息历史标识、管理生成设置，或回告无需处理的原因。选中分支返回一个真实任务结果，交给批次统一汇总。",
+        "definition_id": "era.service.terminal"
       },
       {
         "id": "route_simple_task",
-        "type_used": "era.tasks.dispatch",
-        "display_name": "选择标识、设置或忽略任务",
-        "description": "本次处理标识、设置或忽略事件的简单任务。按简单任务类型选择消息历史标识结算、生成设置操作或忽略事件处理。"
+        "display_name": "选择标识、设置或忽略任务的处理方式",
+        "description": "在“完成消息标识、生成设置或忽略任务”流程中，接收已准备的简单任务，按种类交给消息标识确认、生成设置管理或忽略事件处理。选定分支产生一个任务结果，供批次汇总。",
+        "definition_id": "era.tasks.dispatch"
       },
       {
         "id": "task_update_mk",
-        "type_used": "era.task.update_mk",
-        "display_name": "结算消息历史标识更新",
-        "description": "本次处理标识、设置或忽略事件的简单任务。结算消息历史标识准备的结果。历史标识用于把每条聊天消息与变量变更日志对应起来；读取、生成和必要写入已在任务资料准备时完成。本流程检查该结果，再向任务的原始事件返回无变化、成功或失败回执。"
+        "display_name": "确认消息历史身份准备的结果",
+        "description": "本环节用于“完成消息标识、生成设置或忽略任务”：消息身份标识把聊天消息与变量变更记录对应起来，本流程接收任务准备阶段已有的标识、占位及写入结论。检查后向原事件返回成功、无变化或失败确认，供批次汇总。",
+        "definition_id": "era.task.update_mk"
       },
       {
         "id": "task_agent_settings",
-        "type_used": "era.agent.settings",
-        "display_name": "管理生成配置、预设和连接",
-        "description": "本次处理标识、设置或忽略事件的简单任务。处理多阶段生成的配置、预设、连接和模型列表操作。按命令读取必要的当前设置，通过浏览器接口执行相应操作，再将实际结果对应到原始请求。此流程负责设置管理，生成阶段在其他任务中执行。"
+        "display_name": "读取和管理多阶段生成设置",
+        "description": "本环节用于“完成消息标识、生成设置或忽略任务”：接收用户对生成配置、预设、连接或模型列表的操作，准备必要资料，通过酒馆执行，再向原发起者返回真实结果。模型生成本身由生成流程处理。",
+        "definition_id": "era.agent.settings"
       },
       {
         "id": "task_ignore",
-        "type_used": "era.task.ignore",
-        "display_name": "结算忽略步骤",
-        "description": "本次处理标识、设置或忽略事件的简单任务。为计划中决定忽略的每个原事件返回忽略回执，说明原因。"
+        "display_name": "向被忽略事件返回原因",
+        "description": "在“完成消息标识、生成设置或忽略任务”流程中，接收计划中无需实际处理的事件，为每个原事件返回忽略确认及原因。调用方因此仍能知道请求已被看见，而不会一直等待结果。",
+        "definition_id": "era.task.ignore"
       },
       {
         "id": "end",
-        "type_used": "era.service.terminal",
-        "display_name": "步骤结束",
-        "description": "结束处理标识、设置或忽略任务，输出本段流程的处理结果。"
+        "display_name": "结束完成消息标识、生成设置或忽略任务",
+        "description": "标明“完成消息标识、生成设置或忽略任务”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.service.terminal"
       }
     ],
     "edges": [
@@ -132,7 +132,7 @@
       {
         "type": "era.task.result",
         "cardinality": "exactly_one",
-        "display_name": "简单任务结果",
+        "display_name": "本项任务对应原事件的处理结果",
         "as": "simpleTaskResult"
       }
     ]

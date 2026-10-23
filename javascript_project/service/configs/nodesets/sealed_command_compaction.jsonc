@@ -1,0 +1,124 @@
+{
+  "type_key": "era.command_compaction.apply_sealed_layers",
+  "display_name": "压缩已完成历史并核对实际效果",
+  "description": "为已完成处理的历史正文准备较短指令方案，逐份交给正式操作流程重算比较。只有变量、函数和随机效果一致的方案才合回正文和历史记录，其他部分保持原文。",
+  "requires": [
+    {
+      "type": "era.expression.command.result",
+      "cardinality": "exactly_one",
+      "display_name": "消息处理后待核对的历史压缩资料"
+    }
+  ],
+  "provides": [
+    {
+      "key": "command_compaction_result",
+      "type": "era.command_compaction.result",
+      "display_name": "已确认历史压缩后可采用的正文结果"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "input_0",
+        "type": "era.expression.command.result",
+        "display_name": "消息处理后待核对的历史压缩资料",
+        "required": true
+      }
+    ],
+    "max_steps": 35,
+    "nodes": [
+      {
+        "id": "start",
+        "definition_id": "era.service.terminal",
+        "display_name": "开始压缩已完成历史并核对实际效果",
+        "description": "标明“压缩已完成历史并核对实际效果”的开始位置。为已完成处理的历史正文准备较短指令方案，逐份交给正式操作流程重算比较。只有变量、函数和随机效果一致的方案才合回正文和历史记录，其他部分保持原文。"
+      },
+      {
+        "id": "prepare_candidates",
+        "display_name": "为已完成历史准备压缩及比较任务",
+        "description": "在“压缩已完成历史并核对实际效果”流程中，对已完成处理的历史正文生成可能更短的指令方案，保留各消息原有变量、函数和随机来源。建立逐份比较进度，供正式操作流程验证是否可以采用。",
+        "definition_id": "era.sealed_command_compaction.prepare_candidates"
+      },
+      {
+        "id": "replay_candidates",
+        "definition_id": "vibeflow.loop.while",
+        "display_name": "逐份确认历史压缩后仍有相同效果",
+        "description": "依次从各消息原始变量、函数和随机起点执行缩短指令，比较最终状态与原结果。全部方案处理完后交回可采用清单，未通过方案保留原文。",
+        "requires": [
+          {
+            "type": "era.command_compaction.replay.state",
+            "cardinality": "exactly_one",
+            "display_name": "当前历史压缩方案及验证进度"
+          }
+        ],
+        "provides": [
+          {
+            "key": "replayed",
+            "type": "era.command_compaction.replay.state.next",
+            "display_name": "本份比较后的下一方案及累计结论"
+          }
+        ],
+        "loop": {
+          "body": "era.command_compaction.replay_step",
+          "max_iterations": null,
+          "stop_when": {
+            "from": "iteration_done",
+            "equals": true
+          },
+          "carry": [
+            {
+              "from": "era.command_compaction.replay.state",
+              "as": "replay_state",
+              "update": "state_next"
+            }
+          ],
+          "outputs": [
+            {
+              "from": "state_next",
+              "as": "replayed"
+            }
+          ]
+        }
+      },
+      {
+        "id": "publish_candidates",
+        "display_name": "把通过比较的缩短正文合回历史结果",
+        "description": "在“压缩已完成历史并核对实际效果”流程中，接收各份压缩方案的实际验证结论，将效果一致的缩短正文及处理标记合入同步结果。无变化或未通过的部分保留原文，相关历史记录按实际采用内容更新。",
+        "definition_id": "era.sealed_command_compaction.publish_candidates"
+      },
+      {
+        "id": "end",
+        "definition_id": "era.service.terminal",
+        "display_name": "结束压缩已完成历史并核对实际效果",
+        "description": "标明“压缩已完成历史并核对实际效果”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。"
+      }
+    ],
+    "edges": [
+      [
+        "start",
+        "prepare_candidates"
+      ],
+      [
+        "prepare_candidates",
+        "replay_candidates"
+      ],
+      [
+        "replay_candidates",
+        "publish_candidates"
+      ],
+      [
+        "publish_candidates",
+        "end"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.command_compaction.result",
+        "cardinality": "exactly_one",
+        "display_name": "已确认历史压缩后可采用的正文结果",
+        "as": "command_compaction_result"
+      }
+    ]
+  }
+}

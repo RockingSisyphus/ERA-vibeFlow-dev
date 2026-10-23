@@ -20,7 +20,7 @@ codec 唯一来源。包本身不访问宿主，也不包含工作流调度逻�
 - 两个内部 UI 初始化事件使用 `EraInitializeTaskV1.operation` 区分
   `resources` 与 `settings-update`，`app_ready` 固定为 `startup`；它们不属于公开
   13 API。
-- `npm run check:schema-sync` 对 12 个 Macro descriptor 与 18 个 Service
+- `npm run check:schema-sync` 对 12 个 Macro descriptor 与 17 个 Service
   descriptor 执行结构等价检查，并核对传输参数、结算、通知、诊断及定时器命令
   在复合 Schema 中的嵌入结构。
 - `args` 不限制参数总数；`max_host_refs_per_event` 只限制其中 `host-ref` 标签的数量，
@@ -28,6 +28,6 @@ codec 唯一来源。包本身不访问宿主，也不包含工作流调度逻�
 - `timer` 来源固定使用 `era.service.collection_timer`，并由 workflow 校验 token；
   迟到定时器不得关闭其他事件集。
 - 所有 runtime DTO 默认拒绝未知字段；仅错误 `details` 允许保留可移植 JSON 扩展。
-- 发布给两个 AOT root 的依赖使用固定版本 tarball，并分别写入 npm lock。
+- 发布给各 AOT root 的依赖使用固定版本 tarball，并分别写入 npm lock。
 
-维护注意：2026-10-15目录整理时复查发现`check:schema-sync`已有Macro状态Schema差异（canonical仅present/missing，Macro SDK及检查JSONC还含view/projection-only）；原断言保留，当前不能声称此专项通过。详见开发交接。此检查状态不等同App完整verify或真实酒馆业务验收。
+1.11.0 将已存在的四种宏输入（present、missing、view、projection-only）、快照模式和延迟匹配字段统一到公共合同。维护 Macro Schema 后运行 `npm run sync:macro-schemas`，生成 root 的检查 descriptor 与 SDK 声明；不要分别维护三份 Schema。`check:schema-sync` 同时检查 descriptor、SDK 声明和公共入口的嵌入状态。类型由本包提供，工作流和节点不另建类型副本。该专项通过不代表完整 App 或真实酒馆业务验收。

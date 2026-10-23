@@ -15,4 +15,4 @@
 - 公开 `era:*` 事件、持久化数据格式、通知顺序和宏语义是 ABI；改动前必须明确用户批准，并同时更新合同测试和现行设计文档。
 - 生命周期必须成对管理：注册的 listener、DOM、style、timer、global 入口和 pending work 由辅助workflow资源Node在pagehide/取消及finally中清理，并等待实际异步收尾。
 
-按子目录继续读取局部 `AGENTS.md`。`events/**`、`core/**`中的共享实现与差分参考按真实导入保留；新领域逻辑以Service为入口，不在这些目录恢复旧Host调度。
+按子目录继续读取局部 `AGENTS.md`。`events/catalog.ts`保留公共事件目录；旧core差分参考已退役，其行为期待由正式工作流和静态结果数据承接。领域逻辑以Service为入口，不恢复旧Host调度。

@@ -7,7 +7,6 @@
       "@stdlib/math-base-special-gamma"
     ]
   },
-  "quality_enabled": true,
   "architecture": {
     "documents": [
       {

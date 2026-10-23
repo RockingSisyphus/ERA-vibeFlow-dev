@@ -1,115 +1,13 @@
-import { createEraMacroRegex, containsEraMacro, containsEraLazyMacroToken, createLazyTokenRegex, decodeLazyMacro } from "./macro_syntax.ts";
-import { stripEraTechnicalBlocks } from "./technical_blocks.ts";
+import { createEraMacroRegex, containsEraMacro, containsEraLazyMacroToken, createLazyTokenRegex, decodeLazyMacro } from "./syntax/macro_syntax.ts";
+import { stripEraTechnicalBlocks } from "./syntax/technical_blocks.ts";
 import {
   isPresentMacroStoredStat,
   type JsonValue,
 } from "@era/vibeflow-contracts";
 import { lodashCompatibleGet } from "./lodash_get_compatible.ts";
 
-export type MacroStoredStat =
-  | { readonly kind: "present"; readonly value: unknown }
-  | { readonly kind: "missing" }
-  | { readonly kind: "projection-only" }
-  | { readonly kind: "view"; readonly mode: "raw" | "lazy" | "prompt"; readonly statWithMeta: unknown; readonly statWithoutMeta: unknown };
-
-export type MacroSnapshot = (
-  | {
-      readonly kind: "present";
-      readonly statWithMeta: unknown;
-      readonly statWithoutMeta: unknown;
-    }
-  | { readonly kind: "missing" }) & { readonly mode?: "raw" | "lazy" };
-
-export interface MacroOccurrence {
-  readonly decoded?: string | null;
-  readonly substring: string;
-  readonly path: string;
-  readonly withMeta: boolean;
-  readonly start: number;
-  readonly end: number;
-}
-
-export type MacroOccurrencePlan = {
-  readonly original: string;
-  readonly snapshot: MacroSnapshot;
-  readonly occurrences: readonly MacroOccurrence[];
-};
-
-export type MacroResolution =
-  | {
-      readonly kind: "preserve";
-      readonly start: number;
-      readonly end: number;
-      readonly substring: string;
-    }
-  | {
-      readonly kind: "missing";
-      readonly start: number;
-      readonly end: number;
-    }
-  | {
-      readonly kind: "value";
-      readonly start: number;
-      readonly end: number;
-      readonly value: unknown;
-    };
-
-export type ResolvedMacroOccurrences = {
-  readonly original: string;
-  readonly resolutions: readonly MacroResolution[];
-};
-
-function unescapeText(value: string): string {
-  return value.replace(
-    /__DOT__|__DQUOTE__|__SQUOTE__/g,
-    placeholder => {
-      switch (placeholder) {
-        case "__DOT__":
-          return ".";
-        case "__DQUOTE__":
-          return '"';
-        case "__SQUOTE__":
-          return "'";
-        default:
-          return placeholder;
-      }
-    },
-  );
-}
-
-function unescapeEraData(value: JsonValue): JsonValue {
-  if (Array.isArray(value)) {
-    return value.map(unescapeEraData);
-  }
-
-  if (value !== null && typeof value === "object") {
-    const result: Record<string, JsonValue> = {};
-    for (const [key, child] of Object.entries(value)) {
-      result[unescapeText(key)] = unescapeEraData(child);
-    }
-    return result;
-  }
-
-  return typeof value === "string" ? unescapeText(value) : value;
-}
-
-function removeMetaFields(value: JsonValue): JsonValue {
-  if (Array.isArray(value)) {
-    return value.map(removeMetaFields);
-  }
-
-  if (value !== null && typeof value === "object") {
-    const result: Record<string, JsonValue> = {};
-    for (const [key, child] of Object.entries(value)) {
-      if (!key.startsWith("$")) {
-        result[key] = removeMetaFields(child);
-      }
-    }
-    return result;
-  }
-
-  return value;
-}
+import type { MacroStoredStat, MacroSnapshot, MacroOccurrence, MacroOccurrencePlan, MacroResolution, ResolvedMacroOccurrences } from "@era/vibeflow-contracts";
+import {unescapeEraData, removeMetaFields} from "../../../base_lib/data_view/data_view.ts";
 
 /** 在原检测节点准备实际文本，提示只展开延迟标记。 */
 export function prepareMacroText(text: string, state: MacroStoredStat): { text: string; contains: boolean } {

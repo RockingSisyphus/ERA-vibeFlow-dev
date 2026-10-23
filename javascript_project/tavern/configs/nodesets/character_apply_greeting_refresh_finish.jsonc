@@ -1,20 +1,20 @@
 {
   "type_key": "era.tavern.flow.character_apply_greeting_refresh_finish",
-  "display_name": "执行开场白刷新：角色卡与显示配置：等待与确认",
-  "description": "续用同步段已发起资源；保留原等待后的具体处理、结果核对与错误身份。",
+  "display_name": "完成聊天开场白的通知、重绘和保存",
+  "description": "接续已经更新的聊天首条消息，等待接收通知处理，清除旧显示并重新绘制，发出呈现完成通知后保存聊天。返回本次开场白刷新已完成的实际确认。",
   "expand": true,
   "requires": [
     {
       "type": "era.tavern.call.frame",
       "cardinality": "exactly_one",
-      "display_name": "本次调用、实例资源与上一节点的事实"
+      "display_name": "完成聊天开场白的通知、重绘和保存的请求和已有进度"
     }
   ],
   "provides": [
     {
       "key": "era_tavern_flow_character_apply_greeting_refresh_finish_frame",
       "type": "era.tavern.call.frame",
-      "display_name": "处理后的资源与事实"
+      "display_name": "完成聊天开场白的通知、重绘和保存的处理进度及结果"
     }
   ],
   "pipeline": {
@@ -23,7 +23,7 @@
       {
         "key": "frame",
         "type": "era.tavern.call.frame",
-        "display_name": "同实例调用与资源",
+        "display_name": "完成聊天开场白的通知、重绘和保存的请求和已有进度",
         "required": true
       }
     ],
@@ -32,58 +32,58 @@
         "type": "era.tavern.call.frame",
         "cardinality": "exactly_one",
         "as": "frame",
-        "display_name": "本段明确结果"
+        "display_name": "完成聊天开场白的通知、重绘和保存的处理进度及结果"
       }
     ],
     "max_steps": 12,
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.tavern.initialize.start",
-        "display_name": "开始当前原生流程",
-        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+        "display_name": "开始完成聊天开场白的通知、重绘和保存",
+        "description": "标明“完成聊天开场白的通知、重绘和保存”的开始位置。接续已经更新的聊天首条消息，等待接收通知处理，清除旧显示并重新绘制，发出呈现完成通知后保存聊天。返回本次开场白刷新已完成的实际确认。",
+        "definition_id": "era.tavern.initialize.start"
       },
       {
         "id": "execute",
-        "type_used": "era.tavern.character_apply_greeting_refresh.execute",
-        "display_name": "等待本次执行开场白刷新：角色卡与显示配置的资源终态",
-        "description": "等待同步原生段已捕获的本次资源；检查所属实例和取消，不重发原 API，不执行后续回读或发布。"
+        "display_name": "等待开场白接收通知处理完成",
+        "description": "在“完成聊天开场白的通知、重绘和保存”流程中，接收已经发出的首条消息接收通知，等待监听方处理完成。随后才重建聊天显示，使相关监听处理与呈现顺序一致。",
+        "definition_id": "era.tavern.character_apply_greeting_refresh.execute"
       },
       {
         "id": "clear_display",
-        "type_used": "era.tavern.character_apply_greeting_refresh_finish.clear_display",
-        "display_name": "等待酒馆清空聊天显示",
-        "description": "接收事件完成后调用一次 clearChat 并等待。"
+        "display_name": "清除旧聊天显示以便重绘开场白",
+        "description": "在“完成聊天开场白的通知、重绘和保存”流程中，当前首条消息已经更新后，清理聊天区域的旧显示。后续按现有消息重建页面，使新的开场白内容能够完整呈现。",
+        "definition_id": "era.tavern.character_apply_greeting_refresh_finish.clear_display"
       },
       {
         "id": "print_messages",
-        "type_used": "era.tavern.character_apply_greeting_refresh_finish.print_messages",
-        "display_name": "等待酒馆重绘当前消息",
-        "description": "clearChat 完成后调用一次 printMessages 并等待。"
+        "display_name": "重新绘制包含新开场白的聊天",
+        "description": "在“完成聊天开场白的通知、重绘和保存”流程中，旧显示清理完成后，按当前聊天消息重新绘制页面。新的首条消息由此出现，随后再发出显示完成通知并保存聊天。",
+        "definition_id": "era.tavern.character_apply_greeting_refresh_finish.print_messages"
       },
       {
         "id": "emit_rendered",
-        "type_used": "era.tavern.character_apply_greeting_refresh_finish.emit_rendered",
-        "display_name": "等待首楼渲染通知",
-        "description": "重绘完成后发出 CHARACTER_MESSAGE_RENDERED，沿用首楼 ID 与 first_message 来源。"
+        "display_name": "通知开场白已经显示完成",
+        "description": "在“完成聊天开场白的通知、重绘和保存”流程中，聊天重新绘制后，发出首条角色消息的呈现完成通知，等待相关处理结束。让依赖消息显示的功能知道新开场白已经可用。",
+        "definition_id": "era.tavern.character_apply_greeting_refresh_finish.emit_rendered"
       },
       {
         "id": "save_chat",
-        "type_used": "era.tavern.character_apply_greeting_refresh_finish.save_chat",
-        "display_name": "等待首楼聊天保存",
-        "description": "渲染通知完成后调用一次 saveChat 并等待，再形成原 refreshed 确认。"
+        "display_name": "保存已更新并重绘的开场白聊天",
+        "description": "在“完成聊天开场白的通知、重绘和保存”流程中，首条消息更新、接收通知和重绘完成后，保存当前聊天。返回刷新完成的确认，表示这次开场白同步已完成实际收尾。",
+        "definition_id": "era.tavern.character_apply_greeting_refresh_finish.save_chat"
       },
       {
         "id": "return_result",
-        "type_used": "era.tavern.character_apply_greeting_refresh.return_result",
-        "display_name": "交还执行开场白刷新结果",
-        "description": "返回原 era.tavern.character.greeting_refresh.result 结果；需要脱敏的连接资料只返回摘要。"
+        "display_name": "交回“更新聊天开场白显示”的实际结果",
+        "description": "在“完成聊天开场白的通知、重绘和保存”流程中，接收“更新聊天开场白显示”已经执行得到的结果，复核实例和本次调用尚未取消后交回发起者。调用方据此继续业务或显示结果，取消时按实际原因结束等待。",
+        "definition_id": "era.tavern.character_apply_greeting_refresh.return_result"
       },
       {
         "id": "end",
-        "type_used": "era.tavern.initialize.end",
-        "display_name": "结束当前原生流程",
-        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+        "display_name": "结束完成聊天开场白的通知、重绘和保存",
+        "description": "标明“完成聊天开场白的通知、重绘和保存”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.tavern.initialize.end"
       }
     ],
     "edges": [

@@ -1,24 +1,24 @@
 {
   "type_key": "era.sync.block_step",
-  "display_name": "处理聊天消息中的一段 ERA 内容",
-  "description": "处理当前消息的一步工作：识别正文指令、作者函数调用、生成阶段调用或消息结束，完成对应动作，整理变更日志与消息进度，再压缩已完成历史并返回下一步状态。外层消息循环按正文顺序重复本流程。",
+  "display_name": "处理消息中的一段指令或作者调用",
+  "description": "根据当前消息位置识别变量指令、作者函数、生成阶段调用或消息结束，完成这一项处理并合入进度。随后整理已完成历史的压缩方案，交回下一位置，供外层按正文顺序继续。",
   "requires": [
     {
       "type": "era.sync.block.step.state",
       "cardinality": "exactly_one",
-      "display_name": "当前消息位置、变量、函数和日志"
+      "display_name": "当前消息位置及待处理变量指令"
     }
   ],
   "provides": [
     {
       "key": "block_step_state_after",
       "type": "era.sync.block.step.state.next",
-      "display_name": "处理后的消息位置、变量、函数和日志"
+      "display_name": "本段正文处理后的变量和消息进度"
     },
     {
       "key": "block_step_done",
       "type": "era.step.done",
-      "display_name": "消息范围是否已处理结束"
+      "display_name": "当前处理范围是否已经结束"
     }
   ],
   "pipeline": {
@@ -27,7 +27,7 @@
       {
         "key": "block_step_state",
         "type": "era.sync.block.step.state",
-        "display_name": "当前消息位置、变量、函数和日志",
+        "display_name": "当前消息位置及待处理变量指令",
         "required": true
       }
     ],
@@ -35,116 +35,81 @@
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.service.terminal",
-        "display_name": "消息块位置开始",
-        "description": "开始处理聊天消息中的一段 ERA 内容。"
+        "display_name": "开始处理消息中的一段指令或作者调用",
+        "description": "标明“处理消息中的一段指令或作者调用”的开始位置。根据当前消息位置识别变量指令、作者函数、生成阶段调用或消息结束，完成这一项处理并合入进度。随后整理已完成历史的压缩方案，交回下一位置，供外层按正文顺序继续。",
+        "definition_id": "era.service.terminal"
       },
       {
         "id": "choose_message_action",
-        "type_used": "era.sync.choose_message_action",
-        "display_name": "识别当前位置要处理的消息内容",
-        "description": "读取当前消息和正文位置，准备这条消息的历史起点，识别变量指令、作者函数调用、生成阶段调用或消息结束。无法处理的消息推进到下一条；正在运行的作者函数交给作者调用流程。"
+        "display_name": "判断当前位置是指令、函数还是消息结束",
+        "description": "在“处理消息中的一段指令或作者调用”流程中，读取当前消息及正文位置，准备该消息的历史起点，识别变量指令、作者函数、生成阶段调用或结束位置。正在运行的作者函数交给函数流程；无需处理的消息继续下一条。",
+        "definition_id": "era.sync.choose_message_action"
       },
       {
         "id": "author_function_step",
-        "type_used": "era.sync.author_function_step",
-        "display_name": "启动或接续正文中的作者函数",
-        "description": "本次推进聊天正文中一段 ERA 内容的处理。处理消息正文中的作者 JavaScript 函数一次运行动作：启动、等待请求、确认已应用的操作，或结束调用。有效变量提交在原调用位置插入待执行事务，交回消息循环应用，再返回确认。函数异常和不支持的请求保留具体原因，正常结束后继续后面的正文。"
+        "display_name": "在消息当前位置启动或接续作者函数",
+        "description": "本环节用于“处理消息中的一段指令或作者调用”：接收正文中的作者自定义 JavaScript 函数，检查后启动，等待它提出变量操作或结束。提交的操作在原正文位置应用后回告函数；完成、失败或范围结束时整理调用记录并释放资料。",
+        "definition_id": "era.sync.author_function_step"
       },
       {
         "id": "prepare_operations",
-        "type_used": "era.sync.prepare_message_operations",
-        "display_name": "准备正文指令或生成阶段调用",
-        "description": "把正文中的变量指令或生成阶段函数调用整理为有序操作列表，附上当前变量、函数、历史起点和随机进度，供操作循环逐项处理。"
+        "display_name": "把当前位置的指令整理为有序操作",
+        "description": "在“处理消息中的一段指令或作者调用”流程中，接收正文中的变量指令或生成阶段函数调用，整理要执行的操作清单，附上当前变量、函数、历史起点和随机进度。交给统一操作循环逐项计算，保持消息中的执行顺序。",
+        "definition_id": "era.sync.prepare_message_operations"
       },
       {
         "id": "operation_loop",
-        "type_used": "vibeflow.loop.while",
-        "display_name": "依次执行当前指令中的全部操作",
-        "description": "按正文指令的字段顺序反复处理变量和函数操作，嵌套对象先完成当前子对象。生成阶段函数清单也按原顺序逐项计算；每项使用前一项更新后的值，整段操作完成后输出变量、函数、日志、诊断和随机进度。",
-        "requires": [
-          {
-            "type": "era.command.operation.state",
-            "cardinality": "exactly_one",
-            "display_name": "待处理字段、当前变量和函数、历史起点、随机次数与日志"
-          }
-        ],
-        "provides": [
-          {
-            "key": "operation_result",
-            "type": "era.command.operation.result",
-            "display_name": "当前操作范围完整结果"
-          }
-        ],
-        "loop": {
-          "body": "era.command.operation_step",
-          "max_iterations": null,
-          "stop_when": {
-            "from": "operation_done",
-            "equals": true
-          },
-          "carry": [
-            {
-              "from": "era.command.operation.state",
-              "as": "operation_state",
-              "update": "operation_state_after"
-            }
-          ],
-          "outputs": [
-            {
-              "from": "operation_state_after",
-              "as": "operation_result"
-            }
-          ]
-        }
+        "definition_id": "era.command.apply_operations",
+        "display_name": "完成指定范围内的有序变量和函数操作",
+        "description": "本环节用于“处理消息中的一段指令或作者调用”：接收要处理的操作及起始变量、函数和随机位置，按顺序重复单项操作流程，直到本范围结束。正式消息、历史压缩比较和只读预演共用这一规则，返回各自结果供相应场景使用。"
       },
       {
         "id": "accept_operations",
-        "type_used": "era.sync.accept_message_operations",
-        "display_name": "接收操作结果，继续处理消息",
-        "description": "把操作循环产生的变量、函数、日志和诊断合入当前消息。正文指令标记为已完成并推进正文位置；生成阶段调用形成阶段结果，交回消息处理。"
+        "display_name": "把指令计算结果合入当前消息",
+        "description": "在“处理消息中的一段指令或作者调用”流程中，接收统一操作流程算出的变量、函数、历史和问题，将它们合入当前消息进度。正文指令标记完成并继续后续内容，生成阶段调用则形成相应阶段结果，供外层接着处理。",
+        "definition_id": "era.sync.accept_message_operations"
       },
       {
         "id": "install_author_frame",
-        "type_used": "era.sync.install_author_frame",
-        "display_name": "记录作者函数的调用位置和进度",
-        "description": "本次推进聊天正文中一段 ERA 内容的处理。遇到尚未执行的作者 JavaScript 函数调用时，记录它所在的消息、正文位置和插入操作数量，并在调用后放置临时定位标记。下一轮依据这些记录启动函数；函数提交的操作将接在这个位置处理。"
+        "display_name": "记住作者函数在消息中的执行位置",
+        "description": "在“处理消息中的一段指令或作者调用”流程中，遇到还未执行的作者自定义 JavaScript 函数时，记住它所在的消息和正文位置，并放置临时定位标记。下一轮据此启动函数，它提交的变量操作也会接在这个位置处理。",
+        "definition_id": "era.sync.install_author_frame"
       },
       {
         "id": "skip_call",
-        "type_used": "era.sync.skip_message_call",
         "display_name": "记录跳过的函数调用并继续正文",
-        "description": "当正文中的函数调用按现有规则跳过时，保留跳过原因，标记该调用已处理，并移动到下一个正文片段。"
+        "description": "在“处理消息中的一段指令或作者调用”流程中，正文中的函数调用按规则不执行时，保留原因，标记该调用已经处理，并移到下一个正文片段。外层据此继续消息，不会反复尝试同一项。",
+        "definition_id": "era.sync.skip_message_call"
       },
       {
         "id": "finish_message",
-        "type_used": "era.sync.finish_message",
-        "display_name": "完成本条消息，准备历史压缩",
-        "description": "整理本条消息的变量和函数变更日志，更新正文处理标记，准备可压缩的已完成历史，然后推进到下一条消息。"
+        "display_name": "完成本条消息并准备继续历史",
+        "description": "在“处理消息中的一段指令或作者调用”流程中，整理当前消息引起的变量和函数变化，更新正文处理记录，为已完成的历史准备可用压缩方案。然后移到下一条消息，使整个聊天按原顺序恢复变量状态。",
+        "definition_id": "era.sync.finish_message"
       },
       {
         "id": "finish_message_step",
-        "type_used": "era.sync.finish_message_step",
-        "display_name": "整理这一步的消息进度和变更结果",
-        "description": "根据刚完成的正文指令、作者调用或消息结束动作更新处理进度，整理变量、函数、正文、日志和诊断，供历史压缩和下一轮消息处理使用。"
+        "display_name": "汇总这一段正文带来的变化",
+        "description": "在“处理消息中的一段指令或作者调用”流程中，接收刚处理完的变量指令、作者函数或消息结束结果，整理本轮变量、函数、正文、历史与问题。更新当前消息进度，供历史压缩及下一轮正文处理使用。",
+        "definition_id": "era.sync.finish_message_step"
       },
       {
         "id": "apply_command_compaction",
-        "type_used": "era.command_compaction.apply_sealed_layers_flat",
-        "display_name": "Service 封存压缩组合",
-        "description": "本次推进聊天正文中一段 ERA 内容的处理。压缩已完成历史消息中的 ERA 命令文本。先生成压缩候选，再通过 Service 重放确认变量、函数和随机使用结果一致；确认成功后采用候选及标记，否则保留原文。"
+        "display_name": "压缩已完成历史并核对实际效果",
+        "description": "本环节用于“处理消息中的一段指令或作者调用”：为已完成处理的历史正文准备较短指令方案，逐份交给正式操作流程重算比较。只有变量、函数和随机效果一致的方案才合回正文和历史记录，其他部分保持原文。",
+        "definition_id": "era.command_compaction.apply_sealed_layers"
       },
       {
         "id": "publish_block_application",
-        "type_used": "era.lifecycle.publish_block_application",
-        "display_name": "发布内存应用结果与推进位置",
-        "description": "本次推进聊天正文中一段 ERA 内容的处理。发布消息命令执行后的内存变量、日志、执行范围及待保存正文。普通历史同步遇到旧回复已变化时重新计算当前分支；作者调用产生的 调用接口（API） 候选失败时保留失败结果。"
+        "display_name": "发布本轮内存状态和待保存正文",
+        "description": "在“处理消息中的一段指令或作者调用”流程中，将消息指令算出的变量、历史、有效执行范围和待保存正文发布为当前工作状态。普通同步发现回复已经变化时重新计算该分支；作者函数提交失败时保留失败结果，供后续保存和回告。",
+        "definition_id": "era.lifecycle.publish_block_application"
       },
       {
         "id": "end",
-        "type_used": "era.service.terminal",
-        "display_name": "消息块位置结束",
-        "description": "结束处理聊天消息中的一段 ERA 内容，输出本段流程的处理结果。"
+        "display_name": "结束处理消息中的一段指令或作者调用",
+        "description": "标明“处理消息中的一段指令或作者调用”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.service.terminal"
       }
     ],
     "edges": [
@@ -232,13 +197,13 @@
       {
         "type": "era.sync.block.step.state.next",
         "cardinality": "exactly_one",
-        "display_name": "处理后的消息位置、变量、函数和日志",
+        "display_name": "本段正文处理后的变量和消息进度",
         "as": "block_step_state_after"
       },
       {
         "type": "era.step.done",
         "cardinality": "exactly_one",
-        "display_name": "消息范围是否已处理结束",
+        "display_name": "当前处理范围是否已经结束",
         "as": "block_step_done"
       }
     ]

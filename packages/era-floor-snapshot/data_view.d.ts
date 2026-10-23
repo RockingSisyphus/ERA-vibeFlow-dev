@@ -1,10 +1,9 @@
-// Generated from Service base_lib/domain; do not edit.
-export type EraDataTransformDirection = 'escape' | 'unescape';
-/** 同一遍历使用同一映射，保持原对象键和值的转换语义。 */
-export declare function transformEraData<T>(data: T, direction: EraDataTransformDirection): T;
-/**
- * 返回不含 `$` 元字段的深拷贝。
- * 必须在独立纯模块中完成，否则作者只读投影会反向依赖 Sidecar 运行时并扩大状态生命周期。
- */
+// Generated from Service base_lib/snapshot; do not edit.
+/** ERA 可移植数据的共享视图转换；不读取宿主、状态或时间。 */
+export type EraDataTransformDirection = "escape" | "unescape";
+/** 同时转换纯对象的键和值；保留数组位置和缺项，不修改输入。 */
+export declare function transformEraData<T>(value: T, direction: EraDataTransformDirection): T;
+export declare function unescapeEraData<T>(value: T): T;
+/** 复制可移植数据，递归移除纯对象中以美元符开头的元字段。 */
 export declare function removeMetaFields<T>(value: T): T;
 export declare function selectedMks(meta: Readonly<Record<string, unknown>>): (string | null)[];

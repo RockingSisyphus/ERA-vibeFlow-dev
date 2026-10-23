@@ -2,7 +2,7 @@
 import { commandCompactionMarkerIsCurrent,commandCompactionMarkersOf } from "../commands/command_compaction_marker.ts";
 import { hasAppliedBlockRecords } from "../commands/message_function_calls.ts";
 import { messageContentVersion,readMessageKey,readMkMessageText,type EraMkMessageV1 } from "../mk_engine.ts";
-import { cloneSnapshotValue,parseEditLog } from "../snapshot_history.ts";
+import { cloneSnapshotValue,parseEditLog } from "../../snapshot/snapshot_history.ts";
 import type { EraSyncDivergenceV1 } from "./sync_types.ts";
 
 /** 读取当前消息列表的有效 MK 链；缺失或损坏 MK 显式为 null。 */

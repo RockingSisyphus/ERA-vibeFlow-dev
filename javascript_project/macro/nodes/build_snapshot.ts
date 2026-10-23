@@ -1,7 +1,6 @@
+import type { MacroSnapshot, MacroStoredStat } from "@era/vibeflow-contracts";
 import {
   buildMacroSnapshot,
-  type MacroSnapshot,
-  type MacroStoredStat,
 } from "../base_lib/macro_runtime.ts";
 
 interface Envelope<T> {

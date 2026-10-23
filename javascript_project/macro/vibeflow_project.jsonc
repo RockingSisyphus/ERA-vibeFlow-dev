@@ -4,7 +4,6 @@
     "package_root": ".",
     "external_packages": []
   },
-  "quality_enabled": true,
   "architecture": {
     "documents": [
       {

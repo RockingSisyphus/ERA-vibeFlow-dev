@@ -4,6 +4,8 @@
 
 历史审核、旧阶段日志及旧验收附件已按用户要求直接删除，不设外部归档。当前业务状态与验收结论摘要统一见[交接说明](../docs/developer/交接说明.md)。
 
-本轮清理复验：[summary.json](cleanup-checks/summary.json)。七个入口静态验证、App691项、原生17组及Architecture更新通过；contracts Schema同步检查有既有差异，原始失败日志保留。`summary.status=FAIL`如实反映该专项失败，不能将目录整理完成解读为所有检查通过。
+当前迁移和回归入口为[实施清单](core-implementation-20261022/TODO.md)、[执行记录](core-implementation-20261022/执行备忘录.md)与`business-regression/`。`cleanup-checks/`等早期检查仅保留本轮问题追踪依据，其中的691项、Schema失败及旧bundle成绩均不覆盖当前源码的最终验收。
 
 除本README外，本目录内容是本机生成输出，不随Git提交；下方检查链接只在本机已生成相应结果后可用，云端应按当前源码重新生成。
+
+当前工具链为1.3.8，升级检查见[vibeflow-1.3.8](vibeflow-1.3.8/最终报告.md)。Tavern双入口已实施；当前新候选的真实业务综合/细则尚未启动，静态检查及原生探针不替代该验收。单文件分发构建记录见[distribution-20261023](distribution-20261023/最终报告.md)。

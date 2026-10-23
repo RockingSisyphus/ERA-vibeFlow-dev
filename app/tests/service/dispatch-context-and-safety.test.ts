@@ -7,15 +7,11 @@ const sync_contracts = await import(
     .href
 );
 import { describe, expect, it, vi } from 'vitest';
-
 import { isEraTavernMessageContextV2, normalizeLegacySafeObjectV1 } from '../../../packages/era-contracts/index.js';
-
 type JsonRecord = Record<string, any>;
-
 const preparationUrl = new URL('../../../javascript_project/service/base_lib/dispatch_preparation.ts', import.meta.url)
   .href;
-const transactionUrl = new URL('../../../javascript_project/service/base_lib/sync/sync_planning.ts', import.meta.url)
-  .href;
+const transactionUrl = new URL('./native-workflow-fixture.ts', import.meta.url).href;
 const commitUrl = new URL('../../../javascript_project/service/nodes/dispatch/commit_preparation.ts', import.meta.url)
   .href;
 const planMessagePreparationUrl = new URL(
@@ -28,27 +24,24 @@ const finalizeUrl = new URL(
   '../../../javascript_project/service/nodes/dispatch/shared_dispatch_adapters.ts',
   import.meta.url,
 ).href;
-
 const preparation = await import(/* @vite-ignore */ preparationUrl);
 const transaction = await import(/* @vite-ignore */ transactionUrl);
 const commitNode = await import(/* @vite-ignore */ commitUrl);
 const planMessagePreparationNode = await import(/* @vite-ignore */ planMessagePreparationUrl);
 const readNode = await import(/* @vite-ignore */ readUrl);
 const finalizeNode = await import(/* @vite-ignore */ finalizeUrl);
-
 function event(sequence = 1) {
   return {
     schemaVersion: 1,
     eventId: `event-${sequence}`,
     sequence,
     type: 'message_edited',
-    occurredAt: 1_000 + sequence,
+    occurredAt: 1000 + sequence,
     source: 'tavern',
     args: [],
     encodedBytes: 32,
   };
 }
-
 function syncStep(
   dispatchClass: 'sync' | 'api' = 'sync',
   context = 'latest-message-with-mk',
@@ -104,7 +97,6 @@ function syncStep(
     },
   };
 }
-
 function updateMkStep() {
   const sourceEvent = {
     ...event(),
@@ -127,7 +119,6 @@ function updateMkStep() {
     sources: [{ event: sourceEvent, relation: 'primary' }],
   };
 }
-
 function state(step: JsonRecord) {
   return {
     schemaVersion: 1,
@@ -152,14 +143,12 @@ function state(step: JsonRecord) {
     coverageError: null,
   };
 }
-
 function strictMessages(activeText = '正文', role = 'assistant') {
   return {
     schemaVersion: 2,
     messages: [{ schemaVersion: 1, messageId: 2, role, activeText, swipeIndex: 1 }],
   };
 }
-
 describe('统一执行前上下文', () => {
   it('preserves an Agent wrapper route while keeping the underlying dispatch class', () => {
     const step = { ...updateMkStep(), taskRoute: 'agent-generation-session' };
@@ -173,7 +162,6 @@ describe('统一执行前上下文', () => {
     expect(finalized.prepared_task_route).toBe('agent-generation-session');
     expect(finalized.prepared_routed_step.dispatchContext.dispatchClass).toBe('update-mk');
   });
-
   it('context:none 不触发任何 Host 读取，latest-message 只读取消息', async () => {
     const noHostStep = syncStep('sync', 'none');
     const classified = preparation.classifyDispatch(noHostStep, state(noHostStep));
@@ -184,7 +172,6 @@ describe('统一执行前上下文', () => {
       messageWriteRequired: false,
       variableWriteRequired: false,
     });
-
     const latestStep = syncStep('sync', 'latest-message');
     const latestSeed = preparation.classifyDispatch(latestStep, state(latestStep)).seed;
     const readContext = vi.fn(async () => strictMessages());
@@ -208,7 +195,6 @@ describe('统一执行前上下文', () => {
     const plan = preparation.planDispatchPreparation(result.canonical_dispatch_context);
     expect(plan).toMatchObject({ processingMk: null, messageUpdate: null, variableWriteRequired: false });
   });
-
   it('状态任务确保 MK 和占位符，但保留旧 SelectedMks 供同步事务识别 swipe 分歧', () => {
     const step = syncStep();
     const seed = preparation.classifyDispatch(step, state(step)).seed;
@@ -226,7 +212,6 @@ describe('统一执行前上下文', () => {
     expect(plan.metaUpdate.SelectedMks).toEqual(['mk-0', null]);
     expect(plan.metaUpdate.unknown).toEqual({ keep: true });
     expect(plan.variableWriteRequired).toBe(false);
-
     const repeated = preparation.planDispatchPreparation(
       preparation.canonicalDispatchContext(
         seed,
@@ -238,7 +223,6 @@ describe('统一执行前上下文', () => {
     expect(repeated.messageWriteRequired).toBe(false);
     expect(repeated.variableWriteRequired).toBe(false);
   });
-
   it('生成回退保留完整三楼拓扑，不给待生成末楼补写 MK 或占位符', () => {
     const base = syncStep('sync', 'latest-message');
     const step = { ...base, task: { ...base.task, target: { kind: 'previous-of-latest' } } };
@@ -268,7 +252,6 @@ describe('统一执行前上下文', () => {
     });
     expect(plan.sourceBasis.messages).toEqual(messages);
   });
-
   it('已确认的补MK更新来源依据，未提交的消息仍保留原依据', () => {
     const step = syncStep();
     const plan = preparation.planDispatchPreparation(
@@ -290,7 +273,6 @@ describe('统一执行前上下文', () => {
     expect(committed.stagedMessageUpdates).toEqual([]);
     expect(plan.sourceBasis.messages.at(-1).activeText).toBe('用户原文');
   });
-
   it('零消息只允许同步任务继续准备为空终态', () => {
     const sync = syncStep();
     const syncSeed = preparation.classifyDispatch(sync, state(sync)).seed;
@@ -311,7 +293,6 @@ describe('统一执行前上下文', () => {
       messageWriteRequired: false,
       variableWriteRequired: false,
     });
-
     const update = updateMkStep();
     const updateSeed = preparation.classifyDispatch(update, state(update)).seed;
     const rejected = preparation.planDispatchPreparation(
@@ -324,12 +305,11 @@ describe('统一执行前上下文', () => {
     );
     expect(rejected).toMatchObject({ status: 'failed', failure: { code: 'ERA_DISPATCH_EMPTY_CHAT' } });
   });
-
   it.each([
     ['api', 'state-sync', 'ready'],
     ['api', 'message-write', 'failed'],
     ['update-mk', undefined, 'failed'],
-  ])('空历史 %s/%s 按真实任务意图准备为 %s', (kind, intent, expected) => {
+  ])('空历史 %s/%s 按真实任务意图准备为 %s', async (kind, intent, expected) => {
     const base = syncStep();
     const step = { ...base, task: { ...base.task, kind, intent } };
     const seed = preparation.classifyDispatch(step, state(step)).seed;
@@ -352,7 +332,7 @@ describe('统一执行前上下文', () => {
       const dispatchContext = preparation.dispatchContextOf(preparation.preserveDispatchPreparation(plan));
       // Facade.sync forwards this exact prepared context to the existing sync transaction.
       const routed = { ...base, dispatchContext };
-      const work = transaction.planSyncWork({
+      const work = await transaction.planSyncWork({
         schemaVersion: 1,
         step: routed,
         consecutive: sync_contracts.consecutiveFacts(state(routed)),
@@ -375,7 +355,6 @@ describe('统一执行前上下文', () => {
       });
     }
   });
-
   it('仅 update-mk 任务在准备阶段拥有 SelectedMks 提交权', () => {
     const step = updateMkStep();
     const seed = preparation.classifyDispatch(step, state(step)).seed;
@@ -393,7 +372,6 @@ describe('统一执行前上下文', () => {
     expect(plan.metaUpdate.SelectedMks).toEqual(['mk-0', null, plan.processingMk]);
     expect(plan.metaUpdate.unknown).toEqual({ keep: true });
   });
-
   it('占位符关闭时不新增也不删除历史值，用户消息从不追加占位符', () => {
     const step = syncStep();
     const seed = preparation.classifyDispatch(step, state(step)).seed;
@@ -407,7 +385,6 @@ describe('统一执行前上下文', () => {
     );
     expect(off.messageUpdate?.content).toContain('<历史占位符/>');
     expect(off.messageUpdate?.content).not.toContain('<新占位符/>');
-
     const user = preparation.planDispatchPreparation(
       preparation.canonicalDispatchContext(
         seed,
@@ -418,7 +395,6 @@ describe('统一执行前上下文', () => {
     );
     expect(user.messageUpdate?.content).not.toContain('<状态栏/>');
   });
-
   it('预提交部分写入与未知确认均升级为 fatal', async () => {
     const updateStep = updateMkStep();
     const updateSeed = preparation.classifyDispatch(updateStep, state(updateStep)).seed;
@@ -442,7 +418,6 @@ describe('统一执行前上下文', () => {
         },
       ),
     ).rejects.toThrow('ERA_DISPATCH_PARTIAL_COMMIT');
-
     const syncStepValue = syncStep();
     const syncSeed = preparation.classifyDispatch(syncStepValue, state(syncStepValue)).seed;
     const syncPlan = preparation.planDispatchPreparation(
@@ -453,7 +428,6 @@ describe('统一执行前上下文', () => {
         { variables: {} },
       ),
     );
-
     await expect(
       commitNode.run(
         { 'era.dispatch.preparation.plan': { value: syncPlan } },
@@ -468,7 +442,6 @@ describe('统一执行前上下文', () => {
     ).rejects.toThrow('ERA_DISPATCH_MESSAGE_COMMIT_UNKNOWN');
   });
 });
-
 describe('严格 DTO、安全对象与 API 状态策略', () => {
   it('严格消息 DTO 拒绝 Date、附件及额外宿主字段', () => {
     expect(isEraTavernMessageContextV2(strictMessages())).toBe(true);
@@ -485,7 +458,6 @@ describe('严格 DTO、安全对象与 API 状态策略', () => {
       }),
     ).toBe(false);
   });
-
   it('legacy-safe-object 安全提升 __proto__ 字段，显式字段优先且不污染原型', () => {
     const payload: Record<string, unknown> = Object.create(null);
     Object.defineProperty(payload, '__proto__', {
@@ -505,7 +477,6 @@ describe('严格 DTO、安全对象与 API 状态策略', () => {
     });
     expect(({} as Record<string, unknown>).promoted).toBeUndefined();
   });
-
   it('legacy-safe-object 拒绝循环、访问器、函数、Symbol 与非有限数值', () => {
     const circular: JsonRecord = {};
     circular.self = circular;
@@ -517,8 +488,7 @@ describe('严格 DTO、安全对象与 API 状态策略', () => {
     expect(() => normalizeLegacySafeObjectV1({ [Symbol('key')]: 1 })).toThrow('Symbol');
     expect(() => normalizeLegacySafeObjectV1({ value: Number.POSITIVE_INFINITY })).toThrow('非有限数值');
   });
-
-  it('所有 API 同步公开计数固定为 1，且前后 carry 完全不变', () => {
+  it('所有 API 同步公开计数固定为 1，且前后 carry 完全不变', async () => {
     const mkBlock = '<era_data>{"era-message-key"="mk-existing","era-message-type"="assistant"}</era_data>';
     const variables = {
       stat_data: { hp: 10 },
@@ -529,7 +499,7 @@ describe('严格 DTO、安全对象与 API 状态策略', () => {
       messages: [{ schemaVersion: 1, messageId: 0, role: 'assistant', activeText: mkBlock, swipeIndex: null }],
     };
     const apiStep = syncStep('api', 'latest-message-with-mk', messages.messages, 'mk-existing');
-    const apiWork = transaction.planSyncWork({
+    const apiWork = await transaction.planSyncWork({
       schemaVersion: 1,
       step: apiStep,
       consecutive: sync_contracts.consecutiveFacts(state(apiStep)),
@@ -540,9 +510,8 @@ describe('严格 DTO、安全对象与 API 状态策略', () => {
     });
     expect(apiWork.payload).toMatchObject({ consecutiveProcessingCount: 1, actions: { api: true } });
     expect(apiWork.plan?.nextConsecutiveState).toEqual({ mk: 'mk-existing', count: 4 });
-
     const normalStep = syncStep('sync', 'latest-message-with-mk', messages.messages, 'mk-existing');
-    const normalWork = transaction.planSyncWork({
+    const normalWork = await transaction.planSyncWork({
       schemaVersion: 1,
       step: normalStep,
       consecutive: sync_contracts.consecutiveFacts(state(normalStep)),
@@ -554,10 +523,9 @@ describe('严格 DTO、安全对象与 API 状态策略', () => {
     expect(normalWork.payload?.consecutiveProcessingCount).toBe(5);
     expect(normalWork.plan?.nextConsecutiveState).toEqual({ mk: 'mk-existing', count: 5 });
   });
-
-  it('零消息同步构造无消息身份的真实状态提交', () => {
+  it('零消息同步构造无消息身份的真实状态提交', async () => {
     const step = syncStep('sync', 'latest-message-with-mk', [], null);
-    const work = transaction.planSyncWork({
+    const work = await transaction.planSyncWork({
       schemaVersion: 1,
       step,
       consecutive: sync_contracts.consecutiveFacts(state(step)),
@@ -598,7 +566,6 @@ describe('严格 DTO、安全对象与 API 状态策略', () => {
       route: 'valid',
     });
   });
-
   it('swipe 新 MK 不预提交消息，由同步事务原子写入并撤销 A、应用 B', async () => {
     const keyBlock = (mk: string) => `<era_data>{"era-message-key"="${mk}","era-message-type"="assistant"}</era_data>`;
     const rawMessages = [
@@ -647,7 +614,7 @@ describe('严格 DTO、安全对象与 API 状态策略', () => {
     expect(routed).toMatchObject({ precommit_route: 'no-op' });
     const dispatchContext = preparation.dispatchContextOf(preparation.preserveDispatchPreparation(plan));
     const routedStep = { ...step, dispatchContext };
-    const work = transaction.planSyncWork({
+    const work = await transaction.planSyncWork({
       schemaVersion: 1,
       step: routedStep,
       consecutive: sync_contracts.consecutiveFacts(state(routedStep)),
@@ -679,8 +646,7 @@ describe('严格 DTO、安全对象与 API 状态策略', () => {
       meta: { SelectedMks: ['mk-0', plan.processingMk] },
     });
   });
-
-  it('最终楼层候选只在消息、processing、SelectedMks 与双日志使用同一 MK 时允许提交', () => {
+  it('最终楼层候选只在消息、processing、SelectedMks 与双日志使用同一 MK 时允许提交', async () => {
     const mk = 'era_mk_atomic_floor';
     const content = [
       '原子楼层正文',
@@ -721,7 +687,7 @@ describe('严格 DTO、安全对象与 API 状态策略', () => {
         requiresInitialPresentation: true,
       },
     };
-    const work = transaction.planSyncWork({
+    const work = await transaction.planSyncWork({
       schemaVersion: 1,
       step,
       consecutive: sync_contracts.consecutiveFacts(state(step)),
@@ -749,7 +715,6 @@ describe('严格 DTO、安全对象与 API 状态策略', () => {
       },
       messageWrites: [{ messageId: 0, content, extra: expect.any(Object) }],
     });
-
     const mismatched = {
       ...request,
       messageWrites: [
@@ -765,15 +730,13 @@ describe('严格 DTO、安全对象与 API 状态策略', () => {
     });
   });
 });
-
 describe('同步阶段输入归属', () => {
   it('Node 边界只投影连续事实，规划请求不携带批次和存储编排字段', async () => {
     const readSync = await import(
       /* @vite-ignore */ new URL('../../../javascript_project/service/nodes/sync/read_sync_context.ts', import.meta.url)
         .href
     );
-    const { prepareSyncPlanningInput } =
-      await import('../../../javascript_project/service/base_lib/sync/sync_planning');
+    const { prepareSyncPlanningInput } = await import('./native-workflow-fixture');
     const step = { ...syncStep(), dispatchContext: { status: 'ready', messages: [] } };
     const batch = state(step);
     const stored = { SidecarId: 'fixture' };

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   projectFloorSnapshot,
   projectFloorSnapshots,
-} from '../../../javascript_project/service/base_lib/domain/floor_snapshot';
+} from '../../../javascript_project/service/base_lib/snapshot/floor_snapshot';
 import * as published from '@era/vibeflow-floor-snapshot';
 
 describe('登记快照源码与同步分发出口', () => {

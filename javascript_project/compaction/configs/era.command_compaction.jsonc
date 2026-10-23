@@ -13,28 +13,28 @@
       {
         "key": "compaction_request",
         "type": "era.command_compaction.request",
-        "display_name": "ERA 命令层压缩请求",
+        "display_name": "原消息、变量起点和指令压缩要求",
         "required": true
       }
     ],
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.command_compaction.terminal",
-        "display_name": "命令层压缩启动",
-        "description": "这是“era.command_compaction”的入口标记。本工作流的结构起点或终点标记，执行时返回空结果，不计算表达式、不替换文本，也不读写酒馆。它只明确流程的入口或出口，业务输入与结果通过已声明的数据通道传递；最终结果由实际处理节点产生。"
+        "display_name": "开始指令压缩",
+        "description": "标明“指令压缩”的开始位置。在保持执行效果的前提下缩短消息中的变量及函数指令。",
+        "definition_id": "era.command_compaction.terminal"
       },
       {
         "id": "compact_layer",
-        "type_used": "era.command_compaction.compact_layer",
-        "display_name": "执行命令层安全压缩",
-        "description": "把消息中的 ERA 操作文本在保持行为的前提下缩短：解析标签及作用域，按原顺序分段，逐段重放原操作、分析依赖、生成并确认候选，最后对完整消息再次重放比较。不能确认的部分或整层保留原文并说明原因。返回计算状态和候选文本，不访问酒馆或保存文件，调用方仍可用实际 Service 规则再确认。"
+        "display_name": "缩短整条消息的指令并确认效果",
+        "description": "本环节用于“指令压缩”：接收原消息及变量起点，找出可以分别处理的指令段，逐段尝试缩短并重算比较，最后核对整条消息。只有变量、函数和随机效果一致才采用，其他部分保留原文并说明原因。",
+        "definition_id": "era.command_compaction.compact_layer"
       },
       {
         "id": "end",
-        "type_used": "era.command_compaction.terminal",
-        "display_name": "命令层压缩结束",
-        "description": "这是“era.command_compaction”的出口标记。本工作流的结构起点或终点标记，执行时返回空结果，不计算表达式、不替换文本，也不读写酒馆。它只明确流程的入口或出口，业务输入与结果通过已声明的数据通道传递；最终结果由实际处理节点产生。"
+        "display_name": "结束指令压缩",
+        "description": "标明“指令压缩”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.command_compaction.terminal"
       }
     ],
     "edges": [
@@ -51,7 +51,7 @@
       {
         "type": "era.command_compaction.response",
         "cardinality": "exactly_one",
-        "display_name": "ERA 命令层压缩结果",
+        "display_name": "确认后的消息文字及指令压缩结论",
         "as": "compactionResponse"
       }
     ]
@@ -60,16 +60,15 @@
     {
       "source": {
         "kind": "file",
-        "ref": "plugins/schemas.ts",
-        "export": "plugin"
-      }
-    },
-    {
-      "source": {
-        "kind": "file",
-        "ref": "plugins/era.ts",
-        "export": "plugin"
+        "ref": "plugins/contracts/plugin.ts"
       }
     }
-  ]
+  ],
+  "base_lib": {
+    "modules": [
+      "era.command_compaction.engine",
+      "era.command_compaction.interpreter",
+      "era.command_compaction.stages"
+    ]
+  }
 }

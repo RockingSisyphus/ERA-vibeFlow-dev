@@ -1,25 +1,25 @@
 {
   "type_key": "era.tavern.flow.functions_next_wait_request_item",
-  "display_name": "检查作者请求或等待唤醒",
-  "description": "原生每轮显式选择请求、结束或等待；队列选择和终态判定不藏在 Node 内部无限循环。",
+  "display_name": "检查一次作者进度并按需等待",
+  "description": "查看当前函数是否有新请求、已结束或仍在运行，分别取出、返回结束或登记并等待唤醒。等待完成后再由外层检查，直到取得可返回结果。",
   "expand": true,
   "requires": [
     {
       "type": "era.tavern.frame.functions_next.check_active",
       "cardinality": "exactly_one",
-      "display_name": "本次调用、资源句柄与处理位置"
+      "display_name": "检查一次作者进度并按需等待的请求和已有进度"
     }
   ],
   "provides": [
     {
       "key": "era_tavern_flow_functions_next_wait_request_item_frame",
       "type": "era.tavern.frame.functions_next_wait_request_item.final",
-      "display_name": "本次原生步骤的资源与事实"
+      "display_name": "检查一次作者进度并按需等待的处理进度及结果"
     },
     {
       "key": "era_tavern_flow_functions_next_wait_request_item_done",
       "type": "era.tavern.done.functions_next.wait_request",
-      "display_name": "本次原生步骤的资源与事实"
+      "display_name": "本轮遍历或职责处理是否已经结束"
     }
   ],
   "pipeline": {
@@ -29,57 +29,57 @@
         "key": "frame",
         "type": "era.tavern.frame.functions_next.check_active",
         "required": true,
-        "display_name": "当前作者调用资源"
+        "display_name": "检查一次作者进度并按需等待的请求和已有进度"
       }
     ],
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.tavern.initialize.start",
-        "display_name": "开始当前原生流程",
-        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+        "display_name": "开始检查一次作者进度并按需等待",
+        "description": "标明“检查一次作者进度并按需等待”的开始位置。查看当前函数是否有新请求、已结束或仍在运行，分别取出、返回结束或登记并等待唤醒。等待完成后再由外层检查，直到取得可返回结果。",
+        "definition_id": "era.tavern.initialize.start"
       },
       {
         "id": "choose_next",
-        "type_used": "era.tavern.functions_next_wait_request_item.choose_next",
-        "display_name": "识别已捕获请求、完成或继续等待",
-        "description": "优先交还同步前段固定的原请求；否则读取当前作者队列、finished 和 pending，并选择 request、done 或 wait。"
+        "display_name": "判断作者有新请求、已结束或仍需等待",
+        "description": "在“检查一次作者进度并按需等待”流程中，检查作者函数的请求队列和运行状态。优先交出已提出的操作；函数结束且没有待确认请求时返回结束，否则继续等待唤醒。",
+        "definition_id": "era.tavern.functions_next_wait_request_item.choose_next"
       },
       {
         "id": "take_request",
-        "type_used": "era.tavern.functions_next_wait_request_item.take_request",
-        "display_name": "交还当前原作者请求",
-        "description": "只取一个 commit 或同步请求，保留 id/type/payload；变量应用继续由主 Service 的同一块循环执行。"
+        "display_name": "取出作者提交的下一项操作",
+        "description": "在“检查一次作者进度并按需等待”流程中，从当前函数请求队列取出最早一项，交出操作编号、种类和内容，并标记本轮等待已取得结果。主服务随后在消息位置执行并确认。",
+        "definition_id": "era.tavern.functions_next_wait_request_item.take_request"
       },
       {
         "id": "finish_call",
-        "type_used": "era.tavern.functions_next_wait_request_item.finish_call",
-        "display_name": "交还已真正完成的作者调用",
-        "description": "只有 finished 且 pending=0 才形成 done，保留原函数错误。"
+        "display_name": "返回作者函数已结束的状态",
+        "description": "在“检查一次作者进度并按需等待”流程中，当前作者函数已经结束且待确认操作均已处理时，交出结束结果及函数错误。主服务据此完成正文调用标记并安排释放运行资料。",
+        "definition_id": "era.tavern.functions_next_wait_request_item.finish_call"
       },
       {
         "id": "await_wake",
-        "type_used": "era.tavern.functions_next_wait_request_item.await_wake",
-        "display_name": "登记作者请求唤醒资源",
-        "description": "当前既无请求也未完成时登记本次 call.wake Promise；只创建资源并交还，等待由异步 Node 执行。"
+        "display_name": "登记等待作者下一步的唤醒",
+        "description": "在“检查一次作者进度并按需等待”流程中，当前没有请求且函数尚未结束时，建立一次唤醒等待，供作者提交操作或运行结束时通知。外层循环等待后重新检查实际状态。",
+        "definition_id": "era.tavern.functions_next_wait_request_item.await_wake"
       },
       {
         "id": "join_result",
-        "type_used": "era.tavern.functions_next_wait_request_item.join_result",
-        "display_name": "汇合当前唯一作者等待结果",
-        "description": "当前互斥路径必须产生一个实际结果。"
+        "display_name": "交接检查一次作者进度并按需等待的选中结果",
+        "description": "在“检查一次作者进度并按需等待”流程中，在“检查一次作者进度并按需等待”中，接收本次实际选择的分支所产生的唯一结果，交给后续步骤或调用方。每次只允许一份实际结果，避免把互斥分支误当成多个都已执行。",
+        "definition_id": "era.tavern.functions_next_wait_request_item.join_result"
       },
       {
         "id": "wait_registered",
-        "type_used": "era.tavern.functions_next_wait_request_item.wait_registered",
-        "display_name": "等待已经登记的作者唤醒",
-        "description": "等待同步段或前一轮登记的 call.wake；取消后保留原上下文失效错误。"
+        "display_name": "等待作者提交操作或结束通知",
+        "description": "在“检查一次作者进度并按需等待”流程中，等待已经登记的作者唤醒信号，完成后移除这次等待。后续重新判断是取得请求、函数结束还是仍需继续等待。",
+        "definition_id": "era.tavern.functions_next_wait_request_item.wait_registered"
       },
       {
         "id": "end",
-        "type_used": "era.tavern.initialize.end",
-        "display_name": "结束当前原生流程",
-        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+        "display_name": "结束检查一次作者进度并按需等待",
+        "description": "标明“检查一次作者进度并按需等待”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.tavern.initialize.end"
       }
     ],
     "edges": [
@@ -128,13 +128,13 @@
         "type": "era.tavern.frame.functions_next_wait_request_item.final",
         "cardinality": "exactly_one",
         "as": "frame",
-        "display_name": "下一轮作者资料"
+        "display_name": "检查一次作者进度并按需等待的处理进度及结果"
       },
       {
         "type": "era.tavern.done.functions_next.wait_request",
         "cardinality": "exactly_one",
         "as": "done",
-        "display_name": "是否结束等待"
+        "display_name": "本轮遍历或职责处理是否已经结束"
       }
     ],
     "max_steps": 12

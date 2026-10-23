@@ -1,6 +1,6 @@
 // Adapters with identical declared base libraries share this source.
-import { normalizeOrderedOperations, isRecord, jsonEqual, valueAtPath, type WorkbenchIntent } from "../../base_lib/domain/workbench_operations.js";
-import { workbenchError, type Draft, type OperationPlan, type Baseline } from "../../base_lib/domain/workbench_context.ts";
+import { normalizeOrderedOperations, isRecord, jsonEqual, valueAtPath, type WorkbenchIntent } from "../../base_lib/workbench/workbench_operations.js";
+import { workbenchError, type Draft, type OperationPlan, type Baseline } from "../../base_lib/workbench/workbench_context.ts";
 
 // Original node: nodes/api/workbench_normalize_ordered.ts
 /** 显式操作不重排、不解锁；后续继续走原 Commit 事务校验。 */

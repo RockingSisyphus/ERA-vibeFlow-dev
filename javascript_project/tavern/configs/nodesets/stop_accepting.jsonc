@@ -1,20 +1,20 @@
 {
   "type_key": "era.tavern.flow.stop_accepting",
-  "display_name": "立即关闭实例入口",
-  "description": "同步停止接纳新请求，并使旧公共入口失效；后续异步清理不会重新打开监听。",
+  "display_name": "关闭新请求并取消生成相关等待",
+  "description": "将实例立即标为停止，唤醒作者、通知及计时分支，取消生成进度、订阅与阶段交接。返回入口已关闭确认，实际运行和资源释放仍由统一收尾等待完成。",
   "expand": true,
   "requires": [
     {
       "type": "era.tavern.call.frame",
       "cardinality": "exactly_one",
-      "display_name": "本次调用及实例资源令牌"
+      "display_name": "关闭新请求并取消生成相关等待的请求和已有进度"
     }
   ],
   "provides": [
     {
       "key": "era_tavern_flow_stop_accepting_frame",
       "type": "era.tavern.call.frame",
-      "display_name": "操作结果及后续处理所需的资源令牌"
+      "display_name": "关闭新请求并取消生成相关等待的处理进度及结果"
     }
   ],
   "pipeline": {
@@ -23,7 +23,7 @@
       {
         "key": "frame",
         "type": "era.tavern.call.frame",
-        "display_name": "调用与资源资料",
+        "display_name": "关闭新请求并取消生成相关等待的请求和已有进度",
         "required": true
       }
     ],
@@ -31,33 +31,33 @@
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.tavern.initialize.start",
-        "display_name": "开始当前原生流程",
-        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+        "display_name": "开始关闭新请求并取消生成相关等待",
+        "description": "标明“关闭新请求并取消生成相关等待”的开始位置。将实例立即标为停止，唤醒作者、通知及计时分支，取消生成进度、订阅与阶段交接。返回入口已关闭确认，实际运行和资源释放仍由统一收尾等待完成。",
+        "definition_id": "era.tavern.initialize.start"
       },
       {
         "id": "close_ingress",
-        "type_used": "era.tavern.stop_accepting.close_ingress",
-        "display_name": "标记停止并关闭接纳",
-        "description": "设置停止状态，禁止新事件、能力和监听登记。"
+        "display_name": "立即停止接收新事件并唤醒各分支",
+        "description": "在“关闭新请求并取消生成相关等待”流程中，把当前实例标为停止和未启动，返回入口关闭确认，并唤醒作者、通知和计时等待。后续请求会被拒绝，各长期分支开始结束处理。",
+        "definition_id": "era.tavern.stop_accepting.close_ingress"
       },
       {
         "id": "cancel_generations",
-        "type_used": "era.tavern.stop_accepting.cancel_generations",
-        "display_name": "取消作者函数与生成交接",
-        "description": "同步取消本实例运行信号及生成资源；已登记的作者与生成释放回调只转交各自原生清理路径，不能保留原型空操作。"
+        "display_name": "取消生成、阶段交接及相关订阅",
+        "description": "在“关闭新请求并取消生成相关等待”流程中，实例停止时取消业务等待，结束启动决定，清空本页生成进度、阶段交接及订阅，并撤销延后停止安排。让仍在等待旧生成的调用能够结束，实际运行资源继续由统一收尾等待。",
+        "definition_id": "era.tavern.stop_accepting.cancel_generations"
       },
       {
         "id": "return_closed",
-        "type_used": "era.tavern.stop_accepting.return_closed",
-        "display_name": "交还关闭入口确认",
-        "description": "返回原幂等停止接纳结果，后台和 Service 随后进入收尾。"
+        "display_name": "返回实例已关闭接收入口的确认",
+        "description": "在“关闭新请求并取消生成相关等待”流程中，接收停止接纳及生成取消的结果，向发起者返回入口已经关闭。实际任务退出和异步资源清理仍由实例长期运行流程等待完成。",
+        "definition_id": "era.tavern.stop_accepting.return_closed"
       },
       {
         "id": "end",
-        "type_used": "era.tavern.initialize.end",
-        "display_name": "结束当前原生流程",
-        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+        "display_name": "结束关闭新请求并取消生成相关等待",
+        "description": "标明“关闭新请求并取消生成相关等待”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.tavern.initialize.end"
       }
     ],
     "edges": [
@@ -82,7 +82,7 @@
       {
         "type": "era.tavern.call.frame",
         "cardinality": "exactly_one",
-        "display_name": "完成后的操作资料",
+        "display_name": "关闭新请求并取消生成相关等待的处理进度及结果",
         "as": "frame"
       }
     ]

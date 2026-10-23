@@ -1,7 +1,7 @@
 /** Prepare a sync plan without host I/O. */
 import { hasAppliedBlockRecords } from "../commands/message_function_calls.ts";
 import { readMessageKey,readMkMessageText } from "../mk_engine.ts";
-import { cloneSnapshotValue,rollbackStatToMK } from "../snapshot_history.ts";
+import { cloneSnapshotValue,rollbackStatToMK } from "../../snapshot/snapshot_history.ts";
 import {
 advanceConsecutiveMkState,
 cloneMessages,

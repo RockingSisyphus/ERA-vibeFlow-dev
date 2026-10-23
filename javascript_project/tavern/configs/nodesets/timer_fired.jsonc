@@ -1,20 +1,20 @@
 {
   "type_key": "era.tavern.flow.timer_fired",
-  "display_name": "同步处理 timer 到期回调",
-  "description": "原始 timer 回调只转交这个同步原生入口，保持它与同轮后续提交的序号顺序。",
+  "display_name": "处理有效到期或报告等待过久",
+  "description": "接收计时到达事实，检查安排是否仍有效。业务期限转换为队列事件，等待告警只报告未完成事件，旧计时直接忽略；返回本次实际处理结论。",
   "expand": true,
   "requires": [
     {
       "type": "era.tavern.call.frame",
       "cardinality": "exactly_one",
-      "display_name": "当前帧、实例资源与通知位置"
+      "display_name": "处理有效到期或报告等待过久的请求和已有进度"
     }
   ],
   "provides": [
     {
       "key": "era_tavern_flow_timer_fired_frame",
       "type": "era.tavern.frame.timer_fired.final",
-      "display_name": "本次原生步骤产生的资料"
+      "display_name": "处理有效到期或报告等待过久的处理进度及结果"
     }
   ],
   "pipeline": {
@@ -24,76 +24,76 @@
         "key": "frame",
         "type": "era.tavern.call.frame",
         "required": true,
-        "display_name": "本次调用与资源"
+        "display_name": "处理有效到期或报告等待过久的请求和已有进度"
       }
     ],
     "max_steps": 22,
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.tavern.initialize.start",
-        "display_name": "开始当前原生流程",
-        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+        "display_name": "开始处理有效到期或报告等待过久",
+        "description": "标明“处理有效到期或报告等待过久”的开始位置。接收计时到达事实，检查安排是否仍有效。业务期限转换为队列事件，等待告警只报告未完成事件，旧计时直接忽略；返回本次实际处理结论。",
+        "definition_id": "era.tavern.initialize.start"
       },
       {
         "id": "check_timer",
-        "type_used": "era.tavern.timer_fired.check_timer",
-        "display_name": "检查到期句柄仍有效",
-        "description": "核对 token、当前句柄及运行状态，避免被替换或取消的回调再入队。"
+        "display_name": "核对这次到期是否仍对应有效安排",
+        "description": "在“处理有效到期或报告等待过久”流程中，读取到期记录及其种类，比较当前登记的计时身份，或检查等待告警仍存在。后续据此忽略被替换的旧到期，或处理当前有效期限。",
+        "definition_id": "era.tavern.timer_fired.check_timer"
       },
       {
         "id": "choose_timer_kind",
-        "type_used": "era.tavern.timer_fired.choose_timer_kind",
-        "display_name": "区分有效事件、告警或陈旧回调",
-        "description": "有效 collection/delayed timer 才准入；watchdog 只按固定回执范围告警，陈旧或已取消句柄不制造事件。"
+        "display_name": "区分业务到期、等待告警和旧计时",
+        "description": "在“处理有效到期或报告等待过久”流程中，根据计时有效性与种类选择分支：有效业务期限准备事件，等待告警报告现状，失效记录直接忽略。避免旧安排影响当前任务。",
+        "definition_id": "era.tavern.timer_fired.choose_timer_kind"
       },
       {
         "id": "prepare_event",
-        "type_used": "era.tavern.timer_fired.prepare_event",
-        "display_name": "构造原到期事件",
-        "description": "移除本 timer 记录并构造原 collection timer 或延迟准入事件。"
+        "display_name": "将有效到期转换为主服务事件",
+        "description": "在“处理有效到期或报告等待过久”流程中，移除已到期计时的登记，把收集截止或已约定的延迟事件整理成统一事件输入。交给正常接收队列，让主服务按序决定接下来处理什么。",
+        "definition_id": "era.tavern.timer_fired.prepare_event"
       },
       {
         "id": "return_event_prepare",
-        "type_used": "era.tavern.timer_fired.return_event_prepare",
-        "display_name": "通过共享准入交付到期事件",
-        "description": "调用同一原生准入流程，保持 timer 与其他来源的序号和容量规则。"
+        "display_name": "把有效到期事件交给统一事件入口",
+        "description": "在“处理有效到期或报告等待过久”流程中，接收已经整理好的收集截止或延迟事件，继续交给与普通事件相同的接收流程。事件序号、容量和处理确认规则保持一致，后续回告接收结果。",
+        "definition_id": "era.tavern.timer_fired.return_event_prepare"
       },
       {
         "id": "return_event_shared",
-        "type_used": "era.tavern.flow.admission",
-        "display_name": "检查事件并接纳到 FIFO",
-        "description": "同步接纳 Tavern、UI、公共 API 和 timer 事件；拒绝不分配序号，接受即返回原有回执句柄。"
+        "display_name": "检查新事件并按序交给主服务",
+        "description": "本环节用于“处理有效到期或报告等待过久”：接收聊天、界面、脚本或到期事件，检查实例状态、内容和容量。有效事件登记序号及结果等待，交给服务或进入队列；拒绝时返回具体原因，不进入队列。",
+        "definition_id": "era.tavern.flow.admission"
       },
       {
         "id": "return_event",
-        "type_used": "era.tavern.timer_fired.return_event",
-        "display_name": "交还检查事件并接纳到 FIFO结果",
-        "description": "保存共享原生流程的实际结果并继续当前分支；不重新执行准入、计时或结算。"
+        "display_name": "返回到期事件的接收结论",
+        "description": "在“处理有效到期或报告等待过久”流程中，接收统一事件入口的实际结果，未被接收时报告对应计时或延迟事件的原因。后续不会将被拒绝的到期事件误当作已经处理。",
+        "definition_id": "era.tavern.timer_fired.return_event"
       },
       {
         "id": "warn_watchdog",
-        "type_used": "era.tavern.timer_fired.warn_watchdog",
-        "display_name": "同步报告仍未结算的高水位来源",
-        "description": "在原阈值回调中检查固定范围并记录未完成序号；不解除屏障、不入队业务事件。"
+        "display_name": "报告仍未完成的生成前等待",
+        "description": "在“处理有效到期或报告等待过久”流程中，告警到期时，列出指定范围内仍未确认的事件和已等待时间，并清除这次告警记录。告警只说明等待现状，生成仍遵守真实事件完成条件。",
+        "definition_id": "era.tavern.timer_fired.warn_watchdog"
       },
       {
         "id": "ignore_stale",
-        "type_used": "era.tavern.timer_fired.ignore_stale",
-        "display_name": "忽略已取消或被替代的到期句柄",
-        "description": "不准入事件，也不修改当前有效计时器和回执。"
+        "display_name": "忽略已取消或被替换的旧到期",
+        "description": "在“处理有效到期或报告等待过久”流程中，当前到期记录已不对应有效计时安排时，原样结束本次处理。不会因此把旧事件送入队列，也不影响新的有效计时。",
+        "definition_id": "era.tavern.timer_fired.ignore_stale"
       },
       {
         "id": "join_result",
-        "type_used": "era.tavern.timer_fired.join_result",
-        "display_name": "汇合唯一到期结果",
-        "description": "只交还有效准入、告警或陈旧分支的一个结果。"
+        "display_name": "交接处理有效到期或报告等待过久的选中结果",
+        "description": "在“处理有效到期或报告等待过久”流程中，在“处理有效到期或报告等待过久”中，接收本次实际选择的分支所产生的唯一结果，交给后续步骤或调用方。每次只允许一份实际结果，避免把互斥分支误当成多个都已执行。",
+        "definition_id": "era.tavern.timer_fired.join_result"
       },
       {
         "id": "end",
-        "type_used": "era.tavern.initialize.end",
-        "display_name": "结束当前原生流程",
-        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+        "display_name": "结束处理有效到期或报告等待过久",
+        "description": "标明“处理有效到期或报告等待过久”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.tavern.initialize.end"
       }
     ],
     "edges": [
@@ -154,7 +154,7 @@
         "type": "era.tavern.frame.timer_fired.final",
         "cardinality": "exactly_one",
         "as": "frame",
-        "display_name": "当前阶段结果"
+        "display_name": "处理有效到期或报告等待过久的处理进度及结果"
       }
     ]
   }

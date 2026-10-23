@@ -3,8 +3,58 @@ export type JsonValue =
   JsonPrimitive | readonly JsonValue[] | { readonly [key: string]: JsonValue };
 
 export type MacroStoredStat =
-  | { readonly kind: "present"; readonly value: JsonValue }
-  | { readonly kind: "missing" };
+  | { readonly kind: "present"; readonly value: unknown }
+  | { readonly kind: "missing" }
+  | { readonly kind: "projection-only" }
+  | { readonly kind: "view"; readonly mode: "raw" | "lazy" | "prompt"; readonly statWithMeta: unknown; readonly statWithoutMeta: unknown };
+
+export type MacroSnapshot = (
+  | {
+      readonly kind: "present";
+      readonly statWithMeta: unknown;
+      readonly statWithoutMeta: unknown;
+    }
+  | { readonly kind: "missing" }) & { readonly mode?: "raw" | "lazy" };
+
+export interface MacroOccurrence {
+  readonly decoded?: string | null;
+  readonly substring: string;
+  readonly path: string;
+  readonly withMeta: boolean;
+  readonly start: number;
+  readonly end: number;
+}
+
+export type MacroOccurrencePlan = {
+  readonly original: string;
+  readonly snapshot: MacroSnapshot;
+  readonly occurrences: readonly MacroOccurrence[];
+};
+
+export type MacroResolution =
+  | {
+      readonly kind: "preserve";
+      readonly start: number;
+      readonly end: number;
+      readonly substring: string;
+    }
+  | {
+      readonly kind: "missing";
+      readonly start: number;
+      readonly end: number;
+    }
+  | {
+      readonly kind: "value";
+      readonly start: number;
+      readonly end: number;
+      readonly value: unknown;
+    };
+
+export type ResolvedMacroOccurrences = {
+  readonly original: string;
+  readonly resolutions: readonly MacroResolution[];
+};
+
 
 export interface MacroInputs {
   readonly substring: string;

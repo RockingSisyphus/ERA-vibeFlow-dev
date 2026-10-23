@@ -42,7 +42,7 @@ export function assertCurrentMessageBasis(api: any, value: unknown): void {
   };
   // 先核对聊天，避免读到另一个聊天的数据并给出误导诊断。
   assertMessageWriteTargets(basis.identity, actualChat, [], () => null);
-  const messages = api.getChatMessages('0--1', { include_swipes: true }).map(projectMessage);
+  const messages: ReturnType<typeof projectMessage>[] = api.getChatMessages('0--1', { include_swipes: true }).map(projectMessage);
   // 后续楼层不改变已计算范围；必须校验原范围内的文本、角色和Swipe以避免覆盖用户编辑。
   if (messages.length < basis.messages.length) throw new MessageWriteTargetChanged('message-count', null);
   const byId = new Map(messages.map(message => [message.messageId, message]));

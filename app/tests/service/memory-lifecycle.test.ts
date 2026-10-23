@@ -4,19 +4,18 @@ import { contextWith, identity, sidecarId } from './memory-lifecycle-fixture';
 import { run as advance } from './message-block-fixture';
 import { PublishBlockApplicationNode as publish } from '../../../javascript_project/service/nodes/sync/shared_block_state_adapters';
 import { recordFor } from '../../../javascript_project/service/base_lib/sidecar_binding';
-import { applySealedCommandCompactionToWork } from '../../../javascript_project/service/base_lib/sync/command_compaction';
+import { applySealedCommandCompactionToWork } from './native-workflow-fixture';
 import { overlayWorkingMessages } from '../../../javascript_project/service/base_lib/working_state';
-
-import { prepareApiBlocks as prepareApi } from '../../../javascript_project/service/nodes/api/facade_nodes';
-import { returnAppliedReceipt as receipt } from '../../../javascript_project/service/nodes/api/facade_nodes';
+import {
+  prepareApiBlocks as prepareApi,
+  returnAppliedReceipt as receipt,
+} from '../../../javascript_project/service/nodes/api/facade_nodes';
 import {
   buildTransaction,
   inspectWindow,
   validateCommit,
 } from '../../../javascript_project/service/base_lib/facade_api_engine';
-
 import { execute } from './memory-batch-fixture';
-
 describe('内存块执行与批次保存', () => {
   it('100块即时更新工作状态，聊天和Sidecar各保存一次', async () => {
     const result = await execute('<VariableEdit>{"hp":{"$expr":"hp+1"}}</VariableEdit>'.repeat(100));
@@ -69,7 +68,6 @@ describe('内存块执行与批次保存', () => {
     }
   });
 });
-
 it('连续API共享未保存记录，第二次表达式基于第一次的结果', async () => {
   const context = contextWith('正文');
   const execution: any = {
@@ -135,7 +133,7 @@ it('连续API共享未保存记录，第二次表达式基于第一次的结果'
         .block_step_pending;
       const work = prepareWork({ 'era.sync.block.step.pending': { value: pending } }).expression_command_result;
       state = publish(
-        { 'era.command_compaction.result': { value: applySealedCommandCompactionToWork(work) } },
+        { 'era.command_compaction.result': { value: await applySealedCommandCompactionToWork(work) } },
         {},
         { capabilities },
       ).block_step_state_after;

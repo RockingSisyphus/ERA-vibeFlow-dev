@@ -2,9 +2,23 @@
   "nodeset_imports": [
     {
       "path": "nodesets/service_iteration.jsonc"
+    },
+    {
+      "path": "nodesets/command_operations.jsonc"
+    },
+    {
+      "path": "nodesets/command_compaction_replay_step.jsonc"
+    },
+    {
+      "path": "nodesets/sealed_command_compaction.jsonc"
+    },
+    {
+      "path": "nodesets/readonly_preview_step.jsonc"
+    },
+    {
+      "path": "nodesets/prepare_generation_facts.jsonc"
     }
   ],
-  "host_extensions": [],
   "global_config": {
     "config": {
       "max_event_bytes": 262144,
@@ -25,50 +39,49 @@
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.service.terminal",
-        "display_name": "ERA 服务启动",
-        "description": "开始ERA 服务。"
+        "display_name": "开始ERA 主服务",
+        "description": "标明“ERA 主服务”的开始位置。统一接收聊天变化和脚本请求，并按顺序计算、保存变量。",
+        "definition_id": "era.service.terminal"
       },
       {
         "id": "inspect_current_script_scope",
-        "type_used": "era.installation.scope.inspect",
-        "display_name": "读取当前脚本与脚本树",
-        "description": "读取当前脚本身份及角色卡、全局、预设中的启用脚本资料，供启动位置判断。酒馆读写由 era-tavern 原生辅助流程通过生成接线执行。"
+        "display_name": "读取当前脚本及各处启用情况",
+        "description": "在“ERA 主服务”流程中，读取当前脚本身份，以及角色卡、全局和预设中启用的脚本资料。启动判断据此确定本实例是否应处理聊天、呈现界面或保持休眠。",
+        "definition_id": "era.installation.scope.inspect"
       },
       {
         "id": "choose_startup",
-        "type_used": "era.installation.scope.choose_startup",
-        "display_name": "根据安装位置选择启动方式",
-        "description": "比对当前脚本在角色卡、全局和预设中的安装位置，决定启动服务还是显示休眠提示；位置未知时使用原有兼容启动方式，并给出诊断。"
+        "display_name": "按脚本安装位置决定启用或休眠",
+        "description": "在“ERA 主服务”流程中，比较当前脚本在角色卡、全局或预设中的启用位置，决定该实例运行服务还是显示休眠提示。位置无法识别时按现有兼容规则启动并给出诊断，让后续使用明确的启用范围。",
+        "definition_id": "era.installation.scope.choose_startup"
       },
       {
         "id": "activate_tavern_ingress",
-        "type_used": "era.installation.scope.activate_ingress",
-        "display_name": "登记单层显示窗口与角色卡设置",
-        "description": "在酒馆页面启用聊天事件监听和界面显示规则。根据脚本安装位置选择显示目标，并在聊天界面重建后重新连接。酒馆读写由 era-tavern 原生辅助流程通过生成接线执行。"
+        "display_name": "启用本实例的聊天监听和界面呈现",
+        "description": "在“ERA 主服务”流程中，接收已经确定的脚本启用范围，在酒馆页面安装聊天事件监听及显示规则。按安装位置选择呈现目标，聊天界面重建后重新连接，让后续事件能够进入 ERA 服务。",
+        "definition_id": "era.installation.scope.activate_ingress"
       },
       {
         "id": "publish_dormant_startup",
-        "type_used": "era.installation.scope.publish_dormant",
-        "display_name": "发布休眠安装提示",
-        "description": "向酒馆页面显示脚本休眠原因，并结束本次启动分支。"
+        "display_name": "向页面说明脚本为何处于休眠",
+        "description": "在“ERA 主服务”流程中，接收脚本安装位置的休眠决定，向酒馆页面发布对应提示。当前实例随后结束启动分支，使用户能知道为什么它没有开始处理聊天。",
+        "definition_id": "era.installation.scope.publish_dormant"
       },
       {
         "id": "begin_service",
-        "type_used": "era.service.begin",
-        "display_name": "建立服务状态，从事件收集开始",
-        "description": "建立事件队列、计时器、批次计数和消息处理进度，随后进入收集聊天事件与脚本请求的阶段。"
+        "display_name": "建立服务进度并开始收集事件",
+        "description": "在“ERA 主服务”流程中，建立事件等待集合、定时安排、批次计数和消息处理进度，从收集事件阶段启动服务。后续聊天变化和脚本请求会按批次进入统一处理。",
+        "definition_id": "era.service.begin"
       },
       {
         "id": "service_loop",
-        "type_used": "vibeflow.loop.while",
-        "display_name": "持续收集并执行酒馆事件",
-        "description": "长期接收和处理酒馆事件。收集阶段每轮整理一个事件；执行阶段每轮完成当前批次的一个任务，再汇总结果。批次结束后回到事件收集，页面离开或服务停止时结束循环。",
+        "display_name": "持续接收事件并逐项处理任务",
+        "description": "持续运行 ERA 主服务：等待聊天变化和脚本请求，收齐相关事件后规划一批任务，再逐项执行并回告结果。每批结束回到事件收集，页面离开或实例停止时结束，变量变化因此由同一服务按顺序处理。",
         "requires": [
           {
             "type": "era.service.cycle.state",
             "cardinality": "exactly_one",
-            "display_name": "服务当前阶段及待处理事件或任务"
+            "display_name": "服务当前处于收集还是执行及相应进度"
           }
         ],
         "loop": {
@@ -82,13 +95,14 @@
             }
           ]
         },
-        "provides": []
+        "provides": [],
+        "definition_id": "vibeflow.loop.while"
       },
       {
         "id": "end",
-        "type_used": "era.service.terminal",
-        "display_name": "ERA 服务结束",
-        "description": "结束ERA 服务，输出本段流程的处理结果。"
+        "display_name": "结束ERA 主服务",
+        "description": "标明“ERA 主服务”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.service.terminal"
       }
     ],
     "edges": [
@@ -133,16 +147,82 @@
     {
       "source": {
         "kind": "file",
-        "ref": "plugins/schemas.ts",
-        "export": "plugin"
+        "ref": "plugins/contracts/plugin.ts"
       }
     },
     {
       "source": {
         "kind": "file",
-        "ref": "plugins/era.ts",
+        "ref": "plugins/structure_rules/plugin.ts",
         "export": "plugin"
       }
     }
-  ]
+  ],
+  "rulesets": [
+    "era.service.workflow_structure"
+  ],
+  "base_lib": {
+    "modules": [
+      "era.data_view",
+      "era.command.operation_expressions",
+      "era.command.operation_functions",
+      "era.command.operation_state",
+      "era.command.operation_traversal",
+      "era.crud.mutations",
+      "era.crud.parser",
+      "era.service.agent_configuration",
+      "era.service.agent_flow_policy",
+      "era.service.agent_flow_types",
+      "era.service.agent_generation_context",
+      "era.service.agent_generation_continue",
+      "era.service.agent_generation_planning",
+      "era.service.agent_generation_session",
+      "era.service.agent_generation_settlement",
+      "era.service.agent_report_text",
+      "era.service.agent_session_binding",
+      "era.service.agent_settings_policy",
+      "era.service.agent_stage_handoff",
+      "era.service.agent_stage_program",
+      "era.service.agent_stage_text",
+      "era.service.agent_task_result",
+      "era.service.command_compaction",
+      "era.service.command_compaction_marker",
+      "era.service.dispatch_preparation",
+      "era.service.event_catalog",
+      "era.service.event_planner",
+      "era.service.facade_api_context",
+      "era.service.facade_api_engine",
+      "era.service.function_block_execution",
+      "era.service.greeting_refresh_policy",
+      "era.service.initialization_transaction",
+      "era.service.message_function_calls",
+      "era.service.mk_engine",
+      "era.service.resource_contracts",
+      "era.service.resource_planner",
+      "era.service.resource_setup",
+      "era.service.service_protocol_collection",
+      "era.service.service_protocol_execution",
+      "era.service.sidecar_binding",
+      "era.service.sidecar_resolution_projection",
+      "era.service.sync_commit_policy",
+      "era.service.sync_contracts",
+      "era.service.sync_divergence",
+      "era.service.sync_divergence_detection",
+      "era.service.sync_prepare",
+      "era.service.sync_result_policy",
+      "era.service.sync_types",
+      "era.service.sync_work_preparation",
+      "era.service.task_continuation",
+      "era.service.types",
+      "era.service.working_state",
+      "era.snapshot.history",
+      "era.sync.position_author",
+      "era.sync.position_source",
+      "era.workbench.context",
+      "era.workbench.draft",
+      "era.workbench.operations",
+      "era.workbench.protection",
+      "era.service.readonly_preview"
+    ]
+  }
 }

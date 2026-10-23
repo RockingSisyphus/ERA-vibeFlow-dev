@@ -11,7 +11,10 @@ export function StartEvent(inputs:any,params:any):any {
   let raw:any,error:any,failed=false;
   try {resource.signal.throwIfAborted();raw=s.api.eventEmit(f.notification.type,...f.notification.args);}catch(reason){failed=true;error=reason;}
   observeCompletion(resource,async()=>{if(failed)throw error;const result=await raw;resource.signal.throwIfAborted();return result;},async outcome=>{if(outcome.status==="rejected")throw outcome.error;return outcome.value;});
-  group.tasks.push({...f,kind:"notification",notificationIndex:f.notificationIndex});f.notificationIndex++;
+  const event={...f,notificationIndex:f.notificationIndex};
+  const completed=()=>{if(!s.stopping){s.notificationEvents.push(event);s.notificationWake?.resolve();}};
+  // 只登记一次已发起IO的完成事实；回调不执行workflow或选择业务路径。
+  s.resources.onSettled(resource.promise,completed);f.notificationIndex++;
   return emit({frame:f,done:false},params);
 }
 export function StartHandoff(inputs:any,params:any):any {
@@ -26,6 +29,9 @@ export function StartHandoff(inputs:any,params:any):any {
     raw=s.dispatch.handoff({...f,action:"generation_handoff"});
   }
   observeCompletion(resource,async()=>{resource.signal.throwIfAborted();return await raw;},async outcome=>{if(outcome.status==="rejected")throw outcome.error;return outcome.value;});
-  group.tasks.push({...f,kind:"notification",notificationIndex:f.notificationIndex});f.notificationIndex++;
+  const event={...f,notificationIndex:f.notificationIndex};
+  const completed=()=>{if(!s.stopping){s.notificationEvents.push(event);s.notificationWake?.resolve();}};
+  // 只登记一次已发起IO的完成事实；回调不执行workflow或选择业务路径。
+  s.resources.onSettled(resource.promise,completed);f.notificationIndex++;
   return emit({frame:f,done:false},params);
 }

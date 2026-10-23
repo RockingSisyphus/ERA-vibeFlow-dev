@@ -1,0 +1,28 @@
+import {defineBaseLib} from "@vibeflow/plugin";
+
+export const era_service_agent_stage_program = defineBaseLib({
+  "id": "era.service.agent_stage_program",
+  "display_name": "阶段JSON调用位置",
+  "description": "在共用块循环的当前位置执行规划calls并收集候选操作错误。",
+  "version": "1.0.0",
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "source": {
+        "kind": "file",
+        "ref": "base_lib/agent/agent_stage_program.ts"
+      }
+    }
+  ],
+  "dependencies": [
+    "era.service.sync_contracts"
+  ],
+  "external_packages": [],
+  "rulesets": [
+    "vibeflow.base_lib"
+  ]
+});

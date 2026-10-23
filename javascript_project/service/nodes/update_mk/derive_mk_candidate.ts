@@ -173,8 +173,8 @@ export function run(
   const metaUpdate = cloneMkValue(context.meta) as Record<string, unknown>;
   metaUpdate.SelectedMks = currentSelectedMks;
 
-  const textUpdate = ensured.textUpdate;
-  if (textUpdate !== null && textUpdate.content.kind !== "text") {
+  const updatedContent = ensured.textUpdate?.content ?? null;
+  if (updatedContent !== null && updatedContent.kind !== "text") {
     return {
       mk_candidate: candidateFailure(context.step, {
         code: "ERA_UPDATE_MK_CONTENT_UNSUPPORTED",
@@ -185,9 +185,9 @@ export function run(
     };
   }
   const mkText =
-    textUpdate === null
+    updatedContent === null
       ? context.message.activeText
-      : textUpdate.content.text;
+      : updatedContent.text;
   const content = appendPlaceholder(
     mkText,
     context.message.role,

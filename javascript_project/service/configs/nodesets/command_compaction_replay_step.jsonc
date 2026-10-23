@@ -1,0 +1,132 @@
+{
+  "type_key": "era.command_compaction.replay_step",
+  "display_name": "逐份比较历史指令压缩方案",
+  "description": "依序取出已完成历史的有效缩短方案，从原消息相同的变量、函数和随机起点，使用正式指令流程重算。与原结果一致才记为可采用，最后返回各份接受或拒绝结论。",
+  "requires": [
+    {
+      "type": "era.command_compaction.replay.state",
+      "cardinality": "exactly_one",
+      "display_name": "当前历史压缩方案及验证进度"
+    }
+  ],
+  "provides": [
+    {
+      "key": "state_next",
+      "type": "era.command_compaction.replay.state.next",
+      "display_name": "本份比较后的下一方案及累计结论"
+    },
+    {
+      "key": "iteration_done",
+      "type": "era.command.operation.done",
+      "display_name": "本范围的有序操作是否全部结束"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "replay_state",
+        "type": "era.command_compaction.replay.state",
+        "display_name": "当前历史压缩方案及验证进度",
+        "required": true
+      }
+    ],
+    "max_steps": 35,
+    "nodes": [
+      {
+        "id": "start",
+        "definition_id": "era.service.terminal",
+        "display_name": "开始逐份比较历史指令压缩方案",
+        "description": "标明“逐份比较历史指令压缩方案”的开始位置。依序取出已完成历史的有效缩短方案，从原消息相同的变量、函数和随机起点，使用正式指令流程重算。与原结果一致才记为可采用，最后返回各份接受或拒绝结论。"
+      },
+      {
+        "id": "select_candidate",
+        "display_name": "取出下一份需要验证的历史压缩方案",
+        "description": "在“逐份比较历史指令压缩方案”流程中，从已完成历史的缩短建议中，跳过无实际变化或已有问题的项目，选出下一份可验证方案。为它准备原消息的变量、函数及随机起点；没有剩余项目时结束遍历。",
+        "definition_id": "era.command_compaction_replay_step.select_candidate"
+      },
+      {
+        "id": "prepare_operations",
+        "display_name": "准备从原起点执行缩短后的指令",
+        "description": "在“逐份比较历史指令压缩方案”流程中，接收当前历史压缩方案，用该消息原有的变量、函数、历史和随机来源整理缩短正文中的操作。交给与正式消息相同的指令流程计算，供比较效果。",
+        "definition_id": "era.command_compaction_replay_step.prepare_operations"
+      },
+      {
+        "id": "apply_operations",
+        "definition_id": "era.command.apply_operations",
+        "display_name": "完成指定范围内的有序变量和函数操作",
+        "description": "本环节用于“逐份比较历史指令压缩方案”：接收要处理的操作及起始变量、函数和随机位置，按顺序重复单项操作流程，直到本范围结束。正式消息、历史压缩比较和只读预演共用这一规则，返回各自结果供相应场景使用。"
+      },
+      {
+        "id": "compare_candidate",
+        "display_name": "确认压缩方案与原消息效果相同",
+        "description": "在“逐份比较历史指令压缩方案”流程中，比较缩短指令的重算结果与原历史结果。变量、函数和随机使用次数一致且没有问题时接受，否则保留原文；记下结论后移到下一份方案。",
+        "definition_id": "era.command_compaction_replay_step.compare_candidate"
+      },
+      {
+        "id": "finish_candidates",
+        "display_name": "交出各份历史压缩方案的验证结论",
+        "description": "在“逐份比较历史指令压缩方案”流程中，所有待验证方案处理完后，返回逐份接受或拒绝的记录。外层据此只采用已通过实际计算比较的缩短正文。",
+        "definition_id": "era.command_compaction_replay_step.finish_candidates"
+      },
+      {
+        "id": "end",
+        "definition_id": "era.service.terminal",
+        "display_name": "结束逐份比较历史指令压缩方案",
+        "description": "标明“逐份比较历史指令压缩方案”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。"
+      }
+    ],
+    "edges": [
+      [
+        "start",
+        "select_candidate"
+      ],
+      {
+        "from": "select_candidate",
+        "to": "prepare_operations",
+        "when": "route == 'replay'"
+      },
+      [
+        "prepare_operations",
+        "apply_operations"
+      ],
+      [
+        "apply_operations",
+        "compare_candidate"
+      ],
+      {
+        "from": "select_candidate",
+        "to": "compare_candidate",
+        "schedule": false,
+        "when": "route == 'replay'"
+      },
+      {
+        "from": "select_candidate",
+        "to": "finish_candidates",
+        "when": "route == 'done'"
+      },
+      [
+        "compare_candidate",
+        "end"
+      ],
+      [
+        "finish_candidates",
+        "end"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.command_compaction.replay.state.next",
+        "cardinality": "exactly_one",
+        "display_name": "本份比较后的下一方案及累计结论",
+        "as": "state_next"
+      },
+      {
+        "type": "era.command.operation.done",
+        "cardinality": "exactly_one",
+        "display_name": "本范围的有序操作是否全部结束",
+        "as": "iteration_done"
+      }
+    ]
+  }
+}

@@ -1,0 +1,273 @@
+import {defineNode} from "@vibeflow/plugin";
+
+export const era_tavern_agent_auxiliary_terminal_release = defineNode({
+  "display_name": "真实模型调用结束后解除辅助标记",
+  "description": "确认完成的模型调用属于当前实例，为该调用归还一次辅助生成计数。后续聊天事件识别据此恢复正常，重复完成通知不会重复减少计数。",
+  "version": "0.1.0",
+  "flow_kind": "data_store",
+  "contract": {"requires":[{"type":"era.tavern.call.frame","cardinality":"exactly_one","display_name":"真实模型调用结束后解除辅助标记的请求和已有进度"}],"provides":[{"key":"era_tavern_agent_auxiliary_terminal_release_frame","type":"era.tavern.frame.agent_auxiliary_terminal.release","display_name":"真实模型调用结束后解除辅助标记的处理进度及结果"}],"params_schema":{"outputKeys":{"type":"object"}},"params_defaults":{"outputKeys":{"frame":"era_tavern_agent_auxiliary_terminal_release_frame"}},"input_semantics":{"era.tavern.call.frame":["保留“真实模型调用结束后解除辅助标记”对应的实例、请求及已经形成的进度，供本步骤处理并延续同一次请求。"]},"output_semantics":{"era_tavern_agent_auxiliary_terminal_release_frame":["保留“真实模型调用结束后解除辅助标记”对应的实例、请求及已经形成的进度，交给后续处理或结果返回。"]}},
+  "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/agent/generation.ts","export":"ReleaseAuxiliary"}}],
+  "rulesets": ["vibeflow.data_store"],
+  "base_libs": ["era.tavern.agent_facts","era.tavern.browser","era.tavern.frames","era.tavern.resources"],
+  "id": "era.tavern.agent_auxiliary_terminal.release",
+  "node_type": "vibeflow.node"
+});
+
+export const era_tavern_agent_generate_check_request = defineNode({
+  "display_name": "检查独立模型请求的提示资料",
+  "description": "接收规划或结算等独立生成请求，确认用户输入和按顺序排列的提示内容格式齐全。有效资料继续用于发起模型请求，缺失时报告具体原因。",
+  "version": "0.1.0",
+  "flow_kind": "data_store",
+  "contract": {"requires":[{"type":"era.tavern.call.frame","cardinality":"exactly_one","display_name":"检查独立模型请求的提示资料的请求和已有进度"}],"provides":[{"key":"era_tavern_agent_generate_check_request_frame","type":"era.tavern.frame.agent_generate.check_request","display_name":"检查独立模型请求的提示资料的处理进度及结果"}],"params_schema":{"outputKeys":{"type":"object"}},"params_defaults":{"outputKeys":{"frame":"era_tavern_agent_generate_check_request_frame"}},"input_semantics":{"era.tavern.call.frame":["保留“检查独立模型请求的提示资料”对应的实例、请求及已经形成的进度，供本步骤处理并延续同一次请求。"]},"output_semantics":{"era_tavern_agent_generate_check_request_frame":["保留“检查独立模型请求的提示资料”对应的实例、请求及已经形成的进度，交给后续处理或结果返回。"]}},
+  "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/agent/generation.ts","export":"CheckGenerate"}}],
+  "rulesets": ["vibeflow.data_store"],
+  "base_libs": ["era.tavern.agent_facts","era.tavern.browser","era.tavern.frames","era.tavern.resources"],
+  "id": "era.tavern.agent_generate.check_request",
+  "node_type": "vibeflow.node"
+});
+
+export const era_tavern_agent_generate_classify_result = defineNode({
+  "display_name": "区分生成文字、取消或失败（规划或结算的独立生成）",
+  "description": "本次处理“规划或结算的独立生成”。检查本次模型调用是否取消、是否失败，以及响应是否为有效文字。选择对应处理分支，让调用方得到文字结果或明确的取消、失败结论。",
+  "version": "0.1.0",
+  "flow_kind": "decision",
+  "contract": {"requires":[{"type":"era.tavern.frame.agent_generate.leave_auxiliary","cardinality":"exactly_one","display_name":"区分生成文字、取消或失败（规划或结算的独立生成）的请求和已有进度"}],"provides":[{"key":"era_tavern_agent_generate_classify_result_frame","type":"era.tavern.frame.agent_generate.classify_result","display_name":"区分生成文字、取消或失败（规划或结算的独立生成）的处理进度及结果"},{"key":"era_tavern_agent_generate_classify_result_route","type":"era.tavern.route","display_name":"按当前事实选出的处理方向"}],"params_schema":{"outputKeys":{"type":"object"}},"params_defaults":{"outputKeys":{"frame":"era_tavern_agent_generate_classify_result_frame","route":"era_tavern_agent_generate_classify_result_route"}},"input_semantics":{"era.tavern.frame.agent_generate.leave_auxiliary":["保留“区分生成文字、取消或失败（规划或结算的独立生成）”对应的实例、请求及已经形成的进度，供本步骤处理并延续同一次请求。"]},"output_semantics":{"era_tavern_agent_generate_classify_result_frame":["保留“区分生成文字、取消或失败（规划或结算的独立生成）”对应的实例、请求及已经形成的进度，交给后续处理或结果返回。"],"era_tavern_agent_generate_classify_result_route":["这是根据本次实际状态选择的处理方向，后续只执行对应的一条路径。"]}},
+  "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/agent/generation.ts","export":"ClassifyModel"}}],
+  "rulesets": ["vibeflow.data_store"],
+  "base_libs": ["era.tavern.agent_facts","era.tavern.browser","era.tavern.frames","era.tavern.resources"],
+  "id": "era.tavern.agent_generate.classify_result",
+  "node_type": "vibeflow.node"
+});
+
+export const era_tavern_agent_generate_enter_auxiliary = defineNode({
+  "display_name": "标记辅助生成正在运行（规划或结算的独立生成）",
+  "description": "本次处理“规划或结算的独立生成”。将当前模型调用记入本实例正在进行的辅助生成数量。事件识别据此避免把辅助请求产生的事件误当作新的主故事生成，直到真实模型调用结束才解除标记。",
+  "version": "0.1.0",
+  "flow_kind": "data_store",
+  "contract": {"requires":[{"type":"era.tavern.frame.agent_generate.prepare_request","cardinality":"exactly_one","display_name":"标记辅助生成正在运行（规划或结算的独立生成）的请求和已有进度"}],"provides":[{"key":"era_tavern_agent_generate_enter_auxiliary_frame","type":"era.tavern.frame.agent_generate.enter_auxiliary","display_name":"标记辅助生成正在运行（规划或结算的独立生成）的处理进度及结果"}],"params_schema":{"outputKeys":{"type":"object"}},"params_defaults":{"outputKeys":{"frame":"era_tavern_agent_generate_enter_auxiliary_frame"}},"input_semantics":{"era.tavern.frame.agent_generate.prepare_request":["保留“标记辅助生成正在运行（规划或结算的独立生成）”对应的实例、请求及已经形成的进度，供本步骤处理并延续同一次请求。"]},"output_semantics":{"era_tavern_agent_generate_enter_auxiliary_frame":["保留“标记辅助生成正在运行（规划或结算的独立生成）”对应的实例、请求及已经形成的进度，交给后续处理或结果返回。"]}},
+  "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/agent/generation.ts","export":"EnterAuxiliary"}}],
+  "rulesets": ["vibeflow.data_store"],
+  "presentation": {"shape":"rect"},
+  "base_libs": ["era.tavern.agent_facts","era.tavern.browser","era.tavern.frames","era.tavern.resources"],
+  "id": "era.tavern.agent_generate.enter_auxiliary",
+  "node_type": "vibeflow.node"
+});
+
+export const era_tavern_agent_generate_leave_auxiliary = defineNode({
+  "display_name": "确认本次辅助生成标记已经解除（规划或结算的独立生成）",
+  "description": "本次处理“规划或结算的独立生成”。在模型真实结束后检查本次辅助生成计数是否已归还。确认后才继续整理结果，避免已经结束的请求仍影响之后的聊天事件识别。",
+  "version": "0.1.0",
+  "flow_kind": "data_store",
+  "contract": {"requires":[{"type":"era.tavern.frame.agent_generate.request_model","cardinality":"exactly_one","display_name":"确认本次辅助生成标记已经解除（规划或结算的独立生成）的请求和已有进度"}],"provides":[{"key":"era_tavern_agent_generate_leave_auxiliary_frame","type":"era.tavern.frame.agent_generate.leave_auxiliary","display_name":"确认本次辅助生成标记已经解除（规划或结算的独立生成）的处理进度及结果"}],"params_schema":{"outputKeys":{"type":"object"}},"params_defaults":{"outputKeys":{"frame":"era_tavern_agent_generate_leave_auxiliary_frame"}},"input_semantics":{"era.tavern.frame.agent_generate.request_model":["保留“确认本次辅助生成标记已经解除（规划或结算的独立生成）”对应的实例、请求及已经形成的进度，供本步骤处理并延续同一次请求。"]},"output_semantics":{"era_tavern_agent_generate_leave_auxiliary_frame":["保留“确认本次辅助生成标记已经解除（规划或结算的独立生成）”对应的实例、请求及已经形成的进度，交给后续处理或结果返回。"]}},
+  "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/agent/generation.ts","export":"CheckReleased"}}],
+  "rulesets": ["vibeflow.data_store"],
+  "presentation": {"shape":"rect"},
+  "base_libs": ["era.tavern.agent_facts","era.tavern.browser","era.tavern.frames","era.tavern.resources"],
+  "id": "era.tavern.agent_generate.leave_auxiliary",
+  "node_type": "vibeflow.node"
+});
+
+export const era_tavern_agent_generate_prepare_request = defineNode({
+  "display_name": "登记本次独立生成的请求记录",
+  "description": "为本次规划或结算模型调用分配身份，并记录所属聊天、阶段、输入和请求来源。后续生成结果可以对应到同一次调用，供运行观察和问题定位。",
+  "version": "0.1.0",
+  "flow_kind": "data_store",
+  "contract": {"requires":[{"type":"era.tavern.frame.agent_generate.check_request","cardinality":"exactly_one","display_name":"登记本次独立生成的请求记录的请求和已有进度"}],"provides":[{"key":"era_tavern_agent_generate_prepare_request_frame","type":"era.tavern.frame.agent_generate.prepare_request","display_name":"登记本次独立生成的请求记录的处理进度及结果"}],"params_schema":{"outputKeys":{"type":"object"}},"params_defaults":{"outputKeys":{"frame":"era_tavern_agent_generate_prepare_request_frame"}},"input_semantics":{"era.tavern.frame.agent_generate.check_request":["保留“登记本次独立生成的请求记录”对应的实例、请求及已经形成的进度，供本步骤处理并延续同一次请求。"]},"output_semantics":{"era_tavern_agent_generate_prepare_request_frame":["保留“登记本次独立生成的请求记录”对应的实例、请求及已经形成的进度，交给后续处理或结果返回。"]}},
+  "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/agent/generation.ts","export":"PrepareGenerate"}}],
+  "rulesets": ["vibeflow.data_store"],
+  "presentation": {"shape":"rect"},
+  "base_libs": ["era.tavern.agent_facts","era.tavern.browser","era.tavern.frames","era.tavern.resources"],
+  "id": "era.tavern.agent_generate.prepare_request",
+  "node_type": "vibeflow.node"
+});
+
+export const era_tavern_agent_generate_request_model = defineNode({
+  "display_name": "读取模型调用真实完成的结果（规划或结算的独立生成）",
+  "description": "本次处理“规划或结算的独立生成”。接收本次模型请求已经完成的事实，核对所属实例，记录返回文字或失败情况。独立连接请求失败时整理可读原因，供后续区分成功、取消和失败。",
+  "version": "0.1.0",
+  "flow_kind": "data_store",
+  "contract": {"requires":[{"type":"era.tavern.call.frame","cardinality":"exactly_one","display_name":"读取模型调用真实完成的结果（规划或结算的独立生成）的请求和已有进度"}],"provides":[{"key":"era_tavern_agent_generate_request_model_frame","type":"era.tavern.frame.agent_generate.request_model","display_name":"读取模型调用真实完成的结果（规划或结算的独立生成）的处理进度及结果"}],"params_schema":{"outputKeys":{"type":"object"}},"params_defaults":{"outputKeys":{"frame":"era_tavern_agent_generate_request_model_frame"}},"input_semantics":{"era.tavern.call.frame":["保留“读取模型调用真实完成的结果（规划或结算的独立生成）”对应的实例、请求及已经形成的进度，供本步骤处理并延续同一次请求。"]},"output_semantics":{"era_tavern_agent_generate_request_model_frame":["保留“读取模型调用真实完成的结果（规划或结算的独立生成）”对应的实例、请求及已经形成的进度，交给后续处理或结果返回。"]}},
+  "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/agent/generation.ts","export":"ReadModelOutcome"}}],
+  "rulesets": ["vibeflow.data_store"],
+  "base_libs": ["era.tavern.agent_facts","era.tavern.browser","era.tavern.frames","era.tavern.resources"],
+  "id": "era.tavern.agent_generate.request_model",
+  "node_type": "vibeflow.node"
+});
+
+export const era_tavern_agent_generate_select_cancelled = defineNode({
+  "display_name": "按原原因结束已取消的模型请求（规划或结算的独立生成）",
+  "description": "本次处理“规划或结算的独立生成”。读取本次模型请求的取消原因并终止当前操作。外层等待据此收到取消结论，不会把取消误记成模型返回了有效文字。",
+  "version": "0.1.0",
+  "flow_kind": "data_store",
+  "contract": {"requires":[{"type":"era.tavern.frame.agent_generate.classify_result","cardinality":"exactly_one","display_name":"按原原因结束已取消的模型请求（规划或结算的独立生成）的请求和已有进度"}],"provides":[{"key":"era_tavern_agent_generate_select_cancelled_frame","type":"era.tavern.frame.agent_generate.classify_result","display_name":"按原原因结束已取消的模型请求（规划或结算的独立生成）的处理进度及结果"}],"params_schema":{"outputKeys":{"type":"object"}},"params_defaults":{"outputKeys":{"frame":"era_tavern_agent_generate_select_cancelled_frame"}},"input_semantics":{"era.tavern.frame.agent_generate.classify_result":["保留“按原原因结束已取消的模型请求（规划或结算的独立生成）”对应的实例、请求及已经形成的进度，供本步骤处理并延续同一次请求。"]},"output_semantics":{"era_tavern_agent_generate_select_cancelled_frame":["保留“按原原因结束已取消的模型请求（规划或结算的独立生成）”对应的实例、请求及已经形成的进度，交给后续处理或结果返回。"]}},
+  "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/agent/generation.ts","export":"CancelledModel"}}],
+  "rulesets": ["vibeflow.data_store"],
+  "presentation": {"shape":"rect"},
+  "base_libs": ["era.tavern.agent_facts","era.tavern.browser","era.tavern.frames","era.tavern.resources"],
+  "id": "era.tavern.agent_generate.select_cancelled",
+  "node_type": "vibeflow.node"
+});
+
+export const era_tavern_agent_generate_select_failed = defineNode({
+  "display_name": "返回独立模型生成失败的说明",
+  "description": "接收规划或结算模型请求的失败，整理对应问题及请求身份。返回明确失败结果，供多阶段生成决定是否重试或向页面说明原因。",
+  "version": "0.1.0",
+  "flow_kind": "data_store",
+  "contract": {"requires":[{"type":"era.tavern.frame.agent_generate.classify_result","cardinality":"exactly_one","display_name":"返回独立模型生成失败的说明的请求和已有进度"}],"provides":[{"key":"era_tavern_agent_generate_select_failed_frame","type":"era.tavern.frame.agent_generate.classify_result","display_name":"返回独立模型生成失败的说明的处理进度及结果"}],"params_schema":{"outputKeys":{"type":"object"}},"params_defaults":{"outputKeys":{"frame":"era_tavern_agent_generate_select_failed_frame"}},"input_semantics":{"era.tavern.frame.agent_generate.classify_result":["保留“返回独立模型生成失败的说明”对应的实例、请求及已经形成的进度，供本步骤处理并延续同一次请求。"]},"output_semantics":{"era_tavern_agent_generate_select_failed_frame":["保留“返回独立模型生成失败的说明”对应的实例、请求及已经形成的进度，交给后续处理或结果返回。"]}},
+  "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/agent/generation.ts","export":"FailedGenerate"}}],
+  "rulesets": ["vibeflow.data_store"],
+  "presentation": {"shape":"rect"},
+  "base_libs": ["era.tavern.agent_facts","era.tavern.browser","era.tavern.frames","era.tavern.resources"],
+  "id": "era.tavern.agent_generate.select_failed",
+  "node_type": "vibeflow.node"
+});
+
+export const era_tavern_agent_generate_select_text = defineNode({
+  "display_name": "返回独立生成文字和连接摘要",
+  "description": "接收独立模型请求成功返回的文字，附上本次请求身份及实际连接摘要。主服务据此继续处理规划或结算内容，其中不包含连接密钥。",
+  "version": "0.1.0",
+  "flow_kind": "data_store",
+  "contract": {"requires":[{"type":"era.tavern.frame.agent_generate.classify_result","cardinality":"exactly_one","display_name":"返回独立生成文字和连接摘要的请求和已有进度"}],"provides":[{"key":"era_tavern_agent_generate_select_text_frame","type":"era.tavern.frame.agent_generate.classify_result","display_name":"返回独立生成文字和连接摘要的处理进度及结果"}],"params_schema":{"outputKeys":{"type":"object"}},"params_defaults":{"outputKeys":{"frame":"era_tavern_agent_generate_select_text_frame"}},"input_semantics":{"era.tavern.frame.agent_generate.classify_result":["保留“返回独立生成文字和连接摘要”对应的实例、请求及已经形成的进度，供本步骤处理并延续同一次请求。"]},"output_semantics":{"era_tavern_agent_generate_select_text_frame":["保留“返回独立生成文字和连接摘要”对应的实例、请求及已经形成的进度，交给后续处理或结果返回。"]}},
+  "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/agent/generation.ts","export":"TextGenerate"}}],
+  "rulesets": ["vibeflow.data_store"],
+  "presentation": {"shape":"rect"},
+  "base_libs": ["era.tavern.agent_facts","era.tavern.browser","era.tavern.frames","era.tavern.resources"],
+  "id": "era.tavern.agent_generate.select_text",
+  "node_type": "vibeflow.node"
+});
+
+export const era_tavern_agent_generate_start_operation = defineNode({
+  "display_name": "发起规划或结算的独立模型请求",
+  "description": "按已指定连接、模型和采样设置组合提示，向模型发起本次独立生成。登记实际运行及完成后的处理，使后续可以等待并取得文字或失败原因。",
+  "version": "0.1.0",
+  "flow_kind": "data_store",
+  "contract": {"requires":[{"type":"era.tavern.frame.agent_generate.enter_auxiliary","cardinality":"exactly_one","display_name":"发起规划或结算的独立模型请求的请求和已有进度"}],"provides":[{"key":"era_tavern_agent_generate_start_operation_frame","type":"era.tavern.frame.agent_generate.started","display_name":"发起规划或结算的独立模型请求的处理进度及结果"}],"params_schema":{"outputKeys":{"type":"object"}},"params_defaults":{"outputKeys":{"frame":"era_tavern_agent_generate_start_operation_frame"}},"input_semantics":{"era.tavern.frame.agent_generate.enter_auxiliary":["保留“发起规划或结算的独立模型请求”对应的实例、请求及已经形成的进度，供本步骤处理并延续同一次请求。"]},"output_semantics":{"era_tavern_agent_generate_start_operation_frame":["保留“发起规划或结算的独立模型请求”对应的实例、请求及已经形成的进度，交给后续处理或结果返回。"]}},
+  "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/agent/generation.ts","export":"StartGenerate"}}],
+  "rulesets": ["vibeflow.data_store"],
+  "base_libs": ["era.tavern.agent_facts","era.tavern.browser","era.tavern.frames","era.tavern.resources"],
+  "id": "era.tavern.agent_generate.start_operation",
+  "node_type": "vibeflow.node"
+});
+
+export const era_tavern_agent_generate_story_classify_result = defineNode({
+  "display_name": "区分生成文字、取消或失败（正文重试）",
+  "description": "本次处理“正文重试”。检查本次模型调用是否取消、是否失败，以及响应是否为有效文字。选择对应处理分支，让调用方得到文字结果或明确的取消、失败结论。",
+  "version": "0.1.0",
+  "flow_kind": "decision",
+  "contract": {"requires":[{"type":"era.tavern.frame.agent_generate_story.leave_auxiliary","cardinality":"exactly_one","display_name":"区分生成文字、取消或失败（正文重试）的请求和已有进度"}],"provides":[{"key":"era_tavern_agent_generate_story_classify_result_frame","type":"era.tavern.frame.agent_generate_story.classify_result","display_name":"区分生成文字、取消或失败（正文重试）的处理进度及结果"},{"key":"era_tavern_agent_generate_story_classify_result_route","type":"era.tavern.route","display_name":"按当前事实选出的处理方向"}],"params_schema":{"outputKeys":{"type":"object"}},"params_defaults":{"outputKeys":{"frame":"era_tavern_agent_generate_story_classify_result_frame","route":"era_tavern_agent_generate_story_classify_result_route"}},"input_semantics":{"era.tavern.frame.agent_generate_story.leave_auxiliary":["保留“区分生成文字、取消或失败（正文重试）”对应的实例、请求及已经形成的进度，供本步骤处理并延续同一次请求。"]},"output_semantics":{"era_tavern_agent_generate_story_classify_result_frame":["保留“区分生成文字、取消或失败（正文重试）”对应的实例、请求及已经形成的进度，交给后续处理或结果返回。"],"era_tavern_agent_generate_story_classify_result_route":["这是根据本次实际状态选择的处理方向，后续只执行对应的一条路径。"]}},
+  "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/agent/generation.ts","export":"ClassifyModel"}}],
+  "rulesets": ["vibeflow.data_store"],
+  "base_libs": ["era.tavern.agent_facts","era.tavern.browser","era.tavern.frames","era.tavern.resources"],
+  "id": "era.tavern.agent_generate_story.classify_result",
+  "node_type": "vibeflow.node"
+});
+
+export const era_tavern_agent_generate_story_enter_auxiliary = defineNode({
+  "display_name": "标记辅助生成正在运行（正文重试）",
+  "description": "本次处理“正文重试”。将当前模型调用记入本实例正在进行的辅助生成数量。事件识别据此避免把辅助请求产生的事件误当作新的主故事生成，直到真实模型调用结束才解除标记。",
+  "version": "0.1.0",
+  "flow_kind": "data_store",
+  "contract": {"requires":[{"type":"era.tavern.frame.agent_generate_story.prepare_request","cardinality":"exactly_one","display_name":"标记辅助生成正在运行（正文重试）的请求和已有进度"}],"provides":[{"key":"era_tavern_agent_generate_story_enter_auxiliary_frame","type":"era.tavern.frame.agent_generate_story.enter_auxiliary","display_name":"标记辅助生成正在运行（正文重试）的处理进度及结果"}],"params_schema":{"outputKeys":{"type":"object"}},"params_defaults":{"outputKeys":{"frame":"era_tavern_agent_generate_story_enter_auxiliary_frame"}},"input_semantics":{"era.tavern.frame.agent_generate_story.prepare_request":["保留“标记辅助生成正在运行（正文重试）”对应的实例、请求及已经形成的进度，供本步骤处理并延续同一次请求。"]},"output_semantics":{"era_tavern_agent_generate_story_enter_auxiliary_frame":["保留“标记辅助生成正在运行（正文重试）”对应的实例、请求及已经形成的进度，交给后续处理或结果返回。"]}},
+  "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/agent/generation.ts","export":"EnterAuxiliary"}}],
+  "rulesets": ["vibeflow.data_store"],
+  "presentation": {"shape":"rect"},
+  "base_libs": ["era.tavern.agent_facts","era.tavern.browser","era.tavern.frames","era.tavern.resources"],
+  "id": "era.tavern.agent_generate_story.enter_auxiliary",
+  "node_type": "vibeflow.node"
+});
+
+export const era_tavern_agent_generate_story_leave_auxiliary = defineNode({
+  "display_name": "确认本次辅助生成标记已经解除（正文重试）",
+  "description": "本次处理“正文重试”。在模型真实结束后检查本次辅助生成计数是否已归还。确认后才继续整理结果，避免已经结束的请求仍影响之后的聊天事件识别。",
+  "version": "0.1.0",
+  "flow_kind": "data_store",
+  "contract": {"requires":[{"type":"era.tavern.frame.agent_generate_story.request_model","cardinality":"exactly_one","display_name":"确认本次辅助生成标记已经解除（正文重试）的请求和已有进度"}],"provides":[{"key":"era_tavern_agent_generate_story_leave_auxiliary_frame","type":"era.tavern.frame.agent_generate_story.leave_auxiliary","display_name":"确认本次辅助生成标记已经解除（正文重试）的处理进度及结果"}],"params_schema":{"outputKeys":{"type":"object"}},"params_defaults":{"outputKeys":{"frame":"era_tavern_agent_generate_story_leave_auxiliary_frame"}},"input_semantics":{"era.tavern.frame.agent_generate_story.request_model":["保留“确认本次辅助生成标记已经解除（正文重试）”对应的实例、请求及已经形成的进度，供本步骤处理并延续同一次请求。"]},"output_semantics":{"era_tavern_agent_generate_story_leave_auxiliary_frame":["保留“确认本次辅助生成标记已经解除（正文重试）”对应的实例、请求及已经形成的进度，交给后续处理或结果返回。"]}},
+  "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/agent/generation.ts","export":"CheckReleased"}}],
+  "rulesets": ["vibeflow.data_store"],
+  "presentation": {"shape":"rect"},
+  "base_libs": ["era.tavern.agent_facts","era.tavern.browser","era.tavern.frames","era.tavern.resources"],
+  "id": "era.tavern.agent_generate_story.leave_auxiliary",
+  "node_type": "vibeflow.node"
+});
+
+export const era_tavern_agent_generate_story_prepare_request = defineNode({
+  "display_name": "登记正文重试的输入及模型设置",
+  "description": "读取正文重试的用户输入、附加提示，以及酒馆当前模型、预设和连接来源，为本次重试登记身份。后续据此发起正文生成，并将实际结果对应回这次尝试。",
+  "version": "0.1.0",
+  "flow_kind": "data_store",
+  "contract": {"requires":[{"type":"era.tavern.frame.agent_generate_story.check_request","cardinality":"exactly_one","display_name":"登记正文重试的输入及模型设置的请求和已有进度"}],"provides":[{"key":"era_tavern_agent_generate_story_prepare_request_frame","type":"era.tavern.frame.agent_generate_story.prepare_request","display_name":"登记正文重试的输入及模型设置的处理进度及结果"}],"params_schema":{"outputKeys":{"type":"object"}},"params_defaults":{"outputKeys":{"frame":"era_tavern_agent_generate_story_prepare_request_frame"}},"input_semantics":{"era.tavern.frame.agent_generate_story.check_request":["保留“登记正文重试的输入及模型设置”对应的实例、请求及已经形成的进度，供本步骤处理并延续同一次请求。"]},"output_semantics":{"era_tavern_agent_generate_story_prepare_request_frame":["保留“登记正文重试的输入及模型设置”对应的实例、请求及已经形成的进度，交给后续处理或结果返回。"]}},
+  "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/agent/generation.ts","export":"PrepareStory"}}],
+  "rulesets": ["vibeflow.data_store"],
+  "presentation": {"shape":"rect"},
+  "base_libs": ["era.tavern.agent_facts","era.tavern.browser","era.tavern.frames","era.tavern.resources"],
+  "id": "era.tavern.agent_generate_story.prepare_request",
+  "node_type": "vibeflow.node"
+});
+
+export const era_tavern_agent_generate_story_request_model = defineNode({
+  "display_name": "读取模型调用真实完成的结果（正文重试）",
+  "description": "本次处理“正文重试”。接收本次模型请求已经完成的事实，核对所属实例，记录返回文字或失败情况。独立连接请求失败时整理可读原因，供后续区分成功、取消和失败。",
+  "version": "0.1.0",
+  "flow_kind": "data_store",
+  "contract": {"requires":[{"type":"era.tavern.call.frame","cardinality":"exactly_one","display_name":"读取模型调用真实完成的结果（正文重试）的请求和已有进度"}],"provides":[{"key":"era_tavern_agent_generate_story_request_model_frame","type":"era.tavern.frame.agent_generate_story.request_model","display_name":"读取模型调用真实完成的结果（正文重试）的处理进度及结果"}],"params_schema":{"outputKeys":{"type":"object"}},"params_defaults":{"outputKeys":{"frame":"era_tavern_agent_generate_story_request_model_frame"}},"input_semantics":{"era.tavern.call.frame":["保留“读取模型调用真实完成的结果（正文重试）”对应的实例、请求及已经形成的进度，供本步骤处理并延续同一次请求。"]},"output_semantics":{"era_tavern_agent_generate_story_request_model_frame":["保留“读取模型调用真实完成的结果（正文重试）”对应的实例、请求及已经形成的进度，交给后续处理或结果返回。"]}},
+  "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/agent/generation.ts","export":"ReadModelOutcome"}}],
+  "rulesets": ["vibeflow.data_store"],
+  "base_libs": ["era.tavern.agent_facts","era.tavern.browser","era.tavern.frames","era.tavern.resources"],
+  "id": "era.tavern.agent_generate_story.request_model",
+  "node_type": "vibeflow.node"
+});
+
+export const era_tavern_agent_generate_story_select_cancelled = defineNode({
+  "display_name": "按原原因结束已取消的模型请求（正文重试）",
+  "description": "本次处理“正文重试”。读取本次模型请求的取消原因并终止当前操作。外层等待据此收到取消结论，不会把取消误记成模型返回了有效文字。",
+  "version": "0.1.0",
+  "flow_kind": "data_store",
+  "contract": {"requires":[{"type":"era.tavern.frame.agent_generate_story.classify_result","cardinality":"exactly_one","display_name":"按原原因结束已取消的模型请求（正文重试）的请求和已有进度"}],"provides":[{"key":"era_tavern_agent_generate_story_select_cancelled_frame","type":"era.tavern.frame.agent_generate_story.classify_result","display_name":"按原原因结束已取消的模型请求（正文重试）的处理进度及结果"}],"params_schema":{"outputKeys":{"type":"object"}},"params_defaults":{"outputKeys":{"frame":"era_tavern_agent_generate_story_select_cancelled_frame"}},"input_semantics":{"era.tavern.frame.agent_generate_story.classify_result":["保留“按原原因结束已取消的模型请求（正文重试）”对应的实例、请求及已经形成的进度，供本步骤处理并延续同一次请求。"]},"output_semantics":{"era_tavern_agent_generate_story_select_cancelled_frame":["保留“按原原因结束已取消的模型请求（正文重试）”对应的实例、请求及已经形成的进度，交给后续处理或结果返回。"]}},
+  "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/agent/generation.ts","export":"CancelledModel"}}],
+  "rulesets": ["vibeflow.data_store"],
+  "presentation": {"shape":"rect"},
+  "base_libs": ["era.tavern.agent_facts","era.tavern.browser","era.tavern.frames","era.tavern.resources"],
+  "id": "era.tavern.agent_generate_story.select_cancelled",
+  "node_type": "vibeflow.node"
+});
+
+export const era_tavern_agent_generate_story_select_failed = defineNode({
+  "display_name": "向正文重试流程报告生成失败",
+  "description": "正文请求失败或没有返回文字时，将实际错误交回重试流程。上层据此保留失败原因并决定本次阶段的结论。",
+  "version": "0.1.0",
+  "flow_kind": "data_store",
+  "contract": {"requires":[{"type":"era.tavern.frame.agent_generate_story.classify_result","cardinality":"exactly_one","display_name":"向正文重试流程报告生成失败的请求和已有进度"}],"provides":[{"key":"era_tavern_agent_generate_story_select_failed_frame","type":"era.tavern.frame.agent_generate_story.classify_result","display_name":"向正文重试流程报告生成失败的处理进度及结果"}],"params_schema":{"outputKeys":{"type":"object"}},"params_defaults":{"outputKeys":{"frame":"era_tavern_agent_generate_story_select_failed_frame"}},"input_semantics":{"era.tavern.frame.agent_generate_story.classify_result":["保留“向正文重试流程报告生成失败”对应的实例、请求及已经形成的进度，供本步骤处理并延续同一次请求。"]},"output_semantics":{"era_tavern_agent_generate_story_select_failed_frame":["保留“向正文重试流程报告生成失败”对应的实例、请求及已经形成的进度，交给后续处理或结果返回。"]}},
+  "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/agent/generation.ts","export":"FailedStory"}}],
+  "rulesets": ["vibeflow.data_store"],
+  "presentation": {"shape":"rect"},
+  "base_libs": ["era.tavern.agent_facts","era.tavern.browser","era.tavern.frames","era.tavern.resources"],
+  "id": "era.tavern.agent_generate_story.select_failed",
+  "node_type": "vibeflow.node"
+});
+
+export const era_tavern_agent_generate_story_select_text = defineNode({
+  "display_name": "返回本次正文重试的文字",
+  "description": "接收酒馆正文重试成功返回的内容，附上本次请求身份，交给生成阶段处理。后续再检查文字中的变量和函数指令，并安排消息保存。",
+  "version": "0.1.0",
+  "flow_kind": "data_store",
+  "contract": {"requires":[{"type":"era.tavern.frame.agent_generate_story.classify_result","cardinality":"exactly_one","display_name":"返回本次正文重试的文字的请求和已有进度"}],"provides":[{"key":"era_tavern_agent_generate_story_select_text_frame","type":"era.tavern.frame.agent_generate_story.classify_result","display_name":"返回本次正文重试的文字的处理进度及结果"}],"params_schema":{"outputKeys":{"type":"object"}},"params_defaults":{"outputKeys":{"frame":"era_tavern_agent_generate_story_select_text_frame"}},"input_semantics":{"era.tavern.frame.agent_generate_story.classify_result":["保留“返回本次正文重试的文字”对应的实例、请求及已经形成的进度，供本步骤处理并延续同一次请求。"]},"output_semantics":{"era_tavern_agent_generate_story_select_text_frame":["保留“返回本次正文重试的文字”对应的实例、请求及已经形成的进度，交给后续处理或结果返回。"]}},
+  "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/agent/generation.ts","export":"TextStory"}}],
+  "rulesets": ["vibeflow.data_store"],
+  "presentation": {"shape":"rect"},
+  "base_libs": ["era.tavern.agent_facts","era.tavern.browser","era.tavern.frames","era.tavern.resources"],
+  "id": "era.tavern.agent_generate_story.select_text",
+  "node_type": "vibeflow.node"
+});
+
+export const era_tavern_agent_generate_story_start_operation = defineNode({
+  "display_name": "通过酒馆发起正文重试",
+  "description": "使用准备好的用户输入和附加提示，通过酒馆当前生成方式重新生成正文。登记本次实际请求及完成后的处理，后续接收正文结果或取消、失败原因。",
+  "version": "0.1.0",
+  "flow_kind": "data_store",
+  "contract": {"requires":[{"type":"era.tavern.frame.agent_generate_story.enter_auxiliary","cardinality":"exactly_one","display_name":"通过酒馆发起正文重试的请求和已有进度"}],"provides":[{"key":"era_tavern_agent_generate_story_start_operation_frame","type":"era.tavern.frame.agent_generate_story.started","display_name":"通过酒馆发起正文重试的处理进度及结果"}],"params_schema":{"outputKeys":{"type":"object"}},"params_defaults":{"outputKeys":{"frame":"era_tavern_agent_generate_story_start_operation_frame"}},"input_semantics":{"era.tavern.frame.agent_generate_story.enter_auxiliary":["保留“通过酒馆发起正文重试”对应的实例、请求及已经形成的进度，供本步骤处理并延续同一次请求。"]},"output_semantics":{"era_tavern_agent_generate_story_start_operation_frame":["保留“通过酒馆发起正文重试”对应的实例、请求及已经形成的进度，交给后续处理或结果返回。"]}},
+  "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/agent/generation.ts","export":"StartStory"}}],
+  "rulesets": ["vibeflow.data_store"],
+  "base_libs": ["era.tavern.agent_facts","era.tavern.browser","era.tavern.frames","era.tavern.resources"],
+  "id": "era.tavern.agent_generate_story.start_operation",
+  "node_type": "vibeflow.node"
+});

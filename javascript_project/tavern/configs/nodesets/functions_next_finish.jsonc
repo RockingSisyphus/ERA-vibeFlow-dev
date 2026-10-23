@@ -1,20 +1,20 @@
 {
   "type_key": "era.tavern.flow.functions_next_finish",
-  "display_name": "等待作者请求并交还结果",
-  "description": "已取得结果直接交还；挂起路径由原生 Loop 等待和再次检查，原 request/done/wait 分支保持可见。",
+  "display_name": "等到作者提出操作或真正结束",
+  "description": "已经取得请求或结束结果时直接返回；否则按循环等待唤醒并重新检查。每次只返回当前实际取得的一项操作或结束状态，供消息流程顺序处理。",
   "expand": true,
   "requires": [
     {
       "type": "era.tavern.call.frame",
       "cardinality": "exactly_one",
-      "display_name": "本次调用、实例资源与上一节点的事实"
+      "display_name": "等到作者提出操作或真正结束的请求和已有进度"
     }
   ],
   "provides": [
     {
       "key": "era_tavern_flow_functions_next_finish_frame",
       "type": "era.tavern.call.frame",
-      "display_name": "处理后的资源与事实"
+      "display_name": "等到作者提出操作或真正结束的处理进度及结果"
     }
   ],
   "pipeline": {
@@ -23,7 +23,7 @@
       {
         "key": "frame",
         "type": "era.tavern.call.frame",
-        "display_name": "同实例调用与资源",
+        "display_name": "等到作者提出操作或真正结束的请求和已有进度",
         "required": true
       }
     ],
@@ -32,34 +32,33 @@
         "type": "era.tavern.call.frame",
         "cardinality": "exactly_one",
         "as": "frame",
-        "display_name": "本段明确结果"
+        "display_name": "等到作者提出操作或真正结束的处理进度及结果"
       }
     ],
     "max_steps": 11,
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.tavern.initialize.start",
-        "display_name": "开始当前原生流程",
-        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+        "display_name": "开始等到作者提出操作或真正结束",
+        "description": "标明“等到作者提出操作或真正结束”的开始位置。已经取得请求或结束结果时直接返回；否则按循环等待唤醒并重新检查。每次只返回当前实际取得的一项操作或结束状态，供消息流程顺序处理。",
+        "definition_id": "era.tavern.initialize.start"
       },
       {
         "id": "choose_ready",
-        "type_used": "era.tavern.functions_next_finish.choose_ready",
-        "display_name": "区分已捕获结果与挂起资源",
-        "description": "同步段已取得 request/done 时直接返回；只有 pending 才进入原生等待 Loop。"
+        "display_name": "判断作者结果已取得还是继续等待",
+        "description": "在“等到作者提出操作或真正结束”流程中，查看同步检查是否已拿到作者请求或结束结果。已经取得时直接交出，没有则进入等待循环，保持一次等待只返回当前实际结果。",
+        "definition_id": "era.tavern.functions_next_finish.choose_ready"
       },
       {
         "id": "ready",
-        "type_used": "era.tavern.functions_next_finish.ready",
-        "display_name": "转交已捕获作者结果",
-        "description": "只交还同步段捕获的结果，不再次取队列。"
+        "display_name": "交出已取得的作者请求或结束结果",
+        "description": "在“等到作者提出操作或真正结束”流程中，同步检查已经取到作者操作或函数结束结论时，将这份实际结果交回消息流程。避免再次取队列而越过当前请求。",
+        "definition_id": "era.tavern.functions_next_finish.ready"
       },
       {
         "id": "wait_request_loop",
-        "type_used": "vibeflow.loop.while",
-        "display_name": "等待作者请求或完成循环",
-        "description": "每轮检查当前队列、finished 和 pending；未达到终态时等待唤醒，达到 request/done 后退出，不忙轮询。",
+        "display_name": "等待作者提交下一操作或真正结束",
+        "description": "每轮检查本次作者调用，有请求就取出，函数结束且无待确认操作时交出结束；仍在运行时等待唤醒再检查。取得一份结果后结束本次等待，供消息流程继续处理。",
         "loop": {
           "body": "era.tavern.flow.functions_next_wait_request_item",
           "max_iterations": null,
@@ -85,34 +84,35 @@
           {
             "type": "era.tavern.call.frame.next_state",
             "cardinality": "exactly_one",
-            "display_name": "本次调用、实例资源与上一节点的事实"
+            "display_name": "等到作者提出操作或真正结束的请求和已有进度"
           }
         ],
         "provides": [
           {
             "key": "functions_next_wait_request_loop_frame",
             "type": "era.tavern.frame.functions_next.check_active",
-            "display_name": "等待作者请求或完成完成后的处理资料"
+            "display_name": "等到作者提出操作或真正结束的处理进度及结果"
           }
-        ]
+        ],
+        "definition_id": "vibeflow.loop.while"
       },
       {
         "id": "join_ready",
-        "type_used": "era.tavern.functions_next_finish.join_ready",
-        "display_name": "汇合当前作者结果",
-        "description": "仅汇合直接取得或原生 Loop 返回的一个结果，不读取作者队列。"
+        "display_name": "交接等到作者提出操作或真正结束的选中结果",
+        "description": "在“等到作者提出操作或真正结束”流程中，在“等到作者提出操作或真正结束”中，接收本次实际选择的分支所产生的唯一结果，交给后续步骤或调用方。每次只允许一份实际结果，避免把互斥分支误当成多个都已执行。",
+        "definition_id": "era.tavern.functions_next_finish.join_ready"
       },
       {
         "id": "return_request",
-        "type_used": "era.tavern.functions_next.return_request",
-        "display_name": "交还请求或作者调用诊断",
-        "description": "返回原 request/done 形状，不将作者 commit 送进会等待自身的外部 FIFO。"
+        "display_name": "将作者请求或结束结论交回消息流程",
+        "description": "在“等到作者提出操作或真正结束”流程中，接收本次已取得的作者操作或函数结束结果，交给等待中的消息处理。变量提交在该函数所在正文位置执行，不进入会等待自身结束的外部事件队列。",
+        "definition_id": "era.tavern.functions_next.return_request"
       },
       {
         "id": "end",
-        "type_used": "era.tavern.initialize.end",
-        "display_name": "结束当前原生流程",
-        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+        "display_name": "结束等到作者提出操作或真正结束",
+        "description": "标明“等到作者提出操作或真正结束”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.tavern.initialize.end"
       }
     ],
     "edges": [

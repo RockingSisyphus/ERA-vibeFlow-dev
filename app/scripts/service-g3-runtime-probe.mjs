@@ -1,9 +1,8 @@
 /// <reference types="node" />
 
-import { rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
 import { nativeG3 } from '../tests/native-tavern/g3-fixture.mjs';
-import { mkdir, mkdtemp, readFile, rm, writeFile, symlink } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { importGeneratedService } from './import-generated-service.mjs';
 import { performance } from 'node:perf_hooks';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -25,17 +24,7 @@ const reportUrl =
  * app 包。为让 Node 探针按与 webpack 相同的 package root 解析这些依赖，临时
  * 在本次临时目录链接 app 依赖并导入完全相同的生成物；绝不改写或重新打包 workflow 内容。
  */
-async function importGeneratedWorkflow() {
-  const directory = await mkdtemp(resolve(tmpdir(), 'era-generated-workflow-'));
-  await symlink(resolve(import.meta.dirname, '../node_modules'), resolve(directory, 'node_modules'), 'dir');
-  process.once('exit', () => rmSync(directory, { recursive: true, force: true }));
-  const stagedPath = resolve(directory, 'workflow.mjs');
-  await writeFile(stagedPath, await readFile(generatedModuleUrl), 'utf8');
-  return {
-    workflow: await import(pathToFileURL(stagedPath).href),
-    cleanup: () => rm(directory, { recursive: true, force: true }),
-  };
-}
+const importGeneratedWorkflow = () => importGeneratedService(generatedModuleUrl);
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -498,8 +487,8 @@ async function probeWorkflowFrames(workflow) {
 
 const stagedWorkflow = await importGeneratedWorkflow();
 const workflow = stagedWorkflow.workflow;
-assert(workflow.VIBEFLOW_WORKFLOW_ABI === 'vibeflow.workflow.v6', 'Workflow ABI 不是 v6。');
-assert(workflow.VIBEFLOW_PLUGIN_ABI === 'vibeflow.plugin.v3', 'Plugin ABI 不是 v3。');
+assert(workflow.VIBEFLOW_WORKFLOW_ABI === 'vibeflow.workflow.v10', 'Workflow ABI 不是 v10。');
+assert(workflow.VIBEFLOW_PLUGIN_ABI === 'vibeflow.plugin.v4', 'Plugin ABI 不是 v4。');
 
 const report = {
   status: 'PASS',

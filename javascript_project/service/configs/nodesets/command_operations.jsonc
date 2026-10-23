@@ -1,0 +1,104 @@
+{
+  "type_key": "era.command.apply_operations",
+  "display_name": "完成指定范围内的有序变量和函数操作",
+  "description": "接收要处理的操作及起始变量、函数和随机位置，按顺序重复单项操作流程，直到本范围结束。正式消息、历史压缩比较和只读预演共用这一规则，返回各自结果供相应场景使用。",
+  "requires": [
+    {
+      "type": "era.command.operation.state",
+      "cardinality": "exactly_one",
+      "display_name": "有序操作、当前变量和函数及随机进度"
+    }
+  ],
+  "provides": [
+    {
+      "key": "operation_result",
+      "type": "era.command.operation.result",
+      "display_name": "指定范围所有操作算出的完整状态"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "input_0",
+        "type": "era.command.operation.state",
+        "display_name": "有序操作、当前变量和函数及随机进度",
+        "required": true
+      }
+    ],
+    "max_steps": 35,
+    "nodes": [
+      {
+        "id": "start",
+        "definition_id": "era.service.terminal",
+        "display_name": "开始完成指定范围内的有序变量和函数操作",
+        "description": "标明“完成指定范围内的有序变量和函数操作”的开始位置。接收要处理的操作及起始变量、函数和随机位置，按顺序重复单项操作流程，直到本范围结束。正式消息、历史压缩比较和只读预演共用这一规则，返回各自结果供相应场景使用。"
+      },
+      {
+        "id": "operation_loop",
+        "display_name": "按原顺序执行本范围的所有操作",
+        "description": "反复取出下一项变量、函数或阶段调用，嵌套字段按原有顺序处理，每项使用前项已更新的结果。范围结束后交出完整变量、函数、历史、问题及随机使用进度，供当前消息、预演或压缩比较使用。",
+        "requires": [
+          {
+            "type": "era.command.operation.state",
+            "cardinality": "exactly_one",
+            "display_name": "有序操作、当前变量和函数及随机进度"
+          }
+        ],
+        "provides": [
+          {
+            "key": "operation_result",
+            "type": "era.command.operation.result",
+            "display_name": "指定范围所有操作算出的完整状态"
+          }
+        ],
+        "loop": {
+          "body": "era.command.operation_step",
+          "max_iterations": null,
+          "stop_when": {
+            "from": "operation_done",
+            "equals": true
+          },
+          "carry": [
+            {
+              "from": "era.command.operation.state",
+              "as": "operation_state",
+              "update": "operation_state_after"
+            }
+          ],
+          "outputs": [
+            {
+              "from": "operation_state_after",
+              "as": "operation_result"
+            }
+          ]
+        },
+        "definition_id": "vibeflow.loop.while"
+      },
+      {
+        "id": "end",
+        "definition_id": "era.service.terminal",
+        "display_name": "结束完成指定范围内的有序变量和函数操作",
+        "description": "标明“完成指定范围内的有序变量和函数操作”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。"
+      }
+    ],
+    "edges": [
+      [
+        "start",
+        "operation_loop"
+      ],
+      [
+        "operation_loop",
+        "end"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.command.operation.result",
+        "cardinality": "exactly_one",
+        "display_name": "指定范围所有操作算出的完整状态",
+        "as": "operation_result"
+      }
+    ]
+  }
+}

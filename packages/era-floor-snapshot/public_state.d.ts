@@ -1,4 +1,4 @@
-// Generated from Service base_lib/domain; do not edit.
+// Generated from Service base_lib/snapshot; do not edit.
 export interface SidecarRuntimeIdentity {
     readonly characterId: string | null;
     readonly groupId: string | null;

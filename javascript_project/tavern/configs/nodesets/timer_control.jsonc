@@ -1,20 +1,20 @@
 {
   "type_key": "era.tavern.flow.timer_control",
-  "display_name": "执行 Service 指定的计时安排",
-  "description": "保持原定时 token、dueAt、重复控制和取消规则，到期只回送事件，不重新决定领域任务。",
+  "display_name": "按明确要求安排、取消或沿用计时",
+  "description": "接收收集期限或延迟事件，检查原安排并选择保留、取消或替换，登记最近到期要求后返回确认。实际到期只回送约定事件，下一步业务仍由主服务判断。",
   "expand": true,
   "requires": [
     {
       "type": "era.tavern.call.frame",
       "cardinality": "exactly_one",
-      "display_name": "本次调用及实例资源令牌"
+      "display_name": "按明确要求安排、取消或沿用计时的请求和已有进度"
     }
   ],
   "provides": [
     {
       "key": "era_tavern_flow_timer_control_frame",
       "type": "era.tavern.call.frame",
-      "display_name": "操作结果及后续处理所需的资源令牌"
+      "display_name": "按明确要求安排、取消或沿用计时的处理进度及结果"
     }
   ],
   "pipeline": {
@@ -23,7 +23,7 @@
       {
         "key": "frame",
         "type": "era.tavern.call.frame",
-        "display_name": "调用与资源资料",
+        "display_name": "按明确要求安排、取消或沿用计时的请求和已有进度",
         "required": true
       }
     ],
@@ -31,57 +31,57 @@
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.tavern.initialize.start",
-        "display_name": "开始当前原生流程",
-        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+        "display_name": "开始按明确要求安排、取消或沿用计时",
+        "description": "标明“按明确要求安排、取消或沿用计时”的开始位置。接收收集期限或延迟事件，检查原安排并选择保留、取消或替换，登记最近到期要求后返回确认。实际到期只回送约定事件，下一步业务仍由主服务判断。",
+        "definition_id": "era.tavern.initialize.start"
       },
       {
         "id": "read_timer",
-        "type_used": "era.tavern.timer_control.read_timer",
-        "display_name": "读取计时记录并确定本次截止时间",
-        "description": "读取现有token/key句柄和首次安排时间；收集控制沿用Service给出的dueAt，延迟准入核对delayMs/maxDelayMs，注销旧timer后按原时钟计算截止。"
+        "display_name": "读取本次收集或延迟事件的计时要求",
+        "description": "在“按明确要求安排、取消或沿用计时”流程中，区分主服务指定的事件收集期限与页面提出的延迟事件，读取原有安排、标识和时限。延迟事件检查有效输入并记住首次安排时间，供后续确定取消、保留或替换。",
+        "definition_id": "era.tavern.timer_control.read_timer"
       },
       {
         "id": "choose_timer",
-        "type_used": "era.tavern.timer_control.choose_timer",
-        "display_name": "选择保留、取消或重新安排",
-        "description": "相同到期时间保留原 timer；cancel 移除已有 timer；新安排先撤销旧句柄再登记。"
+        "display_name": "选择取消、沿用或重新安排计时",
+        "description": "在“按明确要求安排、取消或沿用计时”流程中，检查本次要求及已存在的到期时间。取消要求进入撤销分支，相同收集期限沿用原计时，其余进入新安排，避免同一时限重复登记。",
+        "definition_id": "era.tavern.timer_control.choose_timer"
       },
       {
         "id": "branch_schedule",
-        "type_used": "era.tavern.timer_control.branch_schedule",
-        "display_name": "登记新的到期回调",
-        "description": "同步建立计时资源身份、控制器与绝对截止时间，替换旧资源后固定调用编译后的timer_wait异步入口；此处不直接登记长期Timeout。"
+        "display_name": "登记新期限并替换旧安排",
+        "description": "在“按明确要求安排、取消或沿用计时”流程中，取消被替换的旧计时，按收集截止时间或延迟及最长等待窗口计算新期限，登记到本实例。唤醒计时分支，让它按最新最近期限等待。",
+        "definition_id": "era.tavern.timer_control.branch_schedule"
       },
       {
         "id": "branch_cancel",
-        "type_used": "era.tavern.timer_control.branch_cancel",
-        "display_name": "取消计时器并移除记录",
-        "description": "清除对应 timer，移除实例记录，已过期的回调不会再接纳事件。"
+        "display_name": "取消指定计时并通知等待者重选",
+        "description": "在“按明确要求安排、取消或沿用计时”流程中，取消原计时安排并从对应列表移除，更新安排版本、唤醒正在等待的计时分支。后续重新选最近期限，已取消项不会正常触发业务事件。",
+        "definition_id": "era.tavern.timer_control.branch_cancel"
       },
       {
         "id": "branch_keep",
-        "type_used": "era.tavern.timer_control.branch_keep",
-        "display_name": "保留既有计时器",
-        "description": "不重复注册已对应同一 dueAt 的计时器。"
+        "display_name": "沿用相同期限的已有计时",
+        "description": "在“按明确要求安排、取消或沿用计时”流程中，当前事件收集计时已经对应本次要求的同一期限时，保留现有安排并交给确认出口。避免同一到期重复登记。",
+        "definition_id": "era.tavern.timer_control.branch_keep"
       },
       {
         "id": "join_return_timer",
-        "type_used": "era.tavern.timer_control.join_return_timer",
-        "display_name": "汇合当前实际激活分支的结果",
-        "description": "接收当前所选路径的结果集合，交还其中唯一实际结果；不选择未激活分支、不重新执行操作。运行实现必须拒绝实际多结果，不以集合契约放宽唯一结果语义。"
+        "display_name": "交接按明确要求安排、取消或沿用计时的选中结果",
+        "description": "在“按明确要求安排、取消或沿用计时”流程中，在“按明确要求安排、取消或沿用计时”中，接收本次实际选择的分支所产生的唯一结果，交给后续步骤或调用方。每次只允许一份实际结果，避免把互斥分支误当成多个都已执行。",
+        "definition_id": "era.tavern.timer_control.join_return_timer"
       },
       {
         "id": "return_timer",
-        "type_used": "era.tavern.timer_control.return_timer",
-        "display_name": "返回定时控制确认",
-        "description": "保留原控制帧和 schedule/cancel 的返回形状。"
+        "display_name": "返回本次计时安排的确认",
+        "description": "在“按明确要求安排、取消或沿用计时”流程中，本次计时要求已执行后，按操作类型返回已安排、已取消或收集控制确认。调用方据此知道时间要求已登记，实际到期另由计时分支处理。",
+        "definition_id": "era.tavern.timer_control.return_timer"
       },
       {
         "id": "end",
-        "type_used": "era.tavern.initialize.end",
-        "display_name": "结束当前原生流程",
-        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+        "display_name": "结束按明确要求安排、取消或沿用计时",
+        "description": "标明“按明确要求安排、取消或沿用计时”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.tavern.initialize.end"
       }
     ],
     "edges": [
@@ -133,7 +133,7 @@
       {
         "type": "era.tavern.call.frame",
         "cardinality": "exactly_one",
-        "display_name": "完成后的操作资料",
+        "display_name": "按明确要求安排、取消或沿用计时的处理进度及结果",
         "as": "frame"
       }
     ]

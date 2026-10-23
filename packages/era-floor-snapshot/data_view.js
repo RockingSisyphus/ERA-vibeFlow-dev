@@ -1,56 +1,39 @@
-// Generated from Service base_lib/domain; do not edit.
-import _ from 'lodash';
-function transformWithMapping(data, mapping, pattern) {
-    if (Array.isArray(data))
-        return data.map(item => transformWithMapping(item, mapping, pattern));
-    if (_.isPlainObject(data)) {
-        const transformed = {};
-        for (const [key, value] of Object.entries(data)) {
-            transformed[key.replace(pattern, match => mapping[match])] = transformWithMapping(value, mapping, pattern);
+// Generated from Service base_lib/snapshot; do not edit.
+function isPlainRecord(value) {
+    if (value === null || typeof value !== "object" || Array.isArray(value))
+        return false;
+    const prototype = Object.getPrototypeOf(value);
+    return prototype === Object.prototype || prototype === null;
+}
+function mapData(value, text, omitMeta) {
+    if (Array.isArray(value))
+        return value.map(item => mapData(item, text, omitMeta));
+    if (isPlainRecord(value)) {
+        const result = {};
+        for (const key of Object.keys(value)) {
+            if (omitMeta && key.startsWith("$"))
+                continue;
+            // __proto__ 等是用户数据键，不能触发原型 setter。
+            Object.defineProperty(result, text(key), { value: mapData(value[key], text, omitMeta), enumerable: true, configurable: true, writable: true });
         }
-        return transformed;
+        return result;
     }
-    if (typeof data === 'string')
-        return data.replace(pattern, match => mapping[match]);
-    return data;
+    return (typeof value === "string" ? text(value) : value);
 }
-/** 同一遍历使用同一映射，保持原对象键和值的转换语义。 */
-export function transformEraData(data, direction) {
-    const ESCAPE_MAP = {
-        '.': '__DOT__',
-        '"': '__DQUOTE__',
-        "'": '__SQUOTE__',
-    };
-    const UNESCAPE_MAP = _.invert(ESCAPE_MAP);
-    const escapeRegex = new RegExp(Object.keys(ESCAPE_MAP).map(_.escapeRegExp).join('|'), 'g');
-    const unescapeRegex = new RegExp(Object.values(ESCAPE_MAP).map(_.escapeRegExp).join('|'), 'g');
-    return transformWithMapping(data, direction === 'escape' ? ESCAPE_MAP : UNESCAPE_MAP, direction === 'escape' ? escapeRegex : unescapeRegex);
+/** 同时转换纯对象的键和值；保留数组位置和缺项，不修改输入。 */
+export function transformEraData(value, direction) {
+    const ESCAPE = { ".": "__DOT__", '"': "__DQUOTE__", "'": "__SQUOTE__" };
+    const UNESCAPE = { __DOT__: ".", __DQUOTE__: '"', __SQUOTE__: "'" };
+    const mapping = direction === "escape" ? ESCAPE : UNESCAPE;
+    const pattern = direction === "escape" ? /[."']/g : /__DOT__|__DQUOTE__|__SQUOTE__/g;
+    return mapData(value, text => text.replace(pattern, token => mapping[token]), false);
 }
-/**
- * 返回不含 `$` 元字段的深拷贝。
- * 必须在独立纯模块中完成，否则作者只读投影会反向依赖 Sidecar 运行时并扩大状态生命周期。
- */
+export function unescapeEraData(value) {
+    return transformEraData(value, "unescape");
+}
+/** 复制可移植数据，递归移除纯对象中以美元符开头的元字段。 */
 export function removeMetaFields(value) {
-    if (!_.isObject(value))
-        return value;
-    const clone = _.cloneDeep(value);
-    const pending = [clone];
-    while (pending.length > 0) {
-        const current = pending.pop();
-        if (Array.isArray(current)) {
-            pending.push(...current);
-            continue;
-        }
-        if (!_.isPlainObject(current))
-            continue;
-        for (const [key, child] of Object.entries(current)) {
-            if (key.startsWith('$'))
-                delete current[key];
-            else
-                pending.push(child);
-        }
-    }
-    return clone;
+    return mapData(value, text => text, true);
 }
 export function selectedMks(meta) {
     return Array.isArray(meta.SelectedMks) ? meta.SelectedMks.map(value => typeof value === "string" ? value : null) : [];

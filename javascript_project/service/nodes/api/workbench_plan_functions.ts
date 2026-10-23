@@ -1,7 +1,7 @@
 import { compileFunctionLibrary } from '@era/vibeflow-expression/engine';
-import { planFunctionLibraryDiff } from '../../base_lib/domain/workbench_draft.js';
-import { defineOwn, isRecord } from '../../base_lib/domain/workbench_operations.js';
-import { workbenchError, type Draft, type OperationPlan } from '../../base_lib/domain/workbench_context.ts';
+import { planFunctionLibraryDiff } from '../../base_lib/workbench/workbench_draft.js';
+import { defineOwn, isRecord } from '../../base_lib/workbench/workbench_operations.js';
+import { workbenchError, type Draft, type OperationPlan } from '../../base_lib/workbench/workbench_context.ts';
 /** 单项修改只替换当前库中的目标，整库替换已在基准节点核对完整原库。 */
 export function run(inputs: any): any {
   const draft = inputs['era.workbench.draft'].value as Draft;

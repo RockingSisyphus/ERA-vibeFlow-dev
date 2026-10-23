@@ -214,7 +214,7 @@ for (const owner of owners) {
 const report = {
   status: 'PASS',
   evidence:
-    'compiled Browser AOT sync, async wait Loop and author tool Nodeset with recorded APIs; production runtime not yet switched',
+    'compiled Browser AOT sync, async wait Loop and author tool Nodeset with recorded APIs; controlled Tavern APIs; full production App acceptance is separate',
   cases,
 };
 console.log(JSON.stringify(report));

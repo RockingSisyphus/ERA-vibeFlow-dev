@@ -1,0 +1,266 @@
+{
+  "type_key": "era.tavern.flow.ordinary_runtime",
+  "display_name": "协同运行五条职责并统一等待退出",
+  "description": "让同一实例的资源管理、主服务、串行作者调用、通知收尾和计时等待共同运行。任一停止要求触发统一清理，末尾等五条分支都实际退出才返回实例停止确认。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.call.frame",
+      "cardinality": "exactly_one",
+      "display_name": "协同运行五条职责并统一等待退出的请求和已有进度"
+    }
+  ],
+  "provides": [
+    {
+      "key": "ordinary_runtime_result",
+      "type": "era.tavern.runtime.result",
+      "display_name": "五条职责和资源清理完成后的停止确认"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.call.frame",
+        "display_name": "协同运行五条职责并统一等待退出的请求和已有进度",
+        "required": true
+      }
+    ],
+    "max_steps": 20,
+    "nodes": [
+      {
+        "id": "start",
+        "display_name": "开始协同运行五条职责并统一等待退出",
+        "description": "标明“协同运行五条职责并统一等待退出”的开始位置。让同一实例的资源管理、主服务、串行作者调用、通知收尾和计时等待共同运行。任一停止要求触发统一清理，末尾等五条分支都实际退出才返回实例停止确认。",
+        "definition_id": "era.tavern.initialize.start"
+      },
+      {
+        "id": "dispatch",
+        "display_name": "让五条职责分支使用同一实例",
+        "description": "在“协同运行五条职责并统一等待退出”流程中，把本次实例资料同时交给资源、主服务、作者、通知和计时分支。各分支处理各自职责，最后统一等待全部退出。",
+        "config": {
+          "max_concurrency": 5
+        },
+        "definition_id": "era.tavern.runtime.dispatch"
+      },
+      {
+        "id": "resources",
+        "display_name": "管理页面资源直到全部实际清理结束",
+        "description": "在“协同运行五条职责并统一等待退出”流程中，持有本实例的监听、界面释放和实际异步操作，资源可用时通知其他分支。停止、页面卸载或故障时关闭入口、解除监听并等待尚在进行的操作及清理；全部完成后结束本资源分支。",
+        "definition_id": "era.tavern.owned.hold_resources"
+      },
+      {
+        "id": "service",
+        "display_name": "资源就绪后运行唯一 ERA 主服务",
+        "description": "本环节用于“协同运行五条职责并统一等待退出”：等待当前实例资源可用，将同一实例交给主服务的酒馆操作入口，再运行主服务直到真正结束。取消沿调用传递，服务结束会触发其他职责分支共同收尾。",
+        "definition_id": "era.tavern.flow.script_service"
+      },
+      {
+        "id": "authors",
+        "display_name": "持续按顺序执行作者函数",
+        "description": "从当前实例作者队列取出一个函数，等待它真正执行结束再取下一项。函数等待变量提交确认时，由同时运行的主服务在对应消息位置处理；实例停止后结束本分支。",
+        "definition_id": "vibeflow.loop.while",
+        "requires": [
+          {
+            "type": "era.tavern.call.frame",
+            "cardinality": "exactly_one",
+            "display_name": "协同运行五条职责并统一等待退出的请求和已有进度"
+          }
+        ],
+        "provides": [
+          {
+            "key": "authors_result",
+            "type": "era.tavern.task.finished",
+            "display_name": "当前职责已真实完成或退出的确认"
+          }
+        ],
+        "loop": {
+          "body": "era.tavern.flow.authors_iteration",
+          "max_iterations": null,
+          "stop_when": {
+            "from": "done",
+            "equals": true
+          },
+          "carry": [
+            {
+              "from": "era.tavern.call.frame",
+              "as": "frame",
+              "update": "frame"
+            }
+          ],
+          "outputs": [
+            {
+              "from": "frame",
+              "as": "authors_result"
+            }
+          ]
+        }
+      },
+      {
+        "id": "notifications",
+        "display_name": "持续收集通知完成并统一收尾",
+        "description": "从当前实例队列接收已发起通知的完成事实，登记各项结果；整组齐全后按原顺序报告并释放。一个未完成通知不会阻止后到的完成项入队，实例停止时进入统一收尾。",
+        "definition_id": "vibeflow.loop.while",
+        "requires": [
+          {
+            "type": "era.tavern.call.frame",
+            "cardinality": "exactly_one",
+            "display_name": "协同运行五条职责并统一等待退出的请求和已有进度"
+          }
+        ],
+        "provides": [
+          {
+            "key": "notifications_result",
+            "type": "era.tavern.task.finished",
+            "display_name": "当前职责已真实完成或退出的确认"
+          }
+        ],
+        "loop": {
+          "body": "era.tavern.flow.notifications_iteration",
+          "max_iterations": null,
+          "stop_when": {
+            "from": "done",
+            "equals": true
+          },
+          "carry": [
+            {
+              "from": "era.tavern.call.frame",
+              "as": "frame",
+              "update": "frame"
+            }
+          ],
+          "outputs": [
+            {
+              "from": "frame",
+              "as": "notifications_result"
+            }
+          ]
+        }
+      },
+      {
+        "id": "timers",
+        "display_name": "持续等待最近期限并处理安排变化",
+        "description": "每轮选择最近有效计时，等待到期或安排改变；新增、替换和取消会使等待重新选择。有效到期交给对应事件或告警流程，实例停止后结束并释放实际计时。",
+        "definition_id": "vibeflow.loop.while",
+        "requires": [
+          {
+            "type": "era.tavern.call.frame",
+            "cardinality": "exactly_one",
+            "display_name": "协同运行五条职责并统一等待退出的请求和已有进度"
+          }
+        ],
+        "provides": [
+          {
+            "key": "timers_result",
+            "type": "era.tavern.task.finished",
+            "display_name": "当前职责已真实完成或退出的确认"
+          }
+        ],
+        "loop": {
+          "body": "era.tavern.flow.timers_iteration",
+          "max_iterations": null,
+          "stop_when": {
+            "from": "done",
+            "equals": true
+          },
+          "carry": [
+            {
+              "from": "era.tavern.call.frame",
+              "as": "frame",
+              "update": "frame"
+            }
+          ],
+          "outputs": [
+            {
+              "from": "frame",
+              "as": "timers_result"
+            }
+          ]
+        }
+      },
+      {
+        "id": "collect",
+        "display_name": "确认五条职责分支都已实际退出",
+        "description": "在“协同运行五条职责并统一等待退出”流程中，收集资源管理、主服务、作者调用、通知和计时五条分支的退出确认。五条齐全才返回实例停止结果，使取消请求与实际退出明确区分。",
+        "join_policy": "all",
+        "definition_id": "era.tavern.runtime.collect"
+      },
+      {
+        "id": "end",
+        "display_name": "结束协同运行五条职责并统一等待退出",
+        "description": "标明“协同运行五条职责并统一等待退出”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.tavern.initialize.end"
+      }
+    ],
+    "edges": [
+      [
+        "start",
+        "dispatch"
+      ],
+      [
+        "dispatch",
+        "resources"
+      ],
+      [
+        "dispatch",
+        "service"
+      ],
+      [
+        "dispatch",
+        "authors"
+      ],
+      [
+        "dispatch",
+        "notifications"
+      ],
+      [
+        "dispatch",
+        "timers"
+      ],
+      [
+        "resources",
+        "collect"
+      ],
+      [
+        "service",
+        "collect"
+      ],
+      [
+        "authors",
+        "collect"
+      ],
+      [
+        "notifications",
+        "collect"
+      ],
+      [
+        "timers",
+        "collect"
+      ],
+      [
+        "collect",
+        "end"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.runtime.result",
+        "cardinality": "exactly_one",
+        "as": "frame",
+        "display_name": "五条职责和资源清理完成后的停止确认"
+      }
+    ]
+  },
+  "nodeset_imports": [
+    {
+      "path": "authors_iteration.jsonc"
+    },
+    {
+      "path": "notifications_iteration.jsonc"
+    },
+    {
+      "path": "timers_iteration.jsonc"
+    }
+  ]
+}

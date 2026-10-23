@@ -1,19 +1,19 @@
 {
   "type_key": "era.agent.settings",
-  "display_name": "管理生成配置、预设和连接",
-  "description": "处理多阶段生成的配置、预设、连接和模型列表操作。按命令读取必要的当前设置，通过浏览器接口执行相应操作，再将实际结果对应到原始请求。此流程负责设置管理，生成阶段在其他任务中执行。",
+  "display_name": "读取和管理多阶段生成设置",
+  "description": "接收用户对生成配置、预设、连接或模型列表的操作，准备必要资料，通过酒馆执行，再向原发起者返回真实结果。模型生成本身由生成流程处理。",
   "requires": [
     {
       "type": "era.step.request.routed",
       "cardinality": "exactly_one",
-      "display_name": "已准备步骤"
+      "display_name": "当前任务及已读取的聊天资料"
     }
   ],
   "provides": [
     {
       "key": "settings_task_result",
       "type": "era.task.result",
-      "display_name": "设置任务结果"
+      "display_name": "本项任务对应原事件的处理结果"
     }
   ],
   "pipeline": {
@@ -23,40 +23,40 @@
         "key": "routed_step",
         "type": "era.step.request.routed",
         "required": true,
-        "display_name": "已准备步骤"
+        "display_name": "当前任务及已读取的聊天资料"
       }
     ],
     "max_steps": 8,
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.service.terminal",
-        "display_name": "设置命令开始",
-        "description": "开始管理生成配置、预设和连接。"
+        "display_name": "开始读取和管理多阶段生成设置",
+        "description": "标明“读取和管理多阶段生成设置”的开始位置。接收用户对生成配置、预设、连接或模型列表的操作，准备必要资料，通过酒馆执行，再向原发起者返回真实结果。模型生成本身由生成流程处理。",
+        "definition_id": "era.service.terminal"
       },
       {
         "id": "prepare_settings_request",
-        "type_used": "era.agent.prepare_settings_request",
-        "display_name": "准备设置命令",
-        "description": "本次处理多阶段生成的设置操作。读取设置操作所需的当前配置、预设和连接资料，组装待执行命令并保留原请求。"
+        "display_name": "整理本次生成设置操作所需资料",
+        "description": "在“读取和管理多阶段生成设置”流程中，接收用户的生成设置请求，读取这项操作需要的当前配置、预设或连接资料。将明确的操作及原请求一起交给执行步骤，使结果能够对应回发起者。",
+        "definition_id": "era.agent.prepare_settings_request"
       },
       {
         "id": "execute_settings_command",
-        "type_used": "era.agent.execute_settings_command",
-        "display_name": "执行设置命令",
-        "description": "本次处理多阶段生成的设置操作。通过酒馆浏览器接口读取或修改生成配置、预设、连接和模型列表，返回接口实际完成的结果及错误信息。"
+        "display_name": "读取或修改多阶段生成设置",
+        "description": "在“读取和管理多阶段生成设置”流程中，接收生成设置命令，按要求读取或修改角色的生成配置、预设、连接方案或模型列表。通过酒馆完成实际操作，再将真正取得的结果或失败原因交回设置任务。",
+        "definition_id": "era.agent.execute_settings_command"
       },
       {
         "id": "build_settings_result",
-        "type_used": "era.agent.build_settings_result",
-        "display_name": "结算设置命令",
-        "description": "本次处理多阶段生成的设置操作。把配置、预设、连接或模型列表操作的实际结果对应到原请求，输出任务回执及诊断信息。"
+        "display_name": "向发起者返回生成设置结果",
+        "description": "在“读取和管理多阶段生成设置”流程中，接收配置、预设、连接或模型列表操作的实际结果，匹配原始请求，形成处理确认。成功值和失败原因都保留，供界面或脚本显示与使用。",
+        "definition_id": "era.agent.build_settings_result"
       },
       {
         "id": "end",
-        "type_used": "era.service.terminal",
-        "display_name": "设置命令结束",
-        "description": "结束管理生成配置、预设和连接，输出本段流程的处理结果。"
+        "display_name": "结束读取和管理多阶段生成设置",
+        "description": "标明“读取和管理多阶段生成设置”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.service.terminal"
       }
     ],
     "edges": [
@@ -87,7 +87,7 @@
       {
         "type": "era.task.result",
         "cardinality": "exactly_one",
-        "display_name": "设置任务结果",
+        "display_name": "本项任务对应原事件的处理结果",
         "as": "settingsTaskResult"
       }
     ]

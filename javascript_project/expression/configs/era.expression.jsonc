@@ -10,7 +10,7 @@
       {
         "key": "expression_request",
         "type": "era.expression.request",
-        "display_name": "函数表达式请求",
+        "display_name": "初始变量、函数及需要依次计算的公式",
         "required": true
       }
     ],
@@ -18,21 +18,21 @@
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.expression.terminal",
-        "display_name": "表达式计算启动",
-        "description": "这是“era.expression”的入口标记。本工作流的结构起点或终点标记，执行时返回空结果，不计算表达式、不替换文本，也不读写酒馆。它只明确流程的入口或出口，业务输入与结果通过已声明的数据通道传递；最终结果由实际处理节点产生。"
+        "display_name": "开始公式计算",
+        "description": "标明“公式计算”的开始位置。使用提供的变量和函数按顺序完成公式计算。",
+        "definition_id": "era.expression.terminal"
       },
       {
         "id": "execute_layer",
-        "type_used": "era.expression.execute_layer",
-        "display_name": "执行表达式层",
-        "description": "对一层有序变量表达式作纯计算：标准化输入，解析并校验函数库，拒绝自由变量及递归调用，再按顺序求每个操作，使后项读取前项的新值。随机来源和偏移明确传递；完成后推导能安全重放的较短表达式。返回最终变量、诊断及压缩候选，不将其保存到聊天，也不运行任意作者 JavaScript。"
+        "display_name": "按顺序计算一轮变量公式",
+        "description": "本环节用于“公式计算”：接收起始变量、自定义函数及有序公式，检查输入和函数定义，依次计算并更新本轮变量。记录随机使用及错误，同时整理可保持同样效果的公式缩短建议，返回计算结果而不保存到聊天。",
+        "definition_id": "era.expression.execute_layer"
       },
       {
         "id": "end",
-        "type_used": "era.expression.terminal",
-        "display_name": "表达式计算结束",
-        "description": "这是“era.expression”的出口标记。本工作流的结构起点或终点标记，执行时返回空结果，不计算表达式、不替换文本，也不读写酒馆。它只明确流程的入口或出口，业务输入与结果通过已声明的数据通道传递；最终结果由实际处理节点产生。"
+        "display_name": "结束公式计算",
+        "description": "标明“公式计算”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.expression.terminal"
       }
     ],
     "edges": [
@@ -49,7 +49,7 @@
       {
         "type": "era.expression.response",
         "cardinality": "exactly_one",
-        "display_name": "函数表达式结果",
+        "display_name": "公式计算的最终变量和缩短建议",
         "as": "expressionResponse"
       }
     ]
@@ -58,16 +58,20 @@
     {
       "source": {
         "kind": "file",
-        "ref": "plugins/schemas.ts",
-        "export": "plugin"
-      }
-    },
-    {
-      "source": {
-        "kind": "file",
-        "ref": "plugins/era.ts",
-        "export": "plugin"
+        "ref": "plugins/contracts/plugin.ts"
       }
     }
-  ]
+  ],
+  "base_lib": {
+    "modules": [
+      "era.expression.execution",
+      "era.expression.execution_core",
+      "era.expression.functions",
+      "era.expression.operation",
+      "era.expression.primitives",
+      "era.expression.symbolic",
+      "era.expression.syntax",
+      "era.expression.types"
+    ]
+  }
 }

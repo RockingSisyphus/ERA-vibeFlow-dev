@@ -1,6 +1,6 @@
+import type { ResolvedMacroOccurrences } from "@era/vibeflow-contracts";
 import {
   formatResolvedMacros,
-  type ResolvedMacroOccurrences,
 } from "../base_lib/macro_runtime.ts";
 
 interface Envelope<T> {

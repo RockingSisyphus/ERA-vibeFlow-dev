@@ -1,20 +1,20 @@
 {
   "type_key": "era.tavern.flow.messages_refresh",
-  "display_name": "按请求刷新当前消息显示",
-  "description": "实现 era.tavern.messages.refresh；输入沿用 era.tavern.messages.refresh.request，输出沿用 era.tavern.messages.refresh.result，完成方式保持 suspend。 原节点保留；仅把首次等待划为同步发起与异步等待，后续处理在对应 finish 流程。",
+  "display_name": "刷新指定消息或整段聊天显示",
+  "description": "检查实例和消息来源，按要求选择单条消息或整个聊天，发起重绘并等待真实完成。返回显示更新确认，变量保存结果仍由主服务的提交流程确定。",
   "expand": true,
   "requires": [
     {
       "type": "era.tavern.call.frame",
       "cardinality": "exactly_one",
-      "display_name": "当前实例与调用资料"
+      "display_name": "刷新指定消息或整段聊天显示的请求和已有进度"
     }
   ],
   "provides": [
     {
       "key": "era_tavern_flow_messages_refresh_frame",
       "type": "era.tavern.frame.messages_refresh.started",
-      "display_name": "当前步骤的资源与已捕获事实"
+      "display_name": "刷新指定消息或整段聊天显示的处理进度及结果"
     }
   ],
   "pipeline": {
@@ -23,7 +23,7 @@
       {
         "key": "frame",
         "type": "era.tavern.call.frame",
-        "display_name": "调用与资源资料",
+        "display_name": "刷新指定消息或整段聊天显示的请求和已有进度",
         "required": true
       }
     ],
@@ -32,58 +32,58 @@
         "type": "era.tavern.frame.messages_refresh.started",
         "cardinality": "exactly_one",
         "as": "frame",
-        "display_name": "本次已经发起的等待资源"
+        "display_name": "刷新指定消息或整段聊天显示的处理进度及结果"
       }
     ],
     "max_steps": 13,
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.tavern.initialize.start",
-        "display_name": "开始当前原生流程",
-        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+        "display_name": "开始刷新指定消息或整段聊天显示",
+        "description": "标明“刷新指定消息或整段聊天显示”的开始位置。检查实例和消息来源，按要求选择单条消息或整个聊天，发起重绘并等待真实完成。返回显示更新确认，变量保存结果仍由主服务的提交流程确定。",
+        "definition_id": "era.tavern.initialize.start"
       },
       {
         "id": "check_basis",
-        "type_used": "era.tavern.messages_refresh.check_basis",
-        "display_name": "复核显示更新依据",
-        "description": "有 sourceBasis 时核对当前消息，不对陈旧目标执行重绘。"
+        "display_name": "刷新前确认消息来源仍有效",
+        "description": "在“刷新指定消息或整段聊天显示”流程中，检查当前实例和取消状态，必要时确认目标消息仍与本次操作依据一致。通过后才刷新显示，避免过期任务刷新新的聊天内容。",
+        "definition_id": "era.tavern.messages_refresh.check_basis"
       },
       {
         "id": "choose_refresh",
-        "type_used": "era.tavern.messages_refresh.choose_refresh",
-        "display_name": "选择全聊天或单消息刷新",
-        "description": "依据 Service 给出的 mode，区分 reloadCurrentChat 与 refreshOneMessage。"
+        "display_name": "选择刷新整段聊天还是一条消息",
+        "description": "在“刷新指定消息或整段聊天显示”流程中，读取请求的显示刷新范围，选择整个当前聊天或指定消息。后续据此调用对应呈现方式，保持刷新范围明确。",
+        "definition_id": "era.tavern.messages_refresh.choose_refresh"
       },
       {
         "id": "select_one",
-        "type_used": "era.tavern.messages_refresh.select_one",
-        "display_name": "刷新指定消息",
-        "description": "调用 refreshOneMessage，保留原消息 ID 检查。"
+        "display_name": "确定需要刷新的单条消息",
+        "description": "在“刷新指定消息或整段聊天显示”流程中，读取并检查目标消息编号，记录本次只刷新这一条。后续向酒馆发起单消息显示更新。",
+        "definition_id": "era.tavern.messages_refresh.select_one"
       },
       {
         "id": "select_all",
-        "type_used": "era.tavern.messages_refresh.select_all",
-        "display_name": "刷新整个当前聊天",
-        "description": "调用 SillyTavern.reloadCurrentChat，并等待实际返回。"
+        "display_name": "确定刷新整个当前聊天",
+        "description": "在“刷新指定消息或整段聊天显示”流程中，接收整聊天刷新要求，记录本次使用完整聊天重绘。后续向酒馆发起对应刷新操作。",
+        "definition_id": "era.tavern.messages_refresh.select_all"
       },
       {
         "id": "join_refresh",
-        "type_used": "era.tavern.messages_refresh.join_refresh",
-        "display_name": "汇合当前实际激活分支的结果",
-        "description": "接收当前所选路径的结果集合，交还其中唯一实际结果；不选择未激活分支、不重新执行操作。运行实现必须拒绝实际多结果，不以集合契约放宽唯一结果语义。"
+        "display_name": "交接刷新消息显示的选中结果",
+        "description": "在“刷新指定消息或整段聊天显示”流程中，在“刷新消息显示”中，接收本次实际选择的分支所产生的唯一结果，交给后续步骤或调用方。每次只允许一份实际结果，避免把互斥分支误当成多个都已执行。",
+        "definition_id": "era.tavern.messages_refresh.join_refresh"
       },
       {
         "id": "start_operation",
-        "type_used": "era.tavern.messages_refresh.start_operation",
-        "display_name": "同步发起所选消息刷新",
-        "description": "按原 one/all 分支核对来源并发起 refreshOneMessage 或 reloadCurrentChat；异步段只等待本次刷新。 此 Node 只发起原始操作并创建等待资源；不执行异步续体。"
+        "display_name": "发起所选范围的消息显示刷新",
+        "description": "在“刷新指定消息或整段聊天显示”流程中，根据已选择的单条或全聊天范围，向酒馆发起消息重绘。后续等待真实完成，供同步流程确认页面呈现已处理。",
+        "definition_id": "era.tavern.messages_refresh.start_operation"
       },
       {
         "id": "end",
-        "type_used": "era.tavern.initialize.end",
-        "display_name": "结束当前原生流程",
-        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+        "display_name": "结束刷新指定消息或整段聊天显示",
+        "description": "标明“刷新指定消息或整段聊天显示”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.tavern.initialize.end"
       }
     ],
     "edges": [

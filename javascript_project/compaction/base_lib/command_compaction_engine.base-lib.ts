@@ -1,0 +1,30 @@
+import {defineBaseLib} from "@vibeflow/plugin";
+
+export const era_command_compaction_engine = defineBaseLib({
+  "id": "era.command_compaction.engine",
+  "display_name": "ERA 命令层安全压缩引擎",
+  "description": "提供六类指令解析、语义重放、依赖分析和候选重写算法，由命令压缩 Config 编排；算法不访问宿主。",
+  "version": "1.0.0",
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "source": {
+        "kind": "file",
+        "ref": "base_lib/command_compaction_engine.ts"
+      }
+    }
+  ],
+  "dependencies": [
+    "era.command_compaction.interpreter"
+  ],
+  "external_packages": [
+    "@era/vibeflow-expression"
+  ],
+  "rulesets": [
+    "vibeflow.base_lib"
+  ]
+});

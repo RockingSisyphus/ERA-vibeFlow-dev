@@ -32,7 +32,7 @@ export async function HoldResources(inputs:any,params:any,context:any):Promise<a
     try{handle=s.api.eventOnce(type,callback);}catch(error){release();throw error;}
     return release;
   };
-  s.resources={listen,once,perform:(operation:()=>any)=>{
+  s.resources={listen,once,onSettled:(work:Promise<any>,callback:()=>void)=>track(Promise.resolve(work).then(callback,callback)),perform:(operation:()=>any)=>{
     if(!live)throw new EraServiceHostError("ERA_HOST_STOPPED","资源作用域已关闭。");
     return track(operation());
   },track,keep,discard:(value:any)=>track(Promise.resolve(value).then(()=>undefined)),mount:(create:()=>Promise<()=>void>)=>{
@@ -51,7 +51,8 @@ export async function HoldResources(inputs:any,params:any,context:any):Promise<a
   try {
     target?.addEventListener("pagehide",onPagehide,{once:true});
     context.signal.addEventListener("abort",onAbort,{once:true});
-    if(context.signal.aborted)onAbort();
+    s.lifecycle.signal.addEventListener("abort",onAbort,{once:true});
+    if(context.signal.aborted||s.lifecycle.signal.aborted)onAbort();
     s.ownerReady.resolve();
     await stopped.promise;
     return emit({frame:{status:"resources-closed"}},params);
@@ -61,6 +62,7 @@ export async function HoldResources(inputs:any,params:any,context:any):Promise<a
     s.operational.abort(context.signal.reason??"runtime-ended");
     target?.removeEventListener("pagehide",onPagehide);
     context.signal.removeEventListener("abort",onAbort);
+    s.lifecycle.signal.removeEventListener("abort",onAbort);
     try {s.dispatch.stopPrefix({session:s,input:{reason:context.signal.reason??"runtime-ended"}});}catch(error){errors.push(error);}
     releaseAll();
     // Pending contains actual IO and its compiled continuation, including non-cancellable operations.
@@ -68,6 +70,7 @@ export async function HoldResources(inputs:any,params:any,context:any):Promise<a
     for(const group of s.notificationGroups??[]){group.linked.cleanup();group.completion.resolve();}
     s.notificationGroups?.clear();s.activeNotifications.clear();
     s.resources=undefined;
+    s.authorCalls.length=0;s.notificationEvents.length=0;s.timerRequests.clear();
     try{await s.onDispose?.();}catch(error){errors.push(error);}
     s.queue.length=0;s.queueBytes=0;s.refs.clear();s.refsBySequence.clear();
     s.failureLedger.clear();s.processedFrames.clear();
@@ -77,7 +80,12 @@ export async function HoldResources(inputs:any,params:any,context:any):Promise<a
 }
 export async function WaitOwner(inputs:any,params:any,context:any):Promise<any> {
   const f=takeFrame(inputs);
-  await abortable(()=>f.session.ownerReady.promise,linkedSignals([context.signal,f.session.lifecycle.signal]));
+  const s=f.session;
+  context.signal.throwIfAborted();
+  if(!s.stopping&&!s.lifecycle.signal.aborted) {
+    try {await abortable(()=>s.ownerReady.promise,linkedSignals([context.signal,s.lifecycle.signal]));}
+    catch(error){if(context.signal.aborted||!s.lifecycle.signal.aborted)throw error;}
+  }
   return emit({frame:f},params);
 }
 export function BindSession(inputs:any,params:any):any {
@@ -87,7 +95,7 @@ export async function RunService(inputs:any,params:any,context:any):Promise<any>
   const f=takeFrame(inputs),s=f.session,linked=linkedSignals([context.signal,s.lifecycle.signal]);
   try {await s.dispatch.runService({}, {signal:linked.signal});}
   catch(error){if(!linked.signal.aborted)throw error;}
-  finally {linked.cleanup();}
+  finally {linked.cleanup();s.dispatch.stopPrefix({session:s,input:{reason:"service-ended"}});}
   return emit({frame:{status:"service-ended"}},params);
 }
 export function ClaimClose(inputs:any,params:any):any {

@@ -73,11 +73,11 @@ export function RememberFrame(inputs: any, params: any): any {
 export function PrepareNotifications(inputs:any,params:any):any {
   const f=takeFrame(inputs),s=f.session;
   const items=!f.duplicate&&!s.stopping&&isEraBatchResultV1(f.outputFrame)?f.batch.notifications:[];
-  f.notificationIndex=0;f.notificationGroup=items.length?{owner:s,items,tasks:[],outcomes:new Array(items.length),remaining:items.length,completion:deferred(),linked:linkedSignals([s.lifecycle.signal,f.options?.signal])}:null;
+  f.notificationIndex=0;f.notificationGroup=items.length?{owner:s,items,outcomes:new Array(items.length),remaining:items.length,completion:deferred(),linked:linkedSignals([s.lifecycle.signal,f.origin==="service"?undefined:f.options?.signal])}:null;
   return emit({frame:f},params);
 }
 export function ActivateNotifications(inputs:any,params:any):any {
   const f=takeFrame(inputs),s=f.session,group=f.notificationGroup;
-  if(group){s.notificationGroups??=new Set();s.notificationGroups.add(group);s.activeNotifications.add(group.completion.promise);s.tasks.push(...group.tasks);s.backgroundWaiter?.resolve();}
+  if(group){s.notificationGroups??=new Set();s.notificationGroups.add(group);s.activeNotifications.add(group.completion.promise);}
   f.result=null;return emit({frame:f},params);
 }

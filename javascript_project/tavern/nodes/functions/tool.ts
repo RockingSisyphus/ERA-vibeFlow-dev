@@ -8,7 +8,7 @@ export async function InvokeTool(inputs:any,params:any):Promise<any> {
   if(!f.call.active||f.call.signal.aborted)f.toolOutcome={status:"rejected",error:new Error("ERA_FUNCTION_CONTEXT_EXPIRED")};
   if(!f.toolOutcome) {
     try {
-      const value=await f.session.api.SillyTavern.ToolManager.invokeFunctionTool(f.call.name,f.call.parameters);
+      const value=await f.session.resources.perform(()=>f.session.api.SillyTavern.ToolManager.invokeFunctionTool(f.call.name,f.call.parameters));
       f.toolOutcome=Object.prototype.toString.call(value)==="[object Error]"?{status:"rejected",error:new Error(value.message)}:{status:"fulfilled",value};
     } catch(error){f.toolOutcome={status:"rejected",error};}
   }

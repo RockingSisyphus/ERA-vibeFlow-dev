@@ -1,25 +1,25 @@
 {
   "type_key": "era.tavern.flow.collection_control_apply_commands_item",
-  "display_name": "逐项执行计时指令",
-  "description": "每轮取得一条指令，调用共享 timer_control 并推进位置；所有命令完成后退出。",
+  "display_name": "执行计时清单中的一条要求",
+  "description": "根据当前位置取出一条启动或取消要求，交给统一计时控制后推进一项。没有剩余内容时结束本轮，供外层完成整份收集控制。",
   "expand": true,
   "requires": [
     {
       "type": "era.tavern.frame.collection_control.prepare_commands",
       "cardinality": "exactly_one",
-      "display_name": "当前条目、处理位置及实例资源令牌"
+      "display_name": "执行计时清单中的一条要求的请求和已有进度"
     }
   ],
   "provides": [
     {
       "key": "era_tavern_flow_collection_control_apply_commands_item_frame",
       "type": "era.tavern.item.result.collection_control_apply_commands_item",
-      "display_name": "下一条目或当前处理结论"
+      "display_name": "执行计时清单中的一条要求的处理进度及结果"
     },
     {
       "key": "era_tavern_flow_collection_control_apply_commands_item_done",
       "type": "era.tavern.done.collection_control.apply_commands",
-      "display_name": "是否完成"
+      "display_name": "本轮遍历或职责处理是否已经结束"
     }
   ],
   "pipeline": {
@@ -28,7 +28,7 @@
       {
         "key": "frame",
         "type": "era.tavern.frame.collection_control.prepare_commands",
-        "display_name": "当前处理位置",
+        "display_name": "执行计时清单中的一条要求的请求和已有进度",
         "required": true
       }
     ],
@@ -36,87 +36,87 @@
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.tavern.initialize.start",
-        "display_name": "开始当前原生流程",
-        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+        "display_name": "开始执行计时清单中的一条要求",
+        "description": "标明“执行计时清单中的一条要求”的开始位置。根据当前位置取出一条启动或取消要求，交给统一计时控制后推进一项。没有剩余内容时结束本轮，供外层完成整份收集控制。",
+        "definition_id": "era.tavern.initialize.start"
       },
       {
         "id": "choose_item",
-        "type_used": "era.tavern.collection_control_apply_commands_item.choose_item",
-        "display_name": "检查是否还有待处理条目",
-        "description": "有当前条目才进入实际处理；列表为空或已处理完时直接形成完成标记，不调用共享操作。"
+        "display_name": "选择下一条计时要求或结束",
+        "description": "在“执行计时清单中的一条要求”流程中，查看本次计时清单是否还有未处理项目。还有时交给计时控制，没有时结束遍历，随后返回整份控制确认。",
+        "definition_id": "era.tavern.collection_control_apply_commands_item.choose_item"
       },
       {
         "id": "one_item_prepare",
-        "type_used": "era.tavern.collection_control_apply_commands_item.one_item_prepare",
-        "display_name": "逐项执行计时指令",
-        "description": "每轮取得一条指令，调用共享 timer_control 并推进位置；所有命令完成后退出。"
+        "display_name": "取出当前需要执行的计时要求",
+        "description": "在“执行计时清单中的一条要求”流程中，按当前进度取出主服务给定的一条启动或取消要求，交给统一计时控制。保持原先标识和期限，不重新决定业务收集窗口。",
+        "definition_id": "era.tavern.collection_control_apply_commands_item.one_item_prepare"
       },
       {
         "id": "timer__read_timer",
-        "type_used": "era.tavern.timer_control.read_timer",
-        "display_name": "执行 Service 指定的计时安排：读取计时记录并确定本次截止时间",
-        "description": "读取现有token/key句柄和首次安排时间；收集控制沿用Service给出的dueAt，延迟准入核对delayMs/maxDelayMs，注销旧timer后按原时钟计算截止。"
+        "display_name": "读取本次收集或延迟事件的计时要求",
+        "description": "在“执行计时清单中的一条要求”流程中，区分主服务指定的事件收集期限与页面提出的延迟事件，读取原有安排、标识和时限。延迟事件检查有效输入并记住首次安排时间，供后续确定取消、保留或替换。",
+        "definition_id": "era.tavern.timer_control.read_timer"
       },
       {
         "id": "timer__choose_timer",
-        "type_used": "era.tavern.timer_control.choose_timer",
-        "display_name": "执行 Service 指定的计时安排：选择保留、取消或重新安排",
-        "description": "相同到期时间保留原 timer；cancel 移除已有 timer；新安排先撤销旧句柄再登记。"
+        "display_name": "选择取消、沿用或重新安排计时",
+        "description": "在“执行计时清单中的一条要求”流程中，检查本次要求及已存在的到期时间。取消要求进入撤销分支，相同收集期限沿用原计时，其余进入新安排，避免同一时限重复登记。",
+        "definition_id": "era.tavern.timer_control.choose_timer"
       },
       {
         "id": "timer__branch_schedule",
-        "type_used": "era.tavern.timer_control.branch_schedule",
-        "display_name": "执行 Service 指定的计时安排：登记新的到期回调",
-        "description": "同步建立计时资源身份、控制器与绝对截止时间，替换旧资源后固定调用编译后的timer_wait异步入口；此处不直接登记长期Timeout。"
+        "display_name": "登记新期限并替换旧安排",
+        "description": "在“执行计时清单中的一条要求”流程中，取消被替换的旧计时，按收集截止时间或延迟及最长等待窗口计算新期限，登记到本实例。唤醒计时分支，让它按最新最近期限等待。",
+        "definition_id": "era.tavern.timer_control.branch_schedule"
       },
       {
         "id": "timer__branch_cancel",
-        "type_used": "era.tavern.timer_control.branch_cancel",
-        "display_name": "执行 Service 指定的计时安排：取消计时器并移除记录",
-        "description": "清除对应 timer，移除实例记录，已过期的回调不会再接纳事件。"
+        "display_name": "取消指定计时并通知等待者重选",
+        "description": "在“执行计时清单中的一条要求”流程中，取消原计时安排并从对应列表移除，更新安排版本、唤醒正在等待的计时分支。后续重新选最近期限，已取消项不会正常触发业务事件。",
+        "definition_id": "era.tavern.timer_control.branch_cancel"
       },
       {
         "id": "timer__branch_keep",
-        "type_used": "era.tavern.timer_control.branch_keep",
-        "display_name": "执行 Service 指定的计时安排：保留既有计时器",
-        "description": "不重复注册已对应同一 dueAt 的计时器。"
+        "display_name": "沿用相同期限的已有计时",
+        "description": "在“执行计时清单中的一条要求”流程中，当前事件收集计时已经对应本次要求的同一期限时，保留现有安排并交给确认出口。避免同一到期重复登记。",
+        "definition_id": "era.tavern.timer_control.branch_keep"
       },
       {
         "id": "timer__join_return_timer",
-        "type_used": "era.tavern.timer_control.join_return_timer",
-        "display_name": "执行 Service 指定的计时安排：汇合当前实际激活分支的结果",
-        "description": "接收当前所选路径的结果集合，交还其中唯一实际结果；不选择未激活分支、不重新执行操作。运行实现必须拒绝实际多结果，不以集合契约放宽唯一结果语义。"
+        "display_name": "交接按明确要求安排、取消或沿用计时的选中结果",
+        "description": "在“执行计时清单中的一条要求”流程中，在“按明确要求安排、取消或沿用计时”中，接收本次实际选择的分支所产生的唯一结果，交给后续步骤或调用方。每次只允许一份实际结果，避免把互斥分支误当成多个都已执行。",
+        "definition_id": "era.tavern.timer_control.join_return_timer"
       },
       {
         "id": "timer__return_timer",
-        "type_used": "era.tavern.timer_control.return_timer",
-        "display_name": "执行 Service 指定的计时安排：返回定时控制确认",
-        "description": "保留原控制帧和 schedule/cancel 的返回形状。"
+        "display_name": "返回本次计时安排的确认",
+        "description": "在“执行计时清单中的一条要求”流程中，本次计时要求已执行后，按操作类型返回已安排、已取消或收集控制确认。调用方据此知道时间要求已登记，实际到期另由计时分支处理。",
+        "definition_id": "era.tavern.timer_control.return_timer"
       },
       {
         "id": "one_item",
-        "type_used": "era.tavern.collection_control_apply_commands_item.one_item",
-        "display_name": "交还执行 Service 指定的计时安排结果",
-        "description": "保存共享原生流程的实际结果并继续当前分支；不重新执行准入、计时或结算。"
+        "display_name": "记录本条计时要求完成并继续",
+        "description": "在“执行计时清单中的一条要求”流程中，当前计时控制已经执行后，将进度移到下一条并继续循环。整份清单因此按主服务指定的顺序处理到结束。",
+        "definition_id": "era.tavern.collection_control_apply_commands_item.one_item"
       },
       {
         "id": "empty",
-        "type_used": "era.tavern.collection_control_apply_commands_item.empty",
-        "display_name": "完成空列表或已结束的遍历",
-        "description": "保留当前处理资料并返回 done=true，不执行任何条目副作用。"
+        "display_name": "确认计时控制清单已经处理完",
+        "description": "在“执行计时清单中的一条要求”流程中，没有剩余计时要求时，标记遍历结束。外层据此返回控制消息完成，后续到期处理由独立计时分支负责。",
+        "definition_id": "era.tavern.collection_control_apply_commands_item.empty"
       },
       {
         "id": "join_end",
-        "type_used": "era.tavern.collection_control_apply_commands_item.join_end",
-        "display_name": "汇合当前实际激活分支的结果",
-        "description": "接收当前所选路径的结果集合，交还其中唯一实际结果；不选择未激活分支、不重新执行操作。运行实现必须拒绝实际多结果，不以集合契约放宽唯一结果语义。"
+        "display_name": "交接执行计时清单中的一条要求的选中结果",
+        "description": "在“执行计时清单中的一条要求”流程中，在“执行计时清单中的一条要求”中，接收本次实际选择的分支所产生的唯一结果，交给后续步骤或调用方。每次只允许一份实际结果，避免把互斥分支误当成多个都已执行。",
+        "definition_id": "era.tavern.collection_control_apply_commands_item.join_end"
       },
       {
         "id": "end",
-        "type_used": "era.tavern.initialize.end",
-        "display_name": "结束当前原生流程",
-        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+        "display_name": "结束执行计时清单中的一条要求",
+        "description": "标明“执行计时清单中的一条要求”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.tavern.initialize.end"
       }
     ],
     "edges": [
@@ -195,13 +195,13 @@
         "type": "era.tavern.item.result.collection_control_apply_commands_item",
         "cardinality": "exactly_one",
         "as": "frame",
-        "display_name": "更新位置"
+        "display_name": "执行计时清单中的一条要求的处理进度及结果"
       },
       {
         "type": "era.tavern.done.collection_control.apply_commands",
         "cardinality": "exactly_one",
         "as": "done",
-        "display_name": "完成标记"
+        "display_name": "本轮遍历或职责处理是否已经结束"
       }
     ]
   }

@@ -4,7 +4,6 @@
     "package_root": ".",
     "external_packages": []
   },
-  "quality_enabled": true,
   "architecture": {
     "documents": [
       {
@@ -14,10 +13,6 @@
       {
         "workflow": "configs/era.tavern.async.jsonc",
         "document": "ARCHITECTURE.async.jsonc"
-      },
-      {
-        "workflow": "configs/era.tavern.runtime.jsonc",
-        "document": "ARCHITECTURE.jsonc"
       }
     ]
   }

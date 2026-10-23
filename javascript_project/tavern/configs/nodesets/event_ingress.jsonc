@@ -1,20 +1,20 @@
 {
   "type_key": "era.tavern.flow.event_ingress",
-  "display_name": "投影酒馆事件并保持原时序",
-  "description": "酒馆回调只调用此原生同步流程；普通事件即刻返回，生成屏障在异步入口等待对应 high-water。",
+  "display_name": "把酒馆事件整理成 ERA 输入",
+  "description": "接收聊天回调，识别辅助生成和内部写入回声，更新过期生成及作者调用的状态。普通事件按序入队，需要生成前等待的事件继续等待相关处理，返回对应回调结果。",
   "expand": true,
   "requires": [
     {
       "type": "era.tavern.call.frame",
       "cardinality": "exactly_one",
-      "display_name": "本次调用及实例资源令牌"
+      "display_name": "把酒馆事件整理成 ERA 输入的请求和已有进度"
     }
   ],
   "provides": [
     {
       "key": "era_tavern_flow_event_ingress_frame",
       "type": "era.tavern.frame.event_ingress.result",
-      "display_name": "操作结果及后续处理所需的资源令牌"
+      "display_name": "把酒馆事件整理成 ERA 输入的处理进度及结果"
     }
   ],
   "pipeline": {
@@ -23,7 +23,7 @@
       {
         "key": "frame",
         "type": "era.tavern.call.frame",
-        "display_name": "调用与资源资料",
+        "display_name": "把酒馆事件整理成 ERA 输入的请求和已有进度",
         "required": true
       }
     ],
@@ -31,75 +31,75 @@
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.tavern.initialize.start",
-        "display_name": "开始当前原生流程",
-        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+        "display_name": "开始把酒馆事件整理成 ERA 输入",
+        "description": "标明“把酒馆事件整理成 ERA 输入”的开始位置。接收聊天回调，识别辅助生成和内部写入回声，更新过期生成及作者调用的状态。普通事件按序入队，需要生成前等待的事件继续等待相关处理，返回对应回调结果。",
+        "definition_id": "era.tavern.initialize.start"
       },
       {
         "id": "read_event_facts",
-        "type_used": "era.tavern.event_ingress.read_event_facts",
-        "display_name": "读取事件来源及当前窗口",
-        "description": "读取事件目录、原生生成状态、内部写回记录及聊天身份，不规划变量同步或回退。"
+        "display_name": "识别聊天事件是否由 ERA 自己触发",
+        "description": "在“把酒馆事件整理成 ERA 输入”流程中，读取酒馆事件及已登记规则，区分辅助模型生成、ERA 内部消息写入和普通聊天变化。记录酒馆生成结束事实，供后续决定忽略内部事件还是交给主服务。",
+        "definition_id": "era.tavern.event_ingress.read_event_facts"
       },
       {
         "id": "choose_event",
-        "type_used": "era.tavern.event_ingress.choose_event",
-        "display_name": "选择忽略、普通入队或生成屏障",
-        "description": "排除辅助生成重入和 ERA 自身写回；其他事件保持现行生命周期变化、取消交接及入队顺序。"
+        "display_name": "选择忽略、普通入队或等待处理后生成",
+        "description": "在“把酒馆事件整理成 ERA 输入”流程中，根据事件性质和生成时机，选择忽略内部回声、普通入队，或接收后等待相关处理完成。模拟生成检查不会误走真实生成的等待路径，后续按选定方式准备事件。",
+        "definition_id": "era.tavern.event_ingress.choose_event"
       },
       {
         "id": "branch_barrier_prepare",
-        "type_used": "era.tavern.event_ingress.branch_barrier_prepare",
-        "display_name": "登记本次生成屏障来源",
-        "description": "保存本次事件序号和生成交接等待来源，回调返回共享异步屏障流程的 Promise。"
+        "display_name": "准备需要等待状态更新的生成事件",
+        "description": "在“把酒馆事件整理成 ERA 输入”流程中，接收需要在生成前等待的聊天事件，更新当前生成状态，取消已不适用的旧交接和作者调用，并标记本事件要等待处理完成。后续由统一事件入口接收，再等待相关状态就绪。",
+        "definition_id": "era.tavern.event_ingress.branch_barrier_prepare"
       },
       {
         "id": "branch_enqueue_prepare",
-        "type_used": "era.tavern.event_ingress.branch_enqueue_prepare",
-        "display_name": "更新事件生命周期事实",
-        "description": "按现行事件类型更新窗口 token、作者函数有效性、原生生成和会话清理事实，然后使用共享准入流程。"
+        "display_name": "准备普通聊天变化交给主服务",
+        "description": "在“把酒馆事件整理成 ERA 输入”流程中，接收普通聊天事件，更新当前聊天及生成状态，清理已过期的作者调用和阶段等待。将该事件交给统一入队流程，后续处理不阻塞当前普通回调。",
+        "definition_id": "era.tavern.event_ingress.branch_enqueue_prepare"
       },
       {
         "id": "branch_ignore",
-        "type_used": "era.tavern.event_ingress.branch_ignore",
-        "display_name": "忽略已有内部事件",
-        "description": "原事件不进入业务 FIFO，不新增回执。"
+        "display_name": "结束无需交给主服务的内部事件",
+        "description": "在“把酒馆事件整理成 ERA 输入”流程中，事件已被识别为辅助生成、ERA 自己写消息的回声或仅用于记录生成结束时，直接结束本次回调。相关结束事实已在读取阶段更新，不再重复排入业务队列。",
+        "definition_id": "era.tavern.event_ingress.branch_ignore"
       },
       {
         "id": "join_admission_input",
-        "type_used": "era.tavern.event_ingress.join_admission_input",
-        "display_name": "汇合当前选中的准入输入",
-        "description": "屏障事件或普通事件只选一个准备路径；严格汇合后共用一次原生准入，不注册两个相同输出。"
+        "display_name": "交接把酒馆事件整理成 ERA 输入的选中结果",
+        "description": "在“把酒馆事件整理成 ERA 输入”流程中，在“把酒馆事件整理成 ERA 输入”中，接收本次实际选择的分支所产生的唯一结果，交给后续步骤或调用方。每次只允许一份实际结果，避免把互斥分支误当成多个都已执行。",
+        "definition_id": "era.tavern.event_ingress.join_admission_input"
       },
       {
         "id": "admit_shared",
-        "type_used": "era.tavern.flow.admission",
-        "display_name": "对当前选中的事件执行一次准入",
-        "description": "屏障与普通事件共同使用同一个实际原生准入流程。"
+        "display_name": "检查新事件并按序交给主服务",
+        "description": "本环节用于“把酒馆事件整理成 ERA 输入”：接收聊天、界面、脚本或到期事件，检查实例状态、内容和容量。有效事件登记序号及结果等待，交给服务或进入队列；拒绝时返回具体原因，不进入队列。",
+        "definition_id": "era.tavern.flow.admission"
       },
       {
         "id": "return_admission_branch",
-        "type_used": "era.tavern.event_ingress.return_admission_branch",
-        "display_name": "交还唯一准入结果",
-        "description": "只转换共享准入的结果类型，保留此前准备的回调与屏障意图，不再准入一次。"
+        "display_name": "保留聊天事件实际接收的结论",
+        "description": "在“把酒馆事件整理成 ERA 输入”流程中，接收统一事件入口的接收或拒绝结果，连同本事件是否需要生成前等待的安排，交给回调返回步骤。保持一次事件只接收一次。",
+        "definition_id": "era.tavern.event_ingress.return_admission_branch"
       },
       {
         "id": "join_return_event",
-        "type_used": "era.tavern.event_ingress.join_return_event",
-        "display_name": "汇合当前实际激活分支的结果",
-        "description": "接收当前所选路径的结果集合，交还其中唯一实际结果；不选择未激活分支、不重新执行操作。运行实现必须拒绝实际多结果，不以集合契约放宽唯一结果语义。"
+        "display_name": "交接把酒馆事件整理成 ERA 输入的选中结果",
+        "description": "在“把酒馆事件整理成 ERA 输入”流程中，在“把酒馆事件整理成 ERA 输入”中，接收本次实际选择的分支所产生的唯一结果，交给后续步骤或调用方。每次只允许一份实际结果，避免把互斥分支误当成多个都已执行。",
+        "definition_id": "era.tavern.event_ingress.join_return_event"
       },
       {
         "id": "return_event",
-        "type_used": "era.tavern.event_ingress.return_event",
-        "display_name": "返回原事件回调结果",
-        "description": "普通通知返回 void；需要等待的生成事件返回 Promise，不把普通监听改成异步。"
+        "display_name": "普通事件返回，生成事件等待相关状态",
+        "description": "在“把酒馆事件整理成 ERA 输入”流程中，接收事件入队的实际结论。普通事件结束当前回调；需要生成前等待且已被接收的事件，继续等待指定序号及之前的处理和阶段交接，避免模型过早读取变量。",
+        "definition_id": "era.tavern.event_ingress.return_event"
       },
       {
         "id": "end",
-        "type_used": "era.tavern.initialize.end",
-        "display_name": "结束当前原生流程",
-        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+        "display_name": "结束把酒馆事件整理成 ERA 输入",
+        "description": "标明“把酒馆事件整理成 ERA 输入”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.tavern.initialize.end"
       }
     ],
     "edges": [
@@ -163,7 +163,7 @@
       {
         "type": "era.tavern.frame.event_ingress.result",
         "cardinality": "exactly_one",
-        "display_name": "完成后的操作资料",
+        "display_name": "把酒馆事件整理成 ERA 输入的处理进度及结果",
         "as": "frame"
       }
     ]

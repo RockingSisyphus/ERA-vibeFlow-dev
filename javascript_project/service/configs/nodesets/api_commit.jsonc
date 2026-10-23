@@ -1,24 +1,24 @@
 {
   "type_key": "era.api.commit",
-  "display_name": "应用脚本或界面的变量提交",
-  "description": "处理公共接口提交的变量和函数操作。先检查聊天目标与允许执行的范围，工作台草稿先转成有序操作；有效请求转成消息事务，由共享消息流程在内存应用。已经处理过的范围返回跳过，输入无效返回失败；应用回执之后由相应任务安排保存。",
+  "display_name": "应用脚本或界面提交的变量操作",
+  "description": "接收变量或函数提交，检查目标聊天和允许范围，工作台草稿先比较成有序操作。有效请求在统一消息流程中按序计算；重复范围按规则跳过，无效内容返回原因，之后由任务流程安排保存。",
   "requires": [
     {
       "type": "era.api.request.selected",
       "cardinality": "exactly_one",
-      "display_name": "公共对象请求"
+      "display_name": "已经选中的接口请求"
     },
     {
       "type": "era.batch.execution.state",
       "cardinality": "exactly_one",
-      "display_name": "当前批次状态"
+      "display_name": "当前批次的任务进度与累计结果"
     }
   ],
   "provides": [
     {
       "key": "commit_result",
       "type": "era.api.facade.result",
-      "display_name": "提交结果"
+      "display_name": "变量接口的实际处理确认"
     }
   ],
   "pipeline": {
@@ -28,64 +28,63 @@
         "key": "facade_request",
         "type": "era.api.request.selected",
         "required": true,
-        "display_name": "公共对象请求"
+        "display_name": "已经选中的接口请求"
       },
       {
         "key": "execution_state",
         "type": "era.batch.execution.state",
         "required": true,
-        "display_name": "当前批次状态"
+        "display_name": "当前批次的任务进度与累计结果"
       }
     ],
     "max_steps": 35,
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.service.terminal",
-        "display_name": "即时 变量提交 开始",
-        "description": "开始应用脚本或界面的变量提交。"
+        "display_name": "开始应用脚本或界面提交的变量操作",
+        "description": "标明“应用脚本或界面提交的变量操作”的开始位置。接收变量或函数提交，检查目标聊天和允许范围，工作台草稿先比较成有序操作。有效请求在统一消息流程中按序计算；重复范围按规则跳过，无效内容返回原因，之后由任务流程安排保存。",
+        "definition_id": "era.service.terminal"
       },
       {
         "id": "inspect_submission",
-        "type_used": "era.api.inspect_submission",
-        "display_name": "读取提交范围，识别操作或工作台草稿",
-        "description": "读取当前聊天允许处理的消息范围，识别提交的是有序变量操作还是工作台编辑草稿。草稿先转成有序操作，再进行提交检查。"
+        "display_name": "识别提交的是操作清单还是编辑草稿",
+        "description": "在“应用脚本或界面提交的变量操作”流程中，读取本次允许处理的聊天消息范围，查看提交内容是明确的有序操作，还是变量、函数工作台的编辑草稿。草稿先转成可执行操作，之后再统一检查能否提交。",
+        "definition_id": "era.api.inspect_submission"
       },
       {
         "id": "prepare_workbench_commit",
-        "type_used": "era.api.prepare_workbench_commit",
-        "display_name": "把编辑草稿转换为提交操作",
-        "description": "本次处理脚本或界面发起的变量提交。把变量或函数工作台的编辑草稿转成公共接口可执行的操作。读取当前数据，检查草稿是否仍对应原聊天和原值，计算差异，再按用户的选择处理保护规则。输出有序提交请求或要求重新加载、补充选择的失败原因。"
+        "display_name": "把工作台草稿转换成安全的提交清单",
+        "description": "本环节用于“应用脚本或界面提交的变量操作”：接收变量或函数编辑草稿，读取当前数据，确认它仍对应原聊天和编辑前的值，比较差异并处理用户的保护选择。输出有序操作，或说明需要重载、修改输入或重新选择的原因。",
+        "definition_id": "era.api.prepare_workbench_commit"
       },
       {
         "id": "validate_scope_and_operations",
-        "type_used": "era.api.validate_commit",
-        "display_name": "校验 允许执行范围 与有序操作",
-        "description": "本次处理脚本或界面发起的变量提交。检查有序操作和请求来源，再判断本次提交是否允许执行。消息范围内的重复调用可执行，后续范围已处理的调用可跳过；回复分支按该分支的执行记录判断，强制执行请求每次执行，过期范围返回失败。"
+        "display_name": "判断这次变量提交是否允许执行",
+        "description": "在“应用脚本或界面提交的变量操作”流程中，检查脚本或界面提交的操作顺序、来源和有效消息范围。按提交模式决定执行、跳过已处理内容或拒绝过期请求，并保留原因；回复分支的执行记录单独判断，供后续安全应用变量变更。",
+        "definition_id": "era.api.validate_commit"
       },
       {
         "id": "prepare_application",
-        "type_used": "era.api.prepare_application",
-        "display_name": "定位目标消息，准备本次提交",
-        "description": "把已确认的有序操作组成消息事务，读取真实目标消息，并建立共享消息处理的初始状态，随后按顺序应用操作。"
+        "display_name": "为变量提交确定目标消息和起点",
+        "description": "在“应用脚本或界面提交的变量操作”流程中，将已确认允许执行的操作组成当前消息要处理的内容，读取真实目标消息并建立执行起点。交给统一消息流程按原顺序计算，后续再安排保存和显示更新。",
+        "definition_id": "era.api.prepare_application"
       },
       {
         "id": "apply_api_blocks",
-        "type_used": "vibeflow.loop.while",
-        "display_name": "依次应用本次接口提交的命令",
-        "description": "按目标消息位置执行本次接口提交及相关历史处理，逐段更新内存中的变量、函数、正文和日志。处理结束后返回实际应用结果；作者函数提交随所属批次保存，外部提交按合并保存窗口安排写入。",
+        "display_name": "按消息位置应用本次接口提交",
+        "description": "接收已通过检查的脚本或界面提交，在目标消息位置逐段执行变量和函数操作，整理内存状态及历史。结束后返回实际应用结论，作者提交随所属批次保存，外部提交按现有合并时机安排写入。",
         "requires": [
           {
             "type": "era.sync.block.step.state",
             "cardinality": "exactly_one",
-            "display_name": "开始处理的消息范围、变量、函数和日志"
+            "display_name": "当前消息位置及待处理变量指令"
           }
         ],
         "provides": [
           {
             "key": "block_step_state_after",
             "type": "era.sync.block.step.state.next",
-            "display_name": "处理后的消息位置、变量、函数和日志"
+            "display_name": "本段正文处理后的变量和消息进度"
           }
         ],
         "loop": {
@@ -108,25 +107,26 @@
               "as": "block_step_state_after"
             }
           ]
-        }
+        },
+        "definition_id": "vibeflow.loop.while"
       },
       {
         "id": "return_immediate_result",
-        "type_used": "era.api.return_immediate_result",
-        "display_name": "返回跳过或输入失败的提交结果",
-        "description": "对已处理过的提交范围形成跳过回执，对无效操作或工作台草稿形成失败回执，保留具体原因并返回原接口格式。"
+        "display_name": "返回跳过提交或输入无效的原因",
+        "description": "在“应用脚本或界面提交的变量操作”流程中，对按规则无需再次处理的提交返回跳过说明，对无效操作或不再适用的工作台草稿返回失败原因。结果保持原接口需要的形式，让脚本或界面知道为何没有继续执行。",
+        "definition_id": "era.api.return_immediate_result"
       },
       {
         "id": "return_applied_result",
-        "type_used": "era.api.return_application_result",
-        "display_name": "返回消息操作的内存应用回执",
-        "description": "整理共享消息处理完成后的变量、函数、日志和诊断，形成接口提交回执。调用方根据该回执继续安排保存和显示更新。"
+        "display_name": "返回变量提交在内存中的应用结果",
+        "description": "在“应用脚本或界面提交的变量操作”流程中，将消息流程算出的变量、函数、历史记录和问题整理为本次提交的处理结果。调用方据此继续安排实际保存和显示更新；本环节报告的是已经计算得到的应用结果。",
+        "definition_id": "era.api.return_application_result"
       },
       {
         "id": "end",
-        "type_used": "era.service.terminal",
-        "display_name": "即时 变量提交 结束",
-        "description": "结束应用脚本或界面的变量提交，输出本段流程的处理结果。"
+        "display_name": "结束应用脚本或界面提交的变量操作",
+        "description": "标明“应用脚本或界面提交的变量操作”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.service.terminal"
       }
     ],
     "edges": [
@@ -186,7 +186,7 @@
         "type": "era.api.facade.result",
         "cardinality": "exactly_one",
         "as": "commitResult",
-        "display_name": "变量提交结果"
+        "display_name": "变量接口的实际处理确认"
       }
     ]
   },

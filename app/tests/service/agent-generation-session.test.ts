@@ -1,10 +1,6 @@
-import {
-  AgentFunctionCallFailure,
-  executeAgentFunctionCalls,
-} from '../../../javascript_project/service/base_lib/domain/commands/operation_fold.ts';
+import { AgentFunctionCallFailure, executeAgentFunctionCalls } from './native-workflow-fixture.ts';
 import { createCandidateRunner } from './agent-candidate-fixture';
 import { describe, expect, it, vi } from 'vitest';
-
 import {
   buildAgentRetryFeedback,
   agentRequestContext,
@@ -18,16 +14,14 @@ import {
   parsePlanningOutput,
   sanitizePresetSnapshot,
   stripAgentReportsForPrompt,
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Service 纯领域函数的差分测试必须读取真实 VibeFlow 源码。
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Service 纯领域函数的行为测试必须读取真实 VibeFlow 源码。
   // @ts-ignore TypeScript 会对 app rootDir 外的 VibeFlow 源码报告 TS6059。
 } from '../../../javascript_project/service/base_lib/agent/agent_generation_session';
-
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- 节点测试必须调用正式 VibeFlow Node source。
 // @ts-ignore app tsconfig 不声明 Service Node 的跨 root 类型。
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- 节点测试必须经过正式的 V2 准备节点。
 // @ts-ignore app tsconfig 不声明 Service Node 的跨 root 类型。
-import { run as prepareAgentSessionNode } from '../../../javascript_project/service/nodes/agent/prepare_auxiliary_execution_request';
-
+import { prepareAgentSessionNode, generationStepFixture } from './native-workflow-fixture';
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- 节点测试读取真实 Service 编排边界。
 // @ts-ignore app rootDir 外的 Node source。
 import {
@@ -48,13 +42,25 @@ import { run as executeSettingsNode } from '../../../javascript_project/service/
 import { BuildSettingsResultNode as buildSettingsNode } from '../../../javascript_project/service/nodes/agent/shared_agent_flow_adapters.ts';
 async function runAgentSessionNode(
   inputs: {
-    'era.step.request.routed': { value: unknown };
-    'era.batch.execution.state': { value: unknown };
+    'era.step.request.routed': {
+      value: unknown;
+    };
+    'era.batch.execution.state': {
+      value: unknown;
+    };
   },
   params: Record<string, unknown>,
-  runtime: { capabilities: Record<string, unknown> },
+  runtime: {
+    capabilities: Record<string, unknown>;
+  },
 ): Promise<Record<string, unknown>> {
-  const step = inputs['era.step.request.routed'].value as { task?: { primaryEvent?: { type?: string } } };
+  const step = inputs['era.step.request.routed'].value as {
+    task?: {
+      primaryEvent?: {
+        type?: string;
+      };
+    };
+  };
   if (step.task?.primaryEvent?.type === 'era.ui.agent_configuration') {
     const prepared = await prepareSettingsNode(inputs, params, runtime as never);
     const executed = await executeSettingsNode(
@@ -65,6 +71,10 @@ async function runAgentSessionNode(
     const result = buildSettingsNode({ ...inputs, 'era.agent.settings.outcome': { value: executed.settings_outcome } });
     return { ...result, agent_transition: { schemaVersion: 1, step, ...executed.settings_outcome } };
   }
+  inputs = {
+    ...inputs,
+    'era.step.request.routed': { value: generationStepFixture(inputs['era.step.request.routed'].value) },
+  };
   const prepared = await prepareAgentSessionNode(inputs, params, runtime as never);
   const facts = prepared.generation_facts;
   const decision = classifyGenerationNode({ 'era.agent.generation.facts': { value: facts } });
@@ -99,10 +109,12 @@ async function runAgentSessionNode(
     facts.context,
   );
   let executed = await runCandidate(request.generation_request);
-  // 模拟生产后置通知完成后重新入队；旧算法测试仍验证完整周期结果。
+  // 模拟生产后置通知完成后重新入队；行为测试继续验证完整周期结果。
   for (let stage = 0; executed.generation_outcome.stageBoundary && stage < 4; stage++) {
     const session = storedSession as Record<string, unknown>;
-    const pending = session.pendingStage as { completionId: string };
+    const pending = session.pendingStage as {
+      completionId: string;
+    };
     const next = {
       ...request.generation_request,
       phase: 'resume',
@@ -118,7 +130,6 @@ async function runAgentSessionNode(
   }
   return formTransitionNode({ ...inputs, 'era.agent.generation.outcome': { value: executed.generation_outcome } });
 }
-
 describe('stage correction input', () => {
   it('uses the actual failed reply without the display trace truncation and requests a complete correction', () => {
     const response = `{"broken":"${'x'.repeat(140000)}`;
@@ -149,7 +160,6 @@ describe('stage correction input', () => {
     ).toBe('request-retry');
   });
 });
-
 function floorDispatchContext(input: {
   chatId: string;
   messageId: number;
@@ -192,7 +202,6 @@ function floorDispatchContext(input: {
     agentFloorCandidate: null,
   } as const;
 }
-
 describe('retry failure boundaries', () => {
   async function execute(
     stage: 'planning' | 'settlement',
@@ -205,7 +214,7 @@ describe('retry failure boundaries', () => {
       planning: { enabled: stage === 'planning', retryCount: 5, attempts: [{ preset: { source: 'builtin' } }] },
       settlement: { enabled: stage === 'settlement', retryCount: 5, attempts: [{ preset: { source: 'builtin' } }] },
     };
-    return runAgentSessionNode(
+    return await runAgentSessionNode(
       {
         'era.step.request.routed': {
           value: {
@@ -267,7 +276,6 @@ describe('retry failure boundaries', () => {
       },
     );
   }
-
   it('waits for native completion before starting settlement, but not planning', async () => {
     let finish!: (result: unknown) => void;
     const native = vi.fn(
@@ -298,7 +306,6 @@ describe('retry failure boundaries', () => {
     );
     expect(native).not.toHaveBeenCalled();
   });
-
   it.each(['cancelled', 'changed-chat', 'changed-swipe', 'changed-body', 'changed-execution'])(
     'does not send settlement after %s while waiting',
     async kind => {
@@ -318,7 +325,6 @@ describe('retry failure boundaries', () => {
       expect(outcome).toMatchObject({ agent_transition: { status: 'no-op' } });
     },
   );
-
   it.each(['planning', 'settlement'] as const)(
     '%s preserves the exact correction across request failures and replaces only invalid answers',
     async stage => {
@@ -369,22 +375,26 @@ describe('retry failure boundaries', () => {
       expect(fresh.mock.calls[0][0].userInput).toBe(requests[0].userInput);
     },
   );
-
   it('does not retry a validated settlement when the subsequent Host session write fails', async () => {
     const generate = vi.fn().mockResolvedValue({ response: '' });
     const result = await execute(
       'settlement',
       generate,
-      vi.fn((input: { session?: { status?: string } }) => {
-        if (input.session?.status === 'settled') throw new Error('HOST_SESSION_WRITE_FAILED');
-      }),
+      vi.fn(
+        (input: {
+          session?: {
+            status?: string;
+          };
+        }) => {
+          if (input.session?.status === 'settled') throw new Error('HOST_SESSION_WRITE_FAILED');
+        },
+      ),
     );
     expect(generate).toHaveBeenCalledOnce();
     expect(JSON.stringify(result)).toContain('HOST_SESSION_WRITE_FAILED');
     expect(result.agent_transition).not.toMatchObject({ status: 'committed' });
   });
 });
-
 describe('AgentGenerationSession pure contracts', () => {
   it('keeps legacy cards disabled and bounds retry profiles', () => {
     expect(normalizeAgentConfiguration(undefined)).toMatchObject({
@@ -408,7 +418,6 @@ describe('AgentGenerationSession pure contracts', () => {
     });
     expect(normalized.settlement.retryCount).toBe(3);
   });
-
   it('creates a pending custom connection before strict configuration normalization', async () => {
     const writeConfiguration = vi.fn(async () => ({ status: 'committed' }));
     const upsertConnectionProfile = vi.fn(async () => ({
@@ -499,7 +508,6 @@ describe('AgentGenerationSession pure contracts', () => {
         },
       },
     );
-
     expect(upsertConnectionProfile).toHaveBeenCalledWith({
       name: 'Fixture API',
       apiUrl: 'http://127.0.0.1:19002',
@@ -527,7 +535,6 @@ describe('AgentGenerationSession pure contracts', () => {
     });
     expect(result.agent_transition).toMatchObject({ status: 'committed' });
   });
-
   it('sanitizes embedded presets to prompts and common sampling values', () => {
     expect(
       sanitizePresetSnapshot({
@@ -546,7 +553,6 @@ describe('AgentGenerationSession pure contracts', () => {
       settings: { temperature: 0.4, topP: 0.9 },
     });
   });
-
   it('strictly parses planning and settlement JSON', () => {
     expect(
       parsePlanningOutput('```json\n{"storyPlan":{"beat":"door"},"calls":[{"function":"floor","args":[2.9]}]}\n```'),
@@ -556,8 +562,7 @@ describe('AgentGenerationSession pure contracts', () => {
     });
     expect(() => parsePlanningOutput('{"storyPlan":{},"calls":[{"function":"x-y","args":[]}]}')).toThrow('函数名无效');
   });
-
-  it('executes deterministic functions in one ordered random draw stream', () => {
+  it('executes deterministic functions in one ordered random draw stream', async () => {
     const input = {
       calls: [
         { function: 'random', args: [] },
@@ -568,15 +573,14 @@ describe('AgentGenerationSession pure contracts', () => {
       statFunc: {},
       sourceKey: 'message-mk-1',
     } as const;
-    const first = executeAgentFunctionCalls(input);
-    const replay = executeAgentFunctionCalls(input);
+    const first = await executeAgentFunctionCalls(input);
+    const replay = await executeAgentFunctionCalls(input);
     expect(first).toEqual(replay);
     expect(first.results.map(item => item.drawOffsetStart)).toEqual([0, 1, 1]);
     expect(first.results.map(item => item.drawOffsetEnd)).toEqual([1, 1, 2]);
     expect(first.results[1]?.result).toBe(2);
     expect(first.nextDrawOffset).toBe(2);
   });
-
   it('isolates story commands while preserving report and transaction order', () => {
     const isolated = isolateStoryEraCommands(
       'story <VariableEdit>{"a":1}</VariableEdit> middle <era_tx s="m"><VariableDelete>{"b":null}</VariableDelete></era_tx>',
@@ -584,7 +588,6 @@ describe('AgentGenerationSession pure contracts', () => {
     expect(isolated.story).toBe('story  middle');
     expect(isolated.audit).toContain('<VariableEdit>');
     expect(isolated.audit).toContain('<era_tx s="m">');
-
     const plan = formatAgentPlanReport({ ok: true });
     const update = formatAgentUpdateReport({ settled: true });
     const transaction = '<VariableInsert>{"time":10}</VariableInsert>';
@@ -597,7 +600,6 @@ describe('AgentGenerationSession pure contracts', () => {
     expect(promptMessage).toContain('visible story');
     expect(promptMessage).toContain(transaction);
   });
-
   it('reads the authoritative message key and counts completed Agent cycles', () => {
     expect(extractEraMessageKey('<era_data era-message-key="mk-42">{}</era_data>')).toBe('mk-42');
     expect(extractEraMessageKey("<era_data era-message-key='mk-single'>{}</era_data>")).toBe('mk-single');
@@ -605,7 +607,6 @@ describe('AgentGenerationSession pure contracts', () => {
     expect(countAgentCycles('<era_plan>{}</era_plan>story<era_update>{}</era_update>')).toBe(1);
     expect(countAgentCycles('<era_plan>{}</era_plan>story<era_plan>{}</era_plan>more')).toBe(2);
   });
-
   it('keeps only visible story while auditing story-model commands', () => {
     const isolated = isolateStoryEraCommands(
       [
@@ -621,7 +622,6 @@ describe('AgentGenerationSession pure contracts', () => {
     expect(isolated.audit).toContain('story_model_should_be_ignored');
     expect(isolated.audit).not.toContain('era_plan');
   });
-
   it('isolates story-body function calls and their operations region', () => {
     const isolated = isolateStoryEraCommands(
       [
@@ -632,13 +632,11 @@ describe('AgentGenerationSession pure contracts', () => {
         '</EraFCallTx>',
       ].join('\n'),
     );
-
     // 正文里的调用与操作区都不得进入可见故事，但必须留在审计里。
     expect(isolated.story).toBe('visible story');
     expect(isolated.audit).toContain('EraFCall name="attack"');
     expect(isolated.audit).toContain('hp-30');
   });
-
   it('recognizes ERA-owned planning failure messages without matching ordinary stories', () => {
     expect(
       isAgentPlanningFailureMessage({
@@ -661,9 +659,8 @@ describe('AgentGenerationSession pure contracts', () => {
       }),
     ).toBe(false);
   });
-
-  it('rejects an invalid later function before executing any call', () => {
-    expect(() =>
+  it('rejects an invalid later function before executing any call', async () => {
+    await expect(
       executeAgentFunctionCalls({
         calls: [
           { function: 'random', args: [] },
@@ -673,12 +670,11 @@ describe('AgentGenerationSession pure contracts', () => {
         statFunc: {},
         sourceKey: 'message-mk-prevalidate',
       }),
-    ).toThrow('未知函数');
+    ).rejects.toThrow('未知函数');
   });
-
-  it('preserves completed function results and marks the failed and unexecuted calls', () => {
+  it('preserves completed function results and marks the failed and unexecuted calls', async () => {
     try {
-      executeAgentFunctionCalls({
+      await executeAgentFunctionCalls({
         calls: [
           { function: 'floor', args: [2.9] },
           { function: 'sqrt', args: [-1] },
@@ -697,7 +693,6 @@ describe('AgentGenerationSession pure contracts', () => {
       expect(results[2]).not.toHaveProperty('result');
     }
   });
-
   it('clears the in-memory session when Tavern reports generation_stopped', async () => {
     const clearSession = vi.fn(() => ({ status: 'cleared' }));
     const result = await runAgentSessionNode(
@@ -732,7 +727,6 @@ describe('AgentGenerationSession pure contracts', () => {
         },
       },
     );
-
     expect(clearSession).toHaveBeenCalledWith({ chatKey: 'chat-agent-stop' });
     expect(result.agent_transition).toMatchObject({
       mode: 'legacy-ignore',
@@ -740,7 +734,6 @@ describe('AgentGenerationSession pure contracts', () => {
       value: { status: 'generation-cancelled' },
     });
   });
-
   it.each([
     ['no session', null],
     ['a completed session', { schemaVersion: 1, chatKey: 'chat-agent-idle', status: 'settled' }],
@@ -783,11 +776,9 @@ describe('AgentGenerationSession pure contracts', () => {
         },
       },
     );
-
     expect(generate).not.toHaveBeenCalled();
     expect(result.agent_transition).toMatchObject({ mode: 'legacy', status: 'no-op' });
   });
-
   it('opens a fresh cycle for every new user message instead of reusing the completed session', async () => {
     const writeSession = vi.fn(() => ({ status: 'committed' }));
     const result = await runAgentSessionNode(
@@ -834,7 +825,6 @@ describe('AgentGenerationSession pure contracts', () => {
         },
       },
     );
-
     expect(writeSession).toHaveBeenCalledOnce();
     expect(writeSession).toHaveBeenCalledWith({
       chatKey: 'chat-agent-next',
@@ -845,7 +835,6 @@ describe('AgentGenerationSession pure contracts', () => {
     });
     expect(result.agent_transition).toMatchObject({ mode: 'execute-legacy', status: 'committed' });
   });
-
   it('does not let an uncaused normal generation_started event create an Agent cycle', async () => {
     const writeSession = vi.fn();
     const result = await runAgentSessionNode(
@@ -890,12 +879,10 @@ describe('AgentGenerationSession pure contracts', () => {
         },
       },
     );
-
     expect(writeSession).not.toHaveBeenCalled();
     expect(result.agent_transition).toMatchObject({ mode: 'legacy', status: 'no-op' });
   });
-
-  it('hands the planning-only composed message to legacy sync instead of its stale dispatch snapshot', async () => {
+  it('hands the planning-only composed message to synchronization instead of its stale dispatch snapshot', async () => {
     const planReport = '<era_plan>{"storyPlan":{"scene":"baseline"},"calls":[]}</era_plan>';
     const story = '<VariableInsert><era_data>{"error_007":{"value":1}}</era_data></VariableInsert>';
     const eventId = 'event-planning-only-message-received';
@@ -956,12 +943,15 @@ describe('AgentGenerationSession pure contracts', () => {
         },
       },
     );
-
     const candidate = (
       result.agent_transition as {
         step: {
           dispatchContext: {
-            agentFloorCandidate: { content: string; mk: string; extra: Record<string, unknown> };
+            agentFloorCandidate: {
+              content: string;
+              mk: string;
+              extra: Record<string, unknown>;
+            };
           };
         };
       }
@@ -986,7 +976,6 @@ describe('AgentGenerationSession pure contracts', () => {
       },
     });
   });
-
   it('finishes the active cycle with its frozen configuration after the character switches stages', async () => {
     const generate = vi.fn();
     const planReport = '<era_plan>{"storyPlan":{"scene":"frozen"},"calls":[]}</era_plan>';
@@ -1050,7 +1039,6 @@ describe('AgentGenerationSession pure contracts', () => {
         },
       },
     );
-
     expect(generate).not.toHaveBeenCalled();
     expect(result.agent_transition).toMatchObject({
       mode: 'execute-legacy',
@@ -1065,7 +1053,6 @@ describe('AgentGenerationSession pure contracts', () => {
       },
     });
   });
-
   it('keeps settlement enabled for an active cycle even after the character turns it off', async () => {
     const generate = vi.fn(async () => ({ response: '' }));
     const eventId = 'event-frozen-settlement-message-received';
@@ -1123,7 +1110,6 @@ describe('AgentGenerationSession pure contracts', () => {
         },
       },
     );
-
     expect(generate).toHaveBeenCalledOnce();
     expect(result.agent_transition).toMatchObject({
       mode: 'execute-legacy',
@@ -1138,7 +1124,6 @@ describe('AgentGenerationSession pure contracts', () => {
       },
     });
   });
-
   it('preserves a structured missing-profile diagnostic and retries the next planning profile', async () => {
     const generate = vi
       .fn()
@@ -1207,7 +1192,6 @@ describe('AgentGenerationSession pure contracts', () => {
         },
       },
     );
-
     expect(generate).toHaveBeenCalledTimes(2);
     expect(writeSession).toHaveBeenLastCalledWith({
       chatKey: 'chat-profile-retry',
@@ -1236,7 +1220,6 @@ describe('AgentGenerationSession pure contracts', () => {
     // Planning has no physical AI floor yet; its continuation must not save a draft to chat.
     expect(result.agent_transition).toMatchObject({ mode: 'legacy-ignore', status: 'committed' });
   });
-
   it('delegates group chats to the unchanged ERA generation path', async () => {
     const writeSession = vi.fn();
     const generate = vi.fn();
@@ -1278,7 +1261,6 @@ describe('AgentGenerationSession pure contracts', () => {
         },
       },
     );
-
     expect(writeSession).not.toHaveBeenCalled();
     expect(generate).not.toHaveBeenCalled();
     expect(result.agent_transition).toMatchObject({

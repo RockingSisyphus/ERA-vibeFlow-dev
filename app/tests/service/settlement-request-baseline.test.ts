@@ -3,10 +3,8 @@ import { recordFor } from '../../../javascript_project/service/base_lib/sidecar_
 import { sidecarId, contextWith, identity } from './memory-lifecycle-fixture';
 import { classifyGeneration } from '../../../javascript_project/service/base_lib/agent/agent_flow_policy';
 import { expect, it } from 'vitest';
-import { run } from '../../../javascript_project/service/nodes/agent/prepare_auxiliary_execution_request';
-import { planEraSync } from '../../../javascript_project/service/base_lib/sync/sync_planning';
+import { prepareAgentSessionNode as run, generationStepFixture, planEraSync } from './native-workflow-fixture';
 import { readMkMessageText } from '../../../javascript_project/service/base_lib/domain/mk_engine';
-
 it.each([
   ['settlement', 70, false],
   ['story', 80, false],
@@ -18,7 +16,7 @@ it.each([
     '<VariableEdit>{"hp":80}</VariableEdit><FunctionInsert>{"candidateFn":{"params":[],"expr":"42"}}</FunctionInsert>';
   const story = '<EraFCall name="body" status="done"/><era_tx s="a"><VariableEdit>{"hp":70}</VariableEdit></era_tx>';
   const settlement = '<era_tx s="a"><VariableEdit>{"hp":40}</VariableEdit></era_tx>';
-  const base = planEraSync({
+  const base = await planEraSync({
     messages: [
       {
         messageId: 0,
@@ -67,7 +65,7 @@ it.each([
     state: { statData: base.stat, statFunc: base.statFunc, eraMeta: base.meta },
   };
   const result = await run(
-    { 'era.step.request.routed': { value: step } },
+    { 'era.step.request.routed': { value: generationStepFixture(step) } },
     {},
     {
       capabilities: {
@@ -120,7 +118,6 @@ it.each([
   expect(savedSession.status).toBe('unsettled');
   if (kind === 'settlement') expect(savedSession.stageMemory.content).toContain('status="done"');
 });
-
 it('无法恢复结算基线时形成可恢复任务失败，不继续生成或抛成服务致命异常', () => {
   const diagnostic = { code: 'ERA_AGENT_STAGE_BASELINE_FAILED', message: 'missing rollback evidence' };
   const result = classifyGeneration({ diagnostics: [diagnostic] } as any);

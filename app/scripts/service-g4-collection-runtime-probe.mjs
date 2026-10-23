@@ -1,9 +1,8 @@
 /// <reference types="node" />
 
 import { createHash } from 'node:crypto';
-import { rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { mkdir, mkdtemp, readFile, rm, writeFile, symlink } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { importGeneratedService } from './import-generated-service.mjs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -14,17 +13,7 @@ const manifestPath = resolve(buildRoot, 'vibeflow-build.json');
 const reportPath = resolve(projectRoot, 'reports/service-g4-collection-runtime.json');
 
 /** 与 G3 探针一致：保持生成物字节不变，但从 app 包解析运行时依赖。 */
-async function importGeneratedWorkflow() {
-  const directory = await mkdtemp(resolve(tmpdir(), 'era-generated-workflow-'));
-  await symlink(resolve(import.meta.dirname, '../node_modules'), resolve(directory, 'node_modules'), 'dir');
-  process.once('exit', () => rmSync(directory, { recursive: true, force: true }));
-  const stagedPath = resolve(directory, 'workflow.mjs');
-  await writeFile(stagedPath, await readFile(generatedModuleUrl), 'utf8');
-  return {
-    workflow: await import(pathToFileURL(stagedPath).href),
-    cleanup: () => rm(directory, { recursive: true, force: true }),
-  };
-}
+const importGeneratedWorkflow = () => importGeneratedService(generatedModuleUrl);
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -287,7 +276,7 @@ function assertBatch(frame, expectedSequences) {
 
 const stagedWorkflow = await importGeneratedWorkflow();
 const workflow = stagedWorkflow.workflow;
-assert(workflow.VIBEFLOW_WORKFLOW_ABI === 'vibeflow.workflow.v6', 'Workflow ABI 不是 v6。');
+assert(workflow.VIBEFLOW_WORKFLOW_ABI === 'vibeflow.workflow.v10', 'Workflow ABI 不是 v10。');
 
 const controller = new AbortController();
 const port = new FakePort();

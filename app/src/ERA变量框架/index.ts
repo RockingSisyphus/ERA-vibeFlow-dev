@@ -9,7 +9,6 @@ import { runWorkflowAsync as service } from '@era/vibeflow-service';
 import { runEra } from '@era/vibeflow-tavern';
 import { runWorkflow as sync } from '@era/vibeflow-tavern-sync';
 import { runWorkflowAsync as asyncEntry } from '@era/vibeflow-tavern-async';
-import { runWorkflowAsync as runtime } from '@era/vibeflow-tavern-runtime';
 import { INPUT_EVENT, EVENT_CATALOG } from './events/catalog';
 import { agentExecutionRecords, type AgentRequestContext } from './service/agent-execution-records';
 import { observeAgentReceipt, observeAgentSession } from './service/agent-session-observation';
@@ -31,7 +30,7 @@ import type { EraStartupGateDecision, EraWaitThroughResult } from './service/typ
 import { initEraSettings } from './utils/era_data';
 import { Logger } from './utils/log';
 
-import { startEraMacroSubsystem } from './macro/parser';
+import { startEraMacroSubsystem } from './macro/subsystem';
 import { startEraUi } from './ui';
 import { startExternalStatusbar } from './ui/external-statusbar';
 import { startSingleFloor } from './service/single-floor-runtime';
@@ -132,7 +131,7 @@ function observeRequest(
  * 测试Loader必须等旧实例完成清理后再复用入口，避免反复导入整份模块而累积浏览器缓存。 */
 export function runEraScript(): Promise<unknown> {
   const completion = runEra(
-    { sync, async: asyncEntry, runtime, service },
+    { sync, async: asyncEntry, service },
     {
       eventDefinitions: [...EVENT_CATALOG.values()],
       onActivated: (client: EraNativeClient, signal: AbortSignal) => {

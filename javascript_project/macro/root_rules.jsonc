@@ -1,0 +1,15 @@
+{
+  "rulesets": [
+    "vibeflow.root.default"
+  ],
+  "rule_params": {
+    "vibeflow.root.layout": {
+      "directories": [
+        {
+          "path": "manifests",
+          "purpose": "现行Schema同步检查输入"
+        }
+      ]
+    }
+  }
+}

@@ -1,20 +1,20 @@
 {
   "type_key": "era.tavern.flow.functions_release",
-  "display_name": "释放作者函数上下文",
-  "description": "实现 era.tavern.functions.release；输入沿用 era.working.request，输出沿用 era.working.result，完成方式保持 immediate。",
+  "display_name": "结束作者调用并释放相关等待",
+  "description": "先使当前作者调用失效，逐项以过期原因结束未确认请求，再解除参数和取消监听并唤醒等待者。返回释放确认，让消息流程能完整收尾。",
   "expand": true,
   "requires": [
     {
       "type": "era.tavern.call.frame",
       "cardinality": "exactly_one",
-      "display_name": "本次调用及实例资源令牌"
+      "display_name": "结束作者调用并释放相关等待的请求和已有进度"
     }
   ],
   "provides": [
     {
       "key": "era_tavern_flow_functions_release_frame",
       "type": "era.tavern.call.frame",
-      "display_name": "操作结果及后续处理所需的资源令牌"
+      "display_name": "结束作者调用并释放相关等待的处理进度及结果"
     }
   ],
   "pipeline": {
@@ -23,7 +23,7 @@
       {
         "key": "frame",
         "type": "era.tavern.call.frame",
-        "display_name": "调用与资源资料",
+        "display_name": "结束作者调用并释放相关等待的请求和已有进度",
         "required": true
       }
     ],
@@ -31,33 +31,32 @@
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.tavern.initialize.start",
-        "display_name": "开始当前原生流程",
-        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+        "display_name": "开始结束作者调用并释放相关等待",
+        "description": "标明“结束作者调用并释放相关等待”的开始位置。先使当前作者调用失效，逐项以过期原因结束未确认请求，再解除参数和取消监听并唤醒等待者。返回释放确认，让消息流程能完整收尾。",
+        "definition_id": "era.tavern.initialize.start"
       },
       {
         "id": "close_call",
-        "type_used": "era.tavern.functions_release.close_call",
-        "display_name": "标记作者调用失效",
-        "description": "从实例中移除调用，禁止作者延后使用已失效接口。"
+        "display_name": "使当前作者调用停止接受新请求",
+        "description": "在“结束作者调用并释放相关等待”流程中，按调用身份移除作者运行登记并将它标为失效。后续依次结束未完成请求并解绑资料，使旧函数不能继续提交当前消息的操作。",
+        "definition_id": "era.tavern.functions_release.close_call"
       },
       {
         "id": "reject_pending_loop",
-        "type_used": "vibeflow.loop.while",
-        "display_name": "逐项拒绝作者未决请求循环",
-        "description": "每轮拒绝一个未完成请求；全部完成后解绑当前作者上下文。",
+        "display_name": "逐项结束已失效作者的待确认请求",
+        "description": "作者调用关闭后，每轮让一项仍在等待的操作以调用失效结束。全部处理完才进入参数解绑，保证没有作者提交永久等待。",
         "requires": [
           {
             "type": "era.tavern.frame.functions_release.close_call",
             "cardinality": "exactly_one",
-            "display_name": "当前请求、实例资源令牌及此前步骤取得的事实"
+            "display_name": "结束作者调用并释放相关等待的请求和已有进度"
           }
         ],
         "provides": [
           {
             "key": "era_tavern_flow_functions_release_reject_pending_loop_frame",
             "type": "era.tavern.frame.functions_release.close_call",
-            "display_name": "逐项拒绝作者未决请求完成后的处理资料"
+            "display_name": "结束作者调用并释放相关等待的处理进度及结果"
           }
         ],
         "loop": {
@@ -80,31 +79,32 @@
               "as": "era_tavern_flow_functions_release_reject_pending_loop_frame"
             }
           ]
-        }
+        },
+        "definition_id": "vibeflow.loop.while"
       },
       {
         "id": "reject_pending",
-        "type_used": "era.tavern.functions_release.reject_pending",
-        "display_name": "汇总逐项拒绝作者未决请求",
-        "description": "将循环的终态资料转换为后续步骤使用的结果；不重复处理已经完成的条目。"
+        "display_name": "交接作者未决请求已处理完的状态",
+        "description": "在“结束作者调用并释放相关等待”流程中，接收逐项结束作者未确认操作的循环结果，交给参数解绑和最终释放。确保结束等待的工作先完成，再撤销本次运行关联。",
+        "definition_id": "era.tavern.functions_release.reject_pending"
       },
       {
         "id": "unbind_context",
-        "type_used": "era.tavern.functions_release.unbind_context",
-        "display_name": "解绑参数与取消监听并唤醒等待",
-        "description": "解除参数 Facade、移除取消监听、唤醒 next，让停止完整结束。"
+        "display_name": "解绑作者参数并唤醒等待中的调用",
+        "description": "在“结束作者调用并释放相关等待”流程中，移除作者参数与运行资料的关联，释放本次取消监听并唤醒仍在等待的主服务。配合已完成的请求清理，让当前作者函数调用完整结束。",
+        "definition_id": "era.tavern.functions_release.unbind_context"
       },
       {
         "id": "return_release",
-        "type_used": "era.tavern.functions_release.return_release",
-        "display_name": "返回原释放确认",
-        "description": "保持 released 结果，重复释放仍幂等。"
+        "display_name": "确认作者调用资料已释放",
+        "description": "在“结束作者调用并释放相关等待”流程中，返回当前作者调用已经完成释放的确认。主服务据此继续处理正文或完成失败收尾。",
+        "definition_id": "era.tavern.functions_release.return_release"
       },
       {
         "id": "end",
-        "type_used": "era.tavern.initialize.end",
-        "display_name": "结束当前原生流程",
-        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+        "display_name": "结束结束作者调用并释放相关等待",
+        "description": "标明“结束作者调用并释放相关等待”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.tavern.initialize.end"
       }
     ],
     "edges": [
@@ -137,7 +137,7 @@
       {
         "type": "era.tavern.call.frame",
         "cardinality": "exactly_one",
-        "display_name": "完成后的操作资料",
+        "display_name": "结束作者调用并释放相关等待的处理进度及结果",
         "as": "frame"
       }
     ]

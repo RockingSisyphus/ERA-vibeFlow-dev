@@ -1,0 +1,28 @@
+import {defineBaseLib} from "@vibeflow/plugin";
+
+export const era_workbench_context = defineBaseLib({
+  "id": "era.workbench.context",
+  "display_name": "工作台 context 纯规则",
+  "description": "工作台节点间准备数据与统一错误上下文。",
+  "version": "1.0.0",
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser"
+      ],
+      "source": {
+        "kind": "file",
+        "ref": "base_lib/workbench/workbench_context.ts"
+      }
+    }
+  ],
+  "dependencies": [
+    "era.workbench.operations",
+    "era.service.sidecar_binding"
+  ],
+  "external_packages": [],
+  "rulesets": [
+    "vibeflow.base_lib"
+  ]
+});

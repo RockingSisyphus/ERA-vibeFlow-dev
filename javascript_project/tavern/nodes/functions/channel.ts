@@ -20,7 +20,7 @@ export function CheckBegin(inputs:any,params:any):any {
 export function BindContext(inputs:any,params:any):any {
   const f=takeFrame(inputs),s=f.session;
   // begin只发起受资源Node拥有的调用；发起Node正常返回不能释放后续Node还要使用的上下文。
-  // 未带Node来源的直接调用仍保留其显式取消约定。
+  // Service接收的信号只覆盖begin节点；内部直接调用可显式绑定额外取消来源。
   const linked=linkedSignals([s.lifecycle.signal,s.operational.signal,f.origin==="service"?undefined:f.options?.signal]);
   const call:any={id:f.callId,active:true,finished:false,error:null,requests:[],pending:new Map(),nextId:1,wake:null,
     parameters:structuredClone(f.input.args??{}),sourceBasis:f.input.sourceBasis,signal:linked.signal,linked,
@@ -37,7 +37,7 @@ export function BindContext(inputs:any,params:any):any {
   return emit({frame:f},params);
 }
 export function ScheduleTool(inputs:any,params:any):any {
-  const f=takeFrame(inputs),s=f.session;s.tasks.push({...f,kind:"author_tool"});s.backgroundWaiter?.resolve();
+  const f=takeFrame(inputs),s=f.session;s.authorCalls.push({...f});s.authorWake?.resolve();
   return emit({frame:f},params);
 }
 export function ReturnBegin(inputs:any,params:any):any {const f=takeFrame(inputs);f.result={status:"started",id:f.callId};return emit({frame:f},params);}

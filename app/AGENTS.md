@@ -21,7 +21,7 @@
 
 使用Node24、pnpm10及锁文件规定的依赖。常用入口：
 
-- `pnpm --dir app build:workflows`：从同一份源码构建Service、Macro及Tavern三个AOT入口。
+- `pnpm --dir app build:workflows`：从同一份源码构建Service、Macro及Tavern两份AOT（async含operation/runtime命名入口）。
 - `pnpm --dir app verify`：格式、lint、类型、AOT、质量和单元检查。
 - `pnpm --dir app test:integration:tavern`：原生辅助流程执行探针；G3/G4见package脚本。
 - `pnpm --dir app build`：需要验收分发物时构建生产bundle。

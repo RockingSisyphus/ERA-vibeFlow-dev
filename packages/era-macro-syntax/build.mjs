@@ -5,7 +5,7 @@ import { basename } from 'node:path';
 const require = createRequire(new URL('../../app/package.json', import.meta.url));
 const ts = require('typescript');
 const names = ['macro_syntax', 'technical_blocks'];
-const sources = names.map(name => fileURLToPath(new URL(`../../javascript_project/macro/base_lib/${name}.ts`, import.meta.url)));
+const sources = names.map(name => fileURLToPath(new URL(`../../javascript_project/macro/base_lib/syntax/${name}.ts`, import.meta.url)));
 const program = ts.createProgram(sources, { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022, strict: true, skipLibCheck: true, declaration: true, types: [] });
 const diagnostics = ts.getPreEmitDiagnostics(program);
 if (diagnostics.length) throw new Error(ts.formatDiagnosticsWithColorAndContext(diagnostics, { getCanonicalFileName: p => p, getCurrentDirectory: () => process.cwd(), getNewLine: () => '\n' }));

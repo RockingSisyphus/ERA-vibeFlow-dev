@@ -1,5 +1,6 @@
-// Generated from Service base_lib/domain; do not edit.
-export { messageMk } from './message_identity.js';
+// Generated from Service base_lib/snapshot; do not edit.
+/** 从活动消息正文读取 ERA 消息键。 */
+export declare function messageMk(text: string): string | null;
 export type { EraDataTransformDirection } from './data_view.js';
 export { selectedMks, transformEraData, removeMetaFields } from './data_view.js';
 export { projectPublicState } from './public_state.js';

@@ -3,7 +3,6 @@ import { run as inspect } from '../../../javascript_project/service/nodes/sideca
 import { contextWith, identity, sidecarId } from './memory-lifecycle-fixture';
 import { recordFor } from '../../../javascript_project/service/base_lib/sidecar_binding';
 import { workingCapabilityFixture } from './working-capability-fixture';
-
 it.each([false, true])('返回候选中断的聊天先恢复起点，正文被编辑=%s 时拒绝旧待写文本', async edited => {
   const sync = contextWith('original');
   sync.variablesRaw = { identity, meta: { SidecarId: sidecarId }, stat: null };
@@ -63,7 +62,6 @@ it.each([false, true])('返回候选中断的聊天先恢复起点，正文被�
     expect(clearSession).not.toHaveBeenCalled();
   }
 });
-
 it('取消后保留早期已完成阶段的待写记录，后续同步按原版本保存', async () => {
   const { FinishStageBlocksNode: finish } =
     await import('../../../javascript_project/service/nodes/agent/finish_stage_blocks');
@@ -93,7 +91,6 @@ it('取消后保留早期已完成阶段的待写记录，后续同步按原版�
     expect.objectContaining({ event: expect.objectContaining({ type: 'era.facade.sync' }) }),
   );
 });
-
 it('恢复点读取期间切聊天，不提交旧聊天的变量或阶段会话', async () => {
   const sync = contextWith('original');
   sync.variablesRaw = { identity, meta: { SidecarId: sidecarId }, stat: null };
@@ -140,11 +137,10 @@ it('恢复点读取期间切聊天，不提交旧聊天的变量或阶段会话'
   expect(fixture.read_working().working).toEqual(before);
   expect(write).not.toHaveBeenCalled();
 });
-
 it('规划完成但AI楼层尚未创建时取消，丢弃未来文本并由历史日志撤销其效果', async () => {
   const { FinishStageBlocksNode: finish } =
     await import('../../../javascript_project/service/nodes/agent/finish_stage_blocks');
-  const { planEraSync } = await import('../../../javascript_project/service/base_lib/sync/sync_planning');
+  const { planEraSync } = await import('./native-workflow-fixture');
   const { overlayWorkingMessages } = await import('../../../javascript_project/service/base_lib/working_state');
   const messages = [
     {
@@ -153,7 +149,7 @@ it('规划完成但AI楼层尚未创建时取消，丢弃未来文本并由历�
       content: { kind: 'text' as const, text: '<VariableInsert>{"hp":100}</VariableInsert>' },
     },
   ];
-  const base = planEraSync({
+  const base = await planEraSync({
     messages,
     mkSeedsByIndex: [{ timestamp: 1, token: 'base0000' }],
     stat: {},
@@ -163,7 +159,7 @@ it('规划完成但AI楼层尚未创建时取消，丢弃未来文本并由历�
     processingMk: null,
     consecutiveState: null,
   });
-  const plan = planEraSync({
+  const plan = await planEraSync({
     messages: [
       ...base.messages,
       {
@@ -223,7 +219,7 @@ it('规划完成但AI楼层尚未创建时取消，丢弃未来文本并由历�
   expect(overlayWorkingMessages(source, working).messages).toHaveLength(1);
   expect(working.stage).toBeNull();
   expect(working.work).toBeNull();
-  const replay = planEraSync({
+  const replay = await planEraSync({
     messages: base.messages,
     stat: working.record.state.statData,
     statFunc: working.record.state.statFunc,

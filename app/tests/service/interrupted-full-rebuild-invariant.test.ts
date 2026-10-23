@@ -1,7 +1,5 @@
 import { describe, expect, it } from 'vitest';
-
-import { planEraSync } from '../../../javascript_project/service/base_lib/sync/sync_planning';
-
+import { planEraSync } from './native-workflow-fixture';
 /**
  * 真机 SIDECAR-BIND-014 的形态（探针实测）：楼层文本留着「已应用」记录，侧车里也已提交了该楼层
  * **整条** EditLog；此时做一次全量重建（recalc 从 0、rollback to null），回退会用这条日志把
@@ -20,13 +18,12 @@ function message(text: string, messageId: number, mk: string) {
     extra: {},
   } as never;
 }
-
 describe('被中断楼层：回退覆盖到该楼层后不得再跳过已应用前缀', () => {
-  it('前缀效果必须留在终值里（真机 score 丢失就是这里）', () => {
+  it('前缀效果必须留在终值里（真机 score 丢失就是这里）', async () => {
     const prefix =
       '<era_block mk="mk-1" applied="1"><VariableEdit>{"repair_player":{"hp":{"$expr":"repair_player.hp + 1"}}}</VariableEdit></era_block>';
     const suffix = '<VariableEdit>{"repair_player":{"score":8}}</VariableEdit>';
-    const plan = planEraSync({
+    const plan = await planEraSync({
       messages: [message(prefix + suffix, 1, 'mk-1')],
       // 侧车里已提交的世界（含本楼层整条效果）与它的完整日志。
       stat: { repair_player: { hp: 18, score: 8 } },
@@ -46,17 +43,15 @@ describe('被中断楼层：回退覆盖到该楼层后不得再跳过已应用�
       processingMk: 'mk-1',
       consecutiveState: { mk: null, count: 0 },
     } as never);
-
     if (plan.status === 'failed') throw new Error(plan.error.message);
     // 回退到 null 会把 hp 撤回 17、score 撤回 0；从指令 0 重放后 hp 必须重新 +1。
     expect(plan.stat).toEqual({ repair_player: { hp: 18, score: 8 } });
   });
-
-  it('旧中间产物缺少日志时报告恢复问题，不猜测起点', () => {
+  it('旧中间产物缺少日志时报告恢复问题，不猜测起点', async () => {
     const prefix =
       '<era_block mk="mk-1" applied="1"><VariableEdit>{"repair_player":{"hp":{"$expr":"repair_player.hp + 1"}}}</VariableEdit></era_block>';
     const suffix = '<VariableEdit>{"repair_player":{"score":8}}</VariableEdit>';
-    const plan = planEraSync({
+    const plan = await planEraSync({
       messages: [message(prefix + suffix, 1, 'mk-1')],
       stat: { repair_player: { hp: 18, score: 0 } },
       statFunc: {},
@@ -67,7 +62,6 @@ describe('被中断楼层：回退覆盖到该楼层后不得再跳过已应用�
       processingMk: 'mk-1',
       consecutiveState: { mk: null, count: 0 },
     } as never);
-
     expect(plan.status).toBe('failed');
     expect(plan).toMatchObject({
       error: { code: 'ERA_SYNC_PROGRESS_UNRECOVERABLE' },

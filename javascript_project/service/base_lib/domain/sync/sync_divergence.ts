@@ -1,6 +1,6 @@
 /** Sync metadata, rollback and consecutive processing helpers. */
 import { type EraMkMessageV1 } from "../mk_engine.ts";
-import { cloneSnapshotValue,parseEditLog } from "../snapshot_history.ts";
+import { cloneSnapshotValue,parseEditLog } from "../../snapshot/snapshot_history.ts";
 import type { EraActionsTakenV1,EraConsecutiveMkStateV1,EraSyncDivergenceV1,EraSyncInputV1,EraSyncPlanV1,EraSyncReasonV1 } from "./sync_types.ts";
 
 function isRecord(value: unknown): value is Record<string, unknown> {

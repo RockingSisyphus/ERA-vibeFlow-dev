@@ -1,0 +1,26 @@
+import {defineBaseLib} from "@vibeflow/plugin";
+
+export const era_service_mk_engine = defineBaseLib({
+  "id": "era.service.mk_engine",
+  "display_name": "ERA 消息历史标识纯文本引擎",
+  "description": "纯函数解析、生成、确保和替换 ERA 消息密钥；时间与随机 token 由输入注入，只修改消息文本片段并深拷贝保留多模态附件及未知字段。",
+  "version": "1.0.0",
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "source": {
+        "kind": "file",
+        "ref": "base_lib/domain/mk_engine.ts"
+      }
+    }
+  ],
+  "dependencies": [],
+  "external_packages": [],
+  "rulesets": [
+    "vibeflow.base_lib"
+  ]
+});

@@ -8,7 +8,7 @@ import {
   type EraCrudDiagnostic,
 } from "./crud_parser.ts";
 
-export interface OperationAction {
+export type OperationAction = {
   kind: string;
   path: string;
   patch: any;
@@ -22,8 +22,8 @@ export interface OperationAction {
   skip?: boolean;
   diagnostic?: EraCrudDiagnostic;
   response?: any;
-}
-export interface FunctionGroup {
+};
+export type FunctionGroup = {
   type: string;
   root: Record<string, unknown>;
   names: string[];
@@ -35,16 +35,16 @@ export interface FunctionGroup {
     name: string;
     value?: unknown;
   }>;
-}
-export interface StageCallTable {
+};
+export type StageCallTable = {
   calls: any[];
   index: number;
   results: any[];
   validationError?: string;
   errorResults?: any[];
-}
+};
 /** 每次微步骤只改变私有工作副本；消息块结束前不会发布或保存。 */
-export interface OperationState {
+export type OperationState = {
   mode: "command" | "stage-calls";
   commands: readonly EraCrudCommand[];
   commandIndex: number;
@@ -70,7 +70,7 @@ export interface OperationState {
     localDelete?: { stat: any; parentAction: OperationAction };
   };
   pendingAction: OperationAction | null;
-}
+};
 export interface ExpressionRequest {
   purpose: "value" | "library" | "stage-call";
   request: any;

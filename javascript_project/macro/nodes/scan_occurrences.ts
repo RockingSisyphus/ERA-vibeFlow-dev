@@ -1,7 +1,6 @@
+import type { MacroOccurrencePlan, MacroSnapshot } from "@era/vibeflow-contracts";
 import {
   scanMacroOccurrences,
-  type MacroOccurrencePlan,
-  type MacroSnapshot,
 } from "../base_lib/macro_runtime.ts";
 
 interface Envelope<T> {

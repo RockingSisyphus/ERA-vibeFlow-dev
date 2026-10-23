@@ -1,25 +1,25 @@
 {
   "type_key": "era.tavern.flow.notification_report_item",
-  "display_name": "逐项报告已结束的通知结果",
-  "description": "此原生 Loop 不创建任务，只按原通知顺序报告已经固定的最终失败。",
+  "display_name": "查看并报告一条已结束通知",
+  "description": "按当前报告位置查看通知成功或失败，失败时输出具体告警，然后推进。所有通知结果报告完时结束循环，外层再释放通知组。",
   "expand": true,
   "requires": [
     {
       "type": "era.tavern.frame.notification_finalize.read",
       "cardinality": "exactly_one",
-      "display_name": "当前通知及实例资源"
+      "display_name": "查看并报告一条已结束通知的请求和已有进度"
     }
   ],
   "provides": [
     {
       "key": "era_tavern_flow_notification_report_item_frame",
       "type": "era.tavern.frame.notification_report_item.final",
-      "display_name": "本次步骤的结果与资源"
+      "display_name": "查看并报告一条已结束通知的处理进度及结果"
     },
     {
       "key": "era_tavern_flow_notification_report_item_done",
       "type": "era.tavern.done.notification_report",
-      "display_name": "本次步骤的结果与资源"
+      "display_name": "本轮遍历或职责处理是否已经结束"
     }
   ],
   "pipeline": {
@@ -29,46 +29,46 @@
         "key": "frame",
         "type": "era.tavern.frame.notification_finalize.read",
         "required": true,
-        "display_name": "当前报告位置"
+        "display_name": "查看并报告一条已结束通知的请求和已有进度"
       }
     ],
     "max_steps": 12,
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.tavern.initialize.start",
-        "display_name": "开始当前原生流程",
-        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+        "display_name": "开始查看并报告一条已结束通知",
+        "description": "标明“查看并报告一条已结束通知”的开始位置。按当前报告位置查看通知成功或失败，失败时输出具体告警，然后推进。所有通知结果报告完时结束循环，外层再释放通知组。",
+        "definition_id": "era.tavern.initialize.start"
       },
       {
         "id": "choose_item",
-        "type_used": "era.tavern.notification_report_item.choose_item",
-        "display_name": "选择仍需报告的原顺序条目",
-        "description": "未完成列表才选择当前结果，结束时不产生日志。"
+        "display_name": "选择下一条已完成通知的结果",
+        "description": "在“查看并报告一条已结束通知”流程中，查看通知组报告进度，尚有结果时继续逐项报告，到达末尾时结束。报告过程只读取已经完成的结论，不重新发送通知。",
+        "definition_id": "era.tavern.notification_report_item.choose_item"
       },
       {
         "id": "report_one",
-        "type_used": "era.tavern.notification_report_item.report_one",
-        "display_name": "报告一个已完成通知的原失败",
-        "description": "仅 rejected 结果按原告警格式报告；fulfilled 只推进位置，不改写回执。"
+        "display_name": "报告一条通知的实际失败并继续",
+        "description": "在“查看并报告一条已结束通知”流程中，按原通知顺序查看一项完成结果，失败时写出对应告警，成功则继续。说明通知问题不会改写已经完成的状态结算，随后推进报告位置。",
+        "definition_id": "era.tavern.notification_report_item.report_one"
       },
       {
         "id": "empty",
-        "type_used": "era.tavern.notification_report_item.empty",
-        "display_name": "完成原顺序报告遍历",
-        "description": "没有当前结果时只形成 done=true。"
+        "display_name": "确认通知组结果已全部检查",
+        "description": "在“查看并报告一条已结束通知”流程中，通知组所有结果已经按序查看时，标记报告循环结束。后续释放该组资源并完成等待。",
+        "definition_id": "era.tavern.notification_report_item.empty"
       },
       {
         "id": "join_result",
-        "type_used": "era.tavern.notification_report_item.join_result",
-        "display_name": "汇合当前唯一报告结果",
-        "description": "只交回原生遍历的当前结果。"
+        "display_name": "交接查看并报告一条已结束通知的选中结果",
+        "description": "在“查看并报告一条已结束通知”流程中，在“查看并报告一条已结束通知”中，接收本次实际选择的分支所产生的唯一结果，交给后续步骤或调用方。每次只允许一份实际结果，避免把互斥分支误当成多个都已执行。",
+        "definition_id": "era.tavern.notification_report_item.join_result"
       },
       {
         "id": "end",
-        "type_used": "era.tavern.initialize.end",
-        "display_name": "结束当前原生流程",
-        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+        "display_name": "结束查看并报告一条已结束通知",
+        "description": "标明“查看并报告一条已结束通知”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.tavern.initialize.end"
       }
     ],
     "edges": [
@@ -104,13 +104,13 @@
         "type": "era.tavern.frame.notification_report_item.final",
         "cardinality": "exactly_one",
         "as": "frame",
-        "display_name": "下一报告位置"
+        "display_name": "查看并报告一条已结束通知的处理进度及结果"
       },
       {
         "type": "era.tavern.done.notification_report",
         "cardinality": "exactly_one",
         "as": "done",
-        "display_name": "是否结束报告"
+        "display_name": "本轮遍历或职责处理是否已经结束"
       }
     ]
   }

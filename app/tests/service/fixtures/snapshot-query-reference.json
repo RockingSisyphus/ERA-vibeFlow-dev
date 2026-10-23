@@ -1,0 +1,2043 @@
+{
+  "[\"unescapeEraData\",[{\"player\":{\"hp\":18,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]},\"inventory\":[{\"item__DQUOTE__name\":\"剑\"}],\"$root\":\"删除\",\"futureStateField\":{\"preserved\":true}}]]": {
+    "player": {
+      "hp": 18,
+      "display.name": "Alice's",
+      "quoted\"key": "保留",
+      "$meta": {
+        "source": "内部"
+      },
+      "nested": [
+        {
+          "keep": true,
+          "$hidden": "删除"
+        }
+      ]
+    },
+    "inventory": [
+      {
+        "item\"name": "剑"
+      }
+    ],
+    "$root": "删除",
+    "futureStateField": {
+      "preserved": true
+    }
+  },
+  "[\"removeMetaFields\",[{\"player\":{\"hp\":18,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]},\"inventory\":[{\"item__DQUOTE__name\":\"剑\"}],\"$root\":\"删除\",\"futureStateField\":{\"preserved\":true}}]]": {
+    "player": {
+      "hp": 18,
+      "display__DOT__name": "Alice__SQUOTE__s",
+      "quoted__DQUOTE__key": "保留",
+      "nested": [
+        {
+          "keep": true
+        }
+      ]
+    },
+    "inventory": [
+      {
+        "item__DQUOTE__name": "剑"
+      }
+    ],
+    "futureStateField": {
+      "preserved": true
+    }
+  },
+  "[\"unescapeEraData\",[{\"player\":{\"hp\":18,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"nested\":[{\"keep\":true}]},\"inventory\":[{\"item__DQUOTE__name\":\"剑\"}],\"futureStateField\":{\"preserved\":true}}]]": {
+    "player": {
+      "hp": 18,
+      "display.name": "Alice's",
+      "quoted\"key": "保留",
+      "nested": [
+        {
+          "keep": true
+        }
+      ]
+    },
+    "inventory": [
+      {
+        "item\"name": "剑"
+      }
+    ],
+    "futureStateField": {
+      "preserved": true
+    }
+  },
+  "[\"payload\",[\"getCurrentVars\",{\"correlation\":\"current\",\"unknownRequestField\":true},{\"variables\":{\"stat\":{\"player\":{\"hp\":18,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]},\"inventory\":[{\"item__DQUOTE__name\":\"剑\"}],\"$root\":\"删除\",\"futureStateField\":{\"preserved\":true}},\"meta\":{\"SelectedMks\":[null,\"mk-array\",\"mk-object\",null,\"mk-fenced\",\"mk-ignored\"],\"EditLogs\":{\"mk-array\":[{\"op\":\"insert\",\"path\":\"player\",\"value_new\":{\"hp\":10,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]},\"futureLogField\":{\"preserved\":true}}],\"mk-object\":{\"op\":\"update\",\"path\":\"player.hp\",\"value_old\":10,\"value_new\":15,\"futureLogField\":\"单对象日志\"},\"mk-fenced\":\"\\n      ```json\\n      [\\n        {\\\"op\\\":\\\"update\\\",\\\"path\\\":\\\"player.hp\\\",\\\"value_old\\\":15,\\\"value_new\\\":18},\\n        {\\\"op\\\":\\\"insert\\\",\\\"path\\\":\\\"inventory[0]\\\",\\\"value_new\\\":{\\\"item__DQUOTE__name\\\":\\\"剑\\\"}}\\n      ]\\n      ```\\n    \",\"mk-ignored\":\"{\\\"op\\\":\\\"update\\\",\\\"path\\\":\\\"player.hp\\\",\\\"value_new\\\":999}\",\"futureLogBucket\":{\"unknown\":[\"原样保留\"]}},\"futureMetaField\":{\"preserved\":true}}},\"messages\":[{\"role\":\"system\",\"mes\":\"开场\"},{\"role\":\"assistant\",\"mes\":\"<era_data>{\\\"era-message-key\\\"=\\\"mk-array\\\",\\\"era-message-type\\\"=\\\"user\\\"}</era_data>\"},{\"role\":\"user\",\"message\":\"<era_data>{\\\"era-message-key\\\"=\\\"mk-object\\\",\\\"era-message-type\\\"=\\\"assistant\\\"}</era_data>\"},{\"role\":\"system\",\"mes\":\"无 MK\"},{\"role\":\"user\",\"mes\":\"使用 role 回退\"},{\"role\":\"assistant\",\"mes\":\"当前消息\"}]}]]": {
+    "queryType": "getCurrentVars",
+    "request": {
+      "correlation": "current",
+      "unknownRequestField": true
+    },
+    "result": {
+      "mk": "mk-ignored",
+      "message_id": 5,
+      "is_user": false,
+      "stat": {
+        "player": {
+          "hp": 18,
+          "display.name": "Alice's",
+          "quoted\"key": "保留",
+          "$meta": {
+            "source": "内部"
+          },
+          "nested": [
+            {
+              "keep": true,
+              "$hidden": "删除"
+            }
+          ]
+        },
+        "inventory": [
+          {
+            "item\"name": "剑"
+          }
+        ],
+        "$root": "删除",
+        "futureStateField": {
+          "preserved": true
+        }
+      },
+      "statWithoutMeta": {
+        "player": {
+          "hp": 18,
+          "display.name": "Alice's",
+          "quoted\"key": "保留",
+          "nested": [
+            {
+              "keep": true
+            }
+          ]
+        },
+        "inventory": [
+          {
+            "item\"name": "剑"
+          }
+        ],
+        "futureStateField": {
+          "preserved": true
+        }
+      }
+    },
+    "selectedMks": [
+      null,
+      "mk-array",
+      "mk-object",
+      null,
+      "mk-fenced",
+      "mk-ignored"
+    ],
+    "editLogs": {
+      "mk-array": [
+        {
+          "op": "insert",
+          "path": "player",
+          "value_new": {
+            "hp": 10,
+            "display__DOT__name": "Alice__SQUOTE__s",
+            "quoted__DQUOTE__key": "保留",
+            "$meta": {
+              "source": "内部"
+            },
+            "nested": [
+              {
+                "keep": true,
+                "$hidden": "删除"
+              }
+            ]
+          },
+          "futureLogField": {
+            "preserved": true
+          }
+        }
+      ],
+      "mk-object": {
+        "op": "update",
+        "path": "player.hp",
+        "value_old": 10,
+        "value_new": 15,
+        "futureLogField": "单对象日志"
+      },
+      "mk-fenced": "\n      ```json\n      [\n        {\"op\":\"update\",\"path\":\"player.hp\",\"value_old\":15,\"value_new\":18},\n        {\"op\":\"insert\",\"path\":\"inventory[0]\",\"value_new\":{\"item__DQUOTE__name\":\"剑\"}}\n      ]\n      ```\n    ",
+      "mk-ignored": "{\"op\":\"update\",\"path\":\"player.hp\",\"value_new\":999}",
+      "futureLogBucket": {
+        "unknown": [
+          "原样保留"
+        ]
+      }
+    }
+  },
+  "[\"unescapeEraData\",[{\"player\":{\"hp\":10,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]}}]]": {
+    "player": {
+      "hp": 10,
+      "display.name": "Alice's",
+      "quoted\"key": "保留",
+      "$meta": {
+        "source": "内部"
+      },
+      "nested": [
+        {
+          "keep": true,
+          "$hidden": "删除"
+        }
+      ]
+    }
+  },
+  "[\"removeMetaFields\",[{\"player\":{\"hp\":10,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]}}]]": {
+    "player": {
+      "hp": 10,
+      "display__DOT__name": "Alice__SQUOTE__s",
+      "quoted__DQUOTE__key": "保留",
+      "nested": [
+        {
+          "keep": true
+        }
+      ]
+    }
+  },
+  "[\"unescapeEraData\",[{\"player\":{\"hp\":10,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"nested\":[{\"keep\":true}]}}]]": {
+    "player": {
+      "hp": 10,
+      "display.name": "Alice's",
+      "quoted\"key": "保留",
+      "nested": [
+        {
+          "keep": true
+        }
+      ]
+    }
+  },
+  "[\"payload\",[\"getSnapshotAtMk\",{\"mk\":\"mk-array\",\"unknownRequestField\":[\"保留\"]},{\"variables\":{\"stat\":{\"player\":{\"hp\":18,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]},\"inventory\":[{\"item__DQUOTE__name\":\"剑\"}],\"$root\":\"删除\",\"futureStateField\":{\"preserved\":true}},\"meta\":{\"SelectedMks\":[null,\"mk-array\",\"mk-object\",null,\"mk-fenced\",\"mk-ignored\"],\"EditLogs\":{\"mk-array\":[{\"op\":\"insert\",\"path\":\"player\",\"value_new\":{\"hp\":10,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]},\"futureLogField\":{\"preserved\":true}}],\"mk-object\":{\"op\":\"update\",\"path\":\"player.hp\",\"value_old\":10,\"value_new\":15,\"futureLogField\":\"单对象日志\"},\"mk-fenced\":\"\\n      ```json\\n      [\\n        {\\\"op\\\":\\\"update\\\",\\\"path\\\":\\\"player.hp\\\",\\\"value_old\\\":15,\\\"value_new\\\":18},\\n        {\\\"op\\\":\\\"insert\\\",\\\"path\\\":\\\"inventory[0]\\\",\\\"value_new\\\":{\\\"item__DQUOTE__name\\\":\\\"剑\\\"}}\\n      ]\\n      ```\\n    \",\"mk-ignored\":\"{\\\"op\\\":\\\"update\\\",\\\"path\\\":\\\"player.hp\\\",\\\"value_new\\\":999}\",\"futureLogBucket\":{\"unknown\":[\"原样保留\"]}},\"futureMetaField\":{\"preserved\":true}}},\"messages\":[{\"role\":\"system\",\"mes\":\"开场\"},{\"role\":\"assistant\",\"mes\":\"<era_data>{\\\"era-message-key\\\"=\\\"mk-array\\\",\\\"era-message-type\\\"=\\\"user\\\"}</era_data>\"},{\"role\":\"user\",\"message\":\"<era_data>{\\\"era-message-key\\\"=\\\"mk-object\\\",\\\"era-message-type\\\"=\\\"assistant\\\"}</era_data>\"},{\"role\":\"system\",\"mes\":\"无 MK\"},{\"role\":\"user\",\"mes\":\"使用 role 回退\"},{\"role\":\"assistant\",\"mes\":\"当前消息\"}]}]]": {
+    "queryType": "getSnapshotAtMk",
+    "request": {
+      "mk": "mk-array",
+      "unknownRequestField": [
+        "保留"
+      ]
+    },
+    "result": {
+      "mk": "mk-array",
+      "message_id": 1,
+      "is_user": true,
+      "stat": {
+        "player": {
+          "hp": 10,
+          "display.name": "Alice's",
+          "quoted\"key": "保留",
+          "$meta": {
+            "source": "内部"
+          },
+          "nested": [
+            {
+              "keep": true,
+              "$hidden": "删除"
+            }
+          ]
+        }
+      },
+      "statWithoutMeta": {
+        "player": {
+          "hp": 10,
+          "display.name": "Alice's",
+          "quoted\"key": "保留",
+          "nested": [
+            {
+              "keep": true
+            }
+          ]
+        }
+      }
+    },
+    "selectedMks": [
+      null,
+      "mk-array",
+      "mk-object",
+      null,
+      "mk-fenced",
+      "mk-ignored"
+    ],
+    "editLogs": {
+      "mk-array": [
+        {
+          "op": "insert",
+          "path": "player",
+          "value_new": {
+            "hp": 10,
+            "display__DOT__name": "Alice__SQUOTE__s",
+            "quoted__DQUOTE__key": "保留",
+            "$meta": {
+              "source": "内部"
+            },
+            "nested": [
+              {
+                "keep": true,
+                "$hidden": "删除"
+              }
+            ]
+          },
+          "futureLogField": {
+            "preserved": true
+          }
+        }
+      ],
+      "mk-object": {
+        "op": "update",
+        "path": "player.hp",
+        "value_old": 10,
+        "value_new": 15,
+        "futureLogField": "单对象日志"
+      },
+      "mk-fenced": "\n      ```json\n      [\n        {\"op\":\"update\",\"path\":\"player.hp\",\"value_old\":15,\"value_new\":18},\n        {\"op\":\"insert\",\"path\":\"inventory[0]\",\"value_new\":{\"item__DQUOTE__name\":\"剑\"}}\n      ]\n      ```\n    ",
+      "mk-ignored": "{\"op\":\"update\",\"path\":\"player.hp\",\"value_new\":999}",
+      "futureLogBucket": {
+        "unknown": [
+          "原样保留"
+        ]
+      }
+    }
+  },
+  "[\"unescapeEraData\",[{\"player\":{\"hp\":15,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]}}]]": {
+    "player": {
+      "hp": 15,
+      "display.name": "Alice's",
+      "quoted\"key": "保留",
+      "$meta": {
+        "source": "内部"
+      },
+      "nested": [
+        {
+          "keep": true,
+          "$hidden": "删除"
+        }
+      ]
+    }
+  },
+  "[\"removeMetaFields\",[{\"player\":{\"hp\":15,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]}}]]": {
+    "player": {
+      "hp": 15,
+      "display__DOT__name": "Alice__SQUOTE__s",
+      "quoted__DQUOTE__key": "保留",
+      "nested": [
+        {
+          "keep": true
+        }
+      ]
+    }
+  },
+  "[\"unescapeEraData\",[{\"player\":{\"hp\":15,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"nested\":[{\"keep\":true}]}}]]": {
+    "player": {
+      "hp": 15,
+      "display.name": "Alice's",
+      "quoted\"key": "保留",
+      "nested": [
+        {
+          "keep": true
+        }
+      ]
+    }
+  },
+  "[\"unescapeEraData\",[{\"player\":{\"hp\":18,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]},\"inventory\":[{\"item__DQUOTE__name\":\"剑\"}]}]]": {
+    "player": {
+      "hp": 18,
+      "display.name": "Alice's",
+      "quoted\"key": "保留",
+      "$meta": {
+        "source": "内部"
+      },
+      "nested": [
+        {
+          "keep": true,
+          "$hidden": "删除"
+        }
+      ]
+    },
+    "inventory": [
+      {
+        "item\"name": "剑"
+      }
+    ]
+  },
+  "[\"removeMetaFields\",[{\"player\":{\"hp\":18,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]},\"inventory\":[{\"item__DQUOTE__name\":\"剑\"}]}]]": {
+    "player": {
+      "hp": 18,
+      "display__DOT__name": "Alice__SQUOTE__s",
+      "quoted__DQUOTE__key": "保留",
+      "nested": [
+        {
+          "keep": true
+        }
+      ]
+    },
+    "inventory": [
+      {
+        "item__DQUOTE__name": "剑"
+      }
+    ]
+  },
+  "[\"unescapeEraData\",[{\"player\":{\"hp\":18,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"nested\":[{\"keep\":true}]},\"inventory\":[{\"item__DQUOTE__name\":\"剑\"}]}]]": {
+    "player": {
+      "hp": 18,
+      "display.name": "Alice's",
+      "quoted\"key": "保留",
+      "nested": [
+        {
+          "keep": true
+        }
+      ]
+    },
+    "inventory": [
+      {
+        "item\"name": "剑"
+      }
+    ]
+  },
+  "[\"payload\",[\"getSnapshotsBetweenMks\",{\"startMk\":\"mk-array\",\"endMk\":\"mk-ignored\"},{\"variables\":{\"stat\":{\"player\":{\"hp\":18,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]},\"inventory\":[{\"item__DQUOTE__name\":\"剑\"}],\"$root\":\"删除\",\"futureStateField\":{\"preserved\":true}},\"meta\":{\"SelectedMks\":[null,\"mk-array\",\"mk-object\",null,\"mk-fenced\",\"mk-ignored\"],\"EditLogs\":{\"mk-array\":[{\"op\":\"insert\",\"path\":\"player\",\"value_new\":{\"hp\":10,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]},\"futureLogField\":{\"preserved\":true}}],\"mk-object\":{\"op\":\"update\",\"path\":\"player.hp\",\"value_old\":10,\"value_new\":15,\"futureLogField\":\"单对象日志\"},\"mk-fenced\":\"\\n      ```json\\n      [\\n        {\\\"op\\\":\\\"update\\\",\\\"path\\\":\\\"player.hp\\\",\\\"value_old\\\":15,\\\"value_new\\\":18},\\n        {\\\"op\\\":\\\"insert\\\",\\\"path\\\":\\\"inventory[0]\\\",\\\"value_new\\\":{\\\"item__DQUOTE__name\\\":\\\"剑\\\"}}\\n      ]\\n      ```\\n    \",\"mk-ignored\":\"{\\\"op\\\":\\\"update\\\",\\\"path\\\":\\\"player.hp\\\",\\\"value_new\\\":999}\",\"futureLogBucket\":{\"unknown\":[\"原样保留\"]}},\"futureMetaField\":{\"preserved\":true}}},\"messages\":[{\"role\":\"system\",\"mes\":\"开场\"},{\"role\":\"assistant\",\"mes\":\"<era_data>{\\\"era-message-key\\\"=\\\"mk-array\\\",\\\"era-message-type\\\"=\\\"user\\\"}</era_data>\"},{\"role\":\"user\",\"message\":\"<era_data>{\\\"era-message-key\\\"=\\\"mk-object\\\",\\\"era-message-type\\\"=\\\"assistant\\\"}</era_data>\"},{\"role\":\"system\",\"mes\":\"无 MK\"},{\"role\":\"user\",\"mes\":\"使用 role 回退\"},{\"role\":\"assistant\",\"mes\":\"当前消息\"}]}]]": {
+    "queryType": "getSnapshotsBetweenMks",
+    "request": {
+      "startMk": "mk-array",
+      "endMk": "mk-ignored"
+    },
+    "result": [
+      {
+        "mk": "mk-array",
+        "message_id": 1,
+        "is_user": true,
+        "stat": {
+          "player": {
+            "hp": 10,
+            "display.name": "Alice's",
+            "quoted\"key": "保留",
+            "$meta": {
+              "source": "内部"
+            },
+            "nested": [
+              {
+                "keep": true,
+                "$hidden": "删除"
+              }
+            ]
+          }
+        },
+        "statWithoutMeta": {
+          "player": {
+            "hp": 10,
+            "display.name": "Alice's",
+            "quoted\"key": "保留",
+            "nested": [
+              {
+                "keep": true
+              }
+            ]
+          }
+        }
+      },
+      {
+        "mk": "mk-object",
+        "message_id": 2,
+        "is_user": false,
+        "stat": {
+          "player": {
+            "hp": 15,
+            "display.name": "Alice's",
+            "quoted\"key": "保留",
+            "$meta": {
+              "source": "内部"
+            },
+            "nested": [
+              {
+                "keep": true,
+                "$hidden": "删除"
+              }
+            ]
+          }
+        },
+        "statWithoutMeta": {
+          "player": {
+            "hp": 15,
+            "display.name": "Alice's",
+            "quoted\"key": "保留",
+            "nested": [
+              {
+                "keep": true
+              }
+            ]
+          }
+        }
+      },
+      {
+        "mk": "mk-fenced",
+        "message_id": 4,
+        "is_user": true,
+        "stat": {
+          "player": {
+            "hp": 18,
+            "display.name": "Alice's",
+            "quoted\"key": "保留",
+            "$meta": {
+              "source": "内部"
+            },
+            "nested": [
+              {
+                "keep": true,
+                "$hidden": "删除"
+              }
+            ]
+          },
+          "inventory": [
+            {
+              "item\"name": "剑"
+            }
+          ]
+        },
+        "statWithoutMeta": {
+          "player": {
+            "hp": 18,
+            "display.name": "Alice's",
+            "quoted\"key": "保留",
+            "nested": [
+              {
+                "keep": true
+              }
+            ]
+          },
+          "inventory": [
+            {
+              "item\"name": "剑"
+            }
+          ]
+        }
+      },
+      {
+        "mk": "mk-ignored",
+        "message_id": 5,
+        "is_user": false,
+        "stat": {
+          "player": {
+            "hp": 18,
+            "display.name": "Alice's",
+            "quoted\"key": "保留",
+            "$meta": {
+              "source": "内部"
+            },
+            "nested": [
+              {
+                "keep": true,
+                "$hidden": "删除"
+              }
+            ]
+          },
+          "inventory": [
+            {
+              "item\"name": "剑"
+            }
+          ]
+        },
+        "statWithoutMeta": {
+          "player": {
+            "hp": 18,
+            "display.name": "Alice's",
+            "quoted\"key": "保留",
+            "nested": [
+              {
+                "keep": true
+              }
+            ]
+          },
+          "inventory": [
+            {
+              "item\"name": "剑"
+            }
+          ]
+        }
+      }
+    ],
+    "selectedMks": [
+      null,
+      "mk-array",
+      "mk-object",
+      null,
+      "mk-fenced",
+      "mk-ignored"
+    ],
+    "editLogs": {
+      "mk-array": [
+        {
+          "op": "insert",
+          "path": "player",
+          "value_new": {
+            "hp": 10,
+            "display__DOT__name": "Alice__SQUOTE__s",
+            "quoted__DQUOTE__key": "保留",
+            "$meta": {
+              "source": "内部"
+            },
+            "nested": [
+              {
+                "keep": true,
+                "$hidden": "删除"
+              }
+            ]
+          },
+          "futureLogField": {
+            "preserved": true
+          }
+        }
+      ],
+      "mk-object": {
+        "op": "update",
+        "path": "player.hp",
+        "value_old": 10,
+        "value_new": 15,
+        "futureLogField": "单对象日志"
+      },
+      "mk-fenced": "\n      ```json\n      [\n        {\"op\":\"update\",\"path\":\"player.hp\",\"value_old\":15,\"value_new\":18},\n        {\"op\":\"insert\",\"path\":\"inventory[0]\",\"value_new\":{\"item__DQUOTE__name\":\"剑\"}}\n      ]\n      ```\n    ",
+      "mk-ignored": "{\"op\":\"update\",\"path\":\"player.hp\",\"value_new\":999}",
+      "futureLogBucket": {
+        "unknown": [
+          "原样保留"
+        ]
+      }
+    }
+  },
+  "[\"payload\",[\"getSnapshotAtMId\",{\"message_id\":2},{\"variables\":{\"stat\":{\"player\":{\"hp\":18,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]},\"inventory\":[{\"item__DQUOTE__name\":\"剑\"}],\"$root\":\"删除\",\"futureStateField\":{\"preserved\":true}},\"meta\":{\"SelectedMks\":[null,\"mk-array\",\"mk-object\",null,\"mk-fenced\",\"mk-ignored\"],\"EditLogs\":{\"mk-array\":[{\"op\":\"insert\",\"path\":\"player\",\"value_new\":{\"hp\":10,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]},\"futureLogField\":{\"preserved\":true}}],\"mk-object\":{\"op\":\"update\",\"path\":\"player.hp\",\"value_old\":10,\"value_new\":15,\"futureLogField\":\"单对象日志\"},\"mk-fenced\":\"\\n      ```json\\n      [\\n        {\\\"op\\\":\\\"update\\\",\\\"path\\\":\\\"player.hp\\\",\\\"value_old\\\":15,\\\"value_new\\\":18},\\n        {\\\"op\\\":\\\"insert\\\",\\\"path\\\":\\\"inventory[0]\\\",\\\"value_new\\\":{\\\"item__DQUOTE__name\\\":\\\"剑\\\"}}\\n      ]\\n      ```\\n    \",\"mk-ignored\":\"{\\\"op\\\":\\\"update\\\",\\\"path\\\":\\\"player.hp\\\",\\\"value_new\\\":999}\",\"futureLogBucket\":{\"unknown\":[\"原样保留\"]}},\"futureMetaField\":{\"preserved\":true}}},\"messages\":[{\"role\":\"system\",\"mes\":\"开场\"},{\"role\":\"assistant\",\"mes\":\"<era_data>{\\\"era-message-key\\\"=\\\"mk-array\\\",\\\"era-message-type\\\"=\\\"user\\\"}</era_data>\"},{\"role\":\"user\",\"message\":\"<era_data>{\\\"era-message-key\\\"=\\\"mk-object\\\",\\\"era-message-type\\\"=\\\"assistant\\\"}</era_data>\"},{\"role\":\"system\",\"mes\":\"无 MK\"},{\"role\":\"user\",\"mes\":\"使用 role 回退\"},{\"role\":\"assistant\",\"mes\":\"当前消息\"}]}]]": {
+    "queryType": "getSnapshotAtMId",
+    "request": {
+      "message_id": 2
+    },
+    "result": {
+      "mk": "mk-object",
+      "message_id": 2,
+      "is_user": false,
+      "stat": {
+        "player": {
+          "hp": 15,
+          "display.name": "Alice's",
+          "quoted\"key": "保留",
+          "$meta": {
+            "source": "内部"
+          },
+          "nested": [
+            {
+              "keep": true,
+              "$hidden": "删除"
+            }
+          ]
+        }
+      },
+      "statWithoutMeta": {
+        "player": {
+          "hp": 15,
+          "display.name": "Alice's",
+          "quoted\"key": "保留",
+          "nested": [
+            {
+              "keep": true
+            }
+          ]
+        }
+      }
+    },
+    "selectedMks": [
+      null,
+      "mk-array",
+      "mk-object",
+      null,
+      "mk-fenced",
+      "mk-ignored"
+    ],
+    "editLogs": {
+      "mk-array": [
+        {
+          "op": "insert",
+          "path": "player",
+          "value_new": {
+            "hp": 10,
+            "display__DOT__name": "Alice__SQUOTE__s",
+            "quoted__DQUOTE__key": "保留",
+            "$meta": {
+              "source": "内部"
+            },
+            "nested": [
+              {
+                "keep": true,
+                "$hidden": "删除"
+              }
+            ]
+          },
+          "futureLogField": {
+            "preserved": true
+          }
+        }
+      ],
+      "mk-object": {
+        "op": "update",
+        "path": "player.hp",
+        "value_old": 10,
+        "value_new": 15,
+        "futureLogField": "单对象日志"
+      },
+      "mk-fenced": "\n      ```json\n      [\n        {\"op\":\"update\",\"path\":\"player.hp\",\"value_old\":15,\"value_new\":18},\n        {\"op\":\"insert\",\"path\":\"inventory[0]\",\"value_new\":{\"item__DQUOTE__name\":\"剑\"}}\n      ]\n      ```\n    ",
+      "mk-ignored": "{\"op\":\"update\",\"path\":\"player.hp\",\"value_new\":999}",
+      "futureLogBucket": {
+        "unknown": [
+          "原样保留"
+        ]
+      }
+    }
+  },
+  "[\"payload\",[\"getSnapshotsBetweenMIds\",{\"startId\":1,\"endId\":5},{\"variables\":{\"stat\":{\"player\":{\"hp\":18,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]},\"inventory\":[{\"item__DQUOTE__name\":\"剑\"}],\"$root\":\"删除\",\"futureStateField\":{\"preserved\":true}},\"meta\":{\"SelectedMks\":[null,\"mk-array\",\"mk-object\",null,\"mk-fenced\",\"mk-ignored\"],\"EditLogs\":{\"mk-array\":[{\"op\":\"insert\",\"path\":\"player\",\"value_new\":{\"hp\":10,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]},\"futureLogField\":{\"preserved\":true}}],\"mk-object\":{\"op\":\"update\",\"path\":\"player.hp\",\"value_old\":10,\"value_new\":15,\"futureLogField\":\"单对象日志\"},\"mk-fenced\":\"\\n      ```json\\n      [\\n        {\\\"op\\\":\\\"update\\\",\\\"path\\\":\\\"player.hp\\\",\\\"value_old\\\":15,\\\"value_new\\\":18},\\n        {\\\"op\\\":\\\"insert\\\",\\\"path\\\":\\\"inventory[0]\\\",\\\"value_new\\\":{\\\"item__DQUOTE__name\\\":\\\"剑\\\"}}\\n      ]\\n      ```\\n    \",\"mk-ignored\":\"{\\\"op\\\":\\\"update\\\",\\\"path\\\":\\\"player.hp\\\",\\\"value_new\\\":999}\",\"futureLogBucket\":{\"unknown\":[\"原样保留\"]}},\"futureMetaField\":{\"preserved\":true}}},\"messages\":[{\"role\":\"system\",\"mes\":\"开场\"},{\"role\":\"assistant\",\"mes\":\"<era_data>{\\\"era-message-key\\\"=\\\"mk-array\\\",\\\"era-message-type\\\"=\\\"user\\\"}</era_data>\"},{\"role\":\"user\",\"message\":\"<era_data>{\\\"era-message-key\\\"=\\\"mk-object\\\",\\\"era-message-type\\\"=\\\"assistant\\\"}</era_data>\"},{\"role\":\"system\",\"mes\":\"无 MK\"},{\"role\":\"user\",\"mes\":\"使用 role 回退\"},{\"role\":\"assistant\",\"mes\":\"当前消息\"}]}]]": {
+    "queryType": "getSnapshotsBetweenMIds",
+    "request": {
+      "startId": 1,
+      "endId": 5
+    },
+    "result": [
+      {
+        "mk": "mk-array",
+        "message_id": 1,
+        "is_user": true,
+        "stat": {
+          "player": {
+            "hp": 10,
+            "display.name": "Alice's",
+            "quoted\"key": "保留",
+            "$meta": {
+              "source": "内部"
+            },
+            "nested": [
+              {
+                "keep": true,
+                "$hidden": "删除"
+              }
+            ]
+          }
+        },
+        "statWithoutMeta": {
+          "player": {
+            "hp": 10,
+            "display.name": "Alice's",
+            "quoted\"key": "保留",
+            "nested": [
+              {
+                "keep": true
+              }
+            ]
+          }
+        }
+      },
+      {
+        "mk": "mk-object",
+        "message_id": 2,
+        "is_user": false,
+        "stat": {
+          "player": {
+            "hp": 15,
+            "display.name": "Alice's",
+            "quoted\"key": "保留",
+            "$meta": {
+              "source": "内部"
+            },
+            "nested": [
+              {
+                "keep": true,
+                "$hidden": "删除"
+              }
+            ]
+          }
+        },
+        "statWithoutMeta": {
+          "player": {
+            "hp": 15,
+            "display.name": "Alice's",
+            "quoted\"key": "保留",
+            "nested": [
+              {
+                "keep": true
+              }
+            ]
+          }
+        }
+      },
+      {
+        "mk": "mk-fenced",
+        "message_id": 4,
+        "is_user": true,
+        "stat": {
+          "player": {
+            "hp": 18,
+            "display.name": "Alice's",
+            "quoted\"key": "保留",
+            "$meta": {
+              "source": "内部"
+            },
+            "nested": [
+              {
+                "keep": true,
+                "$hidden": "删除"
+              }
+            ]
+          },
+          "inventory": [
+            {
+              "item\"name": "剑"
+            }
+          ]
+        },
+        "statWithoutMeta": {
+          "player": {
+            "hp": 18,
+            "display.name": "Alice's",
+            "quoted\"key": "保留",
+            "nested": [
+              {
+                "keep": true
+              }
+            ]
+          },
+          "inventory": [
+            {
+              "item\"name": "剑"
+            }
+          ]
+        }
+      },
+      {
+        "mk": "mk-ignored",
+        "message_id": 5,
+        "is_user": false,
+        "stat": {
+          "player": {
+            "hp": 18,
+            "display.name": "Alice's",
+            "quoted\"key": "保留",
+            "$meta": {
+              "source": "内部"
+            },
+            "nested": [
+              {
+                "keep": true,
+                "$hidden": "删除"
+              }
+            ]
+          },
+          "inventory": [
+            {
+              "item\"name": "剑"
+            }
+          ]
+        },
+        "statWithoutMeta": {
+          "player": {
+            "hp": 18,
+            "display.name": "Alice's",
+            "quoted\"key": "保留",
+            "nested": [
+              {
+                "keep": true
+              }
+            ]
+          },
+          "inventory": [
+            {
+              "item\"name": "剑"
+            }
+          ]
+        }
+      }
+    ],
+    "selectedMks": [
+      null,
+      "mk-array",
+      "mk-object",
+      null,
+      "mk-fenced",
+      "mk-ignored"
+    ],
+    "editLogs": {
+      "mk-array": [
+        {
+          "op": "insert",
+          "path": "player",
+          "value_new": {
+            "hp": 10,
+            "display__DOT__name": "Alice__SQUOTE__s",
+            "quoted__DQUOTE__key": "保留",
+            "$meta": {
+              "source": "内部"
+            },
+            "nested": [
+              {
+                "keep": true,
+                "$hidden": "删除"
+              }
+            ]
+          },
+          "futureLogField": {
+            "preserved": true
+          }
+        }
+      ],
+      "mk-object": {
+        "op": "update",
+        "path": "player.hp",
+        "value_old": 10,
+        "value_new": 15,
+        "futureLogField": "单对象日志"
+      },
+      "mk-fenced": "\n      ```json\n      [\n        {\"op\":\"update\",\"path\":\"player.hp\",\"value_old\":15,\"value_new\":18},\n        {\"op\":\"insert\",\"path\":\"inventory[0]\",\"value_new\":{\"item__DQUOTE__name\":\"剑\"}}\n      ]\n      ```\n    ",
+      "mk-ignored": "{\"op\":\"update\",\"path\":\"player.hp\",\"value_new\":999}",
+      "futureLogBucket": {
+        "unknown": [
+          "原样保留"
+        ]
+      }
+    }
+  },
+  "[\"payload\",[\"getSnapshotAtMk\",{\"mk\":\"mk-array\"},{\"variables\":{\"stat\":{\"player\":{\"hp\":18,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]},\"inventory\":[{\"item__DQUOTE__name\":\"剑\"}],\"$root\":\"删除\",\"futureStateField\":{\"preserved\":true}},\"meta\":{\"SelectedMks\":[null,\"mk-array\",\"mk-object\",null,\"mk-fenced\",\"mk-ignored\"],\"EditLogs\":{\"mk-array\":[{\"op\":\"insert\",\"path\":\"player\",\"value_new\":{\"hp\":10,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]},\"futureLogField\":{\"preserved\":true}}],\"mk-object\":{\"op\":\"update\",\"path\":\"player.hp\",\"value_old\":10,\"value_new\":15,\"futureLogField\":\"单对象日志\"},\"mk-fenced\":\"\\n      ```json\\n      [\\n        {\\\"op\\\":\\\"update\\\",\\\"path\\\":\\\"player.hp\\\",\\\"value_old\\\":15,\\\"value_new\\\":18},\\n        {\\\"op\\\":\\\"insert\\\",\\\"path\\\":\\\"inventory[0]\\\",\\\"value_new\\\":{\\\"item__DQUOTE__name\\\":\\\"剑\\\"}}\\n      ]\\n      ```\\n    \",\"mk-ignored\":\"{\\\"op\\\":\\\"update\\\",\\\"path\\\":\\\"player.hp\\\",\\\"value_new\\\":999}\",\"futureLogBucket\":{\"unknown\":[\"原样保留\"]}},\"futureMetaField\":{\"preserved\":true}}},\"messages\":[{\"role\":\"system\",\"mes\":\"开场\"},{\"role\":\"assistant\",\"mes\":\"<era_data>{\\\"era-message-key\\\"=\\\"mk-array\\\",\\\"era-message-type\\\"=\\\"user\\\"}</era_data>\"},{\"role\":\"user\",\"message\":\"<era_data>{\\\"era-message-key\\\"=\\\"mk-object\\\",\\\"era-message-type\\\"=\\\"assistant\\\"}</era_data>\"},{\"role\":\"system\",\"mes\":\"无 MK\"},{\"role\":\"user\",\"mes\":\"使用 role 回退\"},{\"role\":\"assistant\",\"mes\":\"当前消息\"}]}]]": {
+    "queryType": "getSnapshotAtMk",
+    "request": {
+      "mk": "mk-array"
+    },
+    "result": {
+      "mk": "mk-array",
+      "message_id": 1,
+      "is_user": true,
+      "stat": {
+        "player": {
+          "hp": 10,
+          "display.name": "Alice's",
+          "quoted\"key": "保留",
+          "$meta": {
+            "source": "内部"
+          },
+          "nested": [
+            {
+              "keep": true,
+              "$hidden": "删除"
+            }
+          ]
+        }
+      },
+      "statWithoutMeta": {
+        "player": {
+          "hp": 10,
+          "display.name": "Alice's",
+          "quoted\"key": "保留",
+          "nested": [
+            {
+              "keep": true
+            }
+          ]
+        }
+      }
+    },
+    "selectedMks": [
+      null,
+      "mk-array",
+      "mk-object",
+      null,
+      "mk-fenced",
+      "mk-ignored"
+    ],
+    "editLogs": {
+      "mk-array": [
+        {
+          "op": "insert",
+          "path": "player",
+          "value_new": {
+            "hp": 10,
+            "display__DOT__name": "Alice__SQUOTE__s",
+            "quoted__DQUOTE__key": "保留",
+            "$meta": {
+              "source": "内部"
+            },
+            "nested": [
+              {
+                "keep": true,
+                "$hidden": "删除"
+              }
+            ]
+          },
+          "futureLogField": {
+            "preserved": true
+          }
+        }
+      ],
+      "mk-object": {
+        "op": "update",
+        "path": "player.hp",
+        "value_old": 10,
+        "value_new": 15,
+        "futureLogField": "单对象日志"
+      },
+      "mk-fenced": "\n      ```json\n      [\n        {\"op\":\"update\",\"path\":\"player.hp\",\"value_old\":15,\"value_new\":18},\n        {\"op\":\"insert\",\"path\":\"inventory[0]\",\"value_new\":{\"item__DQUOTE__name\":\"剑\"}}\n      ]\n      ```\n    ",
+      "mk-ignored": "{\"op\":\"update\",\"path\":\"player.hp\",\"value_new\":999}",
+      "futureLogBucket": {
+        "unknown": [
+          "原样保留"
+        ]
+      }
+    }
+  },
+  "[\"payload\",[\"getSnapshotAtMk\",{\"mk\":\"mk-object\"},{\"variables\":{\"stat\":{\"player\":{\"hp\":18,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]},\"inventory\":[{\"item__DQUOTE__name\":\"剑\"}],\"$root\":\"删除\",\"futureStateField\":{\"preserved\":true}},\"meta\":{\"SelectedMks\":[null,\"mk-array\",\"mk-object\",null,\"mk-fenced\",\"mk-ignored\"],\"EditLogs\":{\"mk-array\":[{\"op\":\"insert\",\"path\":\"player\",\"value_new\":{\"hp\":10,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]},\"futureLogField\":{\"preserved\":true}}],\"mk-object\":{\"op\":\"update\",\"path\":\"player.hp\",\"value_old\":10,\"value_new\":15,\"futureLogField\":\"单对象日志\"},\"mk-fenced\":\"\\n      ```json\\n      [\\n        {\\\"op\\\":\\\"update\\\",\\\"path\\\":\\\"player.hp\\\",\\\"value_old\\\":15,\\\"value_new\\\":18},\\n        {\\\"op\\\":\\\"insert\\\",\\\"path\\\":\\\"inventory[0]\\\",\\\"value_new\\\":{\\\"item__DQUOTE__name\\\":\\\"剑\\\"}}\\n      ]\\n      ```\\n    \",\"mk-ignored\":\"{\\\"op\\\":\\\"update\\\",\\\"path\\\":\\\"player.hp\\\",\\\"value_new\\\":999}\",\"futureLogBucket\":{\"unknown\":[\"原样保留\"]}},\"futureMetaField\":{\"preserved\":true}}},\"messages\":[{\"role\":\"system\",\"mes\":\"开场\"},{\"role\":\"assistant\",\"mes\":\"<era_data>{\\\"era-message-key\\\"=\\\"mk-array\\\",\\\"era-message-type\\\"=\\\"user\\\"}</era_data>\"},{\"role\":\"user\",\"message\":\"<era_data>{\\\"era-message-key\\\"=\\\"mk-object\\\",\\\"era-message-type\\\"=\\\"assistant\\\"}</era_data>\"},{\"role\":\"system\",\"mes\":\"无 MK\"},{\"role\":\"user\",\"mes\":\"使用 role 回退\"},{\"role\":\"assistant\",\"mes\":\"当前消息\"}]}]]": {
+    "queryType": "getSnapshotAtMk",
+    "request": {
+      "mk": "mk-object"
+    },
+    "result": {
+      "mk": "mk-object",
+      "message_id": 2,
+      "is_user": false,
+      "stat": {
+        "player": {
+          "hp": 15,
+          "display.name": "Alice's",
+          "quoted\"key": "保留",
+          "$meta": {
+            "source": "内部"
+          },
+          "nested": [
+            {
+              "keep": true,
+              "$hidden": "删除"
+            }
+          ]
+        }
+      },
+      "statWithoutMeta": {
+        "player": {
+          "hp": 15,
+          "display.name": "Alice's",
+          "quoted\"key": "保留",
+          "nested": [
+            {
+              "keep": true
+            }
+          ]
+        }
+      }
+    },
+    "selectedMks": [
+      null,
+      "mk-array",
+      "mk-object",
+      null,
+      "mk-fenced",
+      "mk-ignored"
+    ],
+    "editLogs": {
+      "mk-array": [
+        {
+          "op": "insert",
+          "path": "player",
+          "value_new": {
+            "hp": 10,
+            "display__DOT__name": "Alice__SQUOTE__s",
+            "quoted__DQUOTE__key": "保留",
+            "$meta": {
+              "source": "内部"
+            },
+            "nested": [
+              {
+                "keep": true,
+                "$hidden": "删除"
+              }
+            ]
+          },
+          "futureLogField": {
+            "preserved": true
+          }
+        }
+      ],
+      "mk-object": {
+        "op": "update",
+        "path": "player.hp",
+        "value_old": 10,
+        "value_new": 15,
+        "futureLogField": "单对象日志"
+      },
+      "mk-fenced": "\n      ```json\n      [\n        {\"op\":\"update\",\"path\":\"player.hp\",\"value_old\":15,\"value_new\":18},\n        {\"op\":\"insert\",\"path\":\"inventory[0]\",\"value_new\":{\"item__DQUOTE__name\":\"剑\"}}\n      ]\n      ```\n    ",
+      "mk-ignored": "{\"op\":\"update\",\"path\":\"player.hp\",\"value_new\":999}",
+      "futureLogBucket": {
+        "unknown": [
+          "原样保留"
+        ]
+      }
+    }
+  },
+  "[\"payload\",[\"getSnapshotAtMk\",{\"mk\":\"mk-fenced\"},{\"variables\":{\"stat\":{\"player\":{\"hp\":18,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]},\"inventory\":[{\"item__DQUOTE__name\":\"剑\"}],\"$root\":\"删除\",\"futureStateField\":{\"preserved\":true}},\"meta\":{\"SelectedMks\":[null,\"mk-array\",\"mk-object\",null,\"mk-fenced\",\"mk-ignored\"],\"EditLogs\":{\"mk-array\":[{\"op\":\"insert\",\"path\":\"player\",\"value_new\":{\"hp\":10,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]},\"futureLogField\":{\"preserved\":true}}],\"mk-object\":{\"op\":\"update\",\"path\":\"player.hp\",\"value_old\":10,\"value_new\":15,\"futureLogField\":\"单对象日志\"},\"mk-fenced\":\"\\n      ```json\\n      [\\n        {\\\"op\\\":\\\"update\\\",\\\"path\\\":\\\"player.hp\\\",\\\"value_old\\\":15,\\\"value_new\\\":18},\\n        {\\\"op\\\":\\\"insert\\\",\\\"path\\\":\\\"inventory[0]\\\",\\\"value_new\\\":{\\\"item__DQUOTE__name\\\":\\\"剑\\\"}}\\n      ]\\n      ```\\n    \",\"mk-ignored\":\"{\\\"op\\\":\\\"update\\\",\\\"path\\\":\\\"player.hp\\\",\\\"value_new\\\":999}\",\"futureLogBucket\":{\"unknown\":[\"原样保留\"]}},\"futureMetaField\":{\"preserved\":true}}},\"messages\":[{\"role\":\"system\",\"mes\":\"开场\"},{\"role\":\"assistant\",\"mes\":\"<era_data>{\\\"era-message-key\\\"=\\\"mk-array\\\",\\\"era-message-type\\\"=\\\"user\\\"}</era_data>\"},{\"role\":\"user\",\"message\":\"<era_data>{\\\"era-message-key\\\"=\\\"mk-object\\\",\\\"era-message-type\\\"=\\\"assistant\\\"}</era_data>\"},{\"role\":\"system\",\"mes\":\"无 MK\"},{\"role\":\"user\",\"mes\":\"使用 role 回退\"},{\"role\":\"assistant\",\"mes\":\"当前消息\"}]}]]": {
+    "queryType": "getSnapshotAtMk",
+    "request": {
+      "mk": "mk-fenced"
+    },
+    "result": {
+      "mk": "mk-fenced",
+      "message_id": 4,
+      "is_user": true,
+      "stat": {
+        "player": {
+          "hp": 18,
+          "display.name": "Alice's",
+          "quoted\"key": "保留",
+          "$meta": {
+            "source": "内部"
+          },
+          "nested": [
+            {
+              "keep": true,
+              "$hidden": "删除"
+            }
+          ]
+        },
+        "inventory": [
+          {
+            "item\"name": "剑"
+          }
+        ]
+      },
+      "statWithoutMeta": {
+        "player": {
+          "hp": 18,
+          "display.name": "Alice's",
+          "quoted\"key": "保留",
+          "nested": [
+            {
+              "keep": true
+            }
+          ]
+        },
+        "inventory": [
+          {
+            "item\"name": "剑"
+          }
+        ]
+      }
+    },
+    "selectedMks": [
+      null,
+      "mk-array",
+      "mk-object",
+      null,
+      "mk-fenced",
+      "mk-ignored"
+    ],
+    "editLogs": {
+      "mk-array": [
+        {
+          "op": "insert",
+          "path": "player",
+          "value_new": {
+            "hp": 10,
+            "display__DOT__name": "Alice__SQUOTE__s",
+            "quoted__DQUOTE__key": "保留",
+            "$meta": {
+              "source": "内部"
+            },
+            "nested": [
+              {
+                "keep": true,
+                "$hidden": "删除"
+              }
+            ]
+          },
+          "futureLogField": {
+            "preserved": true
+          }
+        }
+      ],
+      "mk-object": {
+        "op": "update",
+        "path": "player.hp",
+        "value_old": 10,
+        "value_new": 15,
+        "futureLogField": "单对象日志"
+      },
+      "mk-fenced": "\n      ```json\n      [\n        {\"op\":\"update\",\"path\":\"player.hp\",\"value_old\":15,\"value_new\":18},\n        {\"op\":\"insert\",\"path\":\"inventory[0]\",\"value_new\":{\"item__DQUOTE__name\":\"剑\"}}\n      ]\n      ```\n    ",
+      "mk-ignored": "{\"op\":\"update\",\"path\":\"player.hp\",\"value_new\":999}",
+      "futureLogBucket": {
+        "unknown": [
+          "原样保留"
+        ]
+      }
+    }
+  },
+  "[\"payload\",[\"getSnapshotAtMk\",{\"mk\":\"mk-ignored\"},{\"variables\":{\"stat\":{\"player\":{\"hp\":18,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]},\"inventory\":[{\"item__DQUOTE__name\":\"剑\"}],\"$root\":\"删除\",\"futureStateField\":{\"preserved\":true}},\"meta\":{\"SelectedMks\":[null,\"mk-array\",\"mk-object\",null,\"mk-fenced\",\"mk-ignored\"],\"EditLogs\":{\"mk-array\":[{\"op\":\"insert\",\"path\":\"player\",\"value_new\":{\"hp\":10,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]},\"futureLogField\":{\"preserved\":true}}],\"mk-object\":{\"op\":\"update\",\"path\":\"player.hp\",\"value_old\":10,\"value_new\":15,\"futureLogField\":\"单对象日志\"},\"mk-fenced\":\"\\n      ```json\\n      [\\n        {\\\"op\\\":\\\"update\\\",\\\"path\\\":\\\"player.hp\\\",\\\"value_old\\\":15,\\\"value_new\\\":18},\\n        {\\\"op\\\":\\\"insert\\\",\\\"path\\\":\\\"inventory[0]\\\",\\\"value_new\\\":{\\\"item__DQUOTE__name\\\":\\\"剑\\\"}}\\n      ]\\n      ```\\n    \",\"mk-ignored\":\"{\\\"op\\\":\\\"update\\\",\\\"path\\\":\\\"player.hp\\\",\\\"value_new\\\":999}\",\"futureLogBucket\":{\"unknown\":[\"原样保留\"]}},\"futureMetaField\":{\"preserved\":true}}},\"messages\":[{\"role\":\"system\",\"mes\":\"开场\"},{\"role\":\"assistant\",\"mes\":\"<era_data>{\\\"era-message-key\\\"=\\\"mk-array\\\",\\\"era-message-type\\\"=\\\"user\\\"}</era_data>\"},{\"role\":\"user\",\"message\":\"<era_data>{\\\"era-message-key\\\"=\\\"mk-object\\\",\\\"era-message-type\\\"=\\\"assistant\\\"}</era_data>\"},{\"role\":\"system\",\"mes\":\"无 MK\"},{\"role\":\"user\",\"mes\":\"使用 role 回退\"},{\"role\":\"assistant\",\"mes\":\"当前消息\"}]}]]": {
+    "queryType": "getSnapshotAtMk",
+    "request": {
+      "mk": "mk-ignored"
+    },
+    "result": {
+      "mk": "mk-ignored",
+      "message_id": 5,
+      "is_user": false,
+      "stat": {
+        "player": {
+          "hp": 18,
+          "display.name": "Alice's",
+          "quoted\"key": "保留",
+          "$meta": {
+            "source": "内部"
+          },
+          "nested": [
+            {
+              "keep": true,
+              "$hidden": "删除"
+            }
+          ]
+        },
+        "inventory": [
+          {
+            "item\"name": "剑"
+          }
+        ]
+      },
+      "statWithoutMeta": {
+        "player": {
+          "hp": 18,
+          "display.name": "Alice's",
+          "quoted\"key": "保留",
+          "nested": [
+            {
+              "keep": true
+            }
+          ]
+        },
+        "inventory": [
+          {
+            "item\"name": "剑"
+          }
+        ]
+      }
+    },
+    "selectedMks": [
+      null,
+      "mk-array",
+      "mk-object",
+      null,
+      "mk-fenced",
+      "mk-ignored"
+    ],
+    "editLogs": {
+      "mk-array": [
+        {
+          "op": "insert",
+          "path": "player",
+          "value_new": {
+            "hp": 10,
+            "display__DOT__name": "Alice__SQUOTE__s",
+            "quoted__DQUOTE__key": "保留",
+            "$meta": {
+              "source": "内部"
+            },
+            "nested": [
+              {
+                "keep": true,
+                "$hidden": "删除"
+              }
+            ]
+          },
+          "futureLogField": {
+            "preserved": true
+          }
+        }
+      ],
+      "mk-object": {
+        "op": "update",
+        "path": "player.hp",
+        "value_old": 10,
+        "value_new": 15,
+        "futureLogField": "单对象日志"
+      },
+      "mk-fenced": "\n      ```json\n      [\n        {\"op\":\"update\",\"path\":\"player.hp\",\"value_old\":15,\"value_new\":18},\n        {\"op\":\"insert\",\"path\":\"inventory[0]\",\"value_new\":{\"item__DQUOTE__name\":\"剑\"}}\n      ]\n      ```\n    ",
+      "mk-ignored": "{\"op\":\"update\",\"path\":\"player.hp\",\"value_new\":999}",
+      "futureLogBucket": {
+        "unknown": [
+          "原样保留"
+        ]
+      }
+    }
+  },
+  "[\"payload\",[\"getSnapshotAtMk\",{},{\"variables\":{\"stat\":{\"player\":{\"hp\":18,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]},\"inventory\":[{\"item__DQUOTE__name\":\"剑\"}],\"$root\":\"删除\",\"futureStateField\":{\"preserved\":true}},\"meta\":{\"SelectedMks\":[null,\"mk-array\",\"mk-object\",null,\"mk-fenced\",\"mk-ignored\"],\"EditLogs\":{\"mk-array\":[{\"op\":\"insert\",\"path\":\"player\",\"value_new\":{\"hp\":10,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]},\"futureLogField\":{\"preserved\":true}}],\"mk-object\":{\"op\":\"update\",\"path\":\"player.hp\",\"value_old\":10,\"value_new\":15,\"futureLogField\":\"单对象日志\"},\"mk-fenced\":\"\\n      ```json\\n      [\\n        {\\\"op\\\":\\\"update\\\",\\\"path\\\":\\\"player.hp\\\",\\\"value_old\\\":15,\\\"value_new\\\":18},\\n        {\\\"op\\\":\\\"insert\\\",\\\"path\\\":\\\"inventory[0]\\\",\\\"value_new\\\":{\\\"item__DQUOTE__name\\\":\\\"剑\\\"}}\\n      ]\\n      ```\\n    \",\"mk-ignored\":\"{\\\"op\\\":\\\"update\\\",\\\"path\\\":\\\"player.hp\\\",\\\"value_new\\\":999}\",\"futureLogBucket\":{\"unknown\":[\"原样保留\"]}},\"futureMetaField\":{\"preserved\":true}}},\"messages\":[{\"role\":\"system\",\"mes\":\"开场\"},{\"role\":\"assistant\",\"mes\":\"<era_data>{\\\"era-message-key\\\"=\\\"mk-array\\\",\\\"era-message-type\\\"=\\\"user\\\"}</era_data>\"},{\"role\":\"user\",\"message\":\"<era_data>{\\\"era-message-key\\\"=\\\"mk-object\\\",\\\"era-message-type\\\"=\\\"assistant\\\"}</era_data>\"},{\"role\":\"system\",\"mes\":\"无 MK\"},{\"role\":\"user\",\"mes\":\"使用 role 回退\"},{\"role\":\"assistant\",\"mes\":\"当前消息\"}]}]]": {
+    "queryType": "getSnapshotAtMk",
+    "request": {},
+    "result": {
+      "error": "获取快照时发生错误: 请求缺少 \"mk\" 参数。"
+    },
+    "selectedMks": [
+      null,
+      "mk-array",
+      "mk-object",
+      null,
+      "mk-fenced",
+      "mk-ignored"
+    ],
+    "editLogs": {
+      "mk-array": [
+        {
+          "op": "insert",
+          "path": "player",
+          "value_new": {
+            "hp": 10,
+            "display__DOT__name": "Alice__SQUOTE__s",
+            "quoted__DQUOTE__key": "保留",
+            "$meta": {
+              "source": "内部"
+            },
+            "nested": [
+              {
+                "keep": true,
+                "$hidden": "删除"
+              }
+            ]
+          },
+          "futureLogField": {
+            "preserved": true
+          }
+        }
+      ],
+      "mk-object": {
+        "op": "update",
+        "path": "player.hp",
+        "value_old": 10,
+        "value_new": 15,
+        "futureLogField": "单对象日志"
+      },
+      "mk-fenced": "\n      ```json\n      [\n        {\"op\":\"update\",\"path\":\"player.hp\",\"value_old\":15,\"value_new\":18},\n        {\"op\":\"insert\",\"path\":\"inventory[0]\",\"value_new\":{\"item__DQUOTE__name\":\"剑\"}}\n      ]\n      ```\n    ",
+      "mk-ignored": "{\"op\":\"update\",\"path\":\"player.hp\",\"value_new\":999}",
+      "futureLogBucket": {
+        "unknown": [
+          "原样保留"
+        ]
+      }
+    }
+  },
+  "[\"payload\",[\"getSnapshotAtMk\",{\"mk\":\"missing\"},{\"variables\":{\"stat\":{\"player\":{\"hp\":18,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]},\"inventory\":[{\"item__DQUOTE__name\":\"剑\"}],\"$root\":\"删除\",\"futureStateField\":{\"preserved\":true}},\"meta\":{\"SelectedMks\":[null,\"mk-array\",\"mk-object\",null,\"mk-fenced\",\"mk-ignored\"],\"EditLogs\":{\"mk-array\":[{\"op\":\"insert\",\"path\":\"player\",\"value_new\":{\"hp\":10,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]},\"futureLogField\":{\"preserved\":true}}],\"mk-object\":{\"op\":\"update\",\"path\":\"player.hp\",\"value_old\":10,\"value_new\":15,\"futureLogField\":\"单对象日志\"},\"mk-fenced\":\"\\n      ```json\\n      [\\n        {\\\"op\\\":\\\"update\\\",\\\"path\\\":\\\"player.hp\\\",\\\"value_old\\\":15,\\\"value_new\\\":18},\\n        {\\\"op\\\":\\\"insert\\\",\\\"path\\\":\\\"inventory[0]\\\",\\\"value_new\\\":{\\\"item__DQUOTE__name\\\":\\\"剑\\\"}}\\n      ]\\n      ```\\n    \",\"mk-ignored\":\"{\\\"op\\\":\\\"update\\\",\\\"path\\\":\\\"player.hp\\\",\\\"value_new\\\":999}\",\"futureLogBucket\":{\"unknown\":[\"原样保留\"]}},\"futureMetaField\":{\"preserved\":true}}},\"messages\":[{\"role\":\"system\",\"mes\":\"开场\"},{\"role\":\"assistant\",\"mes\":\"<era_data>{\\\"era-message-key\\\"=\\\"mk-array\\\",\\\"era-message-type\\\"=\\\"user\\\"}</era_data>\"},{\"role\":\"user\",\"message\":\"<era_data>{\\\"era-message-key\\\"=\\\"mk-object\\\",\\\"era-message-type\\\"=\\\"assistant\\\"}</era_data>\"},{\"role\":\"system\",\"mes\":\"无 MK\"},{\"role\":\"user\",\"mes\":\"使用 role 回退\"},{\"role\":\"assistant\",\"mes\":\"当前消息\"}]}]]": {
+    "queryType": "getSnapshotAtMk",
+    "request": {
+      "mk": "missing"
+    },
+    "result": {
+      "error": "找不到 MK \"missing\" 对应的快照。",
+      "stat": null
+    },
+    "selectedMks": [
+      null,
+      "mk-array",
+      "mk-object",
+      null,
+      "mk-fenced",
+      "mk-ignored"
+    ],
+    "editLogs": {
+      "mk-array": [
+        {
+          "op": "insert",
+          "path": "player",
+          "value_new": {
+            "hp": 10,
+            "display__DOT__name": "Alice__SQUOTE__s",
+            "quoted__DQUOTE__key": "保留",
+            "$meta": {
+              "source": "内部"
+            },
+            "nested": [
+              {
+                "keep": true,
+                "$hidden": "删除"
+              }
+            ]
+          },
+          "futureLogField": {
+            "preserved": true
+          }
+        }
+      ],
+      "mk-object": {
+        "op": "update",
+        "path": "player.hp",
+        "value_old": 10,
+        "value_new": 15,
+        "futureLogField": "单对象日志"
+      },
+      "mk-fenced": "\n      ```json\n      [\n        {\"op\":\"update\",\"path\":\"player.hp\",\"value_old\":15,\"value_new\":18},\n        {\"op\":\"insert\",\"path\":\"inventory[0]\",\"value_new\":{\"item__DQUOTE__name\":\"剑\"}}\n      ]\n      ```\n    ",
+      "mk-ignored": "{\"op\":\"update\",\"path\":\"player.hp\",\"value_new\":999}",
+      "futureLogBucket": {
+        "unknown": [
+          "原样保留"
+        ]
+      }
+    }
+  },
+  "[\"payload\",[\"getSnapshotsBetweenMks\",{\"startMk\":\"missing\",\"endMk\":\"mk-fenced\"},{\"variables\":{\"stat\":{\"player\":{\"hp\":18,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]},\"inventory\":[{\"item__DQUOTE__name\":\"剑\"}],\"$root\":\"删除\",\"futureStateField\":{\"preserved\":true}},\"meta\":{\"SelectedMks\":[null,\"mk-array\",\"mk-object\",null,\"mk-fenced\",\"mk-ignored\"],\"EditLogs\":{\"mk-array\":[{\"op\":\"insert\",\"path\":\"player\",\"value_new\":{\"hp\":10,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]},\"futureLogField\":{\"preserved\":true}}],\"mk-object\":{\"op\":\"update\",\"path\":\"player.hp\",\"value_old\":10,\"value_new\":15,\"futureLogField\":\"单对象日志\"},\"mk-fenced\":\"\\n      ```json\\n      [\\n        {\\\"op\\\":\\\"update\\\",\\\"path\\\":\\\"player.hp\\\",\\\"value_old\\\":15,\\\"value_new\\\":18},\\n        {\\\"op\\\":\\\"insert\\\",\\\"path\\\":\\\"inventory[0]\\\",\\\"value_new\\\":{\\\"item__DQUOTE__name\\\":\\\"剑\\\"}}\\n      ]\\n      ```\\n    \",\"mk-ignored\":\"{\\\"op\\\":\\\"update\\\",\\\"path\\\":\\\"player.hp\\\",\\\"value_new\\\":999}\",\"futureLogBucket\":{\"unknown\":[\"原样保留\"]}},\"futureMetaField\":{\"preserved\":true}}},\"messages\":[{\"role\":\"system\",\"mes\":\"开场\"},{\"role\":\"assistant\",\"mes\":\"<era_data>{\\\"era-message-key\\\"=\\\"mk-array\\\",\\\"era-message-type\\\"=\\\"user\\\"}</era_data>\"},{\"role\":\"user\",\"message\":\"<era_data>{\\\"era-message-key\\\"=\\\"mk-object\\\",\\\"era-message-type\\\"=\\\"assistant\\\"}</era_data>\"},{\"role\":\"system\",\"mes\":\"无 MK\"},{\"role\":\"user\",\"mes\":\"使用 role 回退\"},{\"role\":\"assistant\",\"mes\":\"当前消息\"}]}]]": {
+    "queryType": "getSnapshotsBetweenMks",
+    "request": {
+      "startMk": "missing",
+      "endMk": "mk-fenced"
+    },
+    "result": [],
+    "selectedMks": [
+      null,
+      "mk-array",
+      "mk-object",
+      null,
+      "mk-fenced",
+      "mk-ignored"
+    ],
+    "editLogs": {
+      "mk-array": [
+        {
+          "op": "insert",
+          "path": "player",
+          "value_new": {
+            "hp": 10,
+            "display__DOT__name": "Alice__SQUOTE__s",
+            "quoted__DQUOTE__key": "保留",
+            "$meta": {
+              "source": "内部"
+            },
+            "nested": [
+              {
+                "keep": true,
+                "$hidden": "删除"
+              }
+            ]
+          },
+          "futureLogField": {
+            "preserved": true
+          }
+        }
+      ],
+      "mk-object": {
+        "op": "update",
+        "path": "player.hp",
+        "value_old": 10,
+        "value_new": 15,
+        "futureLogField": "单对象日志"
+      },
+      "mk-fenced": "\n      ```json\n      [\n        {\"op\":\"update\",\"path\":\"player.hp\",\"value_old\":15,\"value_new\":18},\n        {\"op\":\"insert\",\"path\":\"inventory[0]\",\"value_new\":{\"item__DQUOTE__name\":\"剑\"}}\n      ]\n      ```\n    ",
+      "mk-ignored": "{\"op\":\"update\",\"path\":\"player.hp\",\"value_new\":999}",
+      "futureLogBucket": {
+        "unknown": [
+          "原样保留"
+        ]
+      }
+    }
+  },
+  "[\"payload\",[\"getSnapshotsBetweenMks\",{\"startMk\":\"mk-fenced\",\"endMk\":\"mk-array\"},{\"variables\":{\"stat\":{\"player\":{\"hp\":18,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]},\"inventory\":[{\"item__DQUOTE__name\":\"剑\"}],\"$root\":\"删除\",\"futureStateField\":{\"preserved\":true}},\"meta\":{\"SelectedMks\":[null,\"mk-array\",\"mk-object\",null,\"mk-fenced\",\"mk-ignored\"],\"EditLogs\":{\"mk-array\":[{\"op\":\"insert\",\"path\":\"player\",\"value_new\":{\"hp\":10,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]},\"futureLogField\":{\"preserved\":true}}],\"mk-object\":{\"op\":\"update\",\"path\":\"player.hp\",\"value_old\":10,\"value_new\":15,\"futureLogField\":\"单对象日志\"},\"mk-fenced\":\"\\n      ```json\\n      [\\n        {\\\"op\\\":\\\"update\\\",\\\"path\\\":\\\"player.hp\\\",\\\"value_old\\\":15,\\\"value_new\\\":18},\\n        {\\\"op\\\":\\\"insert\\\",\\\"path\\\":\\\"inventory[0]\\\",\\\"value_new\\\":{\\\"item__DQUOTE__name\\\":\\\"剑\\\"}}\\n      ]\\n      ```\\n    \",\"mk-ignored\":\"{\\\"op\\\":\\\"update\\\",\\\"path\\\":\\\"player.hp\\\",\\\"value_new\\\":999}\",\"futureLogBucket\":{\"unknown\":[\"原样保留\"]}},\"futureMetaField\":{\"preserved\":true}}},\"messages\":[{\"role\":\"system\",\"mes\":\"开场\"},{\"role\":\"assistant\",\"mes\":\"<era_data>{\\\"era-message-key\\\"=\\\"mk-array\\\",\\\"era-message-type\\\"=\\\"user\\\"}</era_data>\"},{\"role\":\"user\",\"message\":\"<era_data>{\\\"era-message-key\\\"=\\\"mk-object\\\",\\\"era-message-type\\\"=\\\"assistant\\\"}</era_data>\"},{\"role\":\"system\",\"mes\":\"无 MK\"},{\"role\":\"user\",\"mes\":\"使用 role 回退\"},{\"role\":\"assistant\",\"mes\":\"当前消息\"}]}]]": {
+    "queryType": "getSnapshotsBetweenMks",
+    "request": {
+      "startMk": "mk-fenced",
+      "endMk": "mk-array"
+    },
+    "result": [],
+    "selectedMks": [
+      null,
+      "mk-array",
+      "mk-object",
+      null,
+      "mk-fenced",
+      "mk-ignored"
+    ],
+    "editLogs": {
+      "mk-array": [
+        {
+          "op": "insert",
+          "path": "player",
+          "value_new": {
+            "hp": 10,
+            "display__DOT__name": "Alice__SQUOTE__s",
+            "quoted__DQUOTE__key": "保留",
+            "$meta": {
+              "source": "内部"
+            },
+            "nested": [
+              {
+                "keep": true,
+                "$hidden": "删除"
+              }
+            ]
+          },
+          "futureLogField": {
+            "preserved": true
+          }
+        }
+      ],
+      "mk-object": {
+        "op": "update",
+        "path": "player.hp",
+        "value_old": 10,
+        "value_new": 15,
+        "futureLogField": "单对象日志"
+      },
+      "mk-fenced": "\n      ```json\n      [\n        {\"op\":\"update\",\"path\":\"player.hp\",\"value_old\":15,\"value_new\":18},\n        {\"op\":\"insert\",\"path\":\"inventory[0]\",\"value_new\":{\"item__DQUOTE__name\":\"剑\"}}\n      ]\n      ```\n    ",
+      "mk-ignored": "{\"op\":\"update\",\"path\":\"player.hp\",\"value_new\":999}",
+      "futureLogBucket": {
+        "unknown": [
+          "原样保留"
+        ]
+      }
+    }
+  },
+  "[\"payload\",[\"getSnapshotAtMId\",{\"message_id\":3},{\"variables\":{\"stat\":{\"player\":{\"hp\":18,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]},\"inventory\":[{\"item__DQUOTE__name\":\"剑\"}],\"$root\":\"删除\",\"futureStateField\":{\"preserved\":true}},\"meta\":{\"SelectedMks\":[null,\"mk-array\",\"mk-object\",null,\"mk-fenced\",\"mk-ignored\"],\"EditLogs\":{\"mk-array\":[{\"op\":\"insert\",\"path\":\"player\",\"value_new\":{\"hp\":10,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]},\"futureLogField\":{\"preserved\":true}}],\"mk-object\":{\"op\":\"update\",\"path\":\"player.hp\",\"value_old\":10,\"value_new\":15,\"futureLogField\":\"单对象日志\"},\"mk-fenced\":\"\\n      ```json\\n      [\\n        {\\\"op\\\":\\\"update\\\",\\\"path\\\":\\\"player.hp\\\",\\\"value_old\\\":15,\\\"value_new\\\":18},\\n        {\\\"op\\\":\\\"insert\\\",\\\"path\\\":\\\"inventory[0]\\\",\\\"value_new\\\":{\\\"item__DQUOTE__name\\\":\\\"剑\\\"}}\\n      ]\\n      ```\\n    \",\"mk-ignored\":\"{\\\"op\\\":\\\"update\\\",\\\"path\\\":\\\"player.hp\\\",\\\"value_new\\\":999}\",\"futureLogBucket\":{\"unknown\":[\"原样保留\"]}},\"futureMetaField\":{\"preserved\":true}}},\"messages\":[{\"role\":\"system\",\"mes\":\"开场\"},{\"role\":\"assistant\",\"mes\":\"<era_data>{\\\"era-message-key\\\"=\\\"mk-array\\\",\\\"era-message-type\\\"=\\\"user\\\"}</era_data>\"},{\"role\":\"user\",\"message\":\"<era_data>{\\\"era-message-key\\\"=\\\"mk-object\\\",\\\"era-message-type\\\"=\\\"assistant\\\"}</era_data>\"},{\"role\":\"system\",\"mes\":\"无 MK\"},{\"role\":\"user\",\"mes\":\"使用 role 回退\"},{\"role\":\"assistant\",\"mes\":\"当前消息\"}]}]]": {
+    "queryType": "getSnapshotAtMId",
+    "request": {
+      "message_id": 3
+    },
+    "result": {
+      "error": "Message ID 3 处没有找到有效的 MK。",
+      "stat": null
+    },
+    "selectedMks": [
+      null,
+      "mk-array",
+      "mk-object",
+      null,
+      "mk-fenced",
+      "mk-ignored"
+    ],
+    "editLogs": {
+      "mk-array": [
+        {
+          "op": "insert",
+          "path": "player",
+          "value_new": {
+            "hp": 10,
+            "display__DOT__name": "Alice__SQUOTE__s",
+            "quoted__DQUOTE__key": "保留",
+            "$meta": {
+              "source": "内部"
+            },
+            "nested": [
+              {
+                "keep": true,
+                "$hidden": "删除"
+              }
+            ]
+          },
+          "futureLogField": {
+            "preserved": true
+          }
+        }
+      ],
+      "mk-object": {
+        "op": "update",
+        "path": "player.hp",
+        "value_old": 10,
+        "value_new": 15,
+        "futureLogField": "单对象日志"
+      },
+      "mk-fenced": "\n      ```json\n      [\n        {\"op\":\"update\",\"path\":\"player.hp\",\"value_old\":15,\"value_new\":18},\n        {\"op\":\"insert\",\"path\":\"inventory[0]\",\"value_new\":{\"item__DQUOTE__name\":\"剑\"}}\n      ]\n      ```\n    ",
+      "mk-ignored": "{\"op\":\"update\",\"path\":\"player.hp\",\"value_new\":999}",
+      "futureLogBucket": {
+        "unknown": [
+          "原样保留"
+        ]
+      }
+    }
+  },
+  "[\"payload\",[\"getSnapshotAtMId\",{\"message_id\":99},{\"variables\":{\"stat\":{\"player\":{\"hp\":18,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]},\"inventory\":[{\"item__DQUOTE__name\":\"剑\"}],\"$root\":\"删除\",\"futureStateField\":{\"preserved\":true}},\"meta\":{\"SelectedMks\":[null,\"mk-array\",\"mk-object\",null,\"mk-fenced\",\"mk-ignored\"],\"EditLogs\":{\"mk-array\":[{\"op\":\"insert\",\"path\":\"player\",\"value_new\":{\"hp\":10,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]},\"futureLogField\":{\"preserved\":true}}],\"mk-object\":{\"op\":\"update\",\"path\":\"player.hp\",\"value_old\":10,\"value_new\":15,\"futureLogField\":\"单对象日志\"},\"mk-fenced\":\"\\n      ```json\\n      [\\n        {\\\"op\\\":\\\"update\\\",\\\"path\\\":\\\"player.hp\\\",\\\"value_old\\\":15,\\\"value_new\\\":18},\\n        {\\\"op\\\":\\\"insert\\\",\\\"path\\\":\\\"inventory[0]\\\",\\\"value_new\\\":{\\\"item__DQUOTE__name\\\":\\\"剑\\\"}}\\n      ]\\n      ```\\n    \",\"mk-ignored\":\"{\\\"op\\\":\\\"update\\\",\\\"path\\\":\\\"player.hp\\\",\\\"value_new\\\":999}\",\"futureLogBucket\":{\"unknown\":[\"原样保留\"]}},\"futureMetaField\":{\"preserved\":true}}},\"messages\":[{\"role\":\"system\",\"mes\":\"开场\"},{\"role\":\"assistant\",\"mes\":\"<era_data>{\\\"era-message-key\\\"=\\\"mk-array\\\",\\\"era-message-type\\\"=\\\"user\\\"}</era_data>\"},{\"role\":\"user\",\"message\":\"<era_data>{\\\"era-message-key\\\"=\\\"mk-object\\\",\\\"era-message-type\\\"=\\\"assistant\\\"}</era_data>\"},{\"role\":\"system\",\"mes\":\"无 MK\"},{\"role\":\"user\",\"mes\":\"使用 role 回退\"},{\"role\":\"assistant\",\"mes\":\"当前消息\"}]}]]": {
+    "queryType": "getSnapshotAtMId",
+    "request": {
+      "message_id": 99
+    },
+    "result": {
+      "error": "获取快照时发生错误: Message ID 99 超出范围 [0, 5]。"
+    },
+    "selectedMks": [
+      null,
+      "mk-array",
+      "mk-object",
+      null,
+      "mk-fenced",
+      "mk-ignored"
+    ],
+    "editLogs": {
+      "mk-array": [
+        {
+          "op": "insert",
+          "path": "player",
+          "value_new": {
+            "hp": 10,
+            "display__DOT__name": "Alice__SQUOTE__s",
+            "quoted__DQUOTE__key": "保留",
+            "$meta": {
+              "source": "内部"
+            },
+            "nested": [
+              {
+                "keep": true,
+                "$hidden": "删除"
+              }
+            ]
+          },
+          "futureLogField": {
+            "preserved": true
+          }
+        }
+      ],
+      "mk-object": {
+        "op": "update",
+        "path": "player.hp",
+        "value_old": 10,
+        "value_new": 15,
+        "futureLogField": "单对象日志"
+      },
+      "mk-fenced": "\n      ```json\n      [\n        {\"op\":\"update\",\"path\":\"player.hp\",\"value_old\":15,\"value_new\":18},\n        {\"op\":\"insert\",\"path\":\"inventory[0]\",\"value_new\":{\"item__DQUOTE__name\":\"剑\"}}\n      ]\n      ```\n    ",
+      "mk-ignored": "{\"op\":\"update\",\"path\":\"player.hp\",\"value_new\":999}",
+      "futureLogBucket": {
+        "unknown": [
+          "原样保留"
+        ]
+      }
+    }
+  },
+  "[\"payload\",[\"getSnapshotAtMId\",{\"message_id\":\"2\"},{\"variables\":{\"stat\":{\"player\":{\"hp\":18,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]},\"inventory\":[{\"item__DQUOTE__name\":\"剑\"}],\"$root\":\"删除\",\"futureStateField\":{\"preserved\":true}},\"meta\":{\"SelectedMks\":[null,\"mk-array\",\"mk-object\",null,\"mk-fenced\",\"mk-ignored\"],\"EditLogs\":{\"mk-array\":[{\"op\":\"insert\",\"path\":\"player\",\"value_new\":{\"hp\":10,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]},\"futureLogField\":{\"preserved\":true}}],\"mk-object\":{\"op\":\"update\",\"path\":\"player.hp\",\"value_old\":10,\"value_new\":15,\"futureLogField\":\"单对象日志\"},\"mk-fenced\":\"\\n      ```json\\n      [\\n        {\\\"op\\\":\\\"update\\\",\\\"path\\\":\\\"player.hp\\\",\\\"value_old\\\":15,\\\"value_new\\\":18},\\n        {\\\"op\\\":\\\"insert\\\",\\\"path\\\":\\\"inventory[0]\\\",\\\"value_new\\\":{\\\"item__DQUOTE__name\\\":\\\"剑\\\"}}\\n      ]\\n      ```\\n    \",\"mk-ignored\":\"{\\\"op\\\":\\\"update\\\",\\\"path\\\":\\\"player.hp\\\",\\\"value_new\\\":999}\",\"futureLogBucket\":{\"unknown\":[\"原样保留\"]}},\"futureMetaField\":{\"preserved\":true}}},\"messages\":[{\"role\":\"system\",\"mes\":\"开场\"},{\"role\":\"assistant\",\"mes\":\"<era_data>{\\\"era-message-key\\\"=\\\"mk-array\\\",\\\"era-message-type\\\"=\\\"user\\\"}</era_data>\"},{\"role\":\"user\",\"message\":\"<era_data>{\\\"era-message-key\\\"=\\\"mk-object\\\",\\\"era-message-type\\\"=\\\"assistant\\\"}</era_data>\"},{\"role\":\"system\",\"mes\":\"无 MK\"},{\"role\":\"user\",\"mes\":\"使用 role 回退\"},{\"role\":\"assistant\",\"mes\":\"当前消息\"}]}]]": {
+    "queryType": "getSnapshotAtMId",
+    "request": {
+      "message_id": "2"
+    },
+    "result": {
+      "error": "获取快照时发生错误: 请求缺少 \"message_id\" 参数或类型不正确。"
+    },
+    "selectedMks": [
+      null,
+      "mk-array",
+      "mk-object",
+      null,
+      "mk-fenced",
+      "mk-ignored"
+    ],
+    "editLogs": {
+      "mk-array": [
+        {
+          "op": "insert",
+          "path": "player",
+          "value_new": {
+            "hp": 10,
+            "display__DOT__name": "Alice__SQUOTE__s",
+            "quoted__DQUOTE__key": "保留",
+            "$meta": {
+              "source": "内部"
+            },
+            "nested": [
+              {
+                "keep": true,
+                "$hidden": "删除"
+              }
+            ]
+          },
+          "futureLogField": {
+            "preserved": true
+          }
+        }
+      ],
+      "mk-object": {
+        "op": "update",
+        "path": "player.hp",
+        "value_old": 10,
+        "value_new": 15,
+        "futureLogField": "单对象日志"
+      },
+      "mk-fenced": "\n      ```json\n      [\n        {\"op\":\"update\",\"path\":\"player.hp\",\"value_old\":15,\"value_new\":18},\n        {\"op\":\"insert\",\"path\":\"inventory[0]\",\"value_new\":{\"item__DQUOTE__name\":\"剑\"}}\n      ]\n      ```\n    ",
+      "mk-ignored": "{\"op\":\"update\",\"path\":\"player.hp\",\"value_new\":999}",
+      "futureLogBucket": {
+        "unknown": [
+          "原样保留"
+        ]
+      }
+    }
+  },
+  "[\"payload\",[\"getSnapshotsBetweenMIds\",{\"startId\":3,\"endId\":5},{\"variables\":{\"stat\":{\"player\":{\"hp\":18,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]},\"inventory\":[{\"item__DQUOTE__name\":\"剑\"}],\"$root\":\"删除\",\"futureStateField\":{\"preserved\":true}},\"meta\":{\"SelectedMks\":[null,\"mk-array\",\"mk-object\",null,\"mk-fenced\",\"mk-ignored\"],\"EditLogs\":{\"mk-array\":[{\"op\":\"insert\",\"path\":\"player\",\"value_new\":{\"hp\":10,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]},\"futureLogField\":{\"preserved\":true}}],\"mk-object\":{\"op\":\"update\",\"path\":\"player.hp\",\"value_old\":10,\"value_new\":15,\"futureLogField\":\"单对象日志\"},\"mk-fenced\":\"\\n      ```json\\n      [\\n        {\\\"op\\\":\\\"update\\\",\\\"path\\\":\\\"player.hp\\\",\\\"value_old\\\":15,\\\"value_new\\\":18},\\n        {\\\"op\\\":\\\"insert\\\",\\\"path\\\":\\\"inventory[0]\\\",\\\"value_new\\\":{\\\"item__DQUOTE__name\\\":\\\"剑\\\"}}\\n      ]\\n      ```\\n    \",\"mk-ignored\":\"{\\\"op\\\":\\\"update\\\",\\\"path\\\":\\\"player.hp\\\",\\\"value_new\\\":999}\",\"futureLogBucket\":{\"unknown\":[\"原样保留\"]}},\"futureMetaField\":{\"preserved\":true}}},\"messages\":[{\"role\":\"system\",\"mes\":\"开场\"},{\"role\":\"assistant\",\"mes\":\"<era_data>{\\\"era-message-key\\\"=\\\"mk-array\\\",\\\"era-message-type\\\"=\\\"user\\\"}</era_data>\"},{\"role\":\"user\",\"message\":\"<era_data>{\\\"era-message-key\\\"=\\\"mk-object\\\",\\\"era-message-type\\\"=\\\"assistant\\\"}</era_data>\"},{\"role\":\"system\",\"mes\":\"无 MK\"},{\"role\":\"user\",\"mes\":\"使用 role 回退\"},{\"role\":\"assistant\",\"mes\":\"当前消息\"}]}]]": {
+    "queryType": "getSnapshotsBetweenMIds",
+    "request": {
+      "startId": 3,
+      "endId": 5
+    },
+    "result": {
+      "error": "获取批量快照时发生错误: 指定的 ID 范围内没有找到有效的起始或结束 MK。"
+    },
+    "selectedMks": [
+      null,
+      "mk-array",
+      "mk-object",
+      null,
+      "mk-fenced",
+      "mk-ignored"
+    ],
+    "editLogs": {
+      "mk-array": [
+        {
+          "op": "insert",
+          "path": "player",
+          "value_new": {
+            "hp": 10,
+            "display__DOT__name": "Alice__SQUOTE__s",
+            "quoted__DQUOTE__key": "保留",
+            "$meta": {
+              "source": "内部"
+            },
+            "nested": [
+              {
+                "keep": true,
+                "$hidden": "删除"
+              }
+            ]
+          },
+          "futureLogField": {
+            "preserved": true
+          }
+        }
+      ],
+      "mk-object": {
+        "op": "update",
+        "path": "player.hp",
+        "value_old": 10,
+        "value_new": 15,
+        "futureLogField": "单对象日志"
+      },
+      "mk-fenced": "\n      ```json\n      [\n        {\"op\":\"update\",\"path\":\"player.hp\",\"value_old\":15,\"value_new\":18},\n        {\"op\":\"insert\",\"path\":\"inventory[0]\",\"value_new\":{\"item__DQUOTE__name\":\"剑\"}}\n      ]\n      ```\n    ",
+      "mk-ignored": "{\"op\":\"update\",\"path\":\"player.hp\",\"value_new\":999}",
+      "futureLogBucket": {
+        "unknown": [
+          "原样保留"
+        ]
+      }
+    }
+  },
+  "[\"payload\",[\"getSnapshotsBetweenMIds\",{\"startId\":5,\"endId\":1},{\"variables\":{\"stat\":{\"player\":{\"hp\":18,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]},\"inventory\":[{\"item__DQUOTE__name\":\"剑\"}],\"$root\":\"删除\",\"futureStateField\":{\"preserved\":true}},\"meta\":{\"SelectedMks\":[null,\"mk-array\",\"mk-object\",null,\"mk-fenced\",\"mk-ignored\"],\"EditLogs\":{\"mk-array\":[{\"op\":\"insert\",\"path\":\"player\",\"value_new\":{\"hp\":10,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]},\"futureLogField\":{\"preserved\":true}}],\"mk-object\":{\"op\":\"update\",\"path\":\"player.hp\",\"value_old\":10,\"value_new\":15,\"futureLogField\":\"单对象日志\"},\"mk-fenced\":\"\\n      ```json\\n      [\\n        {\\\"op\\\":\\\"update\\\",\\\"path\\\":\\\"player.hp\\\",\\\"value_old\\\":15,\\\"value_new\\\":18},\\n        {\\\"op\\\":\\\"insert\\\",\\\"path\\\":\\\"inventory[0]\\\",\\\"value_new\\\":{\\\"item__DQUOTE__name\\\":\\\"剑\\\"}}\\n      ]\\n      ```\\n    \",\"mk-ignored\":\"{\\\"op\\\":\\\"update\\\",\\\"path\\\":\\\"player.hp\\\",\\\"value_new\\\":999}\",\"futureLogBucket\":{\"unknown\":[\"原样保留\"]}},\"futureMetaField\":{\"preserved\":true}}},\"messages\":[{\"role\":\"system\",\"mes\":\"开场\"},{\"role\":\"assistant\",\"mes\":\"<era_data>{\\\"era-message-key\\\"=\\\"mk-array\\\",\\\"era-message-type\\\"=\\\"user\\\"}</era_data>\"},{\"role\":\"user\",\"message\":\"<era_data>{\\\"era-message-key\\\"=\\\"mk-object\\\",\\\"era-message-type\\\"=\\\"assistant\\\"}</era_data>\"},{\"role\":\"system\",\"mes\":\"无 MK\"},{\"role\":\"user\",\"mes\":\"使用 role 回退\"},{\"role\":\"assistant\",\"mes\":\"当前消息\"}]}]]": {
+    "queryType": "getSnapshotsBetweenMIds",
+    "request": {
+      "startId": 5,
+      "endId": 1
+    },
+    "result": {
+      "error": "获取批量快照时发生错误: ID 范围 [5, 1] 无效或超出范围 [0, 5]。"
+    },
+    "selectedMks": [
+      null,
+      "mk-array",
+      "mk-object",
+      null,
+      "mk-fenced",
+      "mk-ignored"
+    ],
+    "editLogs": {
+      "mk-array": [
+        {
+          "op": "insert",
+          "path": "player",
+          "value_new": {
+            "hp": 10,
+            "display__DOT__name": "Alice__SQUOTE__s",
+            "quoted__DQUOTE__key": "保留",
+            "$meta": {
+              "source": "内部"
+            },
+            "nested": [
+              {
+                "keep": true,
+                "$hidden": "删除"
+              }
+            ]
+          },
+          "futureLogField": {
+            "preserved": true
+          }
+        }
+      ],
+      "mk-object": {
+        "op": "update",
+        "path": "player.hp",
+        "value_old": 10,
+        "value_new": 15,
+        "futureLogField": "单对象日志"
+      },
+      "mk-fenced": "\n      ```json\n      [\n        {\"op\":\"update\",\"path\":\"player.hp\",\"value_old\":15,\"value_new\":18},\n        {\"op\":\"insert\",\"path\":\"inventory[0]\",\"value_new\":{\"item__DQUOTE__name\":\"剑\"}}\n      ]\n      ```\n    ",
+      "mk-ignored": "{\"op\":\"update\",\"path\":\"player.hp\",\"value_new\":999}",
+      "futureLogBucket": {
+        "unknown": [
+          "原样保留"
+        ]
+      }
+    }
+  },
+  "[\"payload\",[\"getSnapshotsBetweenMIds\",{\"startId\":1,\"endId\":99},{\"variables\":{\"stat\":{\"player\":{\"hp\":18,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]},\"inventory\":[{\"item__DQUOTE__name\":\"剑\"}],\"$root\":\"删除\",\"futureStateField\":{\"preserved\":true}},\"meta\":{\"SelectedMks\":[null,\"mk-array\",\"mk-object\",null,\"mk-fenced\",\"mk-ignored\"],\"EditLogs\":{\"mk-array\":[{\"op\":\"insert\",\"path\":\"player\",\"value_new\":{\"hp\":10,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]},\"futureLogField\":{\"preserved\":true}}],\"mk-object\":{\"op\":\"update\",\"path\":\"player.hp\",\"value_old\":10,\"value_new\":15,\"futureLogField\":\"单对象日志\"},\"mk-fenced\":\"\\n      ```json\\n      [\\n        {\\\"op\\\":\\\"update\\\",\\\"path\\\":\\\"player.hp\\\",\\\"value_old\\\":15,\\\"value_new\\\":18},\\n        {\\\"op\\\":\\\"insert\\\",\\\"path\\\":\\\"inventory[0]\\\",\\\"value_new\\\":{\\\"item__DQUOTE__name\\\":\\\"剑\\\"}}\\n      ]\\n      ```\\n    \",\"mk-ignored\":\"{\\\"op\\\":\\\"update\\\",\\\"path\\\":\\\"player.hp\\\",\\\"value_new\\\":999}\",\"futureLogBucket\":{\"unknown\":[\"原样保留\"]}},\"futureMetaField\":{\"preserved\":true}}},\"messages\":[{\"role\":\"system\",\"mes\":\"开场\"},{\"role\":\"assistant\",\"mes\":\"<era_data>{\\\"era-message-key\\\"=\\\"mk-array\\\",\\\"era-message-type\\\"=\\\"user\\\"}</era_data>\"},{\"role\":\"user\",\"message\":\"<era_data>{\\\"era-message-key\\\"=\\\"mk-object\\\",\\\"era-message-type\\\"=\\\"assistant\\\"}</era_data>\"},{\"role\":\"system\",\"mes\":\"无 MK\"},{\"role\":\"user\",\"mes\":\"使用 role 回退\"},{\"role\":\"assistant\",\"mes\":\"当前消息\"}]}]]": {
+    "queryType": "getSnapshotsBetweenMIds",
+    "request": {
+      "startId": 1,
+      "endId": 99
+    },
+    "result": {
+      "error": "获取批量快照时发生错误: ID 范围 [1, 99] 无效或超出范围 [0, 5]。"
+    },
+    "selectedMks": [
+      null,
+      "mk-array",
+      "mk-object",
+      null,
+      "mk-fenced",
+      "mk-ignored"
+    ],
+    "editLogs": {
+      "mk-array": [
+        {
+          "op": "insert",
+          "path": "player",
+          "value_new": {
+            "hp": 10,
+            "display__DOT__name": "Alice__SQUOTE__s",
+            "quoted__DQUOTE__key": "保留",
+            "$meta": {
+              "source": "内部"
+            },
+            "nested": [
+              {
+                "keep": true,
+                "$hidden": "删除"
+              }
+            ]
+          },
+          "futureLogField": {
+            "preserved": true
+          }
+        }
+      ],
+      "mk-object": {
+        "op": "update",
+        "path": "player.hp",
+        "value_old": 10,
+        "value_new": 15,
+        "futureLogField": "单对象日志"
+      },
+      "mk-fenced": "\n      ```json\n      [\n        {\"op\":\"update\",\"path\":\"player.hp\",\"value_old\":15,\"value_new\":18},\n        {\"op\":\"insert\",\"path\":\"inventory[0]\",\"value_new\":{\"item__DQUOTE__name\":\"剑\"}}\n      ]\n      ```\n    ",
+      "mk-ignored": "{\"op\":\"update\",\"path\":\"player.hp\",\"value_new\":999}",
+      "futureLogBucket": {
+        "unknown": [
+          "原样保留"
+        ]
+      }
+    }
+  },
+  "[\"calculateStatAt\",[\"mk-ignored\",[null,\"mk-array\",\"mk-object\",null,\"mk-fenced\",\"mk-ignored\"],{\"mk-array\":[{\"op\":\"insert\",\"path\":\"player\",\"value_new\":{\"hp\":10,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]},\"futureLogField\":{\"preserved\":true}}],\"mk-object\":{\"op\":\"update\",\"path\":\"player.hp\",\"value_old\":10,\"value_new\":15,\"futureLogField\":\"单对象日志\"},\"mk-fenced\":\"\\n      ```json\\n      [\\n        {\\\"op\\\":\\\"update\\\",\\\"path\\\":\\\"player.hp\\\",\\\"value_old\\\":15,\\\"value_new\\\":18},\\n        {\\\"op\\\":\\\"insert\\\",\\\"path\\\":\\\"inventory[0]\\\",\\\"value_new\\\":{\\\"item__DQUOTE__name\\\":\\\"剑\\\"}}\\n      ]\\n      ```\\n    \",\"mk-ignored\":\"{\\\"op\\\":\\\"update\\\",\\\"path\\\":\\\"player.hp\\\",\\\"value_new\\\":999}\",\"futureLogBucket\":{\"unknown\":[\"原样保留\"]}}]]": {
+    "player": {
+      "hp": 18,
+      "display__DOT__name": "Alice__SQUOTE__s",
+      "quoted__DQUOTE__key": "保留",
+      "$meta": {
+        "source": "内部"
+      },
+      "nested": [
+        {
+          "keep": true,
+          "$hidden": "删除"
+        }
+      ]
+    },
+    "inventory": [
+      {
+        "item__DQUOTE__name": "剑"
+      }
+    ]
+  },
+  "[\"calculateAllStatsBetweenMks\",[\"mk-array\",\"mk-ignored\",[null,\"mk-array\",\"mk-object\",null,\"mk-fenced\",\"mk-ignored\"],{\"mk-array\":[{\"op\":\"insert\",\"path\":\"player\",\"value_new\":{\"hp\":10,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]},\"futureLogField\":{\"preserved\":true}}],\"mk-object\":{\"op\":\"update\",\"path\":\"player.hp\",\"value_old\":10,\"value_new\":15,\"futureLogField\":\"单对象日志\"},\"mk-fenced\":\"\\n      ```json\\n      [\\n        {\\\"op\\\":\\\"update\\\",\\\"path\\\":\\\"player.hp\\\",\\\"value_old\\\":15,\\\"value_new\\\":18},\\n        {\\\"op\\\":\\\"insert\\\",\\\"path\\\":\\\"inventory[0]\\\",\\\"value_new\\\":{\\\"item__DQUOTE__name\\\":\\\"剑\\\"}}\\n      ]\\n      ```\\n    \",\"mk-ignored\":\"{\\\"op\\\":\\\"update\\\",\\\"path\\\":\\\"player.hp\\\",\\\"value_new\\\":999}\",\"futureLogBucket\":{\"unknown\":[\"原样保留\"]}}]]": [
+    {
+      "mk": "mk-array",
+      "message_id": 1,
+      "stat": {
+        "player": {
+          "hp": 10,
+          "display__DOT__name": "Alice__SQUOTE__s",
+          "quoted__DQUOTE__key": "保留",
+          "$meta": {
+            "source": "内部"
+          },
+          "nested": [
+            {
+              "keep": true,
+              "$hidden": "删除"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "mk": "mk-object",
+      "message_id": 2,
+      "stat": {
+        "player": {
+          "hp": 15,
+          "display__DOT__name": "Alice__SQUOTE__s",
+          "quoted__DQUOTE__key": "保留",
+          "$meta": {
+            "source": "内部"
+          },
+          "nested": [
+            {
+              "keep": true,
+              "$hidden": "删除"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "mk": "mk-fenced",
+      "message_id": 4,
+      "stat": {
+        "player": {
+          "hp": 18,
+          "display__DOT__name": "Alice__SQUOTE__s",
+          "quoted__DQUOTE__key": "保留",
+          "$meta": {
+            "source": "内部"
+          },
+          "nested": [
+            {
+              "keep": true,
+              "$hidden": "删除"
+            }
+          ]
+        },
+        "inventory": [
+          {
+            "item__DQUOTE__name": "剑"
+          }
+        ]
+      }
+    },
+    {
+      "mk": "mk-ignored",
+      "message_id": 5,
+      "stat": {
+        "player": {
+          "hp": 18,
+          "display__DOT__name": "Alice__SQUOTE__s",
+          "quoted__DQUOTE__key": "保留",
+          "$meta": {
+            "source": "内部"
+          },
+          "nested": [
+            {
+              "keep": true,
+              "$hidden": "删除"
+            }
+          ]
+        },
+        "inventory": [
+          {
+            "item__DQUOTE__name": "剑"
+          }
+        ]
+      }
+    }
+  ],
+  "[\"calculateStatAt\",[\"mk-array\",[null,\"mk-array\",\"mk-object\",null,\"mk-fenced\",\"mk-ignored\"],{\"mk-array\":[{\"op\":\"insert\",\"path\":\"player\",\"value_new\":{\"hp\":10,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]},\"futureLogField\":{\"preserved\":true}}],\"mk-object\":{\"op\":\"update\",\"path\":\"player.hp\",\"value_old\":10,\"value_new\":15,\"futureLogField\":\"单对象日志\"},\"mk-fenced\":\"\\n      ```json\\n      [\\n        {\\\"op\\\":\\\"update\\\",\\\"path\\\":\\\"player.hp\\\",\\\"value_old\\\":15,\\\"value_new\\\":18},\\n        {\\\"op\\\":\\\"insert\\\",\\\"path\\\":\\\"inventory[0]\\\",\\\"value_new\\\":{\\\"item__DQUOTE__name\\\":\\\"剑\\\"}}\\n      ]\\n      ```\\n    \",\"mk-ignored\":\"{\\\"op\\\":\\\"update\\\",\\\"path\\\":\\\"player.hp\\\",\\\"value_new\\\":999}\",\"futureLogBucket\":{\"unknown\":[\"原样保留\"]}}]]": {
+    "player": {
+      "hp": 10,
+      "display__DOT__name": "Alice__SQUOTE__s",
+      "quoted__DQUOTE__key": "保留",
+      "$meta": {
+        "source": "内部"
+      },
+      "nested": [
+        {
+          "keep": true,
+          "$hidden": "删除"
+        }
+      ]
+    }
+  },
+  "[\"calculateStatForward\",[{\"player\":{\"hp\":10,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]}},\"mk-array\",\"mk-fenced\",[null,\"mk-array\",\"mk-object\",null,\"mk-fenced\",\"mk-ignored\"],{\"mk-array\":[{\"op\":\"insert\",\"path\":\"player\",\"value_new\":{\"hp\":10,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]},\"futureLogField\":{\"preserved\":true}}],\"mk-object\":{\"op\":\"update\",\"path\":\"player.hp\",\"value_old\":10,\"value_new\":15,\"futureLogField\":\"单对象日志\"},\"mk-fenced\":\"\\n      ```json\\n      [\\n        {\\\"op\\\":\\\"update\\\",\\\"path\\\":\\\"player.hp\\\",\\\"value_old\\\":15,\\\"value_new\\\":18},\\n        {\\\"op\\\":\\\"insert\\\",\\\"path\\\":\\\"inventory[0]\\\",\\\"value_new\\\":{\\\"item__DQUOTE__name\\\":\\\"剑\\\"}}\\n      ]\\n      ```\\n    \",\"mk-ignored\":\"{\\\"op\\\":\\\"update\\\",\\\"path\\\":\\\"player.hp\\\",\\\"value_new\\\":999}\",\"futureLogBucket\":{\"unknown\":[\"原样保留\"]}}]]": {
+    "player": {
+      "hp": 18,
+      "display__DOT__name": "Alice__SQUOTE__s",
+      "quoted__DQUOTE__key": "保留",
+      "$meta": {
+        "source": "内部"
+      },
+      "nested": [
+        {
+          "keep": true,
+          "$hidden": "删除"
+        }
+      ]
+    },
+    "inventory": [
+      {
+        "item__DQUOTE__name": "剑"
+      }
+    ]
+  },
+  "[\"rollbackStatToMK\",[\"mk-array\",\"mk-ignored\",{\"player\":{\"hp\":18,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]},\"inventory\":[{\"item__DQUOTE__name\":\"剑\"}]},[null,\"mk-array\",\"mk-object\",null,\"mk-fenced\",\"mk-ignored\"],{\"mk-array\":[{\"op\":\"insert\",\"path\":\"player\",\"value_new\":{\"hp\":10,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]},\"futureLogField\":{\"preserved\":true}}],\"mk-object\":{\"op\":\"update\",\"path\":\"player.hp\",\"value_old\":10,\"value_new\":15,\"futureLogField\":\"单对象日志\"},\"mk-fenced\":\"\\n      ```json\\n      [\\n        {\\\"op\\\":\\\"update\\\",\\\"path\\\":\\\"player.hp\\\",\\\"value_old\\\":15,\\\"value_new\\\":18},\\n        {\\\"op\\\":\\\"insert\\\",\\\"path\\\":\\\"inventory[0]\\\",\\\"value_new\\\":{\\\"item__DQUOTE__name\\\":\\\"剑\\\"}}\\n      ]\\n      ```\\n    \",\"mk-ignored\":\"{\\\"op\\\":\\\"update\\\",\\\"path\\\":\\\"player.hp\\\",\\\"value_new\\\":999}\",\"futureLogBucket\":{\"unknown\":[\"原样保留\"]}}]]": {
+    "player": {
+      "hp": 10,
+      "display__DOT__name": "Alice__SQUOTE__s",
+      "quoted__DQUOTE__key": "保留",
+      "$meta": {
+        "source": "内部"
+      },
+      "nested": [
+        {
+          "keep": true,
+          "$hidden": "删除"
+        }
+      ]
+    },
+    "inventory": [
+      {
+        "__era_expected_undefined__": true
+      }
+    ]
+  },
+  "[\"findLatestNewValue\",[\"player.hp\",6,[null,\"mk-array\",\"mk-object\",null,\"mk-fenced\",\"mk-ignored\"],{\"mk-array\":[{\"op\":\"insert\",\"path\":\"player\",\"value_new\":{\"hp\":10,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]},\"futureLogField\":{\"preserved\":true}}],\"mk-object\":{\"op\":\"update\",\"path\":\"player.hp\",\"value_old\":10,\"value_new\":15,\"futureLogField\":\"单对象日志\"},\"mk-fenced\":\"\\n      ```json\\n      [\\n        {\\\"op\\\":\\\"update\\\",\\\"path\\\":\\\"player.hp\\\",\\\"value_old\\\":15,\\\"value_new\\\":18},\\n        {\\\"op\\\":\\\"insert\\\",\\\"path\\\":\\\"inventory[0]\\\",\\\"value_new\\\":{\\\"item__DQUOTE__name\\\":\\\"剑\\\"}}\\n      ]\\n      ```\\n    \",\"mk-ignored\":\"{\\\"op\\\":\\\"update\\\",\\\"path\\\":\\\"player.hp\\\",\\\"value_new\\\":999}\",\"futureLogBucket\":{\"unknown\":[\"原样保留\"]}}]]": 18,
+  "[\"parseEditLog\",[[{\"op\":\"insert\",\"path\":\"player\",\"value_new\":{\"hp\":10,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]},\"futureLogField\":{\"preserved\":true}}]]]": [
+    {
+      "op": "insert",
+      "path": "player",
+      "value_new": {
+        "hp": 10,
+        "display__DOT__name": "Alice__SQUOTE__s",
+        "quoted__DQUOTE__key": "保留",
+        "$meta": {
+          "source": "内部"
+        },
+        "nested": [
+          {
+            "keep": true,
+            "$hidden": "删除"
+          }
+        ]
+      },
+      "futureLogField": {
+        "preserved": true
+      }
+    }
+  ],
+  "[\"parseEditLog\",[{\"op\":\"update\",\"path\":\"player.hp\",\"value_old\":10,\"value_new\":15,\"futureLogField\":\"单对象日志\"}]]": [
+    {
+      "op": "update",
+      "path": "player.hp",
+      "value_old": 10,
+      "value_new": 15,
+      "futureLogField": "单对象日志"
+    }
+  ],
+  "[\"parseEditLog\",[\"\\n      ```json\\n      [\\n        {\\\"op\\\":\\\"update\\\",\\\"path\\\":\\\"player.hp\\\",\\\"value_old\\\":15,\\\"value_new\\\":18},\\n        {\\\"op\\\":\\\"insert\\\",\\\"path\\\":\\\"inventory[0]\\\",\\\"value_new\\\":{\\\"item__DQUOTE__name\\\":\\\"剑\\\"}}\\n      ]\\n      ```\\n    \"]]": [
+    {
+      "op": "update",
+      "path": "player.hp",
+      "value_old": 15,
+      "value_new": 18
+    },
+    {
+      "op": "insert",
+      "path": "inventory[0]",
+      "value_new": {
+        "item__DQUOTE__name": "剑"
+      }
+    }
+  ],
+  "[\"parseEditLog\",[\"{\\\"op\\\":\\\"update\\\",\\\"path\\\":\\\"player.hp\\\",\\\"value_new\\\":999}\"]]": [],
+  "[\"parseEditLog\",[null]]": []
+}

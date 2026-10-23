@@ -9,6 +9,10 @@ type CommitOutcome =
   | { readonly mode: "non-commit"; readonly work: SyncWorkV1 }
   | SyncCommitResultV1;
 
+function isNonCommit(outcome: CommitOutcome): outcome is Extract<CommitOutcome, {mode: "non-commit"}> {
+  return "mode" in outcome && outcome.mode === "non-commit";
+}
+
 interface Context {
   readonly capabilities: {
     readonly "era.tavern.messages": {
@@ -31,7 +35,7 @@ export async function run(
   context: Context,
 ): Promise<any> {
   const outcome = inputs["era.tavern.commit.result"].value as CommitOutcome;
-  if ("mode" in outcome && outcome.mode === "non-commit") {
+  if (isNonCommit(outcome)) {
     // 逐块提交的楼层不再由尾链写入，但刷新显示仍然归尾链：工作项带呈现意图时这里执行一次
     // 「affected」刷新；不带意图（或带 null）时保持原样，不做任何宿主调用。
     const work = outcome.work as {

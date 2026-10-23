@@ -2,25 +2,25 @@
   "type_key": "era.sidecar.store",
   "status": "implemented",
   "flow_kind": "process",
-  "display_name": "加载或修复聊天的独立状态文件",
-  "description": "加载当前聊天使用的独立状态文件，文件中保存 ERA 变量、函数和历史日志。优先沿用同一聊天有效的内存结果；首次使用时建立绑定，旧数据需要时迁移，归属冲突或损坏时提示用户选择。执行选定的绑定方案后输出可用于历史同步的状态或等待、失败结果。",
+  "display_name": "加载聊天状态或引导用户解决文件问题",
+  "description": "检查当前聊天绑定的独立状态文件，其中保存变量、函数和历史；有效内存资料可直接沿用。新聊天按需建文件，旧资料按需迁移，归属冲突或损坏时请用户选择，执行方案后交出可用状态或等待、失败原因。",
   "requires": [
     {
       "type": "era.sync.context",
       "cardinality": "exactly_one",
-      "display_name": "同步上下文"
+      "display_name": "本次历史同步需要的消息和文件资料"
     }
   ],
   "provides": [
     {
       "key": "sidecar_binding_context",
       "type": "era.sync.context",
-      "display_name": "已加载 独立状态文件 状态的同步上下文"
+      "display_name": "本次历史同步需要的消息和文件资料"
     },
     {
       "key": "sidecar_binding_route",
       "type": "era.sidecar.binding.route",
-      "display_name": "独立状态文件 状态路由"
+      "display_name": "继续使用文件、执行修复或等待选择"
     }
   ],
   "pipeline": {
@@ -29,7 +29,7 @@
       {
         "key": "sync_context",
         "type": "era.sync.context",
-        "display_name": "同步上下文",
+        "display_name": "本次历史同步需要的消息和文件资料",
         "required": true
       }
     ],
@@ -37,39 +37,39 @@
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.service.terminal",
-        "display_name": "独立状态文件 状态存储启动",
-        "description": "开始加载或修复聊天的独立状态文件。"
+        "display_name": "开始加载聊天状态或引导用户解决文件问题",
+        "description": "标明“加载聊天状态或引导用户解决文件问题”的开始位置。检查当前聊天绑定的独立状态文件，其中保存变量、函数和历史；有效内存资料可直接沿用。新聊天按需建文件，旧资料按需迁移，归属冲突或损坏时请用户选择，执行方案后交出可用状态或等待、失败原因。",
+        "definition_id": "era.service.terminal"
       },
       {
         "id": "inspect_current",
-        "type_used": "era.sidecar_binding.inspect_current",
-        "display_name": "读取并核对本次 独立状态文件 事务来源",
-        "description": "本次处理当前聊天独立状态文件的绑定和加载。检查当前聊天指向的独立状态文件及聊天身份，优先使用同一有效绑定的内存变量、函数和日志，并识别需要恢复的未完成候选起点。"
+        "display_name": "确认当前聊天应使用哪份状态",
+        "description": "在“加载聊天状态或引导用户解决文件问题”流程中，读取聊天绑定的独立状态文件及其归属，检查可否沿用同一聊天的内存变量、函数和历史。也识别尚需恢复的生成起点，供后续选择继续、修复或请用户确认。",
+        "definition_id": "era.sidecar_binding.inspect_current"
       },
       {
         "id": "resolve_choice",
-        "type_used": "era.sidecar_binding.resolve_choice",
-        "display_name": "保留失败来源或解析绑定选择",
-        "description": "本次处理当前聊天独立状态文件的绑定和加载。根据当前状态文件资料及用户选择，决定新建、迁移、继续使用或等待归属、修复选择；读取失败时保留其原因。"
+        "display_name": "决定继续使用、新建还是修复状态文件",
+        "description": "在“加载聊天状态或引导用户解决文件问题”流程中，接收当前文件检查结果和已有用户选择，判断可直接使用、需要新建迁移，还是必须等待归属或修复确认。读取失败时保留具体原因，交给相应处理分支。",
+        "definition_id": "era.sidecar_binding.resolve_choice"
       },
       {
         "id": "publish_choice_prompt",
-        "type_used": "era.sidecar_binding.publish_choice_prompt",
-        "display_name": "发布 独立状态文件 冲突选择",
-        "description": "本次处理当前聊天独立状态文件的绑定和加载。向页面显示状态文件归属冲突或损坏的处理选项，携带聊天身份、文件归属和版本资料；已有有效选择时沿用该选择。"
+        "display_name": "显示状态文件冲突或损坏的处理选项",
+        "description": "在“加载聊天状态或引导用户解决文件问题”流程中，根据当前聊天身份、状态文件归属和版本，向页面显示需要用户决定的处理方案。已有有效选择时沿用该选择，供后续规划绑定或修复。",
+        "definition_id": "era.sidecar_binding.publish_choice_prompt"
       },
       {
         "id": "apply_resolution",
-        "type_used": "era.sidecar_binding.apply_resolution",
-        "display_name": "按原来源执行恢复、确认保存并提交 独立状态文件",
-        "description": "本次处理当前聊天独立状态文件的绑定和加载。执行用户选定的状态文件新建、迁移或修复方案。先提交必要的消息修改，再写入文件及聊天绑定；核对聊天身份和文件版本，记录已完成部分及失败原因。"
+        "display_name": "按选定方案新建、迁移或修复状态文件",
+        "description": "在“加载聊天状态或引导用户解决文件问题”流程中，接收已确定的独立状态文件处理方案，先完成必要消息修改，再保存文件和聊天绑定。过程中检查聊天身份及文件版本，记录实际完成部分和失败原因，供同步或恢复判断。",
+        "definition_id": "era.sidecar_binding.apply_resolution"
       },
       {
         "id": "end",
-        "type_used": "era.service.terminal",
-        "display_name": "独立状态文件 状态存储结束",
-        "description": "结束加载或修复聊天的独立状态文件，输出本段流程的处理结果。"
+        "display_name": "结束加载聊天状态或引导用户解决文件问题",
+        "description": "标明“加载聊天状态或引导用户解决文件问题”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.service.terminal"
       }
     ],
     "edges": [
@@ -108,13 +108,13 @@
       {
         "type": "era.sync.context",
         "cardinality": "exactly_one",
-        "display_name": "已加载 独立状态文件 状态的同步上下文",
+        "display_name": "本次历史同步需要的消息和文件资料",
         "as": "sidecarBindingContext"
       },
       {
         "type": "era.sidecar.binding.route",
         "cardinality": "exactly_one",
-        "display_name": "独立状态文件 状态路由",
+        "display_name": "继续使用文件、执行修复或等待选择",
         "as": "sidecarBindingRoute"
       }
     ]

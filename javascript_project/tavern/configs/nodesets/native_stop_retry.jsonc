@@ -1,20 +1,20 @@
 {
   "type_key": "era.tavern.flow.native_stop_retry",
-  "display_name": "命令阶段后的一次原生停止尝试",
-  "description": "只接受当前实例仍有效的once票据；一次尝试后释放记录，陈旧回调不执行停止。",
+  "display_name": "命令阶段结束后补做一次生成停止",
+  "description": "检查此前登记的单次延后停止是否仍属于当前实例。有效时先解除监听再尝试停止酒馆生成，过期时直接结束，返回本次实际结果。",
   "expand": true,
   "requires": [
     {
       "type": "era.tavern.call.frame",
       "cardinality": "exactly_one",
-      "display_name": "当前实例及启动资料"
+      "display_name": "命令阶段结束后补做一次生成停止的请求和已有进度"
     }
   ],
   "provides": [
     {
       "key": "era_tavern_flow_native_stop_retry_frame",
       "type": "era.tavern.frame.native_stop_retry.returned",
-      "display_name": "该流程的唯一结果"
+      "display_name": "命令阶段结束后补做一次生成停止的处理进度及结果"
     }
   ],
   "pipeline": {
@@ -24,46 +24,46 @@
         "key": "frame",
         "type": "era.tavern.call.frame",
         "required": true,
-        "display_name": "当前实例及调用资料"
+        "display_name": "命令阶段结束后补做一次生成停止的请求和已有进度"
       }
     ],
     "max_steps": 24,
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.tavern.initialize.start",
-        "display_name": "开始当前资源流程",
-        "description": "保持原生控制入口或出口，不创建额外资源。"
+        "display_name": "开始命令阶段结束后补做一次生成停止",
+        "description": "标明“命令阶段结束后补做一次生成停止”的开始位置。检查此前登记的单次延后停止是否仍属于当前实例。有效时先解除监听再尝试停止酒馆生成，过期时直接结束，返回本次实际结果。",
+        "definition_id": "era.tavern.initialize.start"
       },
       {
         "id": "choose_active",
-        "type_used": "era.tavern.owned.choose_native_retry",
-        "display_name": "核对一次停止监听是否仍属于本实例",
-        "description": "当前票据仍有效且实例未停止时允许一次原生停止尝试；已取消或被替换的回调直接结束，避免影响后来生成。"
+        "display_name": "检查延后停止安排是否仍有效",
+        "description": "在“命令阶段结束后补做一次生成停止”流程中，命令阶段结束后，核对收到的停止安排是否仍属于当前实例，且实例没有停止。有效时执行一次停止尝试，已经过期或被替换时忽略。",
+        "definition_id": "era.tavern.owned.choose_native_retry"
       },
       {
         "id": "attempt_once",
-        "type_used": "era.tavern.owned.attempt_native_retry",
-        "display_name": "执行此前登记的一次原生停止",
-        "description": "确认once已自然注销后移除本地票据，再调用原生停止API一次；不重新登记监听，不重复停止辅助模型。"
+        "display_name": "执行有效的单次延后停止",
+        "description": "在“命令阶段结束后补做一次生成停止”流程中，收到仍有效的延后停止安排后，先解除该单次监听，再尝试停止酒馆正文生成。记录实际结果，防止同一安排反复触发。",
+        "definition_id": "era.tavern.owned.attempt_native_retry"
       },
       {
         "id": "ignore_stale",
-        "type_used": "era.tavern.owned.ignore_native_retry",
-        "display_name": "结束已失效的一次停止回调",
-        "description": "陈旧或已经取消的监听不调用停止API，只形成当前回调的空结果。"
+        "display_name": "结束已经过期的延后停止安排",
+        "description": "在“命令阶段结束后补做一次生成停止”流程中，收到已经被替换或实例已停止的旧安排时，直接结束本次处理。后续生成不会因此被误停。",
+        "definition_id": "era.tavern.owned.ignore_native_retry"
       },
       {
         "id": "return_retry",
-        "type_used": "era.tavern.owned.return_native_retry",
-        "display_name": "交回一次停止回调的结果",
-        "description": "汇合有效尝试或失效路径的唯一结果，交回原生同步入口。"
+        "display_name": "返回延后停止的有效尝试或忽略结果",
+        "description": "在“命令阶段结束后补做一次生成停止”流程中，接收本实例单次停止安排的实际执行结果，或旧安排失效后的空结论，交回同步回调。停止监听已由相应分支处理。",
+        "definition_id": "era.tavern.owned.return_native_retry"
       },
       {
         "id": "end",
-        "type_used": "era.tavern.initialize.end",
-        "display_name": "结束当前资源流程",
-        "description": "保持原生控制入口或出口，不创建额外资源。"
+        "display_name": "结束命令阶段结束后补做一次生成停止",
+        "description": "标明“命令阶段结束后补做一次生成停止”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.tavern.initialize.end"
       }
     ],
     "edges": [
@@ -99,7 +99,7 @@
         "type": "era.tavern.frame.native_stop_retry.returned",
         "cardinality": "exactly_one",
         "as": "frame",
-        "display_name": "该流程的完成结果"
+        "display_name": "命令阶段结束后补做一次生成停止的处理进度及结果"
       }
     ]
   }

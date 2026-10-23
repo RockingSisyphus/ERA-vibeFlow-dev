@@ -1,6 +1,6 @@
+import type { MacroStoredStat } from "@era/vibeflow-contracts";
 import {
   prepareMacroText,
-  type MacroStoredStat,
 } from "../base_lib/macro_runtime.ts";
 
 interface Envelope<T> {

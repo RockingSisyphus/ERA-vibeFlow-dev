@@ -1,24 +1,24 @@
 {
   "type_key": "era.agent.finish_phase",
-  "display_name": "整理生成阶段结果和下一阶段交接",
-  "description": "在生成候选达到最终结论后整理阶段交接。生成完成标识及下一阶段恢复资料，页面执行订阅回调后可以请求继续；需要保存或消息历史结算的结果交回相应流程，取消或失败返回原任务结果。",
+  "display_name": "结束当前生成阶段并准备下一步",
+  "description": "接收已经结束的生成尝试，整理阶段完成资料及后续恢复依据。需要保存或历史同步时交给相应流程，其他结果直接回告；页面执行订阅回调后可按这些资料继续下一阶段。",
   "requires": [
     {
       "type": "era.agent.candidate.outcome",
       "cardinality": "exactly_one",
-      "display_name": "生成循环的最终结果"
+      "display_name": "生成尝试结束后的完整结果"
     },
     {
       "type": "era.task.continuation.context",
       "cardinality": "exactly_one",
-      "display_name": "原任务、事件来源、批次和回执资料"
+      "display_name": "执行后回告所需的原任务资料"
     }
   ],
   "provides": [
     {
       "key": "era_agent_finish_phase_prepared_task",
       "type": "era.task.prepared",
-      "display_name": "待执行请求及原任务资料"
+      "display_name": "已备齐的执行请求或直接返回结论"
     }
   ],
   "pipeline": {
@@ -27,13 +27,13 @@
       {
         "key": "input_0",
         "type": "era.agent.candidate.outcome",
-        "display_name": "生成循环的最终结果",
+        "display_name": "生成尝试结束后的完整结果",
         "required": true
       },
       {
         "key": "input_1",
         "type": "era.task.continuation.context",
-        "display_name": "原任务、事件来源、批次和回执资料",
+        "display_name": "执行后回告所需的原任务资料",
         "required": true
       }
     ],
@@ -41,69 +41,69 @@
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.service.terminal",
-        "display_name": "候选收尾开始",
-        "description": "开始整理生成阶段结果和下一阶段交接。"
+        "display_name": "开始结束当前生成阶段并准备下一步",
+        "description": "标明“结束当前生成阶段并准备下一步”的开始位置。接收已经结束的生成尝试，整理阶段完成资料及后续恢复依据。需要保存或历史同步时交给相应流程，其他结果直接回告；页面执行订阅回调后可按这些资料继续下一阶段。",
+        "definition_id": "era.service.terminal"
       },
       {
         "id": "carry_preparation_context",
-        "type_used": "era.task.carry_preparation_context",
-        "display_name": "保留原生成任务的接续依据",
-        "description": "本次整理生成阶段完成后的交接。携带原任务、批次和事件来源穿过执行资料准备阶段，供执行与回执使用。"
+        "display_name": "保留任务准备前的原请求资料",
+        "description": "在“结束当前生成阶段并准备下一步”流程中，让原任务、批次和事件来源穿过资料准备流程继续传递。执行和结算环节据此知道正在处理谁的请求，保留正确的回复依据。",
+        "definition_id": "era.task.carry_preparation_context"
       },
       {
         "id": "unpack_finish_context",
-        "type_used": "era.agent.unpack_finish_context",
-        "display_name": "取出候选最终结果及原步骤",
-        "description": "本次整理生成阶段完成后的交接。从生成最终结果取出原任务、批次和候选应用结果，供阶段交接与结果结算使用。"
+        "display_name": "取出生成结论对应的原任务",
+        "description": "在“结束当前生成阶段并准备下一步”流程中，从已经结束的生成尝试中取出原任务、所属批次及文字指令的应用结果。阶段交接和任务结算据此报告本次生成，避免把结果对应到其他请求。",
+        "definition_id": "era.agent.unpack_finish_context"
       },
       {
         "id": "prepare_stage_handoff",
-        "type_used": "era.agent.prepare_stage_handoff",
-        "display_name": "形成阶段交接与恢复凭据",
-        "description": "本次整理生成阶段完成后的交接。在生成阶段成功后建立完成标记、阶段结果和下一阶段恢复资料。页面接到通知后依次执行订阅回调，再按恢复资料请求继续。"
+        "display_name": "准备阶段完成通知和下一阶段资料",
+        "description": "在“结束当前生成阶段并准备下一步”流程中，本次规划、正文或结算阶段完成后，记录它的结果及下一阶段继续所需的资料。页面据此执行作者订阅的回调，回调结束后再决定是否继续生成，避免跳过阶段间安排。",
+        "definition_id": "era.agent.prepare_stage_handoff"
       },
       {
         "id": "form_session_transition",
-        "type_used": "era.agent.form_session_transition",
-        "display_name": "携带已应用阶段状态进入下一阶段",
-        "description": "本次整理生成阶段完成后的交接。把候选应用结果转换为后续任务：需要消息保存或历史同步的结果进入共享消息流程，其余结果直接返回生成片段回执。保留原任务和本次允许执行的消息范围。"
+        "display_name": "决定生成结果还需怎样保存或同步",
+        "description": "在“结束当前生成阶段并准备下一步”流程中，查看本次生成及其指令应用结果，判断还需同步消息历史、确认消息标识，还是已经可以直接返回。保留原任务和可处理的消息范围，供后续把生成结果完成结算。",
+        "definition_id": "era.agent.form_session_transition"
       },
       {
         "id": "route_agent_transition",
-        "type_used": "era.agent.route_transition",
-        "display_name": "路由阶段结果",
-        "description": "本次整理生成阶段完成后的交接。根据生成结果需要的结算方式选择出口：历史同步或消息历史标识进入共享任务流程，片段完成、取消或失败进入直接返回流程。"
+        "display_name": "选择生成结果后续的处理流程",
+        "description": "在“结束当前生成阶段并准备下一步”流程中，接收生成阶段结论，判断还需历史同步、消息标识确认，还是直接返回阶段结果。将本次请求引向相应分支，使保存与处理确认沿统一流程完成。",
+        "definition_id": "era.agent.route_transition"
       },
       {
         "id": "adapt_legacy_step",
-        "type_used": "era.agent.adapt_legacy_step",
-        "display_name": "把最终楼层候选交给同步事务",
-        "description": "本次整理生成阶段完成后的交接。把生成后的消息结算要求转换为普通历史同步或消息历史标识任务，保留原消息位置、事件来源和批次，供共享消息流程继续处理。"
+        "display_name": "让生成后的消息继续统一历史处理",
+        "description": "在“结束当前生成阶段并准备下一步”流程中，将生成结束后的消息处理要求整理为普通历史同步或消息标识任务。保留消息位置、原事件和所属批次，让生成内容沿同一套消息流程完成后续结算。",
+        "definition_id": "era.agent.adapt_legacy_step"
       },
       {
         "id": "build_direct_result",
-        "type_used": "era.agent.build_result",
-        "display_name": "构造直接结果",
-        "description": "本次整理生成阶段完成后的交接。把本次生成片段的实际结果整理为任务回执，附上阶段完成标记、诊断和页面通知。页面可在订阅回调结束后请求执行下一阶段。"
+        "display_name": "返回生成阶段结果并通知页面",
+        "description": "在“结束当前生成阶段并准备下一步”流程中，把本次生成阶段的成功、取消或失败整理成原任务的处理确认，附上阶段完成信息和具体问题。需要继续时一并提供页面通知，让订阅回调完成后能够启动下一阶段。",
+        "definition_id": "era.agent.build_result"
       },
       {
         "id": "return_legacy_continuation",
-        "type_used": "era.agent.prepare_legacy_continuation",
-        "display_name": "返回后续共享同步或标识请求",
-        "description": "本次整理生成阶段完成后的交接。把候选已经应用的消息及允许执行范围转换为历史同步或消息历史标识任务，保留原事件来源，供共享消息流程完成结算。"
+        "display_name": "把生成后的消息交给统一同步流程",
+        "description": "在“结束当前生成阶段并准备下一步”流程中，接收生成文字及其中指令已应用的结果，整理后续需要的历史同步或消息标识任务。保留可处理范围和原事件，让统一消息流程接着完成保存与确认。",
+        "definition_id": "era.agent.prepare_legacy_continuation"
       },
       {
         "id": "return_direct_continuation",
-        "type_used": "era.agent.prepare_direct_continuation",
-        "display_name": "返回当前阶段片段的结果",
-        "description": "本次整理生成阶段完成后的交接。将阶段交接、取消或失败结果与原请求一起整理为直接返回资料，供任务结算使用。"
+        "display_name": "整理无需继续生成的阶段结果",
+        "description": "在“结束当前生成阶段并准备下一步”流程中，接收已经完成交接、被取消或失败的生成阶段结论，将其与原任务对应。交给任务结算环节直接返回，保留阶段信息和具体原因。",
+        "definition_id": "era.agent.prepare_direct_continuation"
       },
       {
         "id": "end",
-        "type_used": "era.service.terminal",
-        "display_name": "候选收尾结束",
-        "description": "结束整理生成阶段结果和下一阶段交接，输出本段流程的处理结果。"
+        "display_name": "结束结束当前生成阶段并准备下一步",
+        "description": "标明“结束当前生成阶段并准备下一步”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.service.terminal"
       }
     ],
     "edges": [
@@ -173,7 +173,7 @@
       {
         "type": "era.task.prepared",
         "cardinality": "exactly_one",
-        "display_name": "待执行请求及原任务资料",
+        "display_name": "已备齐的执行请求或直接返回结论",
         "as": "era_agent_finish_phase_prepared_task"
       }
     ]

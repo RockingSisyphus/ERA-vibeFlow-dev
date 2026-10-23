@@ -1,4 +1,4 @@
-import { unescapeEraData } from "../../base_lib/domain/snapshot_history.ts";
+import { unescapeEraData } from "../../../../base_lib/data_view/data_view.ts";
 import {
   inspectSidecar,
   sidecarIdFromVariables,
@@ -6,12 +6,12 @@ import {
 import {
   isRecord,
   jsonEqual,
-} from "../../base_lib/domain/workbench_operations.js";
+} from "../../base_lib/workbench/workbench_operations.js";
 import {
   workbenchError,
   type Baseline,
   type Inspected,
-} from "../../base_lib/domain/workbench_context.ts";
+} from "../../base_lib/workbench/workbench_context.ts";
 interface Context {
   capabilities: {
     "era.tavern.sidecar": {

@@ -5,13 +5,15 @@ import { recordFor } from '../../../javascript_project/service/base_lib/sidecar_
 import { run as prepareStage } from '../../../javascript_project/service/nodes/agent/prepare_stage_blocks';
 import { run as advance } from './message-block-fixture';
 import { PublishBlockApplicationNode as publish } from '../../../javascript_project/service/nodes/sync/shared_block_state_adapters';
-import { FinishStageBlocksNode as finishStage } from '../../../javascript_project/service/nodes/agent/finish_stage_blocks.ts';
+import {
+  FinishStageBlocksNode as finishStage,
+  FormSessionTransitionNode as formTransition,
+} from '../../../javascript_project/service/nodes/agent/finish_stage_blocks.ts';
 import {
   parsePlanningOutput,
   formatAgentPlanReport,
 } from '../../../javascript_project/service/base_lib/agent/agent_generation_session';
 import { overlayWorkingMessages } from '../../../javascript_project/service/base_lib/working_state';
-import { FormSessionTransitionNode as formTransition } from '../../../javascript_project/service/nodes/agent/finish_stage_blocks.ts';
 import { isEraDispatchContextV3 } from '../../../packages/era-contracts/index.js';
 
 const edit = (value: unknown) => `<VariableEdit>${JSON.stringify({ hp: value })}</VariableEdit>`;

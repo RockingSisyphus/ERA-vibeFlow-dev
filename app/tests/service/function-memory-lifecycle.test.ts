@@ -19,15 +19,13 @@ import { prepare } from '../../../javascript_project/service/nodes/sync/prepare_
 import { run as advance } from './message-block-fixture';
 import { PublishBlockApplicationNode as publish } from '../../../javascript_project/service/nodes/sync/shared_block_state_adapters';
 import { recordFor } from '../../../javascript_project/service/base_lib/sidecar_binding';
-import { planEraSync } from '../../../javascript_project/service/base_lib/sync/sync_planning';
-
+import { planEraSync } from './native-workflow-fixture';
 const cleanup: (() => void | Promise<void>)[] = [];
 afterEach(async () => {
   for (const stop of cleanup.splice(0).reverse()) await stop();
   clearSidecarRuntimeSnapshot();
   vi.unstubAllGlobals();
 });
-
 async function execute(
   text: string,
   action: (parameters: any) => Promise<unknown>,
@@ -172,7 +170,6 @@ async function execute(
   expect(state.work.disposition).toBe(failApplication ? 'failed' : 'commit');
   return { state, working, invoke, text: state.work.plan?.messages[0].content.text ?? '' };
 }
-
 describe('原生工具到共用内存块循环', () => {
   it.each([undefined, { mode: 'auto' }, { mode: 'latest' }, { mode: 'full' }, { rollbackTo: 0 }] as const)(
     '函数内sync明确拒绝，捕获后commit及后块仍执行：%j',
@@ -225,10 +222,22 @@ describe('原生工具到共用内存块循环', () => {
       '<VariableEdit>{"hp":100}</VariableEdit><EraFCall name="favor" args=\'{"delta":30}\'/><VariableEdit>{"hp":{"$expr":"hp*2"}}</VariableEdit>',
       async parameters => {
         const era = getInstalledEraPublicApi().forCall(parameters);
-        seen.push((era.get().statData as { hp: number }).hp);
+        seen.push(
+          (
+            era.get().statData as {
+              hp: number;
+            }
+          ).hp,
+        );
         const receipt = await era.commit([{ edit: { hp: { $expr: `hp-${parameters.delta}` } } }], { scope: 'always' });
         expect(receipt.status).toBe('committed');
-        seen.push((era.get().statData as { hp: number }).hp);
+        seen.push(
+          (
+            era.get().statData as {
+              hp: number;
+            }
+          ).hp,
+        );
       },
     );
     expect(seen).toEqual([100, 70]);
@@ -239,7 +248,7 @@ describe('原生工具到共用内存块循环', () => {
     expect(result.text).not.toContain('era_block');
     expect(result.text.indexOf('<era_tx')).toBeGreaterThan(result.text.indexOf('<EraFCall'));
     expect(result.text.indexOf('<era_tx')).toBeLessThan(result.text.indexOf('hp*2'));
-    const replay = planEraSync({
+    const replay = await planEraSync({
       messages: result.state.work.plan!.messages,
       stat: result.working.record.state.statData,
       statFunc: {},
@@ -279,7 +288,6 @@ describe('原生工具到共用内存块循环', () => {
     expect(result.state.work.plan!.diagnostics.some((item: any) => item.message === 'author failure')).toBe(true);
   });
 });
-
 it.each(['broken-json', '{"storyPlan":{},"calls":[{"function":"missing","args":[]}]}'])(
   '函数API前缀在候选失败后整体回退，scope和done不泄漏：%s',
   async invalid => {
@@ -290,7 +298,13 @@ it.each(['broken-json', '{"storyPlan":{},"calls":[{"function":"missing","args":[
       async parameters => {
         const api = getInstalledEraPublicApi().forCall(parameters);
         facades.push(api);
-        seen.push((api.get().statData as { hp: number }).hp);
+        seen.push(
+          (
+            api.get().statData as {
+              hp: number;
+            }
+          ).hp,
+        );
         await api.commit([{ edit: { hp: { $expr: 'hp-10' } } }], { scope: 'message' });
       },
       false,

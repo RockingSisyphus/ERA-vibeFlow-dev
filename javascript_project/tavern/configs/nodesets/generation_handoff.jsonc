@@ -1,20 +1,20 @@
 {
   "type_key": "era.tavern.flow.generation_handoff",
-  "display_name": "等待原始生成订阅并完成阶段交接",
-  "description": "同步发起节点固定调用此原生async路径；通知公开等待取消后，原始订阅与交接仍按原signal复核和收尾，不由图外adapter执行。",
+  "display_name": "在阶段订阅结束后接续整次生成",
+  "description": "检查阶段仍有效，等待作者订阅回调，再向主服务提交继续或取消并等待结果。需要后续阶段时继续跟随其交接；失效、取消或失败按真实结论结束，最后移除本阶段记录。",
   "expand": true,
   "requires": [
     {
       "type": "era.tavern.call.frame",
       "cardinality": "exactly_one",
-      "display_name": "已同步捕获的当前交接资源"
+      "display_name": "在阶段订阅结束后接续整次生成的请求和已有进度"
     }
   ],
   "provides": [
     {
       "key": "generation_handoff_frame",
       "type": "era.tavern.frame.notification.choose_notification",
-      "display_name": "原始交接的真实终态"
+      "display_name": "在阶段订阅结束后接续整次生成的处理进度及结果"
     }
   ],
   "pipeline": {
@@ -23,7 +23,7 @@
       {
         "key": "frame",
         "type": "era.tavern.call.frame",
-        "display_name": "调用与资源资料",
+        "display_name": "在阶段订阅结束后接续整次生成的请求和已有进度",
         "required": true
       }
     ],
@@ -31,153 +31,153 @@
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.tavern.initialize.start",
-        "display_name": "开始当前原生流程",
-        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+        "display_name": "开始在阶段订阅结束后接续整次生成",
+        "description": "标明“在阶段订阅结束后接续整次生成”的开始位置。检查阶段仍有效，等待作者订阅回调，再向主服务提交继续或取消并等待结果。需要后续阶段时继续跟随其交接；失效、取消或失败按真实结论结束，最后移除本阶段记录。",
+        "definition_id": "era.tavern.initialize.start"
       },
       {
         "id": "handoff_check_pending",
-        "type_used": "era.tavern.generation_handoff.check_pending",
-        "display_name": "检查交接来源仍存在",
-        "description": "检查 completionId 是否仍在当前实例；不存在或已取消时保留原返回。"
+        "display_name": "读取当前生成阶段是否仍在等待交接",
+        "description": "在“在阶段订阅结束后接续整次生成”流程中，从阶段完成资料取出本次身份，检查当前实例是否仍登记了对应交接。保留检查结论，后续只推进仍有效阶段或结束已经失效的等待。",
+        "definition_id": "era.tavern.generation_handoff.check_pending"
       },
       {
         "id": "handoff_publish_completion",
-        "type_used": "era.tavern.generation_handoff.publish_completion",
-        "display_name": "等待同步发布的阶段订阅终态",
-        "description": "只等待同步前段已发起的原 proceed 资源，不重复 publish。"
+        "display_name": "等阶段订阅回调决定是否继续",
+        "description": "在“在阶段订阅结束后接续整次生成”流程中，接收已经开始的阶段订阅处理，等待它完成并取得继续或取消结论。订阅等待出错时保留原因，供下一步决定提交继续请求或结束交接。",
+        "definition_id": "era.tavern.generation_handoff.publish_completion"
       },
       {
         "id": "handoff_check_cancel",
-        "type_used": "era.tavern.generation_handoff.check_cancel",
-        "display_name": "复核订阅后的取消和来源",
-        "description": "等待回调后重新检查 signal 和 pending，避免已取消交接继续入队。"
+        "display_name": "订阅结束后检查阶段是否已经取消",
+        "description": "在“在阶段订阅结束后接续整次生成”流程中，阶段回调结束后，重新核对取消状态及当前阶段记录是否仍存在。防止回调等待期间用户换消息、停止生成后，旧阶段仍被继续执行。",
+        "definition_id": "era.tavern.generation_handoff.check_cancel"
       },
       {
         "id": "handoff_admit_continue_prepare",
-        "type_used": "era.tavern.generation_handoff.admit_continue_prepare",
-        "display_name": "准备阶段继续或取消请求",
-        "description": "构造原 era.agent.stage_continue 输入及 cancelled 标记，再调用共享原生准入。"
+        "display_name": "准备向主服务提交阶段继续或取消",
+        "description": "在“在阶段订阅结束后接续整次生成”流程中，根据订阅回调结论，形成对应当前阶段的继续请求；回调决定不继续时一并说明取消。交给统一事件接收流程，由主服务决定下一阶段业务。",
+        "definition_id": "era.tavern.generation_handoff.admit_continue_prepare"
       },
       {
         "id": "handoff_admit_continue_shared",
-        "type_used": "era.tavern.flow.admission",
-        "display_name": "检查事件并接纳到 FIFO",
-        "description": "同步接纳 Tavern、UI、公共 API 和 timer 事件；拒绝不分配序号，接受即返回原有回执句柄。"
+        "display_name": "检查新事件并按序交给主服务",
+        "description": "本环节用于“在阶段订阅结束后接续整次生成”：接收聊天、界面、脚本或到期事件，检查实例状态、内容和容量。有效事件登记序号及结果等待，交给服务或进入队列；拒绝时返回具体原因，不进入队列。",
+        "definition_id": "era.tavern.flow.admission"
       },
       {
         "id": "handoff_admit_continue",
-        "type_used": "era.tavern.generation_handoff.admit_continue",
-        "display_name": "交还检查事件并接纳到 FIFO结果",
-        "description": "保存共享原生流程的实际结果并继续当前分支；不重新执行准入、计时或结算。"
+        "display_name": "记住阶段继续请求是否被接收",
+        "description": "在“在阶段订阅结束后接续整次生成”流程中，接收统一事件入口的实际返回，保存本次阶段继续请求的接纳或拒绝结论。后续据此等待处理结果，或结束被拒绝的阶段交接。",
+        "definition_id": "era.tavern.generation_handoff.admit_continue"
       },
       {
         "id": "handoff_await_continue",
-        "type_used": "era.tavern.generation_handoff.await_continue",
-        "display_name": "等待续体来源回执",
-        "description": "等待实际 admission.done，保持原拒绝和异常行为。"
+        "display_name": "等待主服务处理本阶段继续请求",
+        "description": "在“在阶段订阅结束后接续整次生成”流程中，对已经接收的继续或取消请求，等待其真实处理确认。保留结果及等待失败，供后续判断生成已结束还是还有新的阶段交接。",
+        "definition_id": "era.tavern.generation_handoff.await_continue"
       },
       {
         "id": "handoff_choose_followup",
-        "type_used": "era.tavern.generation_handoff.choose_followup",
-        "display_name": "选择本阶段结果或后续交接",
-        "description": "proceed 为 false 时完成取消；有新的 completionId 时等待其最终结果；其余直接完成当前交接。"
+        "display_name": "判断生成已结束还是还要等下一阶段",
+        "description": "在“在阶段订阅结束后接续整次生成”流程中，接收阶段继续请求的结果，取消或失败时结束交接，产生新阶段完成身份时继续等待，其他情况采用当前结果。使外层等待可以覆盖整次生成。",
+        "definition_id": "era.tavern.generation_handoff.choose_followup"
       },
       {
         "id": "handoff_select_current",
-        "type_used": "era.tavern.generation_handoff.select_current",
-        "display_name": "保留当前续体结论",
-        "description": "无后续标识时直接使用当前实际回执结果。"
+        "display_name": "采用当前阶段已经形成的最终结果",
+        "description": "在“在阶段订阅结束后接续整次生成”流程中，没有后续阶段需要等待时，将本次继续请求的处理确认作为最终生成结果。交给交接收尾，供外层等待得到实际结论。",
+        "definition_id": "era.tavern.generation_handoff.select_current"
       },
       {
         "id": "handoff_select_next",
-        "type_used": "era.tavern.generation_handoff.select_next",
-        "display_name": "取得后续交接标识",
-        "description": "读取实际回执中的 completionId，不猜测下一阶段。"
+        "display_name": "取出接下来需要等待的阶段身份",
+        "description": "在“在阶段订阅结束后接续整次生成”流程中，当前处理产生了下一阶段交接时，记录它的完成身份。后续只等待这次对应阶段，最终结果会继续传回原生成请求。",
+        "definition_id": "era.tavern.generation_handoff.select_next"
       },
       {
         "id": "handoff_select_cancel",
-        "type_used": "era.tavern.generation_handoff.select_cancel",
-        "display_name": "完成订阅取消",
-        "description": "把当前交接结论设置为 null，不把取消续体当成成功。"
+        "display_name": "标记本次生成不再继续交接",
+        "description": "在“在阶段订阅结束后接续整次生成”流程中，阶段被取消或等待失败时，将后续生成结果记为空。交给统一收尾，结束当前阶段等待并保留已有错误结论。",
+        "definition_id": "era.tavern.generation_handoff.select_cancel"
       },
       {
         "id": "handoff_join_await_followup",
-        "type_used": "era.tavern.generation_handoff.join_await_followup",
-        "display_name": "汇合当前实际激活分支的结果",
-        "description": "接收当前所选路径的结果集合，交还其中唯一实际结果；不选择未激活分支、不重新执行操作。运行实现必须拒绝实际多结果，不以集合契约放宽唯一结果语义。"
+        "display_name": "交接在阶段订阅结束后接续整次生成的选中结果",
+        "description": "在“在阶段订阅结束后接续整次生成”流程中，在“在阶段订阅结束后接续整次生成”中，接收本次实际选择的分支所产生的唯一结果，交给后续步骤或调用方。每次只允许一份实际结果，避免把互斥分支误当成多个都已执行。",
+        "definition_id": "era.tavern.generation_handoff.join_await_followup"
       },
       {
         "id": "handoff_await_followup",
-        "type_used": "era.tavern.generation_handoff.await_followup",
-        "display_name": "等待后续阶段终态",
-        "description": "仅在存在后续交接标识时等待；取消或无后续时保留当前结果。"
+        "display_name": "等待后续阶段形成最终生成结果",
+        "description": "在“在阶段订阅结束后接续整次生成”流程中，根据已经取得的后续阶段身份，等待它完成全部交接。失败时保留原因并结束本次结果，成功时把最终结论传回当前阶段，供原发起者等待。",
+        "definition_id": "era.tavern.generation_handoff.await_followup"
       },
       {
         "id": "handoff_finish_handoff",
-        "type_used": "era.tavern.generation_handoff.finish_handoff",
-        "display_name": "完成并移除当前交接等待",
-        "description": "将最终结果或取消结论交还原等待者；失败路径也完成资源清理。"
+        "display_name": "结束并移除本阶段交接等待",
+        "description": "在“在阶段订阅结束后接续整次生成”流程中，用本阶段最终生成结果完成对应等待，移除阶段登记，并形成通知成功或失败结论。原重试等待和通知组据此完整结束，不再留下旧阶段记录。",
+        "definition_id": "era.tavern.generation_handoff.finish_handoff"
       },
       {
         "id": "handoff_choose_pending",
-        "type_used": "era.tavern.generation_handoff.choose_pending",
-        "display_name": "核对当前完成标识是否仍待交接",
-        "description": "已经结束或取消的 completionId 不再次发布订阅，也不准入续体。"
+        "display_name": "选择继续交接或结束已失效阶段",
+        "description": "在“在阶段订阅结束后接续整次生成”流程中，查看本阶段交接记录是否仍存在。存在时继续等待订阅回调，不存在时返回已结束结论，避免旧生成请求重新启动下一阶段。",
+        "definition_id": "era.tavern.generation_handoff.choose_pending"
       },
       {
         "id": "handoff_finish_missing",
-        "type_used": "era.tavern.generation_handoff.finish_missing",
-        "display_name": "形成已结束交接的空终态",
-        "description": "保留原 missing/no-pending 的 null 结果，不再次等待或发起动作。"
+        "display_name": "结束已经没有有效记录的旧阶段",
+        "description": "在“在阶段订阅结束后接续整次生成”流程中，本次阶段交接记录已不再存在时，返回没有后续结果的结论。随后完成统一收尾，不会重新建立已结束的阶段。",
+        "definition_id": "era.tavern.generation_handoff.finish_missing"
       },
       {
         "id": "handoff_choose_continue",
-        "type_used": "era.tavern.generation_handoff.choose_continue",
-        "display_name": "选择准入续体或按取消收尾",
-        "description": "订阅 proceed 终态后，信号取消或当前完成标识失效时直接结束；其余路径才恢复主 Service。"
+        "display_name": "决定继续生成、取消或报告交接失败",
+        "description": "在“在阶段订阅结束后接续整次生成”流程中，结合阶段回调结果、取消状态和等待错误，选择提交下一步请求，或进入取消、失败收尾。后续只沿实际适用分支处理本次生成。",
+        "definition_id": "era.tavern.generation_handoff.choose_continue"
       },
       {
         "id": "handoff_finish_cancelled",
-        "type_used": "era.tavern.generation_handoff.finish_cancelled",
-        "display_name": "结束已取消的当前交接",
-        "description": "按原合同完成本 completionId 的 null 结果，不准入额外事件。"
+        "display_name": "结束已经取消的阶段交接",
+        "description": "在“在阶段订阅结束后接续整次生成”流程中，当前阶段在等待期间取消时，保留无后续结果的结论，交给统一收尾。使对应等待能够结束，而不会继续发起下一阶段。",
+        "definition_id": "era.tavern.generation_handoff.finish_cancelled"
       },
       {
         "id": "handoff_join_finish",
-        "type_used": "era.tavern.generation_handoff.join_finish",
-        "display_name": "汇合当前唯一交接终态",
-        "description": "实际完成、已失效或已取消路径只产生一个当前终态。"
+        "display_name": "交接在阶段订阅结束后接续整次生成的选中结果",
+        "description": "在“在阶段订阅结束后接续整次生成”流程中，在“在阶段订阅结束后接续整次生成”中，接收本次实际选择的分支所产生的唯一结果，交给后续步骤或调用方。每次只允许一份实际结果，避免把互斥分支误当成多个都已执行。",
+        "definition_id": "era.tavern.generation_handoff.join_finish"
       },
       {
         "id": "handoff_choose_admission",
-        "type_used": "era.tavern.generation_handoff.choose_admission",
-        "display_name": "核对原生续体准入结果",
-        "description": "accepted 才等待原 done；拒绝时形成原通知失败并结束当前 handoff，不等待不存在的回执。"
+        "display_name": "区分阶段继续请求已接收或被拒绝",
+        "description": "在“在阶段订阅结束后接续整次生成”流程中，检查刚提交的阶段继续请求是否进入主服务队列。接收后等待对应结果，被拒绝时保留具体原因并收尾。",
+        "definition_id": "era.tavern.generation_handoff.choose_admission"
       },
       {
         "id": "handoff_finish_rejected",
-        "type_used": "era.tavern.generation_handoff.finish_rejected",
-        "display_name": "结束被拒绝准入的原交接",
-        "description": "保存原拒绝原因并完成 handoff=null；外层通知组按 rejected 结果统一报告，不终止整个后台 Loop。"
+        "display_name": "记录主服务拒绝阶段继续的原因",
+        "description": "在“在阶段订阅结束后接续整次生成”流程中，本次阶段继续请求未被主服务接收时，将拒绝说明记录为交接失败，并结束后续生成结果。统一收尾会将这次失败交回通知等待。",
+        "definition_id": "era.tavern.generation_handoff.finish_rejected"
       },
       {
         "id": "handoff_finish_failed",
-        "type_used": "era.tavern.generation_handoff.finish_failed",
-        "display_name": "结束原订阅或等待失败的交接",
-        "description": "保存本次原失败或取消原因并完成 handoff=null；失败作为通知组终态交回外层，不制造成功、重试或额外续体。"
+        "display_name": "结束阶段交接失败并保留原因",
+        "description": "在“在阶段订阅结束后接续整次生成”流程中，阶段订阅或等待已经失败时，整理为没有后续生成结果的状态。保留实际错误交给统一收尾，供通知组报告。",
+        "definition_id": "era.tavern.generation_handoff.finish_failed"
       },
       {
         "id": "select_handoff",
-        "type_used": "era.tavern.notification.select_handoff",
-        "display_name": "交还完成生成阶段订阅与续体交接结果",
-        "description": "保存共享原生流程的实际结果并继续当前分支；不重新执行准入、计时或结算。"
+        "display_name": "交接阶段通知实际完成的结果",
+        "description": "在“在阶段订阅结束后接续整次生成”流程中，接收生成阶段订阅及后续交接流程的实际结论，传给通知结果登记。整组通知会据此记录成功或失败，阶段业务不在这里再执行。",
+        "definition_id": "era.tavern.notification.select_handoff"
       },
       {
         "id": "end",
-        "type_used": "era.tavern.initialize.end",
-        "display_name": "结束当前原生流程",
-        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+        "display_name": "结束在阶段订阅结束后接续整次生成",
+        "description": "标明“在阶段订阅结束后接续整次生成”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.tavern.initialize.end"
       }
     ],
     "edges": [
@@ -317,7 +317,7 @@
         "type": "era.tavern.frame.notification.choose_notification",
         "cardinality": "exactly_one",
         "as": "frame",
-        "display_name": "原始交接终态"
+        "display_name": "在阶段订阅结束后接续整次生成的处理进度及结果"
       }
     ]
   }

@@ -1,19 +1,19 @@
 {
   "type_key": "era.task.update_mk",
-  "display_name": "结算消息历史标识更新",
-  "description": "结算消息历史标识准备的结果。历史标识用于把每条聊天消息与变量变更日志对应起来；读取、生成和必要写入已在任务资料准备时完成。本流程检查该结果，再向任务的原始事件返回无变化、成功或失败回执。",
+  "display_name": "确认消息历史身份准备的结果",
+  "description": "消息身份标识把聊天消息与变量变更记录对应起来，本流程接收任务准备阶段已有的标识、占位及写入结论。检查后向原事件返回成功、无变化或失败确认，供批次汇总。",
   "requires": [
     {
       "type": "era.step.request.routed",
       "cardinality": "exactly_one",
-      "display_name": "已准备路由步骤"
+      "display_name": "当前任务及已读取的聊天资料"
     }
   ],
   "provides": [
     {
       "key": "update_mk_task_result",
       "type": "era.task.result",
-      "display_name": "消息历史标识 更新结果"
+      "display_name": "本项任务对应原事件的处理结果"
     }
   ],
   "pipeline": {
@@ -22,7 +22,7 @@
       {
         "key": "routed_step",
         "type": "era.step.request.routed",
-        "display_name": "已准备路由步骤",
+        "display_name": "当前任务及已读取的聊天资料",
         "required": true
       }
     ],
@@ -30,27 +30,27 @@
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.service.terminal",
-        "display_name": "消息历史标识 结算启动",
-        "description": "开始结算消息历史标识更新。"
+        "display_name": "开始确认消息历史身份准备的结果",
+        "description": "标明“确认消息历史身份准备的结果”的开始位置。消息身份标识把聊天消息与变量变更记录对应起来，本流程接收任务准备阶段已有的标识、占位及写入结论。检查后向原事件返回成功、无变化或失败确认，供批次汇总。",
+        "definition_id": "era.service.terminal"
       },
       {
         "id": "consume_prepared_mk_context",
-        "type_used": "era.mk.consume_prepared",
-        "display_name": "确认统一 消息历史标识 准备结果",
-        "description": "本次结算消息历史标识任务。取出任务准备阶段已经生成的消息历史标识、占位内容和实际写入结果，供标识任务结算。"
+        "display_name": "读取任务准备时已有的消息标识结果",
+        "description": "在“确认消息历史身份准备的结果”流程中，取出任务准备阶段已经生成的消息标识、显示占位和实际写入结论。将这些已有成果交给标识任务结算，避免重复计算和保存。",
+        "definition_id": "era.mk.consume_prepared"
       },
       {
         "id": "build_mk_result",
-        "type_used": "era.mk.build_result",
-        "display_name": "构造 消息历史标识 任务结果",
-        "description": "本次结算消息历史标识任务。根据消息历史标识的准备和写入结果，为每个原事件返回一次成功、无变化或失败回执，并附上诊断。"
+        "display_name": "向原事件返回消息标识处理结果",
+        "description": "在“确认消息历史身份准备的结果”流程中，根据消息标识准备和实际保存结论，为每个原事件形成一次成功、无变化、取消或失败确认。附上问题说明，供批次汇总及调用方获知结果。",
+        "definition_id": "era.mk.build_result"
       },
       {
         "id": "end",
-        "type_used": "era.service.terminal",
-        "display_name": "消息历史标识 结算结束",
-        "description": "结束结算消息历史标识更新，输出本段流程的处理结果。"
+        "display_name": "结束确认消息历史身份准备的结果",
+        "description": "标明“确认消息历史身份准备的结果”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.service.terminal"
       }
     ],
     "edges": [
@@ -71,7 +71,7 @@
       {
         "type": "era.task.result",
         "cardinality": "exactly_one",
-        "display_name": "消息历史标识 更新结果",
+        "display_name": "本项任务对应原事件的处理结果",
         "as": "updateMkTaskResult"
       }
     ]

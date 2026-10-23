@@ -1,20 +1,20 @@
 {
   "type_key": "era.tavern.flow.script_service",
-  "display_name": "运行本次局部脚本的主Service",
-  "description": "由原有唯一启动边界启动；资源就绪后await真实主Service，取消信号沿调用传递并等待清理。",
+  "display_name": "资源就绪后运行唯一 ERA 主服务",
+  "description": "等待当前实例资源可用，将同一实例交给主服务的酒馆操作入口，再运行主服务直到真正结束。取消沿调用传递，服务结束会触发其他职责分支共同收尾。",
   "expand": true,
   "requires": [
     {
       "type": "era.tavern.call.frame",
       "cardinality": "exactly_one",
-      "display_name": "本次局部脚本会话"
+      "display_name": "资源就绪后运行唯一 ERA 主服务的请求和已有进度"
     }
   ],
   "provides": [
     {
       "key": "era_tavern_script_service_terminal",
       "type": "era.tavern.task.finished",
-      "display_name": "主Service轻量终态"
+      "display_name": "当前职责已真实完成或退出的确认"
     }
   ],
   "pipeline": {
@@ -24,34 +24,34 @@
         "key": "frame",
         "type": "era.tavern.call.frame",
         "required": true,
-        "display_name": "本次局部脚本会话"
+        "display_name": "资源就绪后运行唯一 ERA 主服务的请求和已有进度"
       }
     ],
     "max_steps": 6,
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.tavern.initialize.start",
-        "display_name": "开始主Service任务",
-        "description": "原生任务入口。"
+        "display_name": "开始资源就绪后运行唯一 ERA 主服务",
+        "description": "标明“资源就绪后运行唯一 ERA 主服务”的开始位置。等待当前实例资源可用，将同一实例交给主服务的酒馆操作入口，再运行主服务直到真正结束。取消沿调用传递，服务结束会触发其他职责分支共同收尾。",
+        "definition_id": "era.tavern.initialize.start"
       },
       {
         "id": "wait_owner",
-        "type_used": "era.tavern.owned.wait_owner",
-        "display_name": "等待本次资源持有者就绪",
-        "description": "只等待同次运行的资源Node公布入口；卸载或故障取消时退出，不登记外部运行Promise。"
+        "display_name": "等待本实例页面资源准备就绪",
+        "description": "在“资源就绪后运行唯一 ERA 主服务”流程中，等待资源管理分支完成运行资源登记，取消时结束等待。后续主服务只在同一实例资源可用后启动，避免尚未就绪就调用页面能力。",
+        "definition_id": "era.tavern.owned.wait_owner"
       },
       {
         "id": "run_service",
-        "type_used": "era.tavern.owned.run_script_service",
-        "display_name": "等待主Service实际结束",
-        "description": "通过机械回调调用编译后Service，传入本任务信号并等待实际收尾。"
+        "display_name": "运行主服务并等待它真正结束",
+        "description": "在“资源就绪后运行唯一 ERA 主服务”流程中，启动本实例唯一的 ERA 主服务，连接实例与当前调用的取消。等待实际结束后发起本实例停止收尾，让其他职责分支也能退出。",
+        "definition_id": "era.tavern.owned.run_script_service"
       },
       {
         "id": "end",
-        "type_used": "era.tavern.initialize.end",
-        "display_name": "结束主Service任务",
-        "description": "资源和异步清理完成后结束。"
+        "display_name": "结束资源就绪后运行唯一 ERA 主服务",
+        "description": "标明“资源就绪后运行唯一 ERA 主服务”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.tavern.initialize.end"
       }
     ],
     "edges": [
@@ -72,7 +72,7 @@
       {
         "type": "era.tavern.task.finished",
         "cardinality": "exactly_one",
-        "display_name": "主Service轻量终态",
+        "display_name": "当前职责已真实完成或退出的确认",
         "as": "frame"
       }
     ]

@@ -1,0 +1,26 @@
+import {defineBaseLib} from "@vibeflow/plugin";
+
+export const era_service_mk_read_normalization = defineBaseLib({
+  "id": "era.service.mk_read_normalization",
+  "display_name": "消息历史标识 宿主读取规范化",
+  "description": "规范化消息和变量读取包裹结构，保留原深度限制与错误语义。",
+  "version": "1.0.0",
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "source": {
+        "kind": "file",
+        "ref": "base_lib/domain/mk_read_normalization.ts"
+      }
+    }
+  ],
+  "dependencies": [],
+  "external_packages": [],
+  "rulesets": [
+    "vibeflow.base_lib"
+  ]
+});

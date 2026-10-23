@@ -141,6 +141,15 @@ async function assertDescriptorGroup(descriptors, groupName) {
 }
 
 await assertDescriptorGroup(macroDescriptors, "Macro");
+// SDK declarations and the public entry schema derive from the same canonical contracts.
+const sdk = await readFile(path.join(workspaceRoot, "javascript_project/macro/plugins/contracts/contracts-1.ts"), "utf8");
+for (const [, source] of sdk.matchAll(/defineDataSchema\((\{.*\})\);/g)) {
+  const declaration = JSON.parse(source);
+  assert.deepEqual(declaration.schema, await readJson(path.join(schemasRoot, `${declaration.type_key}.schema.json`)), `SDK ${declaration.type_key} differs from canonical schema`);
+}
+assert.equal([...sdk.matchAll(/defineDataSchema\(/g)].length, macroDescriptors.size);
+const macroInput = await readJson(path.join(schemasRoot, "era.macro.inputs.v1.schema.json"));
+assert.deepEqual(macroInput.properties.storedStat, withoutDraft(await readJson(path.join(schemasRoot, "era.macro.stored_stat.schema.json"))));
 await assertDescriptorGroup(serviceDescriptors, "Service");
 
 const eventSchema = await readJson(

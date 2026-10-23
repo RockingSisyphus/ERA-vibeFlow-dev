@@ -1,29 +1,29 @@
 {
   "type_key": "era.task.api",
-  "display_name": "准备脚本或界面的提交、同步请求",
-  "description": "为脚本或界面的变量提交和历史同步请求准备执行资料：提交请求交给共享命令处理；同步请求先检查模式和范围，输入有误则返回具体失败结果。执行结论由外层任务回执流程形成。",
+  "display_name": "准备脚本或界面的变量提交和历史同步",
+  "description": "读取本次接口请求，变量提交进入草稿比较和操作准备，历史同步先检查重算方式及目标范围。有效请求交给对应执行流程，无效请求带原因直接返回，并保留原请求用于回告。",
   "requires": [
     {
       "type": "era.step.request.routed",
       "cardinality": "exactly_one",
-      "display_name": "原任务、触发事件与已读取消息"
+      "display_name": "当前任务及已读取的聊天资料"
     },
     {
       "type": "era.batch.execution.state",
       "cardinality": "exactly_one",
-      "display_name": "当前批次、任务列表与执行位置"
+      "display_name": "当前批次的任务进度与累计结果"
     },
     {
       "type": "era.task.continuation.context",
       "cardinality": "exactly_one",
-      "display_name": "原任务、事件来源、批次和回执资料"
+      "display_name": "执行后回告所需的原任务资料"
     }
   ],
   "provides": [
     {
       "key": "era_task_api_prepared_task",
       "type": "era.task.prepared",
-      "display_name": "待执行请求及原任务资料"
+      "display_name": "已备齐的执行请求或直接返回结论"
     }
   ],
   "pipeline": {
@@ -32,19 +32,19 @@
       {
         "key": "input_0",
         "type": "era.step.request.routed",
-        "display_name": "原任务、触发事件与已读取消息",
+        "display_name": "当前任务及已读取的聊天资料",
         "required": true
       },
       {
         "key": "input_1",
         "type": "era.batch.execution.state",
-        "display_name": "当前批次、任务列表与执行位置",
+        "display_name": "当前批次的任务进度与累计结果",
         "required": true
       },
       {
         "key": "continuation",
         "type": "era.task.continuation.context",
-        "display_name": "原任务、事件来源、批次和回执资料",
+        "display_name": "执行后回告所需的原任务资料",
         "required": true
       }
     ],
@@ -52,33 +52,33 @@
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.service.terminal",
-        "display_name": "API 准备开始",
-        "description": "开始准备脚本或界面的提交、同步请求。"
+        "display_name": "开始准备脚本或界面的变量提交和历史同步",
+        "description": "标明“准备脚本或界面的变量提交和历史同步”的开始位置。读取本次接口请求，变量提交进入草稿比较和操作准备，历史同步先检查重算方式及目标范围。有效请求交给对应执行流程，无效请求带原因直接返回，并保留原请求用于回告。",
+        "definition_id": "era.service.terminal"
       },
       {
         "id": "identify_request",
-        "type_used": "era.api.identify_task_request",
-        "display_name": "识别脚本或界面的接口请求",
-        "description": "读取脚本或界面提交的接口请求，区分提交变量操作（commit）与按历史重算（sync），并把原任务和回执资料传给对应准备入口。"
+        "display_name": "区分变量提交和历史重算请求",
+        "description": "在“准备脚本或界面的变量提交和历史同步”流程中，读取脚本或界面发来的请求，判断它要直接提交变量操作，还是根据聊天历史重新计算。将请求和原任务资料送到对应的准备流程，供完成后返回处理结果。",
+        "definition_id": "era.api.identify_task_request"
       },
       {
         "id": "prepare_commit_request",
-        "type_used": "era.api.prepare_commit_continuation",
-        "display_name": "返回原位提交请求",
-        "description": "本次准备脚本或界面发起的提交、同步请求。取出公共 调用接口（API） 提交请求和原批次，交给 Service 的提交执行流程，并保留回执所需的请求来源。"
+        "display_name": "把已准备的变量提交交给执行流程",
+        "description": "在“准备脚本或界面的变量提交和历史同步”流程中，接收脚本或界面的变量提交请求，连同原任务和批次交给统一提交流程。保留发起来源，使实际应用完成后能够把成功、跳过或失败返回给对应调用方。",
+        "definition_id": "era.api.prepare_commit_continuation"
       },
       {
         "id": "prepare_history_sync",
-        "type_used": "era.api.prepare_history_sync",
-        "display_name": "检查同步请求，确定重算方式和范围",
-        "description": "检查按历史重算请求的模式和目标消息，生成历史同步任务；输入有误时形成具体失败结果。两种情况都保留原接口请求，供执行完成后返回回执。"
+        "display_name": "检查并准备按历史重算的请求",
+        "description": "在“准备脚本或界面的变量提交和历史同步”流程中，接收脚本或界面的历史同步请求，检查重算方式及目标消息，整理为统一的历史同步任务。方式或范围无效时形成具体失败结果，并保留原请求以便回告。",
+        "definition_id": "era.api.prepare_history_sync"
       },
       {
         "id": "end",
-        "type_used": "era.service.terminal",
-        "display_name": "API 准备结束",
-        "description": "结束准备脚本或界面的提交、同步请求，输出本段流程的处理结果。"
+        "display_name": "结束准备脚本或界面的变量提交和历史同步",
+        "description": "标明“准备脚本或界面的变量提交和历史同步”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.service.terminal"
       }
     ],
     "edges": [
@@ -109,7 +109,7 @@
       {
         "type": "era.task.prepared",
         "cardinality": "exactly_one",
-        "display_name": "待执行请求及原任务资料",
+        "display_name": "已备齐的执行请求或直接返回结论",
         "as": "era_task_api_prepared_task"
       }
     ]

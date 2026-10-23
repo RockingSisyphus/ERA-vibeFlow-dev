@@ -1,6 +1,6 @@
-import { jsonEqual } from '../../base_lib/domain/workbench_operations.js';
-import { variablePlanProtections, functionPlanProtections, wrapVariableProtection, wrapFunctionPlanProtections } from '../../base_lib/domain/workbench_protection.js';
-import { rejected, workbenchError, type OperationPlan } from '../../base_lib/domain/workbench_context.ts';
+import { jsonEqual } from '../../base_lib/workbench/workbench_operations.js';
+import { variablePlanProtections, functionPlanProtections, wrapVariableProtection, wrapFunctionPlanProtections } from '../../base_lib/workbench/workbench_protection.js';
+import { rejected, workbenchError, type OperationPlan } from '../../base_lib/workbench/workbench_context.ts';
 /** 比较用户看到的保护与提交时的实际保护，避免隐式扩大解锁范围。 */
 export function run(inputs: any): any {
   const plan = inputs['era.workbench.operation_plan'].value as OperationPlan;

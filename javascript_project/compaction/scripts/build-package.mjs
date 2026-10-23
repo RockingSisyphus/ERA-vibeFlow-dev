@@ -8,12 +8,14 @@ import {
   readFile,
   writeFile,
 } from "node:fs/promises";
-import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 const root = fileURLToPath(new URL("..", import.meta.url));
 const repository = path.resolve(root, "../..");
-const temp = await mkdtemp(path.join(os.tmpdir(), "era-compaction-package-"));
+const reports = path.join(repository, "reports");
+await mkdir(reports, { recursive: true });
+const temp = await mkdtemp(path.join(reports, ".compaction-package-"));
+const buildEnv = { ...process.env, TMPDIR: temp, TMP: temp, TEMP: temp };
 try {
   await symlink(
     path.join(root, "node_modules"),
@@ -38,7 +40,7 @@ try {
         "--out-dir",
         generated,
       ],
-      { cwd: repository, stdio: ["ignore", "ignore", "inherit"] },
+      { cwd: repository, env: buildEnv, stdio: ["ignore", "ignore", "inherit"] },
     );
     execFileSync(
       path.join(root, "node_modules/.bin/esbuild"),
@@ -50,7 +52,7 @@ try {
         "--packages=external",
         `--outfile=${output}/${target}.js`,
       ],
-      { cwd: root, stdio: "pipe" },
+      { cwd: root, env: buildEnv, stdio: "pipe" },
     );
     await copyFile(
       path.join(generated, "workflow.d.ts"),
@@ -77,7 +79,7 @@ try {
       "--external:@stdlib/math-base-special-gamma",
       `--outfile=${output}/engine.js`,
     ],
-    { cwd: root, stdio: "pipe" },
+    { cwd: root, env: buildEnv, stdio: "pipe" },
   );
   const declarations = path.join(temp, "declarations");
   execFileSync(
@@ -92,7 +94,7 @@ try {
       "--outDir",
       declarations,
     ],
-    { cwd: root, stdio: "pipe" },
+    { cwd: root, env: buildEnv, stdio: "pipe" },
   );
   const types = await readFile(
     path.join(declarations, "base_lib/command_compaction_engine.d.ts"),

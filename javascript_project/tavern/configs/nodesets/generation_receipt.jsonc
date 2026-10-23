@@ -1,20 +1,20 @@
 {
   "type_key": "era.tavern.flow.generation_receipt",
-  "display_name": "等待公共重试的完整生成回执",
-  "description": "替换图外generationAdmission包装；主Service原始FIFO回执不变。",
+  "display_name": "等待用户重试引起的完整生成结果",
+  "description": "先等原重试事件处理确认，有阶段交接时继续等待规划、正文或结算的最终结果。结束时保留原请求身份；会话已取消则向原发起者返回取消。",
   "expand": true,
   "requires": [
     {
       "type": "era.tavern.call.frame",
       "cardinality": "exactly_one",
-      "display_name": "本次实例及调用资料"
+      "display_name": "等待用户重试引起的完整生成结果的请求和已有进度"
     }
   ],
   "provides": [
     {
       "key": "generation_receipt_frame",
       "type": "era.tavern.call.frame",
-      "display_name": "本流程实际结果"
+      "display_name": "等待用户重试引起的完整生成结果的处理进度及结果"
     }
   ],
   "pipeline": {
@@ -24,69 +24,69 @@
         "key": "frame",
         "type": "era.tavern.call.frame",
         "required": true,
-        "display_name": "本次实例及调用资料"
+        "display_name": "等待用户重试引起的完整生成结果的请求和已有进度"
       }
     ],
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.tavern.initialize.start",
-        "display_name": "开始当前原生流程",
-        "description": "标记本段原生流程的控制边界，不创建资源或重复输出。"
+        "display_name": "开始等待用户重试引起的完整生成结果",
+        "description": "标明“等待用户重试引起的完整生成结果”的开始位置。先等原重试事件处理确认，有阶段交接时继续等待规划、正文或结算的最终结果。结束时保留原请求身份；会话已取消则向原发起者返回取消。",
+        "definition_id": "era.tavern.initialize.start"
       },
       {
         "id": "await_receipt",
-        "type_used": "era.tavern.generation_receipt.await_receipt",
-        "display_name": "等待本次重试的原始回执",
-        "description": "只等待已经接受的原始done，不重新准入或改写FIFO结算。"
+        "display_name": "先等待重试请求本身处理完成",
+        "description": "在“等待用户重试引起的完整生成结果”流程中，接收用户发起的生成重试，等待它在主服务队列中的处理确认。后续检查是否还包含阶段交接，使公开结果可以覆盖完整重试。",
+        "definition_id": "era.tavern.generation_receipt.await_receipt"
       },
       {
         "id": "choose",
-        "type_used": "era.tavern.generation_receipt.choose",
-        "display_name": "选择片段回执或完整阶段交接",
-        "description": "回执value没有completionId直接返回；有标识才等待同实例的最终交接。"
+        "display_name": "判断重试是否还需要等生成阶段",
+        "description": "在“等待用户重试引起的完整生成结果”流程中，查看原重试处理结果是否带有阶段完成身份。有则继续等完整阶段交接，没有则直接返回原确认，避免把一个片段完成误认为整次生成结束。",
+        "definition_id": "era.tavern.generation_receipt.choose"
       },
       {
         "id": "original",
-        "type_used": "era.tavern.generation_receipt.original",
-        "display_name": "交还无交接标识的原始回执",
-        "description": "保留原结算，不延长普通任务等待。"
+        "display_name": "直接返回无需阶段交接的重试结果",
+        "description": "在“等待用户重试引起的完整生成结果”流程中，原重试请求已经形成最终确认且没有后续阶段时，直接交回该结果。调用方据此得到本次实际成功、失败或取消结论。",
+        "definition_id": "era.tavern.generation_receipt.original"
       },
       {
         "id": "await_handoff",
-        "type_used": "era.tavern.generation_receipt.await_handoff",
-        "display_name": "等待真实生成的最终交接",
-        "description": "按当前回执给出的completionId等待；缺失或已取消时取得null，不借用其他执行。"
+        "display_name": "等待重试引起的完整阶段交接",
+        "description": "在“等待用户重试引起的完整生成结果”流程中，根据重试结果中的阶段身份，等待规划、正文或结算的后续交接结束。取得最终结果或无结果状态，供公开重试调用返回。",
+        "definition_id": "era.tavern.generation_receipt.await_handoff"
       },
       {
         "id": "choose_final",
-        "type_used": "era.tavern.generation_receipt.choose_final",
-        "display_name": "区分最终结算或取消",
-        "description": "真实最终交接有结果才完成；null保持原生成会话已取消结果。"
+        "display_name": "区分重试已完成还是生成会话取消",
+        "description": "在“等待用户重试引起的完整生成结果”流程中，检查阶段交接是否形成最终处理确认。已有结果时采用完整结论，没有时按会话取消返回，让调用方不会一直等待旧生成。",
+        "definition_id": "era.tavern.generation_receipt.choose_final"
       },
       {
         "id": "completed",
-        "type_used": "era.tavern.generation_receipt.completed",
-        "display_name": "保留最终结果与原始事件身份",
-        "description": "使用最终结算，同时保留第一次接受的eventId/sequence，避免UI提前解除busy。"
+        "display_name": "返回完整重试结果并保留原请求身份",
+        "description": "在“等待用户重试引起的完整生成结果”流程中，接收最终生成确认，同时沿用最初重试事件的身份和序号。原发起者据此得到整次重试的真实结果，而不会混淆中间阶段事件。",
+        "definition_id": "era.tavern.generation_receipt.completed"
       },
       {
         "id": "cancelled",
-        "type_used": "era.tavern.generation_receipt.cancelled",
-        "display_name": "交还原生成会话取消结算",
-        "description": "保留原片段回执字段，将status设为cancelled及原原因；不制造成功。"
+        "display_name": "向原重试请求说明生成已取消",
+        "description": "在“等待用户重试引起的完整生成结果”流程中，阶段交接没有形成可用最终结果时，返回生成会话已取消，并保留原重试请求身份。调用方可以结束等待并显示对应状态。",
+        "definition_id": "era.tavern.generation_receipt.cancelled"
       },
       {
         "id": "join_result",
-        "type_used": "era.tavern.generation_receipt.join_result",
-        "display_name": "交还本次重试等待结果",
-        "description": "汇合原回执、完整交接或取消，返回唯一公开done结果。"
+        "display_name": "交接等待用户重试引起的完整生成结果的选中结果",
+        "description": "在“等待用户重试引起的完整生成结果”流程中，在“等待用户重试引起的完整生成结果”中，接收本次实际选择的分支所产生的唯一结果，交给后续步骤或调用方。每次只允许一份实际结果，避免把互斥分支误当成多个都已执行。",
+        "definition_id": "era.tavern.generation_receipt.join_result"
       },
       {
         "id": "end",
-        "type_used": "era.tavern.initialize.end",
-        "display_name": "结束当前原生流程",
-        "description": "标记本段原生流程的控制边界，不创建资源或重复输出。"
+        "display_name": "结束等待用户重试引起的完整生成结果",
+        "description": "标明“等待用户重试引起的完整生成结果”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.tavern.initialize.end"
       }
     ],
     "edges": [
@@ -144,7 +144,7 @@
         "type": "era.tavern.call.frame",
         "cardinality": "exactly_one",
         "as": "frame",
-        "display_name": "当前实际结果"
+        "display_name": "等待用户重试引起的完整生成结果的处理进度及结果"
       }
     ],
     "max_steps": 13

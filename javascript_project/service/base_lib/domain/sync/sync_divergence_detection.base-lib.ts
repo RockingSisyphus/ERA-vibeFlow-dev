@@ -1,0 +1,32 @@
+import {defineBaseLib} from "@vibeflow/plugin";
+
+export const era_service_sync_divergence_detection = defineBaseLib({
+  "id": "era.service.sync_divergence_detection",
+  "display_name": "ERA 同步分歧检测",
+  "description": "找到首个分歧或未完成封存楼层。",
+  "version": "1.0.0",
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "source": {
+        "kind": "file",
+        "ref": "base_lib/domain/sync/sync_divergence_detection.ts"
+      }
+    }
+  ],
+  "dependencies": [
+    "era.service.message_function_calls",
+    "era.service.mk_engine",
+    "era.snapshot.history",
+    "era.service.command_compaction_marker",
+    "era.service.sync_types"
+  ],
+  "external_packages": [],
+  "rulesets": [
+    "vibeflow.base_lib"
+  ]
+});

@@ -1,0 +1,19 @@
+{
+  "rulesets": [
+    "vibeflow.root.default"
+  ],
+  "rule_params": {
+    "vibeflow.root.layout": {
+      "directories": [
+        {
+          "path": "vendor",
+          "purpose": "现有第三方算法源码及许可"
+        },
+        {
+          "path": "manifests",
+          "purpose": "现行Schema同步检查输入"
+        }
+      ]
+    }
+  }
+}

@@ -8,25 +8,25 @@
     }
   ],
   "type_key": "era.task.sync",
-  "display_name": "按聊天历史更新变量并保存",
-  "description": "使聊天中的变量和函数与当前消息历史一致。读取并核对状态文件及当前内存结果，找出历史变更处，撤销旧效果后按正文顺序重算；处理指令和作者函数，准备历史压缩，最后保存消息和独立状态文件，再刷新显示并返回结果。",
+  "display_name": "按当前聊天历史恢复变量并保存",
+  "description": "读取聊天消息及独立状态文件，找出历史变化处，撤回旧效果后按正文顺序执行变量指令和作者函数。整理可压缩历史，保存消息及状态文件，确认后刷新显示并返回真实结果。",
   "requires": [
     {
       "type": "era.step.request.routed",
       "cardinality": "exactly_one",
-      "display_name": "已路由步骤"
+      "display_name": "当前任务及已读取的聊天资料"
     },
     {
       "type": "era.batch.execution.state",
       "cardinality": "exactly_one",
-      "display_name": "当前批次执行状态"
+      "display_name": "当前批次的任务进度与累计结果"
     }
   ],
   "provides": [
     {
       "key": "sync_task_result",
       "type": "era.task.result",
-      "display_name": "同步结果"
+      "display_name": "本项任务对应原事件的处理结果"
     }
   ],
   "pipeline": {
@@ -35,13 +35,13 @@
       {
         "key": "routed_step",
         "type": "era.step.request.routed",
-        "display_name": "已路由步骤",
+        "display_name": "当前任务及已读取的聊天资料",
         "required": true
       },
       {
         "key": "execution_state",
         "type": "era.batch.execution.state",
-        "display_name": "当前批次执行状态",
+        "display_name": "当前批次的任务进度与累计结果",
         "required": true
       }
     ],
@@ -49,45 +49,44 @@
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.service.terminal",
-        "display_name": "同步启动",
-        "description": "开始按聊天历史更新变量并保存。"
+        "display_name": "开始按当前聊天历史恢复变量并保存",
+        "description": "标明“按当前聊天历史恢复变量并保存”的开始位置。读取聊天消息及独立状态文件，找出历史变化处，撤回旧效果后按正文顺序执行变量指令和作者函数。整理可压缩历史，保存消息及状态文件，确认后刷新显示并返回真实结果。",
+        "definition_id": "era.service.terminal"
       },
       {
         "id": "read_sync_context",
-        "type_used": "era.tavern.sync_read",
-        "display_name": "取得当前聊天工作状态",
-        "description": "本次处理聊天历史与变量结果的同步。读取历史同步需要的消息历史、处理进度、重新执行位置及独立状态文件绑定、迁移资料，输出任务上下文或读取失败原因。"
+        "display_name": "读取历史同步需要的消息与状态资料",
+        "description": "在“按当前聊天历史恢复变量并保存”流程中，读取当前聊天历史、处理进度、要求重算的位置及独立状态文件绑定和迁移资料。整理为历史同步的输入，读取失败时返回原因，供后续决定恢复范围。",
+        "definition_id": "era.tavern.sync_read"
       },
       {
         "id": "sidecar_store_prepare",
-        "type_used": "era.sidecar.store",
-        "display_name": "加载或修复聊天的独立状态文件",
-        "description": "本次处理聊天历史与变量结果的同步。加载当前聊天使用的独立状态文件，文件中保存 ERA 变量、函数和历史日志。优先沿用同一聊天有效的内存结果；首次使用时建立绑定，旧数据需要时迁移，归属冲突或损坏时提示用户选择。执行选定的绑定方案后输出可用于历史同步的状态或等待、失败结果。"
+        "display_name": "加载聊天状态或引导用户解决文件问题",
+        "description": "本环节用于“按当前聊天历史恢复变量并保存”：检查当前聊天绑定的独立状态文件，其中保存变量、函数和历史；有效内存资料可直接沿用。新聊天按需建文件，旧资料按需迁移，归属冲突或损坏时请用户选择，执行方案后交出可用状态或等待、失败原因。",
+        "definition_id": "era.sidecar.store"
       },
       {
         "id": "prepare_block_step",
-        "type_used": "era.sync.prepare_block_step",
-        "display_name": "准备内存回退与本次消息范围",
-        "description": "本次处理聊天历史与变量结果的同步。建立消息历史重新执行的起点：撤回需要重算的旧日志，确定消息范围，并带入当前变量、函数、消息历史标识、允许执行范围及随机使用记录。无需处理或准备失败时返回对应结论。"
+        "display_name": "恢复需要重算的消息历史起点",
+        "description": "在“按当前聊天历史恢复变量并保存”流程中，根据本次聊天变化确定重算范围，撤回相应旧变更记录，带入当前变量、函数、消息身份及随机使用记录。形成按正文顺序重新执行的起点；无需处理或无法准备时交出对应结论。",
+        "definition_id": "era.sync.prepare_block_step"
       },
       {
         "id": "process_message_blocks",
-        "type_used": "vibeflow.loop.while",
-        "display_name": "依次处理目标范围的聊天正文",
-        "description": "按规划的聊天历史范围反复处理正文指令和作者函数，后一段读取前一段更新后的变量、函数和日志。范围处理完成或任务失败时退出，再由同步任务统一提交消息及独立状态文件。",
+        "display_name": "按消息顺序恢复本范围变量和函数",
+        "description": "按本次历史范围逐段处理消息指令及作者函数，后段使用前段更新的变量、函数和历史。范围结束或任务失败时返回，后续统一保存消息及独立状态文件。",
         "requires": [
           {
             "type": "era.sync.block.step.state",
             "cardinality": "exactly_one",
-            "display_name": "开始处理的消息范围、变量、函数和日志"
+            "display_name": "当前消息位置及待处理变量指令"
           }
         ],
         "provides": [
           {
             "key": "block_step_state_after",
             "type": "era.sync.block.step.state.next",
-            "display_name": "处理后的消息位置、变量、函数和日志"
+            "display_name": "本段正文处理后的变量和消息进度"
           }
         ],
         "loop": {
@@ -110,55 +109,56 @@
               "as": "block_step_state_after"
             }
           ]
-        }
+        },
+        "definition_id": "vibeflow.loop.while"
       },
       {
         "id": "finalize_block_step",
-        "type_used": "era.lifecycle.finalize_block_step",
-        "display_name": "冻结本批消息与独立状态文件保存候选",
-        "description": "本次处理聊天历史与变量结果的同步。把消息命令执行的最终状态整理为待提交批次，包含正文变更和独立状态文件候选。失败时保留已确认的成功部分，无变化时选择无需提交分支。"
+        "display_name": "整理本批消息和变量的待保存内容",
+        "description": "在“按当前聊天历史恢复变量并保存”流程中，将本轮消息指令执行的最终状态整理成保存准备，包含改动的正文和独立状态文件内容。无变化时进入无需保存分支，失败时保留已确认部分及原因，供统一提交判断。",
+        "definition_id": "era.lifecycle.finalize_block_step"
       },
       {
         "id": "persist_batch_state",
-        "type_used": "era.tavern.variables_commit",
-        "display_name": "批量保存消息 → 独立状态文件并确认",
-        "description": "本次处理聊天历史与变量结果的同步。先提交并确认消息正文批次，再写入独立状态文件、核对文件版本并更新绑定结果。普通历史的消息来源变化时请求重算；部分写入、文件失败或无法确认的写入分别保留实际进度及恢复、停止原因。"
+        "display_name": "保存消息和变量状态并确认结果",
+        "description": "在“按当前聊天历史恢复变量并保存”流程中，先保存并确认当前批次的消息正文，再写入独立状态文件并检查版本和聊天绑定。消息来源变化时要求重新计算；部分保存或结果无法确认时保留真实进度及恢复、停止原因。",
+        "definition_id": "era.tavern.variables_commit"
       },
       {
         "id": "settle_saved_batch",
-        "type_used": "era.lifecycle.settle_saved_batch",
-        "display_name": "结算已保存批次与恢复事实",
-        "description": "本次处理聊天历史与变量结果的同步。汇总保存结果与命令执行结果，保留执行失败的原因。消息来源变化时安排重新计算，待保存内容为空时清除多余保存定时器。"
+        "display_name": "汇总保存结果并决定是否需要恢复",
+        "description": "在“按当前聊天历史恢复变量并保存”流程中，合并消息保存与指令执行的真实结论，保留失败原因。消息来源变化时安排重算，没有待保存内容时清除多余定时安排，使后续知道继续、恢复还是停止。",
+        "definition_id": "era.lifecycle.settle_saved_batch"
       },
       {
         "id": "present_finalized_floor",
-        "type_used": "era.sync.present_finalized_floor",
-        "display_name": "呈现已提交的最终楼层",
-        "description": "本次处理聊天历史与变量结果的同步。在保存已确认且消息来源仍匹配时请求页面刷新显示；无需提交的分支沿用已有刷新要求。显示失败记录为附加诊断，保存结果保持其实际状态。"
+        "display_name": "保存确认后刷新消息显示",
+        "description": "在“按当前聊天历史恢复变量并保存”流程中，消息和变量保存已经确认、且目标消息仍匹配时，请页面刷新相关显示；无需提交时沿用已有刷新要求。显示问题单独记录，让调用方区分保存结果与呈现结果。",
+        "definition_id": "era.sync.present_finalized_floor"
       },
       {
         "id": "build_sync_notification",
-        "type_used": "era.sync.build_notification",
-        "display_name": "结算提交结果与批次更新",
-        "description": "本次处理聊天历史与变量结果的同步。根据保存的实际结果生成原事件回执、页面通知、诊断和消息处理进度，区分成功、无变化、失败及需要停止服务的情况。"
+        "display_name": "返回同步保存的实际结果",
+        "description": "在“按当前聊天历史恢复变量并保存”流程中，根据消息和独立状态文件的实际保存结论，为原事件生成确认、页面通知及问题说明。明确区分成功、无变化、失败和需要停止服务的情况，并带回最新消息进度。",
+        "definition_id": "era.sync.build_notification"
       },
       {
         "id": "sidecar_binding_blocked_result",
-        "type_used": "era.sidecar_binding.build_blocked_result",
-        "display_name": "结算等待 独立状态文件 选择的任务",
-        "description": "本次处理聊天历史与变量结果的同步。状态文件归属或损坏问题仍需用户选择时，为原事件生成包含选择原因的失败回执，供页面提示和任务结算。"
+        "display_name": "说明状态文件为何需要用户选择",
+        "description": "在“按当前聊天历史恢复变量并保存”流程中，状态文件归属冲突或损坏仍未解决时，为原请求形成包含原因的失败确认。页面据此提示用户选择，任务在选择明确前不会继续使用不确定文件。",
+        "definition_id": "era.sidecar_binding.build_blocked_result"
       },
       {
         "id": "sidecar_binding_applied_result",
-        "type_used": "era.sidecar_binding.build_applied_result",
-        "display_name": "结算已完成的 独立状态文件 绑定",
-        "description": "本次处理聊天历史与变量结果的同步。把状态文件绑定或修复的实际完成结果对应到原事件，保留已在内存中应用的 调用接口（API） 修改，形成本次任务结算结果。"
+        "display_name": "返回状态文件绑定或修复的结果",
+        "description": "在“按当前聊天历史恢复变量并保存”流程中，接收状态文件新建、迁移或修复后的真实结论，匹配原事件，保留本次已经在内存应用的变量提交。将结果交给任务结算，使调用方知道当前可用状态。",
+        "definition_id": "era.sidecar_binding.build_applied_result"
       },
       {
         "id": "end",
-        "type_used": "era.service.terminal",
-        "display_name": "同步结束",
-        "description": "结束按聊天历史更新变量并保存，输出本段流程的处理结果。"
+        "display_name": "结束按当前聊天历史恢复变量并保存",
+        "description": "标明“按当前聊天历史恢复变量并保存”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.service.terminal"
       }
     ],
     "edges": [
@@ -226,7 +226,7 @@
       {
         "type": "era.task.result",
         "cardinality": "exactly_one",
-        "display_name": "同步结果",
+        "display_name": "本项任务对应原事件的处理结果",
         "as": "syncTaskResult"
       }
     ]

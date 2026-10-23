@@ -1,25 +1,25 @@
 {
   "type_key": "era.tavern.flow.messages_update_content_update_messages_item",
-  "display_name": "逐项更新指定消息",
-  "description": "原生 Loop 同步准备整个批量更新列表；逐项保留宿主字段，不逐项发起写入。",
+  "display_name": "把一条消息修改加入批量提交清单",
+  "description": "依次取出本次明确更新的消息，合并需要保留的附加资料，记录受影响范围和内部写入内容。全部整理后由外层统一发起一次写入，本轮只推进清单准备。",
   "expand": true,
   "requires": [
     {
       "type": "era.tavern.frame.messages_update_content.choose_update",
       "cardinality": "exactly_one",
-      "display_name": "当前条目、处理位置及实例资源令牌"
+      "display_name": "把一条消息修改加入批量提交清单的请求和已有进度"
     }
   ],
   "provides": [
     {
       "key": "era_tavern_flow_messages_update_content_update_messages_item_frame",
       "type": "era.tavern.item.result.messages_update_content_update_messages_item",
-      "display_name": "下一条目或当前处理结论"
+      "display_name": "把一条消息修改加入批量提交清单的处理进度及结果"
     },
     {
       "key": "era_tavern_flow_messages_update_content_update_messages_item_done",
       "type": "era.tavern.done.messages_update_content.update_messages",
-      "display_name": "是否完成"
+      "display_name": "本轮遍历或职责处理是否已经结束"
     }
   ],
   "pipeline": {
@@ -28,7 +28,7 @@
       {
         "key": "frame",
         "type": "era.tavern.frame.messages_update_content.choose_update",
-        "display_name": "当前处理位置",
+        "display_name": "把一条消息修改加入批量提交清单的请求和已有进度",
         "required": true
       }
     ],
@@ -36,39 +36,39 @@
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.tavern.initialize.start",
-        "display_name": "开始当前原生流程",
-        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+        "display_name": "开始把一条消息修改加入批量提交清单",
+        "description": "标明“把一条消息修改加入批量提交清单”的开始位置。依次取出本次明确更新的消息，合并需要保留的附加资料，记录受影响范围和内部写入内容。全部整理后由外层统一发起一次写入，本轮只推进清单准备。",
+        "definition_id": "era.tavern.initialize.start"
       },
       {
         "id": "choose_item",
-        "type_used": "era.tavern.messages_update_content_update_messages_item.choose_item",
-        "display_name": "检查是否还有待处理条目",
-        "description": "有当前条目才进入实际处理；列表为空或已处理完时直接形成完成标记，不调用共享操作。"
+        "display_name": "判断还有没有消息修改需要整理",
+        "description": "在“把一条消息修改加入批量提交清单”流程中，查看本次消息更新清单的当前位置。还有项目时整理下一条，全部完成时结束准备，后续一次提交整份修改清单。",
+        "definition_id": "era.tavern.messages_update_content_update_messages_item.choose_item"
       },
       {
         "id": "one_item",
-        "type_used": "era.tavern.messages_update_content_update_messages_item.one_item",
-        "display_name": "准备一条保留附件的消息更新",
-        "description": "读取当前消息并保留未知 extra 和附件，登记预期文本，追加本次 hostUpdates；不发起 setChatMessages。"
+        "display_name": "整理一条修改并保留原附加资料",
+        "description": "在“把一条消息修改加入批量提交清单”流程中，取出一条消息修改，按需读取原消息，合并应保留的附加字段，并记录受影响消息及 ERA 自己写入的文字。这里只建立统一提交清单，后续一起执行写入。",
+        "definition_id": "era.tavern.messages_update_content_update_messages_item.one_item"
       },
       {
         "id": "empty",
-        "type_used": "era.tavern.messages_update_content_update_messages_item.empty",
-        "display_name": "完成空列表或已结束的遍历",
-        "description": "保留当前处理资料并返回 done=true，不执行任何条目副作用。"
+        "display_name": "确认消息更新清单已经整理完",
+        "description": "在“把一条消息修改加入批量提交清单”流程中，全部消息修改已经遍历时，标记准备循环结束。后续使用整理好的清单一次发起写入，而不是在此逐条保存。",
+        "definition_id": "era.tavern.messages_update_content_update_messages_item.empty"
       },
       {
         "id": "join_end",
-        "type_used": "era.tavern.messages_update_content_update_messages_item.join_end",
-        "display_name": "汇合当前实际激活分支的结果",
-        "description": "接收当前所选路径的结果集合，交还其中唯一实际结果；不选择未激活分支、不重新执行操作。运行实现必须拒绝实际多结果，不以集合契约放宽唯一结果语义。"
+        "display_name": "交接把一条消息修改加入批量提交清单的选中结果",
+        "description": "在“把一条消息修改加入批量提交清单”流程中，在“把一条消息修改加入批量提交清单”中，接收本次实际选择的分支所产生的唯一结果，交给后续步骤或调用方。每次只允许一份实际结果，避免把互斥分支误当成多个都已执行。",
+        "definition_id": "era.tavern.messages_update_content_update_messages_item.join_end"
       },
       {
         "id": "end",
-        "type_used": "era.tavern.initialize.end",
-        "display_name": "结束当前原生流程",
-        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+        "display_name": "结束把一条消息修改加入批量提交清单",
+        "description": "标明“把一条消息修改加入批量提交清单”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.tavern.initialize.end"
       }
     ],
     "edges": [
@@ -104,13 +104,13 @@
         "type": "era.tavern.item.result.messages_update_content_update_messages_item",
         "cardinality": "exactly_one",
         "as": "frame",
-        "display_name": "更新位置"
+        "display_name": "把一条消息修改加入批量提交清单的处理进度及结果"
       },
       {
         "type": "era.tavern.done.messages_update_content.update_messages",
         "cardinality": "exactly_one",
         "as": "done",
-        "display_name": "完成标记"
+        "display_name": "本轮遍历或职责处理是否已经结束"
       }
     ]
   }

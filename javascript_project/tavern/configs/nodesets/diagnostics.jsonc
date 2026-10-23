@@ -1,20 +1,20 @@
 {
   "type_key": "era.tavern.flow.diagnostics",
-  "display_name": "读取实例诊断与生命周期令牌",
-  "description": "读取实例运行、队列、回执、timer、引用和通知计数，保留 client 捕获当前生命周期 token 的接口。",
+  "display_name": "查看实例运行状态和有效期标记",
+  "description": "按请求读取当前实例的运行、队列、未确认事件和计时等概况，或交出页面有效期标记。提供只读诊断结果，供界面判断旧操作是否仍适用。",
   "expand": true,
   "requires": [
     {
       "type": "era.tavern.call.frame",
       "cardinality": "exactly_one",
-      "display_name": "本次调用及实例资源令牌"
+      "display_name": "查看实例运行状态和有效期标记的请求和已有进度"
     }
   ],
   "provides": [
     {
       "key": "era_tavern_flow_diagnostics_frame",
       "type": "era.tavern.call.frame",
-      "display_name": "操作结果及后续处理所需的资源令牌"
+      "display_name": "查看实例运行状态和有效期标记的处理进度及结果"
     }
   ],
   "pipeline": {
@@ -23,7 +23,7 @@
       {
         "key": "frame",
         "type": "era.tavern.call.frame",
-        "display_name": "调用与资源资料",
+        "display_name": "查看实例运行状态和有效期标记的请求和已有进度",
         "required": true
       }
     ],
@@ -31,27 +31,27 @@
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.tavern.initialize.start",
-        "display_name": "开始当前原生流程",
-        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+        "display_name": "开始查看实例运行状态和有效期标记",
+        "description": "标明“查看实例运行状态和有效期标记”的开始位置。按请求读取当前实例的运行、队列、未确认事件和计时等概况，或交出页面有效期标记。提供只读诊断结果，供界面判断旧操作是否仍适用。",
+        "definition_id": "era.tavern.initialize.start"
       },
       {
         "id": "read_resources",
-        "type_used": "era.tavern.diagnostics.read_resources",
-        "display_name": "读取当前实例资源事实",
-        "description": "读取当前会话的资源计数、运行状态和生命周期 token，不推断业务是否通过。"
+        "display_name": "读取当前实例的运行和等待数量",
+        "description": "在“查看实例运行状态和有效期标记”流程中，读取实例是否启动、停止或严重故障，以及队列、未确认事件、定时器、页面引用和通知数量。返回只读运行概况，供诊断使用而不改变处理状态。",
+        "definition_id": "era.tavern.diagnostics.read_resources"
       },
       {
         "id": "return_diagnostics",
-        "type_used": "era.tavern.diagnostics.return_diagnostics",
-        "display_name": "返回原诊断和令牌形状",
-        "description": "生成现有 diagnosticsSnapshot 或 currentLifecycleToken 结果；不更改运行状态。"
+        "display_name": "交回当前实例的只读诊断结果",
+        "description": "在“查看实例运行状态和有效期标记”流程中，接收运行状态、队列、计时和等待数量等诊断资料，或当前有效期标记，交给诊断调用方。结果用于观察和判断旧请求是否过期。",
+        "definition_id": "era.tavern.diagnostics.return_diagnostics"
       },
       {
         "id": "end",
-        "type_used": "era.tavern.initialize.end",
-        "display_name": "结束当前原生流程",
-        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+        "display_name": "结束查看实例运行状态和有效期标记",
+        "description": "标明“查看实例运行状态和有效期标记”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.tavern.initialize.end"
       }
     ],
     "edges": [
@@ -72,7 +72,7 @@
       {
         "type": "era.tavern.call.frame",
         "cardinality": "exactly_one",
-        "display_name": "完成后的操作资料",
+        "display_name": "查看实例运行状态和有效期标记的处理进度及结果",
         "as": "frame"
       }
     ]

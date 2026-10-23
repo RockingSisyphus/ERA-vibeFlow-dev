@@ -1,29 +1,29 @@
 {
   "type_key": "era.agent.candidate_attempt",
-  "display_name": "生成文本并检查其中的命令应用",
-  "description": "执行模型输出的一次候选尝试：请求模型文本，将其中的变量、函数和作者调用交给共享消息流程应用，再检查候选结果。可纠正的失败恢复本次尝试起点并准备重试，较早成功的阶段继续保留；成功或无法重试时返回最终结论。",
+  "display_name": "完成一次模型生成与指令检查",
+  "description": "接收本次生成要求及恢复起点，请求模型文字，再由统一消息流程处理其中的变量、函数和作者调用。可重试失败先恢复本次起点，成功或重试结束时交出最终结果，较早阶段成果继续保留。",
   "requires": [
     {
       "type": "era.agent.candidate.state",
       "cardinality": "exactly_one",
-      "display_name": "本次模型尝试的请求、起点和进度"
+      "display_name": "本次生成尝试的请求和恢复起点"
     }
   ],
   "provides": [
     {
       "key": "candidate_state_after",
       "type": "era.agent.candidate.state.next",
-      "display_name": "本次尝试后的进度及重试请求"
+      "display_name": "本次尝试后的进度与重试要求"
     },
     {
       "key": "candidate_done",
       "type": "era.agent.candidate.done",
-      "display_name": "本阶段是否已成功或无法继续"
+      "display_name": "本次生成尝试循环是否结束"
     },
     {
       "key": "candidate_outcome",
       "type": "era.agent.candidate.outcome",
-      "display_name": "候选执行结果"
+      "display_name": "生成尝试结束后的完整结果"
     }
   ],
   "pipeline": {
@@ -33,52 +33,51 @@
         "key": "candidate_state",
         "type": "era.agent.candidate.state",
         "required": true,
-        "display_name": "候选请求"
+        "display_name": "本次生成尝试的请求和恢复起点"
       }
     ],
     "max_steps": 12,
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.service.terminal",
-        "display_name": "候选尝试开始",
-        "description": "开始生成文本并检查其中的命令应用。"
+        "display_name": "开始完成一次模型生成与指令检查",
+        "description": "标明“完成一次模型生成与指令检查”的开始位置。接收本次生成要求及恢复起点，请求模型文字，再由统一消息流程处理其中的变量、函数和作者调用。可重试失败先恢复本次起点，成功或重试结束时交出最终结果，较早阶段成果继续保留。",
+        "definition_id": "era.service.terminal"
       },
       {
         "id": "unpack_candidate",
-        "type_used": "era.agent.candidate_unpack",
-        "display_name": "取出候选执行输入",
-        "description": "本次检查一次模型生成结果及其命令应用。从当前候选运行状态取出模型请求、原任务和批次，交给下一次模型调用。"
+        "display_name": "取出下一次模型生成需要的请求",
+        "description": "在“完成一次模型生成与指令检查”流程中，从当前生成尝试的状态中，取出模型请求、原任务和所属批次。下一次模型调用据此继续，确保重试仍属于同一次生成任务。",
+        "definition_id": "era.agent.candidate_unpack"
       },
       {
         "id": "execute_agent_phase_v2",
-        "type_used": "era.agent.execute_session_v2",
-        "display_name": "生成标签格式结算候选",
-        "description": "本次检查一次模型生成结果及其命令应用。按当前阶段请求模型生成文本，收集其中的变量命令、函数定义和作者调用，输出待应用的候选内容及模型执行结果。"
+        "display_name": "执行本次规划、正文或结算生成",
+        "description": "在“完成一次模型生成与指令检查”流程中，根据当前生成阶段和聊天进度，向模型请求规划或结算内容，或接续酒馆已经生成的正文。把得到的文字、变量指令和函数调用交给消息处理流程；取消、过期请求或失败会带着具体原因返回。",
+        "definition_id": "era.agent.execute_session_v2"
       },
       {
         "id": "prepare_stage_blocks",
-        "type_used": "era.lifecycle.prepare_stage_blocks",
-        "display_name": "标签候选接入共用逐块执行",
-        "description": "本次检查一次模型生成结果及其命令应用。为模型生成的候选正文建立消息命令执行计划，并保存失败恢复所需的起点。规划阶段可使用即将生成的 AI 消息位置，其余阶段使用捕获的实际目标。"
+        "display_name": "准备执行模型文字里的变量和函数指令",
+        "description": "在“完成一次模型生成与指令检查”流程中，将模型本次生成的文字整理成按顺序执行的消息内容，并保存尝试失败时要恢复的起点。规划阶段使用预定的 AI 消息位置，其他阶段使用已确认的目标消息，供共享指令流程逐项处理。",
+        "definition_id": "era.lifecycle.prepare_stage_blocks"
       },
       {
         "id": "apply_stage_blocks",
-        "type_used": "vibeflow.loop.while",
-        "display_name": "依次应用本次模型生成的命令",
-        "description": "按本次模型生成结果的正文顺序处理变量指令、函数和作者调用，携带累计的变量、正文、日志及随机进度。候选范围完成或发生结束结果时退出，交给候选检查决定成功、重试或失败。",
+        "display_name": "按正文顺序处理本次生成中的指令",
+        "description": "接收模型本次返回的文字，从本次尝试起点按顺序处理变量指令、函数和作者调用，逐段累计变量、正文和历史。处理范围结束或失败时交回生成检查，供判断成功、恢复重试或结束。",
         "requires": [
           {
             "type": "era.sync.block.step.state",
             "cardinality": "exactly_one",
-            "display_name": "开始处理的消息范围、变量、函数和日志"
+            "display_name": "当前消息位置及待处理变量指令"
           }
         ],
         "provides": [
           {
             "key": "block_step_state_after",
             "type": "era.sync.block.step.state.next",
-            "display_name": "处理后的消息位置、变量、函数和日志"
+            "display_name": "本段正文处理后的变量和消息进度"
           }
         ],
         "loop": {
@@ -101,25 +100,26 @@
               "as": "block_step_state_after"
             }
           ]
-        }
+        },
+        "definition_id": "vibeflow.loop.while"
       },
       {
         "id": "finish_stage_blocks",
-        "type_used": "era.lifecycle.finish_stage_blocks",
-        "display_name": "回送已应用阶段状态及草稿",
-        "description": "本次检查一次模型生成结果及其命令应用。把模型候选中已完成的命令应用结果合入生成会话正文及进度。可重试的失败恢复本次候选起点，再准备重试；重试耗尽时保留候选起点及较早阶段成果并返回失败。"
+        "display_name": "整理生成文字中指令的执行结果",
+        "description": "在“完成一次模型生成与指令检查”流程中，接收本次模型文字里变量及函数指令的执行结果，更新生成阶段的正文和进度。可重试错误会恢复本次尝试前的状态；重试结束仍失败时保留更早阶段的成果，并返回本次失败原因。",
+        "definition_id": "era.lifecycle.finish_stage_blocks"
       },
       {
         "id": "finish_candidate",
-        "type_used": "era.agent.candidate_finish",
-        "display_name": "判断是否重试候选",
-        "description": "本次检查一次模型生成结果及其命令应用。检查一次生成候选是否需要重试。存在重试请求时保留运行进度继续尝试；否则输出本次生成的最终结果。"
+        "display_name": "判断生成尝试结束还是需要重试",
+        "description": "在“完成一次模型生成与指令检查”流程中，检查本次模型输出及指令应用后的结论。有可执行的重试要求时带着现有进度进入下一尝试，否则交出最终成功、取消或失败结果，供生成阶段结算。",
+        "definition_id": "era.agent.candidate_finish"
       },
       {
         "id": "end",
-        "type_used": "era.service.terminal",
-        "display_name": "候选尝试结束",
-        "description": "结束生成文本并检查其中的命令应用，输出本段流程的处理结果。"
+        "display_name": "结束完成一次模型生成与指令检查",
+        "description": "标明“完成一次模型生成与指令检查”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.service.terminal"
       }
     ],
     "edges": [
@@ -163,19 +163,19 @@
         "type": "era.agent.candidate.state.next",
         "cardinality": "exactly_one",
         "as": "candidate_state_after",
-        "display_name": "候选状态"
+        "display_name": "本次尝试后的进度与重试要求"
       },
       {
         "type": "era.agent.candidate.done",
         "cardinality": "exactly_one",
         "as": "candidate_done",
-        "display_name": "本次生成的最终结论"
+        "display_name": "本次生成尝试循环是否结束"
       },
       {
         "type": "era.agent.candidate.outcome",
         "cardinality": "exactly_one",
         "as": "candidate_outcome",
-        "display_name": "阶段结果"
+        "display_name": "生成尝试结束后的完整结果"
       }
     ]
   }

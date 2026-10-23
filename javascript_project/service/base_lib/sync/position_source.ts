@@ -7,7 +7,7 @@ import {
 import {
   cloneSnapshotValue,
   parseEditLog,
-} from "../domain/snapshot_history.ts";
+} from "../snapshot/snapshot_history.ts";
 import {
   cloneMessages,
   defineOwn,

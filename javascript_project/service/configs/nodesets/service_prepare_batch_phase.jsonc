@@ -5,20 +5,20 @@
     }
   ],
   "type_key": "era.service.prepare_batch_phase",
-  "display_name": "把收齐的事件安排为有序任务",
-  "description": "把已就绪的聊天和 调用接口（API） 事件编成有顺序的任务列表，并检查每个原始事件恰好对应一次处理、总步骤不超过128。检查通过后从第一个任务开始执行；检查失败时结算整批来源并发布原因。",
+  "display_name": "把就绪事件排成可执行的有序批次",
+  "description": "接收已收齐事件，规划初始化、同步、生成等任务，并核对每个原事件恰好对应一次、总任务数在限制内。有效计划从第一项开始，错误计划为整批返回失败原因。",
   "requires": [
     {
       "type": "era.collection.reduction",
       "cardinality": "exactly_one",
-      "display_name": "就绪事件集"
+      "display_name": "新事件合并后的等待与组批决定"
     }
   ],
   "provides": [
     {
       "key": "prepared_cycle_state",
       "type": "era.service.cycle.state",
-      "display_name": "下一阶段状态"
+      "display_name": "服务当前处于收集还是执行及相应进度"
     }
   ],
   "pipeline": {
@@ -27,7 +27,7 @@
       {
         "key": "collection_reduction",
         "type": "era.collection.reduction",
-        "display_name": "就绪事件集",
+        "display_name": "新事件合并后的等待与组批决定",
         "required": true
       }
     ],
@@ -35,45 +35,45 @@
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.service.terminal",
-        "display_name": "规划阶段开始",
-        "description": "开始把收齐的事件安排为有序任务。"
+        "display_name": "开始把就绪事件排成可执行的有序批次",
+        "description": "标明“把就绪事件排成可执行的有序批次”的开始位置。接收已收齐事件，规划初始化、同步、生成等任务，并核对每个原事件恰好对应一次、总任务数在限制内。有效计划从第一项开始，错误计划为整批返回失败原因。",
+        "definition_id": "era.service.terminal"
       },
       {
         "id": "plan_batch",
-        "type_used": "era.service.plan_batch",
-        "display_name": "规划原生命周期步骤",
-        "description": "本次为收齐的事件安排任务顺序。把已经收齐的聊天和 调用接口（API） 事件安排为有序任务，包括初始化、历史同步、消息历史标识、生成及忽略任务，并保留每个事件的对应关系。"
+        "display_name": "把收齐的事件安排成有序任务",
+        "description": "在“把就绪事件排成可执行的有序批次”流程中，接收已收齐的聊天变化和脚本请求，安排初始化、历史同步、消息标识、生成或忽略任务。保留每个任务对应的原事件，让同批相关变化按顺序处理并逐一返回确认。",
+        "definition_id": "era.service.plan_batch"
       },
       {
         "id": "validate_coverage",
-        "type_used": "era.service.validate_coverage",
-        "display_name": "验证来源覆盖",
-        "description": "本次为收齐的事件安排任务顺序。检查任务计划是否恰好覆盖本批每个原事件一次，且事件来源有效、任务数在允许范围内；输出检查结果及具体问题。"
+        "display_name": "检查每个原事件都有且只有一次安排",
+        "description": "在“把就绪事件排成可执行的有序批次”流程中，检查本批任务与原事件的对应关系，确认没有漏处理、重复对应、无效来源或任务数超限。有效计划才能执行，问题计划带着具体原因进入整批失败结算。",
+        "definition_id": "era.service.validate_coverage"
       },
       {
         "id": "coverage_failure",
-        "type_used": "era.service.coverage_failure",
-        "display_name": "构造覆盖失败批次",
-        "description": "本次为收齐的事件安排任务顺序。任务计划与原事件对应关系有误时，为原批次中的每个事件生成失败回执，结束该批次并说明计划问题。"
+        "display_name": "向整批事件说明任务安排失败",
+        "description": "在“把就绪事件排成可执行的有序批次”流程中，任务与原事件的对应关系检查未通过时，为这批每个事件返回失败确认并附上计划问题。结束当前批次，避免执行存在遗漏或重复安排的任务。",
+        "definition_id": "era.service.coverage_failure"
       },
       {
         "id": "begin_execution",
-        "type_used": "era.service.cycle.begin_execution",
-        "display_name": "携带已校验批次",
-        "description": "本次为收齐的事件安排任务顺序。将已通过检查的任务批次放入执行阶段，从第一个任务开始逐项处理。"
+        "display_name": "从第一项开始执行已确认的批次",
+        "description": "在“把就绪事件排成可执行的有序批次”流程中，接收通过检查的任务列表，将服务切换到执行阶段，并把当前位置设为第一项。后续逐项准备和执行，不再把这批事件重新加入收集队列。",
+        "definition_id": "era.service.cycle.begin_execution"
       },
       {
         "id": "finish_invalid_batch",
-        "type_used": "era.service.finish_batch",
-        "display_name": "汇总批次结果并发送给酒馆页面",
-        "description": "本次为收齐的事件安排任务顺序。汇总当前批次所有任务的结论，检查每个原始事件恰有一次回执，再发送结果和通知。普通失败后可以继续接收事件；写入结果未知等致命问题先告知调用方，再停止服务。"
+        "display_name": "汇总整批结果并回告页面",
+        "description": "本环节用于“把就绪事件排成可执行的有序批次”：所有任务结束后，为本批每个原事件整理一次最终确认，附上通知和问题记录，再集中送回页面。普通失败后继续接收事件，需停止的严重问题先回告原因再结束服务。",
+        "definition_id": "era.service.finish_batch"
       },
       {
         "id": "end",
-        "type_used": "era.service.terminal",
-        "display_name": "规划阶段结束",
-        "description": "结束把收齐的事件安排为有序任务，输出本段流程的处理结果。"
+        "display_name": "结束把就绪事件排成可执行的有序批次",
+        "description": "标明“把就绪事件排成可执行的有序批次”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.service.terminal"
       }
     ],
     "edges": [
@@ -112,7 +112,7 @@
       {
         "type": "era.service.cycle.state",
         "cardinality": "exactly_one",
-        "display_name": "下一阶段状态",
+        "display_name": "服务当前处于收集还是执行及相应进度",
         "as": "cycleStateNext"
       }
     ]

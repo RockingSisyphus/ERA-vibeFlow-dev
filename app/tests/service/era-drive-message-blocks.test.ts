@@ -1,10 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { execute } from './memory-batch-fixture';
 import { contextWith } from './memory-lifecycle-fixture';
-import { planEraSync } from '../../../javascript_project/service/base_lib/sync/sync_planning';
+import { planEraSync } from './native-workflow-fixture';
 import { run as advanceBlock } from './message-block-fixture';
-import { vi } from 'vitest';
-
 // The former per-block disk pipeline is replaced by the approved memory publication pipeline.
 // Keep its rollback/expression/history conditions against the actual production nodes.
 describe('正式内存块链的历史与恢复', () => {
@@ -29,7 +27,7 @@ describe('正式内存块链的历史与恢复', () => {
     expect(next).not.toHaveBeenCalled();
     expect(release).not.toHaveBeenCalled();
   });
-  it('定向正文先补齐新增用户楼层，结算回退保留历史变量和函数且止于目标楼层', () => {
+  it('定向正文先补齐新增用户楼层，结算回退保留历史变量和函数且止于目标楼层', async () => {
     const message = (messageId: number, role: string, text: string) => ({
       messageId,
       role,
@@ -38,7 +36,7 @@ describe('正式内存块链的历史与恢复', () => {
         text: `${text}<era_data>{"era-message-key"="mk-${messageId}","era-message-type"="${role}"}</era_data>`,
       },
     });
-    const history = planEraSync({
+    const history = await planEraSync({
       messages: [
         message(
           0,
@@ -58,7 +56,7 @@ describe('正式内存块链的历史与恢复', () => {
       message(2, 'assistant', '正文'),
       message(3, 'assistant', '<VariableDelete>{"history":""}</VariableDelete>'),
     ];
-    const story = planEraSync({
+    const story = await planEraSync({
       messages,
       stat: history.stat,
       statFunc: history.statFunc,
@@ -70,7 +68,7 @@ describe('正式内存块链的历史与恢复', () => {
       stopAtTarget: true,
     });
     expect(story.meta.SelectedMks).toEqual(['mk-0', 'mk-1', 'mk-2']);
-    const settled = planEraSync({
+    const settled = await planEraSync({
       messages: story.messages.map(m =>
         m.messageId === 2 ? message(2, 'assistant', '<VariableInsert>{"settled":1}</VariableInsert>') : m,
       ),
@@ -120,7 +118,7 @@ describe('正式内存块链的历史与恢复', () => {
     fresh.variablesRaw.ERAMetaData = whole.working.record.state.eraMeta;
     const resumed = await execute(actual, { context: fresh });
     expect(resumed.working.record.state.statData).toEqual(whole.working.record.state.statData);
-    const replay = planEraSync({
+    const replay = await planEraSync({
       messages: resumed.state.work.plan.messages,
       stat: resumed.working.record.state.statData,
       statFunc: {},

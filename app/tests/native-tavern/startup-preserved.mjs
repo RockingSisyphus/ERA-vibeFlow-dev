@@ -13,7 +13,9 @@ assert.equal(
 );
 cases.push('staged初始化不登记Tavern监听');
 const wait = owner =>
-  asyncEntry({ request: { session: owner.session, action: 'wait_startup' } }).then(r => r.result.result);
+  asyncEntry({ request: { session: owner.session, action: 'wait_startup' } }, { entry: 'operation' }).then(
+    r => r.result.result,
+  );
 let settled = false;
 const pending = wait(a).then(x => {
   settled = true;

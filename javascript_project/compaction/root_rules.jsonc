@@ -1,0 +1,35 @@
+{
+  "rulesets": [
+    "vibeflow.root.default"
+  ],
+  "rule_params": {
+    "vibeflow.root.layout": {
+      "directories": [
+        {
+          "path": "vendor",
+          "purpose": "现有第三方算法源码及许可"
+        },
+        {
+          "path": "tests",
+          "purpose": "公开包行为合同测试"
+        },
+        {
+          "path": "scripts",
+          "purpose": "构建与生成入口"
+        },
+        {
+          "path": "api",
+          "purpose": "公开包API与类型"
+        },
+        {
+          "path": "manifests",
+          "purpose": "现行Schema同步检查输入"
+        },
+        {
+          "path": "generated",
+          "purpose": "AOT与机械接线构建产物"
+        }
+      ]
+    }
+  }
+}

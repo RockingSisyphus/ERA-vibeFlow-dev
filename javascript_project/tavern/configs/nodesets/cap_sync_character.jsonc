@@ -1,20 +1,20 @@
 {
   "type_key": "era.tavern.flow.cap_sync_character",
-  "display_name": "角色卡与显示配置操作",
-  "description": "共享同一职责组的原操作与必要的等待前发起；无额外 cap 总分组。",
+  "display_name": "分派角色卡和显示设置操作",
+  "description": "接收角色卡和显示设置请求，按操作种类选择读取、修改或异步请求的发起流程。各分支分别保持自己的目标检查和实际结果，最后把本次选中操作的唯一结果交给调用方。",
   "expand": true,
   "requires": [
     {
       "type": "era.tavern.call.frame",
       "cardinality": "exactly_one",
-      "display_name": "本次调用、实例资源与上一节点的事实"
+      "display_name": "分派角色卡和显示设置操作的请求和已有进度"
     }
   ],
   "provides": [
     {
       "key": "era_tavern_flow_cap_sync_character_frame",
       "type": "era.tavern.frame.final.cap_sync_character",
-      "display_name": "处理后的资源与事实"
+      "display_name": "分派角色卡和显示设置操作的处理进度及结果"
     }
   ],
   "pipeline": {
@@ -23,7 +23,7 @@
       {
         "key": "frame",
         "type": "era.tavern.call.frame",
-        "display_name": "同实例调用与资源",
+        "display_name": "分派角色卡和显示设置操作的请求和已有进度",
         "required": true
       }
     ],
@@ -32,112 +32,112 @@
         "type": "era.tavern.frame.final.cap_sync_character",
         "cardinality": "exactly_one",
         "as": "frame",
-        "display_name": "本段明确结果"
+        "display_name": "分派角色卡和显示设置操作的处理进度及结果"
       }
     ],
     "max_steps": 21,
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.tavern.initialize.start",
-        "display_name": "开始当前原生流程",
-        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+        "display_name": "开始分派角色卡和显示设置操作",
+        "description": "标明“分派角色卡和显示设置操作”的开始位置。接收角色卡和显示设置请求，按操作种类选择读取、修改或异步请求的发起流程。各分支分别保持自己的目标检查和实际结果，最后把本次选中操作的唯一结果交给调用方。",
+        "definition_id": "era.tavern.initialize.start"
       },
       {
         "id": "choose",
-        "type_used": "era.tavern.cap_sync_character.choose",
-        "display_name": "识别角色卡与显示配置操作",
-        "description": "按已声明操作名选择唯一原生路径；即时操作、同步完成的 Promise 操作及真正等待前的发起共享本职责组，不重复分组。"
+        "display_name": "选择角色卡和显示设置的具体操作",
+        "description": "在“分派角色卡和显示设置操作”流程中，接收角色卡和显示设置请求，读取明确操作种类，选择本组已声明的一条处理路径。未知操作报告原因，有效操作交给对应步骤完成，并返回实际结果。",
+        "definition_id": "era.tavern.cap_sync_character.choose"
       },
       {
         "id": "route_patch_single_floor__check_request",
-        "type_used": "era.tavern.character_patch_single_floor.check_request",
-        "display_name": "更新单层显示配置：角色卡与显示配置：检查更新单层显示配置请求",
-        "description": "保持 era.tavern.character.patch_single_floor 的现行参数、取消和目标复核；不新增资格条件。"
+        "display_name": "检查“保存单层显示设置”的调用是否有效",
+        "description": "在“分派角色卡和显示设置操作”流程中，接收“保存单层显示设置”的请求，确认当前实例仍可运行、调用未取消，且输入确实是一份操作资料。通过后交给对应业务步骤，失败时按实际原因结束。",
+        "definition_id": "era.tavern.character_patch_single_floor.check_request"
       },
       {
         "id": "route_patch_single_floor__start_operation",
-        "type_used": "era.tavern.character_patch_single_floor.start_operation",
-        "display_name": "更新单层显示配置：角色卡与显示配置：发起指定角色的单层设置写入",
-        "description": "固定 avatar、序列化镜像和设置值，核对角色存在后发起 /api/characters/merge-attributes；成功后才更新镜像和 UI。 此 Node 只发起原始操作并创建等待资源；不执行异步续体。"
+        "display_name": "向角色卡保存单层显示或外置状态栏设置（保存单层显示设置）",
+        "description": "在“分派角色卡和显示设置操作”流程中，本次处理“保存单层显示设置”。读取目标角色及请求的显示配置，合并本次明确改动并发起角色卡保存。保留目标角色与设置内容，供后续确认保存后更新页面。",
+        "definition_id": "era.tavern.character_patch_single_floor.start_operation"
       },
       {
         "id": "route_patch_external_statusbar__check_request",
-        "type_used": "era.tavern.character_patch_external_statusbar.check_request",
-        "display_name": "更新外置状态栏配置：角色卡与显示配置：检查更新外置状态栏配置请求",
-        "description": "保持 era.tavern.character.patch_external_statusbar 的现行参数、取消和目标复核；不新增资格条件。"
+        "display_name": "检查“保存外置状态栏设置”的调用是否有效",
+        "description": "在“分派角色卡和显示设置操作”流程中，接收“保存外置状态栏设置”的请求，确认当前实例仍可运行、调用未取消，且输入确实是一份操作资料。通过后交给对应业务步骤，失败时按实际原因结束。",
+        "definition_id": "era.tavern.character_patch_external_statusbar.check_request"
       },
       {
         "id": "route_patch_external_statusbar__start_operation",
-        "type_used": "era.tavern.character_patch_external_statusbar.start_operation",
-        "display_name": "更新外置状态栏配置：角色卡与显示配置：发起指定角色的外置状态栏写入",
-        "description": "固定 avatar、原外置配置与明确补丁，发起 merge-attributes；成功后才更新镜像和 UI。 此 Node 只发起原始操作并创建等待资源；不执行异步续体。"
+        "display_name": "向角色卡保存单层显示或外置状态栏设置（保存外置状态栏设置）",
+        "description": "在“分派角色卡和显示设置操作”流程中，本次处理“保存外置状态栏设置”。读取目标角色及请求的显示配置，合并本次明确改动并发起角色卡保存。保留目标角色与设置内容，供后续确认保存后更新页面。",
+        "definition_id": "era.tavern.character_patch_external_statusbar.start_operation"
       },
       {
         "id": "route_read_main_greeting__check_request",
-        "type_used": "era.tavern.character_read_main_greeting.check_request",
-        "display_name": "读取主开场白：角色卡与显示配置：检查读取主开场白请求",
-        "description": "保持 era.tavern.character.read_main_greeting 的现行参数、取消和目标复核；不新增资格条件。"
+        "display_name": "检查“读取角色主开场白”的调用是否有效",
+        "description": "在“分派角色卡和显示设置操作”流程中，接收“读取角色主开场白”的请求，确认当前实例仍可运行、调用未取消，且输入确实是一份操作资料。通过后交给对应业务步骤，失败时按实际原因结束。",
+        "definition_id": "era.tavern.character_read_main_greeting.check_request"
       },
       {
         "id": "route_read_main_greeting__start_operation",
-        "type_used": "era.tavern.character_read_main_greeting.start_operation",
-        "display_name": "读取主开场白：角色卡与显示配置：发起当前角色主开场白读取",
-        "description": "同步捕获角色名及群聊事实；缺失时捕获 missing，否则发起 getCharacter。 此 Node 只发起原始操作并创建等待资源；不执行异步续体。"
+        "display_name": "发起读取当前角色的主开场白",
+        "description": "在“分派角色卡和显示设置操作”流程中，识别当前角色，发起角色资料读取。群聊或没有角色时记录不可用情况，后续将主开场白和相关状态栏设置交回资源准备流程。",
+        "definition_id": "era.tavern.character_read_main_greeting.start_operation"
       },
       {
         "id": "route_write_main_greeting__check_request",
-        "type_used": "era.tavern.character_write_main_greeting.check_request",
-        "display_name": "写入主开场白：角色卡与显示配置：检查写入主开场白请求",
-        "description": "保持 era.tavern.character.write_main_greeting 的现行参数、取消和目标复核；不新增资格条件。"
+        "display_name": "检查“保存角色主开场白”的调用是否有效",
+        "description": "在“分派角色卡和显示设置操作”流程中，接收“保存角色主开场白”的请求，确认当前实例仍可运行、调用未取消，且输入确实是一份操作资料。通过后交给对应业务步骤，失败时按实际原因结束。",
+        "definition_id": "era.tavern.character_write_main_greeting.check_request"
       },
       {
         "id": "route_write_main_greeting__start_operation",
-        "type_used": "era.tavern.character_write_main_greeting.start_operation",
-        "display_name": "写入主开场白：角色卡与显示配置：核对输入并发起角色开场白读取",
-        "description": "固定 expected、next 及当前角色名；拒绝群聊或缺失目标，再发起 getCharacter；旧值比对与持久化保留在异步段。 此 Node 只发起原始操作并创建等待资源；不执行异步续体。"
+        "display_name": "写入前重新读取角色主开场白",
+        "description": "在“分派角色卡和显示设置操作”流程中，接收预期旧开场白和新文字，确认当前存在可写的单角色，再发起角色资料读取。后续先核对旧内容是否仍一致，避免初始化覆盖期间发生的新编辑。",
+        "definition_id": "era.tavern.character_write_main_greeting.start_operation"
       },
       {
         "id": "route_read_greeting_refresh_context__check_request",
-        "type_used": "era.tavern.character_read_greeting_refresh_context.check_request",
-        "display_name": "读取开场白刷新事实：角色卡与显示配置：检查读取开场白刷新事实请求",
-        "description": "保持 era.tavern.character.read_greeting_refresh_context 的现行参数、取消和目标复核；不新增资格条件。"
+        "display_name": "检查“读取开场白更新依据”的调用是否有效",
+        "description": "在“分派角色卡和显示设置操作”流程中，接收“读取开场白更新依据”的请求，确认当前实例仍可运行、调用未取消，且输入确实是一份操作资料。通过后交给对应业务步骤，失败时按实际原因结束。",
+        "definition_id": "era.tavern.character_read_greeting_refresh_context.check_request"
       },
       {
         "id": "route_read_greeting_refresh_context__execute",
-        "type_used": "era.tavern.character_read_greeting_refresh_context.execute",
-        "display_name": "读取开场白刷新事实：角色卡与显示配置：执行读取开场白刷新事实操作",
-        "description": "在酒馆页面执行该操作的实际 API 或资源动作；保留未知字段、现有错误类别及原同步/异步约定。"
+        "display_name": "读取首条消息是否适合更新开场白",
+        "description": "在“分派角色卡和显示设置操作”流程中，读取当前是否群聊、聊天是否有改动、消息数量及首条消息的原文和所选回复。主服务据此决定更新、新建还是保留当前首条消息。",
+        "definition_id": "era.tavern.character_read_greeting_refresh_context.execute"
       },
       {
         "id": "route_read_greeting_refresh_context__return_result",
-        "type_used": "era.tavern.character_read_greeting_refresh_context.return_result",
-        "display_name": "读取开场白刷新事实：角色卡与显示配置：交还读取开场白刷新事实结果",
-        "description": "返回原 era.tavern.character.greeting_refresh.facts 结果；需要脱敏的连接资料只返回摘要。"
+        "display_name": "交回“读取开场白更新依据”的实际结果",
+        "description": "在“分派角色卡和显示设置操作”流程中，接收“读取开场白更新依据”已经执行得到的结果，复核实例和本次调用尚未取消后交回发起者。调用方据此继续业务或显示结果，取消时按实际原因结束等待。",
+        "definition_id": "era.tavern.character_read_greeting_refresh_context.return_result"
       },
       {
         "id": "route_apply_greeting_refresh__check_request",
-        "type_used": "era.tavern.character_apply_greeting_refresh.check_request",
-        "display_name": "执行开场白刷新：角色卡与显示配置：检查执行开场白刷新请求",
-        "description": "保持 era.tavern.character.apply_greeting_refresh 的现行参数、取消和目标复核；不新增资格条件。"
+        "display_name": "检查“更新聊天开场白显示”的调用是否有效",
+        "description": "在“分派角色卡和显示设置操作”流程中，接收“更新聊天开场白显示”的请求，确认当前实例仍可运行、调用未取消，且输入确实是一份操作资料。通过后交给对应业务步骤，失败时按实际原因结束。",
+        "definition_id": "era.tavern.character_apply_greeting_refresh.check_request"
       },
       {
         "id": "route_apply_greeting_refresh__start_operation",
-        "type_used": "era.tavern.character_apply_greeting_refresh.start_operation",
-        "display_name": "执行开场白刷新：角色卡与显示配置：更新纯净首楼并发起接收事件",
-        "description": "按 Service 指定 empty/append 结果同步更新首楼镜像与 swipe，发起一次 MESSAGE_RECEIVED；清空显示、重绘及保存随后按原顺序执行。 此 Node 只发起原始操作并创建等待资源；不执行异步续体。"
+        "display_name": "更新聊天首条消息并发出接收通知",
+        "description": "在“分派角色卡和显示设置操作”流程中，根据主服务已经选定的方案，在空聊天建立开场白，或更新已有首条消息及其原始回复。随后发出首条消息接收通知，后续等待通知、重绘并保存聊天。",
+        "definition_id": "era.tavern.character_apply_greeting_refresh.start_operation"
       },
       {
         "id": "join_return",
-        "type_used": "era.tavern.cap_sync_character.join_return",
-        "display_name": "汇合当前实际激活分支的结果",
-        "description": "接收当前所选路径的结果集合，交还其中唯一实际结果；不选择未激活分支、不重新执行操作。运行实现必须拒绝实际多结果，不以集合契约放宽唯一结果语义。"
+        "display_name": "交接分派角色卡和显示设置操作的选中结果",
+        "description": "在“分派角色卡和显示设置操作”流程中，在“分派角色卡和显示设置操作”中，接收本次实际选择的分支所产生的唯一结果，交给后续步骤或调用方。每次只允许一份实际结果，避免把互斥分支误当成多个都已执行。",
+        "definition_id": "era.tavern.cap_sync_character.join_return"
       },
       {
         "id": "end",
-        "type_used": "era.tavern.initialize.end",
-        "display_name": "结束当前原生流程",
-        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+        "display_name": "结束分派角色卡和显示设置操作",
+        "description": "标明“分派角色卡和显示设置操作”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.tavern.initialize.end"
       }
     ],
     "edges": [

@@ -1,6 +1,6 @@
 import { executeExpressionLayer } from '@era/vibeflow-expression/engine';
-import { planVariableDelete, planVariableDiff, planVariableExpression, planVariableInsert } from '../../base_lib/domain/workbench_draft.js';
-import { workbenchError, type Draft, type OperationPlan } from '../../base_lib/domain/workbench_context.ts';
+import { planVariableDelete, planVariableDiff, planVariableExpression, planVariableInsert } from '../../base_lib/workbench/workbench_draft.js';
+import { workbenchError, type Draft, type OperationPlan } from '../../base_lib/workbench/workbench_context.ts';
 /** 草稿在权威基准上重新解释；表达式使用现有引擎做完整诊断。 */
 export function run(inputs: any): any {
   const draft = inputs['era.workbench.draft'].value as Draft;

@@ -35,7 +35,12 @@
                   "type": "string"
                 }
               },
-              "required": ["kind", "start", "end", "substring"],
+              "required": [
+                "kind",
+                "start",
+                "end",
+                "substring"
+              ],
               "additionalProperties": false
             },
             {
@@ -55,7 +60,11 @@
                   "maximum": 9007199254740991
                 }
               },
-              "required": ["kind", "start", "end"],
+              "required": [
+                "kind",
+                "start",
+                "end"
+              ],
               "additionalProperties": false
             },
             {
@@ -76,14 +85,22 @@
                 },
                 "value": {}
               },
-              "required": ["kind", "start", "end", "value"],
+              "required": [
+                "kind",
+                "start",
+                "end",
+                "value"
+              ],
               "additionalProperties": false
             }
           ]
         }
       }
     },
-    "required": ["original", "resolutions"],
+    "required": [
+      "original",
+      "resolutions"
+    ],
     "additionalProperties": false
   }
 }

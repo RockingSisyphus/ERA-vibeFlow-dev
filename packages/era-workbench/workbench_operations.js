@@ -1,4 +1,4 @@
-// Generated from Service base_lib/domain; do not edit.
+// Generated from Service base_lib/workbench; do not edit.
 export function isRecord(value) {
     return value !== null && typeof value === 'object' && !Array.isArray(value);
 }

@@ -1,20 +1,20 @@
 {
   "type_key": "era.tavern.flow.notification",
-  "display_name": "执行一个后置通知",
-  "description": "普通事件或交接均等待同步发起的公开通知资源，再按原位置记录组终态；交接的原始续体使用同root的async入口。",
+  "display_name": "收集一条已发起通知的完成结果",
+  "description": "区分普通事件与生成阶段交接，等待对应已发起操作结束，记入通知组原位置。全部通知齐全时安排整组收尾，尚有未完成项时保留组状态等待。",
   "expand": true,
   "requires": [
     {
       "type": "era.tavern.call.frame",
       "cardinality": "exactly_one",
-      "display_name": "本次调用及实例资源令牌"
+      "display_name": "收集一条已发起通知的完成结果的请求和已有进度"
     }
   ],
   "provides": [
     {
       "key": "era_tavern_flow_notification_frame",
       "type": "era.tavern.task.finished",
-      "display_name": "操作结果及后续处理所需的资源令牌"
+      "display_name": "当前职责已真实完成或退出的确认"
     }
   ],
   "pipeline": {
@@ -23,7 +23,7 @@
       {
         "key": "frame",
         "type": "era.tavern.call.frame",
-        "display_name": "调用与资源资料",
+        "display_name": "收集一条已发起通知的完成结果的请求和已有进度",
         "required": true
       }
     ],
@@ -31,87 +31,87 @@
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.tavern.initialize.start",
-        "display_name": "开始当前原生流程",
-        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+        "display_name": "开始收集一条已发起通知的完成结果",
+        "description": "标明“收集一条已发起通知的完成结果”的开始位置。区分普通事件与生成阶段交接，等待对应已发起操作结束，记入通知组原位置。全部通知齐全时安排整组收尾，尚有未完成项时保留组状态等待。",
+        "definition_id": "era.tavern.initialize.start"
       },
       {
         "id": "read_notification",
-        "type_used": "era.tavern.notification.read_notification",
-        "display_name": "取得通知参数和取消来源",
-        "description": "从实例资源取出已解析参数和调用 signal，引用不重新编码。"
+        "display_name": "接收本次已经发起的通知资料",
+        "description": "在“收集一条已发起通知的完成结果”流程中，取出当前通知、所属通知组及取消来源，交给通知类型判断。此处使用已经登记的通知，后续读取其完成结果并记录到正确位置。",
+        "definition_id": "era.tavern.notification.read_notification"
       },
       {
         "id": "choose_notification",
-        "type_used": "era.tavern.notification.choose_notification",
-        "display_name": "识别普通通知或阶段交接",
-        "description": "按原通知类型选择 eventEmit 或阶段完成订阅流程，不重新选择领域任务。"
+        "display_name": "区分普通通知和生成阶段完成通知",
+        "description": "在“收集一条已发起通知的完成结果”流程中，查看本次通知种类，普通事件走通知完成等待，生成阶段完成走订阅与下一阶段交接等待。各自结果随后归入同一通知组。",
+        "definition_id": "era.tavern.notification.choose_notification"
       },
       {
         "id": "select_handoff_prepare",
-        "type_used": "era.tavern.notification.select_handoff_prepare",
-        "display_name": "等待已经同步发起的交接通知资源",
-        "description": "只等待本通知的公开可取消Promise并保存其终态；原始生成交接已经进入编译后的独立async路径，不在这里重复发起或丢弃原始续体。"
+        "display_name": "等待生成阶段通知及交接结束",
+        "description": "在“收集一条已发起通知的完成结果”流程中，接收已发起的生成阶段通知，等待订阅处理和阶段交接结果。将实际成功或失败记录到本次通知，供整组统一报告和释放。",
+        "definition_id": "era.tavern.notification.select_handoff_prepare"
       },
       {
         "id": "select_handoff",
-        "type_used": "era.tavern.notification.select_handoff",
-        "display_name": "交还完成生成阶段订阅与续体交接结果",
-        "description": "保存共享原生流程的实际结果并继续当前分支；不重新执行准入、计时或结算。"
+        "display_name": "交接阶段通知实际完成的结果",
+        "description": "在“收集一条已发起通知的完成结果”流程中，接收生成阶段订阅及后续交接流程的实际结论，传给通知结果登记。整组通知会据此记录成功或失败，阶段业务不在这里再执行。",
+        "definition_id": "era.tavern.notification.select_handoff"
       },
       {
         "id": "select_event",
-        "type_used": "era.tavern.notification.select_event",
-        "display_name": "发射原普通通知",
-        "description": "只等待同步发起的原 eventEmit 资源，不再次发射通知。"
+        "display_name": "等待普通通知的监听处理结束",
+        "description": "在“收集一条已发起通知的完成结果”流程中，接收已经发起的普通页面通知，等待监听处理完成，并记录成功或失败。结果交给通知组汇总，较慢通知不会阻止其他通知记录自己的完成情况。",
+        "definition_id": "era.tavern.notification.select_event"
       },
       {
         "id": "join_emit_notification",
-        "type_used": "era.tavern.notification.join_emit_notification",
-        "display_name": "汇合当前实际激活分支的结果",
-        "description": "接收当前所选路径的结果集合，交还其中唯一实际结果；不选择未激活分支、不重新执行操作。运行实现必须拒绝实际多结果，不以集合契约放宽唯一结果语义。"
+        "display_name": "交接收集一条已发起通知的完成结果的选中结果",
+        "description": "在“收集一条已发起通知的完成结果”流程中，在“收集一条已发起通知的完成结果”中，接收本次实际选择的分支所产生的唯一结果，交给后续步骤或调用方。每次只允许一份实际结果，避免把互斥分支误当成多个都已执行。",
+        "definition_id": "era.tavern.notification.join_emit_notification"
       },
       {
         "id": "emit_notification",
-        "type_used": "era.tavern.notification.emit_notification",
-        "display_name": "执行本次通知并等待回调",
-        "description": "保存所选 continuation 的终态，不第二次执行 eventEmit。"
+        "display_name": "交接已经取得的通知完成结果",
+        "description": "在“收集一条已发起通知的完成结果”流程中，接收普通通知或阶段交接已经形成的完成资料，原样传给结果登记步骤。实际通知已经在发起流程执行，此处不会再次发出相同通知。",
+        "definition_id": "era.tavern.notification.emit_notification"
       },
       {
         "id": "record_result",
-        "type_used": "era.tavern.notification.record_result",
-        "display_name": "记录当前回调终态并减少组待结数量",
-        "description": "把终态存入原位置并更新待结数量，不提前报告失败。"
+        "display_name": "记下本条通知的结果和整组剩余数量",
+        "description": "在“收集一条已发起通知的完成结果”流程中，将当前回调的成功或失败写到通知原来的位置，并减少整组尚未完成数量。后续据此判断整组是否齐全，同时保留原顺序供统一报告。",
+        "definition_id": "era.tavern.notification.record_result"
       },
       {
         "id": "choose_batch_complete",
-        "type_used": "era.tavern.notification.choose_batch_complete",
-        "display_name": "判断当前通知组是否全部终态",
-        "description": "组中仍有未结回调时只结束本次 continuation；全部终态时才安排有序失败报告和组释放。"
+        "display_name": "判断整组通知是否都已结束",
+        "description": "在“收集一条已发起通知的完成结果”流程中，检查本通知组仍有多少项没有完成。尚有未完成项时保留组状态，全部齐全时安排最终报告和释放，使整组确认只在真实完成后发出。",
+        "definition_id": "era.tavern.notification.choose_batch_complete"
       },
       {
         "id": "keep_group",
-        "type_used": "era.tavern.notification.keep_group",
-        "display_name": "保留其他回调仍拥有的通知组",
-        "description": "不报告部分失败，也不提前解析本组完成 Promise。"
+        "display_name": "保留尚有未完成项的通知组",
+        "description": "在“收集一条已发起通知的完成结果”流程中，本条通知结果已经记下，但同组其他回调尚未全部结束时，保留通知组等待。整组齐全后才统一报告失败和释放。",
+        "definition_id": "era.tavern.notification.keep_group"
       },
       {
         "id": "schedule_group_finish",
-        "type_used": "era.tavern.notification.schedule_group_finish",
-        "display_name": "安排当前已完成通知组的原生收尾",
-        "description": "只把已完成组交给后台 notification_finalize 路径；有序警告和资源释放在真实流程中执行。"
+        "display_name": "把已齐全的通知组交给最终收尾",
+        "description": "在“收集一条已发起通知的完成结果”流程中，整组通知完成后，将它加入通知收尾队列并唤醒处理分支。后续按原顺序报告失败并释放整组等待。",
+        "definition_id": "era.tavern.notification.schedule_group_finish"
       },
       {
         "id": "join_batch_result",
-        "type_used": "era.tavern.notification.join_batch_result",
-        "display_name": "汇合当前唯一通知组结论",
-        "description": "完成当前实际工作和应有收尾后只交回小的完成摘要；框架缓存不再持有本次请求、会话或私密函数引用。"
+        "display_name": "结束本条通知完成情况的处理",
+        "description": "在“收集一条已发起通知的完成结果”流程中，本条通知结果已经登记，并已保留未完成组或安排完整组收尾后，返回本轮处理结束。通知职责分支可以接着读取下一条完成记录。",
+        "definition_id": "era.tavern.notification.join_batch_result"
       },
       {
         "id": "end",
-        "type_used": "era.tavern.initialize.end",
-        "display_name": "结束当前原生流程",
-        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+        "display_name": "结束收集一条已发起通知的完成结果",
+        "description": "标明“收集一条已发起通知的完成结果”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.tavern.initialize.end"
       }
     ],
     "edges": [
@@ -184,7 +184,7 @@
       {
         "type": "era.tavern.task.finished",
         "cardinality": "exactly_one",
-        "display_name": "完成后的操作资料",
+        "display_name": "当前职责已真实完成或退出的确认",
         "as": "frame"
       }
     ]

@@ -1,20 +1,20 @@
 {
   "type_key": "era.tavern.flow.character_write_main_greeting_finish",
-  "display_name": "写入主开场白：角色卡与显示配置：等待与确认",
-  "description": "续用同步段已发起资源；保留原等待后的具体处理、结果核对与错误身份。",
+  "display_name": "确认旧开场白仍匹配再保存新文字",
+  "description": "接续写入前的角色读取，比较旧开场白是否仍符合修改依据；相同才保存新文字并检查响应。成功后同步页面编辑资料，内容已变或保存失败则返回原因。",
   "expand": true,
   "requires": [
     {
       "type": "era.tavern.call.frame",
       "cardinality": "exactly_one",
-      "display_name": "本次调用、实例资源与上一节点的事实"
+      "display_name": "确认旧开场白仍匹配再保存新文字的请求和已有进度"
     }
   ],
   "provides": [
     {
       "key": "era_tavern_flow_character_write_main_greeting_finish_frame",
       "type": "era.tavern.call.frame",
-      "display_name": "处理后的资源与事实"
+      "display_name": "确认旧开场白仍匹配再保存新文字的处理进度及结果"
     }
   ],
   "pipeline": {
@@ -23,7 +23,7 @@
       {
         "key": "frame",
         "type": "era.tavern.call.frame",
-        "display_name": "同实例调用与资源",
+        "display_name": "确认旧开场白仍匹配再保存新文字的请求和已有进度",
         "required": true
       }
     ],
@@ -32,58 +32,58 @@
         "type": "era.tavern.call.frame",
         "cardinality": "exactly_one",
         "as": "frame",
-        "display_name": "本段明确结果"
+        "display_name": "确认旧开场白仍匹配再保存新文字的处理进度及结果"
       }
     ],
     "max_steps": 12,
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.tavern.initialize.start",
-        "display_name": "开始当前原生流程",
-        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+        "display_name": "开始确认旧开场白仍匹配再保存新文字",
+        "description": "标明“确认旧开场白仍匹配再保存新文字”的开始位置。接续写入前的角色读取，比较旧开场白是否仍符合修改依据；相同才保存新文字并检查响应。成功后同步页面编辑资料，内容已变或保存失败则返回原因。",
+        "definition_id": "era.tavern.initialize.start"
       },
       {
         "id": "execute",
-        "type_used": "era.tavern.character_write_main_greeting.execute",
-        "display_name": "等待本次写入主开场白：角色卡与显示配置的资源终态",
-        "description": "等待同步原生段已捕获的本次资源；检查所属实例和取消，不重发原 API，不执行后续回读或发布。"
+        "display_name": "等待读取待修改角色的最新资料",
+        "description": "在“确认旧开场白仍匹配再保存新文字”流程中，接收开场白写入前已经发起的角色读取，等待最新资料返回。交给下一步检查原开场白是否仍符合本次修改依据。",
+        "definition_id": "era.tavern.character_write_main_greeting.execute"
       },
       {
         "id": "check_expected",
-        "type_used": "era.tavern.character_write_main_greeting_finish.check_expected",
-        "display_name": "核对读取到的旧主开场白",
-        "description": "比较本次读取结果与 expected；不相等则报原 STALE 错误。"
+        "display_name": "确认开场白没有被其他编辑改变",
+        "description": "在“确认旧开场白仍匹配再保存新文字”流程中，将刚读取的主开场白与本次请求记住的旧文字比较。相同才继续保存新开场白，不同则报告内容已变化，防止覆盖新的作者编辑。",
+        "definition_id": "era.tavern.character_write_main_greeting_finish.check_expected"
       },
       {
         "id": "persist_greeting",
-        "type_used": "era.tavern.character_write_main_greeting_finish.persist_greeting",
-        "display_name": "持久化当前主开场白",
-        "description": "核对当前目标并捕获真实 avatar，发起一次 merge-attributes 并等待；不按显示名寻址。"
+        "display_name": "将新的主开场白保存到角色卡",
+        "description": "在“确认旧开场白仍匹配再保存新文字”流程中，在写入依据确认后，向当前角色卡保存新主开场白，等待写入响应。保留实际目标供后续检查与页面资料同步。",
+        "definition_id": "era.tavern.character_write_main_greeting_finish.persist_greeting"
       },
       {
         "id": "check_response",
-        "type_used": "era.tavern.character_write_main_greeting_finish.check_response",
-        "display_name": "核对开场白保存响应",
-        "description": "核对 HTTP 成功，失败读取响应文本用于原错误；不能把 fulfilled 当保存成功。"
+        "display_name": "确认主开场白保存成功",
+        "description": "在“确认旧开场白仍匹配再保存新文字”流程中，检查角色卡主开场白写入的响应，失败时返回保存原因。成功后再更新页面中持有的开场白，使显示与保存状态一致。",
+        "definition_id": "era.tavern.character_write_main_greeting_finish.check_response"
       },
       {
         "id": "publish_mirror",
-        "type_used": "era.tavern.character_write_main_greeting_finish.publish_mirror",
-        "display_name": "发布保存后的角色镜像和草稿",
-        "description": "同步更新 first_mes、data、json_data 与编辑器草稿，随后形成 updated 确认；不自动重绘聊天。"
+        "display_name": "同步页面中的已保存主开场白",
+        "description": "在“确认旧开场白仍匹配再保存新文字”流程中，角色卡保存成功后，更新当前页面持有的角色资料和开场白编辑框，返回新文字。完成资源写入的页面侧确认，聊天首条消息是否更新仍由相应流程决定。",
+        "definition_id": "era.tavern.character_write_main_greeting_finish.publish_mirror"
       },
       {
         "id": "return_result",
-        "type_used": "era.tavern.character_write_main_greeting.return_result",
-        "display_name": "交还写入主开场白结果",
-        "description": "返回原 era.tavern.character.write_main_greeting.result 结果；需要脱敏的连接资料只返回摘要。"
+        "display_name": "交回“保存角色主开场白”的实际结果",
+        "description": "在“确认旧开场白仍匹配再保存新文字”流程中，接收“保存角色主开场白”已经执行得到的结果，复核实例和本次调用尚未取消后交回发起者。调用方据此继续业务或显示结果，取消时按实际原因结束等待。",
+        "definition_id": "era.tavern.character_write_main_greeting.return_result"
       },
       {
         "id": "end",
-        "type_used": "era.tavern.initialize.end",
-        "display_name": "结束当前原生流程",
-        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+        "display_name": "结束确认旧开场白仍匹配再保存新文字",
+        "description": "标明“确认旧开场白仍匹配再保存新文字”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.tavern.initialize.end"
       }
     ],
     "edges": [

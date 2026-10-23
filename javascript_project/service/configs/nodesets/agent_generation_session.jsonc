@@ -1,29 +1,29 @@
 {
   "type_key": "era.agent.generation_session",
-  "display_name": "选择生成阶段并准备模型请求",
-  "description": "为一次多阶段生成准备请求。读取配置、消息历史和当前会话，判断应执行规划、正文还是结算阶段；重试或替换旧阶段时先恢复应保留的历史起点，再建立候选初始状态。输出待生成请求及原任务资料，供候选循环执行。",
+  "display_name": "选择生成阶段并准备可靠起点",
+  "description": "读取当前生成配置、聊天和会话进度，区分规划、正文与结算。重试或替换阶段时先按保留历史恢复变量起点，再整理模型请求；输出可执行生成或明确的过期、取消、失败结论。",
   "requires": [
     {
       "type": "era.step.request.routed",
       "cardinality": "exactly_one",
-      "display_name": "原任务、触发事件与已读取消息"
+      "display_name": "当前任务及已读取的聊天资料"
     },
     {
       "type": "era.batch.execution.state",
       "cardinality": "exactly_one",
-      "display_name": "当前批次、任务列表与执行位置"
+      "display_name": "当前批次的任务进度与累计结果"
     },
     {
       "type": "era.task.continuation.context",
       "cardinality": "exactly_one",
-      "display_name": "原任务、事件来源、批次和回执资料"
+      "display_name": "执行后回告所需的原任务资料"
     }
   ],
   "provides": [
     {
       "key": "era_agent_generation_session_prepared_task",
       "type": "era.task.prepared",
-      "display_name": "待执行请求及原任务资料"
+      "display_name": "已备齐的执行请求或直接返回结论"
     }
   ],
   "pipeline": {
@@ -32,19 +32,19 @@
       {
         "key": "input_0",
         "type": "era.step.request.routed",
-        "display_name": "原任务、触发事件与已读取消息",
+        "display_name": "当前任务及已读取的聊天资料",
         "required": true
       },
       {
         "key": "input_1",
         "type": "era.batch.execution.state",
-        "display_name": "当前批次、任务列表与执行位置",
+        "display_name": "当前批次的任务进度与累计结果",
         "required": true
       },
       {
         "key": "continuation",
         "type": "era.task.continuation.context",
-        "display_name": "原任务、事件来源、批次和回执资料",
+        "display_name": "执行后回告所需的原任务资料",
         "required": true
       }
     ],
@@ -52,51 +52,51 @@
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.service.terminal",
-        "display_name": "多阶段生成 准备开始",
-        "description": "开始选择生成阶段并准备模型请求。"
+        "display_name": "开始选择生成阶段并准备可靠起点",
+        "description": "标明“选择生成阶段并准备可靠起点”的开始位置。读取当前生成配置、聊天和会话进度，区分规划、正文与结算。重试或替换阶段时先按保留历史恢复变量起点，再整理模型请求；输出可执行生成或明确的过期、取消、失败结论。",
+        "definition_id": "era.service.terminal"
       },
       {
         "id": "carry_candidate_inputs",
-        "type_used": "era.task.carry_candidate_inputs",
-        "display_name": "保留候选准备的原步骤与批次",
-        "description": "本次准备规划、正文或结算阶段的生成请求。取出原生成任务、批次和事件来源，交给生成候选起点准备流程。"
+        "display_name": "保留生成尝试对应的原请求",
+        "description": "在“选择生成阶段并准备可靠起点”流程中，取出原生成任务、所属批次和事件来源，交给生成起点准备。后续模型结果和失败重试都可以准确回到这次请求。",
+        "definition_id": "era.task.carry_candidate_inputs"
       },
       {
         "id": "prepare_auxiliary_execution_request",
-        "type_used": "era.agent.prepare_auxiliary_execution_request",
-        "display_name": "读取阶段工作状态与当前来源",
-        "description": "本次准备规划、正文或结算阶段的生成请求。读取生成配置、当前会话和变量，为下一阶段建立模型请求。优先使用尚未保存的当前正文；重新生成、切换回复或手动重试时恢复对应阶段的历史起点，保留较早阶段成果。"
+        "display_name": "准备生成资料并按需还原变量起点",
+        "description": "本环节用于“选择生成阶段并准备可靠起点”：读取当前正文、配置和生成进度，判断重试仍否有效，以及哪些较早阶段应保留。需要重建时按只读历史流程重算变量，成功后交出下一阶段起点，失败时保留原因。",
+        "definition_id": "era.agent.prepare_generation_facts"
       },
       {
         "id": "classify_generation_event",
-        "type_used": "era.agent.classify_generation_event",
-        "display_name": "判定事件与阶段",
-        "description": "本次准备规划、正文或结算阶段的生成请求。根据首次生成、继续、手动重试或页面恢复事件，选择规划、正文或结算阶段。结合聊天和消息版本判断恢复请求是否仍适用，并记录选择结果或过期原因。"
+        "display_name": "判断这次应执行哪个生成阶段",
+        "description": "在“选择生成阶段并准备可靠起点”流程中，接收首次生成、继续、重试或页面恢复请求，结合当前聊天和消息版本，判断应进入规划、正文还是结算阶段。请求已过期时记录原因，供外层返回而不处理旧生成。",
+        "definition_id": "era.agent.classify_generation_event"
       },
       {
         "id": "prepare_generation_phase",
-        "type_used": "era.agent.prepare_generation_phase",
-        "display_name": "准备阶段请求",
-        "description": "本次准备规划、正文或结算阶段的生成请求。根据已选定的规划、正文或结算阶段，组装模型设置、消息历史、变量起点和会话资料。请求无效时返回具体原因。"
+        "display_name": "组装当前生成阶段需要的完整资料",
+        "description": "在“选择生成阶段并准备可靠起点”流程中，根据已确定的规划、正文或结算阶段，整理模型设置、消息历史、变量起点和会话进度。资料无效时返回具体原因，有效时交给模型生成尝试。",
+        "definition_id": "era.agent.prepare_generation_phase"
       },
       {
         "id": "seed_candidate",
-        "type_used": "era.agent.candidate_seed",
-        "display_name": "建立候选请求",
-        "description": "本次准备规划、正文或结算阶段的生成请求。建立一次生成候选的起始状态，保存原请求和批次。替换旧阶段时，先把应保留的较早阶段变量、函数和会话结果恢复到内存；准备失败时返回失败结果。"
+        "display_name": "准备本次生成尝试及失败恢复起点",
+        "description": "在“选择生成阶段并准备可靠起点”流程中，接收即将执行的模型生成请求，记住原任务、所属批次和本次允许保留的历史。替换旧阶段时先恢复较早阶段已经完成的变量与函数；恢复失败就返回原因，避免在错误起点上继续生成。",
+        "definition_id": "era.agent.candidate_seed"
       },
       {
         "id": "prepare_candidate_continuation",
-        "type_used": "era.agent.prepare_candidate_continuation",
-        "display_name": "返回候选状态与原生成任务",
-        "description": "本次准备规划、正文或结算阶段的生成请求。将已建立起点的候选请求、原任务和批次交给候选循环，供模型生成及命令应用。"
+        "display_name": "把准备好的生成请求交给尝试循环",
+        "description": "在“选择生成阶段并准备可靠起点”流程中，接收已确认起点的生成请求，连同原任务和所属批次交给生成循环。循环据此请求模型、执行文字中的指令，并在允许时重试，结果仍能对应原发起者。",
+        "definition_id": "era.agent.prepare_candidate_continuation"
       },
       {
         "id": "end",
-        "type_used": "era.service.terminal",
-        "display_name": "多阶段生成 准备结束",
-        "description": "结束选择生成阶段并准备模型请求，输出本段流程的处理结果。"
+        "display_name": "结束选择生成阶段并准备可靠起点",
+        "description": "标明“选择生成阶段并准备可靠起点”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.service.terminal"
       }
     ],
     "edges": [
@@ -143,7 +143,7 @@
       {
         "type": "era.task.prepared",
         "cardinality": "exactly_one",
-        "display_name": "待执行请求及原任务资料",
+        "display_name": "已备齐的执行请求或直接返回结论",
         "as": "era_agent_generation_session_prepared_task"
       }
     ]

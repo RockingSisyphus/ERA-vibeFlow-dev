@@ -1,20 +1,20 @@
 {
   "type_key": "era.tavern.flow.settlement",
-  "display_name": "依次结算批次并安排后置通知",
-  "description": "按序号完成批次回执，先设置致命转换标记再允许回执回调重入；通知不占用主 Service 执行等待。",
+  "display_name": "逐项回告批次事件并整理后续通知",
+  "description": "接收主服务已经核对的批次结果，先标记严重停止状态，再按原序完成每个事件确认并释放引用，报告诊断并交接通知资料。后续通知独立收集完成，不占用主服务下一轮等待。",
   "expand": true,
   "requires": [
     {
       "type": "era.tavern.call.frame",
       "cardinality": "exactly_one",
-      "display_name": "本次调用及实例资源令牌"
+      "display_name": "逐项回告批次事件并整理后续通知的请求和已有进度"
     }
   ],
   "provides": [
     {
       "key": "era_tavern_flow_settlement_frame",
       "type": "era.tavern.call.frame",
-      "display_name": "操作结果及后续处理所需的资源令牌"
+      "display_name": "逐项回告批次事件并整理后续通知的处理进度及结果"
     }
   ],
   "pipeline": {
@@ -23,7 +23,7 @@
       {
         "key": "frame",
         "type": "era.tavern.call.frame",
-        "display_name": "调用与资源资料",
+        "display_name": "逐项回告批次事件并整理后续通知的请求和已有进度",
         "required": true
       }
     ],
@@ -31,33 +31,32 @@
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.tavern.initialize.start",
-        "display_name": "开始当前原生流程",
-        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+        "display_name": "开始逐项回告批次事件并整理后续通知",
+        "description": "标明“逐项回告批次事件并整理后续通知”的开始位置。接收主服务已经核对的批次结果，先标记严重停止状态，再按原序完成每个事件确认并释放引用，报告诊断并交接通知资料。后续通知独立收集完成，不占用主服务下一轮等待。",
+        "definition_id": "era.tavern.initialize.start"
       },
       {
         "id": "mark_fatal_transition",
-        "type_used": "era.tavern.settlement.mark_fatal_transition",
-        "display_name": "登记致命转换边界",
-        "description": "fatal 批次先进入转换状态，使回执回调中再次准入时立即获得原拒绝。"
+        "display_name": "严重错误时先标记不再接收新事件",
+        "description": "在“逐项回告批次事件并整理后续通知”流程中，查看本批是否需要停止服务，若需要则先标记正在进入严重故障状态，再开始逐项返回事件结果。这样回告触发的新请求也能看到服务不可继续的状态。",
+        "definition_id": "era.tavern.settlement.mark_fatal_transition"
       },
       {
         "id": "settle_receipts_loop",
-        "type_used": "vibeflow.loop.while",
-        "display_name": "逐项结算来源循环",
-        "description": "每轮结算一个来源、释放它的引用并推进位置；所有来源完成后结束。回执重入时仍看到本批次已设置的致命转换边界。",
+        "display_name": "按序向每个原事件回告结果",
+        "description": "对本批原事件清单逐项返回真实处理结果并释放其页面引用，全部结束后再处理诊断及通知。若有严重停止原因，回告前已标记不可继续接收，避免回调中重新进入正常服务。",
         "requires": [
           {
             "type": "era.tavern.frame.settlement.mark_fatal_transition",
             "cardinality": "exactly_one",
-            "display_name": "当前请求、实例资源令牌及此前步骤取得的事实"
+            "display_name": "逐项回告批次事件并整理后续通知的请求和已有进度"
           }
         ],
         "provides": [
           {
             "key": "era_tavern_flow_settlement_settle_receipts_loop_frame",
             "type": "era.tavern.frame.settlement.mark_fatal_transition",
-            "display_name": "逐项结算来源完成后的处理资料"
+            "display_name": "逐项回告批次事件并整理后续通知的处理进度及结果"
           }
         ],
         "loop": {
@@ -80,37 +79,38 @@
               "as": "era_tavern_flow_settlement_settle_receipts_loop_frame"
             }
           ]
-        }
+        },
+        "definition_id": "vibeflow.loop.while"
       },
       {
         "id": "settle_receipts",
-        "type_used": "era.tavern.settlement.settle_receipts",
-        "display_name": "汇总逐项结算来源",
-        "description": "将循环的终态资料转换为后续步骤使用的结果；不重复处理已经完成的条目。"
+        "display_name": "确认本批原事件都已逐项回告",
+        "description": "在“逐项回告批次事件并整理后续通知”流程中，接收事件结算循环结束的资料，继续进入严重故障固定、诊断和通知整理。此时原事件已经得到处理确认，后续不会再次结算同一项。",
+        "definition_id": "era.tavern.settlement.settle_receipts"
       },
       {
         "id": "latch_fatal",
-        "type_used": "era.tavern.settlement.latch_fatal",
-        "display_name": "完成致命态与等待取消",
-        "description": "fatal 时锁定致命态并取消 operational 等待；普通批次保持运行。"
+        "display_name": "进入严重故障状态并结束运行等待",
+        "description": "在“逐项回告批次事件并整理后续通知”流程中，本批要求停止服务时，固定严重故障状态，取消操作等待并拒绝仍挂起的事件接收。配合之前已回告的结果，让当前实例停止继续接收业务。",
+        "definition_id": "era.tavern.settlement.latch_fatal"
       },
       {
         "id": "publish_diagnostics",
-        "type_used": "era.tavern.settlement.publish_diagnostics",
-        "display_name": "报告 Service 输出诊断",
-        "description": "按既有 Console 内容报告诊断，不把预期错误改成成功，也不静默过滤告警。"
+        "display_name": "把本批问题和提示报告到页面日志",
+        "description": "在“逐项回告批次事件并整理后续通知”流程中，读取主服务返回的各项诊断，逐条写入本实例日志。供用户或开发者看到实际处理中的提示与原因，原事件结论保持实际状态。",
+        "definition_id": "era.tavern.settlement.publish_diagnostics"
       },
       {
         "id": "enqueue_notifications",
-        "type_used": "era.tavern.settlement.enqueue_notifications",
-        "display_name": "保存已经解码的后置通知资料",
-        "description": "只保存本批次通知参数和实例引用；不入后台队列或发起回调。同步 frame_send 在 remember_frame 后通过原生 Loop 发起。"
+        "display_name": "交接本批已经整理的通知资料",
+        "description": "在“逐项回告批次事件并整理后续通知”流程中，接收已完成批次结算的资料，交给后续通知准备。这里只继续传递现有内容，通知实际发起和完成处理由相应通知流程负责。",
+        "definition_id": "era.tavern.settlement.enqueue_notifications"
       },
       {
         "id": "end",
-        "type_used": "era.tavern.initialize.end",
-        "display_name": "结束当前原生流程",
-        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+        "display_name": "结束逐项回告批次事件并整理后续通知",
+        "description": "标明“逐项回告批次事件并整理后续通知”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.tavern.initialize.end"
       }
     ],
     "edges": [
@@ -147,7 +147,7 @@
       {
         "type": "era.tavern.call.frame",
         "cardinality": "exactly_one",
-        "display_name": "完成后的操作资料",
+        "display_name": "逐项回告批次事件并整理后续通知的处理进度及结果",
         "as": "frame"
       }
     ]

@@ -1,0 +1,31 @@
+import {defineBaseLib} from "@vibeflow/plugin";
+
+export const era_service_initialization_transaction = defineBaseLib({
+  "id": "era.service.initialization_transaction",
+  "display_name": "ERA 初始化事务纯适配层",
+  "description": "规范化身份与宿主资源快照，调用设置、世界书、正则、主开场白和占位符纯规划器，并形成结算结果。",
+  "version": "1.0.0",
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "source": {
+        "kind": "file",
+        "ref": "base_lib/initialization_transaction.ts"
+      }
+    }
+  ],
+  "dependencies": [
+    "era.service.resource_planner",
+    "era.service.types"
+  ],
+  "external_packages": [
+    "@era/example-resources"
+  ],
+  "rulesets": [
+    "vibeflow.base_lib"
+  ]
+});

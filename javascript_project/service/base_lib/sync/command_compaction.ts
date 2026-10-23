@@ -3,8 +3,8 @@ import { compactCommandLayer } from "@era/vibeflow-command-compaction/engine";
 import {
   seedCommandOperations,
   operationResult,
+  type OperationState,
 } from "../domain/commands/operation_state.ts";
-import { foldOperations } from "../domain/commands/operation_fold.ts";
 import {
   commandCompactionContentHash,
   commandCompactionLineageHash,
@@ -165,7 +165,7 @@ export function identifySealedLayers(
  *
  * **含调用块的楼层不再整层跳过**（人工决定 2026-09-11）：调用块执行后带 `status="done"`、
  * 永不重跑，压缩只要不把它的操作区拆开，就可以把它产出的操作当普通操作一起压缩。
- * 安全性由后一步的真实重放门承担：`replayWithServiceEngine` 会用 Service 的 CRUD 引擎重放
+ * 安全性由后一步的真实重放门承担：正式共享操作子图会重放
  * 压缩结果并与层末状态逐字段比对，任何「压缩把顺序或数值改了」的结果都会被拒绝（`accepted:false`）。
  */
 export function compactEachSegment(
@@ -189,40 +189,57 @@ export function compactEachSegment(
   });
 }
 
-/** Replay an eligible candidate with the real Service CRUD engine. */
-export function replayWithServiceEngine(
+/** 只判断候选资格；重放顺序及执行由正式 workflow 负责。 */
+export function candidateCanReplay(
   context: ServiceCompactionContext,
-): ServiceCompactionContext {
-  return mapCandidates(context, (entry) => {
-    const compacted = entry.compaction;
-    if (
-      entry.original === null ||
-      compacted === null ||
-      (compacted.status !== "compacted" && compacted.status !== "partial") ||
-      compacted.diagnostics.length !== 0 ||
-      compacted.content === entry.original
-    )
-      return entry;
-    const replay = operationResult(
-      foldOperations(
-        seedCommandOperations({
-          content: compacted.content,
-          messageId: entry.candidate.messageId,
-          initialStat: entry.candidate.layerStartStat,
-          initialStatFunc: entry.candidate.layerStartStatFunc,
-          randomSourceKey: entry.candidate.mk,
-          meta: entry.candidate.eraMeta,
-          traditionalToSimplified: entry.candidate.traditionalToSimplified,
-        }),
-      ),
-    );
-    const accepted =
-      replay.diagnostics.length === 0 &&
-      equal(replay.finalStat, entry.candidate.layerEndStat) &&
-      equal(replay.finalStatFunc ?? {}, entry.candidate.layerEndStatFunc) &&
-      replay.nextRandomDrawOffset === compacted.nextRandomDrawOffset;
-    return { ...entry, replay, accepted };
+  index: number,
+): boolean {
+  const entry = context.candidates[index];
+  const compacted = entry?.compaction;
+  return Boolean(
+    entry &&
+    entry.original !== null &&
+    compacted &&
+    (compacted.status === "compacted" || compacted.status === "partial") &&
+    compacted.diagnostics.length === 0 &&
+    compacted.content !== entry.original,
+  );
+}
+export function prepareCandidateOperations(
+  context: ServiceCompactionContext,
+  index: number,
+): OperationState {
+  const entry = context.candidates[index];
+  if (!candidateCanReplay(context, index))
+    throw new TypeError("压缩候选不满足重放条件。");
+  return seedCommandOperations({
+    content: entry.compaction!.content,
+    messageId: entry.candidate.messageId,
+    initialStat: entry.candidate.layerStartStat,
+    initialStatFunc: entry.candidate.layerStartStatFunc,
+    randomSourceKey: entry.candidate.mk,
+    meta: entry.candidate.eraMeta,
+    traditionalToSimplified: entry.candidate.traditionalToSimplified,
   });
+}
+export function compareCandidateReplay(
+  context: ServiceCompactionContext,
+  index: number,
+  operations: OperationState,
+): ServiceCompactionContext {
+  const entry = context.candidates[index];
+  const replay = operationResult(operations);
+  const accepted =
+    replay.diagnostics.length === 0 &&
+    equal(replay.finalStat, entry.candidate.layerEndStat) &&
+    equal(replay.finalStatFunc ?? {}, entry.candidate.layerEndStatFunc) &&
+    replay.nextRandomDrawOffset === entry.compaction!.nextRandomDrawOffset;
+  return {
+    ...context,
+    candidates: context.candidates.map((item, i) =>
+      i === index ? { ...entry, replay, accepted } : item,
+    ),
+  };
 }
 
 /** Write only accepted single-scope replacements and their real replay logs. */
@@ -342,31 +359,4 @@ export function updateCompactionMarkers(
     sealedCompactionCandidates: [],
   };
   return { ...context.originalWork, plan } as SyncWorkV1;
-}
-
-/** Compose the existing Service stages for the production Node and focused tests. */
-export function applySealedCommandCompactionToWork(
-  work: SyncWorkV1,
-): SyncWorkV1 {
-  const identified = identifySealedLayers(work);
-  const compacted = compactEachSegment(identified);
-  const replayed = replayWithServiceEngine(compacted);
-  const written = writeSingleScopeSegments(replayed);
-  return updateCompactionMarkers(written);
-}
-
-/** Compatibility for focused pure-plan tests. */
-export function applySealedCommandCompaction(
-  plan: EraSyncPlanV1,
-): EraSyncPlanV1 {
-  if (plan.status === "failed") return plan;
-  const work = {
-    schemaVersion: 1,
-    step: {} as SyncWorkV1["step"],
-    disposition: "commit",
-    plan,
-    payload: null,
-    failure: null,
-  } satisfies SyncWorkV1;
-  return applySealedCommandCompactionToWork(work).plan ?? plan;
 }

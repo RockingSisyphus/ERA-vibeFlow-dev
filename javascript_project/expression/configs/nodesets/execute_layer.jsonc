@@ -6,20 +6,20 @@
   ],
   "type_key": "era.expression.execute_layer",
   "flow_kind": "process",
-  "display_name": "ERA 函数表达式层执行",
-  "description": "对一层有序变量表达式作纯计算：标准化输入，解析并校验函数库，拒绝自由变量及递归调用，再按顺序求每个操作，使后项读取前项的新值。随机来源和偏移明确传递；完成后推导能安全重放的较短表达式。返回最终变量、诊断及压缩候选，不将其保存到聊天，也不运行任意作者 JavaScript。",
+  "display_name": "按顺序计算一轮变量公式",
+  "description": "接收起始变量、自定义函数及有序公式，检查输入和函数定义，依次计算并更新本轮变量。记录随机使用及错误，同时整理可保持同样效果的公式缩短建议，返回计算结果而不保存到聊天。",
   "requires": [
     {
       "type": "era.expression.request",
       "cardinality": "exactly_one",
-      "display_name": "函数表达式请求"
+      "display_name": "初始变量、函数及需要依次计算的公式"
     }
   ],
   "provides": [
     {
       "key": "expression_response",
       "type": "era.expression.response",
-      "display_name": "函数表达式结果"
+      "display_name": "公式计算的最终变量和缩短建议"
     }
   ],
   "pipeline": {
@@ -28,7 +28,7 @@
       {
         "key": "expression_request",
         "type": "era.expression.request",
-        "display_name": "函数表达式请求",
+        "display_name": "初始变量、函数及需要依次计算的公式",
         "required": true
       }
     ],
@@ -36,88 +36,87 @@
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.expression.terminal",
-        "display_name": "表达式层启动",
-        "description": "这是“ERA 函数表达式层执行”的入口标记。本工作流的结构起点或终点标记，执行时返回空结果，不计算表达式、不替换文本，也不读写酒馆。它只明确流程的入口或出口，业务输入与结果通过已声明的数据通道传递；最终结果由实际处理节点产生。"
+        "display_name": "开始按顺序计算一轮变量公式",
+        "description": "标明“按顺序计算一轮变量公式”的开始位置。接收起始变量、自定义函数及有序公式，检查输入和函数定义，依次计算并更新本轮变量。记录随机使用及错误，同时整理可保持同样效果的公式缩短建议，返回计算结果而不保存到聊天。",
+        "definition_id": "era.expression.terminal"
       },
       {
         "id": "validate_request",
-        "type_used": "era.expression.validate_request",
-        "display_name": "验证表达式请求",
-        "description": "检查表达式求值请求中的初始变量、函数定义和有序操作是否符合允许的格式，数值必须有限；同时检查可选随机来源标识及非负安全整数偏移。将有效输入标准化，并保留无效输入诊断供后续统一返回。只读取请求内数据，不读取聊天、时间或系统随机数。"
+        "display_name": "检查公式、变量和计算要求",
+        "description": "在“按顺序计算一轮变量公式”流程中，检查本次提供的初始变量、自定义函数及有序计算是否齐全、格式是否可用，数值需有效；有可重复随机要求时也检查其起点。整理有效资料并记录具体问题，供整个公式计算流程使用。",
+        "definition_id": "era.expression.validate_request"
       },
       {
         "id": "validate_random_context",
-        "type_used": "era.expression.validate_random_context",
-        "display_name": "传递已校验的随机上下文",
-        "description": "把请求标准化阶段已经检查过的随机上下文连同请求原样传到函数和操作处理链。随机来源标识用于稳定重放，偏移表示此前已消耗的位置；当前节点不另做一次校验、不抽取随机数，也不保存游标。随机输入是否合法由入口标准化负责，避免把数据转接误写成独立验证。"
+        "display_name": "传递可重复随机所需的起点",
+        "description": "在“按顺序计算一轮变量公式”流程中，接收入口已经检查过的计算请求，将随机来源和此前使用次数继续交给公式计算。后续据此在重算同一条消息时取得相同随机结果；本环节本身不生成随机数。",
+        "definition_id": "era.expression.validate_random_context"
       },
       {
         "id": "parse_function_definitions",
-        "type_used": "era.expression.parse_function_definitions",
-        "display_name": "解析函数定义 AST",
-        "description": "逐个读取 JSON 函数定义的名称、形参和表达式，用 ERA 自有语法解析器生成语法树，记录调用与参数位置。重复形参、非法名称或表达式无法解析时附带定位诊断。语法树描述计算结构，尚不执行函数，也不会把表达式作为任意 JavaScript 代码运行。"
+        "display_name": "读懂每个自定义函数的算式",
+        "description": "在“按顺序计算一轮变量公式”流程中，逐个读取自定义函数的名称、参数和算式，将算式整理成可以逐步计算的结构。名称、参数或算式有问题时记下位置和原因，供后面的函数检查决定是否允许使用。",
+        "definition_id": "era.expression.parse_function_definitions"
       },
       {
         "id": "extract_function_dependencies",
-        "type_used": "era.expression.extract_function_dependencies",
-        "display_name": "提取函数体调用",
-        "description": "遍历各函数的语法树，列出它调用了哪些已定义的自定义函数，去重并排序，形成后续检查递归所需的依赖表。内建函数不加入这份自定义依赖表，其名称和参数约束由纯度检查负责。这里不执行函数，也不因为提取到调用关系就认定其有效。"
+        "display_name": "找出自定义函数之间的调用关系",
+        "description": "在“按顺序计算一轮变量公式”流程中，查看每个自定义函数的算式，列出它会调用哪些其他自定义函数。例如甲使用乙的结果，就记录甲依赖乙；这些关系用于发现互相循环调用的定义。",
+        "definition_id": "era.expression.extract_function_dependencies"
       },
       {
         "id": "validate_function_purity",
-        "type_used": "era.expression.validate_function_purity",
-        "display_name": "验证函数纯度与参数",
-        "description": "检查每个自定义函数只使用自己的形参，调用的内建或自定义函数确实存在且参数数量正确，不允许偷偷读取状态路径、自由变量或覆盖内建名称。输出诊断供编译阶段决定能否执行；这样同一组参数应有明确结果，不依赖函数定义以外的隐含变量。"
+        "display_name": "检查函数参数和允许的运算",
+        "description": "在“按顺序计算一轮变量公式”流程中，检查自定义函数只使用声明的参数，调用的函数确实存在且参数数量正确。禁止函数暗中依赖外部变量或覆盖内建函数；发现的问题会使相应函数库无法作为有效计算依据。",
+        "definition_id": "era.expression.validate_function_purity"
       },
       {
         "id": "build_function_call_graph",
-        "type_used": "era.expression.build_function_call_graph",
-        "display_name": "建立函数调用图",
-        "description": "把自定义函数依赖表和已有检查诊断整理成调用图，供递归检测使用。例如甲调用乙、乙调用丙会形成连续关系，函数先调用后定义仍可对应。这里不再次解析函数或求值，也不在组装图时抹掉先前诊断。"
+        "display_name": "整理函数依赖关系供检查",
+        "description": "在“按顺序计算一轮变量公式”流程中，接收各函数调用其他函数的记录，把它们整理为完整的依赖关系，并保留已经发现的问题。下一环节沿这些关系检查是否存在无法结束的循环调用。",
+        "definition_id": "era.expression.build_function_call_graph"
       },
       {
         "id": "reject_recursive_functions",
-        "type_used": "era.expression.reject_recursive_functions",
-        "display_name": "拒绝递归函数环",
-        "description": "沿自定义函数调用关系作深度优先遍历，识别直接调用自身或绕经其他函数返回自身的循环，并记录完整循环链。输出调用图及新增诊断，不当场执行函数；后续编译结合诊断判定函数库是否可用，因此节点名字中的“拒绝”不是静默删除错误函数。"
+        "display_name": "找出会反复调用自己的函数",
+        "description": "在“按顺序计算一轮变量公式”流程中，沿函数之间的调用关系检查直接或间接自我调用，例如甲调用乙、乙又调用甲。发现时记录完整关系，交给函数库检查结果处理，避免计算陷入无限重复。",
+        "definition_id": "era.expression.reject_recursive_functions"
       },
       {
         "id": "compile_callable_functions",
-        "type_used": "era.expression.compile_callable_functions",
-        "display_name": "编译可调用函数库",
-        "description": "将解析好的函数体语法树、形参表和所有校验诊断组织成运行时可调用的函数库，标明是否有效。求值时按明确调用帧绑定参数，不通过字符串替换拼接函数体；存在格式、纯度或递归问题时不把库当作可执行。这里只准备调用结构，不调用作者函数或修改变量。"
+        "display_name": "整理可供公式使用的函数库",
+        "description": "在“按顺序计算一轮变量公式”流程中，把已读懂的函数算式、参数和检查结果整理成一份可调用的函数库。函数定义有错误时保留错误并标记不可用；有效函数供后续逐项公式计算使用。",
+        "definition_id": "era.expression.compile_callable_functions"
       },
       {
         "id": "parse_operations",
-        "type_used": "era.expression.parse_operations",
-        "display_name": "解析顺序操作",
-        "description": "按输入原顺序解析每个变量操作的目标路径和表达式，记录对应语法树及定位诊断。用户表达式不能使用内部压缩表示的 @path，避免混淆当前值和层起始快照。这里只解释操作结构，不更新变量；后续循环按顺序执行，后一项才能读取前一项的新结果。"
+        "display_name": "按原顺序整理各项公式",
+        "description": "在“按顺序计算一轮变量公式”流程中，接收需要依次执行的变量计算，读出每项要修改的变量和算式，记录无法识别的内容。保留原有顺序，让后一项公式可以使用前一项刚算出的变量值。",
+        "definition_id": "era.expression.parse_operations"
       },
       {
         "id": "initialize_sequence_state",
-        "type_used": "era.expression.initialize_random_sequence_state",
-        "display_name": "初始化顺序状态与随机游标",
-        "description": "建立有序求值的起始状态：保留本层开始时的变量快照，装入已编译函数库和解析操作，建立操作索引及从请求偏移开始的随机进度，预留自动随机位置。可选快照函数库单独编译，供快照表达式使用。尚未执行任何操作，冻结起点用于之后重放和压缩证明。",
-        "join_policy": "all"
+        "display_name": "准备变量起点和随机使用进度",
+        "description": "在“按顺序计算一轮变量公式”流程中，保存本轮开始前的变量，装入有序公式和函数库，并从请求指定的位置记录随机使用次数。后续计算可继续前面的随机顺序，原始起点则用于重复得到相同结果。",
+        "join_policy": "all",
+        "definition_id": "era.expression.initialize_random_sequence_state"
       },
       {
         "id": "operation_loop",
-        "type_used": "vibeflow.loop.while",
-        "display_name": "逐条执行表达式操作",
-        "description": "按原输入顺序逐项求表达式，循环携带当前变量、操作索引、函数库和随机进度。每项通过显式语法树帧栈处理嵌套调用，成功结果供后项读取，失败诊断保留。全部完成后返回整层计算结果；这里没有酒馆写入。",
+        "display_name": "依次计算公式并沿用前项结果",
+        "description": "按请求顺序逐项计算公式，携带当前变量、函数和随机进度，成功结果供后项读取，失败原因继续保留。所有操作处理完才返回本轮计算结果，随后整理可用的缩短建议。",
         "requires": [
           {
             "type": "era.expression.sequence.state",
             "cardinality": "exactly_one",
-            "display_name": "表达式顺序执行状态"
+            "display_name": "当前公式计算位置和已更新变量"
           }
         ],
         "provides": [
           {
             "key": "numeric_execution",
             "type": "era.expression.execution.result",
-            "display_name": "顺序数值结果"
+            "display_name": "本轮公式得到的变量和随机使用记录"
           }
         ],
         "loop": {
@@ -140,31 +139,32 @@
               "as": "numeric_execution"
             }
           ]
-        }
+        },
+        "definition_id": "vibeflow.loop.while"
       },
       {
         "id": "derive_symbolic_layer",
-        "type_used": "era.expression.derive_symbolic_layer",
-        "display_name": "推导消息层符号变化",
-        "description": "根据已完成的有序操作，把每个变化变量的最终计算推导成引用层起始快照的表达式，而不是简单把最终数值写死。内部 @path 表示起点某变量，便于重放。含自动随机调用或受其影响的路径在推导中排除不安全压缩，保留需要按原顺序执行的部分；这里只形成候选。"
+        "display_name": "找出能表达相同变化的较短公式",
+        "description": "在“按顺序计算一轮变量公式”流程中，根据本轮已经完成的变量计算，尝试把每个变量的最终变化表示成相对于计算起点的公式。依赖自动随机结果而无法安全合并的部分会保留原有顺序；输出的是供后续确认的缩短方案。",
+        "definition_id": "era.expression.derive_symbolic_layer"
       },
       {
         "id": "guard_random_compaction",
-        "type_used": "era.expression.guard_random_compaction",
-        "display_name": "传递随机依赖筛选结果",
-        "description": "原样传递符号推导器已经筛选过的候选及诊断，明确从“推导结果”进入“规范化候选”的数据边界。自动随机调用及其依赖路径的排除由前面的真实推导算法完成，本节点不再分析或抽取随机数；只有能按原随机语义重放的候选才继续使用。"
+        "display_name": "交接已排除不安全随机合并的方案",
+        "description": "在“按顺序计算一轮变量公式”流程中，接收公式推导步骤已经筛选过的缩短方案及问题记录，交给文字简化步骤。随机调用及其影响范围的判断已在推导时完成，此处原样交接，保留后续核对所需依据。",
+        "definition_id": "era.expression.guard_random_compaction"
       },
       {
         "id": "normalize_compaction",
-        "type_used": "era.expression.normalize_compaction",
-        "display_name": "规范化压缩表达式",
-        "description": "把安全的符号候选做局部常数折叠、零和一等简化，并按所需括号打印为较短表达式，每个变化路径最多产生一个候选。连同有序执行所得最终变量、诊断和随机消耗一起返回；不安全路径不强行压缩。这里是纯计算出口，是否用于消息重写还须由调用方验证。"
+        "display_name": "整理最终计算结果和公式缩短建议",
+        "description": "在“按顺序计算一轮变量公式”流程中，将可以安全简化的公式写得更短，例如合并常量、去掉无效的加零操作；同时返回本轮变量结果、随机使用次数和问题说明。缩短建议由调用方进一步验证后决定是否用于改写消息。",
+        "definition_id": "era.expression.normalize_compaction"
       },
       {
         "id": "end",
-        "type_used": "era.expression.terminal",
-        "display_name": "表达式层结束",
-        "description": "这是“ERA 函数表达式层执行”的出口标记。本工作流的结构起点或终点标记，执行时返回空结果，不计算表达式、不替换文本，也不读写酒馆。它只明确流程的入口或出口，业务输入与结果通过已声明的数据通道传递；最终结果由实际处理节点产生。"
+        "display_name": "结束按顺序计算一轮变量公式",
+        "description": "标明“按顺序计算一轮变量公式”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.expression.terminal"
       }
     ],
     "edges": [
@@ -266,7 +266,7 @@
       {
         "type": "era.expression.response",
         "cardinality": "exactly_one",
-        "display_name": "函数表达式结果",
+        "display_name": "公式计算的最终变量和缩短建议",
         "as": "expressionResponse"
       }
     ]

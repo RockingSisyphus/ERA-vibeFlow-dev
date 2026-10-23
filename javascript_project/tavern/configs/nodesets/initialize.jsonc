@@ -1,20 +1,20 @@
 {
   "type_key": "era.tavern.flow.initialize",
-  "display_name": "建立隔离的酒馆会话资源",
-  "description": "同步建立限额、实例及安装决议回执；不在短流程里创建长期监听。资源就绪与默认激活在同一辅助root的异步启动入口完成，对外start完成时监听已经就绪。",
+  "display_name": "建立当前页面的 ERA 运行实例",
+  "description": "读取容量和告警设置，建立事件、生成和资源运行资料，以及脚本启用决定的等待。返回同一实例给后续启动和操作使用，长期监听与清理由运行职责分支负责。",
   "expand": true,
   "requires": [
     {
       "type": "era.tavern.call.frame",
       "cardinality": "exactly_one",
-      "display_name": "本次调用及实例资源令牌"
+      "display_name": "建立当前页面的 ERA 运行实例的请求和已有进度"
     }
   ],
   "provides": [
     {
       "key": "era_tavern_flow_initialize_frame",
       "type": "era.tavern.frame.initialize.return_session",
-      "display_name": "操作结果及后续处理所需的资源令牌"
+      "display_name": "建立当前页面的 ERA 运行实例的处理进度及结果"
     }
   ],
   "pipeline": {
@@ -23,7 +23,7 @@
       {
         "key": "frame",
         "type": "era.tavern.call.frame",
-        "display_name": "调用与资源资料",
+        "display_name": "建立当前页面的 ERA 运行实例的请求和已有进度",
         "required": true
       }
     ],
@@ -31,39 +31,39 @@
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.tavern.initialize.start",
-        "display_name": "开始当前原生流程",
-        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+        "display_name": "开始建立当前页面的 ERA 运行实例",
+        "description": "标明“建立当前页面的 ERA 运行实例”的开始位置。读取容量和告警设置，建立事件、生成和资源运行资料，以及脚本启用决定的等待。返回同一实例给后续启动和操作使用，长期监听与清理由运行职责分支负责。",
+        "definition_id": "era.tavern.initialize.start"
       },
       {
         "id": "read_limits",
-        "type_used": "era.tavern.initialize.read_limits",
-        "display_name": "读取现有端口和限额",
-        "description": "读取迁移后的原有配置；保持事件字节、队列容量、引用数量和屏障告警阈值，不新增运行资格条件。"
+        "display_name": "读取事件队列和等待提醒的设置",
+        "description": "在“建立当前页面的 ERA 运行实例”流程中，读取事件大小、队列数量、页面引用数量及等待告警期限，缺少有效设置时使用现有默认值。供本实例建立资源和接收限制。",
+        "definition_id": "era.tavern.initialize.read_limits"
       },
       {
         "id": "allocate_session",
-        "type_used": "era.tavern.initialize.allocate_session",
-        "display_name": "建立本实例资源仓库",
-        "description": "分配实例令牌，建立队列、回执、引用、会话与控制器；同一实例的三个 AOT 入口共享同一仓库，不同实例分开。"
+        "display_name": "建立当前 ERA 实例的运行资料",
+        "description": "在“建立当前页面的 ERA 运行实例”流程中，为本次页面实例建立事件队列、处理确认、定时记录、生成进度和资源等待；已启动实例沿用原资料，已停止实例不能重新启动。后续各条职责分支共用同一份实例资料。",
+        "definition_id": "era.tavern.initialize.allocate_session"
       },
       {
         "id": "open_startup_wait",
-        "type_used": "era.tavern.initialize.open_startup_wait",
-        "display_name": "建立安装决议等待",
-        "description": "创建本实例startup Promise和停止监听；按staged_startup选择等待显式决议或复用自动激活，不在接线里选择监听策略。"
+        "display_name": "决定自动启用还是等待安装位置判断",
+        "description": "在“建立当前页面的 ERA 运行实例”流程中，接收新建实例，建立启动决定的等待。自动模式继续启用，分步启动模式等待主服务判断脚本安装位置，让监听与界面按最终决定启用。",
+        "definition_id": "era.tavern.initialize.open_startup_wait"
       },
       {
         "id": "return_session",
-        "type_used": "era.tavern.initialize.return_session",
-        "display_name": "交还会话与调用入口资料",
-        "description": "返回实例令牌和初始化结果，供生成的接线启动后台流程并向 Service 提供能力。"
+        "display_name": "交出已经建立的当前实例",
+        "description": "在“建立当前页面的 ERA 运行实例”流程中，将本次已创建的运行资料交给调用方，作为后续酒馆操作和长期运行使用的同一实例。事件、生成和计时处理据此保持归属一致。",
+        "definition_id": "era.tavern.initialize.return_session"
       },
       {
         "id": "end",
-        "type_used": "era.tavern.initialize.end",
-        "display_name": "结束当前原生流程",
-        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+        "display_name": "结束建立当前页面的 ERA 运行实例",
+        "description": "标明“建立当前页面的 ERA 运行实例”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.tavern.initialize.end"
       }
     ],
     "edges": [
@@ -92,7 +92,7 @@
       {
         "type": "era.tavern.frame.initialize.return_session",
         "cardinality": "exactly_one",
-        "display_name": "完成后的操作资料",
+        "display_name": "建立当前页面的 ERA 运行实例的处理进度及结果",
         "as": "frame"
       }
     ]

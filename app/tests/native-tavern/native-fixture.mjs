@@ -1,19 +1,13 @@
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, writeFile, symlink } from 'node:fs/promises';
-import { rmSync } from 'node:fs';
 import { fileURLToPath, URL as ResourceURL } from 'node:url';
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
+const { importGeneratedService } = require('../../scripts/import-generated-service.mjs');
 import { setTimeout as delay } from 'node:timers/promises';
 const bundleRoot = new ResourceURL(process.env.ERA_NATIVE_AOT_ROOT ?? '../../../generated/', import.meta.url);
 const { runWorkflow: sync } = require(fileURLToPath(new ResourceURL('era-tavern/sync/workflow.js', bundleRoot).href));
 const { runWorkflowAsync: asyncEntry } = require(
   fileURLToPath(new ResourceURL('era-tavern/async/workflow.js', bundleRoot).href),
-);
-const { runWorkflowAsync: runtime } = require(
-  fileURLToPath(new ResourceURL('era-tavern/runtime/workflow.js', bundleRoot).href),
 );
 const { runWorkflowAsync: realService } = await stageService();
 const { runEra } = require(
@@ -101,13 +95,14 @@ export async function fixture(serviceEntry, options = {}) {
       if (signal.aborted) resolve();
     });
   };
-  const recordingRuntime = (inputs, runOptions) => runtime(inputs, { ...runOptions, ...options.runtimeOptions });
+  const recordingAsync = (inputs, runOptions) =>
+    asyncEntry(inputs, runOptions.entry === 'runtime' ? { ...runOptions, ...options.runtimeOptions } : runOptions);
   const recordingSync = inputs => {
     session = inputs.request.session ?? session;
     return sync(inputs);
   };
   const work = runEra(
-    { sync: recordingSync, async: asyncEntry, runtime: recordingRuntime, service },
+    { sync: recordingSync, async: recordingAsync, service },
     {
       ...options,
       api: env.api,
@@ -140,16 +135,13 @@ export async function fixture(serviceEntry, options = {}) {
     disposed: () => disposed,
   };
 }
-export { sync, asyncEntry, runtime, realService, runEra };
+export { sync, asyncEntry, realService, runEra };
 
 async function stageService() {
-  const directory = await mkdtemp(join(tmpdir(), 'era-generated-workflow-'));
-  const entry = directory + '/workflow.mjs';
+  const staged = await importGeneratedService(new ResourceURL('era-service/workflow.js', bundleRoot));
   try {
-    await symlink(fileURLToPath(new ResourceURL('../../node_modules', import.meta.url)), directory + '/node_modules', 'dir');
-    await writeFile(entry, await readFile(new ResourceURL('era-service/workflow.js', bundleRoot)));
-    return require(entry);
+    return staged.workflow;
   } finally {
-    rmSync(directory, { recursive: true, force: true });
+    await staged.cleanup();
   }
 }

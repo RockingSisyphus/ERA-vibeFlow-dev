@@ -1,20 +1,20 @@
 {
   "type_key": "era.tavern.flow.variables_commit",
-  "display_name": "应用 Service 指定的变量写入并回读",
-  "description": "实现 era.tavern.variables.commit；输入沿用 era.tavern.variables.commit.request，输出沿用 era.tavern.variables.commit.result，完成方式保持 suspend。 原接口虽返回 Promise，但内部没有实际等待；完整原流程同步完成。",
+  "display_name": "执行明确变量写入并回读确认",
+  "description": "接收目标范围及完整对象或字段变化，区分整份替换与部分合并后写入，再读取真实变量。脚本设置变化时通知页面，最后返回范围、实际内容及完成确认。",
   "expand": true,
   "requires": [
     {
       "type": "era.tavern.call.frame",
       "cardinality": "exactly_one",
-      "display_name": "当前实例与调用资料"
+      "display_name": "执行明确变量写入并回读确认的请求和已有进度"
     }
   ],
   "provides": [
     {
       "key": "era_tavern_flow_variables_commit_frame",
       "type": "era.tavern.call.frame",
-      "display_name": "当前步骤的资源与已捕获事实"
+      "display_name": "执行明确变量写入并回读确认的处理进度及结果"
     }
   ],
   "pipeline": {
@@ -23,7 +23,7 @@
       {
         "key": "frame",
         "type": "era.tavern.call.frame",
-        "display_name": "调用与资源资料",
+        "display_name": "执行明确变量写入并回读确认的请求和已有进度",
         "required": true
       }
     ],
@@ -31,7 +31,7 @@
       {
         "type": "era.tavern.call.frame",
         "cardinality": "exactly_one",
-        "display_name": "完成后的操作资料",
+        "display_name": "执行明确变量写入并回读确认的处理进度及结果",
         "as": "frame"
       }
     ],
@@ -39,63 +39,63 @@
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.tavern.initialize.start",
-        "display_name": "开始当前原生流程",
-        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+        "display_name": "开始执行明确变量写入并回读确认",
+        "description": "标明“执行明确变量写入并回读确认”的开始位置。接收目标范围及完整对象或字段变化，区分整份替换与部分合并后写入，再读取真实变量。脚本设置变化时通知页面，最后返回范围、实际内容及完成确认。",
+        "definition_id": "era.tavern.initialize.start"
       },
       {
         "id": "check_scope",
-        "type_used": "era.tavern.variables_commit.check_scope",
-        "display_name": "检查变量作用域及明确写入内容",
-        "description": "检查 chat/script/message 作用域，复制 Service 给出的整对象或明确变更，不自行计算 ERA 变量。"
+        "display_name": "确认变量写入的目标范围",
+        "description": "在“执行明确变量写入并回读确认”流程中，检查当前实例可用且请求未取消，读取本次要修改的聊天或脚本变量范围。后续所有写入和回读都使用同一明确目标。",
+        "definition_id": "era.tavern.variables_commit.check_scope"
       },
       {
         "id": "choose_write",
-        "type_used": "era.tavern.variables_commit.choose_write",
-        "display_name": "选择整对象替换或明确字段更新",
-        "description": "输入携带 variables 时整体替换；否则只应用已声明的 stat/meta/changes。"
+        "display_name": "区分整份变量替换和部分字段更新",
+        "description": "在“执行明确变量写入并回读确认”流程中，查看本次变量请求，提供完整变量对象时选择替换，否则选择明确字段的合并更新。后续按请求实际含义写入，避免把部分修改误作整库覆盖。",
+        "definition_id": "era.tavern.variables_commit.choose_write"
       },
       {
         "id": "select_patch",
-        "type_used": "era.tavern.variables_commit.select_patch",
-        "display_name": "只应用明确字段更新",
-        "description": "对指定作用域调用 updateVariablesWith，只合入 Service 给出的 stat/meta/changes。"
+        "display_name": "准备只更新请求给出的字段",
+        "description": "在“执行明确变量写入并回读确认”流程中，接收明确指定的字段变化，交给统一写入步骤合并到所选范围。未指定字段保留，后续回读实际变量供调用方确认。",
+        "definition_id": "era.tavern.variables_commit.select_patch"
       },
       {
         "id": "select_replace",
-        "type_used": "era.tavern.variables_commit.select_replace",
-        "display_name": "执行明确整对象替换",
-        "description": "对指定作用域调用 replaceVariables，原样使用 Service 提供的 variables。"
+        "display_name": "准备替换整份目标变量",
+        "description": "在“执行明确变量写入并回读确认”流程中，接收明确指定的完整变量对象，交给统一写入步骤。该分支会用新对象替换所选范围的原变量，后续再回读确认。",
+        "definition_id": "era.tavern.variables_commit.select_replace"
       },
       {
         "id": "join_write",
-        "type_used": "era.tavern.variables_commit.join_write",
-        "display_name": "汇合当前实际激活分支的结果",
-        "description": "接收当前所选路径的结果集合，交还其中唯一实际结果；不选择未激活分支、不重新执行操作。运行实现必须拒绝实际多结果，不以集合契约放宽唯一结果语义。"
+        "display_name": "交接提交酒馆变量的选中结果",
+        "description": "在“执行明确变量写入并回读确认”流程中，在“提交酒馆变量”中，接收本次实际选择的分支所产生的唯一结果，交给后续步骤或调用方。每次只允许一份实际结果，避免把互斥分支误当成多个都已执行。",
+        "definition_id": "era.tavern.variables_commit.join_write"
       },
       {
         "id": "write",
-        "type_used": "era.tavern.variables_commit.write",
-        "display_name": "执行明确的变量写入",
-        "description": "按前面选择的整对象替换或字段补丁执行原变量 API；不自行计算领域变量。"
+        "display_name": "执行本次明确的变量替换或字段更新",
+        "description": "在“执行明确变量写入并回读确认”流程中，根据已选方案，将完整对象替换到目标范围，或仅合并指定字段。完成后交给回读步骤确认真实结果，脚本设置变化随后通知页面。",
+        "definition_id": "era.tavern.variables_commit.write"
       },
       {
         "id": "read_back",
-        "type_used": "era.tavern.variables_commit.read_back",
-        "display_name": "回读实际变量",
-        "description": "从同一作用域重新读取已写入值，供主 Service 核对确认。"
+        "display_name": "回读写入后的实际酒馆变量",
+        "description": "在“执行明确变量写入并回读确认”流程中，读取刚写入范围的现有变量，返回目标范围及实际内容，作为本次提交确认。调用方可以据此核对写入结果。",
+        "definition_id": "era.tavern.variables_commit.read_back"
       },
       {
         "id": "publish_settings",
-        "type_used": "era.tavern.variables_commit.publish_settings",
-        "display_name": "通知脚本设置更新",
-        "description": "只有脚本变量提交才刷新设置和对应事件，返回 committed 与实际 variables。"
+        "display_name": "脚本变量改变后通知设置界面",
+        "description": "在“执行明确变量写入并回读确认”流程中，本次写入属于脚本设置时，通知相关设置观察方刷新。其他变量范围沿用实际结果，随后返回本次写入确认。",
+        "definition_id": "era.tavern.variables_commit.publish_settings"
       },
       {
         "id": "end",
-        "type_used": "era.tavern.initialize.end",
-        "display_name": "结束当前原生流程",
-        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+        "display_name": "结束执行明确变量写入并回读确认",
+        "description": "标明“执行明确变量写入并回读确认”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.tavern.initialize.end"
       }
     ],
     "edges": [

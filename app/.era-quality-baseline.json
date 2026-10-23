@@ -317,97 +317,6 @@
     },
     {
       "debt": 1,
-      "fingerprint": "fca8bc1dfc1402545900c21f486748b527a4aa4894343d1caa6e793a7ec93326",
-      "objectId": "src/ERA变量框架/core/crud/delete#function:applyDeleteAtLevel",
-      "ruleId": "COMMENT_CRITICAL_DOC_RATIONALE",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "6a0350799492cfdeb27f1c1a9f55818f287ad429cb2de8ada31a4bd120f6abaf",
-      "objectId": "src/ERA变量框架/core/crud/delete#function:processDeleteBlocks",
-      "ruleId": "COMMENT_CRITICAL_DOC_RATIONALE",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "c3eb1dc6bcce0ab609ecf0b875806c15c973c6382e7d3e326dc32db348a44af3",
-      "objectId": "src/ERA变量框架/core/crud/insert/insert#function:applyInsertAtLevel",
-      "ruleId": "COMMENT_CRITICAL_DOC_RATIONALE",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "a7058049f5bf55cd9ac8f813c5e69b221bdebac26205cbe048388a5bae9b50d8",
-      "objectId": "src/ERA变量框架/core/crud/insert/insert#function:processInsertBlocks",
-      "ruleId": "COMMENT_CRITICAL_DOC_RATIONALE",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "150cb2a4f384a9759c1edbe753b7ca45e08a85a35ac9a1d21d152e46b653f744",
-      "objectId": "src/ERA变量框架/core/crud/insert/template#function:applyTemplateToPatch",
-      "ruleId": "COMMENT_CRITICAL_DOC_RATIONALE",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "1cf85cba572265de7789c42d2927d14ab06a944ebee4a3998197c590a9c89f68",
-      "objectId": "src/ERA变量框架/core/crud/insert/template#function:getInheritedTemplateContent",
-      "ruleId": "COMMENT_CRITICAL_DOC_RATIONALE",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "b0346536bec4af44a3ea4796a86c02e37ff5123d11a1fe267ce9c64eb67904a3",
-      "objectId": "src/ERA变量框架/core/crud/insert/template#function:resolveTemplate",
-      "ruleId": "COMMENT_CRITICAL_DOC_RATIONALE",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "8c2234eec6ebfdc3dd90fe205549801adb13c0ebd70f6ee1481d106354d7d55c",
-      "objectId": "src/ERA变量框架/core/crud/update#function:processEditBlocks",
-      "ruleId": "COMMENT_CRITICAL_DOC_RATIONALE",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "8ef1a66ca5b1bf55b57075003f3ec809885c48ac9e7df7f9ed3d6a6c36d0a059",
-      "objectId": "src/ERA变量框架/core/snapshot#function:getStatAtMK",
-      "ruleId": "COMMENT_CRITICAL_DOC_RATIONALE",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "65fb742a6296dbdea618720af1dda97d787e409ef101cc2cc38e90e2e49a7205",
-      "objectId": "src/ERA变量框架/core/snapshot#function:getStatsBetweenMKs",
-      "ruleId": "COMMENT_CRITICAL_DOC_RATIONALE",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "8a8900eb91d5cac1227f5c204edcd4d4512db173f0573e0d591607112ca957a9",
-      "objectId": "src/ERA变量框架/core/timetravel#function:calculateAllStatsBetweenMks",
-      "ruleId": "COMMENT_CRITICAL_DOC_RATIONALE",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "761f63ab5d18946db2c198cbe876e07ac97511d97bc00aa6df24d3c2c6ed1d6e",
-      "objectId": "src/ERA变量框架/core/timetravel#function:calculateStatForward",
-      "ruleId": "COMMENT_CRITICAL_DOC_RATIONALE",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "c4381e233d0cff28e9f159ffd1e39834a1f1d6e590a44fb733277a60e8496e0a",
-      "objectId": "src/ERA变量框架/core/timetravel#function:findLatestNewValue",
-      "ruleId": "COMMENT_CRITICAL_DOC_RATIONALE",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
       "fingerprint": "1d4161cd6ecf94126fcb3874a5b088a3de915c601452cd841379d761933c4fc7",
       "objectId": "src/ERA变量框架/initer/manual/regex#function:initEraCharacterRegexes",
       "ruleId": "COMMENT_CRITICAL_DOC_RATIONALE",
@@ -548,57 +457,8 @@
     },
     {
       "debt": 1,
-      "fingerprint": "e3c6e292d530309fa504d97d7db4bf3f2e8b92a80ddc82cd710c29b2b9f41f80",
-      "objectId": "comment:script:_.get(patchObj, ['$meta', 'updatable']) === true; -> if (isUpdatable === false && !isBypassingProtection) {",
-      "ruleId": "COMMENT_DEVELOPMENT_HISTORY",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "bb9b21a804ca249301f596c2a2c46ffb875214e3c9a98d0d1f9a3e7acc7219ad",
-      "objectId": "comment:script:_.set(contextMeta, SEL_PATH, newSelectedMks.slice(0, i)); -> let ensuredMkForCurrent: string | null = readMessageKey(msg",
-      "ruleId": "COMMENT_DEVELOPMENT_HISTORY",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "44b0c3cb7149e89f64a059ae0208da5116a6df48956d6c203ae3dac5a1d03b96",
-      "objectId": "comment:script:const contentWithMk = currentContent + '\\n' + dataString; -> const newContent = contentWithMk;",
-      "ruleId": "COMMENT_DEVELOPMENT_HISTORY",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "519039a4c2adb3f8922ae4dc3d657517343b12cebc7708be61fc48a87d9815ed",
-      "objectId": "comment:script:const isUpdatable = _.get(currentNodeInVars, ['$meta', 'updatable'], true); -> const isBypassingProtection =",
-      "ruleId": "COMMENT_DEVELOPMENT_HISTORY",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "878b4c7bf3badf78cb30bb0a1577b5204a88006f5c34f53b39186f123612f1ec",
-      "objectId": "comment:script:const msg = allMessages[i]; -> const contextMeta = _.cloneDeep(metaForRecalc);",
-      "ruleId": "COMMENT_DEVELOPMENT_HISTORY",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "f43cb5991d3c67593640882a3d3b0f44f1799740a1b6e92f26face32d6b66611",
-      "objectId": "comment:script:const subPatchObj = patchObj[key]; -> if (necessary === 'children' && _.isPlainObject(subPatchObj) && _.isEmpty(subPat",
-      "ruleId": "COMMENT_DEVELOPMENT_HISTORY",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
       "fingerprint": "3dad4c4616e249f9df810a00b03fda204f0396b0e16433782f5657abd805ddb0",
       "objectId": "comment:script:import JsonNode from './JsonNode.vue'; -> const logger = new Logger();",
-      "ruleId": "COMMENT_DEVELOPMENT_HISTORY",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "97a0c766246fc92a8e5c3b1ce294c47d1bd6caab847ebf095d694e60e8928fe6",
-      "objectId": "comment:script:parentData: any, -> ) {",
       "ruleId": "COMMENT_DEVELOPMENT_HISTORY",
       "severity": "warning"
     },
@@ -653,51 +513,9 @@
     },
     {
       "debt": 1,
-      "fingerprint": "2daeb6af68237e8694d9373c35f5ea9fdca18f158b5ffae16f5d0b9caa4f3af6",
-      "objectId": "comment:script:const content = getMessageContent(msg); -> const mk = parseEraData(content)?.['era-message-key'] || '';",
-      "ruleId": "COMMENT_DISABLED_CODE",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
       "fingerprint": "b62100af6d882559fa98c992398ed343777c2d11152f9c4f1f74d9cf1d6521fb",
       "objectId": "comment:script:onMounted(() => { -> });",
       "ruleId": "COMMENT_DISABLED_CODE",
-      "severity": "warning"
-    },
-    {
-      "debt": 17,
-      "fingerprint": "749ac650c9d9cd12aa953891c7d534dda29e65d181c31054cb70580b262cefc5",
-      "objectId": "comment:script:return mk; -> }",
-      "ruleId": "COMMENT_DISABLED_CODE",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "46d4d8d002bd47ba4c1921b4c2df30892bae364c85dfb2cb842386b8d9586e52",
-      "objectId": "comment:script:try { -> const customFormatBlock = match[1];",
-      "ruleId": "COMMENT_DUPLICATE_PROSE",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "de3238e4b18cdc16d220d8d5cdc4f71927a2b2e77b403c96ad0ec90362191797",
-      "objectId": "comment:script:try { -> const customFormatBlock = match[1];",
-      "ruleId": "COMMENT_DUPLICATE_PROSE",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "79379c98499cace1df6589afdb685e43a7471fd3c669f18a10d7b4dcd1b0839c",
-      "objectId": "src/ERA变量框架/core/key/mk#function:parseEraData",
-      "ruleId": "COMMENT_DUPLICATE_PROSE",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "8fc8e9a9a5534cb06b3c61a532cd99336bbab1d8d1ce98f5482a0eaa73127ca5",
-      "objectId": "src/ERA变量框架/utils/message#function:parseEraData",
-      "ruleId": "COMMENT_DUPLICATE_PROSE",
       "severity": "warning"
     },
     {
@@ -719,13 +537,6 @@
       "fingerprint": "4a8b4ab1c62eba3913811b9e73b99ea0713ba61add28420e4eb4d110cbc434e0",
       "objectId": "src/ERA变量框架/events/catalog#type:EventDefinition",
       "ruleId": "COMMENT_EXPORTED_TYPE_DOC",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "0187a38b0a680a18695b92e01236828d29ec9659b3253f76856bfb5bf2da82ea",
-      "objectId": "src/ERA变量框架/core/key/mk#function:updateLatestSelectedMk",
-      "ruleId": "COMMENT_JSDOC_EMPTY_TAG",
       "severity": "warning"
     },
     {
@@ -1080,13 +891,6 @@
     },
     {
       "debt": 12,
-      "fingerprint": "e69965554819c19d99516987e3abd7c61a07c5de3579818aa111754e98976028",
-      "objectId": "src/ERA变量框架/core/sync",
-      "ruleId": "COMMENT_MODULE_DOC",
-      "severity": "warning"
-    },
-    {
-      "debt": 12,
       "fingerprint": "7be5de8c8c66e1e4659b58323d49a2bd73cc720a661f84d0e49e5b8ea0458321",
       "objectId": "src/ERA变量框架/events/catalog",
       "ruleId": "COMMENT_MODULE_DOC",
@@ -1115,27 +919,6 @@
     },
     {
       "debt": 1,
-      "fingerprint": "1d0e3e8d3ade159c5ac6b62a701cd4c9ba4e64a87f57e2cae3945fb8876924f4",
-      "objectId": "comment:script: -> 'use strict';",
-      "ruleId": "COMMENT_STALE_FILE_REFERENCE",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "afa2f48f1ab4ec1d461d663b60eec356b9ab860ab5db2c483dcb66785c9c14f0",
-      "objectId": "comment:script: -> 'use strict';",
-      "ruleId": "COMMENT_STALE_FILE_REFERENCE",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "5edb8e4a8eff6f70702a4be255211acd0d7fa01dd7427592aefb7a7854d3fd91",
-      "objectId": "comment:script:const newContent = contentWithMk; -> await updateMessageContent(msg, newContent);",
-      "ruleId": "COMMENT_STALE_FILE_REFERENCE",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
       "fingerprint": "ce8cfda9b2220bd025109a89293a1d73f77272f090595022010fc3c0e8269064",
       "objectId": "comment:script:export const ERA_DATA_TAG = 'era_data'; -> export const ERA_DATA_REGEX = new RegExp(`<${ERA_DATA_TAG}>({.*?})<\\\\/${ERA_D",
       "ruleId": "COMMENT_STALE_FILE_REFERENCE",
@@ -1156,368 +939,11 @@
       "severity": "warning"
     },
     {
-      "debt": 1,
-      "fingerprint": "3f393abee53ce674d3cf9e1ce90b59fb686d4e28e1f7c660274d1d178426295f",
-      "objectId": "comment:script:_.set(statData, basePath, finalValue); -> editLog.push({ op: 'insert', path: basePath, value_new: _.cloneDeep(finalValue",
-      "ruleId": "COMMENT_WHAT_NARRATION",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "5ed4038652bf882540f6789e2695259a82a4484a3741d74625e12c52b0db5603",
-      "objectId": "comment:script:) { -> const localTplContent = resolveTemplate(inheritedContent, parentData);",
-      "ruleId": "COMMENT_WHAT_NARRATION",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "9602d264536e2db7e2514a8f2094bd6c715395334cd508944a41e3ca63767eab",
-      "objectId": "comment:script:} -> const { finalStat, finalEditLog } = await ApplyVarChangeForMessage(msg, statForR",
-      "ruleId": "COMMENT_WHAT_NARRATION",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "b8274abbb8068e9aaa413b8a5c3c12f2a201e7115727a0d5cabb803c1777b7bc",
-      "objectId": "comment:script:} -> const statAtTarget = calculateStatAt(targetMK, selectedMks, allLogs);",
-      "ruleId": "COMMENT_WHAT_NARRATION",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "848f0140392daa6c93422063f2b516f072ea03a24eb529838156c8e59b185e8e",
-      "objectId": "comment:script:} -> const valOld = _.cloneDeep(currentNodeInVars);",
-      "ruleId": "COMMENT_WHAT_NARRATION",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "9351880d9064593e698d38c8beea981469df5ebe758a31c7d65801a14d7dd036",
-      "objectId": "comment:script:if (!mk) return; -> await updateEraMetaData(meta => {",
-      "ruleId": "COMMENT_WHAT_NARRATION",
-      "severity": "warning"
-    },
-    {
       "debt": 5,
       "fingerprint": "51df9a3118c756de03e7fb10a703aaec850447d28aaf8a2174a4df50fd6a3cb4",
       "objectId": "runtime-dependency-chain",
       "ruleId": "DEPENDENCY_CHAIN",
       "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "7fe401ef18661a1cd468032ac0d74f7460ce62b6f1fc20ed8701c2b8900a2341",
-      "objectId": "src/ERA变量框架/core/crud/delete.ts#DOM_UI#src/ERA变量框架/utils/log.ts#src/ERA变量框架/utils/log#function:Logger.error",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "848090a7c859ef8c1018dd0b3957ef4d948bf74f8b392bdf6190f59ef9a2d27e",
-      "objectId": "src/ERA变量框架/core/crud/delete.ts#DOM_UI#src/ERA变量框架/utils/log.ts#src/ERA变量框架/utils/log#function:Logger.warn",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "a16b61cf35b2b9adb2eac4575120199e1035c1edbcb0d8bf77d80ff964ae512a",
-      "objectId": "src/ERA变量框架/core/crud/delete.ts#STORAGE#src/ERA变量框架/utils/era_data.ts#src/ERA变量框架/utils/era_data#function:initEraSettings",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "770b33aeeef469b352554abc0ecdf13090b073ed5bab5901e853ad571a39224d",
-      "objectId": "src/ERA变量框架/core/crud/delete.ts#STORAGE#src/ERA变量框架/utils/log.ts#src/ERA变量框架/utils/log#function:add",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "536ba33927d5964c56707189c86db0e6c67a60a306ef04a93fe772c21f5c27b0",
-      "objectId": "src/ERA变量框架/core/crud/delete.ts#STORAGE#src/ERA变量框架/utils/log.ts#src/ERA变量框架/utils/log#function:loadDebugConfig",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "4fc867771a3343d3010837aed6f270d25256c0ea0da9b5c4f07ec8f4b7e622b7",
-      "objectId": "src/ERA变量框架/core/crud/delete.ts#STORAGE#src/ERA变量框架/utils/log.ts#src/ERA变量框架/utils/log#function:remove",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "0af56aa8490d5622e3086a5dceb809ee1e565330cf66aa74b984044abe29abb5",
-      "objectId": "src/ERA变量框架/core/crud/delete.ts#STORAGE#src/ERA变量框架/utils/log.ts#src/ERA变量框架/utils/log#function:status",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "70b3603d7f316a7f7abc4cf1a40070e1d8b018da750339236af0e8e5b1d61601",
-      "objectId": "src/ERA变量框架/core/crud/delete.ts#STORAGE#src/ERA变量框架/utils/log.ts#src/ERA变量框架/utils/log#function:updateConfig",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "a9da7917e43fa4af1b9ba7d8d89e9d6bfb3c41473268da5a3d4f1f47acd150c7",
-      "objectId": "src/ERA变量框架/core/crud/delete.ts#TAVERN_HELPER#src/ERA变量框架/utils/era_data.ts#src/ERA变量框架/utils/era_data#function:updateScriptSettings",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "dd7cffafe2fca60069348637dcc319889af023942d2fa983096f113cbfba6e1f",
-      "objectId": "src/ERA变量框架/core/crud/insert/insert.ts#DOM_UI#src/ERA变量框架/utils/log.ts#src/ERA变量框架/utils/log#function:Logger.error",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "7f297722c1bb10de6f50c6ca1f0867b67daa0bd2247d839fbcf41f56c7f0df73",
-      "objectId": "src/ERA变量框架/core/crud/insert/insert.ts#DOM_UI#src/ERA变量框架/utils/log.ts#src/ERA变量框架/utils/log#function:Logger.warn",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "0c1ee3332e4080fdc3843966dc619ff86fcf1d4e2cdef65e628046dc6db502de",
-      "objectId": "src/ERA变量框架/core/crud/insert/insert.ts#STORAGE#src/ERA变量框架/utils/era_data.ts#src/ERA变量框架/utils/era_data#function:initEraSettings",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "f37b21ccab8598418a19da712f9bfba4e45193c8aff6c84c2c59f96f24326625",
-      "objectId": "src/ERA变量框架/core/crud/insert/insert.ts#STORAGE#src/ERA变量框架/utils/log.ts#src/ERA变量框架/utils/log#function:add",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "907acca199632d051795bc0f78e9646e51239f906c783eebeb53870e4904c089",
-      "objectId": "src/ERA变量框架/core/crud/insert/insert.ts#STORAGE#src/ERA变量框架/utils/log.ts#src/ERA变量框架/utils/log#function:loadDebugConfig",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "5249f36bffd1baee0f2cbc62570365e9c7b1587359739d445d8731c9568b6ff1",
-      "objectId": "src/ERA变量框架/core/crud/insert/insert.ts#STORAGE#src/ERA变量框架/utils/log.ts#src/ERA变量框架/utils/log#function:remove",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "f4bb8544da5296b9053c8dca5ee2c55a1c0594e5174412802985ff82252af60d",
-      "objectId": "src/ERA变量框架/core/crud/insert/insert.ts#STORAGE#src/ERA变量框架/utils/log.ts#src/ERA变量框架/utils/log#function:status",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "aa492111505337960c38defd90484bd1873154876ce8eff21dcec71576dee52e",
-      "objectId": "src/ERA变量框架/core/crud/insert/insert.ts#STORAGE#src/ERA变量框架/utils/log.ts#src/ERA变量框架/utils/log#function:updateConfig",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "cf459e1ca39b3abcda8c923abe08be7edbc5d945892024fd236cdf0ce36b815f",
-      "objectId": "src/ERA变量框架/core/crud/insert/insert.ts#TAVERN_HELPER#src/ERA变量框架/utils/era_data.ts#src/ERA变量框架/utils/era_data#function:updateScriptSettings",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "f0e7668c41d3c6ae20299de12c50281487004655b12d9b92f7705de547afc7c4",
-      "objectId": "src/ERA变量框架/core/crud/insert/template.ts#DOM_UI#src/ERA变量框架/utils/log.ts#src/ERA变量框架/utils/log#function:Logger.error",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "dfee3f1e7f28928ca35689280a237cfbf137396f02e7db02a6c10de36c49ce3e",
-      "objectId": "src/ERA变量框架/core/crud/insert/template.ts#DOM_UI#src/ERA变量框架/utils/log.ts#src/ERA变量框架/utils/log#function:Logger.warn",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "8c9013df6adfce54e9f945dddb489f672f4c9882dfc9e59f9a492e51290e8137",
-      "objectId": "src/ERA变量框架/core/crud/insert/template.ts#STORAGE#src/ERA变量框架/utils/era_data.ts#src/ERA变量框架/utils/era_data#function:initEraSettings",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "22840920a5f87fa8101098774a345cc593cc5e8aea281cc1b9633f1b7d14c5b2",
-      "objectId": "src/ERA变量框架/core/crud/insert/template.ts#STORAGE#src/ERA变量框架/utils/log.ts#src/ERA变量框架/utils/log#function:add",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "91d330784153f5d5e7e99509f0d6ea2fae166d6649d46ff694aae6ecc04537af",
-      "objectId": "src/ERA变量框架/core/crud/insert/template.ts#STORAGE#src/ERA变量框架/utils/log.ts#src/ERA变量框架/utils/log#function:loadDebugConfig",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "700f9731594802f9f09519f4ce14b19bb73447dbebeb87710c0c65e63270d011",
-      "objectId": "src/ERA变量框架/core/crud/insert/template.ts#STORAGE#src/ERA变量框架/utils/log.ts#src/ERA变量框架/utils/log#function:remove",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "47cad669e01d92d7efd27b9f8b3134ccc8ae5837e66d9348947c2fa90858f6c5",
-      "objectId": "src/ERA变量框架/core/crud/insert/template.ts#STORAGE#src/ERA变量框架/utils/log.ts#src/ERA变量框架/utils/log#function:status",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "73903eb60ba6576f62223bf03658d4030e0229d60a890351be34d89265062b89",
-      "objectId": "src/ERA变量框架/core/crud/insert/template.ts#STORAGE#src/ERA变量框架/utils/log.ts#src/ERA变量框架/utils/log#function:updateConfig",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "bf3998dd9696c6f0bb33676e893160966bd68415766370b87b20a7c8c1f2f697",
-      "objectId": "src/ERA变量框架/core/crud/insert/template.ts#TAVERN_HELPER#src/ERA变量框架/utils/era_data.ts#src/ERA变量框架/utils/era_data#function:updateScriptSettings",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "6f519eee5f40bcdc2431f4a6aab9db117bc5326f214b17b61fff72e583ebf80a",
-      "objectId": "src/ERA变量框架/core/crud/update.ts#DOM_UI#src/ERA变量框架/utils/log.ts#src/ERA变量框架/utils/log#function:Logger.error",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "cde2ff9415d3a52e66cfd04a3226a9d429850b7468cf1f1a4c22751d0262e45a",
-      "objectId": "src/ERA变量框架/core/crud/update.ts#DOM_UI#src/ERA变量框架/utils/log.ts#src/ERA变量框架/utils/log#function:Logger.warn",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "0a6222d4505baaef071ffca197482b0eec3d7a487473d7a0a6fbfdebcbc1ef31",
-      "objectId": "src/ERA变量框架/core/crud/update.ts#STORAGE#src/ERA变量框架/utils/era_data.ts#src/ERA变量框架/utils/era_data#function:initEraSettings",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "dca5cdd59e6b70d04da6cd82e3b07f669a643bac1189c3db8aed6d64ab49865a",
-      "objectId": "src/ERA变量框架/core/crud/update.ts#STORAGE#src/ERA变量框架/utils/log.ts#src/ERA变量框架/utils/log#function:add",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "b3bf8302f66678fef511422038f01598e6c09846fd6ac3bbbfe3ad57b977bd0e",
-      "objectId": "src/ERA变量框架/core/crud/update.ts#STORAGE#src/ERA变量框架/utils/log.ts#src/ERA变量框架/utils/log#function:loadDebugConfig",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "ca0b66447a83d2ba3c74a3b0ae2d2560cd3f053635a71f26098334231416742c",
-      "objectId": "src/ERA变量框架/core/crud/update.ts#STORAGE#src/ERA变量框架/utils/log.ts#src/ERA变量框架/utils/log#function:remove",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "4c88c5ffa265cb42dbdb9d4676a3309f3daf71e6e4ef452cefbd07564bac8e0b",
-      "objectId": "src/ERA变量框架/core/crud/update.ts#STORAGE#src/ERA变量框架/utils/log.ts#src/ERA变量框架/utils/log#function:status",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "46727cb1c547a8f81f65b813605176159f48dd5493609343c8554d1614087900",
-      "objectId": "src/ERA变量框架/core/crud/update.ts#STORAGE#src/ERA变量框架/utils/log.ts#src/ERA变量框架/utils/log#function:updateConfig",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "b8988cdaa2410c18fe387653de18ffe52f947ff877d54daabd664aafa2e20a69",
-      "objectId": "src/ERA变量框架/core/crud/update.ts#TAVERN_HELPER#src/ERA变量框架/utils/era_data.ts#src/ERA变量框架/utils/era_data#function:updateScriptSettings",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "f30b2a9f3ff5f548b990cb29ffe2ec674b9d46bcdb713cd1566e2a01ca236767",
-      "objectId": "src/ERA变量框架/core/timetravel.ts#DOM_UI#src/ERA变量框架/utils/log.ts#src/ERA变量框架/utils/log#function:Logger.error",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "e134fc535afb478eac8c482c7cda08183ee0d05698199fe28b43c59b4cc80113",
-      "objectId": "src/ERA变量框架/core/timetravel.ts#DOM_UI#src/ERA变量框架/utils/log.ts#src/ERA变量框架/utils/log#function:Logger.warn",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "61ed93b81d8cabd433a44b0246bae6c2f6cd76c25e8b3002620ad3962bffd843",
-      "objectId": "src/ERA变量框架/core/timetravel.ts#STORAGE#src/ERA变量框架/utils/era_data.ts#src/ERA变量框架/utils/era_data#function:initEraSettings",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "f897cb3088c7b6bd4c9bd5bce3fc98292915561e11dcee812cabc0bc8a931cbe",
-      "objectId": "src/ERA变量框架/core/timetravel.ts#STORAGE#src/ERA变量框架/utils/log.ts#src/ERA变量框架/utils/log#function:add",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "30c040ff85430b9c39574c504c077ca2613728345e894b2a6947d5f116d0a522",
-      "objectId": "src/ERA变量框架/core/timetravel.ts#STORAGE#src/ERA变量框架/utils/log.ts#src/ERA变量框架/utils/log#function:loadDebugConfig",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "e6cbdf31fbbdaab6c4f6a441de008e6e8fbf20eaea5099fbc6fbe3c28c772209",
-      "objectId": "src/ERA变量框架/core/timetravel.ts#STORAGE#src/ERA变量框架/utils/log.ts#src/ERA变量框架/utils/log#function:remove",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "02c1422bb26b60cc8d834cf5b3ed566b574da0cfed452d5825ce178b9cae2caf",
-      "objectId": "src/ERA变量框架/core/timetravel.ts#STORAGE#src/ERA变量框架/utils/log.ts#src/ERA变量框架/utils/log#function:status",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "70c3624d87fe0eb123f4a2e2244e12f4019f6fe558225fcfabf2d5c11cdc4ead",
-      "objectId": "src/ERA变量框架/core/timetravel.ts#STORAGE#src/ERA变量框架/utils/log.ts#src/ERA变量框架/utils/log#function:updateConfig",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "1be0f10515557cfcebe460d6d00b3b299d1fe98c3c6f67e8d0087a6881cd96e7",
-      "objectId": "src/ERA变量框架/core/timetravel.ts#TAVERN_HELPER#src/ERA变量框架/utils/era_data.ts#src/ERA变量框架/utils/era_data#function:updateScriptSettings",
-      "ruleId": "PURE_MODULE_SIDE_EFFECT",
-      "severity": "error"
     },
     {
       "debt": 1,
@@ -1545,34 +971,6 @@
       "fingerprint": "482058877387a555f0f7f6cb0d73a7fede80bb371f8b53a5af2122445143345f",
       "objectId": "src/ERA变量框架/utils/log#function:Logger.warn",
       "ruleId": "STRUCT_DUPLICATE_FUNCTION",
-      "severity": "warning"
-    },
-    {
-      "debt": 8,
-      "fingerprint": "55e7584b406dccb00ef7f577f2f7a8de7b382f5a7c395eb39c70be5c1e29bd8f",
-      "objectId": "src/ERA变量框架/core/crud/delete#function:applyDeleteAtLevel",
-      "ruleId": "STRUCT_FUNCTION_BRANCHES",
-      "severity": "warning"
-    },
-    {
-      "debt": 7,
-      "fingerprint": "dde4a33899222d65c763cb609f0ddf5ce14d1f48e958321b89031bd4932d392d",
-      "objectId": "src/ERA变量框架/core/crud/insert/insert#function:applyInsertAtLevel",
-      "ruleId": "STRUCT_FUNCTION_BRANCHES",
-      "severity": "warning"
-    },
-    {
-      "debt": 9,
-      "fingerprint": "3f2cdf2f648ad46704081752a0d1b0864056e7547b2d7658d7f0d7b36966df02",
-      "objectId": "src/ERA变量框架/core/sync#function:resyncStateOnHistoryChange",
-      "ruleId": "STRUCT_FUNCTION_BRANCHES",
-      "severity": "warning"
-    },
-    {
-      "debt": 2,
-      "fingerprint": "d0ac1c106efc07135bab642c13cf3e08e3cd91b45a5fa63ea84161b7a7c97a83",
-      "objectId": "src/ERA变量框架/core/timetravel#function:findLatestNewValue",
-      "ruleId": "STRUCT_FUNCTION_BRANCHES",
       "severity": "warning"
     },
     {
@@ -1611,13 +1009,6 @@
       "severity": "warning"
     },
     {
-      "debt": 25,
-      "fingerprint": "cde3aa6484ff8fc7a06169d5cc1feee0299c3ad6f55c96709efedcd61bc0c872",
-      "objectId": "src/ERA变量框架/core/sync#function:resyncStateOnHistoryChange",
-      "ruleId": "STRUCT_FUNCTION_LINES",
-      "severity": "warning"
-    },
-    {
       "debt": 2,
       "fingerprint": "155d05db7f4de56209bd02efb8ffed64ed22ec78a2b8332a0ba5f7db99eb3c81",
       "objectId": "src/ERA变量框架/utils/message#function:extractMessageIdFromDetail",
@@ -1637,16 +1028,9 @@
       "objectId": "src/ERA变量框架/utils/string#function:containsXMLTags",
       "ruleId": "STRUCT_FUNCTION_NESTING",
       "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "ac00bb50312f6ce181dc7abd5a307a97ed52337278df8b8c26f86a4636058233",
-      "objectId": "src/ERA变量框架/core/crud/update#function:applyEditAtLevel",
-      "ruleId": "STRUCT_FUNCTION_PARAMS",
-      "severity": "warning"
     }
   ],
-  "policyDigest": "8745e7fc2bccf34b5e4ea279ed61e792f95466891765a67df4d7ed16dfc45ed1",
+  "policyDigest": "b15df9491a1aaa61ed2d0b1e3a6850c335116f543610c0188a49eedb6e6fcd8f",
   "schemaVersion": 1,
   "toolVersion": "1.0.0"
 }

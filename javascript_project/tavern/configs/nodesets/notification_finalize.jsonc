@@ -1,20 +1,20 @@
 {
   "type_key": "era.tavern.flow.notification_finalize",
-  "display_name": "收尾已全部结束的通知组",
-  "description": "保持旧 allSettled 的整体完成、失败报告顺序和按组诊断计数；回调等待由独立 detached continuation 进行。",
+  "display_name": "按原顺序报告并释放已完成通知组",
+  "description": "接收全部结束的通知组，按原清单顺序查看结果并报告失败，最后清理取消关联和运行登记，完成整组等待。只处理已固定结果，不再重发通知。",
   "expand": true,
   "requires": [
     {
       "type": "era.tavern.call.frame",
       "cardinality": "exactly_one",
-      "display_name": "当前通知及实例资源"
+      "display_name": "按原顺序报告并释放已完成通知组的请求和已有进度"
     }
   ],
   "provides": [
     {
       "key": "era_tavern_flow_notification_finalize_frame",
       "type": "era.tavern.task.finished",
-      "display_name": "本次步骤的结果与资源"
+      "display_name": "当前职责已真实完成或退出的确认"
     }
   ],
   "pipeline": {
@@ -24,40 +24,39 @@
         "key": "frame",
         "type": "era.tavern.call.frame",
         "required": true,
-        "display_name": "当前完成组"
+        "display_name": "按原顺序报告并释放已完成通知组的请求和已有进度"
       }
     ],
     "max_steps": 12,
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.tavern.initialize.start",
-        "display_name": "开始当前原生流程",
-        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+        "display_name": "开始按原顺序报告并释放已完成通知组",
+        "description": "标明“按原顺序报告并释放已完成通知组”的开始位置。接收全部结束的通知组，按原清单顺序查看结果并报告失败，最后清理取消关联和运行登记，完成整组等待。只处理已固定结果，不再重发通知。",
+        "definition_id": "era.tavern.initialize.start"
       },
       {
         "id": "read_group",
-        "type_used": "era.tavern.notification_finalize.read_group",
-        "display_name": "读取当前已经全部终态的通知组",
-        "description": "固定原通知顺序的全部结果与待释放资源；此处没有未完成回调。"
+        "display_name": "准备按原顺序检查通知组结果",
+        "description": "在“按原顺序报告并释放已完成通知组”流程中，接收已经全部结束的通知组，把报告位置设为第一项。后续逐条查看已固定结果，确保失败说明与原通知顺序一致。",
+        "definition_id": "era.tavern.notification_finalize.read_group"
       },
       {
         "id": "report_failures_loop",
-        "type_used": "vibeflow.loop.while",
-        "display_name": "按原通知顺序报告全部失败",
-        "description": "只有组全部终态后才逐项报告失败；不改变既有状态结算或启动任何重试。",
+        "display_name": "按原顺序查看整组通知结果",
+        "description": "整组通知都结束后，按原发送顺序逐项读取结论，实际失败写出告警。全部报告完才释放通知组，已经完成的变量和事件结算结果继续保留。",
         "requires": [
           {
             "type": "era.tavern.frame.notification_finalize.read",
             "cardinality": "exactly_one",
-            "display_name": "当前通知及实例资源"
+            "display_name": "按原顺序报告并释放已完成通知组的请求和已有进度"
           }
         ],
         "provides": [
           {
             "key": "era_tavern_notification_finalize_report_failures_loop_frame",
             "type": "era.tavern.frame.notification_finalize.read",
-            "display_name": "本次步骤的结果与资源"
+            "display_name": "按原顺序报告并释放已完成通知组的处理进度及结果"
           }
         ],
         "loop": {
@@ -80,19 +79,20 @@
               "as": "era_tavern_notification_finalize_report_failures_loop_frame"
             }
           ]
-        }
+        },
+        "definition_id": "vibeflow.loop.while"
       },
       {
         "id": "release_group",
-        "type_used": "era.tavern.notification_finalize.release_group",
-        "display_name": "释放当前通知组并完成等待",
-        "description": "完成当前实际工作和应有收尾后只交回小的完成摘要；框架缓存不再持有本次请求、会话或私密函数引用。"
+        "display_name": "释放通知组并完成整组等待",
+        "description": "在“按原顺序报告并释放已完成通知组”流程中，通知组结果已经全部报告后，清除取消关联和运行登记，完成等待这组通知的调用。返回整组已释放确认，实例收尾也能据此知道没有遗留通知等待。",
+        "definition_id": "era.tavern.notification_finalize.release_group"
       },
       {
         "id": "end",
-        "type_used": "era.tavern.initialize.end",
-        "display_name": "结束当前原生流程",
-        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+        "display_name": "结束按原顺序报告并释放已完成通知组",
+        "description": "标明“按原顺序报告并释放已完成通知组”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.tavern.initialize.end"
       }
     ],
     "edges": [
@@ -118,7 +118,7 @@
         "type": "era.tavern.task.finished",
         "cardinality": "exactly_one",
         "as": "frame",
-        "display_name": "已释放通知组"
+        "display_name": "当前职责已真实完成或退出的确认"
       }
     ]
   }

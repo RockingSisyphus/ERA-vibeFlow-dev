@@ -1,20 +1,20 @@
 {
   "type_key": "era.tavern.flow.functions_begin",
-  "display_name": "建立作者函数上下文并安排调用",
-  "description": "实现 era.tavern.functions.begin；输入沿用 era.working.request，输出沿用 era.working.result，完成方式保持 immediate。",
+  "display_name": "建立作者函数调用并安排执行",
+  "description": "检查调用身份和目标消息，建立参数、操作接口及取消关联，再把函数加入作者队列。返回已安排确认，消息流程随后等待作者操作或结束。",
   "expand": true,
   "requires": [
     {
       "type": "era.tavern.call.frame",
       "cardinality": "exactly_one",
-      "display_name": "本次调用及实例资源令牌"
+      "display_name": "建立作者函数调用并安排执行的请求和已有进度"
     }
   ],
   "provides": [
     {
       "key": "era_tavern_flow_functions_begin_frame",
       "type": "era.tavern.call.frame",
-      "display_name": "操作结果及后续处理所需的资源令牌"
+      "display_name": "建立作者函数调用并安排执行的处理进度及结果"
     }
   ],
   "pipeline": {
@@ -23,7 +23,7 @@
       {
         "key": "frame",
         "type": "era.tavern.call.frame",
-        "display_name": "调用与资源资料",
+        "display_name": "建立作者函数调用并安排执行的请求和已有进度",
         "required": true
       }
     ],
@@ -31,39 +31,39 @@
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.tavern.initialize.start",
-        "display_name": "开始当前原生流程",
-        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+        "display_name": "开始建立作者函数调用并安排执行",
+        "description": "标明“建立作者函数调用并安排执行”的开始位置。检查调用身份和目标消息，建立参数、操作接口及取消关联，再把函数加入作者队列。返回已安排确认，消息流程随后等待作者操作或结束。",
+        "definition_id": "era.tavern.initialize.start"
       },
       {
         "id": "check_call",
-        "type_used": "era.tavern.functions_begin.check_call",
-        "display_name": "检查调用身份与消息依据",
-        "description": "拒绝重复调用或陈旧来源；保留参数复制和原错误身份。"
+        "display_name": "检查作者函数调用身份和目标消息",
+        "description": "在“建立作者函数调用并安排执行”流程中，接收准备启动的作者自定义 JavaScript 函数调用，确认调用身份尚未使用、请求未取消，且目标消息仍匹配。通过后才建立运行资料，避免旧消息中的函数误执行。",
+        "definition_id": "era.tavern.functions_begin.check_call"
       },
       {
         "id": "bind_context",
-        "type_used": "era.tavern.functions_begin.bind_context",
-        "display_name": "建立作者接口与请求队列",
-        "description": "为本次函数参数绑定受限 Facade、独立队列、pending 记录和取消监听。"
+        "display_name": "建立作者函数可用的参数和提交接口",
+        "description": "在“建立作者函数调用并安排执行”流程中，为本次作者函数保存参数、目标消息及取消来源，并建立它可使用的变量提交接口。函数后续提出的操作会对应到这次调用，由消息流程逐项处理。",
+        "definition_id": "era.tavern.functions_begin.bind_context"
       },
       {
         "id": "schedule_tool",
-        "type_used": "era.tavern.functions_begin.schedule_tool",
-        "display_name": "把原生工具调用交给后台流程",
-        "description": "登记 ToolManager 调用任务后即返回 started，不等待作者函数自身结束。"
+        "display_name": "将作者函数加入按顺序执行的队列",
+        "description": "在“建立作者函数调用并安排执行”流程中，接收已建立运行资料的作者函数，把它交给本实例的作者执行队列并唤醒等待者。作者执行分支按顺序运行，主服务仍可协作处理函数提出的变量提交。",
+        "definition_id": "era.tavern.functions_begin.schedule_tool"
       },
       {
         "id": "return_call",
-        "type_used": "era.tavern.functions_begin.return_call",
-        "display_name": "交还作者函数启动确认",
-        "description": "保留原 id 和 started 结果，后续 next/acknowledge 由 Service 同一块循环执行。"
+        "display_name": "确认作者函数已安排执行",
+        "description": "在“建立作者函数调用并安排执行”流程中，返回本次作者函数已经启动安排的确认及调用身份。主服务据此进入后续请求等待，实际函数结果由作者执行及消息流程共同完成。",
+        "definition_id": "era.tavern.functions_begin.return_call"
       },
       {
         "id": "end",
-        "type_used": "era.tavern.initialize.end",
-        "display_name": "结束当前原生流程",
-        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+        "display_name": "结束建立作者函数调用并安排执行",
+        "description": "标明“建立作者函数调用并安排执行”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.tavern.initialize.end"
       }
     ],
     "edges": [
@@ -92,7 +92,7 @@
       {
         "type": "era.tavern.call.frame",
         "cardinality": "exactly_one",
-        "display_name": "完成后的操作资料",
+        "display_name": "建立作者函数调用并安排执行的处理进度及结果",
         "as": "frame"
       }
     ]

@@ -1,20 +1,20 @@
 {
   "type_key": "era.tavern.flow.subscription_control",
-  "display_name": "登记和释放生成阶段订阅",
-  "description": "公开generation.subscribe及其注销器只转交此原生同步流程，回调表按实例隔离。",
+  "display_name": "管理作者的生成阶段订阅",
+  "description": "接收登记、停止或取消要求，检查订阅归属及关注阶段，在当前实例内更新回调记录。返回可注销的订阅或完成确认，供后续阶段按正确名单执行。",
   "expand": true,
   "requires": [
     {
       "type": "era.tavern.call.frame",
       "cardinality": "exactly_one",
-      "display_name": "本次实例及调用资料"
+      "display_name": "管理作者的生成阶段订阅的请求和已有进度"
     }
   ],
   "provides": [
     {
       "key": "subscription_control_frame",
       "type": "era.tavern.call.frame",
-      "display_name": "本流程实际结果"
+      "display_name": "管理作者的生成阶段订阅的处理进度及结果"
     }
   ],
   "pipeline": {
@@ -24,51 +24,51 @@
         "key": "frame",
         "type": "era.tavern.call.frame",
         "required": true,
-        "display_name": "本次实例及调用资料"
+        "display_name": "管理作者的生成阶段订阅的请求和已有进度"
       }
     ],
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.tavern.initialize.start",
-        "display_name": "开始当前原生流程",
-        "description": "标记本段原生流程的控制边界，不创建资源或重复输出。"
+        "display_name": "开始管理作者的生成阶段订阅",
+        "description": "标明“管理作者的生成阶段订阅”的开始位置。接收登记、停止或取消要求，检查订阅归属及关注阶段，在当前实例内更新回调记录。返回可注销的订阅或完成确认，供后续阶段按正确名单执行。",
+        "definition_id": "era.tavern.initialize.start"
       },
       {
         "id": "choose",
-        "type_used": "era.tavern.subscription_control.choose",
-        "display_name": "区分登记、注销或取消阶段订阅",
-        "description": "按公开登记或资源释放请求选择唯一动作；不调用作者回调。"
+        "display_name": "选择登记、移除或取消阶段订阅",
+        "description": "在“管理作者的生成阶段订阅”流程中，接收作者对生成阶段通知的管理请求，判断要新增订阅、停止指定订阅，还是取消当前阶段处理。后续在本实例范围内执行对应操作。",
+        "definition_id": "era.tavern.subscription_control.choose"
       },
       {
         "id": "register",
-        "type_used": "era.tavern.subscription_control.register",
-        "display_name": "登记当前实例的阶段订阅",
-        "description": "校验函数和阶段选项，保存本实例回调资源；返回只转交注销请求的stop及cancelPending句柄。停止后的旧Facade返回空注销器。"
+        "display_name": "登记作者希望监听的生成阶段",
+        "description": "在“管理作者的生成阶段订阅”流程中，接收作者回调及可选的规划、正文、结算阶段范围，检查后登记到当前实例。返回可停止订阅的操作，使阶段完成时能找到匹配作者处理。",
+        "definition_id": "era.tavern.subscription_control.register"
       },
       {
         "id": "stop",
-        "type_used": "era.tavern.subscription_control.stop",
-        "display_name": "注销本次订阅或取消其在途等待",
-        "description": "普通注销仅退出此订阅并解除本回调等待；cancelPending同时取消它正在参与的生成周期。资源句柄必须属于当前实例。"
+        "display_name": "移除指定阶段订阅并按需取消等待",
+        "description": "在“管理作者的生成阶段订阅”流程中，确认订阅属于当前实例后移除它，结束订阅有效性；请求明确要求时也取消它参与的阶段等待。后续新阶段不再调用该订阅。",
+        "definition_id": "era.tavern.subscription_control.stop"
       },
       {
         "id": "cancel",
-        "type_used": "era.tavern.subscription_control.cancel",
-        "display_name": "取消当前生成周期或释放全部订阅",
-        "description": "取消本实例原始控制器；导航保留登记，停止时注销全部资源。此Node不顺序执行作者函数，不重启生成。"
+        "display_name": "取消进行中的阶段回调周期",
+        "description": "在“管理作者的生成阶段订阅”流程中，取消当前实例正在处理的阶段订阅周期；请求明确要求清空时，同时移除全部订阅。用于生成停止或实例释放，避免旧周期继续推动下一阶段。",
+        "definition_id": "era.tavern.subscription_control.cancel"
       },
       {
         "id": "join_result",
-        "type_used": "era.tavern.subscription_control.join_result",
-        "display_name": "交还当前订阅资源操作结果",
-        "description": "严格汇合当前互斥路径，返回原stop句柄或释放确认。"
+        "display_name": "交接管理作者的生成阶段订阅的选中结果",
+        "description": "在“管理作者的生成阶段订阅”流程中，在“管理作者的生成阶段订阅”中，接收本次实际选择的分支所产生的唯一结果，交给后续步骤或调用方。每次只允许一份实际结果，避免把互斥分支误当成多个都已执行。",
+        "definition_id": "era.tavern.subscription_control.join_result"
       },
       {
         "id": "end",
-        "type_used": "era.tavern.initialize.end",
-        "display_name": "结束当前原生流程",
-        "description": "标记本段原生流程的控制边界，不创建资源或重复输出。"
+        "display_name": "结束管理作者的生成阶段订阅",
+        "description": "标明“管理作者的生成阶段订阅”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.tavern.initialize.end"
       }
     ],
     "edges": [
@@ -113,7 +113,7 @@
         "type": "era.tavern.call.frame",
         "cardinality": "exactly_one",
         "as": "frame",
-        "display_name": "当前实际结果"
+        "display_name": "管理作者的生成阶段订阅的处理进度及结果"
       }
     ],
     "max_steps": 10

@@ -1,0 +1,31 @@
+import {defineBaseLib} from "@vibeflow/plugin";
+
+export const era_service_sync_contracts = defineBaseLib({
+  "id": "era.service.sync_contracts",
+  "display_name": "同步阶段基础契约",
+  "description": "同步阶段类型、批次连续事实投影、JSON 与错误适配、共享输入断言。",
+  "version": "1.0.0",
+  "implementations": [
+    {
+      "language": "typescript",
+      "targets": [
+        "browser",
+        "node"
+      ],
+      "source": {
+        "kind": "file",
+        "ref": "base_lib/sync/sync_contracts.ts"
+      }
+    }
+  ],
+  "dependencies": [
+    "era.service.sync_types",
+    "era.service.types"
+  ],
+  "external_packages": [
+    "@era/vibeflow-contracts"
+  ],
+  "rulesets": [
+    "vibeflow.base_lib"
+  ]
+});

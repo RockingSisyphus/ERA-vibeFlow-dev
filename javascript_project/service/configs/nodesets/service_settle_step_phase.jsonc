@@ -1,24 +1,24 @@
 {
   "type_key": "era.service.settle_step_phase",
-  "display_name": "整理当前任务结果并继续批次",
-  "description": "接收刚完成任务的回执、诊断和消息进度，合入当前批次并推进任务索引。仍有任务时继续执行；全部完成时汇总并发布整批结果，再返回事件收集阶段。",
+  "display_name": "收下本项结果并判断批次是否结束",
+  "description": "将刚完成任务的确认、通知和消息进度合入批次并推进位置。有剩余任务时继续执行，全部完成时汇总发回页面，再恢复事件收集。",
   "requires": [
     {
       "type": "era.batch.execution.state",
       "cardinality": "exactly_one",
-      "display_name": "已准备批次状态"
+      "display_name": "当前批次的任务进度与累计结果"
     },
     {
       "type": "era.task.result",
       "cardinality": "exactly_one",
-      "display_name": "当前任务结果"
+      "display_name": "本项任务对应原事件的处理结果"
     }
   ],
   "provides": [
     {
       "key": "settled_cycle_state",
       "type": "era.service.cycle.state",
-      "display_name": "下一阶段状态"
+      "display_name": "服务当前处于收集还是执行及相应进度"
     }
   ],
   "pipeline": {
@@ -27,13 +27,13 @@
       {
         "key": "execution_state",
         "type": "era.batch.execution.state",
-        "display_name": "已准备批次状态",
+        "display_name": "当前批次的任务进度与累计结果",
         "required": true
       },
       {
         "key": "task_result",
         "type": "era.task.result",
-        "display_name": "当前任务结果",
+        "display_name": "本项任务对应原事件的处理结果",
         "required": true
       }
     ],
@@ -41,45 +41,45 @@
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.service.terminal",
-        "display_name": "单步后处理开始",
-        "description": "开始整理当前任务结果并继续批次。"
+        "display_name": "开始收下本项结果并判断批次是否结束",
+        "description": "标明“收下本项结果并判断批次是否结束”的开始位置。将刚完成任务的确认、通知和消息进度合入批次并推进位置。有剩余任务时继续执行，全部完成时汇总发回页面，再恢复事件收集。",
+        "definition_id": "era.service.terminal"
       },
       {
         "id": "merge_task_result",
-        "type_used": "era.service.merge_task_result",
-        "display_name": "合并步骤结果",
-        "description": "本次整理一个已执行任务的结果。把当前任务的回执、诊断、通知和消息处理进度合入批次累计结果，移到下一任务位置，并标记批次是否完成。"
+        "display_name": "合并当前任务结果并移到下一项",
+        "description": "在“收下本项结果并判断批次是否结束”流程中，将刚完成任务的处理确认、问题记录、通知和消息进度加入批次累计结果。推进任务位置并标记是否完成，让服务选择继续下一项还是汇总整批。",
+        "definition_id": "era.service.merge_task_result"
       },
       {
         "id": "route_completion",
-        "type_used": "era.service.cycle.route_completion",
-        "display_name": "路由继续或收尾",
-        "description": "本次整理一个已执行任务的结果。检查当前批次是否还有待执行任务。未结束时继续下一任务，已结束时进入批次结算。"
+        "display_name": "判断当前批次是否还有任务",
+        "description": "在“收下本项结果并判断批次是否结束”流程中，查看批次的当前位置和结束标志。仍有任务时继续执行下一项，全部结束时进入批次汇总，使每项任务都在返回整批结果前得到处理。",
+        "definition_id": "era.service.cycle.route_completion"
       },
       {
         "id": "carry_execution",
-        "type_used": "era.service.cycle.carry_execution",
-        "display_name": "继续同一批次",
-        "description": "本次整理一个已执行任务的结果。把下一任务位置、累计结果和消息处理进度放回执行循环，供后续任务继续使用。"
+        "display_name": "保留批次进度以继续下一项任务",
+        "description": "在“收下本项结果并判断批次是否结束”流程中，接收当前任务结束后的批次，保留下一任务位置、累计结果和消息进度，交给服务循环。下一轮据此继续尚未完成的任务。",
+        "definition_id": "era.service.cycle.carry_execution"
       },
       {
         "id": "promote_done_state",
-        "type_used": "era.service.cycle.promote_done",
-        "display_name": "确认待结算状态",
-        "description": "本次整理一个已执行任务的结果。把已经完成的批次交给最终结算阶段，供汇总所有原事件的回执。"
+        "display_name": "把已完成批次交给最终汇总",
+        "description": "在“收下本项结果并判断批次是否结束”流程中，接收所有任务已经结束的批次，交给批次结算环节。后续为每个原事件整理最终确认，并集中发回页面。",
+        "definition_id": "era.service.cycle.promote_done"
       },
       {
         "id": "finish_batch",
-        "type_used": "era.service.finish_batch",
-        "display_name": "汇总批次结果并发送给酒馆页面",
-        "description": "本次整理一个已执行任务的结果。汇总当前批次所有任务的结论，检查每个原始事件恰有一次回执，再发送结果和通知。普通失败后可以继续接收事件；写入结果未知等致命问题先告知调用方，再停止服务。"
+        "display_name": "汇总整批结果并回告页面",
+        "description": "本环节用于“收下本项结果并判断批次是否结束”：所有任务结束后，为本批每个原事件整理一次最终确认，附上通知和问题记录，再集中送回页面。普通失败后继续接收事件，需停止的严重问题先回告原因再结束服务。",
+        "definition_id": "era.service.finish_batch"
       },
       {
         "id": "end",
-        "type_used": "era.service.terminal",
-        "display_name": "单步后处理结束",
-        "description": "结束整理当前任务结果并继续批次，输出本段流程的处理结果。"
+        "display_name": "结束收下本项结果并判断批次是否结束",
+        "description": "标明“收下本项结果并判断批次是否结束”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.service.terminal"
       }
     ],
     "edges": [
@@ -118,7 +118,7 @@
       {
         "type": "era.service.cycle.state",
         "cardinality": "exactly_one",
-        "display_name": "下一阶段状态",
+        "display_name": "服务当前处于收集还是执行及相应进度",
         "as": "cycleStateNext"
       }
     ]

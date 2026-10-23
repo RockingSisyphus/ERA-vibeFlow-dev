@@ -1,20 +1,20 @@
 {
   "type_key": "era.tavern.flow.stop_prefix",
-  "display_name": "释放实例全部运行资源：同步准备",
-  "description": "复用原节点完成返回 Promise 前的立即资源变更；不引入第二份准入、回执或清理实现。",
+  "display_name": "解除实例监听、计时和剩余等待",
+  "description": "接收实例停止要求，取消接收与业务等待，解除监听，撤销计时，逐项取消未确认事件并关闭状态文件提示。首次与重复停止按已有进度处理，实际异步操作由资源分支等待清理。",
   "expand": true,
   "requires": [
     {
       "type": "era.tavern.call.frame",
       "cardinality": "exactly_one",
-      "display_name": "本次调用、实例资源与上一节点的事实"
+      "display_name": "解除实例监听、计时和剩余等待的请求和已有进度"
     }
   ],
   "provides": [
     {
       "key": "era_tavern_flow_stop_prefix_frame",
       "type": "era.tavern.frame.stop.owned_prepared",
-      "display_name": "处理后的资源与事实"
+      "display_name": "解除实例监听、计时和剩余等待的处理进度及结果"
     }
   ],
   "pipeline": {
@@ -23,7 +23,7 @@
       {
         "key": "frame",
         "type": "era.tavern.call.frame",
-        "display_name": "同实例调用与资源",
+        "display_name": "解除实例监听、计时和剩余等待的请求和已有进度",
         "required": true
       }
     ],
@@ -32,58 +32,57 @@
         "type": "era.tavern.frame.stop.owned_prepared",
         "cardinality": "exactly_one",
         "as": "frame",
-        "display_name": "本段明确结果"
+        "display_name": "解除实例监听、计时和剩余等待的处理进度及结果"
       }
     ],
     "max_steps": 24,
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.tavern.initialize.start",
-        "display_name": "开始当前原生流程",
-        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+        "display_name": "开始解除实例监听、计时和剩余等待",
+        "description": "标明“解除实例监听、计时和剩余等待”的开始位置。接收实例停止要求，取消接收与业务等待，解除监听，撤销计时，逐项取消未确认事件并关闭状态文件提示。首次与重复停止按已有进度处理，实际异步操作由资源分支等待清理。",
+        "definition_id": "era.tavern.initialize.start"
       },
       {
         "id": "claim_stop",
-        "type_used": "era.tavern.owned.claim_stop",
-        "display_name": "只为第一次停止建立收尾回执",
-        "description": "标记本实例首次资源关闭并进入同步清理路径；重入或重复卸载直接跳过，避免重复注销和结算，不建立对外停止Promise。"
+        "display_name": "区分首次停止与已有停止请求",
+        "description": "在“解除实例监听、计时和剩余等待”流程中，检查本实例是否已经开始清理。首次请求进入收尾，重复请求沿用已开始的停止过程，避免多次释放同一批资源。",
+        "definition_id": "era.tavern.owned.claim_stop"
       },
       {
         "id": "close_ingress",
-        "type_used": "era.tavern.stop_accepting.close_ingress",
-        "display_name": "标记停止并关闭接纳",
-        "description": "设置停止状态，禁止新事件、能力和监听登记。"
+        "display_name": "立即停止接收新事件并唤醒各分支",
+        "description": "在“解除实例监听、计时和剩余等待”流程中，把当前实例标为停止和未启动，返回入口关闭确认，并唤醒作者、通知和计时等待。后续请求会被拒绝，各长期分支开始结束处理。",
+        "definition_id": "era.tavern.stop_accepting.close_ingress"
       },
       {
         "id": "cancel_generations",
-        "type_used": "era.tavern.stop_accepting.cancel_generations",
-        "display_name": "取消作者函数与生成交接",
-        "description": "同步取消本实例运行信号及生成资源；已登记的作者与生成释放回调只转交各自原生清理路径，不能保留原型空操作。"
+        "display_name": "取消生成、阶段交接及相关订阅",
+        "description": "在“解除实例监听、计时和剩余等待”流程中，实例停止时取消业务等待，结束启动决定，清空本页生成进度、阶段交接及订阅，并撤销延后停止安排。让仍在等待旧生成的调用能够结束，实际运行资源继续由统一收尾等待。",
+        "definition_id": "era.tavern.stop_accepting.cancel_generations"
       },
       {
         "id": "abort_waiters",
-        "type_used": "era.tavern.stop.abort_waiters",
-        "display_name": "取消接收和能力等待",
-        "description": "中止实例控制器和 operational 控制器，拒绝挂起 receive，传播原取消原因。"
+        "display_name": "取消事件接收和其他运行等待",
+        "description": "在“解除实例监听、计时和剩余等待”流程中，将实例生命周期及业务操作标为取消，结束挂起的事件接收，唤醒作者、通知和计时等待。各分支据此进入停止路径，而不是继续等新任务。",
+        "definition_id": "era.tavern.stop.abort_waiters"
       },
       {
         "id": "remove_listeners",
-        "type_used": "era.tavern.stop.remove_listeners",
-        "display_name": "注销 Tavern 及取消监听",
-        "description": "注销全部属于本实例的普通事件、按钮、原生观察和取消 listener；重复停止不重复注销。"
+        "display_name": "解除当前实例安装的页面监听",
+        "description": "在“解除实例监听、计时和剩余等待”流程中，移除本实例的聊天监听及取消监听，清空登记；解除中发生的问题写入告警。配合入口关闭，确保停止后不再由旧监听接收事件。",
+        "definition_id": "era.tavern.stop.remove_listeners"
       },
       {
         "id": "clear_timers",
-        "type_used": "era.tavern.stop.clear_timers",
-        "display_name": "清除 timer 和屏障看门狗",
-        "description": "逐项取消定时控制、延迟准入和 watchdog 句柄。"
+        "display_name": "撤销计时安排并列出未确认事件",
+        "description": "在“解除实例监听、计时和剩余等待”流程中，取消事件收集、延迟事件及等待告警的计时，清空对应登记。按序列出尚未确认的事件，供后续逐项返回取消结果。",
+        "definition_id": "era.tavern.stop.clear_timers"
       },
       {
         "id": "cancel_receipts_loop",
-        "type_used": "vibeflow.loop.while",
-        "display_name": "取消未决回执循环",
-        "description": "每轮完成一个未决来源为 cancelled、释放该来源引用；原有已完成来源不重复结算。",
+        "display_name": "逐项向未完成事件说明实例停止",
+        "description": "实例停止时，按序让尚未确认的原事件以取消结束，并释放其持有资料。全部处理完才继续停止收尾，已完成事件不会重复回告。",
         "loop": {
           "body": "era.tavern.flow.stop_cancel_receipts_item",
           "max_iterations": null,
@@ -109,40 +108,41 @@
           {
             "type": "era.tavern.frame.stop.clear_timers",
             "cardinality": "exactly_one",
-            "display_name": "当前请求、实例资源令牌及此前步骤取得的事实"
+            "display_name": "解除实例监听、计时和剩余等待的请求和已有进度"
           }
         ],
         "provides": [
           {
             "key": "era_tavern_flow_stop_cancel_receipts_loop_frame",
             "type": "era.tavern.frame.stop.clear_timers",
-            "display_name": "取消未决回执完成后的处理资料"
+            "display_name": "解除实例监听、计时和剩余等待的处理进度及结果"
           }
-        ]
+        ],
+        "definition_id": "vibeflow.loop.while"
       },
       {
         "id": "cancel_receipts",
-        "type_used": "era.tavern.stop.cancel_receipts",
-        "display_name": "汇总取消未决回执",
-        "description": "将循环的终态资料转换为后续步骤使用的结果；不重复处理已经完成的条目。"
+        "display_name": "确认停止时的未完成事件已逐项取消",
+        "description": "在“解除实例监听、计时和剩余等待”流程中，接收取消循环结束状态，交给剩余实例清理。发起者的等待已按停止原因结束，随后再关闭相关页面提示。",
+        "definition_id": "era.tavern.stop.cancel_receipts"
       },
       {
         "id": "clear_prompt",
-        "type_used": "era.tavern.stop.clear_prompt",
-        "display_name": "清理状态文件绑定弹窗",
-        "description": "通过仍可执行的清理调用移除实例提示，不解释绑定业务结论。"
+        "display_name": "关闭本实例的状态文件选择提示",
+        "description": "在“解除实例监听、计时和剩余等待”流程中，实例停止时清除页面上的状态文件绑定或修复弹窗。清理失败会记录问题，其他停止步骤仍按流程继续。",
+        "definition_id": "era.tavern.stop.clear_prompt"
       },
       {
         "id": "reuse_stop",
-        "type_used": "era.tavern.owned.reuse_stop",
-        "display_name": "交回已有停止Promise",
-        "description": "重复资源关闭只交回已关闭事实，不再次注销、结算或发出提示清理。"
+        "display_name": "确认已有停止过程继续负责清理",
+        "description": "在“解除实例监听、计时和剩余等待”流程中，本实例已经开始停止时，返回入口已关闭的确认。实际资源仍由原停止过程清理，最终等待由长期运行的退出汇合负责。",
+        "definition_id": "era.tavern.owned.reuse_stop"
       },
       {
         "id": "end",
-        "type_used": "era.tavern.initialize.end",
-        "display_name": "结束当前原生流程",
-        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+        "display_name": "结束解除实例监听、计时和剩余等待",
+        "description": "标明“解除实例监听、计时和剩余等待”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.tavern.initialize.end"
       }
     ],
     "edges": [

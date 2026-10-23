@@ -1,20 +1,20 @@
 {
   "type_key": "era.tavern.flow.messages_update_content",
-  "display_name": "更新消息并确认保存完成",
-  "description": "实现 era.tavern.messages.update_content；输入沿用 era.tavern.messages.update_content.request，输出沿用 era.tavern.messages.update_content.result，完成方式保持 suspend。 原节点保留；仅把首次等待划为同步发起与异步等待，后续处理在对应 finish 流程。",
+  "display_name": "准备并发起一次消息批量更新",
+  "description": "核对聊天、消息和文件绑定，整理单条或多条更新并保留附加资料，再一次发起写入。后续确认流程等待更新、保存聊天、回读比较，最后返回实际写入状态。",
   "expand": true,
   "requires": [
     {
       "type": "era.tavern.call.frame",
       "cardinality": "exactly_one",
-      "display_name": "本次调用及实例资源令牌"
+      "display_name": "准备并发起一次消息批量更新的请求和已有进度"
     }
   ],
   "provides": [
     {
       "key": "era_tavern_flow_messages_update_content_frame",
       "type": "era.tavern.frame.messages_update_content.started",
-      "display_name": "本次原生步骤的资源与事实"
+      "display_name": "准备并发起一次消息批量更新的处理进度及结果"
     }
   ],
   "pipeline": {
@@ -23,7 +23,7 @@
       {
         "key": "frame",
         "type": "era.tavern.call.frame",
-        "display_name": "调用与资源资料",
+        "display_name": "准备并发起一次消息批量更新的请求和已有进度",
         "required": true
       }
     ],
@@ -32,52 +32,51 @@
         "type": "era.tavern.frame.messages_update_content.started",
         "cardinality": "exactly_one",
         "as": "frame",
-        "display_name": "本次已经发起的等待资源"
+        "display_name": "准备并发起一次消息批量更新的处理进度及结果"
       }
     ],
     "max_steps": 15,
     "nodes": [
       {
         "id": "start",
-        "type_used": "era.tavern.initialize.start",
-        "display_name": "开始当前原生流程",
-        "description": "标记本段原生流程开始；不输出重复数据，不创建资源。"
+        "display_name": "开始准备并发起一次消息批量更新",
+        "description": "标明“准备并发起一次消息批量更新”的开始位置。核对聊天、消息和文件绑定，整理单条或多条更新并保留附加资料，再一次发起写入。后续确认流程等待更新、保存聊天、回读比较，最后返回实际写入状态。",
+        "definition_id": "era.tavern.initialize.start"
       },
       {
         "id": "check_target",
-        "type_used": "era.tavern.messages_update_content.check_target",
-        "display_name": "复核消息目标与保存依据",
-        "description": "检查原消息来源和保存观察依据，避免覆盖用户修改或另一聊天。"
+        "display_name": "写消息前核对聊天和状态文件",
+        "description": "在“准备并发起一次消息批量更新”流程中，检查当前实例、目标消息和预期的状态文件绑定仍与本次任务一致，记录本次保存依据和需要的刷新方式。后续据此准备消息修改，避免用户切换聊天后写错目标。",
+        "definition_id": "era.tavern.messages_update_content.check_target"
       },
       {
         "id": "choose_update",
-        "type_used": "era.tavern.messages_update_content.choose_update",
-        "display_name": "选择单条正文或消息更新列表",
-        "description": "保留单条写 message 与多条合并 extra 的区别，避免丢失 swipe_info、附件和未知字段。"
+        "display_name": "区分单条正文修改和批量消息修改",
+        "description": "在“准备并发起一次消息批量更新”流程中，接收消息写入请求，判断是直接替换一条正文，还是处理明确列出的多条消息更新。后续统一整理成一次批量提交所需的清单。",
+        "definition_id": "era.tavern.messages_update_content.choose_update"
       },
       {
         "id": "select_many",
-        "type_used": "era.tavern.messages_update_content.select_many",
-        "display_name": "准备多消息更新列表",
-        "description": "保留原 updates 顺序，把每条更新交给原生消息更新 Loop。"
+        "display_name": "接收明确列出的消息修改",
+        "description": "在“准备并发起一次消息批量更新”流程中，复制请求指定的单项或多项消息更新，保留原顺序。后续逐项补齐应保留的消息附加资料，再统一发起写入。",
+        "definition_id": "era.tavern.messages_update_content.select_many"
       },
       {
         "id": "select_single",
-        "type_used": "era.tavern.messages_update_content.select_single",
-        "display_name": "准备单条正文写入",
-        "description": "只生成指定 message 的写入项，保留原 swipe 和附件字段。"
+        "display_name": "检查并整理一条消息的正文替换",
+        "description": "在“准备并发起一次消息批量更新”流程中，读取消息编号和新正文，确认目标存在且文字有效，整理成一项更新。后续与批量修改共用同一写入和保存确认流程。",
+        "definition_id": "era.tavern.messages_update_content.select_single"
       },
       {
         "id": "join_update_messages_loop",
-        "type_used": "era.tavern.messages_update_content.join_update_messages_loop",
-        "display_name": "汇合当前实际激活分支的结果",
-        "description": "接收当前所选路径的结果集合，交还其中唯一实际结果；不选择未激活分支、不重新执行操作。运行实现必须拒绝实际多结果，不以集合契约放宽唯一结果语义。"
+        "display_name": "交接准备并发起一次消息批量更新的选中结果",
+        "description": "在“准备并发起一次消息批量更新”流程中，在“准备并发起一次消息批量更新”中，接收本次实际选择的分支所产生的唯一结果，交给后续步骤或调用方。每次只允许一份实际结果，避免把互斥分支误当成多个都已执行。",
+        "definition_id": "era.tavern.messages_update_content.join_update_messages_loop"
       },
       {
         "id": "update_messages_loop",
-        "type_used": "vibeflow.loop.while",
-        "display_name": "逐项更新指定消息循环",
-        "description": "每轮保留原消息结构并执行一个明确更新，记录实际受影响消息；处理完列表后统一等待保存和显示刷新。",
+        "display_name": "逐条整理本次消息批量修改",
+        "description": "按本次更新清单，逐项合并需要保留的消息附加资料并记下影响范围。准备完后统一发起一次消息更新；本循环只整理清单，随后才等待保存及回读确认。",
         "loop": {
           "body": "era.tavern.flow.messages_update_content_update_messages_item",
           "max_iterations": null,
@@ -103,28 +102,29 @@
           {
             "type": "era.tavern.frame.messages_update_content.choose_update",
             "cardinality": "exactly_one",
-            "display_name": "当前请求、实例资源令牌及此前步骤取得的事实"
+            "display_name": "准备并发起一次消息批量更新的请求和已有进度"
           }
         ],
         "provides": [
           {
             "key": "era_tavern_flow_messages_update_content_update_messages_loop_frame",
             "type": "era.tavern.frame.messages_update_content.choose_update",
-            "display_name": "逐项更新指定消息完成后的处理资料"
+            "display_name": "准备并发起一次消息批量更新的处理进度及结果"
           }
-        ]
+        ],
+        "definition_id": "vibeflow.loop.while"
       },
       {
         "id": "start_operation",
-        "type_used": "era.tavern.messages_update_content.start_operation",
-        "display_name": "核对目标并发起一次批量消息更新",
-        "description": "捕获固定保存目标和写后依据；在同步准备完更新列表后再次核对当前目标，调用一次 setChatMessages；不逐条写入，不覆盖附件或未知 extra。 此 Node 只发起原始操作并创建等待资源；不执行异步续体。"
+        "display_name": "再次核对目标并发起批量消息更新",
+        "description": "在“准备并发起一次消息批量更新”流程中，准备清单完成后，再检查聊天消息及状态文件绑定仍一致，随后一次提交全部消息修改。后续等待真实更新并保存聊天，防止准备期间目标变化。",
+        "definition_id": "era.tavern.messages_update_content.start_operation"
       },
       {
         "id": "end",
-        "type_used": "era.tavern.initialize.end",
-        "display_name": "结束当前原生流程",
-        "description": "标记本段原生流程结束；不输出重复数据，不代办资源释放。"
+        "display_name": "结束准备并发起一次消息批量更新",
+        "description": "标明“准备并发起一次消息批量更新”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "definition_id": "era.tavern.initialize.end"
       }
     ],
     "edges": [
