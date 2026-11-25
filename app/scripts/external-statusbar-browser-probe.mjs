@@ -4,9 +4,10 @@ import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
 import { createServer } from 'node:http';
 
-const harness =
-  process.env.ERA_HARNESS_PACKAGE ??
-  '/home/example/projects/酒馆开发目录/测试工具链/ST-Test-Harness/package.json';
+const harness = process.env.ERA_HARNESS_PACKAGE;
+if (!harness) {
+  throw new Error('Set ERA_HARNESS_PACKAGE to the Harness package.json path.');
+}
 const require = createRequire(harness);
 const { build } = require('esbuild');
 const { chromium } = require('playwright');

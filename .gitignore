@@ -43,3 +43,10 @@ reports/native-workflows/
 /vibeflow-preview/
 /vibeflow-preview.html
 /vibeflow-preview.config.js
+
+# Local reference material and internal records
+/references/
+/work/
+/docs/developer/新会话提示词-20261018.md
+/docs/developer/续接-20261018.md
+/docs/developer/云端迁移准备.md

@@ -101,6 +101,6 @@ npm run test:workflow
 
 ## 旧项目参考与差异
 
-仅以 `references/local-expression-reference/函数计算器/源码/Calculator3.2.2/Calculator/Calculator/` 中的 `Equation.cs`、`EquationElement.cs`、`EquationHelper.cs`、`EquationCalculator.cs`、`EquationFinder.cs`、`LambdaBuilder.cs`、`BaseEquationCalculator.cs` 与 `equations/custom_equations.txt` 提取行为样例。
+外部参考资料不随仓库分发。
 
 本实现以 token 流、不可变 AST、显式环境和完整调用图替代旧版的全局状态、文本替换、动态编译和仅用于删除提示的引用检查。
