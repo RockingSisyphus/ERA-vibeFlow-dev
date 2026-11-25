@@ -1,0 +1,22 @@
+{
+  "version": 4,
+  "id": "20261125T113305748520Z-4122a0a77bc1",
+  "category": "review",
+  "status": "公开架构",
+  "created_at": "2026-11-25T11:33:05.748501+00:00",
+  "updated_at": "2026-11-25T11:33:06.069604+00:00",
+  "workflow": {
+    "root_id": "era-tavern",
+    "path": "configs/era.tavern.async.jsonc",
+    "id": "era-tavern:configs/era.tavern.async.jsonc",
+    "name": "era.tavern.async",
+    "target": "javascript"
+  },
+  "views": [
+    "flow",
+    "base_lib",
+    "plugin",
+    "links"
+  ],
+  "revision": 2
+}
