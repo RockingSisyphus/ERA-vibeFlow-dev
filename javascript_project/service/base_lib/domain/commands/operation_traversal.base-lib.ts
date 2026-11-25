@@ -21,7 +21,6 @@ export const era_command_operation_traversal = defineBaseLib({
   "dependencies": [
     "era.command.operation_state",
     "era.crud.mutations",
-    "era.snapshot.history",
     "era.crud.parser"
   ],
   "external_packages": [],

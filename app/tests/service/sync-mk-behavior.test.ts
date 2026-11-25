@@ -396,6 +396,31 @@ describe('VibeFlow 历史同步工作流行为', () => {
       { op: 'insert', path: 'd', value_new: 4 },
     ]);
   });
+  it.each([
+    ['新增子项', command('Insert', { 背包: { 盾: 1 } }), { 剑: 1, 盾: 1 }],
+    ['修改子项', command('Edit', { 背包: { 剑: 5 } }), { 剑: 5 }],
+    ['删除子项', command('Delete', { 背包: { 剑: {} } }), {}],
+  ] as const)('%s后整体改写父级，删除改写楼层恢复改写前的值', async (_name, childChange, before) => {
+    const messages = [
+      message(0, 'mk-0', command('Insert', { 背包: { 剑: 1 } })),
+      message(1, 'mk-1', childChange),
+      message(2, 'mk-2', command('Edit', { 背包: '背包丢了' })),
+    ];
+    const meta = { SelectedMks: [], EditLogs: {}, FunctionEditLogs: {} };
+    const applied = await runSync({ messages, stat: {}, meta, forceFullRebuild: true, reason: 'manual' });
+    expect(applied.stat).toEqual({ 背包: '背包丢了' });
+    expect((applied.meta.EditLogs as Record<string, unknown>)['mk-2']).toEqual([
+      { op: 'update', path: '背包', value_old: before, value_new: '背包丢了' },
+    ]);
+    const deleted = await runSync({
+      messages: messages.slice(0, 2),
+      stat: applied.stat,
+      statFunc: applied.statFunc,
+      meta: applied.meta,
+      processingMk: 'mk-1',
+    });
+    expect(deleted.stat).toEqual({ 背包: before });
+  });
   it('force full 从 0 回滚并重放全部消息', async () => {
     const plan = await runSync({ forceFullRebuild: true, reason: 'manual' });
     expect(plan).toMatchObject({

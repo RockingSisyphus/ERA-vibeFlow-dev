@@ -223,16 +223,16 @@ describe('ERA 纯 CRUD 引擎公开行为回归', () => {
       array: ['{"next":true}', null, '[1,2]'],
     });
     expect(result.editLog.map(log => log.path)).toEqual(['hero.hp', 'hero.title', 'hero.array']);
-    expect(result.editLog[0]).toMatchObject({ op: 'update', value_old: 7, value_new: 10 });
+    expect(result.editLog[0]).toMatchObject({ op: 'update', value_old: 10, value_new: 10 });
   });
-  it('Edit 从父级历史 value_new 追溯旧值', async () => {
+  it('Edit 的旧值取写入前的实时值，不取历史 value_new', async () => {
     const stat = { hero: { profile: { level: 3, title: 'current' } } };
     const result = await expectEditEqual([{ hero: { profile: { title: 'next' } } }], stat);
     expect(result.editLog).toEqual([
       {
         op: 'update',
         path: 'hero.profile.title',
-        value_old: '旧称号',
+        value_old: 'current',
         value_new: 'next',
       },
     ]);

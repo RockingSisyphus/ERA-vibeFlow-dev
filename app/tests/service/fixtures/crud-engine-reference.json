@@ -261,7 +261,7 @@
       {
         "op": "update",
         "path": "hero.hp",
-        "value_old": 7,
+        "value_old": 10,
         "value_new": 10
       },
       {
@@ -300,7 +300,7 @@
       {
         "op": "update",
         "path": "hero.profile.title",
-        "value_old": "旧称号",
+        "value_old": "current",
         "value_new": "next"
       }
     ]
@@ -428,7 +428,7 @@
       {
         "op": "update",
         "path": "hero.hp",
-        "value_old": 7,
+        "value_old": 10,
         "value_new": 12
       },
       {
