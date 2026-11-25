@@ -16,7 +16,6 @@ import {
   applyTemplate,
   editDiagnostic,
 } from "./crud_mutations.ts";
-import { findLatestNewValue } from "../../snapshot/snapshot_history.ts";
 import {
   forkOperation,
   type OperationState,
@@ -217,15 +216,8 @@ export function inspectEdit(input: OperationState): {
 export function applyAssignment(input: OperationState): OperationState {
   const state = forkOperation(input),
     a = state.pendingAction!;
-  let previous = findLatestNewValue(
-    a.path,
-    state.context.messageId,
-    Array.isArray(state.context.meta.SelectedMks)
-      ? state.context.meta.SelectedMks
-      : [],
-    state.context.meta.EditLogs ?? {},
-  );
-  if (previous === null) previous = getAtPath(state.stat, a.path);
+  // 旧值取写入前的实时值；只翻同路径或父路径的日志会漏掉之后对子项的修改。
+  const previous = getAtPath(state.stat, a.path);
   const cleaned = sanitizeArrays(a.patch);
   setAtPath(writableTree(state), a.path, cleaned);
   state.context.pendingLog = {
