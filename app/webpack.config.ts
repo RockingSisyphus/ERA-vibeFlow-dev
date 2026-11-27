@@ -234,7 +234,8 @@ function tavern_sync(compiler: webpack.Compiler) {
   }
 }
 
-function parse_configuration(entry: Entry, is_release = false): (_env: any, argv: any) => webpack.Configuration {
+function parse_configuration(entry: Entry, release_output?: string): (_env: any, argv: any) => webpack.Configuration {
+  const is_release = release_output !== undefined;
   const should_obfuscate = fs
     .readFileSync(path.join(import.meta.dirname, entry.script), 'utf-8')
     .includes('@obfuscate');
@@ -251,10 +252,10 @@ function parse_configuration(entry: Entry, is_release = false): (_env: any, argv
     },
     entry: path.join(import.meta.dirname, entry.script),
     target: 'browserslist',
-    output: is_release
+    output: release_output !== undefined
       ? {
           filename: 'bundle.js',
-          path: path.join(import.meta.dirname, 'artifact'),
+          path: release_output,
           clean: true,
           library: {
             type: 'module',
@@ -734,15 +735,15 @@ function parse_configuration(entry: Entry, is_release = false): (_env: any, argv
   });
 }
 
-const is_release = process.env.npm_lifecycle_event === 'release';
+const release_output = process.env.ERA_RELEASE_OUTPUT;
 
-export default is_release
+export default release_output
   ? [
       parse_configuration(
         {
           script: 'src/ERA变量框架/index.ts',
         },
-        true,
+        release_output,
       ),
     ]
-  : config.entries.map(entry => parse_configuration(entry, false));
+  : config.entries.map(entry => parse_configuration(entry));

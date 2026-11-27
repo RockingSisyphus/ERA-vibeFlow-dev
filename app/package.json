@@ -1,5 +1,6 @@
 {
   "private": true,
+  "version": "0.1.0",
   "type": "module",
   "packageManager": "pnpm@10.34.5",
   "engines": {
@@ -10,7 +11,7 @@
     "serve": "node scripts/serve-project.mjs",
     "build:dev": "pnpm build:workflows && webpack --mode development",
     "build": "pnpm build:workflows && webpack --mode production",
-    "release": "pnpm build:workflows && webpack --mode production",
+    "release": "python scripts/release.py",
     "watch": "webpack --mode development --watch --progress",
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,css,scss,html,vue}\" \"tests/**/*.{ts,tsx,js,jsx}\" \"scripts/era-quality/**/*.{ts,json}\" \"era-quality.config.json\" \".era-quality-baseline.json\" \"tsconfig.quality.json\" --no-error-on-unmatched-pattern",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,css,scss,html,vue}\" \"tests/**/*.{ts,tsx,js,jsx}\" \"scripts/era-quality/**/*.{ts,json}\" \"era-quality.config.json\" \".era-quality-baseline.json\" \"tsconfig.quality.json\" --no-error-on-unmatched-pattern",

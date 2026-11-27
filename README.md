@@ -12,4 +12,4 @@ ERA为SillyTavern角色卡提供变量、表达式、消息内函数调用和历
 
 ## 获取酒馆助手脚本包
 
-在项目根目录运行 `pnpm --dir app release`。构建完成后，最新生成的 ERA 单文件脚本包位于 `app/artifact/bundle.js`，可直接在酒馆助手中导入并启用。
+在项目根目录运行 `pnpm --dir app release`。最新版位于 `app/artifact/bundle.js`，可直接在酒馆助手中导入。ERA 版本号取自 `app/package.json`，写在文件头。发布新版本时，被替换的包自动归档到 `app/artifact/archive/era-v<版本号>.zip`。
