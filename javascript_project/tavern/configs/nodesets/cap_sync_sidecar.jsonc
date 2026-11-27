@@ -195,8 +195,8 @@
       },
       {
         "id": "route_write_working__return_result",
-        "display_name": "发布当前内存变量读数及工作进度",
-        "description": "在“分派独立状态文件和变量快照操作”流程中，用新的内存工作记录更新页面可读取的变量快照，并按请求决定是否通知订阅者。返回最新工作状态；这些资料是否已写入文件由后续保存流程确认。",
+        "display_name": "返回块间工作进度或发布完整快照",
+        "description": "逐块计算仅更新所属聊天的工作进度。全部块完成后，才通过现有快照发布入口更新公开读数。按既有保存确认条件向订阅者发送更新。",
         "definition_id": "era.tavern.sidecar_write_working.return_result"
       },
       {

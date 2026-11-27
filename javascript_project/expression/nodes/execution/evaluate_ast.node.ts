@@ -8,7 +8,6 @@ export const era_expression_evaluate_ast = defineNode({
   "contract": {"requires":[{"type":"era.expression.ast_frame.state","cardinality":"exactly_one","display_name":"当前公式各步运算和函数参数的进度"}],"provides":[{"key":"evaluated_expression","type":"era.expression.value","display_name":"当前公式实际算出的数值及问题"}],"params_schema":{},"params_defaults":{},"input_semantics":{"era.expression.ast_frame.state":["供逐步计算嵌套表达式及函数，仍保留无效输入的错误结论。"]},"output_semantics":{"evaluated_expression":["尚需检查成功且数值有效，才能应用到本轮目标变量。"]}},
   "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/execution/evaluate_ast.ts","export":"run"}}],
   "base_libs": ["era.expression.types","era.expression.operation"],
-  "capabilities": [],
   "tags": ["表达式执行"],
   "rulesets": ["vibeflow.process"],
   "id": "era.expression.evaluate_ast",

@@ -19,6 +19,7 @@ export const era_service_agent_generation_planning = defineBaseLib({
     }
   ],
   "dependencies": [
+    "era.service.agent_stage_layout",
     "era.service.agent_stage_text",
     "era.service.agent_generation_session",
     "era.service.agent_configuration",

@@ -15,6 +15,17 @@ selectedMksOf,
 import { findSyncDivergence } from "./sync_divergence_detection.ts";
 import type { EraSyncDivergenceV1,EraSyncInputV1,EraSyncPlanV1 } from "./sync_types.ts";
 
+function lastAppliedMkBefore(
+  selectedMks: readonly (string | null)[],
+  end: number,
+): string | null {
+  for (let index = end - 1; index >= 0; index -= 1) {
+    const mk = selectedMks[index];
+    if (mk !== null) return mk;
+  }
+  return null;
+}
+
 export function prepareEraSync(input: EraSyncInputV1): EraSyncPlanV1 {
   if (input.messages.length === 0) {
     const emptyMeta = metaWith(input.meta, [], {}, {});
@@ -60,9 +71,7 @@ export function prepareEraSync(input: EraSyncInputV1): EraSyncPlanV1 {
     }
     divergence = {
       type: "FULL_RECALC",
-      // A new target can follow unprocessed user floors. Keep the applied
-      // prefix contiguous so a later rollback cannot mistake a hole for
-      // the beginning of history.
+      // 新目标可能在尚未处理的用户楼层之后，从已有历史的末尾开始补算。
       recalcId: Math.min(input.targetMessageId, oldSelectedMks.length),
       cause: "targeted",
     };
@@ -145,10 +154,11 @@ export function prepareEraSync(input: EraSyncInputV1): EraSyncPlanV1 {
       );
     }
     if (firstRecalcId > -1 && firstRecalcId < oldSelectedMks.length) {
-      const currentMk = oldSelectedMks[oldSelectedMks.length - 1];
-      const targetMk =
-        firstRecalcId > 0 ? oldSelectedMks[firstRecalcId - 1] : null;
-      if (currentMk) {
+      // 回滚后单独切换较晚楼层的 Swipe 会留下空位。保留重算楼层之前
+      // 最后一条已应用的记录，仅在此前完全没有记录时回到初始状态。
+      const currentMk = lastAppliedMkBefore(oldSelectedMks, oldSelectedMks.length);
+      const targetMk = lastAppliedMkBefore(oldSelectedMks, firstRecalcId);
+      if (currentMk !== null && currentMk !== targetMk) {
         statForRecalc = rollbackStatToMK(
           targetMk,
           currentMk,

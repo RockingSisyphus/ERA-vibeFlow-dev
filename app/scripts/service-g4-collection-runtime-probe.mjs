@@ -1,3 +1,4 @@
+import {runWithIoMocks} from '../tests/service/workflow-io-sandbox.mjs';
 /// <reference types="node" />
 
 import { createHash } from 'node:crypto';
@@ -276,11 +277,11 @@ function assertBatch(frame, expectedSequences) {
 
 const stagedWorkflow = await importGeneratedWorkflow();
 const workflow = stagedWorkflow.workflow;
-assert(workflow.VIBEFLOW_WORKFLOW_ABI === 'vibeflow.workflow.v10', 'Workflow ABI 不是 v10。');
+assert(workflow.VIBEFLOW_WORKFLOW_ABI === 'vibeflow.workflow.v12', 'Workflow ABI 不是 v12。');
 
 const controller = new AbortController();
 const port = new FakePort();
-const execution = workflow.runWorkflowAsync(
+const execution = runWithIoMocks(workflow,
   {},
   {
     signal: controller.signal,

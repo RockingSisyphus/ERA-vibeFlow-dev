@@ -1,0 +1,88 @@
+{
+  "type_key": "era.service.workflow.send_collection_control",
+  "display_name": "Send：服务决定的计时安排交回酒馆",
+  "description": "保持原业务结果和计时合同，改为向绑定的酒馆runtime发送官方纯数据消息；发送入队不作为业务完成回执。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.collection.control",
+      "cardinality": "exactly_one",
+      "display_name": "服务决定的计时安排"
+    },
+    {"type":"era.workflow.host_resources","cardinality":"exactly_one","display_name":"所属 ERA 实例的本地资源"}
+  ],
+  "provides": [],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "input0",
+        "type": "era.collection.control",
+        "required": true,
+        "display_name": "服务决定的计时安排"
+      },
+      {"key":"host_resources","type":"era.workflow.host_resources","required":true,"display_name":"所属 ERA 实例的本地资源"}
+    ],
+    "max_steps": 6,
+    "nodes": [
+      {
+        "id": "start",
+        "definition_id": "era.service.terminal",
+        "display_name": "开始本段通信",
+        "description": "本步骤用于“Send：服务决定的计时安排交回酒馆”：标明本段通信范围；实际结果由中间业务和官方通信步骤提供。"
+      },
+      {
+        "id": "prepare",
+        "display_name": "准备酒馆收信地址和结果消息",
+        "description": "本步骤用于“Send：服务决定的计时安排交回酒馆”：从受限实例绑定取得酒馆回信地址，将本轮结果装入纯数据信封；不传浏览器对象，也不在这里执行页面操作。",
+        "definition_id": "era.workflow.service.workflow_send_collection_control.prepare"
+      },
+      {
+        "id": "encode_message",
+        "definition_id": "era.workflow.encode_message",
+        "display_name": "保留事件或结果原值，再交给官方发送",
+        "description": "在此处保留大数、负零、数组空位和缺失值，使独立流程收到与原调用相同的业务值。此转换只处理消息，当前业务进度仍通过图内数据连接保留。"
+      },
+      {
+        "id": "send",
+        "display_name": "Send：把本轮结果交给酒馆",
+        "description": "本步骤用于“Send：服务决定的计时安排交回酒馆”：使用官方发送接口将结果送入酒馆runtime的era.service.out端口；酒馆仍需执行结算和资源操作。",
+        "definition_id": "era.workflow.send",
+        "config": {
+          "expected_workflows": [
+            {
+              "root": "era-tavern",
+              "path": "configs/era.tavern.runtime.jsonc",
+              "entry": "protocol_runtime"
+            }
+          ]
+        }
+      },
+      {
+        "id": "end",
+        "definition_id": "era.service.terminal",
+        "display_name": "完成本段通信",
+        "description": "本步骤用于“Send：服务决定的计时安排交回酒馆”：标明本段通信范围；实际结果由中间业务和官方通信步骤提供。"
+      }
+    ],
+    "edges": [
+      [
+        "start",
+        "prepare"
+      ],
+      [
+        "prepare",
+        "encode_message"
+      ],
+      [
+        "send",
+        "end"
+      ],
+      [
+        "encode_message",
+        "send"
+      ]
+    ],
+    "outputs": []
+  }
+}

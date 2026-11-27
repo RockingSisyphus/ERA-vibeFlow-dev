@@ -19,7 +19,9 @@ export const era_service_agent_generation_settlement = defineBaseLib({
     }
   ],
   "dependencies": [
+    "era.service.agent_stage_layout",
     "era.service.message_function_calls",
+    "era.crud.parser",
     "era.service.agent_stage_text",
     "era.service.agent_stage_handoff",
     "era.service.agent_configuration",

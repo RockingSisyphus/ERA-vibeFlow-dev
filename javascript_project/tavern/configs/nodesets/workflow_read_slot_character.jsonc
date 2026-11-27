@@ -1,0 +1,146 @@
+{
+  "type_key": "era.tavern.workflow.read_slot.character",
+  "display_name": "读取主开场白并等待实际IO结束",
+  "description": "沿用原主开场白读取参数、返回合同及资源原语；与本组其他实际读取共同运行。取消或出错也等待已启动IO和清理结束，不启动图外完成回调工作流。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.read_slot",
+      "cardinality": "exactly_one",
+      "display_name": "主开场白读取要求与所属资源"
+    }
+  ],
+  "provides": [
+    {
+      "key": "reply_character",
+      "type": "era.tavern.read_slot.reply",
+      "display_name": "主开场白的实际读取结果"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "slot",
+        "type": "era.tavern.read_slot",
+        "required": true,
+        "display_name": "本次单项读取要求与资源"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.read_slot.reply",
+        "cardinality": "exactly_one",
+        "as": "reply",
+        "display_name": "这项读取的实际结果"
+      }
+    ],
+    "max_steps": 18,
+    "nodes": [
+      {
+        "id": "start",
+        "definition_id": "era.tavern.initialize.start",
+        "display_name": "开始读取主开场白并等待实际IO结束",
+        "description": "接收本次请求并进入“读取主开场白并等待实际IO结束”；具体结果由后续实际处理步骤给出。"
+      },
+      {
+        "id": "prepare",
+        "display_name": "读取主开场白并等待实际IO结束：准备",
+        "description": "沿用原主开场白读取参数、返回合同及资源原语；与本组其他实际读取共同运行。取消或出错也等待已启动IO和清理结束，不启动图外完成回调工作流。",
+        "definition_id": "era.tavern.workflow.read_slot.character.prepare"
+      },
+      {
+        "id": "prefix_route_read_main_greeting__check_request",
+        "display_name": "检查“读取角色主开场白”的调用是否有效",
+        "description": "在“分派角色卡和显示设置操作”流程中，接收“读取角色主开场白”的请求，确认当前实例仍可运行、调用未取消，且输入确实是一份操作资料。通过后交给对应业务步骤，失败时按实际原因结束。",
+        "definition_id": "era.tavern.character_read_main_greeting.check_request"
+      },
+      {
+        "id": "prefix_route_read_main_greeting__start_operation",
+        "display_name": "发起读取当前角色的主开场白",
+        "description": "在“分派角色卡和显示设置操作”流程中，识别当前角色，发起角色资料读取。群聊或没有角色时记录不可用情况，后续将主开场白和相关状态栏设置交回资源准备流程。",
+        "definition_id": "era.tavern.character_read_main_greeting.start_operation"
+      },
+      {
+        "id": "classify",
+        "display_name": "读取主开场白并等待实际IO结束：确认是否等待",
+        "description": "沿用原主开场白读取参数、返回合同及资源原语；与本组其他实际读取共同运行。取消或出错也等待已启动IO和清理结束，不启动图外完成回调工作流。",
+        "definition_id": "era.tavern.workflow.read_slot.character.classify"
+      },
+      {
+        "id": "suffix_route_read_main_greeting__execute",
+        "display_name": "返回角色主开场白和状态栏配置",
+        "description": "在“完成角色卡和显示设置操作”流程中，等待读取角色资料的操作完成，取出主开场白、角色身份及外置状态栏设置。没有可用单角色时返回缺失说明，供初始化决定如何处理。",
+        "definition_id": "era.tavern.character_read_main_greeting.execute"
+      },
+      {
+        "id": "suffix_route_read_main_greeting__return_result",
+        "display_name": "交回“读取角色主开场白”的实际结果",
+        "description": "在“完成角色卡和显示设置操作”流程中，接收“读取角色主开场白”已经执行得到的结果，复核实例和本次调用尚未取消后交回发起者。调用方据此继续业务或显示结果，取消时按实际原因结束等待。",
+        "definition_id": "era.tavern.character_read_main_greeting.return_result"
+      },
+      {
+        "id": "project_wait",
+        "display_name": "读取主开场白并等待实际IO结束：整理等待结果",
+        "description": "沿用原主开场白读取参数、返回合同及资源原语；与本组其他实际读取共同运行。取消或出错也等待已启动IO和清理结束，不启动图外完成回调工作流。",
+        "definition_id": "era.tavern.workflow.read_slot.character.project_wait"
+      },
+      {
+        "id": "project_immediate",
+        "display_name": "读取主开场白并等待实际IO结束：整理即时结果",
+        "description": "沿用原主开场白读取参数、返回合同及资源原语；与本组其他实际读取共同运行。取消或出错也等待已启动IO和清理结束，不启动图外完成回调工作流。",
+        "definition_id": "era.tavern.workflow.read_slot.character.project_immediate"
+      },
+      {
+        "id": "end",
+        "definition_id": "era.tavern.initialize.end",
+        "display_name": "完成读取主开场白并等待实际IO结束",
+        "description": "本段所选路径已经结束，向调用方交回实际结果或结束确认。"
+      }
+    ],
+    "edges": [
+      [
+        "prepare",
+        "prefix_route_read_main_greeting__check_request"
+      ],
+      [
+        "prefix_route_read_main_greeting__check_request",
+        "prefix_route_read_main_greeting__start_operation"
+      ],
+      [
+        "prefix_route_read_main_greeting__start_operation",
+        "classify"
+      ],
+      {
+        "from": "classify",
+        "to": "suffix_route_read_main_greeting__execute",
+        "when": "read_route == 'wait'"
+      },
+      {
+        "from": "classify",
+        "to": "project_immediate",
+        "when": "read_route == 'immediate'"
+      },
+      [
+        "suffix_route_read_main_greeting__execute",
+        "suffix_route_read_main_greeting__return_result"
+      ],
+      [
+        "suffix_route_read_main_greeting__return_result",
+        "project_wait"
+      ],
+      [
+        "start",
+        "prepare"
+      ],
+      [
+        "project_immediate",
+        "end"
+      ],
+      [
+        "project_wait",
+        "end"
+      ]
+    ]
+  }
+}

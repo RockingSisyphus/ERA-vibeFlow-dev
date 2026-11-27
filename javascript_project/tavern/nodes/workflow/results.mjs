@@ -1,0 +1,6 @@
+import {decodePacket} from "../../../../base_lib/workflow_values/codec.mjs";
+const owner=inputs=>inputs['era.workflow.local_owner'].value;
+export function Retain(inputs){return {local_owner:inputs['era.tavern.call.frame'].value};}
+export function Prepare(inputs,_params,context){const f=owner(inputs),m=inputs['vibeflow.workflow.receive.result'].value,api=inputs["era.workflow.host_resources"].value,a=api.metadata({}),value=decodePacket(m.payload);const end=m.sender===a.runtimeId&&value.kind==='end';if(m.port!=='era.service.out'||!end&&m.sender!==a.serviceId)throw new TypeError('回信不属于当前主服务。');const payload=end?{}:{ownerToken:a.ownerToken,...api.project({value:{session:f.session,dispatch:f.session.dispatch,action:'send',input:{port:m.port,...value},protocolFrame:true}})};return {payload,retained_owner:f,result_route:end?'end':'process'};}
+export function Complete(inputs,_params,context){const result=inputs['era.workflow.outputs'].value;if(result.workflowFailure!==undefined)throw result.workflowFailure;const api=inputs["era.workflow.host_resources"].value;api.restore({wire:{ownerToken:api.metadata({}).ownerToken,...result},boundary:'consume_result'});return {processed_frame:owner(inputs),processed_done:false};}
+export function Closed(inputs){return {closed_frame:owner(inputs),closed_done:true};}

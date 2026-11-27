@@ -11,6 +11,6 @@
     "typescript": "7.0.2"
   },
   "dependencies": {
-    "@era/vibeflow-contracts": "file:../../packages/era-contracts/era-vibeflow-contracts-1.11.0.tgz"
+    "@era/vibeflow-contracts": "file:../../packages/era-contracts/era-vibeflow-contracts-1.12.0.tgz"
   }
 }

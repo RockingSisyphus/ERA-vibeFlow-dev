@@ -4,10 +4,11 @@ import {
   type DispatchSeedV1,
 } from "../../base_lib/dispatch_preparation.ts";
 import { inspectSidecar, variablesForState } from "../../base_lib/sidecar_binding.ts";
+import { projectWorkingMessages, nativeCandidateRecovery } from "../../base_lib/working_state.ts";
 
 interface Envelope<T> { readonly value: T; }
 interface MessageReadRequest {
-  readonly projection: "era-active-message-v1";
+  readonly projection: "era-active-message-v2";
   readonly range: string | number;
   readonly purpose?: string;
 }
@@ -31,57 +32,41 @@ function failed(seed: DispatchSeedV1, error: unknown): DispatchCanonicalContextV
   };
 }
 
-export async function run(
+export function* runProgress(
   inputs: Readonly<{ "era.dispatch.seed": Envelope<unknown> }>,
   _params: Readonly<Record<string, unknown>>,
   context: Context,
-): Promise<any> {
+): Generator<any,any,any> {
   const seed = inputs["era.dispatch.seed"].value as DispatchSeedV1;
   try {
-    const messagesPromise = context.capabilities["era.tavern.messages"].read_context({
-      projection: "era-active-message-v1",
-      range: "0--1",
-      purpose: "era-dispatch-prepare",
-    });
-    const identity = context.capabilities["era.tavern.identity"].read({
-      purpose: "era-dispatch-prepare",
-    });
+    const group=yield {kind:"parallel",input:{kind:"dispatch",latest:seed.requirement==="latest-message"}};
+    const {messages,current,variables:scriptVariables,identity:resolvedIdentity}=group;
+    let working=current?.working;
+    const recovery=nativeCandidateRecovery(working,messages);
+    if(recovery)working={...working,...recovery};
+    const overlay=projectWorkingMessages(messages,working);
+    const projected={...overlay,messages:overlay.messages.filter((message:any)=>message.candidate.exists||message.candidate.phase!=="cancelled")};
     if (seed.requirement === "latest-message") {
-      const [messages, resolvedIdentity] = await Promise.all([
-        messagesPromise,
-        Promise.resolve(identity),
-      ]);
-      return {
-        canonical_dispatch_context: canonicalDispatchContext(
-          seed,
-          messages,
-          { variables: {} },
-          { variables: {} },
-          resolvedIdentity,
-        ),
-      };
+      const canonical=canonicalDispatchContext(seed,projected,{variables:{}},{variables:{}},resolvedIdentity);
+      return {canonical_dispatch_context:{...canonical,sourceMessages:messages.messages}};
     }
-    const [messages, current, scriptVariables, resolvedIdentity] = await Promise.all([
-      messagesPromise,
-      context.capabilities["era.tavern.sidecar"].read_current({}),
-      context.capabilities["era.tavern.variables"].read({ scope: { type: "script" }, purpose: "era-dispatch-placeholder" }),
-      Promise.resolve(identity),
-    ]);
     const meta = current !== null && typeof current === "object" ? (current as Record<string, unknown>).meta : null;
     const id = meta !== null && typeof meta === "object" ? (meta as Record<string, unknown>).SidecarId : null;
-    const stored = typeof id === "string" ? await context.capabilities["era.tavern.sidecar"].read_record({ sidecarId: id }) : null;
+    const stored = typeof id === "string" ? working?.record?.sidecarId===id
+      ? {status:"found",sidecarId:id,record:working.record}
+      : (yield {kind:"resource",capability:"era.tavern.sidecar",operation:"read_record",input:{sidecarId:id}}) : null;
     const facts = inspectSidecar(current, stored);
     const chatVariables = facts.record === null
       ? { variables: {} }
       : { variables: variablesForState(facts.record.state, facts.record.sidecarId) };
     return {
-      canonical_dispatch_context: canonicalDispatchContext(
+      canonical_dispatch_context: {...canonicalDispatchContext(
         seed,
-        messages,
+        projected,
         chatVariables,
         scriptVariables,
         resolvedIdentity,
-      ),
+      ),sourceMessages:messages.messages},
     };
   } catch (error) {
     return { canonical_dispatch_context: failed(seed, error) };

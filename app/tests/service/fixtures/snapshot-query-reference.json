@@ -1990,7 +1990,6 @@
       }
     ]
   },
-  "[\"findLatestNewValue\",[\"player.hp\",6,[null,\"mk-array\",\"mk-object\",null,\"mk-fenced\",\"mk-ignored\"],{\"mk-array\":[{\"op\":\"insert\",\"path\":\"player\",\"value_new\":{\"hp\":10,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]},\"futureLogField\":{\"preserved\":true}}],\"mk-object\":{\"op\":\"update\",\"path\":\"player.hp\",\"value_old\":10,\"value_new\":15,\"futureLogField\":\"单对象日志\"},\"mk-fenced\":\"\\n      ```json\\n      [\\n        {\\\"op\\\":\\\"update\\\",\\\"path\\\":\\\"player.hp\\\",\\\"value_old\\\":15,\\\"value_new\\\":18},\\n        {\\\"op\\\":\\\"insert\\\",\\\"path\\\":\\\"inventory[0]\\\",\\\"value_new\\\":{\\\"item__DQUOTE__name\\\":\\\"剑\\\"}}\\n      ]\\n      ```\\n    \",\"mk-ignored\":\"{\\\"op\\\":\\\"update\\\",\\\"path\\\":\\\"player.hp\\\",\\\"value_new\\\":999}\",\"futureLogBucket\":{\"unknown\":[\"原样保留\"]}}]]": 18,
   "[\"parseEditLog\",[[{\"op\":\"insert\",\"path\":\"player\",\"value_new\":{\"hp\":10,\"display__DOT__name\":\"Alice__SQUOTE__s\",\"quoted__DQUOTE__key\":\"保留\",\"$meta\":{\"source\":\"内部\"},\"nested\":[{\"keep\":true,\"$hidden\":\"删除\"}]},\"futureLogField\":{\"preserved\":true}}]]]": [
     {
       "op": "insert",

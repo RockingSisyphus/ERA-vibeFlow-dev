@@ -11,9 +11,12 @@ importers:
       '@era/example-resources':
         specifier: file:../packages/era-example-resources/era-example-resources-0.1.1.tgz
         version: file:../packages/era-example-resources/era-example-resources-0.1.1.tgz
+      '@era/vibeflow-command-compaction':
+        specifier: file:../javascript_project/compaction/era-vibeflow-command-compaction-0.4.7.tgz
+        version: file:../javascript_project/compaction/era-vibeflow-command-compaction-0.4.7.tgz(@era/vibeflow-expression@file:../javascript_project/expression/era-vibeflow-expression-0.3.4.tgz)
       '@era/vibeflow-expression':
-        specifier: file:../javascript_project/expression/era-vibeflow-expression-0.3.3.tgz
-        version: file:../javascript_project/expression/era-vibeflow-expression-0.3.3.tgz
+        specifier: file:../javascript_project/expression/era-vibeflow-expression-0.3.4.tgz
+        version: file:../javascript_project/expression/era-vibeflow-expression-0.3.4.tgz
       '@era/vibeflow-floor-snapshot':
         specifier: file:../packages/era-floor-snapshot/era-vibeflow-floor-snapshot-0.1.4.tgz
         version: file:../packages/era-floor-snapshot/era-vibeflow-floor-snapshot-0.1.4.tgz
@@ -407,13 +410,20 @@ packages:
     resolution: {integrity: sha512-5M/LxBuMaS8mNm9R9FvdzI5tMwP6wm2yxa218Dxam6HwRlZyD2Uxw/U356rwgrQliyRHmu1riSXdgeIulXqL8Q==, tarball: file:../packages/era-example-resources/era-example-resources-0.1.1.tgz}
     version: 0.1.1
 
-  '@era/vibeflow-expression@file:../javascript_project/expression/era-vibeflow-expression-0.3.3.tgz':
-    resolution: {integrity: sha512-W9M0rwWuJAKq5iQ9Q48v7FhBv04js8iSazip0ynt6zV3/u5gt2g23W+211KCaCtsrYSxlj+9gmbAwpWr83qvyQ==, tarball: file:../javascript_project/expression/era-vibeflow-expression-0.3.3.tgz}
-    version: 0.3.3
+  '@era/vibeflow-command-compaction@file:../javascript_project/compaction/era-vibeflow-command-compaction-0.4.7.tgz':
+    resolution: {integrity: sha512-3kH5llylbQgKDAg3w00L6zMAK3bgL/XiAQRt4nCp3/luT4YskngofGYnECM1FzU5o5tkY63raAY/76rdll5n7Q==, tarball: file:../javascript_project/compaction/era-vibeflow-command-compaction-0.4.7.tgz}
+    version: 0.4.7
+    engines: {node: '>=24.18.0'}
+    peerDependencies:
+      '@era/vibeflow-expression': '>=0.3.0 <1'
+
+  '@era/vibeflow-expression@file:../javascript_project/expression/era-vibeflow-expression-0.3.4.tgz':
+    resolution: {integrity: sha512-UZQXaotyqhgl9uA40zxJJ6V0r42CMvlOIOT/7wA66225ca1XPXXnL1cbm8R12Y7UvkZrSmva4G3vKQrTD+RLMg==, tarball: file:../javascript_project/expression/era-vibeflow-expression-0.3.4.tgz}
+    version: 0.3.4
     engines: {node: '>=24.18.0'}
 
   '@era/vibeflow-floor-snapshot@file:../packages/era-floor-snapshot/era-vibeflow-floor-snapshot-0.1.4.tgz':
-    resolution: {integrity: sha512-pbR0oXXa0mIjMKzVOpVxBHAeYJ1XwsOXt0FcIbjvntVHmu3kXNAxHRlXoAckrx8u8RjQaqi/gH99imVS2GDZgg==, tarball: file:../packages/era-floor-snapshot/era-vibeflow-floor-snapshot-0.1.4.tgz}
+    resolution: {integrity: sha512-Q+QpOhcpcFs9rma6sPMpQ+W7TCbET0tzxSmESYI9mKmpTA26UEX7vwMPyLlbJI+2xZwDIl1FFihfsOA8UHHy5Q==, tarball: file:../packages/era-floor-snapshot/era-vibeflow-floor-snapshot-0.1.4.tgz}
     version: 0.1.4
 
   '@era/vibeflow-macro-syntax@file:../packages/era-macro-syntax/era-vibeflow-macro-syntax-0.1.1.tgz':
@@ -421,7 +431,7 @@ packages:
     version: 0.1.1
 
   '@era/vibeflow-workbench@file:../packages/era-workbench/era-vibeflow-workbench-0.1.1.tgz':
-    resolution: {integrity: sha512-vDH4nSo6A0hVkA9RVUVvRxDKX9NgAC822Fa4n+vMAN1Sm+z8+koYEqYNMHQRC9N+bFah+mQvoPd4dxs6iORIjg==, tarball: file:../packages/era-workbench/era-vibeflow-workbench-0.1.1.tgz}
+    resolution: {integrity: sha512-PE4ctpOQb01+hMFCf2Sz4n3poG1gcBV2k7yXd5nCWmvKKKFGC8tOWMi6nP/TLXBww3CyH0Xc85huA7s/InjwGw==, tarball: file:../packages/era-workbench/era-vibeflow-workbench-0.1.1.tgz}
     version: 0.1.1
 
   '@eslint-community/eslint-utils@4.10.1':
@@ -5609,7 +5619,15 @@ snapshots:
 
   '@era/example-resources@file:../packages/era-example-resources/era-example-resources-0.1.1.tgz': {}
 
-  '@era/vibeflow-expression@file:../javascript_project/expression/era-vibeflow-expression-0.3.3.tgz':
+  '@era/vibeflow-command-compaction@file:../javascript_project/compaction/era-vibeflow-command-compaction-0.4.7.tgz(@era/vibeflow-expression@file:../javascript_project/expression/era-vibeflow-expression-0.3.4.tgz)':
+    dependencies:
+      '@era/vibeflow-expression': file:../javascript_project/expression/era-vibeflow-expression-0.3.4.tgz
+      '@stdlib/math-base-special-gamma': 0.3.1
+      mathjs: 15.2.0
+    transitivePeerDependencies:
+      - supports-color
+
+  '@era/vibeflow-expression@file:../javascript_project/expression/era-vibeflow-expression-0.3.4.tgz':
     dependencies:
       '@stdlib/math-base-special-gamma': 0.3.1
       mathjs: 15.2.0

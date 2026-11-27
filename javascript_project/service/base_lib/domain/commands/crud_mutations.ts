@@ -8,21 +8,7 @@ import {
   type EraCrudDiagnostic,
   type TemplateContext,
 } from "./crud_parser.ts";
-
-function pathSegments(path: string): string[] {
-  const result: string[] = [];
-  if (path.charCodeAt(0) === 46) result.push("");
-  path.replace(
-    /[^.[\]]+|\[(?:(-?\d+(?:\.\d+)?)|(["'])((?:(?!\2)[^\\]|\\.)*?)\2)\]|(?=(?:\.|\[\])(?:\.|\[\]|$))/g,
-    (match: string, number: string, quote: string, substring: string) => {
-      result.push(
-        quote ? substring.replace(/\\(\\)?/g, "$1") : number || match,
-      );
-      return match;
-    },
-  );
-  return result;
-}
+import { pathSegments } from "../../../../../base_lib/data_view/data_view.js";
 
 function isArrayIndex(value: string): boolean {
   if (!/^(?:0|[1-9]\d*)$/.test(value)) return false;

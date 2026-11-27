@@ -1,0 +1,146 @@
+{
+  "type_key": "era.communication.api_return_application_result",
+  "display_name": "返回变量提交在内存中的应用结果",
+  "description": "将消息流程算出的变量、函数、历史记录和问题整理为本次提交的处理结果。调用方据此继续安排实际保存和显示更新；本环节报告的是已经计算得到的应用结果。 展开后查看该段实际需要的原生酒馆调用、等待和结果接回；具体操作仍按原业务分支选择。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.sync.block.step.state.next",
+      "cardinality": "exactly_one",
+      "display_name": "本段正文处理后的变量和消息进度"
+    },
+    {"type":"era.workflow.host_resources","cardinality":"exactly_one","display_name":"所属 ERA 实例的本地资源"}
+  ],
+  "provides": [
+    {
+      "key": "applied_facade_result",
+      "type": "era.api.facade.result",
+      "display_name": "变量接口的实际处理确认"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "input0",
+        "type": "era.sync.block.step.state.next",
+        "required": true,
+        "display_name": "本段正文处理后的变量和消息进度"
+      },
+      {"key":"host_resources","type":"era.workflow.host_resources","required":true,"display_name":"所属 ERA 实例的本地资源"}
+    ],
+    "max_steps": 9,
+    "nodes": [
+      {
+        "id": "start",
+        "definition_id": "era.service.terminal",
+        "display_name": "开始本段酒馆操作",
+        "description": "本步骤用于“返回变量提交在内存中的应用结果”：标明该段业务操作的范围；跨工作流调用在中间明确显示。"
+      },
+      {
+        "id": "prepare",
+        "display_name": "完成外部提交后再交回执",
+        "description": "外部提交成功且目标楼层稳定时，经现有酒馆消息操作把事务同步到正在使用的候选正文，并以实际写入后的消息作为后续保存依据。在交回执前发布完整变量结果。独立状态文件仍使用现有合并保存。原生生成候选和逐块作者调用继续依其所属周期处理。",
+        "definition_id": "era.communication.api_return_application_result.prepare"
+      },
+      {
+        "id": "operation_loop",
+        "definition_id": "vibeflow.loop.while",
+        "display_name": "按业务顺序完成实际需要的酒馆操作",
+        "description": "本步骤用于“返回变量提交在内存中的应用结果”：每次接回当前操作的实际结果后才准备下一项，保持原错误和取消处理；不预先并发所有可能操作。",
+        "requires": [
+          {
+            "type": "era.communication.api_return_application_result.state",
+            "cardinality": "exactly_one",
+            "display_name": "本业务段的本地计算和酒馆操作进度"
+          },
+          {"type":"era.workflow.host_resources","cardinality":"exactly_one","display_name":"所属 ERA 实例的本地资源"}
+        ],
+        "provides": [
+          {
+            "key": "ready",
+            "type": "era.communication.api_return_application_result.ready",
+            "display_name": "已完成全部酒馆操作的业务进度"
+          }
+        ],
+        "loop": {
+          "body": "era.communication.api_return_application_result.step",
+          "max_iterations": null,
+          "stop_when": {
+            "from": "done",
+            "equals": true
+          },
+          "carry": [
+            {
+              "from": "era.communication.api_return_application_result.state",
+              "as": "state",
+              "update": "next_state"
+            },
+            {"from":"era.workflow.host_resources","as":"host_resources","update":"retained_host_resources"}
+          ],
+          "outputs": [
+            {
+              "from": "next_state",
+              "as": "ready"
+            }
+          ]
+        }
+      },
+      {
+        "id": "skip",
+        "display_name": "本段无需调用酒馆，直接继续",
+        "description": "本步骤用于“返回变量提交在内存中的应用结果”：当前业务分支没有实际酒馆操作，保留本地处理结果，不发出空调用。",
+        "definition_id": "era.communication.api_return_application_result.skip"
+      },
+      {
+        "id": "finish",
+        "display_name": "交出本段原合同的结果",
+        "description": "本步骤用于“返回变量提交在内存中的应用结果”：业务所需操作均已完成，按原合同交出数据、诊断及结果；资源令牌和通信信封不成为公共业务输出。",
+        "definition_id": "era.communication.api_return_application_result.finish"
+      },
+      {
+        "id": "end",
+        "definition_id": "era.service.terminal",
+        "display_name": "完成本段酒馆操作",
+        "description": "本步骤用于“返回变量提交在内存中的应用结果”：标明该段业务操作的范围；跨工作流调用在中间明确显示。"
+      },
+      {"id":"retain_host_resources","definition_id":"era.service.retain_host_resources","display_name":"保留所属实例的资源","description":"先取出本次运行或本轮迭代收到的本地资源，供下面需要组织工作流通信的步骤使用。资源不写入业务消息。"}
+    ],
+    "edges": [
+      {"from":"start","to":"prepare","schedule":true},
+      {
+        "from": "prepare",
+        "to": "operation_loop",
+        "when": "needs_operation == 'call'"
+      },
+      {
+        "from": "prepare",
+        "to": "skip",
+        "when": "needs_operation == 'done'"
+      },
+      [
+        "operation_loop",
+        "finish"
+      ],
+      [
+        "skip",
+        "finish"
+      ],
+      [
+        "finish",
+        "end"
+      ],
+      ["start","retain_host_resources"],
+      {"from":"retain_host_resources","to":"prepare","schedule":true},
+      {"from":"retain_host_resources","to":"operation_loop","schedule":false}
+    ],
+    "outputs": [
+      {
+        "type": "era.api.facade.result",
+        "cardinality": "exactly_one",
+        "display_name": "变量接口的实际处理确认",
+        "as": "applied_facade_result"
+      }
+    ]
+  }
+}

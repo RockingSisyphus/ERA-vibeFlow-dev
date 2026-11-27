@@ -38,3 +38,14 @@ export function removeMetaFields(value) {
 export function selectedMks(meta) {
     return Array.isArray(meta.SelectedMks) ? meta.SelectedMks.map(value => typeof value === "string" ? value : null) : [];
 }
+/** 将点号和方括号写法转换为对象键。旧楼层日志忽略开头点号产生的空键。 */
+export function pathSegments(path, preserveLeadingEmpty = true) {
+    const result = [];
+    if (preserveLeadingEmpty && path.startsWith('.'))
+        result.push('');
+    path.replace(/[^.[\]]+|\[(?:(-?\d+(?:\.\d+)?)|(["'])((?:(?!\2)[^\\]|\\.)*?)\2)\]|(?=(?:\.|\[\])(?:\.|\[\]|$))/g, (match, number, quote, substring) => {
+        result.push(quote ? substring.replace(/\\(\\)?/g, '$1') : number || match);
+        return match;
+    });
+    return result;
+}

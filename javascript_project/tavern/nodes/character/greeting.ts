@@ -9,7 +9,7 @@ export function ReadRefreshContext(inputs:any,params:any):any {
 }
 export function StartRead(inputs:any,params:any):any {
   const f=takeFrame(inputs),api=f.session.api;f.characterName=api.getCurrentCharacterName();f.greetingMissing=Boolean(api.SillyTavern.groupId||!f.characterName);
-  f.operationResource=startResource(f,()=>f.greetingMissing?null:api.getCharacter(f.characterName),r=>f.session.dispatch.finishCapability({...f,operationResource:r}));
+  f.operationResource=startResource(f,()=>f.greetingMissing?null:api.getCharacter(f.characterName));
   f.publicPromise=f.operationResource.publicPromise;return emit({frame:f},params);
 }
 export async function ReadGreeting(inputs:any,params:any):Promise<any> {
@@ -23,7 +23,7 @@ export function StartWrite(inputs:any,params:any):any {
   if(typeof f.input.expected!=="string"||typeof f.input.next!=="string")throw new TypeError("主开场白写入请求缺少 expected 或 next。");
   f.characterName=api.getCurrentCharacterName();
   if(api.SillyTavern.groupId||!f.characterName)throw new Error("ERA_CHARACTER_GREETING_MISSING: 当前未打开可写入的单角色角色卡。");
-  f.operationResource=startResource(f,()=>api.getCharacter(f.characterName),r=>f.session.dispatch.finishCapability({...f,operationResource:r}));
+  f.operationResource=startResource(f,()=>api.getCharacter(f.characterName));
   f.publicPromise=f.operationResource.publicPromise;return emit({frame:f},params);
 }
 export async function AwaitCharacter(inputs:any,params:any):Promise<any> {const f=takeFrame(inputs);f.readCharacter=await resourceValue(f);return emit({frame:f},params);}

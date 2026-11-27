@@ -93,7 +93,7 @@ export const era_tavern_messages_update_content_update_messages_item_empty = def
 
 export const era_tavern_messages_update_content_update_messages_item_one_item = defineNode({
   "display_name": "整理一条修改并保留原附加资料",
-  "description": "取出一条消息修改，按需读取原消息，合并应保留的附加字段，并记录受影响消息及 ERA 自己写入的文字。这里只建立统一提交清单，后续一起执行写入。",
+  "description": "取出一条消息修改：候选数组中的正文按全候选视图定位，附加字段从当前候选视图读取并与本次 ERA 字段合并，保留原有资料。记录受影响消息和 ERA 写入的文字，交给后续统一提交。",
   "version": "0.1.0",
   "flow_kind": "data_store",
   "contract": {"requires":[{"type":"era.tavern.frame.messages_update_content.choose_update","cardinality":"exactly_one","display_name":"整理一条修改并保留原附加资料的请求和已有进度"}],"provides":[{"key":"era_tavern_messages_update_content_update_messages_item_one_item_frame","type":"era.tavern.frame.messages_update_content.choose_update","display_name":"整理一条修改并保留原附加资料的处理进度及结果"},{"key":"era_tavern_messages_update_content_update_messages_item_one_item_done","type":"era.tavern.done.messages_update_content.update_messages","display_name":"本轮遍历或职责处理是否已经结束"}],"params_schema":{"outputKeys":{"type":"object"}},"params_defaults":{"outputKeys":{"frame":"era_tavern_messages_update_content_update_messages_item_one_item_frame","done":"era_tavern_messages_update_content_update_messages_item_one_item_done"}},"input_semantics":{"era.tavern.frame.messages_update_content.choose_update":["保留“整理一条修改并保留原附加资料”对应的实例、请求及已经形成的进度，供本步骤处理并延续同一次请求。"]},"output_semantics":{"era_tavern_messages_update_content_update_messages_item_one_item_frame":["保留“整理一条修改并保留原附加资料”对应的实例、请求及已经形成的进度，交给后续处理或结果返回。"],"era_tavern_messages_update_content_update_messages_item_one_item_done":["表示当前清单或长期职责是否已达到结束条件，外层据此继续下一项或退出。"]}},

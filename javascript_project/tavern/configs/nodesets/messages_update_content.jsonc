@@ -116,8 +116,8 @@
       },
       {
         "id": "start_operation",
-        "display_name": "再次核对目标并发起批量消息更新",
-        "description": "在“准备并发起一次消息批量更新”流程中，准备清单完成后，再检查聊天消息及状态文件绑定仍一致，随后一次提交全部消息修改。后续等待真实更新并保存聊天，防止准备期间目标变化。",
+        "display_name": "复核楼层状态并写入酒馆正文",
+        "description": "以聊天身份、原正文和当前候选校验写入目标。外部提交在写入前再次查看目标楼层的编辑状态，避免覆盖正在编辑的正文。其余调用沿用原有候选规则。",
         "definition_id": "era.tavern.messages_update_content.start_operation"
       },
       {

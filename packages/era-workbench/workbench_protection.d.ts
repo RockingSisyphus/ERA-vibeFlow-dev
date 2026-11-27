@@ -1,6 +1,7 @@
 // Generated from Service base_lib/workbench; do not edit.
 /** 工作台共享纯计算；生产 Service 节点与 UI 预览由同一源码构建。 */
 import { type EraCommitOperation, type VariableMutationKind, type VariableProtection, type VariablePlan, type ProtectionChoice } from './workbench_operations.js';
+export { variableRuleAt } from './variable_write.js';
 import type { FunctionPlan } from './workbench_draft.js';
 /**
  * 收集目标及其所有祖先的变量保护。祖先限制会传递给子路径，
@@ -9,7 +10,7 @@ import type { FunctionPlan } from './workbench_draft.js';
 export declare function variableProtections(root: unknown, path: readonly string[], kind: VariableMutationKind): VariableProtection[];
 export declare function variablePlanProtections(root: unknown, plan: VariablePlan): VariableProtection[];
 /** 解锁与可选恢复必须包在同一次 commit，否则中间失败会留下意外解锁状态。 */
-export declare function wrapVariableProtection(operations: readonly EraCommitOperation[], protections: readonly VariableProtection[], choice: ProtectionChoice): readonly EraCommitOperation[];
+export declare function wrapVariableProtection(operations: readonly EraCommitOperation[], protections: readonly VariableProtection[], choice: ProtectionChoice, root: unknown): readonly EraCommitOperation[];
 export interface NamedFunctionProtection extends VariableProtection {
     readonly name: string;
 }

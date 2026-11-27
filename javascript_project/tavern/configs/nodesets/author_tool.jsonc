@@ -44,7 +44,7 @@
       {
         "id": "invoke_tool",
         "display_name": "执行作者注册的 JavaScript 函数",
-        "description": "在“实际运行已安排的作者函数”流程中，使用本次函数名称和参数调用酒馆注册的作者工具，并等待它实际结束。调用已取消或抛错时保留失败，后续统一记录完成状态并唤醒消息流程。",
+        "description": "用本次函数名称和参数调用酒馆注册的作者工具。实际调用结束时关闭新操作的入口，保留已接收操作的结算，并把调用结果交给下一步记录。",
         "definition_id": "era.tavern.author_tool.invoke_tool"
       },
       {

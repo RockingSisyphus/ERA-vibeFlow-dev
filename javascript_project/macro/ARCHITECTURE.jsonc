@@ -1539,7 +1539,7 @@
         }
       ],
       "base_libs": [],
-      "capabilities": [],
+      "workflow_operations": [],
       "rulesets": [
         "vibeflow.process"
       ],
@@ -1602,7 +1602,7 @@
           }
         ],
         "base_libs": [],
-        "capabilities": [],
+        "workflow_operations": [],
         "rulesets": [
           "vibeflow.process"
         ],
@@ -1702,7 +1702,7 @@
       "base_libs": [
         "era.macro.runtime"
       ],
-      "capabilities": [],
+      "workflow_operations": [],
       "rulesets": [
         "vibeflow.process"
       ],
@@ -1783,7 +1783,7 @@
         "base_libs": [
           "era.macro.runtime"
         ],
-        "capabilities": [],
+        "workflow_operations": [],
         "rulesets": [
           "vibeflow.process"
         ],
@@ -1867,7 +1867,7 @@
       "base_libs": [
         "era.macro.runtime"
       ],
-      "capabilities": [],
+      "workflow_operations": [],
       "rulesets": [
         "vibeflow.process"
       ],
@@ -1932,7 +1932,7 @@
         "base_libs": [
           "era.macro.runtime"
         ],
-        "capabilities": [],
+        "workflow_operations": [],
         "rulesets": [
           "vibeflow.process"
         ],
@@ -2014,7 +2014,7 @@
         }
       ],
       "base_libs": [],
-      "capabilities": [],
+      "workflow_operations": [],
       "rulesets": [
         "vibeflow.process"
       ],
@@ -2077,7 +2077,7 @@
           }
         ],
         "base_libs": [],
-        "capabilities": [],
+        "workflow_operations": [],
         "rulesets": [
           "vibeflow.process"
         ],
@@ -2159,7 +2159,7 @@
         }
       ],
       "base_libs": [],
-      "capabilities": [],
+      "workflow_operations": [],
       "rulesets": [
         "vibeflow.process"
       ],
@@ -2222,7 +2222,7 @@
           }
         ],
         "base_libs": [],
-        "capabilities": [],
+        "workflow_operations": [],
         "rulesets": [
           "vibeflow.process"
         ],
@@ -2330,7 +2330,7 @@
       "base_libs": [
         "era.macro.runtime"
       ],
-      "capabilities": [],
+      "workflow_operations": [],
       "rulesets": [
         "vibeflow.process"
       ],
@@ -2419,7 +2419,7 @@
         "base_libs": [
           "era.macro.runtime"
         ],
-        "capabilities": [],
+        "workflow_operations": [],
         "rulesets": [
           "vibeflow.process"
         ],
@@ -2503,7 +2503,7 @@
       "base_libs": [
         "era.macro.runtime"
       ],
-      "capabilities": [],
+      "workflow_operations": [],
       "rulesets": [
         "vibeflow.process"
       ],
@@ -2568,7 +2568,7 @@
         "base_libs": [
           "era.macro.runtime"
         ],
-        "capabilities": [],
+        "workflow_operations": [],
         "rulesets": [
           "vibeflow.process"
         ],
@@ -2660,7 +2660,7 @@
       "base_libs": [
         "era.macro.runtime"
       ],
-      "capabilities": [],
+      "workflow_operations": [],
       "rulesets": [
         "vibeflow.process"
       ],
@@ -2733,7 +2733,7 @@
         "base_libs": [
           "era.macro.runtime"
         ],
-        "capabilities": [],
+        "workflow_operations": [],
         "rulesets": [
           "vibeflow.process"
         ],
@@ -2795,7 +2795,7 @@
         }
       ],
       "base_libs": [],
-      "capabilities": [],
+      "workflow_operations": [],
       "rulesets": [
         "vibeflow.process"
       ],
@@ -2838,7 +2838,7 @@
           }
         ],
         "base_libs": [],
-        "capabilities": [],
+        "workflow_operations": [],
         "rulesets": [
           "vibeflow.process"
         ],
@@ -3375,7 +3375,7 @@
         ],
         "id": "era.data_view",
         "display_name": "ERA 数据视图转换",
-        "description": "Macro、Service与展示快照共用的可移植数据反转义及元字段过滤；不读写宿主或业务状态。",
+        "description": "Macro、Service与展示快照共用的数据反转义、元字段过滤和变量路径拆分；不读写宿主或业务状态。",
         "category": "",
         "version": "0.1.1",
         "implementations": [
@@ -3511,10 +3511,9 @@
         "external_packages": []
       }
     },
-    "capabilities": {},
     "plugins": []
   },
-  "call_policies": {},
+  "workflow_operations": {},
   "resource_use": {
     "workflow": "era-macro:configs/era.macro.jsonc",
     "resources": [
@@ -3676,16 +3675,6 @@
       {
         "kind": "rule",
         "id": "vibeflow.async_lifecycle",
-        "reason": "builtin"
-      },
-      {
-        "kind": "rule",
-        "id": "vibeflow.capability.allow",
-        "reason": "builtin"
-      },
-      {
-        "kind": "rule",
-        "id": "vibeflow.capability.restrict",
         "reason": "builtin"
       },
       {
@@ -3911,6 +3900,11 @@
       {
         "kind": "rule",
         "id": "vibeflow.workflow.analysis",
+        "reason": "builtin"
+      },
+      {
+        "kind": "rule",
+        "id": "vibeflow.workflow.connectivity",
         "reason": "builtin"
       },
       {
@@ -4745,12 +4739,12 @@
                       {
                         "path": "../../base_lib/data_view/data_view.ts",
                         "module": "../../base_lib/data_view/data_view.ts",
-                        "lines": 44,
-                        "bytes": 2238,
-                        "function_count": 11,
+                        "lines": 57,
+                        "bytes": 2857,
+                        "function_count": 13,
                         "class_count": 0,
                         "public_api_count": 4,
-                        "branch_count": 14,
+                        "branch_count": 18,
                         "max_nesting_depth": 4,
                         "imports": [],
                         "functions": [
@@ -4863,6 +4857,26 @@
                             "max_nesting_depth": 1,
                             "param_count": 1,
                             "ast_fingerprint": "228,227,222,79,36,10,57,79,58,105"
+                          },
+                          {
+                            "qualname": "pathSegments",
+                            "line_start": 46,
+                            "line_end": 57,
+                            "lines": 12,
+                            "branches": 4,
+                            "max_nesting_depth": 2,
+                            "param_count": 2,
+                            "ast_fingerprint": "242,244,262,261,79,189,154,210,246,227,79,55,214,212,79,79,10,245,214,212,79,79,10,245,214,212,79,79,13,220,170,79,154,170,79,154,170,79,154,170,79,154,38,242,245,214,212,79,79,228,79,57,214,212,79,79,13,10,58,227,79,56,79,254,79,254,79"
+                          },
+                          {
+                            "qualname": "pathSegments.anonymous@51:5",
+                            "line_start": 51,
+                            "line_end": 54,
+                            "lines": 4,
+                            "branches": 2,
+                            "max_nesting_depth": 2,
+                            "param_count": 4,
+                            "ast_fingerprint": "242,245,214,212,79,79,228,79,57,214,212,79,79,13,10,58,227,79,56,79,254,79"
                           }
                         ],
                         "import_sites": []
@@ -5355,7 +5369,8 @@
                           "removeMetaFields": [
                             "mapData"
                           ],
-                          "selectedMks": []
+                          "selectedMks": [],
+                          "pathSegments": []
                         }
                       },
                       {
@@ -5716,12 +5731,12 @@
                       {
                         "path": "../../base_lib/data_view/data_view.ts",
                         "module": "../../base_lib/data_view/data_view.ts",
-                        "lines": 44,
-                        "bytes": 2238,
-                        "function_count": 11,
+                        "lines": 57,
+                        "bytes": 2857,
+                        "function_count": 13,
                         "class_count": 0,
-                        "public_api_count": 5,
-                        "branch_count": 14,
+                        "public_api_count": 6,
+                        "branch_count": 18,
                         "max_nesting_depth": 4,
                         "imports": [],
                         "functions": [
@@ -5834,6 +5849,26 @@
                             "max_nesting_depth": 1,
                             "param_count": 1,
                             "ast_fingerprint": "228,227,222,79,36,10,57,79,58,105"
+                          },
+                          {
+                            "qualname": "pathSegments",
+                            "line_start": 46,
+                            "line_end": 57,
+                            "lines": 12,
+                            "branches": 4,
+                            "max_nesting_depth": 2,
+                            "param_count": 2,
+                            "ast_fingerprint": "242,244,262,261,79,189,154,210,246,227,79,55,214,212,79,79,10,245,214,212,79,79,10,245,214,212,79,79,13,220,170,79,154,170,79,154,170,79,154,170,79,154,38,242,245,214,212,79,79,228,79,57,214,212,79,79,13,10,58,227,79,56,79,254,79,254,79"
+                          },
+                          {
+                            "qualname": "pathSegments.anonymous@51:5",
+                            "line_start": 51,
+                            "line_end": 54,
+                            "lines": 4,
+                            "branches": 2,
+                            "max_nesting_depth": 2,
+                            "param_count": 4,
+                            "ast_fingerprint": "242,245,214,212,79,79,228,79,57,214,212,79,79,13,10,58,227,79,56,79,254,79"
                           }
                         ],
                         "import_sites": []
@@ -6325,7 +6360,8 @@
                           "removeMetaFields": [
                             "mapData"
                           ],
-                          "selectedMks": []
+                          "selectedMks": [],
+                          "pathSegments": []
                         }
                       },
                       {
@@ -7237,12 +7273,12 @@
                       {
                         "path": "../../base_lib/data_view/data_view.ts",
                         "module": "../../base_lib/data_view/data_view.ts",
-                        "lines": 44,
-                        "bytes": 2238,
-                        "function_count": 11,
+                        "lines": 57,
+                        "bytes": 2857,
+                        "function_count": 13,
                         "class_count": 0,
-                        "public_api_count": 5,
-                        "branch_count": 14,
+                        "public_api_count": 6,
+                        "branch_count": 18,
                         "max_nesting_depth": 4,
                         "imports": [],
                         "functions": [
@@ -7355,6 +7391,26 @@
                             "max_nesting_depth": 1,
                             "param_count": 1,
                             "ast_fingerprint": "228,227,222,79,36,10,57,79,58,105"
+                          },
+                          {
+                            "qualname": "pathSegments",
+                            "line_start": 46,
+                            "line_end": 57,
+                            "lines": 12,
+                            "branches": 4,
+                            "max_nesting_depth": 2,
+                            "param_count": 2,
+                            "ast_fingerprint": "242,244,262,261,79,189,154,210,246,227,79,55,214,212,79,79,10,245,214,212,79,79,10,245,214,212,79,79,13,220,170,79,154,170,79,154,170,79,154,170,79,154,38,242,245,214,212,79,79,228,79,57,214,212,79,79,13,10,58,227,79,56,79,254,79,254,79"
+                          },
+                          {
+                            "qualname": "pathSegments.anonymous@51:5",
+                            "line_start": 51,
+                            "line_end": 54,
+                            "lines": 4,
+                            "branches": 2,
+                            "max_nesting_depth": 2,
+                            "param_count": 4,
+                            "ast_fingerprint": "242,245,214,212,79,79,228,79,57,214,212,79,79,13,10,58,227,79,56,79,254,79"
                           }
                         ],
                         "import_sites": []
@@ -7846,7 +7902,8 @@
                           "removeMetaFields": [
                             "mapData"
                           ],
-                          "selectedMks": []
+                          "selectedMks": [],
+                          "pathSegments": []
                         }
                       },
                       {
@@ -8210,12 +8267,12 @@
                       {
                         "path": "../../base_lib/data_view/data_view.ts",
                         "module": "../../base_lib/data_view/data_view.ts",
-                        "lines": 44,
-                        "bytes": 2238,
-                        "function_count": 11,
+                        "lines": 57,
+                        "bytes": 2857,
+                        "function_count": 13,
                         "class_count": 0,
-                        "public_api_count": 5,
-                        "branch_count": 14,
+                        "public_api_count": 6,
+                        "branch_count": 18,
                         "max_nesting_depth": 4,
                         "imports": [],
                         "functions": [
@@ -8328,6 +8385,26 @@
                             "max_nesting_depth": 1,
                             "param_count": 1,
                             "ast_fingerprint": "228,227,222,79,36,10,57,79,58,105"
+                          },
+                          {
+                            "qualname": "pathSegments",
+                            "line_start": 46,
+                            "line_end": 57,
+                            "lines": 12,
+                            "branches": 4,
+                            "max_nesting_depth": 2,
+                            "param_count": 2,
+                            "ast_fingerprint": "242,244,262,261,79,189,154,210,246,227,79,55,214,212,79,79,10,245,214,212,79,79,10,245,214,212,79,79,13,220,170,79,154,170,79,154,170,79,154,170,79,154,38,242,245,214,212,79,79,228,79,57,214,212,79,79,13,10,58,227,79,56,79,254,79,254,79"
+                          },
+                          {
+                            "qualname": "pathSegments.anonymous@51:5",
+                            "line_start": 51,
+                            "line_end": 54,
+                            "lines": 4,
+                            "branches": 2,
+                            "max_nesting_depth": 2,
+                            "param_count": 4,
+                            "ast_fingerprint": "242,245,214,212,79,79,228,79,57,214,212,79,79,13,10,58,227,79,56,79,254,79"
                           }
                         ],
                         "import_sites": []
@@ -8820,7 +8897,8 @@
                           "removeMetaFields": [
                             "mapData"
                           ],
-                          "selectedMks": []
+                          "selectedMks": [],
+                          "pathSegments": []
                         }
                       },
                       {
@@ -9183,12 +9261,12 @@
                       {
                         "path": "../../base_lib/data_view/data_view.ts",
                         "module": "../../base_lib/data_view/data_view.ts",
-                        "lines": 44,
-                        "bytes": 2238,
-                        "function_count": 11,
+                        "lines": 57,
+                        "bytes": 2857,
+                        "function_count": 13,
                         "class_count": 0,
-                        "public_api_count": 5,
-                        "branch_count": 14,
+                        "public_api_count": 6,
+                        "branch_count": 18,
                         "max_nesting_depth": 4,
                         "imports": [],
                         "functions": [
@@ -9301,6 +9379,26 @@
                             "max_nesting_depth": 1,
                             "param_count": 1,
                             "ast_fingerprint": "228,227,222,79,36,10,57,79,58,105"
+                          },
+                          {
+                            "qualname": "pathSegments",
+                            "line_start": 46,
+                            "line_end": 57,
+                            "lines": 12,
+                            "branches": 4,
+                            "max_nesting_depth": 2,
+                            "param_count": 2,
+                            "ast_fingerprint": "242,244,262,261,79,189,154,210,246,227,79,55,214,212,79,79,10,245,214,212,79,79,10,245,214,212,79,79,13,220,170,79,154,170,79,154,170,79,154,170,79,154,38,242,245,214,212,79,79,228,79,57,214,212,79,79,13,10,58,227,79,56,79,254,79,254,79"
+                          },
+                          {
+                            "qualname": "pathSegments.anonymous@51:5",
+                            "line_start": 51,
+                            "line_end": 54,
+                            "lines": 4,
+                            "branches": 2,
+                            "max_nesting_depth": 2,
+                            "param_count": 4,
+                            "ast_fingerprint": "242,245,214,212,79,79,228,79,57,214,212,79,79,13,10,58,227,79,56,79,254,79"
                           }
                         ],
                         "import_sites": []
@@ -9793,7 +9891,8 @@
                           "removeMetaFields": [
                             "mapData"
                           ],
-                          "selectedMks": []
+                          "selectedMks": [],
+                          "pathSegments": []
                         }
                       },
                       {
@@ -11200,12 +11299,12 @@
                       {
                         "path": "../../base_lib/data_view/data_view.ts",
                         "module": "../../base_lib/data_view/data_view.ts",
-                        "lines": 44,
-                        "bytes": 2238,
-                        "function_count": 11,
+                        "lines": 57,
+                        "bytes": 2857,
+                        "function_count": 13,
                         "class_count": 0,
-                        "public_api_count": 5,
-                        "branch_count": 14,
+                        "public_api_count": 6,
+                        "branch_count": 18,
                         "max_nesting_depth": 4,
                         "imports": [],
                         "functions": [
@@ -11318,6 +11417,26 @@
                             "max_nesting_depth": 1,
                             "param_count": 1,
                             "ast_fingerprint": "228,227,222,79,36,10,57,79,58,105"
+                          },
+                          {
+                            "qualname": "pathSegments",
+                            "line_start": 46,
+                            "line_end": 57,
+                            "lines": 12,
+                            "branches": 4,
+                            "max_nesting_depth": 2,
+                            "param_count": 2,
+                            "ast_fingerprint": "242,244,262,261,79,189,154,210,246,227,79,55,214,212,79,79,10,245,214,212,79,79,10,245,214,212,79,79,13,220,170,79,154,170,79,154,170,79,154,170,79,154,38,242,245,214,212,79,79,228,79,57,214,212,79,79,13,10,58,227,79,56,79,254,79,254,79"
+                          },
+                          {
+                            "qualname": "pathSegments.anonymous@51:5",
+                            "line_start": 51,
+                            "line_end": 54,
+                            "lines": 4,
+                            "branches": 2,
+                            "max_nesting_depth": 2,
+                            "param_count": 4,
+                            "ast_fingerprint": "242,245,214,212,79,79,228,79,57,214,212,79,79,13,10,58,227,79,56,79,254,79"
                           }
                         ],
                         "import_sites": []
@@ -11348,7 +11467,8 @@
                           "removeMetaFields": [
                             "mapData"
                           ],
-                          "selectedMks": []
+                          "selectedMks": [],
+                          "pathSegments": []
                         }
                       }
                     ]
@@ -12091,12 +12211,12 @@
                       {
                         "path": "../../base_lib/data_view/data_view.ts",
                         "module": "../../base_lib/data_view/data_view.ts",
-                        "lines": 44,
-                        "bytes": 2238,
-                        "function_count": 11,
+                        "lines": 57,
+                        "bytes": 2857,
+                        "function_count": 13,
                         "class_count": 0,
-                        "public_api_count": 5,
-                        "branch_count": 14,
+                        "public_api_count": 6,
+                        "branch_count": 18,
                         "max_nesting_depth": 4,
                         "imports": [],
                         "functions": [
@@ -12209,6 +12329,26 @@
                             "max_nesting_depth": 1,
                             "param_count": 1,
                             "ast_fingerprint": "228,227,222,79,36,10,57,79,58,105"
+                          },
+                          {
+                            "qualname": "pathSegments",
+                            "line_start": 46,
+                            "line_end": 57,
+                            "lines": 12,
+                            "branches": 4,
+                            "max_nesting_depth": 2,
+                            "param_count": 2,
+                            "ast_fingerprint": "242,244,262,261,79,189,154,210,246,227,79,55,214,212,79,79,10,245,214,212,79,79,10,245,214,212,79,79,13,220,170,79,154,170,79,154,170,79,154,170,79,154,38,242,245,214,212,79,79,228,79,57,214,212,79,79,13,10,58,227,79,56,79,254,79,254,79"
+                          },
+                          {
+                            "qualname": "pathSegments.anonymous@51:5",
+                            "line_start": 51,
+                            "line_end": 54,
+                            "lines": 4,
+                            "branches": 2,
+                            "max_nesting_depth": 2,
+                            "param_count": 4,
+                            "ast_fingerprint": "242,245,214,212,79,79,228,79,57,214,212,79,79,13,10,58,227,79,56,79,254,79"
                           }
                         ],
                         "import_sites": []
@@ -12645,7 +12785,8 @@
                           "removeMetaFields": [
                             "mapData"
                           ],
-                          "selectedMks": []
+                          "selectedMks": [],
+                          "pathSegments": []
                         }
                       },
                       {
@@ -13300,6 +13441,16 @@
                 "replace_rule": ""
               },
               {
+                "source": "connectivity",
+                "target": "analysis",
+                "kind": "requires",
+                "bindings": {
+                  "analysis": "graphs"
+                },
+                "params": {},
+                "replace_rule": ""
+              },
+              {
                 "source": "join",
                 "target": "analysis",
                 "kind": "requires",
@@ -13372,6 +13523,14 @@
               {
                 "source": "summary",
                 "target": "flow",
+                "kind": "requires",
+                "bindings": {},
+                "params": {},
+                "replace_rule": ""
+              },
+              {
+                "source": "summary",
+                "target": "connectivity",
                 "kind": "requires",
                 "bindings": {},
                 "params": {},
@@ -13454,6 +13613,7 @@
             "graph_scope": "effective_subtree",
             "order": [
               "analysis",
+              "connectivity",
               "duplicates",
               "flow",
               "join",
@@ -13470,6 +13630,25 @@
                 "params": {},
                 "dependencies": [],
                 "inputs": {},
+                "origins": [
+                  "vibeflow.workflow"
+                ],
+                "parameter_sources": {}
+              },
+              {
+                "id": "connectivity",
+                "rule_id": "vibeflow.workflow.connectivity",
+                "original_rule_id": "vibeflow.workflow.connectivity",
+                "params": {},
+                "dependencies": [
+                  "analysis"
+                ],
+                "inputs": {
+                  "analysis": [
+                    "analysis",
+                    "graphs"
+                  ]
+                },
                 "origins": [
                   "vibeflow.workflow"
                 ],
@@ -13601,6 +13780,7 @@
                 "original_rule_id": "vibeflow.workflow",
                 "params": {},
                 "dependencies": [
+                  "connectivity",
                   "duplicates",
                   "flow",
                   "join",
@@ -13627,6 +13807,16 @@
             "relations": [
               {
                 "source": "flow",
+                "target": "analysis",
+                "kind": "requires",
+                "bindings": {
+                  "analysis": "graphs"
+                },
+                "params": {},
+                "replace_rule": ""
+              },
+              {
+                "source": "connectivity",
                 "target": "analysis",
                 "kind": "requires",
                 "bindings": {
@@ -13715,6 +13905,14 @@
               },
               {
                 "source": "summary",
+                "target": "connectivity",
+                "kind": "requires",
+                "bindings": {},
+                "params": {},
+                "replace_rule": ""
+              },
+              {
+                "source": "summary",
                 "target": "join",
                 "kind": "requires",
                 "bindings": {},
@@ -13776,6 +13974,11 @@
                   }
                 }
               },
+              "findings": []
+            },
+            "connectivity": {
+              "state": "completed",
+              "records": {},
               "findings": []
             },
             "duplicates": {
@@ -13840,6 +14043,7 @@
           "findings": [],
           "executed": [
             "analysis",
+            "connectivity",
             "duplicates",
             "flow",
             "join",
@@ -14905,7 +15109,11 @@
       "source_load_states": {
         "plugins/contracts/contracts-1.ts": "loaded",
         "plugins/contracts/plugin.ts": "loaded",
+        "@project/base_lib/command_payload/command_payload.base-lib.ts": "loaded",
         "@project/base_lib/data_view/data_view.base-lib.ts": "loaded",
+        "@project/base_lib/variable_write/variable_write.base-lib.ts": "loaded",
+        "@project/base_lib/workflow_progress/progress.base-lib.ts": "loaded",
+        "@project/base_lib/workflow_values/workflow_values.base-lib.ts": "loaded",
         "nodes/adapt_output.node.ts": "loaded",
         "nodes/build_snapshot.node.ts": "loaded",
         "nodes/format_values.node.ts": "loaded",
@@ -14939,7 +15147,7 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/plugin.py",
+            "path": "@kernel/targets/shared/rule_support/plugin.py",
             "symbol": ""
           }
         },
@@ -15003,7 +15211,7 @@
               }
             ],
             "base_libs": [],
-            "capabilities": [],
+            "workflow_operations": [],
             "rulesets": [
               "vibeflow.process"
             ],
@@ -15100,7 +15308,7 @@
             "base_libs": [
               "era.macro.runtime"
             ],
-            "capabilities": [],
+            "workflow_operations": [],
             "rulesets": [
               "vibeflow.process"
             ],
@@ -15181,7 +15389,7 @@
             "base_libs": [
               "era.macro.runtime"
             ],
-            "capabilities": [],
+            "workflow_operations": [],
             "rulesets": [
               "vibeflow.process"
             ],
@@ -15260,7 +15468,7 @@
               }
             ],
             "base_libs": [],
-            "capabilities": [],
+            "workflow_operations": [],
             "rulesets": [
               "vibeflow.process"
             ],
@@ -15339,7 +15547,7 @@
               }
             ],
             "base_libs": [],
-            "capabilities": [],
+            "workflow_operations": [],
             "rulesets": [
               "vibeflow.process"
             ],
@@ -15444,7 +15652,7 @@
             "base_libs": [
               "era.macro.runtime"
             ],
-            "capabilities": [],
+            "workflow_operations": [],
             "rulesets": [
               "vibeflow.process"
             ],
@@ -15525,7 +15733,7 @@
             "base_libs": [
               "era.macro.runtime"
             ],
-            "capabilities": [],
+            "workflow_operations": [],
             "rulesets": [
               "vibeflow.process"
             ],
@@ -15614,7 +15822,7 @@
             "base_libs": [
               "era.macro.runtime"
             ],
-            "capabilities": [],
+            "workflow_operations": [],
             "rulesets": [
               "vibeflow.process"
             ],
@@ -15673,7 +15881,7 @@
               }
             ],
             "base_libs": [],
-            "capabilities": [],
+            "workflow_operations": [],
             "rulesets": [
               "vibeflow.process"
             ],
@@ -15705,7 +15913,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/handlers.py",
+                  "ref": "@kernel/targets/javascript/rules/node/handlers.py",
                   "export": "javascript_source_bindings.<locals>.asynchronous"
                 }
               }
@@ -15725,121 +15933,9 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/definitions.py",
+            "path": "@kernel/targets/javascript/rules/node/definitions.py",
             "line": 8,
             "symbol": "source_rule_resources"
-          }
-        },
-        {
-          "kind": "rule",
-          "id": "vibeflow.capability.allow",
-          "descriptor": {
-            "kind": "rule",
-            "id": "vibeflow.capability.allow",
-            "display_name": "",
-            "description": "",
-            "implementations": [
-              {
-                "language": "python",
-                "source": {
-                  "kind": "file",
-                  "ref": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/capability_policy.py",
-                  "export": "allow"
-                }
-              }
-            ],
-            "inputs": {},
-            "outputs": {
-              "policy": "vibeflow.capability_policy.v1"
-            },
-            "params_schema": {
-              "capability": {
-                "type": "string"
-              },
-              "operations": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "actions": {
-                "type": "array",
-                "items": {
-                  "type": "object"
-                }
-              }
-            },
-            "params_defaults": {
-              "capability": "",
-              "operations": [],
-              "actions": []
-            },
-            "handler": "",
-            "scope": "call",
-            "level": "node"
-          },
-          "origin": {
-            "owner": {
-              "kind": "plugin",
-              "id": "vibeflow.core",
-              "root_id": "",
-              "path": ""
-            },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/capabilities.py",
-            "line": 6,
-            "symbol": "policy_rule_resources"
-          }
-        },
-        {
-          "kind": "rule",
-          "id": "vibeflow.capability.restrict",
-          "descriptor": {
-            "kind": "rule",
-            "id": "vibeflow.capability.restrict",
-            "display_name": "",
-            "description": "",
-            "implementations": [
-              {
-                "language": "python",
-                "source": {
-                  "kind": "file",
-                  "ref": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/capability_policy.py",
-                  "export": "restrict"
-                }
-              }
-            ],
-            "inputs": {},
-            "outputs": {
-              "policy": "vibeflow.capability_policy.v1"
-            },
-            "params_schema": {
-              "capabilities": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              }
-            },
-            "params_defaults": {
-              "capabilities": [
-                "vibeflow.port",
-                "vibeflow.workflow"
-              ]
-            },
-            "handler": "",
-            "scope": "call",
-            "level": "graph"
-          },
-          "origin": {
-            "owner": {
-              "kind": "plugin",
-              "id": "vibeflow.core",
-              "root_id": "",
-              "path": ""
-            },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/capabilities.py",
-            "line": 6,
-            "symbol": "policy_rule_resources"
           }
         },
         {
@@ -15855,7 +15951,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/graph.py",
+                  "ref": "@kernel/targets/shared/rule_support/graph.py",
                   "export": "_duplicates"
                 }
               }
@@ -15875,7 +15971,7 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/graph/topics.py",
+            "path": "@kernel/targets/javascript/rules/graph/topics.py",
             "line": 6,
             "symbol": "workflow_topic_resources"
           }
@@ -15893,7 +15989,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/graph.py",
+                  "ref": "@kernel/targets/shared/rule_support/graph.py",
                   "export": "_flow"
                 }
               }
@@ -15913,7 +16009,7 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/graph/topics.py",
+            "path": "@kernel/targets/javascript/rules/graph/topics.py",
             "line": 6,
             "symbol": "workflow_topic_resources"
           }
@@ -15931,7 +16027,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/graph.py",
+                  "ref": "@kernel/targets/shared/rule_support/graph.py",
                   "export": "_join"
                 }
               }
@@ -15951,7 +16047,7 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/graph/topics.py",
+            "path": "@kernel/targets/javascript/rules/graph/topics.py",
             "line": 6,
             "symbol": "workflow_topic_resources"
           }
@@ -15969,7 +16065,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/graph.py",
+                  "ref": "@kernel/targets/shared/rule_support/graph.py",
                   "export": "_nodesets"
                 }
               }
@@ -16000,7 +16096,7 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/graph/topics.py",
+            "path": "@kernel/targets/javascript/rules/graph/topics.py",
             "line": 6,
             "symbol": "workflow_topic_resources"
           }
@@ -16018,7 +16114,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/graph.py",
+                  "ref": "@kernel/targets/shared/rule_support/graph.py",
                   "export": "_planned"
                 }
               }
@@ -16040,7 +16136,7 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/graph/topics.py",
+            "path": "@kernel/targets/javascript/rules/graph/topics.py",
             "line": 6,
             "symbol": "workflow_topic_resources"
           }
@@ -16058,7 +16154,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/source_quality.py",
+                  "ref": "@kernel/targets/shared/rule_support/source_quality.py",
                   "export": "_dependencies"
                 }
               }
@@ -16092,7 +16188,7 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/governance.py",
+            "path": "@kernel/targets/shared/rule_support/governance.py",
             "line": 12,
             "symbol": "governance_resources"
           }
@@ -16110,7 +16206,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/source_quality.py",
+                  "ref": "@kernel/targets/shared/rule_support/source_quality.py",
                   "export": "_duplicates"
                 }
               }
@@ -16130,7 +16226,7 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/governance.py",
+            "path": "@kernel/targets/shared/rule_support/governance.py",
             "line": 12,
             "symbol": "governance_resources"
           }
@@ -16148,7 +16244,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/source_quality.py",
+                  "ref": "@kernel/targets/shared/rule_support/source_quality.py",
                   "export": "_files"
                 }
               }
@@ -16214,7 +16310,7 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/governance.py",
+            "path": "@kernel/targets/shared/rule_support/governance.py",
             "line": 12,
             "symbol": "governance_resources"
           }
@@ -16232,7 +16328,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/source_quality.py",
+                  "ref": "@kernel/targets/shared/rule_support/source_quality.py",
                   "export": "_structure"
                 }
               }
@@ -16380,7 +16476,7 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/governance.py",
+            "path": "@kernel/targets/shared/rule_support/governance.py",
             "line": 12,
             "symbol": "governance_resources"
           }
@@ -16398,7 +16494,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/handlers.py",
+                  "ref": "@kernel/targets/javascript/rules/node/handlers.py",
                   "export": "javascript_source_bindings.<locals>.implementation.<locals>.check"
                 }
               }
@@ -16426,7 +16522,7 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/definitions.py",
+            "path": "@kernel/targets/javascript/rules/node/definitions.py",
             "line": 31,
             "symbol": "implementation_resources"
           }
@@ -16444,7 +16540,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/handlers.py",
+                  "ref": "@kernel/targets/javascript/rules/node/handlers.py",
                   "export": "javascript_source_bindings.<locals>.implementation.<locals>.check"
                 }
               }
@@ -16472,7 +16568,7 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/definitions.py",
+            "path": "@kernel/targets/javascript/rules/node/definitions.py",
             "line": 31,
             "symbol": "implementation_resources"
           }
@@ -16490,7 +16586,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/handlers.py",
+                  "ref": "@kernel/targets/javascript/rules/node/handlers.py",
                   "export": "javascript_source_bindings.<locals>.implementation.<locals>.check"
                 }
               }
@@ -16518,7 +16614,7 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/definitions.py",
+            "path": "@kernel/targets/javascript/rules/node/definitions.py",
             "line": 31,
             "symbol": "implementation_resources"
           }
@@ -16536,7 +16632,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/handlers.py",
+                  "ref": "@kernel/targets/javascript/rules/node/handlers.py",
                   "export": "javascript_source_bindings.<locals>.imports"
                 }
               }
@@ -16603,7 +16699,7 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/definitions.py",
+            "path": "@kernel/targets/javascript/rules/node/definitions.py",
             "line": 8,
             "symbol": "source_rule_resources"
           }
@@ -16621,7 +16717,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/handlers.py",
+                  "ref": "@kernel/targets/javascript/rules/node/handlers.py",
                   "export": "javascript_source_bindings.<locals>.input_writes"
                 }
               }
@@ -16661,7 +16757,7 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/definitions.py",
+            "path": "@kernel/targets/javascript/rules/node/definitions.py",
             "line": 8,
             "symbol": "source_rule_resources"
           }
@@ -16679,7 +16775,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/handlers.py",
+                  "ref": "@kernel/targets/javascript/rules/node/handlers.py",
                   "export": "javascript_source_bindings.<locals>.maintainability"
                 }
               }
@@ -16707,7 +16803,7 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/definitions.py",
+            "path": "@kernel/targets/javascript/rules/node/definitions.py",
             "line": 8,
             "symbol": "source_rule_resources"
           }
@@ -16725,7 +16821,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/handlers.py",
+                  "ref": "@kernel/targets/javascript/rules/node/handlers.py",
                   "export": "javascript_source_bindings.<locals>.effects"
                 }
               }
@@ -16794,7 +16890,7 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/definitions.py",
+            "path": "@kernel/targets/javascript/rules/node/definitions.py",
             "line": 8,
             "symbol": "source_rule_resources"
           }
@@ -16812,7 +16908,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/handlers.py",
+                  "ref": "@kernel/targets/javascript/rules/node/handlers.py",
                   "export": "javascript_source_bindings.<locals>.architecture"
                 }
               }
@@ -16832,7 +16928,7 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/definitions.py",
+            "path": "@kernel/targets/javascript/rules/node/definitions.py",
             "line": 8,
             "symbol": "source_rule_resources"
           }
@@ -16850,7 +16946,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/handlers.py",
+                  "ref": "@kernel/targets/javascript/rules/node/handlers.py",
                   "export": "javascript_source_bindings.<locals>.interface"
                 }
               }
@@ -16879,7 +16975,7 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/node/definitions.py",
+            "path": "@kernel/targets/javascript/rules/node/definitions.py",
             "line": 8,
             "symbol": "source_rule_resources"
           }
@@ -16897,7 +16993,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/resource_governance.py",
+                  "ref": "@kernel/targets/shared/rule_support/resource_governance.py",
                   "export": "shared_dependencies"
                 }
               }
@@ -16923,7 +17019,7 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/governance.py",
+            "path": "@kernel/targets/shared/rule_support/governance.py",
             "line": 12,
             "symbol": "governance_resources"
           }
@@ -16941,7 +17037,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/governance.py",
+                  "ref": "@kernel/targets/shared/rule_support/governance.py",
                   "export": "project_layout"
                 }
               }
@@ -16967,7 +17063,7 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/governance.py",
+            "path": "@kernel/targets/shared/rule_support/governance.py",
             "line": 12,
             "symbol": "governance_resources"
           }
@@ -16985,7 +17081,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/resource_governance.py",
+                  "ref": "@kernel/targets/shared/rule_support/resource_governance.py",
                   "export": "packages"
                 }
               }
@@ -17005,7 +17101,7 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/governance.py",
+            "path": "@kernel/targets/shared/rule_support/governance.py",
             "line": 12,
             "symbol": "governance_resources"
           }
@@ -17023,7 +17119,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/resource_use/ownership.py",
+                  "ref": "@kernel/targets/shared/rule_support/resource_use/ownership.py",
                   "export": "ownership"
                 }
               }
@@ -17043,7 +17139,7 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/governance.py",
+            "path": "@kernel/targets/shared/rule_support/governance.py",
             "line": 12,
             "symbol": "governance_resources"
           }
@@ -17061,7 +17157,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/governance.py",
+                  "ref": "@kernel/targets/shared/rule_support/governance.py",
                   "export": "shared_resources"
                 }
               }
@@ -17081,7 +17177,7 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/governance.py",
+            "path": "@kernel/targets/shared/rule_support/governance.py",
             "line": 12,
             "symbol": "governance_resources"
           }
@@ -17099,7 +17195,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/resource_governance.py",
+                  "ref": "@kernel/targets/shared/rule_support/resource_governance.py",
                   "export": "project_structure"
                 }
               }
@@ -17119,7 +17215,7 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/governance.py",
+            "path": "@kernel/targets/shared/rule_support/governance.py",
             "line": 12,
             "symbol": "governance_resources"
           }
@@ -17137,7 +17233,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/source_quality.py",
+                  "ref": "@kernel/targets/javascript/rules/source_quality.py",
                   "export": "project_handler.<locals>.check"
                 }
               }
@@ -17171,7 +17267,7 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/source_quality.py",
+            "path": "@kernel/targets/javascript/rules/source_quality.py",
             "line": 12,
             "symbol": "source_quality_resources"
           }
@@ -17189,7 +17285,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/source_quality.py",
+                  "ref": "@kernel/targets/javascript/rules/source_quality.py",
                   "export": "project_handler.<locals>.check"
                 }
               }
@@ -17209,7 +17305,7 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/source_quality.py",
+            "path": "@kernel/targets/javascript/rules/source_quality.py",
             "line": 12,
             "symbol": "source_quality_resources"
           }
@@ -17227,7 +17323,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/source_quality.py",
+                  "ref": "@kernel/targets/javascript/rules/source_quality.py",
                   "export": "project_handler.<locals>.check"
                 }
               }
@@ -17293,7 +17389,7 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/source_quality.py",
+            "path": "@kernel/targets/javascript/rules/source_quality.py",
             "line": 12,
             "symbol": "source_quality_resources"
           }
@@ -17311,7 +17407,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/source_quality.py",
+                  "ref": "@kernel/targets/javascript/rules/source_quality.py",
                   "export": "project_handler.<locals>.check"
                 }
               }
@@ -17459,7 +17555,7 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/source_quality.py",
+            "path": "@kernel/targets/javascript/rules/source_quality.py",
             "line": 12,
             "symbol": "source_quality_resources"
           }
@@ -17477,7 +17573,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/governance.py",
+                  "ref": "@kernel/targets/shared/rule_support/governance.py",
                   "export": "governance_handlers.<locals>.root_quality.<locals>.check"
                 }
               }
@@ -17511,7 +17607,7 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/governance.py",
+            "path": "@kernel/targets/shared/rule_support/governance.py",
             "line": 12,
             "symbol": "governance_resources"
           }
@@ -17529,7 +17625,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/governance.py",
+                  "ref": "@kernel/targets/shared/rule_support/governance.py",
                   "export": "governance_handlers.<locals>.root_quality.<locals>.check"
                 }
               }
@@ -17549,7 +17645,7 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/governance.py",
+            "path": "@kernel/targets/shared/rule_support/governance.py",
             "line": 12,
             "symbol": "governance_resources"
           }
@@ -17567,7 +17663,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/governance.py",
+                  "ref": "@kernel/targets/shared/rule_support/governance.py",
                   "export": "governance_handlers.<locals>.root_quality.<locals>.check"
                 }
               }
@@ -17633,7 +17729,7 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/governance.py",
+            "path": "@kernel/targets/shared/rule_support/governance.py",
             "line": 12,
             "symbol": "governance_resources"
           }
@@ -17651,7 +17747,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/governance.py",
+                  "ref": "@kernel/targets/shared/rule_support/governance.py",
                   "export": "root_layout"
                 }
               }
@@ -17677,7 +17773,7 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/governance.py",
+            "path": "@kernel/targets/shared/rule_support/governance.py",
             "line": 12,
             "symbol": "governance_resources"
           }
@@ -17695,7 +17791,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/resource_governance.py",
+                  "ref": "@kernel/targets/shared/rule_support/resource_governance.py",
                   "export": "nodesets"
                 }
               }
@@ -17715,7 +17811,7 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/governance.py",
+            "path": "@kernel/targets/shared/rule_support/governance.py",
             "line": 12,
             "symbol": "governance_resources"
           }
@@ -17733,7 +17829,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/resource_governance.py",
+                  "ref": "@kernel/targets/shared/rule_support/resource_governance.py",
                   "export": "packages"
                 }
               }
@@ -17753,7 +17849,7 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/governance.py",
+            "path": "@kernel/targets/shared/rule_support/governance.py",
             "line": 12,
             "symbol": "governance_resources"
           }
@@ -17771,7 +17867,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/resource_use/ownership.py",
+                  "ref": "@kernel/targets/shared/rule_support/resource_use/ownership.py",
                   "export": "ownership"
                 }
               }
@@ -17791,7 +17887,7 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/governance.py",
+            "path": "@kernel/targets/shared/rule_support/governance.py",
             "line": 12,
             "symbol": "governance_resources"
           }
@@ -17809,7 +17905,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/resource_use/selection.py",
+                  "ref": "@kernel/targets/shared/rule_support/resource_use/selection.py",
                   "export": "duplicates"
                 }
               }
@@ -17829,7 +17925,7 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/governance.py",
+            "path": "@kernel/targets/shared/rule_support/governance.py",
             "line": 12,
             "symbol": "governance_resources"
           }
@@ -17847,7 +17943,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/resource_use/selection.py",
+                  "ref": "@kernel/targets/shared/rule_support/resource_use/selection.py",
                   "export": "independent"
                 }
               }
@@ -17869,7 +17965,7 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/governance.py",
+            "path": "@kernel/targets/shared/rule_support/governance.py",
             "line": 12,
             "symbol": "governance_resources"
           }
@@ -17887,7 +17983,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/resource_use/selection.py",
+                  "ref": "@kernel/targets/shared/rule_support/resource_use/selection.py",
                   "export": "plugins"
                 }
               }
@@ -17909,7 +18005,7 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/governance.py",
+            "path": "@kernel/targets/shared/rule_support/governance.py",
             "line": 12,
             "symbol": "governance_resources"
           }
@@ -17927,7 +18023,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/resource_use/references.py",
+                  "ref": "@kernel/targets/shared/rule_support/resource_use/references.py",
                   "export": "references"
                 }
               }
@@ -17949,7 +18045,7 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/governance.py",
+            "path": "@kernel/targets/shared/rule_support/governance.py",
             "line": 12,
             "symbol": "governance_resources"
           }
@@ -17967,7 +18063,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/resource_use/selection.py",
+                  "ref": "@kernel/targets/shared/rule_support/resource_use/selection.py",
                   "export": "compose"
                 }
               }
@@ -17993,7 +18089,7 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/governance.py",
+            "path": "@kernel/targets/shared/rule_support/governance.py",
             "line": 12,
             "symbol": "governance_resources"
           }
@@ -18011,7 +18107,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/resource_use/selection.py",
+                  "ref": "@kernel/targets/shared/rule_support/resource_use/selection.py",
                   "export": "visibility"
                 }
               }
@@ -18033,7 +18129,7 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/governance.py",
+            "path": "@kernel/targets/shared/rule_support/governance.py",
             "line": 12,
             "symbol": "governance_resources"
           }
@@ -18051,7 +18147,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/governance.py",
+                  "ref": "@kernel/targets/shared/rule_support/governance.py",
                   "export": "root_resources"
                 }
               }
@@ -18077,7 +18173,7 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/governance.py",
+            "path": "@kernel/targets/shared/rule_support/governance.py",
             "line": 12,
             "symbol": "governance_resources"
           }
@@ -18095,7 +18191,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/governance.py",
+                  "ref": "@kernel/targets/shared/rule_support/governance.py",
                   "export": "governance_handlers.<locals>.root_quality.<locals>.check"
                 }
               }
@@ -18243,7 +18339,7 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/governance.py",
+            "path": "@kernel/targets/shared/rule_support/governance.py",
             "line": 12,
             "symbol": "governance_resources"
           }
@@ -18261,7 +18357,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/workflow.py",
+                  "ref": "@kernel/targets/shared/rule_support/workflow.py",
                   "export": "summary"
                 }
               }
@@ -18287,7 +18383,7 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/graph/workflow.py",
+            "path": "@kernel/targets/javascript/rules/graph/workflow.py",
             "line": 6,
             "symbol": "workflow_plan_resources"
           }
@@ -18305,7 +18401,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/workflow.py",
+                  "ref": "@kernel/targets/shared/rule_support/workflow.py",
                   "export": "analysis"
                 }
               }
@@ -18327,7 +18423,47 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/graph/workflow.py",
+            "path": "@kernel/targets/javascript/rules/graph/workflow.py",
+            "line": 6,
+            "symbol": "workflow_plan_resources"
+          }
+        },
+        {
+          "kind": "rule",
+          "id": "vibeflow.workflow.connectivity",
+          "descriptor": {
+            "kind": "rule",
+            "id": "vibeflow.workflow.connectivity",
+            "display_name": "",
+            "description": "",
+            "implementations": [
+              {
+                "language": "python",
+                "source": {
+                  "kind": "file",
+                  "ref": "@kernel/targets/shared/rule_support/workflow.py",
+                  "export": "topic.<locals>.check"
+                }
+              }
+            ],
+            "inputs": {
+              "analysis": "vibeflow.graph_analysis.v1"
+            },
+            "outputs": {},
+            "params_schema": {},
+            "params_defaults": {},
+            "handler": "",
+            "scope": "call",
+            "level": "graph"
+          },
+          "origin": {
+            "owner": {
+              "kind": "plugin",
+              "id": "vibeflow.core",
+              "root_id": "",
+              "path": ""
+            },
+            "path": "@kernel/targets/javascript/rules/graph/workflow.py",
             "line": 6,
             "symbol": "workflow_plan_resources"
           }
@@ -18345,7 +18481,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/workflow.py",
+                  "ref": "@kernel/targets/shared/rule_support/workflow.py",
                   "export": "topic.<locals>.check"
                 }
               }
@@ -18367,7 +18503,7 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/graph/workflow.py",
+            "path": "@kernel/targets/javascript/rules/graph/workflow.py",
             "line": 6,
             "symbol": "workflow_plan_resources"
           }
@@ -18385,7 +18521,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/workflow.py",
+                  "ref": "@kernel/targets/shared/rule_support/workflow.py",
                   "export": "topic.<locals>.check"
                 }
               }
@@ -18407,7 +18543,7 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/graph/workflow.py",
+            "path": "@kernel/targets/javascript/rules/graph/workflow.py",
             "line": 6,
             "symbol": "workflow_plan_resources"
           }
@@ -18425,7 +18561,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/workflow.py",
+                  "ref": "@kernel/targets/shared/rule_support/workflow.py",
                   "export": "topic.<locals>.check"
                 }
               }
@@ -18447,7 +18583,7 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/graph/workflow.py",
+            "path": "@kernel/targets/javascript/rules/graph/workflow.py",
             "line": 6,
             "symbol": "workflow_plan_resources"
           }
@@ -18465,7 +18601,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/workflow.py",
+                  "ref": "@kernel/targets/shared/rule_support/workflow.py",
                   "export": "nodeset_types"
                 }
               }
@@ -18498,7 +18634,7 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/graph/workflow.py",
+            "path": "@kernel/targets/javascript/rules/graph/workflow.py",
             "line": 6,
             "symbol": "workflow_plan_resources"
           }
@@ -18516,7 +18652,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/workflow.py",
+                  "ref": "@kernel/targets/shared/rule_support/workflow.py",
                   "export": "topic.<locals>.check"
                 }
               }
@@ -18540,7 +18676,7 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/graph/workflow.py",
+            "path": "@kernel/targets/javascript/rules/graph/workflow.py",
             "line": 6,
             "symbol": "workflow_plan_resources"
           }
@@ -18558,7 +18694,7 @@
                 "language": "python",
                 "source": {
                   "kind": "file",
-                  "ref": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/workflow.py",
+                  "ref": "@kernel/targets/shared/rule_support/workflow.py",
                   "export": "review"
                 }
               }
@@ -18582,7 +18718,7 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rules/graph/workflow.py",
+            "path": "@kernel/targets/javascript/rules/graph/workflow.py",
             "line": 6,
             "symbol": "workflow_plan_resources"
           }
@@ -18658,8 +18794,8 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rulesets/standard.py",
-            "line": 5,
+            "path": "@kernel/targets/javascript/rulesets/standard.py",
+            "line": 6,
             "symbol": "standard_rulesets"
           }
         },
@@ -18738,8 +18874,8 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rulesets/standard.py",
-            "line": 5,
+            "path": "@kernel/targets/javascript/rulesets/standard.py",
+            "line": 6,
             "symbol": "standard_rulesets"
           }
         },
@@ -18818,8 +18954,8 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rulesets/standard.py",
-            "line": 5,
+            "path": "@kernel/targets/javascript/rulesets/standard.py",
+            "line": 6,
             "symbol": "standard_rulesets"
           }
         },
@@ -18898,8 +19034,8 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rulesets/standard.py",
-            "line": 5,
+            "path": "@kernel/targets/javascript/rulesets/standard.py",
+            "line": 6,
             "symbol": "standard_rulesets"
           }
         },
@@ -18978,8 +19114,8 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rulesets/standard.py",
-            "line": 5,
+            "path": "@kernel/targets/javascript/rulesets/standard.py",
+            "line": 6,
             "symbol": "standard_rulesets"
           }
         },
@@ -19056,8 +19192,8 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rulesets/standard.py",
-            "line": 5,
+            "path": "@kernel/targets/javascript/rulesets/standard.py",
+            "line": 6,
             "symbol": "standard_rulesets"
           }
         },
@@ -19103,8 +19239,8 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rulesets/standard.py",
-            "line": 5,
+            "path": "@kernel/targets/javascript/rulesets/standard.py",
+            "line": 6,
             "symbol": "standard_rulesets"
           }
         },
@@ -19183,8 +19319,8 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rulesets/standard.py",
-            "line": 5,
+            "path": "@kernel/targets/javascript/rulesets/standard.py",
+            "line": 6,
             "symbol": "standard_rulesets"
           }
         },
@@ -19240,7 +19376,7 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/governance.py",
+            "path": "@kernel/targets/shared/rule_support/governance.py",
             "line": 12,
             "symbol": "governance_resources"
           }
@@ -19320,8 +19456,8 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rulesets/standard.py",
-            "line": 5,
+            "path": "@kernel/targets/javascript/rulesets/standard.py",
+            "line": 6,
             "symbol": "standard_rulesets"
           }
         },
@@ -19379,7 +19515,7 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rulesets/source_quality.py",
+            "path": "@kernel/targets/javascript/rulesets/source_quality.py",
             "line": 5,
             "symbol": "source_quality_ruleset"
           }
@@ -19533,7 +19669,7 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/governance.py",
+            "path": "@kernel/targets/shared/rule_support/governance.py",
             "line": 12,
             "symbol": "governance_resources"
           }
@@ -19636,7 +19772,7 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/shared/rule_support/governance.py",
+            "path": "@kernel/targets/shared/rule_support/governance.py",
             "line": 12,
             "symbol": "governance_resources"
           }
@@ -19657,6 +19793,11 @@
                 "id": "flow",
                 "params": {},
                 "rule_id": "vibeflow.workflow.flow"
+              },
+              {
+                "id": "connectivity",
+                "params": {},
+                "rule_id": "vibeflow.workflow.connectivity"
               },
               {
                 "id": "join",
@@ -19692,6 +19833,16 @@
             "relations": [
               {
                 "source": "flow",
+                "target": "analysis",
+                "kind": "requires",
+                "bindings": {
+                  "analysis": "graphs"
+                },
+                "params": {},
+                "replace_rule": ""
+              },
+              {
+                "source": "connectivity",
                 "target": "analysis",
                 "kind": "requires",
                 "bindings": {
@@ -19780,6 +19931,14 @@
               },
               {
                 "source": "summary",
+                "target": "connectivity",
+                "kind": "requires",
+                "bindings": {},
+                "params": {},
+                "replace_rule": ""
+              },
+              {
+                "source": "summary",
                 "target": "join",
                 "kind": "requires",
                 "bindings": {},
@@ -19823,8 +19982,8 @@
               "root_id": "",
               "path": ""
             },
-            "path": "@project/kernel/vibeflow-kernel.zip/vibeflow/targets/javascript/rulesets/standard.py",
-            "line": 5,
+            "path": "@kernel/targets/javascript/rulesets/standard.py",
+            "line": 6,
             "symbol": "standard_rulesets"
           }
         },
@@ -20512,6 +20671,48 @@
         },
         {
           "kind": "base_lib",
+          "id": "era.command.payload",
+          "descriptor": {
+            "kind": "base_lib",
+            "rulesets": [
+              "vibeflow.base_lib"
+            ],
+            "id": "era.command.payload",
+            "display_name": "解析变量与函数指令正文",
+            "description": "提取指令标签并解析其 JSON，保留字符串字面量。仅修正可识别的结构符号，失败由各调用场景处理。",
+            "category": "",
+            "version": "1.0.0",
+            "implementations": [
+              {
+                "language": "typescript",
+                "targets": [
+                  "node",
+                  "browser"
+                ],
+                "source": {
+                  "kind": "file",
+                  "ref": "@project/base_lib/command_payload/command_payload.ts"
+                },
+                "completion": "immediate"
+              }
+            ],
+            "dependencies": [],
+            "external_packages": []
+          },
+          "origin": {
+            "owner": {
+              "kind": "project",
+              "id": "project",
+              "root_id": "",
+              "path": "@project/."
+            },
+            "path": "@project/base_lib/command_payload/command_payload.base-lib.ts",
+            "line": 3,
+            "symbol": "commandPayload"
+          }
+        },
+        {
+          "kind": "base_lib",
           "id": "era.data_view",
           "descriptor": {
             "kind": "base_lib",
@@ -20520,7 +20721,7 @@
             ],
             "id": "era.data_view",
             "display_name": "ERA 数据视图转换",
-            "description": "Macro、Service与展示快照共用的可移植数据反转义及元字段过滤；不读写宿主或业务状态。",
+            "description": "Macro、Service与展示快照共用的数据反转义、元字段过滤和变量路径拆分；不读写宿主或业务状态。",
             "category": "",
             "version": "0.1.1",
             "implementations": [
@@ -20726,6 +20927,138 @@
             "line": 3,
             "symbol": "era_macro_technical_blocks"
           }
+        },
+        {
+          "kind": "base_lib",
+          "id": "era.variable.write",
+          "descriptor": {
+            "kind": "base_lib",
+            "rulesets": [
+              "vibeflow.base_lib"
+            ],
+            "id": "era.variable.write",
+            "display_name": "校验并写入变量字段",
+            "description": "沿显式路径读取父规则，检查新增、修改或删除以及整表替换的子项变化，生成通过校验的单次写入。",
+            "category": "",
+            "version": "1.0.0",
+            "implementations": [
+              {
+                "language": "typescript",
+                "targets": [
+                  "node",
+                  "browser"
+                ],
+                "source": {
+                  "kind": "file",
+                  "ref": "@project/base_lib/variable_write/variable_write.ts"
+                },
+                "completion": "immediate"
+              }
+            ],
+            "dependencies": [],
+            "external_packages": []
+          },
+          "origin": {
+            "owner": {
+              "kind": "project",
+              "id": "project",
+              "root_id": "",
+              "path": "@project/."
+            },
+            "path": "@project/base_lib/variable_write/variable_write.base-lib.ts",
+            "line": 3,
+            "symbol": "variableWrite"
+          }
+        },
+        {
+          "kind": "base_lib",
+          "id": "era.workflow.progress",
+          "descriptor": {
+            "kind": "base_lib",
+            "rulesets": [
+              "vibeflow.base_lib"
+            ],
+            "id": "era.workflow.progress",
+            "display_name": "原业务算法的局部请求进度",
+            "description": "保存一次计算在原算法中的位置，接回实际结果后继续；通信、并发和停止仍由正式图负责，不保存Node context。",
+            "category": "",
+            "version": "1.0.0",
+            "implementations": [
+              {
+                "language": "typescript",
+                "targets": [
+                  "browser",
+                  "node"
+                ],
+                "source": {
+                  "kind": "file",
+                  "ref": "@project/base_lib/workflow_progress/progress.ts"
+                },
+                "completion": "immediate"
+              }
+            ],
+            "dependencies": [],
+            "external_packages": []
+          },
+          "origin": {
+            "owner": {
+              "kind": "project",
+              "id": "project",
+              "root_id": "",
+              "path": "@project/."
+            },
+            "path": "@project/base_lib/workflow_progress/progress.base-lib.ts",
+            "line": 2,
+            "symbol": "businessProgress"
+          }
+        },
+        {
+          "kind": "base_lib",
+          "id": "era.workflow.values",
+          "descriptor": {
+            "kind": "base_lib",
+            "rulesets": [
+              "vibeflow.base_lib"
+            ],
+            "id": "era.workflow.values",
+            "display_name": "工作流通信中的业务值转换",
+            "description": "把变量和计算结果转换为官方通信可承载的纯数据消息，再恢复原值；保留大数、负零、缺失值和数组空位，不持有页面资源、不调度流程。",
+            "category": "",
+            "version": "0.1.0",
+            "implementations": [
+              {
+                "language": "javascript",
+                "targets": [
+                  "node",
+                  "browser"
+                ],
+                "source": {
+                  "kind": "file",
+                  "ref": "@project/base_lib/workflow_values/codec.mjs"
+                },
+                "completion": "immediate",
+                "implementation_files": [
+                  {
+                    "kind": "file",
+                    "ref": "@project/base_lib/workflow_values/codec.d.mts"
+                  }
+                ]
+              }
+            ],
+            "dependencies": [],
+            "external_packages": []
+          },
+          "origin": {
+            "owner": {
+              "kind": "project",
+              "id": "project",
+              "root_id": "",
+              "path": "@project/."
+            },
+            "path": "@project/base_lib/workflow_values/workflow_values.base-lib.ts",
+            "line": 2,
+            "symbol": "workflowValues"
+          }
         }
       ],
       "node_definitions": {
@@ -20786,7 +21119,7 @@
             }
           ],
           "base_libs": [],
-          "capabilities": [],
+          "workflow_operations": [],
           "rulesets": [
             "vibeflow.process"
           ],
@@ -20868,7 +21201,7 @@
           "base_libs": [
             "era.macro.runtime"
           ],
-          "capabilities": [],
+          "workflow_operations": [],
           "rulesets": [
             "vibeflow.process"
           ],
@@ -20934,7 +21267,7 @@
           "base_libs": [
             "era.macro.runtime"
           ],
-          "capabilities": [],
+          "workflow_operations": [],
           "rulesets": [
             "vibeflow.process"
           ],
@@ -20998,7 +21331,7 @@
             }
           ],
           "base_libs": [],
-          "capabilities": [],
+          "workflow_operations": [],
           "rulesets": [
             "vibeflow.process"
           ],
@@ -21062,7 +21395,7 @@
             }
           ],
           "base_libs": [],
-          "capabilities": [],
+          "workflow_operations": [],
           "rulesets": [
             "vibeflow.process"
           ],
@@ -21152,7 +21485,7 @@
           "base_libs": [
             "era.macro.runtime"
           ],
-          "capabilities": [],
+          "workflow_operations": [],
           "rulesets": [
             "vibeflow.process"
           ],
@@ -21218,7 +21551,7 @@
           "base_libs": [
             "era.macro.runtime"
           ],
-          "capabilities": [],
+          "workflow_operations": [],
           "rulesets": [
             "vibeflow.process"
           ],
@@ -21292,7 +21625,7 @@
           "base_libs": [
             "era.macro.runtime"
           ],
-          "capabilities": [],
+          "workflow_operations": [],
           "rulesets": [
             "vibeflow.process"
           ],
@@ -21336,7 +21669,7 @@
             }
           ],
           "base_libs": [],
-          "capabilities": [],
+          "workflow_operations": [],
           "rulesets": [
             "vibeflow.process"
           ],
@@ -21525,11 +21858,46 @@
         ],
         "known_owners": [
           {
+            "path": "@project/base_lib/command_payload/command_payload.ts",
+            "kind": "base_lib",
+            "id": "era.command.payload",
+            "export": "run",
+            "role": "entry"
+          },
+          {
             "path": "@project/base_lib/data_view/data_view.ts",
             "kind": "base_lib",
             "id": "era.data_view",
             "export": "run",
             "role": "entry"
+          },
+          {
+            "path": "@project/base_lib/variable_write/variable_write.ts",
+            "kind": "base_lib",
+            "id": "era.variable.write",
+            "export": "run",
+            "role": "entry"
+          },
+          {
+            "path": "@project/base_lib/workflow_progress/progress.ts",
+            "kind": "base_lib",
+            "id": "era.workflow.progress",
+            "export": "run",
+            "role": "entry"
+          },
+          {
+            "path": "@project/base_lib/workflow_values/codec.mjs",
+            "kind": "base_lib",
+            "id": "era.workflow.values",
+            "export": "run",
+            "role": "entry"
+          },
+          {
+            "path": "@project/base_lib/workflow_values/codec.d.mts",
+            "kind": "base_lib",
+            "id": "era.workflow.values",
+            "export": "",
+            "role": "support"
           },
           {
             "path": "nodes/adapt_output.ts",
@@ -21746,7 +22114,7 @@
           }
         ],
         "base_libs": [],
-        "capabilities": [],
+        "workflow_operations": [],
         "rulesets": [
           "vibeflow.process"
         ],
@@ -22104,7 +22472,7 @@
         "base_libs": [
           "era.macro.runtime"
         ],
-        "capabilities": [],
+        "workflow_operations": [],
         "rulesets": [
           "vibeflow.process"
         ],
@@ -22446,7 +22814,7 @@
         "base_libs": [
           "era.macro.runtime"
         ],
-        "capabilities": [],
+        "workflow_operations": [],
         "rulesets": [
           "vibeflow.process"
         ],
@@ -22786,7 +23154,7 @@
           }
         ],
         "base_libs": [],
-        "capabilities": [],
+        "workflow_operations": [],
         "rulesets": [
           "vibeflow.process"
         ],
@@ -23126,7 +23494,7 @@
           }
         ],
         "base_libs": [],
-        "capabilities": [],
+        "workflow_operations": [],
         "rulesets": [
           "vibeflow.process"
         ],
@@ -23492,7 +23860,7 @@
         "base_libs": [
           "era.macro.runtime"
         ],
-        "capabilities": [],
+        "workflow_operations": [],
         "rulesets": [
           "vibeflow.process"
         ],
@@ -23834,7 +24202,7 @@
         "base_libs": [
           "era.macro.runtime"
         ],
-        "capabilities": [],
+        "workflow_operations": [],
         "rulesets": [
           "vibeflow.process"
         ],
@@ -24184,7 +24552,7 @@
         "base_libs": [
           "era.macro.runtime"
         ],
-        "capabilities": [],
+        "workflow_operations": [],
         "rulesets": [
           "vibeflow.process"
         ],
@@ -24504,7 +24872,7 @@
           }
         ],
         "base_libs": [],
-        "capabilities": [],
+        "workflow_operations": [],
         "rulesets": [
           "vibeflow.process"
         ],
@@ -24794,7 +25162,7 @@
         ],
         "id": "era.data_view",
         "display_name": "ERA 数据视图转换",
-        "description": "Macro、Service与展示快照共用的可移植数据反转义及元字段过滤；不读写宿主或业务状态。",
+        "description": "Macro、Service与展示快照共用的数据反转义、元字段过滤和变量路径拆分；不读写宿主或业务状态。",
         "category": "",
         "version": "0.1.1",
         "implementations": [

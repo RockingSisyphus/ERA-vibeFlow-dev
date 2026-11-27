@@ -11,6 +11,7 @@ import {
 export type OperationAction = {
   kind: string;
   path: string;
+  arrayPath?: readonly (string | number)[];
   patch: any;
   root?: boolean;
   template?: { inheritedContent: unknown; parentPath: string | null };
@@ -63,8 +64,6 @@ export type OperationState = {
   done: boolean;
   failure: { message: string } | null;
   context: {
-    messageId: number;
-    meta: Record<string, any>;
     exposesFunctionState: boolean;
     pendingLog?: EraCrudEditLog;
     localDelete?: { stat: any; parentAction: OperationAction };
@@ -130,8 +129,6 @@ export function seedCommandOperations(
     failure: null,
     pendingAction: null,
     context: {
-      messageId: input.messageId,
-      meta: input.meta,
       exposesFunctionState:
         Object.keys(library).length > 0 ||
         commands.some((c) => c.type.startsWith("function-")),

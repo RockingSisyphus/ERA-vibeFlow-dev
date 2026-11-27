@@ -9,6 +9,16 @@ export async function AwaitWrite(inputs: any, params: any): Promise<any> {
 }
 export async function SaveChat(inputs: any, params: any): Promise<any> {
   const f = takeFrame(inputs); f.persistenceConfirmed = false;
+  if (f.input.purpose === "era-facade-commit") {
+    try {
+      assertCurrentMessageBasis(f.session.api, f.persistence.postWriteBasis, f.session);
+      f.result = {status: "applied", sourceBasis: f.persistence.postWriteBasis};
+      return emit(route(f, "finished"), params);
+    } catch (error) {
+      f.persistenceError = error;
+      return emit(route(f, "failed"), params);
+    }
+  }
   if (f.persistence.expected.length === 0) { f.result = {status: "committed"}; return emit(route(f, "finished"), params); }
   try {
     await rawCall(f, signal => {
@@ -52,7 +62,7 @@ export function ProjectDisplay(inputs: any, params: any): any {
       message: f.persistenceError instanceof Error ? f.persistenceError.message : String(f.persistenceError)};
     return emit({frame: f}, params);
   }
-  if (f.input.projectTechnicalBlocks !== false) f.session.projectTechnicalBlocks?.([...f.affectedMessageIds]);
   f.session.lifecycle.signal.throwIfAborted(); f.session.operational.signal.throwIfAborted(); f.options?.signal?.throwIfAborted();
+  f.session.updateTechnicalReports?.([...f.affectedMessageIds]);
   return emit({frame: f}, params);
 }

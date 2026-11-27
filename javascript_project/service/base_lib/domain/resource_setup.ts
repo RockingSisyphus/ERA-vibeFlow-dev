@@ -200,7 +200,8 @@ function operationRuleContent(): string {
       "- **`<VariableEdit>`**:\n    - **只改不增**: 用于修改已存在的数据，它绝不会在不存在的路径上创建新数据。",
       `- **\`<VariableEdit>\`**:\n    - **只改不增**: 用于修改已存在的数据，它绝不会在不存在的路径上创建新数据。\n${relativeRules}`,
     )
-    .replace('"hp": 10', '"hp": { "$expr": "hp - 5" }');
+    .replace('"hp": 10', '"hp": { "$expr": "hp - 5" }')
+    + `\n\n数组可保存对象和嵌套数组。逐项操作在对应的 VariableInsert、VariableEdit 或 VariableDelete 中使用 {"$arrayOps":[{"path":["装备",0],"value":{"名称":"剑"}}]}。对象键用字符串，下标用从零起的数字。Insert 的下标必须等于当前长度，Edit 和 Delete 要求目标已存在。Delete 省略 value，后续元素会前移。字段规则写在父对象的 $meta.fields 中，数组共有元素规则写在字段规则的 items 中。`;
 }
 
 function worldbookEntry(
@@ -245,10 +246,8 @@ export function getEraDemoGreetingBlock(mode: "traditional" | "external" = "trad
       "alive": true,
       "note": null,
       "inventory": ["torch", "rope"],
-      "profile": {
-        "title": "Apprentice",
-        "$meta": { "necessary": true, "updatable": true }
-      }
+      "profile": { "title": "Apprentice" },
+      "$meta": { "fields": { "profile": { "necessary": "self", "updatable": true } } }
     },
     "world": {
       "npcs": {

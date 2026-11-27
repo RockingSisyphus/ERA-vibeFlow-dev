@@ -1,4 +1,5 @@
-import { writeSession as writeWorkflowSession } from '../../../javascript_project/service/nodes/agent/execute_generation_session';
+import { localResourceClient } from '../native-tavern/native-resource-client.mjs';
+import { writeSessionProgress } from '../../../javascript_project/service/nodes/agent/execute_generation_session';
 import {
   connectionId,
   planConnectionSave,
@@ -32,13 +33,22 @@ function writeSession(
   input: Readonly<Record<string, unknown>>,
   context: { signal: AbortSignal },
 ) {
-  return writeWorkflowSession(
-    {
-      read_session_binding: request => operations.read_session_binding(request, context),
-      write_session: request => operations.write_session(request, context),
-    },
-    input,
-  );
+  // 仅驱动纯算法的局部请求；工作流通信另由实际AOT探针覆盖。
+  const local = {
+    read_session_binding: (request: any) => operations.read_session_binding(request, context),
+    write_session: (request: any) => operations.write_session(request, context),
+  };
+  const progress = writeSessionProgress(local, input);
+  let step = progress.next();
+  while (!step.done) {
+    const request = step.value;
+    try {
+      step = progress.next(request.capability[request.operation](request.input));
+    } catch (error) {
+      step = progress.throw(error);
+    }
+  }
+  return step.value;
 }
 
 describe('AgentTavernHost V2 local routes', () => {
@@ -138,7 +148,7 @@ describe('AgentTavernHost V2 local routes', () => {
       return error;
     };
     const operations: AgentOperations = Object.fromEntries(
-      Object.entries(owner.caps['era.tavern.agent']).map(([key, call]: [string, any]) => [
+      Object.entries(localResourceClient(owner.session)['era.tavern.agent']).map(([key, call]: [string, any]) => [
         key,
         (...args: any[]) => {
           try {

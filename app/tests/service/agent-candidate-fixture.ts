@@ -1,17 +1,13 @@
+import { generationStepFixture, batchExecutionFixture } from './workflow-input-fixture';
+import { businessWorkflowNode } from './business-workflow-node';
 import { run as prepareWork } from './prepare-block-work-fixture';
 import { contextWith } from './memory-lifecycle-fixture';
-import { run as generate } from '../../../javascript_project/service/nodes/agent/execute_generation_session';
-import { run as seed } from '../../../javascript_project/service/nodes/agent/candidate_seed';
 import {
   CandidateUnpackNode as unpack,
   CandidateFinishNode as finishCandidate,
 } from '../../../javascript_project/service/nodes/initialize/shared_pure_adapters';
-import { run as prepare } from '../../../javascript_project/service/nodes/agent/prepare_stage_blocks';
 import { run as advance } from './message-block-fixture';
-import { PublishBlockApplicationNode as publish } from '../../../javascript_project/service/nodes/sync/shared_block_state_adapters';
-import { FinishStageBlocksNode as finish } from '../../../javascript_project/service/nodes/agent/finish_stage_blocks.ts';
 import { recordFor } from '../../../javascript_project/service/base_lib/sidecar_binding';
-
 /** Executes the actual candidate/body nodes with a memory-only Tavern storage fixture. */
 export function createCandidateRunner(originalStep: any, originalBatch: any, runtime: any, context: any) {
   const identity = { characterId: null, groupId: null, ...context?.identity };
@@ -45,32 +41,32 @@ export function createCandidateRunner(originalStep: any, originalBatch: any, run
   };
   const fallback = contextWith(context?.latestMessage?.message ?? '').step;
   const dispatch = originalStep.dispatchContext ?? fallback.dispatchContext;
-  const step = {
+  const step = generationStepFixture({
     ...fallback,
     ...originalStep,
     sources: originalStep.sources ?? [{ relation: 'primary', event: originalStep.task?.primaryEvent }],
     stepId: originalStep.stepId ?? 'candidate-test',
     task: { ...originalStep.task, primaryEvent: { occurredAt: 1, ...originalStep.task?.primaryEvent } },
     dispatchContext: { ...dispatch, sourceBasis: dispatch.sourceBasis ?? { identity, messages: dispatch.messages } },
-  };
-  const batch = {
-    schemaVersion: 1,
-    ...originalBatch,
-    nextState: { consecutiveMk: null, consecutiveProcessingCount: 0, scopeWindow: {}, ...originalBatch?.nextState },
-  };
+  });
+  const batch = batchExecutionFixture(step, originalBatch);
   return async (request: any) => {
-    let candidate = seed(
-      {
-        'era.agent.generation.request': { value: request },
-        'era.step.request.routed': { value: step },
-        'era.batch.execution.state': { value: batch },
-      },
-      {},
-      { capabilities },
+    let candidate = (
+      await businessWorkflowNode(
+        'era.agent.candidate_seed',
+        {
+          'era.agent.generation.request': { value: request },
+          'era.step.request.routed': { value: step },
+          'era.batch.execution.state': { value: batch },
+        },
+        {},
+        { capabilities },
+      )
     ).candidate_state;
     for (let attempts = 0; attempts < 20; attempts++) {
       const inputs = unpack({ 'era.agent.candidate.state': { value: candidate } });
-      const raw = await generate(
+      const raw = await businessWorkflowNode(
+        'era.agent.execute_session_v2',
         {
           'era.agent.generation.request': { value: inputs.generation_request },
           'era.step.request.routed': { value: inputs.routed_step },
@@ -79,26 +75,35 @@ export function createCandidateRunner(originalStep: any, originalBatch: any, run
         {},
         { capabilities },
       );
-      let state = prepare(
-        { 'era.agent.generation.raw': { value: raw.generation_outcome } },
-        {},
-        { capabilities },
+      let state = (
+        await businessWorkflowNode(
+          'era.lifecycle.prepare_stage_blocks',
+          { 'era.agent.generation.raw': { value: raw.generation_outcome } },
+          {},
+          { capabilities },
+        )
       ).block_step_state;
       for (let blocks = 0; !state.done; blocks++) {
         if (blocks > 500) throw new Error('candidate block fixture stalled');
         const pending = (await advance({ 'era.sync.block.step.state': { value: state } }, {}, { capabilities }))
           .block_step_pending;
         const work = prepareWork({ 'era.sync.block.step.pending': { value: pending } }).expression_command_result;
-        state = publish(
-          { 'era.command_compaction.result': { value: work } },
-          {},
-          { capabilities },
+        state = (
+          await businessWorkflowNode(
+            'era.lifecycle.publish_block_application',
+            { 'era.command_compaction.result': { value: work } },
+            {},
+            { capabilities },
+          )
         ).block_step_state_after;
       }
-      const applied = finish(
-        { 'era.sync.block.step.state.next': { value: state } },
-        {},
-        { capabilities },
+      const applied = (
+        await businessWorkflowNode(
+          'era.lifecycle.finish_stage_blocks',
+          { 'era.sync.block.step.state.next': { value: state } },
+          {},
+          { capabilities },
+        )
       ).applied_generation_outcome;
       const result = finishCandidate({
         'era.agent.candidate.state': { value: candidate },

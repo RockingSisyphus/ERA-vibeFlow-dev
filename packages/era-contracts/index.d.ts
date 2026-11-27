@@ -149,17 +149,23 @@ export type EraEventRelationV1 = "primary" | "combined" | "coalesced";
 export type EraTaskContextRequirementV1 =
   "none" | "latest-message" | "latest-message-with-mk";
 
-export interface EraTavernMessageV1 {
-  readonly schemaVersion: 1;
+export interface EraTavernMessageV2 {
+  readonly schemaVersion: 2;
   readonly messageId: number;
   readonly role: string;
   readonly activeText: string;
   readonly swipeIndex: number | null;
+  readonly candidate: Readonly<{
+    exists: boolean;
+    generation: number | null;
+    predecessor: number | null;
+    phase: "idle" | "preparing" | "generating" | "completed" | "cancelled";
+  }>;
 }
 
 export interface EraTavernMessageContextV2 {
   readonly schemaVersion: 2;
-  readonly messages: readonly EraTavernMessageV1[];
+  readonly messages: readonly EraTavernMessageV2[];
 }
 
 export interface EraDispatchContextV2 {
@@ -167,8 +173,8 @@ export interface EraDispatchContextV2 {
   readonly status: "ready" | "failed";
   readonly dispatchClass: EraDispatchClassV1 | "ignore";
   readonly requirement: EraTaskContextRequirementV1;
-  readonly messages: readonly EraTavernMessageV1[];
-  readonly processingMessage: EraTavernMessageV1 | null;
+  readonly messages: readonly EraTavernMessageV2[];
+  readonly processingMessage: EraTavernMessageV2 | null;
   readonly processingMk: string | null;
   readonly messageChanged: boolean;
   readonly variablesChanged: boolean;
@@ -208,8 +214,8 @@ export interface EraDispatchContextV3 {
   readonly status: "ready" | "failed";
   readonly dispatchClass: EraDispatchClassV1 | "ignore";
   readonly requirement: EraTaskContextRequirementV1;
-  readonly messages: readonly EraTavernMessageV1[];
-  readonly processingMessage: EraTavernMessageV1 | null;
+  readonly messages: readonly EraTavernMessageV2[];
+  readonly processingMessage: EraTavernMessageV2 | null;
   readonly processingMk: string | null;
   readonly messageChanged: boolean;
   readonly variablesChanged: boolean;
@@ -218,6 +224,8 @@ export interface EraDispatchContextV3 {
   readonly floorIdentity: EraFloorIdentityV1 | null;
   readonly stagedMessageUpdates: readonly EraStagedMessageUpdateV1[];
   readonly agentFloorCandidate: EraAgentFloorCandidateV1 | null;
+  /** 启用时采用的楼内状态栏标记，供最终消息写入判断是否需要首次呈现。 */
+  readonly statusbarPlaceholder?: string;
   /** 本次计算实际读取的宿主事实；只在事务内存中保留，不持久化。 */
   readonly sourceBasis?: EraMessageSourceBasisV1;
 }
@@ -228,7 +236,7 @@ export interface EraMessageSourceBasisV1 {
     chatId: string;
     groupId: string | null;
   }>;
-  readonly messages: readonly EraTavernMessageV1[];
+  readonly messages: readonly EraTavernMessageV2[];
 }
 export type EraSyncReasonV1 =
   | "history-changed"
@@ -366,7 +374,7 @@ export interface EraDiagnosticV1 {
   readonly sequence: number | null;
 }
 
-export type EraTaskStatusV1 = "committed" | "no-op" | "failed" | "fatal";
+export type EraTaskStatusV1 = "committed" | "deferred" | "no-op" | "failed" | "fatal";
 
 export interface EraTaskStateUpdateV1 {
   readonly consecutiveMk: string | null;
@@ -424,9 +432,9 @@ export interface EraBatchFinalizationV1 {
   readonly fatal: boolean;
 }
 
-export declare function isEraTavernMessageV1(
+export declare function isEraTavernMessageV2(
   value: unknown,
-): value is EraTavernMessageV1;
+): value is EraTavernMessageV2;
 export declare function isEraTavernMessageContextV2(
   value: unknown,
 ): value is EraTavernMessageContextV2;

@@ -1867,11 +1867,12 @@
                             "messageId",
                             "role",
                             "activeText",
-                            "swipeIndex"
+                            "swipeIndex",
+                            "candidate"
                           ],
                           "properties": {
                             "schemaVersion": {
-                              "const": 1
+                              "const": 2
                             },
                             "messageId": {
                               "type": "integer",
@@ -1894,6 +1895,53 @@
                                   "type": "null"
                                 }
                               ]
+                            },
+                            "candidate": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "required": [
+                                "exists",
+                                "generation",
+                                "phase",
+                                "predecessor"
+                              ],
+                              "properties": {
+                                "exists": {
+                                  "type": "boolean"
+                                },
+                                "generation": {
+                                  "oneOf": [
+                                    {
+                                      "type": "integer",
+                                      "minimum": 1
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "phase": {
+                                  "type": "string",
+                                  "enum": [
+                                    "idle",
+                                    "preparing",
+                                    "generating",
+                                    "completed",
+                                    "cancelled"
+                                  ]
+                                },
+                                "predecessor": {
+                                  "oneOf": [
+                                    {
+                                      "type": "integer",
+                                      "minimum": 1
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                }
+                              }
                             }
                           }
                         }
@@ -1951,11 +1999,12 @@
                               "messageId",
                               "role",
                               "activeText",
-                              "swipeIndex"
+                              "swipeIndex",
+                              "candidate"
                             ],
                             "properties": {
                               "schemaVersion": {
-                                "const": 1
+                                "const": 2
                               },
                               "messageId": {
                                 "type": "integer",
@@ -1978,6 +2027,53 @@
                                     "type": "null"
                                   }
                                 ]
+                              },
+                              "candidate": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "exists",
+                                  "generation",
+                                  "phase",
+                                  "predecessor"
+                                ],
+                                "properties": {
+                                  "exists": {
+                                    "type": "boolean"
+                                  },
+                                  "generation": {
+                                    "oneOf": [
+                                      {
+                                        "type": "integer",
+                                        "minimum": 1
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "phase": {
+                                    "type": "string",
+                                    "enum": [
+                                      "idle",
+                                      "preparing",
+                                      "generating",
+                                      "completed",
+                                      "cancelled"
+                                    ]
+                                  },
+                                  "predecessor": {
+                                    "oneOf": [
+                                      {
+                                        "type": "integer",
+                                        "minimum": 1
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  }
+                                }
                               }
                             }
                           },
@@ -2054,11 +2150,12 @@
                             "messageId",
                             "role",
                             "activeText",
-                            "swipeIndex"
+                            "swipeIndex",
+                            "candidate"
                           ],
                           "properties": {
                             "schemaVersion": {
-                              "const": 1
+                              "const": 2
                             },
                             "messageId": {
                               "type": "integer",
@@ -2081,6 +2178,53 @@
                                   "type": "null"
                                 }
                               ]
+                            },
+                            "candidate": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "required": [
+                                "exists",
+                                "generation",
+                                "phase",
+                                "predecessor"
+                              ],
+                              "properties": {
+                                "exists": {
+                                  "type": "boolean"
+                                },
+                                "generation": {
+                                  "oneOf": [
+                                    {
+                                      "type": "integer",
+                                      "minimum": 1
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "phase": {
+                                  "type": "string",
+                                  "enum": [
+                                    "idle",
+                                    "preparing",
+                                    "generating",
+                                    "completed",
+                                    "cancelled"
+                                  ]
+                                },
+                                "predecessor": {
+                                  "oneOf": [
+                                    {
+                                      "type": "integer",
+                                      "minimum": 1
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                }
+                              }
                             }
                           }
                         }
@@ -2095,11 +2239,12 @@
                               "messageId",
                               "role",
                               "activeText",
-                              "swipeIndex"
+                              "swipeIndex",
+                              "candidate"
                             ],
                             "properties": {
                               "schemaVersion": {
-                                "const": 1
+                                "const": 2
                               },
                               "messageId": {
                                 "type": "integer",
@@ -2122,6 +2267,53 @@
                                     "type": "null"
                                   }
                                 ]
+                              },
+                              "candidate": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "exists",
+                                  "generation",
+                                  "phase",
+                                  "predecessor"
+                                ],
+                                "properties": {
+                                  "exists": {
+                                    "type": "boolean"
+                                  },
+                                  "generation": {
+                                    "oneOf": [
+                                      {
+                                        "type": "integer",
+                                        "minimum": 1
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "phase": {
+                                    "type": "string",
+                                    "enum": [
+                                      "idle",
+                                      "preparing",
+                                      "generating",
+                                      "completed",
+                                      "cancelled"
+                                    ]
+                                  },
+                                  "predecessor": {
+                                    "oneOf": [
+                                      {
+                                        "type": "integer",
+                                        "minimum": 1
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  }
+                                }
                               }
                             }
                           },
@@ -2272,7 +2464,131 @@
                           }
                         }
                       },
-                      "sourceBasis": {"type":"object","additionalProperties":false,"required":["identity","messages"],"properties":{"identity":{"type":"object","additionalProperties":false,"required":["characterId","chatId","groupId"],"properties":{"characterId":{"type":["string","null"]},"chatId":{"type":"string"},"groupId":{"type":["string","null"]}}},"messages":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["schemaVersion","messageId","role","activeText","swipeIndex"],"properties":{"schemaVersion":{"const":1},"messageId":{"type":"integer","minimum":0},"role":{"type":"string","minLength":1},"activeText":{"type":"string"},"swipeIndex":{"oneOf":[{"type":"integer","minimum":0},{"type":"null"}]}}}}}},
+                      "sourceBasis": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "identity",
+                          "messages"
+                        ],
+                        "properties": {
+                          "identity": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "characterId",
+                              "chatId",
+                              "groupId"
+                            ],
+                            "properties": {
+                              "characterId": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "chatId": {
+                                "type": "string"
+                              },
+                              "groupId": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            }
+                          },
+                          "messages": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "required": [
+                                "schemaVersion",
+                                "messageId",
+                                "role",
+                                "activeText",
+                                "swipeIndex",
+                                "candidate"
+                              ],
+                              "properties": {
+                                "schemaVersion": {
+                                  "const": 2
+                                },
+                                "messageId": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "role": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "activeText": {
+                                  "type": "string"
+                                },
+                                "swipeIndex": {
+                                  "oneOf": [
+                                    {
+                                      "type": "integer",
+                                      "minimum": 0
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "candidate": {
+                                  "type": "object",
+                                  "additionalProperties": false,
+                                  "required": [
+                                    "exists",
+                                    "generation",
+                                    "phase",
+                                    "predecessor"
+                                  ],
+                                  "properties": {
+                                    "exists": {
+                                      "type": "boolean"
+                                    },
+                                    "generation": {
+                                      "oneOf": [
+                                        {
+                                          "type": "integer",
+                                          "minimum": 1
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "phase": {
+                                      "type": "string",
+                                      "enum": [
+                                        "idle",
+                                        "preparing",
+                                        "generating",
+                                        "completed",
+                                        "cancelled"
+                                      ]
+                                    },
+                                    "predecessor": {
+                                      "oneOf": [
+                                        {
+                                          "type": "integer",
+                                          "minimum": 1
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
                       "agentFloorCandidate": {
                         "oneOf": [
                           {
@@ -2569,11 +2885,12 @@
                             "messageId",
                             "role",
                             "activeText",
-                            "swipeIndex"
+                            "swipeIndex",
+                            "candidate"
                           ],
                           "properties": {
                             "schemaVersion": {
-                              "const": 1
+                              "const": 2
                             },
                             "messageId": {
                               "type": "integer",
@@ -2596,6 +2913,53 @@
                                   "type": "null"
                                 }
                               ]
+                            },
+                            "candidate": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "required": [
+                                "exists",
+                                "generation",
+                                "phase",
+                                "predecessor"
+                              ],
+                              "properties": {
+                                "exists": {
+                                  "type": "boolean"
+                                },
+                                "generation": {
+                                  "oneOf": [
+                                    {
+                                      "type": "integer",
+                                      "minimum": 1
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "phase": {
+                                  "type": "string",
+                                  "enum": [
+                                    "idle",
+                                    "preparing",
+                                    "generating",
+                                    "completed",
+                                    "cancelled"
+                                  ]
+                                },
+                                "predecessor": {
+                                  "oneOf": [
+                                    {
+                                      "type": "integer",
+                                      "minimum": 1
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                }
+                              }
                             }
                           }
                         }
@@ -2653,11 +3017,12 @@
                               "messageId",
                               "role",
                               "activeText",
-                              "swipeIndex"
+                              "swipeIndex",
+                              "candidate"
                             ],
                             "properties": {
                               "schemaVersion": {
-                                "const": 1
+                                "const": 2
                               },
                               "messageId": {
                                 "type": "integer",
@@ -2680,6 +3045,53 @@
                                     "type": "null"
                                   }
                                 ]
+                              },
+                              "candidate": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "exists",
+                                  "generation",
+                                  "phase",
+                                  "predecessor"
+                                ],
+                                "properties": {
+                                  "exists": {
+                                    "type": "boolean"
+                                  },
+                                  "generation": {
+                                    "oneOf": [
+                                      {
+                                        "type": "integer",
+                                        "minimum": 1
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "phase": {
+                                    "type": "string",
+                                    "enum": [
+                                      "idle",
+                                      "preparing",
+                                      "generating",
+                                      "completed",
+                                      "cancelled"
+                                    ]
+                                  },
+                                  "predecessor": {
+                                    "oneOf": [
+                                      {
+                                        "type": "integer",
+                                        "minimum": 1
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  }
+                                }
                               }
                             }
                           },
@@ -2756,11 +3168,12 @@
                             "messageId",
                             "role",
                             "activeText",
-                            "swipeIndex"
+                            "swipeIndex",
+                            "candidate"
                           ],
                           "properties": {
                             "schemaVersion": {
-                              "const": 1
+                              "const": 2
                             },
                             "messageId": {
                               "type": "integer",
@@ -2783,6 +3196,53 @@
                                   "type": "null"
                                 }
                               ]
+                            },
+                            "candidate": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "required": [
+                                "exists",
+                                "generation",
+                                "phase",
+                                "predecessor"
+                              ],
+                              "properties": {
+                                "exists": {
+                                  "type": "boolean"
+                                },
+                                "generation": {
+                                  "oneOf": [
+                                    {
+                                      "type": "integer",
+                                      "minimum": 1
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "phase": {
+                                  "type": "string",
+                                  "enum": [
+                                    "idle",
+                                    "preparing",
+                                    "generating",
+                                    "completed",
+                                    "cancelled"
+                                  ]
+                                },
+                                "predecessor": {
+                                  "oneOf": [
+                                    {
+                                      "type": "integer",
+                                      "minimum": 1
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                }
+                              }
                             }
                           }
                         }
@@ -2797,11 +3257,12 @@
                               "messageId",
                               "role",
                               "activeText",
-                              "swipeIndex"
+                              "swipeIndex",
+                              "candidate"
                             ],
                             "properties": {
                               "schemaVersion": {
-                                "const": 1
+                                "const": 2
                               },
                               "messageId": {
                                 "type": "integer",
@@ -2824,6 +3285,53 @@
                                     "type": "null"
                                   }
                                 ]
+                              },
+                              "candidate": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "exists",
+                                  "generation",
+                                  "phase",
+                                  "predecessor"
+                                ],
+                                "properties": {
+                                  "exists": {
+                                    "type": "boolean"
+                                  },
+                                  "generation": {
+                                    "oneOf": [
+                                      {
+                                        "type": "integer",
+                                        "minimum": 1
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "phase": {
+                                    "type": "string",
+                                    "enum": [
+                                      "idle",
+                                      "preparing",
+                                      "generating",
+                                      "completed",
+                                      "cancelled"
+                                    ]
+                                  },
+                                  "predecessor": {
+                                    "oneOf": [
+                                      {
+                                        "type": "integer",
+                                        "minimum": 1
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  }
+                                }
                               }
                             }
                           },
@@ -2974,7 +3482,131 @@
                           }
                         }
                       },
-                      "sourceBasis": {"type":"object","additionalProperties":false,"required":["identity","messages"],"properties":{"identity":{"type":"object","additionalProperties":false,"required":["characterId","chatId","groupId"],"properties":{"characterId":{"type":["string","null"]},"chatId":{"type":"string"},"groupId":{"type":["string","null"]}}},"messages":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["schemaVersion","messageId","role","activeText","swipeIndex"],"properties":{"schemaVersion":{"const":1},"messageId":{"type":"integer","minimum":0},"role":{"type":"string","minLength":1},"activeText":{"type":"string"},"swipeIndex":{"oneOf":[{"type":"integer","minimum":0},{"type":"null"}]}}}}}},
+                      "sourceBasis": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "identity",
+                          "messages"
+                        ],
+                        "properties": {
+                          "identity": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "characterId",
+                              "chatId",
+                              "groupId"
+                            ],
+                            "properties": {
+                              "characterId": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "chatId": {
+                                "type": "string"
+                              },
+                              "groupId": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            }
+                          },
+                          "messages": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "required": [
+                                "schemaVersion",
+                                "messageId",
+                                "role",
+                                "activeText",
+                                "swipeIndex",
+                                "candidate"
+                              ],
+                              "properties": {
+                                "schemaVersion": {
+                                  "const": 2
+                                },
+                                "messageId": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "role": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "activeText": {
+                                  "type": "string"
+                                },
+                                "swipeIndex": {
+                                  "oneOf": [
+                                    {
+                                      "type": "integer",
+                                      "minimum": 0
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "candidate": {
+                                  "type": "object",
+                                  "additionalProperties": false,
+                                  "required": [
+                                    "exists",
+                                    "generation",
+                                    "phase",
+                                    "predecessor"
+                                  ],
+                                  "properties": {
+                                    "exists": {
+                                      "type": "boolean"
+                                    },
+                                    "generation": {
+                                      "oneOf": [
+                                        {
+                                          "type": "integer",
+                                          "minimum": 1
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "phase": {
+                                      "type": "string",
+                                      "enum": [
+                                        "idle",
+                                        "preparing",
+                                        "generating",
+                                        "completed",
+                                        "cancelled"
+                                      ]
+                                    },
+                                    "predecessor": {
+                                      "oneOf": [
+                                        {
+                                          "type": "integer",
+                                          "minimum": 1
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
                       "agentFloorCandidate": {
                         "oneOf": [
                           {

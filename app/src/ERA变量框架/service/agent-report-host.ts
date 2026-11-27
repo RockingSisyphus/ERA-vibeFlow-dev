@@ -9,8 +9,9 @@ import { activeMessageText, messageMk } from './statusbar-message-identity';
 
 const reportApps = new Map<HTMLElement, App>();
 const reportVisibility = new WeakMap<object, { mk: string | null; stages: Map<AgentReportStage, boolean> }>();
+const saveDetailsVisibility = new WeakMap<HTMLElement, () => void>();
 
-/** 宿主重绘只替换DOM；同一消息/MK保留用户展开状态，切换版本则重新默认折叠。 */
+/** 同一消息版本重绘时保留展开状态，切换版本则重新默认折叠。 */
 function bindReportVisibility(details: HTMLDetailsElement, stage: AgentReportStage, messageId: number): void {
   const message = SillyTavern.chat[messageId];
   if (!message) return;
@@ -22,9 +23,7 @@ function bindReportVisibility(details: HTMLDetailsElement, stage: AgentReportSta
   }
   details.open = visibility.stages.get(stage) ?? details.open;
   const stages = visibility.stages;
-  /** 记录真实toggle结果，避免宿主复制或重建DOM时把用户展开意图丢掉。 */
-  const rememberToggle = () => stages.set(stage, details.open);
-  details.addEventListener('toggle', rememberToggle);
+  saveDetailsVisibility.set(details, () => stages.set(stage, details.open));
 }
 
 /** 三阶段必须共用显示状态绑定，避免只有规划报告能在宿主重绘后保持展开。 */
@@ -45,12 +44,14 @@ export function createReportDetails(
 }
 
 /** 必须卸载脱离页面的 Vue 实例，否则旧报告仍会订阅后续请求。 */
-export function releaseReportApps(all = false): void {
+export function releaseReportApps(container?: HTMLElement | true): void {
   for (const [root, app] of reportApps) {
-    if (all || !root.isConnected) {
-      app.unmount();
-      reportApps.delete(root);
-    }
+    if (container !== true && (container ? !container.contains(root) : root.isConnected)) continue;
+    // 宿主可能在异步 toggle 通知之前重绘，卸载时直接读取旧组件的实际展开状态。
+    const details = root.parentElement;
+    if (details) saveDetailsVisibility.get(details)?.();
+    app.unmount();
+    reportApps.delete(root);
   }
 }
 
@@ -68,32 +69,15 @@ export function mountReportViewer(
     agentExecutionRecords.rememberReport(currentAgentRecordChat(), floorKey, stage, report);
   const root = document.createElement('div');
   const props = { stage, messageId, floorKey };
-  // Helper 会复制 HTML；DOM 只保存重新挂载的身份，不复制报告。
-  // 完整提示词不在 props 中，仍仅通过请求 ID 从页面记录仓库读取。
-  root.dataset.eraReportView = encodeURIComponent(JSON.stringify(props));
+  // 完整提示词仍仅通过请求 ID 从页面记录仓库读取。
   const app = createApp(AgentReportViewer, props);
   app.mount(root);
   reportApps.set(root, app);
   return root;
 }
 
-/** 宿主复制 HTML 不会复制 Vue listener，必须为新容器恢复自己的组件，不碰作者 iframe。 */
-export function hydrateReportViewers(message: HTMLElement): void {
-  releaseReportApps();
-  for (const root of message.querySelectorAll<HTMLElement>('[data-era-report-view]')) {
-    if (reportApps.has(root)) continue;
-    const props = JSON.parse(decodeURIComponent(root.dataset.eraReportView!));
-    const details = root.closest('details');
-    if (details) bindReportVisibility(details, props.stage, props.messageId);
-    const app = createApp(AgentReportViewer, props);
-    app.mount(root);
-    reportApps.set(root, app);
-  }
-}
-
 /** 正文已有聊天事实来源；没有页面请求 ID 的旧记录只能读，不能冒充实际提示词。 */
-export function createStoryViewer(document: Document, messageId: number, fallbackStory: string): HTMLElement | null {
-  if (!SillyTavern.chat[messageId]?.extra?.era_agent) return null;
+export function createStoryViewer(document: Document, messageId: number, fallbackStory: string): HTMLElement {
   const session = readCurrentAgentSession();
   const current = session?.messageId === messageId ? session : null;
   const request =
@@ -114,9 +98,7 @@ export function createStoryViewer(document: Document, messageId: number, fallbac
 }
 
 /** 精简消息没有 era_update，因此从实际指令提供查看入口，避免重进后变量页消失。 */
-export function createSettlementViewer(document: Document, messageId: number): HTMLElement | null {
-  const message = SillyTavern.chat[messageId];
-  if (!message?.extra?.era_agent || /<era_update>/iu.test(activeMessageText(message) ?? '')) return null;
+export function createSettlementViewer(document: Document, messageId: number): HTMLElement {
   const details = createReportDetails(document, 'settlement', messageId, 'ERA 变量解析报告');
   details.dataset.eraSettlementViewer = 'true';
   details.append(mountReportViewer(document, '', 'settlement', messageId));

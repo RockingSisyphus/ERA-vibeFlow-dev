@@ -13,7 +13,7 @@ export const contract_13_1 = defineDataSchema({
   "representation": "json",
   "display_name": "ERA 消息历史标识提交结果",
   "description": "记录 no-op、committed、普通失败或 fatal，以及消息与变量两部分是否已经确认写入。",
-  "schema": {"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","required":["schemaVersion","step","status","mk","messageChanged","variablesChanged","failure"],"properties":{"schemaVersion":{"const":1},"step":{"type":"object"},"status":{"type":"string","enum":["committed","no-op","failed","fatal"]},"mk":{"type":["string","null"]},"messageChanged":{"type":"boolean"},"variablesChanged":{"type":"boolean"},"failure":{"type":["object","null"],"properties":{"code":{"type":"string","minLength":1},"message":{"type":"string","minLength":1},"category":{"type":"string","enum":["input","domain","tavern","cancelled"]},"retryable":{"const":false}},"required":["code","message","category","retryable"]}},"additionalProperties":false}
+  "schema": {"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","required":["schemaVersion","step","status","mk","messageChanged","variablesChanged","failure"],"properties":{"schemaVersion":{"const":1},"step":{"type":"object"},"status":{"type":"string","enum":["committed","deferred","no-op","failed","fatal"]},"mk":{"type":["string","null"]},"messageChanged":{"type":"boolean"},"variablesChanged":{"type":"boolean"},"failure":{"type":["object","null"],"properties":{"code":{"type":"string","minLength":1},"message":{"type":"string","minLength":1},"category":{"type":"string","enum":["input","domain","tavern","cancelled"]},"retryable":{"const":false}},"required":["code","message","category","retryable"]}},"additionalProperties":false}
 });
 
 export const contract_13_2 = defineDataSchema({

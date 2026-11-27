@@ -1,17 +1,6 @@
 import {defineNode} from "@vibeflow/plugin";
 
-export const era_tavern_owned_hold_resources = defineNode({
-  "display_name": "管理页面资源直到全部实际清理结束",
-  "description": "持有本实例的监听、界面释放和实际异步操作，资源可用时通知其他分支。停止、页面卸载或故障时关闭入口、解除监听并等待尚在进行的操作及清理；全部完成后结束本资源分支。",
-  "flow_kind": "data_store",
-  "rulesets": ["vibeflow.data_store"],
-  "contract": {"requires":[{"type":"era.tavern.call.frame","cardinality":"exactly_one","display_name":"管理页面资源直到全部实际清理结束的请求和已有进度"}],"provides":[{"key":"owned_hold_resources_frame","type":"era.tavern.task.finished","display_name":"当前职责已真实完成或退出的确认"}],"params_schema":{"outputKeys":{"type":"object"}},"params_defaults":{"outputKeys":{"frame":"owned_hold_resources_frame"}},"input_semantics":{"era.tavern.call.frame":["保留“管理页面资源直到全部实际清理结束”对应的实例、请求及已经形成的进度，供本步骤处理并延续同一次请求。"]},"output_semantics":{"owned_hold_resources_frame":["记录当前职责一次工作或整个分支已经实际结束，供循环继续或汇合确认。"]}},
-  "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"suspend","source":{"kind":"file","ref":"nodes/runtime/owner.ts","export":"HoldResources"}}],
-  "base_libs": ["era.tavern.browser","era.tavern.frames","era.tavern.resources"],
-  "id": "era.tavern.owned.hold_resources",
-  "node_type": "vibeflow.node"
-});
-
+export const era_tavern_owned_hold_resources=defineNode({"display_name": "管理页面资源直到全部实际清理结束", "description": "持有本实例的监听、界面释放和实际异步操作，资源可用时通知其他分支。停止、页面卸载或故障时关闭入口、解除监听并等待尚在进行的操作及清理；全部完成后结束本资源分支。", "flow_kind": "data_store", "rulesets": ["vibeflow.data_store"], "contract": {"requires": [{"type":"era.workflow.host_resources","cardinality":"exactly_one","display_name":"所属 ERA 实例的本地资源"}, {"type": "era.tavern.call.frame", "cardinality": "exactly_one", "display_name": "管理页面资源直到全部实际清理结束的请求和已有进度"}], "provides": [{"key": "owned_hold_resources_frame", "type": "era.tavern.task.finished", "display_name": "当前职责已真实完成或退出的确认"}], "params_schema": {"outputKeys": {"type": "object"}}, "params_defaults": {"outputKeys": {"frame": "owned_hold_resources_frame"}}, "input_semantics": {"era.workflow.host_resources":["由运行宿主在本地注入的当前 ERA 实例资源，跨流程消息不包含此对象"],"era.tavern.call.frame": ["保留“管理页面资源直到全部实际清理结束”对应的实例、请求及已经形成的进度，供本步骤处理并延续同一次请求。"]}, "output_semantics": {"owned_hold_resources_frame": ["记录当前职责一次工作或整个分支已经实际结束，供循环继续或汇合确认。"]}}, "implementations": [{"language": "typescript", "targets": ["browser", "node"], "completion": "suspend", "source": {"kind": "file", "ref": "nodes/runtime/owner.ts", "export": "HoldResources"}}], "base_libs": ["era.tavern.browser", "era.tavern.frames", "era.tavern.resources"], "id": "era.tavern.owned.hold_resources", "node_type": "vibeflow.node"});
 export const era_tavern_owned_wait_owner = defineNode({
   "display_name": "等待本实例页面资源准备就绪",
   "description": "等待资源管理分支完成运行资源登记，取消时结束等待。后续主服务只在同一实例资源可用后启动，避免尚未就绪就调用页面能力。",
@@ -60,14 +49,3 @@ export const era_tavern_owned_bind_script_session = defineNode({
   "node_type": "vibeflow.node"
 });
 
-export const era_tavern_owned_run_script_service = defineNode({
-  "display_name": "运行主服务并等待它真正结束",
-  "description": "启动本实例唯一的 ERA 主服务，连接实例与当前调用的取消。等待实际结束后发起本实例停止收尾，让其他职责分支也能退出。",
-  "flow_kind": "data_store",
-  "rulesets": ["vibeflow.data_store"],
-  "contract": {"requires":[{"type":"era.tavern.call.frame","cardinality":"exactly_one","display_name":"运行主服务并等待它真正结束的请求和已有进度"}],"provides":[{"key":"owned_run_script_service_frame","type":"era.tavern.task.finished","display_name":"当前职责已真实完成或退出的确认"}],"params_schema":{"outputKeys":{"type":"object"}},"params_defaults":{"outputKeys":{"frame":"owned_run_script_service_frame"}},"input_semantics":{"era.tavern.call.frame":["保留“运行主服务并等待它真正结束”对应的实例、请求及已经形成的进度，供本步骤处理并延续同一次请求。"]},"output_semantics":{"owned_run_script_service_frame":["记录当前职责一次工作或整个分支已经实际结束，供循环继续或汇合确认。"]}},
-  "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"suspend","source":{"kind":"file","ref":"nodes/runtime/owner.ts","export":"RunService"}}],
-  "base_libs": ["era.tavern.frames","era.tavern.resources"],
-  "id": "era.tavern.owned.run_script_service",
-  "node_type": "vibeflow.node"
-});

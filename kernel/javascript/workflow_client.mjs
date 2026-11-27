@@ -3,7 +3,7 @@ export class WorkflowCoordinationError extends Error {
   constructor(code, message) { super(message); this.code = code; }
 }
 
-function portable(value) {
+export function portable(value) {
   const visit = item => {
     if(typeof item === "number" && (!Number.isFinite(item) || Number.isInteger(item) && !Number.isSafeInteger(item)))
       throw new TypeError("message numbers must be finite and cross-language safe; encode large integers as strings");
@@ -16,6 +16,22 @@ function portable(value) {
   };
   visit(value);
   return JSON.parse(JSON.stringify(value));
+}
+
+export function errorRecord(error, ancestors = new Set()) {
+  const result = {code:error?.code || error?.name || 'Error', message:String(error)};
+  if (ancestors.has(error)) return {...result, recursive:true};
+  const next = new Set(ancestors); next.add(error);
+  if (error?.workflowCalls) result.workflow_calls = error.workflowCalls;
+  if (error?.cause) result.cause = errorRecord(error.cause, next);
+  if (Array.isArray(error?.errors)) result.errors = error.errors.map(item => errorRecord(item, next));
+  if (error?.cleanupErrors) result.cleanup_errors = error.cleanupErrors.map(item => errorRecord(item, next));
+  return result;
+}
+function mergeCleanupError(primary, cleanup) {
+  if (primary == null) return cleanup;
+  const record = typeof primary === 'object' && !Array.isArray(primary) ? primary : {cause:primary};
+  return {...record, cleanup_errors:[...(record.cleanup_errors || []), cleanup]};
 }
 
 export class WorkflowClient {
@@ -57,10 +73,10 @@ export class WorkflowClient {
     while(true) {
       signal?.throwIfAborted();
       if(this.closed)throw new WorkflowCoordinationError("VF_INSTANCE_ENDED",this.id);
-      if(Date.now()>=deadline)throw new WorkflowCoordinationError("VF_WAIT_TIMEOUT",id);
-      const value={id};if(port!==undefined)value.port=port;
+      const value={id,poll:Math.max(0,Math.min(.25,(deadline-Date.now())/1000))};if(port!==undefined)value.port=port;
       const result=await this.request(operation,value,signal);
       if(!result.pending)return result;
+      if(Date.now()>=deadline)throw new WorkflowCoordinationError("VF_WAIT_TIMEOUT",id);
     }
   }
   async call(workflow, {launch,inputs={},timeout,signal}={}) {
@@ -71,7 +87,7 @@ export class WorkflowClient {
   wait(id, options={}) {return this.poll("wait",id,options);}
   receive(port="default", options={}) {return this.poll("receive",this.id,{...options,port});}
   async kill(id, options={}) {await this.request("kill",{id,...(options.workflow?{workflow:{...options.workflow,root:options.workflow.root||this.workflow?.root||""}}:{})},options.signal);return this.wait(id,options);}
-  operations() {
+  session() {
     return {
       call:(request,context={})=>this.call(request.workflow,{...request,signal:context.signal}),
       wait:(request,context={})=>this.wait(request.id,{...request,signal:context.signal}),
@@ -88,11 +104,12 @@ export class WorkflowClient {
     if(this.closed)return;
     try {
       let deliveryError;
-      try {await this.flush();}catch(failure){deliveryError=failure;state="failed";error={code:failure.code||"VF_DELIVERY_FAILED",message:String(failure)};}
+      try {await this.flush();}catch(failure){deliveryError=failure;state="failed";
+        error=mergeCleanupError(error,{...errorRecord(failure),code:failure.code||"VF_DELIVERY_FAILED"});}
       let payload={id:this.id,state,outputs,error};
       try {payload=portable(payload);}
       catch(failure){deliveryError ||= failure;payload={id:this.id,state:"failed",outputs:null,
-        error:{code:"VF_RESULT_NOT_JSON",message:String(failure)}};}
+        error:mergeCleanupError(error,{code:"VF_RESULT_NOT_JSON",message:String(failure)})};}
       const result=await this.request("complete",payload);
       if(deliveryError)throw deliveryError;
       return result;

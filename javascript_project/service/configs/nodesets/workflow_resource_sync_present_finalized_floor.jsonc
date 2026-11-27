@@ -1,0 +1,146 @@
+{
+  "type_key": "era.communication.sync_present_finalized_floor",
+  "display_name": "保存确认后刷新消息显示",
+  "description": "消息和变量保存已经确认、且目标消息仍匹配时，请页面刷新相关显示；无需提交时沿用已有刷新要求。显示问题单独记录，让调用方区分保存结果与呈现结果。 展开后查看该段实际需要的原生酒馆调用、等待和结果接回；具体操作仍按原业务分支选择。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.commit.result",
+      "cardinality": "exactly_one",
+      "display_name": "消息和状态文件实际保存的结论"
+    },
+    {"type":"era.workflow.host_resources","cardinality":"exactly_one","display_name":"所属 ERA 实例的本地资源"}
+  ],
+  "provides": [
+    {
+      "key": "presented_sync_commit_result",
+      "type": "era.tavern.commit.result",
+      "display_name": "消息和状态文件实际保存的结论"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "input0",
+        "type": "era.tavern.commit.result",
+        "required": true,
+        "display_name": "消息和状态文件实际保存的结论"
+      },
+      {"key":"host_resources","type":"era.workflow.host_resources","required":true,"display_name":"所属 ERA 实例的本地资源"}
+    ],
+    "max_steps": 9,
+    "nodes": [
+      {
+        "id": "start",
+        "definition_id": "era.service.terminal",
+        "display_name": "开始本段酒馆操作",
+        "description": "本步骤用于“保存确认后刷新消息显示”：标明该段业务操作的范围；跨工作流调用在中间明确显示。"
+      },
+      {
+        "id": "prepare",
+        "display_name": "准备本段业务并寻找第一个酒馆操作",
+        "description": "本步骤用于“保存确认后刷新消息显示”：消息和变量保存已经确认、且目标消息仍匹配时，请页面刷新相关显示；无需提交时沿用已有刷新要求。显示问题单独记录，让调用方区分保存结果与呈现结果。 先做本地计算；无需酒馆操作时直接形成结果，避免虚构调用。",
+        "definition_id": "era.communication.sync_present_finalized_floor.prepare"
+      },
+      {
+        "id": "operation_loop",
+        "definition_id": "vibeflow.loop.while",
+        "display_name": "按业务顺序完成实际需要的酒馆操作",
+        "description": "本步骤用于“保存确认后刷新消息显示”：每次接回当前操作的实际结果后才准备下一项，保持原错误和取消处理；不预先并发所有可能操作。",
+        "requires": [
+          {
+            "type": "era.communication.sync_present_finalized_floor.state",
+            "cardinality": "exactly_one",
+            "display_name": "本业务段的本地计算和酒馆操作进度"
+          },
+          {"type":"era.workflow.host_resources","cardinality":"exactly_one","display_name":"所属 ERA 实例的本地资源"}
+        ],
+        "provides": [
+          {
+            "key": "ready",
+            "type": "era.communication.sync_present_finalized_floor.ready",
+            "display_name": "已完成全部酒馆操作的业务进度"
+          }
+        ],
+        "loop": {
+          "body": "era.communication.sync_present_finalized_floor.step",
+          "max_iterations": null,
+          "stop_when": {
+            "from": "done",
+            "equals": true
+          },
+          "carry": [
+            {
+              "from": "era.communication.sync_present_finalized_floor.state",
+              "as": "state",
+              "update": "next_state"
+            },
+            {"from":"era.workflow.host_resources","as":"host_resources","update":"retained_host_resources"}
+          ],
+          "outputs": [
+            {
+              "from": "next_state",
+              "as": "ready"
+            }
+          ]
+        }
+      },
+      {
+        "id": "skip",
+        "display_name": "本段无需调用酒馆，直接继续",
+        "description": "本步骤用于“保存确认后刷新消息显示”：当前业务分支没有实际酒馆操作，保留本地处理结果，不发出空调用。",
+        "definition_id": "era.communication.sync_present_finalized_floor.skip"
+      },
+      {
+        "id": "finish",
+        "display_name": "交出本段原合同的结果",
+        "description": "本步骤用于“保存确认后刷新消息显示”：业务所需操作均已完成，按原合同交出数据、诊断及结果；资源令牌和通信信封不成为公共业务输出。",
+        "definition_id": "era.communication.sync_present_finalized_floor.finish"
+      },
+      {
+        "id": "end",
+        "definition_id": "era.service.terminal",
+        "display_name": "完成本段酒馆操作",
+        "description": "本步骤用于“保存确认后刷新消息显示”：标明该段业务操作的范围；跨工作流调用在中间明确显示。"
+      },
+      {"id":"retain_host_resources","definition_id":"era.service.retain_host_resources","display_name":"保留所属实例的资源","description":"先取出本次运行或本轮迭代收到的本地资源，供下面需要组织工作流通信的步骤使用。资源不写入业务消息。"}
+    ],
+    "edges": [
+      {"from":"start","to":"prepare","schedule":true},
+      {
+        "from": "prepare",
+        "to": "operation_loop",
+        "when": "needs_operation == 'call'"
+      },
+      {
+        "from": "prepare",
+        "to": "skip",
+        "when": "needs_operation == 'done'"
+      },
+      [
+        "operation_loop",
+        "finish"
+      ],
+      [
+        "skip",
+        "finish"
+      ],
+      [
+        "finish",
+        "end"
+      ],
+      ["start","retain_host_resources"],
+      {"from":"retain_host_resources","to":"prepare","schedule":true},
+      {"from":"retain_host_resources","to":"operation_loop","schedule":false}
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.commit.result",
+        "cardinality": "exactly_one",
+        "display_name": "消息和状态文件实际保存的结论",
+        "as": "presented_sync_commit_result"
+      }
+    ]
+  }
+}

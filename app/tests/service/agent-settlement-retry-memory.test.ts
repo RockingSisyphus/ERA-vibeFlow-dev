@@ -1,7 +1,6 @@
+import { businessWorkflowNode } from './business-workflow-node';
 import { expect, it, vi } from 'vitest';
-import { run } from '../../../javascript_project/service/nodes/agent/execute_generation_session';
 import { normalizeAgentConfiguration } from '../../../javascript_project/service/base_lib/agent/agent_generation_session';
-
 it('重新结算替换旧结算记录，保留已执行正文中的普通API记录与done', async () => {
   const story =
     'story<EraFCall name="body" status="done"/><era_tx s="a"><VariableInsert>{"body":1}</VariableInsert></era_tx>';
@@ -15,7 +14,8 @@ it('重新结算替换旧结算记录，保留已执行正文中的普通API记�
     transaction: oldSettlement,
   };
   const write = vi.fn();
-  const result = await run(
+  const result = await businessWorkflowNode(
+    'era.agent.execute_session_v2',
     {
       'era.agent.generation.request': {
         value: {

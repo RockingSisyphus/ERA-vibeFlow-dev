@@ -23,20 +23,21 @@ function isDryRunGeneration(event: TimedEventV1): boolean {
   );
 }
 
-/** 酒馆明确请求重新生成当前回复；普通生成、续写和静默生成不得触发回退。 */
-function isRegenerateGeneration(event: TimedEventV1): boolean {
+/** 酒馆重新生成回复或生成新候选时恢复上一楼；选择已有候选仍由同步事件处理。 */
+function isReplacingGeneration(event: TimedEventV1): boolean {
+  const type = readTransportArgument(event.args[0]);
   return (
     event.type === EVENT_GENERATION_STARTED &&
-    readTransportArgument(event.args[0]) === "regenerate" &&
+    (type === "regenerate" || type === "swipe") &&
     !isDryRunGeneration(event)
   );
 }
 
-/** swipe 组合与酒馆显式 regenerate 都要求在放行生成前恢复上一楼状态。 */
+/** 回退由实际生成意图决定；候选切换先前已结算时也不依赖事件仍在同一组合窗口。 */
 function needsPreviousMessageRollback(unit: WorkUnitV1): boolean {
   return (
     unit.combo === "swipe-and-regenerate" ||
-    isRegenerateGeneration(unit.primaryEvent)
+    isReplacingGeneration(unit.primaryEvent)
   );
 }
 

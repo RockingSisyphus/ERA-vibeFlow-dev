@@ -8,20 +8,20 @@ export const era_tavern_function_submit_allocate_request = defineNode({
   "contract": {"requires":[{"type":"era.tavern.frame.function_submit.check_call","cardinality":"exactly_one","display_name":"为作者提出的操作建立结果等待的请求和已有进度"}],"provides":[{"key":"era_tavern_function_submit_allocate_request_frame","type":"era.tavern.frame.function_submit.allocate_request","display_name":"为作者提出的操作建立结果等待的处理进度及结果"}],"params_schema":{"outputKeys":{"type":"object"}},"params_defaults":{"outputKeys":{"frame":"era_tavern_function_submit_allocate_request_frame"}},"input_semantics":{"era.tavern.frame.function_submit.check_call":["保留“为作者提出的操作建立结果等待”对应的实例、请求及已经形成的进度，供本步骤处理并延续同一次请求。"]},"output_semantics":{"era_tavern_function_submit_allocate_request_frame":["保留“为作者提出的操作建立结果等待”对应的实例、请求及已经形成的进度，交给后续处理或结果返回。"]}},
   "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/functions/channel.ts","export":"AllocateRequest"}}],
   "rulesets": ["vibeflow.data_store"],
-  "base_libs": ["era.tavern.frames","era.tavern.message_facts","era.tavern.resources"],
+  "base_libs": ["era.tavern.frames","era.tavern.message_facts","era.tavern.resources","era.tavern.sidecar_facts"],
   "id": "era.tavern.function_submit.allocate_request",
   "node_type": "vibeflow.node"
 });
 
 export const era_tavern_function_submit_check_call = defineNode({
   "display_name": "确认作者函数仍可提交请求",
-  "description": "根据函数参数或调用身份找到当前有效的作者运行资料，必要时检查目标消息仍一致。区分读取函数上下文与提交操作，过期调用返回原因，避免旧函数继续修改当前聊天。",
+  "description": "根据函数参数或调用身份找到作者运行资料，按调用来源检查目标消息。读取上下文返回本次接口。提交操作还需确认作者函数仍在运行，结束后的新操作立即被拒绝。",
   "version": "0.1.0",
   "flow_kind": "data_store",
   "contract": {"requires":[{"type":"era.tavern.call.frame","cardinality":"exactly_one","display_name":"确认作者函数仍可提交请求的请求和已有进度"}],"provides":[{"key":"era_tavern_function_submit_check_call_frame","type":"era.tavern.frame.function_submit.check_call","display_name":"确认作者函数仍可提交请求的处理进度及结果"},{"key":"era_tavern_function_submit_check_call_route","type":"era.tavern.route","display_name":"按当前事实选出的处理方向"}],"params_schema":{"outputKeys":{"type":"object"}},"params_defaults":{"outputKeys":{"frame":"era_tavern_function_submit_check_call_frame","route":"era_tavern_function_submit_check_call_route"}},"input_semantics":{"era.tavern.call.frame":["保留“确认作者函数仍可提交请求”对应的实例、请求及已经形成的进度，供本步骤处理并延续同一次请求。"]},"output_semantics":{"era_tavern_function_submit_check_call_frame":["保留“确认作者函数仍可提交请求”对应的实例、请求及已经形成的进度，交给后续处理或结果返回。"],"era_tavern_function_submit_check_call_route":["这是根据本次实际状态选择的处理方向，后续只执行对应的一条路径。"]}},
   "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/functions/channel.ts","export":"CheckSubmit"}}],
   "rulesets": ["vibeflow.data_store"],
-  "base_libs": ["era.tavern.frames","era.tavern.message_facts","era.tavern.resources"],
+  "base_libs": ["era.tavern.frames","era.tavern.message_facts","era.tavern.resources","era.tavern.sidecar_facts"],
   "id": "era.tavern.function_submit.check_call",
   "node_type": "vibeflow.node"
 });
@@ -34,7 +34,7 @@ export const era_tavern_function_submit_enqueue_request = defineNode({
   "contract": {"requires":[{"type":"era.tavern.frame.function_submit.allocate_request","cardinality":"exactly_one","display_name":"把作者操作交给当前消息流程的请求和已有进度"}],"provides":[{"key":"era_tavern_function_submit_enqueue_request_frame","type":"era.tavern.frame.function_submit.enqueue_request","display_name":"把作者操作交给当前消息流程的处理进度及结果"}],"params_schema":{"outputKeys":{"type":"object"}},"params_defaults":{"outputKeys":{"frame":"era_tavern_function_submit_enqueue_request_frame"}},"input_semantics":{"era.tavern.frame.function_submit.allocate_request":["保留“把作者操作交给当前消息流程”对应的实例、请求及已经形成的进度，供本步骤处理并延续同一次请求。"]},"output_semantics":{"era_tavern_function_submit_enqueue_request_frame":["保留“把作者操作交给当前消息流程”对应的实例、请求及已经形成的进度，交给后续处理或结果返回。"]}},
   "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/functions/channel.ts","export":"EnqueueRequest"}}],
   "rulesets": ["vibeflow.data_store"],
-  "base_libs": ["era.tavern.frames","era.tavern.message_facts","era.tavern.resources"],
+  "base_libs": ["era.tavern.frames","era.tavern.message_facts","era.tavern.resources","era.tavern.sidecar_facts"],
   "id": "era.tavern.function_submit.enqueue_request",
   "node_type": "vibeflow.node"
 });
@@ -47,7 +47,7 @@ export const era_tavern_function_submit_return_request = defineNode({
   "contract": {"requires":[{"type":"era.tavern.frame.function_submit.check_call","cardinality":"all","display_name":"交回作者接口或本次操作的等待结果的请求和已有进度"},{"type":"era.tavern.frame.function_submit.enqueue_request","cardinality":"all","display_name":"交回作者接口或本次操作的等待结果的请求和已有进度"}],"provides":[{"key":"era_tavern_function_submit_return_request_frame","type":"era.tavern.frame.function_submit.return_request","display_name":"交回作者接口或本次操作的等待结果的处理进度及结果"}],"params_schema":{"outputKeys":{"type":"object"}},"params_defaults":{"outputKeys":{"frame":"era_tavern_function_submit_return_request_frame"}},"input_semantics":{"era.tavern.frame.function_submit.check_call":["保留“交回作者接口或本次操作的等待结果”对应的实例、请求及已经形成的进度，供本步骤处理并延续同一次请求。"],"era.tavern.frame.function_submit.enqueue_request":["保留“交回作者接口或本次操作的等待结果”对应的实例、请求及已经形成的进度，供本步骤处理并延续同一次请求。"]},"output_semantics":{"era_tavern_function_submit_return_request_frame":["保留“交回作者接口或本次操作的等待结果”对应的实例、请求及已经形成的进度，交给后续处理或结果返回。"]}},
   "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/functions/channel.ts","export":"ReturnSubmit"}}],
   "rulesets": ["vibeflow.data_store"],
-  "base_libs": ["era.tavern.frames","era.tavern.message_facts","era.tavern.resources"],
+  "base_libs": ["era.tavern.frames","era.tavern.message_facts","era.tavern.resources","era.tavern.sidecar_facts"],
   "id": "era.tavern.function_submit.return_request",
   "node_type": "vibeflow.node"
 });
@@ -61,7 +61,7 @@ export const era_tavern_functions_acknowledge_find_request = defineNode({
   "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/functions/channel.ts","export":"FindRequest"}}],
   "rulesets": ["vibeflow.data_store"],
   "presentation": {"shape":"rect"},
-  "base_libs": ["era.tavern.frames","era.tavern.message_facts","era.tavern.resources"],
+  "base_libs": ["era.tavern.frames","era.tavern.message_facts","era.tavern.resources","era.tavern.sidecar_facts"],
   "id": "era.tavern.functions_acknowledge.find_request",
   "node_type": "vibeflow.node"
 });
@@ -75,7 +75,7 @@ export const era_tavern_functions_acknowledge_resolve_request = defineNode({
   "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/functions/channel.ts","export":"ResolveRequest"}}],
   "rulesets": ["vibeflow.data_store"],
   "presentation": {"shape":"rect"},
-  "base_libs": ["era.tavern.frames","era.tavern.message_facts","era.tavern.resources"],
+  "base_libs": ["era.tavern.frames","era.tavern.message_facts","era.tavern.resources","era.tavern.sidecar_facts"],
   "id": "era.tavern.functions_acknowledge.resolve_request",
   "node_type": "vibeflow.node"
 });
@@ -88,7 +88,7 @@ export const era_tavern_functions_acknowledge_return_ack = defineNode({
   "contract": {"requires":[{"type":"era.tavern.frame.functions_acknowledge.resolve_request","cardinality":"exactly_one","display_name":"确认作者操作已回告完成的请求和已有进度"}],"provides":[{"key":"era_tavern_functions_acknowledge_return_ack_frame","type":"era.tavern.call.frame","display_name":"确认作者操作已回告完成的处理进度及结果"}],"params_schema":{"outputKeys":{"type":"object"}},"params_defaults":{"outputKeys":{"frame":"era_tavern_functions_acknowledge_return_ack_frame"}},"input_semantics":{"era.tavern.frame.functions_acknowledge.resolve_request":["保留“确认作者操作已回告完成”对应的实例、请求及已经形成的进度，供本步骤处理并延续同一次请求。"]},"output_semantics":{"era_tavern_functions_acknowledge_return_ack_frame":["保留“确认作者操作已回告完成”对应的实例、请求及已经形成的进度，交给后续处理或结果返回。"]}},
   "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/functions/channel.ts","export":"ReturnAck"}}],
   "rulesets": ["vibeflow.data_store"],
-  "base_libs": ["era.tavern.frames","era.tavern.message_facts","era.tavern.resources"],
+  "base_libs": ["era.tavern.frames","era.tavern.message_facts","era.tavern.resources","era.tavern.sidecar_facts"],
   "id": "era.tavern.functions_acknowledge.return_ack",
   "node_type": "vibeflow.node"
 });
@@ -102,7 +102,7 @@ export const era_tavern_functions_begin_bind_context = defineNode({
   "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/functions/channel.ts","export":"BindContext"}}],
   "rulesets": ["vibeflow.data_store"],
   "presentation": {"shape":"rect"},
-  "base_libs": ["era.tavern.frames","era.tavern.message_facts","era.tavern.resources"],
+  "base_libs": ["era.tavern.frames","era.tavern.message_facts","era.tavern.resources","era.tavern.sidecar_facts"],
   "id": "era.tavern.functions_begin.bind_context",
   "node_type": "vibeflow.node"
 });
@@ -115,7 +115,7 @@ export const era_tavern_functions_begin_check_call = defineNode({
   "contract": {"requires":[{"type":"era.tavern.call.frame","cardinality":"exactly_one","display_name":"检查作者函数调用身份和目标消息的请求和已有进度"}],"provides":[{"key":"era_tavern_functions_begin_check_call_frame","type":"era.tavern.frame.functions_begin.check_call","display_name":"检查作者函数调用身份和目标消息的处理进度及结果"}],"params_schema":{"outputKeys":{"type":"object"}},"params_defaults":{"outputKeys":{"frame":"era_tavern_functions_begin_check_call_frame"}},"input_semantics":{"era.tavern.call.frame":["保留“检查作者函数调用身份和目标消息”对应的实例、请求及已经形成的进度，供本步骤处理并延续同一次请求。"]},"output_semantics":{"era_tavern_functions_begin_check_call_frame":["保留“检查作者函数调用身份和目标消息”对应的实例、请求及已经形成的进度，交给后续处理或结果返回。"]}},
   "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/functions/channel.ts","export":"CheckBegin"}}],
   "rulesets": ["vibeflow.data_store"],
-  "base_libs": ["era.tavern.frames","era.tavern.message_facts","era.tavern.resources"],
+  "base_libs": ["era.tavern.frames","era.tavern.message_facts","era.tavern.resources","era.tavern.sidecar_facts"],
   "id": "era.tavern.functions_begin.check_call",
   "node_type": "vibeflow.node"
 });
@@ -128,7 +128,7 @@ export const era_tavern_functions_begin_return_call = defineNode({
   "contract": {"requires":[{"type":"era.tavern.frame.functions_begin.schedule_tool","cardinality":"exactly_one","display_name":"确认作者函数已安排执行的请求和已有进度"}],"provides":[{"key":"era_tavern_functions_begin_return_call_frame","type":"era.tavern.call.frame","display_name":"确认作者函数已安排执行的处理进度及结果"}],"params_schema":{"outputKeys":{"type":"object"}},"params_defaults":{"outputKeys":{"frame":"era_tavern_functions_begin_return_call_frame"}},"input_semantics":{"era.tavern.frame.functions_begin.schedule_tool":["保留“确认作者函数已安排执行”对应的实例、请求及已经形成的进度，供本步骤处理并延续同一次请求。"]},"output_semantics":{"era_tavern_functions_begin_return_call_frame":["保留“确认作者函数已安排执行”对应的实例、请求及已经形成的进度，交给后续处理或结果返回。"]}},
   "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/functions/channel.ts","export":"ReturnBegin"}}],
   "rulesets": ["vibeflow.data_store"],
-  "base_libs": ["era.tavern.frames","era.tavern.message_facts","era.tavern.resources"],
+  "base_libs": ["era.tavern.frames","era.tavern.message_facts","era.tavern.resources","era.tavern.sidecar_facts"],
   "id": "era.tavern.functions_begin.return_call",
   "node_type": "vibeflow.node"
 });
@@ -142,7 +142,7 @@ export const era_tavern_functions_begin_schedule_tool = defineNode({
   "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/functions/channel.ts","export":"ScheduleTool"}}],
   "rulesets": ["vibeflow.data_store"],
   "presentation": {"shape":"rect"},
-  "base_libs": ["era.tavern.frames","era.tavern.message_facts","era.tavern.resources"],
+  "base_libs": ["era.tavern.frames","era.tavern.message_facts","era.tavern.resources","era.tavern.sidecar_facts"],
   "id": "era.tavern.functions_begin.schedule_tool",
   "node_type": "vibeflow.node"
 });
@@ -155,7 +155,7 @@ export const era_tavern_functions_next_check_active = defineNode({
   "contract": {"requires":[{"type":"era.tavern.call.frame","cardinality":"exactly_one","display_name":"确认作者调用仍属于当前消息的请求和已有进度"}],"provides":[{"key":"era_tavern_functions_next_check_active_frame","type":"era.tavern.call.frame","display_name":"确认作者调用仍属于当前消息的处理进度及结果"}],"params_schema":{"outputKeys":{"type":"object"}},"params_defaults":{"outputKeys":{"frame":"era_tavern_functions_next_check_active_frame"}},"input_semantics":{"era.tavern.call.frame":["保留“确认作者调用仍属于当前消息”对应的实例、请求及已经形成的进度，供本步骤处理并延续同一次请求。"]},"output_semantics":{"era_tavern_functions_next_check_active_frame":["保留“确认作者调用仍属于当前消息”对应的实例、请求及已经形成的进度，交给后续处理或结果返回。"]}},
   "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/functions/channel.ts","export":"CheckNext"}}],
   "rulesets": ["vibeflow.data_store"],
-  "base_libs": ["era.tavern.frames","era.tavern.message_facts","era.tavern.resources"],
+  "base_libs": ["era.tavern.frames","era.tavern.message_facts","era.tavern.resources","era.tavern.sidecar_facts"],
   "id": "era.tavern.functions_next.check_active",
   "node_type": "vibeflow.node"
 });
@@ -168,7 +168,7 @@ export const era_tavern_functions_next_finish_choose_ready = defineNode({
   "contract": {"requires":[{"type":"era.tavern.call.frame","cardinality":"exactly_one","display_name":"判断作者结果已取得还是继续等待的请求和已有进度"}],"provides":[{"key":"era_tavern_functions_next_finish_choose_ready_frame","type":"era.tavern.call.frame.next_state","display_name":"判断作者结果已取得还是继续等待的处理进度及结果"},{"key":"era_tavern_functions_next_finish_choose_ready_route","type":"era.tavern.route","display_name":"按当前事实选出的处理方向"}],"params_schema":{"outputKeys":{"type":"object"}},"params_defaults":{"outputKeys":{"frame":"era_tavern_functions_next_finish_choose_ready_frame","route":"era_tavern_functions_next_finish_choose_ready_route"}},"input_semantics":{"era.tavern.call.frame":["保留“判断作者结果已取得还是继续等待”对应的实例、请求及已经形成的进度，供本步骤处理并延续同一次请求。"]},"output_semantics":{"era_tavern_functions_next_finish_choose_ready_frame":["保留“判断作者结果已取得还是继续等待”对应的实例、请求及已经形成的进度，交给后续处理或结果返回。"],"era_tavern_functions_next_finish_choose_ready_route":["这是根据本次实际状态选择的处理方向，后续只执行对应的一条路径。"]}},
   "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/functions/channel.ts","export":"ChooseReady"}}],
   "rulesets": ["vibeflow.data_store"],
-  "base_libs": ["era.tavern.frames","era.tavern.message_facts","era.tavern.resources"],
+  "base_libs": ["era.tavern.frames","era.tavern.message_facts","era.tavern.resources","era.tavern.sidecar_facts"],
   "id": "era.tavern.functions_next_finish.choose_ready",
   "node_type": "vibeflow.node"
 });
@@ -181,7 +181,7 @@ export const era_tavern_functions_next_wait_request_item_await_wake = defineNode
   "contract": {"requires":[{"type":"era.tavern.frame.functions_next_wait_request_item.chosen","cardinality":"exactly_one","display_name":"登记等待作者下一步的唤醒的请求和已有进度"}],"provides":[{"key":"era_tavern_functions_next_wait_request_item_await_wake_frame","type":"era.tavern.frame.functions_next_wait_request_item.result","display_name":"登记等待作者下一步的唤醒的处理进度及结果"},{"key":"era_tavern_functions_next_wait_request_item_await_wake_done","type":"era.tavern.done.functions_next.wait_request","display_name":"本轮遍历或职责处理是否已经结束"}],"params_schema":{"outputKeys":{"type":"object"}},"params_defaults":{"outputKeys":{"frame":"era_tavern_functions_next_wait_request_item_await_wake_frame","done":"era_tavern_functions_next_wait_request_item_await_wake_done"}},"input_semantics":{"era.tavern.frame.functions_next_wait_request_item.chosen":["保留“登记等待作者下一步的唤醒”对应的实例、请求及已经形成的进度，供本步骤处理并延续同一次请求。"]},"output_semantics":{"era_tavern_functions_next_wait_request_item_await_wake_frame":["保留“登记等待作者下一步的唤醒”对应的实例、请求及已经形成的进度，交给后续处理或结果返回。"],"era_tavern_functions_next_wait_request_item_await_wake_done":["表示当前清单或长期职责是否已达到结束条件，外层据此继续下一项或退出。"]}},
   "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/functions/channel.ts","export":"RegisterWake"}}],
   "rulesets": ["vibeflow.data_store"],
-  "base_libs": ["era.tavern.frames","era.tavern.message_facts","era.tavern.resources"],
+  "base_libs": ["era.tavern.frames","era.tavern.message_facts","era.tavern.resources","era.tavern.sidecar_facts"],
   "id": "era.tavern.functions_next_wait_request_item.await_wake",
   "node_type": "vibeflow.node"
 });
@@ -194,7 +194,7 @@ export const era_tavern_functions_next_wait_request_item_choose_next = defineNod
   "contract": {"requires":[{"type":"era.tavern.call.frame","cardinality":"exactly_one","display_name":"判断作者有新请求、已结束或仍需等待的请求和已有进度"}],"provides":[{"key":"era_tavern_functions_next_wait_request_item_choose_next_frame","type":"era.tavern.frame.functions_next_wait_request_item.chosen","display_name":"判断作者有新请求、已结束或仍需等待的处理进度及结果"},{"key":"era_tavern_functions_next_wait_request_item_choose_next_route","type":"era.tavern.route","display_name":"按当前事实选出的处理方向"}],"params_schema":{"outputKeys":{"type":"object"}},"params_defaults":{"outputKeys":{"frame":"era_tavern_functions_next_wait_request_item_choose_next_frame","route":"era_tavern_functions_next_wait_request_item_choose_next_route"}},"input_semantics":{"era.tavern.call.frame":["保留“判断作者有新请求、已结束或仍需等待”对应的实例、请求及已经形成的进度，供本步骤处理并延续同一次请求。"]},"output_semantics":{"era_tavern_functions_next_wait_request_item_choose_next_frame":["保留“判断作者有新请求、已结束或仍需等待”对应的实例、请求及已经形成的进度，交给后续处理或结果返回。"],"era_tavern_functions_next_wait_request_item_choose_next_route":["这是根据本次实际状态选择的处理方向，后续只执行对应的一条路径。"]}},
   "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/functions/channel.ts","export":"ChooseNext"}}],
   "rulesets": ["vibeflow.data_store"],
-  "base_libs": ["era.tavern.frames","era.tavern.message_facts","era.tavern.resources"],
+  "base_libs": ["era.tavern.frames","era.tavern.message_facts","era.tavern.resources","era.tavern.sidecar_facts"],
   "id": "era.tavern.functions_next_wait_request_item.choose_next",
   "node_type": "vibeflow.node"
 });
@@ -207,7 +207,7 @@ export const era_tavern_functions_next_wait_request_item_finish_call = defineNod
   "contract": {"requires":[{"type":"era.tavern.frame.functions_next_wait_request_item.chosen","cardinality":"exactly_one","display_name":"返回作者函数已结束的状态的请求和已有进度"}],"provides":[{"key":"era_tavern_functions_next_wait_request_item_finish_call_frame","type":"era.tavern.frame.functions_next_wait_request_item.result","display_name":"返回作者函数已结束的状态的处理进度及结果"},{"key":"era_tavern_functions_next_wait_request_item_finish_call_done","type":"era.tavern.done.functions_next.wait_request","display_name":"本轮遍历或职责处理是否已经结束"}],"params_schema":{"outputKeys":{"type":"object"}},"params_defaults":{"outputKeys":{"frame":"era_tavern_functions_next_wait_request_item_finish_call_frame","done":"era_tavern_functions_next_wait_request_item_finish_call_done"}},"input_semantics":{"era.tavern.frame.functions_next_wait_request_item.chosen":["保留“返回作者函数已结束的状态”对应的实例、请求及已经形成的进度，供本步骤处理并延续同一次请求。"]},"output_semantics":{"era_tavern_functions_next_wait_request_item_finish_call_frame":["保留“返回作者函数已结束的状态”对应的实例、请求及已经形成的进度，交给后续处理或结果返回。"],"era_tavern_functions_next_wait_request_item_finish_call_done":["表示当前清单或长期职责是否已达到结束条件，外层据此继续下一项或退出。"]}},
   "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/functions/channel.ts","export":"FinishCall"}}],
   "rulesets": ["vibeflow.data_store"],
-  "base_libs": ["era.tavern.frames","era.tavern.message_facts","era.tavern.resources"],
+  "base_libs": ["era.tavern.frames","era.tavern.message_facts","era.tavern.resources","era.tavern.sidecar_facts"],
   "id": "era.tavern.functions_next_wait_request_item.finish_call",
   "node_type": "vibeflow.node"
 });
@@ -220,7 +220,7 @@ export const era_tavern_functions_next_wait_request_item_take_request = defineNo
   "contract": {"requires":[{"type":"era.tavern.frame.functions_next_wait_request_item.chosen","cardinality":"exactly_one","display_name":"取出作者提交的下一项操作的请求和已有进度"}],"provides":[{"key":"era_tavern_functions_next_wait_request_item_take_request_frame","type":"era.tavern.frame.functions_next_wait_request_item.result","display_name":"取出作者提交的下一项操作的处理进度及结果"},{"key":"era_tavern_functions_next_wait_request_item_take_request_done","type":"era.tavern.done.functions_next.wait_request","display_name":"本轮遍历或职责处理是否已经结束"}],"params_schema":{"outputKeys":{"type":"object"}},"params_defaults":{"outputKeys":{"frame":"era_tavern_functions_next_wait_request_item_take_request_frame","done":"era_tavern_functions_next_wait_request_item_take_request_done"}},"input_semantics":{"era.tavern.frame.functions_next_wait_request_item.chosen":["保留“取出作者提交的下一项操作”对应的实例、请求及已经形成的进度，供本步骤处理并延续同一次请求。"]},"output_semantics":{"era_tavern_functions_next_wait_request_item_take_request_frame":["保留“取出作者提交的下一项操作”对应的实例、请求及已经形成的进度，交给后续处理或结果返回。"],"era_tavern_functions_next_wait_request_item_take_request_done":["表示当前清单或长期职责是否已达到结束条件，外层据此继续下一项或退出。"]}},
   "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/functions/channel.ts","export":"TakeRequest"}}],
   "rulesets": ["vibeflow.data_store"],
-  "base_libs": ["era.tavern.frames","era.tavern.message_facts","era.tavern.resources"],
+  "base_libs": ["era.tavern.frames","era.tavern.message_facts","era.tavern.resources","era.tavern.sidecar_facts"],
   "id": "era.tavern.functions_next_wait_request_item.take_request",
   "node_type": "vibeflow.node"
 });
@@ -233,7 +233,7 @@ export const era_tavern_functions_next_wait_request_item_wait_registered = defin
   "contract": {"requires":[{"type":"era.tavern.frame.functions_next.check_active","cardinality":"exactly_one","display_name":"等待作者提交操作或结束通知的请求和已有进度"}],"provides":[{"key":"era_tavern_functions_next_wait_request_item_wait_registered_frame","type":"era.tavern.call.frame","display_name":"等待作者提交操作或结束通知的处理进度及结果"}],"params_schema":{"outputKeys":{"type":"object"}},"params_defaults":{"outputKeys":{"frame":"era_tavern_functions_next_wait_request_item_wait_registered_frame"}},"input_semantics":{"era.tavern.frame.functions_next.check_active":["保留“等待作者提交操作或结束通知”对应的实例、请求及已经形成的进度，供本步骤处理并延续同一次请求。"]},"output_semantics":{"era_tavern_functions_next_wait_request_item_wait_registered_frame":["保留“等待作者提交操作或结束通知”对应的实例、请求及已经形成的进度，交给后续处理或结果返回。"]}},
   "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"suspend","source":{"kind":"file","ref":"nodes/functions/channel.ts","export":"WaitRegistered"}}],
   "rulesets": ["vibeflow.data_store"],
-  "base_libs": ["era.tavern.frames","era.tavern.message_facts","era.tavern.resources"],
+  "base_libs": ["era.tavern.frames","era.tavern.message_facts","era.tavern.resources","era.tavern.sidecar_facts"],
   "id": "era.tavern.functions_next_wait_request_item.wait_registered",
   "node_type": "vibeflow.node"
 });
@@ -247,7 +247,7 @@ export const era_tavern_functions_release_close_call = defineNode({
   "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/functions/channel.ts","export":"CloseCall"}}],
   "rulesets": ["vibeflow.data_store"],
   "presentation": {"shape":"rect"},
-  "base_libs": ["era.tavern.frames","era.tavern.message_facts","era.tavern.resources"],
+  "base_libs": ["era.tavern.frames","era.tavern.message_facts","era.tavern.resources","era.tavern.sidecar_facts"],
   "id": "era.tavern.functions_release.close_call",
   "node_type": "vibeflow.node"
 });
@@ -260,7 +260,7 @@ export const era_tavern_functions_release_return_release = defineNode({
   "contract": {"requires":[{"type":"era.tavern.frame.functions_release.unbind_context","cardinality":"exactly_one","display_name":"确认作者调用资料已释放的请求和已有进度"}],"provides":[{"key":"era_tavern_functions_release_return_release_frame","type":"era.tavern.call.frame","display_name":"确认作者调用资料已释放的处理进度及结果"}],"params_schema":{"outputKeys":{"type":"object"}},"params_defaults":{"outputKeys":{"frame":"era_tavern_functions_release_return_release_frame"}},"input_semantics":{"era.tavern.frame.functions_release.unbind_context":["保留“确认作者调用资料已释放”对应的实例、请求及已经形成的进度，供本步骤处理并延续同一次请求。"]},"output_semantics":{"era_tavern_functions_release_return_release_frame":["保留“确认作者调用资料已释放”对应的实例、请求及已经形成的进度，交给后续处理或结果返回。"]}},
   "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/functions/channel.ts","export":"ReturnRelease"}}],
   "rulesets": ["vibeflow.data_store"],
-  "base_libs": ["era.tavern.frames","era.tavern.message_facts","era.tavern.resources"],
+  "base_libs": ["era.tavern.frames","era.tavern.message_facts","era.tavern.resources","era.tavern.sidecar_facts"],
   "id": "era.tavern.functions_release.return_release",
   "node_type": "vibeflow.node"
 });
@@ -274,7 +274,7 @@ export const era_tavern_functions_release_unbind_context = defineNode({
   "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/functions/channel.ts","export":"UnbindContext"}}],
   "rulesets": ["vibeflow.data_store"],
   "presentation": {"shape":"rect"},
-  "base_libs": ["era.tavern.frames","era.tavern.message_facts","era.tavern.resources"],
+  "base_libs": ["era.tavern.frames","era.tavern.message_facts","era.tavern.resources","era.tavern.sidecar_facts"],
   "id": "era.tavern.functions_release.unbind_context",
   "node_type": "vibeflow.node"
 });
@@ -287,7 +287,7 @@ export const era_tavern_functions_release_reject_pending_item_choose_item = defi
   "contract": {"requires":[{"type":"era.tavern.frame.functions_release.close_call","cardinality":"exactly_one","display_name":"检查还有哪些作者请求需要结束的请求和已有进度"}],"provides":[{"key":"era_tavern_functions_release_reject_pending_item_choose_item_frame","type":"era.tavern.frame.functions_release.close_call","display_name":"检查还有哪些作者请求需要结束的处理进度及结果"},{"key":"era_tavern_functions_release_reject_pending_item_choose_item_route","type":"era.tavern.route","display_name":"按当前事实选出的处理方向"}],"params_schema":{"outputKeys":{"type":"object"}},"params_defaults":{"outputKeys":{"frame":"era_tavern_functions_release_reject_pending_item_choose_item_frame","route":"era_tavern_functions_release_reject_pending_item_choose_item_route"}},"input_semantics":{"era.tavern.frame.functions_release.close_call":["保留“检查还有哪些作者请求需要结束”对应的实例、请求及已经形成的进度，供本步骤处理并延续同一次请求。"]},"output_semantics":{"era_tavern_functions_release_reject_pending_item_choose_item_frame":["保留“检查还有哪些作者请求需要结束”对应的实例、请求及已经形成的进度，交给后续处理或结果返回。"],"era_tavern_functions_release_reject_pending_item_choose_item_route":["这是根据本次实际状态选择的处理方向，后续只执行对应的一条路径。"]}},
   "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/functions/channel.ts","export":"ChoosePending"}}],
   "rulesets": ["vibeflow.data_store"],
-  "base_libs": ["era.tavern.frames","era.tavern.message_facts","era.tavern.resources"],
+  "base_libs": ["era.tavern.frames","era.tavern.message_facts","era.tavern.resources","era.tavern.sidecar_facts"],
   "id": "era.tavern.functions_release_reject_pending_item.choose_item",
   "node_type": "vibeflow.node"
 });
@@ -300,7 +300,7 @@ export const era_tavern_functions_release_reject_pending_item_empty = defineNode
   "contract": {"requires":[{"type":"era.tavern.frame.functions_release.close_call","cardinality":"exactly_one","display_name":"确认没有剩余作者请求需要结束的请求和已有进度"}],"provides":[{"key":"era_tavern_functions_release_reject_pending_item_empty_frame","type":"era.tavern.frame.functions_release.close_call","display_name":"确认没有剩余作者请求需要结束的处理进度及结果"},{"key":"era_tavern_functions_release_reject_pending_item_empty_done","type":"era.tavern.done.functions_release.reject_pending","display_name":"本轮遍历或职责处理是否已经结束"}],"params_schema":{"outputKeys":{"type":"object"}},"params_defaults":{"outputKeys":{"frame":"era_tavern_functions_release_reject_pending_item_empty_frame","done":"era_tavern_functions_release_reject_pending_item_empty_done"}},"input_semantics":{"era.tavern.frame.functions_release.close_call":["保留“确认没有剩余作者请求需要结束”对应的实例、请求及已经形成的进度，供本步骤处理并延续同一次请求。"]},"output_semantics":{"era_tavern_functions_release_reject_pending_item_empty_frame":["保留“确认没有剩余作者请求需要结束”对应的实例、请求及已经形成的进度，交给后续处理或结果返回。"],"era_tavern_functions_release_reject_pending_item_empty_done":["表示当前清单或长期职责是否已达到结束条件，外层据此继续下一项或退出。"]}},
   "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/functions/channel.ts","export":"EmptyPending"}}],
   "rulesets": ["vibeflow.data_store"],
-  "base_libs": ["era.tavern.frames","era.tavern.message_facts","era.tavern.resources"],
+  "base_libs": ["era.tavern.frames","era.tavern.message_facts","era.tavern.resources","era.tavern.sidecar_facts"],
   "id": "era.tavern.functions_release_reject_pending_item.empty",
   "node_type": "vibeflow.node"
 });
@@ -314,7 +314,7 @@ export const era_tavern_functions_release_reject_pending_item_one_item = defineN
   "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/functions/channel.ts","export":"RejectOne"}}],
   "rulesets": ["vibeflow.data_store"],
   "presentation": {"shape":"rect"},
-  "base_libs": ["era.tavern.frames","era.tavern.message_facts","era.tavern.resources"],
+  "base_libs": ["era.tavern.frames","era.tavern.message_facts","era.tavern.resources","era.tavern.sidecar_facts"],
   "id": "era.tavern.functions_release_reject_pending_item.one_item",
   "node_type": "vibeflow.node"
 });
@@ -327,7 +327,7 @@ export const era_tavern_functions_next_start_wait = defineNode({
   "contract": {"requires":[{"type":"era.tavern.frame.functions_next_wait_request_item.final","cardinality":"exactly_one","display_name":"发起对作者下一请求或结束的等待的请求和已有进度"}],"provides":[{"key":"era_tavern_functions_next_start_wait_frame","type":"era.tavern.frame.functions_next.start_wait","display_name":"发起对作者下一请求或结束的等待的处理进度及结果"}],"params_schema":{"outputKeys":{"type":"object"}},"params_defaults":{"outputKeys":{"frame":"era_tavern_functions_next_start_wait_frame"}},"input_semantics":{"era.tavern.frame.functions_next_wait_request_item.final":["保留“发起对作者下一请求或结束的等待”对应的实例、请求及已经形成的进度，供本步骤处理并延续同一次请求。"]},"output_semantics":{"era_tavern_functions_next_start_wait_frame":["保留“发起对作者下一请求或结束的等待”对应的实例、请求及已经形成的进度，交给后续处理或结果返回。"]}},
   "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/functions/channel.ts","export":"StartNext"}}],
   "rulesets": ["vibeflow.data_store"],
-  "base_libs": ["era.tavern.frames","era.tavern.message_facts","era.tavern.resources"],
+  "base_libs": ["era.tavern.frames","era.tavern.message_facts","era.tavern.resources","era.tavern.sidecar_facts"],
   "id": "era.tavern.functions_next.start_wait",
   "node_type": "vibeflow.node"
 });

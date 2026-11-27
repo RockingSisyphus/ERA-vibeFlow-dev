@@ -8,7 +8,6 @@ export const era_expression_reject_recursive_functions = defineNode({
   "contract": {"requires":[{"type":"era.expression.function_library.call_graph","cardinality":"exactly_one","display_name":"待检查循环的函数调用关系"}],"provides":[{"key":"acyclic_function_graph","type":"era.expression.function_library.acyclic_graph","display_name":"经过循环检查的调用关系及问题"}],"params_schema":{},"params_defaults":{},"input_semantics":{"era.expression.function_library.call_graph":["记录所有自定义函数之间的依赖及已有问题，供沿关系检查。"]},"output_semantics":{"acyclic_function_graph":["递归问题保留在结果中，后续结合所有诊断决定函数库能否执行。"]}},
   "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/reject_recursive_functions.ts","export":"run"}}],
   "base_libs": ["era.expression.execution","era.expression.functions","era.expression.types"],
-  "capabilities": [],
   "tags": ["表达式工作流"],
   "rulesets": ["vibeflow.process"],
   "id": "era.expression.reject_recursive_functions",

@@ -18,7 +18,8 @@
       "type": "era.task.continuation.context",
       "cardinality": "exactly_one",
       "display_name": "执行后回告所需的原任务资料"
-    }
+    },
+    {"type":"era.workflow.host_resources","cardinality":"exactly_one","display_name":"所属 ERA 实例的本地资源"}
   ],
   "provides": [
     {
@@ -47,9 +48,10 @@
         "type": "era.task.continuation.context",
         "display_name": "执行后回告所需的原任务资料",
         "required": true
-      }
+      },
+      {"key":"host_resources","type":"era.workflow.host_resources","required":true,"display_name":"所属 ERA 实例的本地资源"}
     ],
-    "max_steps": 21,
+    "max_steps": 22,
     "nodes": [
       {
         "id": "start",
@@ -61,19 +63,22 @@
         "id": "carry_preparation_context",
         "display_name": "保留任务准备前的原请求资料",
         "description": "在“准备角色 ERA 资源并接续历史同步”流程中，让原任务、批次和事件来源穿过资料准备流程继续传递。执行和结算环节据此知道正在处理谁的请求，保留正确的回复依据。",
-        "definition_id": "era.task.carry_preparation_context"
+        "definition_id": "era.task.carry_preparation_context",
+        "join_policy": "all"
       },
       {
         "id": "read_host_resources",
         "display_name": "读取角色当前的 ERA 初始化资源",
         "description": "在“准备角色 ERA 资源并接续历史同步”流程中，从酒馆读取角色和聊天资料、相关设置、世界书、正则、开场白及外置配置。把当前资源交给初始化比较，未指定模式时采用传统模式。",
-        "definition_id": "era.tavern.initialization_read"
+        "definition_id": "era.communication.tavern_initialization_read",
+        "join_policy": "all"
       },
       {
         "id": "carry_execution_state",
         "display_name": "记住初始化请求所属的批次",
         "description": "在“准备角色 ERA 资源并接续历史同步”流程中，让原初始化任务和批次资料随资源准备流程继续传递。资源完成后用这些资料继续历史同步，并把最终结果返回原发起者。",
-        "definition_id": "era.initialize.carry_execution_state"
+        "definition_id": "era.initialize.carry_execution_state",
+        "join_policy": "all"
       },
       {
         "id": "plan_resources",
@@ -103,7 +108,7 @@
         "id": "commit_host_resources",
         "display_name": "按计划安装或更新角色的 ERA 资源",
         "description": "在“准备角色 ERA 资源并接续历史同步”流程中，接收初始化资源变更计划，按顺序写入设置、世界书、正则和开场白等资源，并记录每项实际进度。开场白保存后按实际聊天决定更新、新建或保留首条消息；目标变化或部分失败时带回已完成内容和原因。",
-        "definition_id": "era.tavern.initialization_commit"
+        "definition_id": "era.communication.tavern_initialization_commit"
       },
       {
         "id": "route_completion",
@@ -128,21 +133,13 @@
         "display_name": "结束准备角色 ERA 资源并接续历史同步",
         "description": "标明“准备角色 ERA 资源并接续历史同步”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
         "definition_id": "era.service.terminal"
-      }
+      },
+      {"id":"retain_host_resources","definition_id":"era.service.retain_host_resources","display_name":"保留所属实例的资源","description":"先取出本次运行或本轮迭代收到的本地资源，供下面需要组织工作流通信的步骤使用。资源不写入业务消息。"}
     ],
     "edges": [
-      [
-        "start",
-        "carry_preparation_context"
-      ],
-      [
-        "start",
-        "read_host_resources"
-      ],
-      [
-        "start",
-        "carry_execution_state"
-      ],
+      {"from":"start","to":"carry_preparation_context","schedule":true},
+      {"from":"start","to":"read_host_resources","schedule":true},
+      {"from":"start","to":"carry_execution_state","schedule":true},
       [
         "read_host_resources",
         "plan_resources"
@@ -205,7 +202,12 @@
         "from": "carry_preparation_context",
         "to": "prepare_resource_result",
         "schedule": true
-      }
+      },
+      ["start","retain_host_resources"],
+      {"from":"retain_host_resources","to":"carry_preparation_context","transfer":false,"schedule":true},
+      {"from":"retain_host_resources","to":"read_host_resources","transfer":false,"schedule":true},
+      {"from":"retain_host_resources","to":"carry_execution_state","transfer":false,"schedule":true},
+      {"from":"retain_host_resources","to":"commit_host_resources","schedule":false}
     ],
     "outputs": [
       {

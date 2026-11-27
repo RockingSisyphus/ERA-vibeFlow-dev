@@ -3,9 +3,10 @@
 /**
  * 本文件是 ERA 所有输入事件的唯一目录。
  *
- * 这里使用 SillyTavern 的稳定事件字符串，而不在模块加载时读取 `tavern_events` 全局变量。
- * 这样纯事件模块可以在 Node 单元测试中直接导入；浏览器入口仍可用 `tavern_events.*`
- * 注册监听，两边最终得到的是同一个字符串。
+ * 这里声明 ERA 的稳定输入类型；原生来源不同时用 nativeType 显式绑定，
+ * 不在模块加载时读取 `tavern_events` 全局变量。
+ * 目录只描述事件分类与等待方式，监听注册、准入和回执由酒馆辅助工作流执行。
+ * 浏览器入口仍可用 `tavern_events.*` 注册监听，两边最终得到同一个稳定字符串。
  */
 export const INPUT_EVENT = {
   APP_READY: 'app_ready',
@@ -17,6 +18,7 @@ export const INPUT_EVENT = {
   MESSAGE_UPDATED: 'message_updated',
   CHAT_CHANGED: 'chat_id_changed',
   GENERATION_STARTED: 'generation_started',
+  GENERATION_ENDED: 'generation_ended',
   GENERATION_STOPPED: 'generation_stopped',
   MANUAL_WRITE: 'manual_write',
   MANUAL_SYNC: 'manual_sync',
@@ -31,6 +33,8 @@ export type AwaitMode = 'detached' | 'generation-barrier';
 
 export interface EventDefinition {
   type: string;
+  /** 宿主监听名；省略时与 ERA 输入类型相同。 */
+  nativeType?: (typeof tavern_events)[keyof typeof tavern_events];
   group: Exclude<EventGroup, 'UNKNOWN'>;
   listenerOrder: ListenerOrder;
   awaitMode: AwaitMode;
@@ -55,6 +59,15 @@ export interface EventCollisionRule {
 export const DEFAULT_COLLECTION_WINDOW_MS = 100;
 
 const EVENT_DEFINITIONS: EventDefinition[] = [
+  {
+    // 原生生成结束只触发已有待写内容的结算；不等待新的生成周期，也不合并进延时收集窗口。
+    type: INPUT_EVENT.GENERATION_ENDED,
+    group: 'SYNC',
+    listenerOrder: 'normal',
+    awaitMode: 'detached',
+    collectionWindowMs: 0,
+    closesCollectionWindow: true,
+  },
   {
     type: INPUT_EVENT.APP_READY,
     group: 'INIT',
@@ -89,6 +102,9 @@ const EVENT_DEFINITIONS: EventDefinition[] = [
   },
   {
     type: INPUT_EVENT.GENERATION_STARTED,
+    // 酒馆 generation_started 在斜杠命令执行前就发出；命令可直接返回而没有
+    // 回复或结束事件。只有通过命令阶段才进入原有候选生命周期和生成屏障。
+    nativeType: 'GENERATION_AFTER_COMMANDS',
     group: 'COLLISION_DETECTORS',
     listenerOrder: 'first',
     awaitMode: 'generation-barrier',

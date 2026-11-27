@@ -5,6 +5,30 @@
     },
     {
       "path": "nodesets/segment_step.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_execute.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_execute_step.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_rewrite.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_rewrite_step.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_verify.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_verify_step.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_verify_layer.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_verify_layer_step.jsonc"
     }
   ],
   "pipeline": {
@@ -35,17 +59,98 @@
         "display_name": "结束指令压缩",
         "description": "标明“指令压缩”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
         "definition_id": "era.command_compaction.terminal"
+      },
+      {
+        "id": "protocol_start",
+        "definition_id": "era.command_compaction.terminal",
+        "display_name": "开始处理独立流程的纯数据请求",
+        "description": "官方调用进入此处，接收保留原值的消息；原同步入口仍用于已有公共调用。"
+      },
+      {
+        "id": "decode_request",
+        "definition_id": "era.workflow.decode_compaction",
+        "display_name": "恢复公式或压缩请求的原始值",
+        "description": "在进入原计算定义前恢复大数、负零、缺失项和数组空位，保持与原同步输入相同的业务含义。 标记本次结果须走通信回信；随后把请求交给两个入口共用的处理节点。"
+      },
+      {
+        "id": "encode_response",
+        "definition_id": "era.workflow.encode_compaction",
+        "display_name": "保留计算结果的原值后交回调用方",
+        "description": "计算完成后仅作可逆数据转换，结果仍由调用方处理或采用，此处不修改聊天和权威状态。"
+      },
+      {
+        "id": "protocol_end",
+        "definition_id": "era.command_compaction.terminal",
+        "display_name": "交回独立流程的结果消息",
+        "description": "本次计算和数据封装均已完成，交回官方通信可以传递的结果。"
+      },
+      {
+        "id": "prepare_direct_request",
+        "display_name": "整理直接入口的请求",
+        "description": "取出直接入口收到的业务请求，标明结果直接返回。把同一类型的请求送进与通信入口共用的处理节点。",
+        "definition_id": "era.compaction.boundary.PrepareDirectRequest"
+      },
+      {
+        "id": "select_entry_return",
+        "display_name": "按进入方式交付处理结果",
+        "description": "核心处理完成后，依据入口提供的类别直接交付结果或进入协议编码。本步骤不重跑业务处理。",
+        "definition_id": "era.compaction.boundary.SelectEntryReturn"
       }
     ],
     "edges": [
       [
-        "start",
+        "protocol_start",
+        "decode_request"
+      ],
+      [
+        "decode_request",
         "compact_layer"
       ],
       [
-        "compact_layer",
-        "end"
-      ]
+        "encode_response",
+        "protocol_end"
+      ],
+      [
+        "start",
+        "prepare_direct_request"
+      ],
+      [
+        "prepare_direct_request",
+        "compact_layer"
+      ],
+      {
+        "from": "compact_layer",
+        "to": "select_entry_return",
+        "schedule": true,
+        "transfer": false
+      },
+      {
+        "from": "decode_request",
+        "to": "select_entry_return",
+        "schedule": false
+      },
+      {
+        "from": "prepare_direct_request",
+        "to": "select_entry_return",
+        "schedule": false
+      },
+      {
+        "from": "select_entry_return",
+        "to": "end",
+        "when": "return_route == 'direct'",
+        "transfer": false
+      },
+      {
+        "from": "select_entry_return",
+        "to": "encode_response",
+        "when": "return_route == 'protocol'",
+        "transfer": false
+      },
+      {
+        "from": "compact_layer",
+        "to": "encode_response",
+        "schedule": false
+      }
     ],
     "outputs": [
       {
@@ -54,7 +159,33 @@
         "display_name": "确认后的消息文字及指令压缩结论",
         "as": "compactionResponse"
       }
-    ]
+    ],
+    "entries": {
+      "main": {
+        "start": "start"
+      },
+      "protocol": {
+        "start": "protocol_start",
+        "inputs": [
+          {
+            "key": "wire_request",
+            "type": "era.workflow.packet",
+            "required": true,
+            "display_name": "保留原值的跨流程请求"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "era.workflow.packet",
+            "cardinality": "exactly_one",
+            "display_name": "保留原值的跨流程结果",
+            "as": "wireResponse"
+          }
+        ]
+      }
+    },
+    "default_entry": "main",
+    "max_steps": 9
   },
   "plugins": [
     {
@@ -62,13 +193,24 @@
         "kind": "file",
         "ref": "plugins/contracts/plugin.ts"
       }
+    },
+    {
+      "scope": "project",
+      "source": {
+        "kind": "file",
+        "ref": "plugins/workflow_protocol/plugin.ts"
+      }
     }
   ],
   "base_lib": {
     "modules": [
+      "era.command.payload",
+      "era.variable.write",
       "era.command_compaction.engine",
       "era.command_compaction.interpreter",
-      "era.command_compaction.stages"
+      "era.command_compaction.stages",
+      "era.workflow.values",
+      "era.workflow.progress"
     ]
   }
 }

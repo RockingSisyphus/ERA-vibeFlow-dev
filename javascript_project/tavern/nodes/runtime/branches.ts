@@ -42,4 +42,6 @@ export function Collect(inputs:any,params:any):any {
   return emit({frame:{status:"stopped"}},params);
 }
 
-export function Dispatch(inputs:any,params:any):any {return emit({frame:takeFrame(inputs)},params);}
+export function Dispatch(inputs:any,params:any):any {
+  return emit({frame:{...inputs["era.tavern.call.frame"].value}},params);
+}

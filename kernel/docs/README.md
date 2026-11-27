@@ -5,6 +5,7 @@
 按任务阅读以下规范：
 
 - [overview](overview.md)
+- [architecture](user/architecture.md)
 - [quickstart](user/quickstart.md)
 - [workflow-and-config](user/workflow-and-config.md)
 - [project-governance](user/project-governance.md)

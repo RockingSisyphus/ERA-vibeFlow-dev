@@ -1,0 +1,399 @@
+{
+  "type_key": "era.tavern.flow.workflow_service",
+  "display_name": "用官方机制运行主服务并交换业务消息",
+  "description": "原生Call启动唯一主服务，Wait确认终态，Kill处理停止，Send/Receive承担事件和回信。资源仍归本实例，原业务先进先出队列、回执和生成屏障保持职责。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.call.frame",
+      "cardinality": "exactly_one",
+      "display_name": "当前酒馆实例的本地资源与生命周期"
+    },
+    {"type":"era.workflow.host_resources","cardinality":"exactly_one","display_name":"所属 ERA 实例的本地资源"}
+  ],
+  "provides": [
+    {
+      "key": "service_finished",
+      "type": "era.tavern.task.finished",
+      "display_name": "Service和所属通信分支均已实际退出"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "input0",
+        "type": "era.tavern.call.frame",
+        "required": true,
+        "display_name": "当前酒馆实例的本地资源与生命周期"
+      },
+      {"key":"host_resources","type":"era.workflow.host_resources","required":true,"display_name":"所属 ERA 实例的本地资源"}
+    ],
+    "max_steps": 41,
+    "nodes": [
+      {
+        "id": "start",
+        "definition_id": "era.tavern.initialize.start",
+        "display_name": "开始本段通信",
+        "description": "标明本段通信范围；实际结果由中间业务和官方通信步骤提供。"
+      },
+      {
+        "id": "prepare",
+        "display_name": "准备唯一主服务的启动输入",
+        "description": "确认页面资源已就绪，准备Service启动所需纯数据；宿主能力由同页绑定注入，本地本地实例、函数和释放器不作为Call输入传输。",
+        "definition_id": "era.tavern.communication.service.prepare",
+        "join_policy": "all"
+      },
+      {
+        "id": "call_service",
+        "display_name": "Call：在同一页面启动唯一主服务",
+        "description": "使用官方in_process启动已绑定Service AOT，取得实际实例号；不通过私有runService转发函数启动。",
+        "definition_id": "era.workflow.call",
+        "config": {
+          "workflow": {
+            "root": "era-service",
+            "path": "configs/era.service.jsonc"
+          },
+          "launch": {
+            "kind": "in_process"
+          },
+          "allow_background": false
+        }
+      },
+      {
+        "id": "register",
+        "display_name": "登记Service归属并分开运行通信职责",
+        "description": "确认绑定层已在Call返回前登记本实例拥有的Service，将实际编号及本地资源交给等待、停止观察、事件交接和结果接收四条普通分支。即使图在Call之后被取消，资源作用域也能停止已登记的子流程并等实际清理。",
+        "config": {
+          "max_concurrency": 4
+        },
+        "definition_id": "era.tavern.communication.service.register"
+      },
+      {
+        "id": "wait_service",
+        "display_name": "Wait；中断时Kill并等Service退出",
+        "description": "正常时等待主服务真实终态；若本等待步骤被取消或失败，在本步骤收尾中停止所拥有的Service并等待清理结束，随后才退出。正常实例停止仍有独立Kill分支，资源收尾也核对真实终态。",
+        "definition_id": "era.workflow.wait_owned",
+        "config": {
+          "workflow": {
+            "root": "era-service",
+            "path": "configs/era.service.jsonc"
+          }
+        }
+      },
+      {
+        "id": "announce_end",
+        "display_name": "结束Service并通知通信分支收尾",
+        "description": "保留Service终态或错误，要求本实例停止接收新任务，唤醒本地队列等待，并准备投递本runtime的结果接收结束信封。",
+        "definition_id": "era.tavern.communication.service.announce_end"
+      },
+      {
+        "id": "encode_message",
+        "definition_id": "era.workflow.encode_message",
+        "display_name": "保留事件或结果原值，再交给官方发送",
+        "description": "在此处保留大数、负零、数组空位和缺失值，使独立流程收到与原调用相同的业务值。此转换只处理消息，当前业务进度仍通过图内数据连接保留。"
+      },
+      {
+        "id": "wake_results",
+        "display_name": "Send：唤醒结果接收分支退出",
+        "description": "把Service结束信封送到本实例era.service.out邮箱，保证阻塞Receive可以取得结束事实。",
+        "definition_id": "era.workflow.send",
+        "config": {
+          "expected_workflows": [
+            {
+              "root": "era-tavern",
+              "path": "configs/era.tavern.runtime.jsonc",
+              "entry": "protocol_runtime"
+            }
+          ]
+        }
+      },
+      {
+        "id": "wait_done",
+        "display_name": "确认等待分支已发出结束通知",
+        "description": "Service已真正结束，结果接收分支也已得到唤醒信封；交出等待分支完成确认。",
+        "definition_id": "era.tavern.communication.service.wait_done"
+      },
+      {
+        "id": "observe_stop",
+        "display_name": "等待实例要求停止或Service已结束",
+        "description": "观察同一资源作用域的停止事实，正常结束和页面卸载均能唤醒。此处不把某个短期Node信号当作实例寿命。",
+        "definition_id": "era.tavern.communication.service.observe_stop"
+      },
+      {
+        "id": "kill_service",
+        "display_name": "Kill：停止本实例主服务并等待退出",
+        "description": "对Call所得同一Service实例请求停止并等待真实终态；已结束时确认终态，不停止其他ERA实例。",
+        "definition_id": "era.workflow.kill",
+        "config": {
+          "workflow": {
+            "root": "era-service",
+            "path": "configs/era.service.jsonc"
+          }
+        }
+      },
+      {
+        "id": "stop_done",
+        "display_name": "确认停止请求已完成",
+        "description": "官方Kill已确认目标实际退出，交出停止分支完成事实。",
+        "definition_id": "era.tavern.communication.service.stop_done"
+      },
+      {
+        "id": "events",
+        "definition_id": "vibeflow.loop.while",
+        "display_name": "持续交接事件直到实例结束",
+        "description": "由本地生命周期和明确结束通知退出，不保留图外调度循环；实际收发在可展开子流程中。",
+        "requires": [
+          {
+            "type": "era.tavern.call.frame",
+            "cardinality": "exactly_one",
+            "display_name": "当前酒馆实例的本地资源与生命周期"
+          },
+          {"type":"era.workflow.host_resources","cardinality":"exactly_one","display_name":"所属 ERA 实例的本地资源"}
+        ],
+        "provides": [
+          {
+            "key": "events_finished",
+            "type": "era.workflow.events_branch",
+            "display_name": "交接事件分支退出确认"
+          }
+        ],
+        "loop": {
+          "body": "era.tavern.workflow.events_step",
+          "max_iterations": null,
+          "stop_when": {
+            "from": "done",
+            "equals": true
+          },
+          "carry": [
+            {
+              "from": "era.tavern.call.frame",
+              "as": "frame",
+              "update": "next_frame"
+            },
+            {"from":"era.workflow.host_resources","as":"host_resources","update":"retained_host_resources"}
+          ],
+          "outputs": [
+            {
+              "from": "next_frame",
+              "as": "events_finished"
+            }
+          ]
+        }
+      },
+      {
+        "id": "results",
+        "definition_id": "vibeflow.loop.while",
+        "display_name": "持续接收并落实回信直到实例结束",
+        "description": "由本地生命周期和明确结束通知退出，不保留图外调度循环；实际收发在可展开子流程中。",
+        "requires": [
+          {
+            "type": "era.tavern.call.frame",
+            "cardinality": "exactly_one",
+            "display_name": "当前酒馆实例的本地资源与生命周期"
+          },
+          {"type":"era.workflow.host_resources","cardinality":"exactly_one","display_name":"所属 ERA 实例的本地资源"}
+        ],
+        "provides": [
+          {
+            "key": "results_finished",
+            "type": "era.workflow.results_branch",
+            "display_name": "接收并落实回信分支退出确认"
+          }
+        ],
+        "loop": {
+          "body": "era.tavern.workflow.results_step",
+          "max_iterations": null,
+          "stop_when": {
+            "from": "done",
+            "equals": true
+          },
+          "carry": [
+            {
+              "from": "era.tavern.call.frame",
+              "as": "frame",
+              "update": "next_frame"
+            },
+            {"from":"era.workflow.host_resources","as":"host_resources","update":"retained_host_resources"}
+          ],
+          "outputs": [
+            {
+              "from": "next_frame",
+              "as": "results_finished"
+            }
+          ]
+        }
+      },
+      {
+        "id": "collect",
+        "display_name": "等待Service和全部通信分支退出",
+        "description": "等待终态通知、停止确认、事件转交和结果接收四条分支都已结束。原外层还会等待资源、作者、通知和计时职责，全部完成后才返回。",
+        "join_policy": "all",
+        "definition_id": "era.tavern.communication.service.collect"
+      },
+      {
+        "id": "end",
+        "definition_id": "era.tavern.initialize.end",
+        "display_name": "完成本段通信",
+        "description": "标明本段通信范围；实际结果由中间业务和官方通信步骤提供。"
+      },
+      {
+        "id": "prepare_end_pull",
+        "display_name": "通知事件分支结束",
+        "description": "准备本运行实例的取件结束信封，唤醒尚在等待取件请求的事件分支。",
+        "definition_id": "era.tavern.communication.service.prepare_end_pull"
+      },
+      {
+        "id": "encode_end_pull",
+        "definition_id": "era.workflow.encode_end_pull",
+        "display_name": "封装取件结束信封",
+        "description": "将结束控制消息封装后交给官方发送。"
+      },
+      {
+        "id": "wake_events",
+        "definition_id": "era.workflow.send",
+        "display_name": "Send：唤醒取件等待结束",
+        "description": "向本实例取件端口发送结束事实。",
+        "config": {
+          "expected_workflows": [
+            {
+              "root": "era-tavern",
+              "path": "configs/era.tavern.runtime.jsonc",
+              "entry": "protocol_runtime"
+            }
+          ]
+        }
+      },
+      {"id":"retain_host_resources","definition_id":"era.tavern.retain_host_resources","display_name":"保留所属实例的资源","description":"先取出本次运行或本轮迭代收到的本地资源，供下面需要组织工作流通信的步骤使用。资源不写入业务消息。"}
+    ],
+    "edges": [
+      {"from":"start","to":"prepare","schedule":true},
+      [
+        "prepare",
+        "call_service"
+      ],
+      [
+        "call_service",
+        "register"
+      ],
+      [
+        "register",
+        "wait_service"
+      ],
+      [
+        "register",
+        "observe_stop"
+      ],
+      [
+        "register",
+        "events"
+      ],
+      [
+        "register",
+        "results"
+      ],
+      [
+        "wait_service",
+        "announce_end"
+      ],
+      [
+        "announce_end",
+        "encode_message"
+      ],
+      [
+        "observe_stop",
+        "kill_service"
+      ],
+      [
+        "kill_service",
+        "stop_done"
+      ],
+      [
+        "wait_done",
+        "collect"
+      ],
+      [
+        "stop_done",
+        "collect"
+      ],
+      [
+        "events",
+        "collect"
+      ],
+      [
+        "results",
+        "collect"
+      ],
+      [
+        "collect",
+        "end"
+      ],
+      {
+        "from": "prepare",
+        "to": "register",
+        "schedule": false
+      },
+      {
+        "from": "call_service",
+        "to": "wait_service",
+        "schedule": false
+      },
+      {
+        "from": "call_service",
+        "to": "kill_service",
+        "schedule": false
+      },
+      {
+        "from": "register",
+        "to": "announce_end",
+        "schedule": false
+      },
+      [
+        "encode_message",
+        "wake_results"
+      ],
+      [
+        "wake_results",
+        "prepare_end_pull"
+      ],
+      [
+        "prepare_end_pull",
+        "encode_end_pull"
+      ],
+      [
+        "encode_end_pull",
+        "wake_events"
+      ],
+      [
+        "wake_events",
+        "wait_done"
+      ],
+      {
+        "from": "register",
+        "to": "prepare_end_pull",
+        "schedule": false
+      },
+      {
+        "from": "announce_end",
+        "to": "wait_done",
+        "schedule": false
+      },
+      ["start","retain_host_resources"],
+      {"from":"retain_host_resources","to":"prepare","transfer":false,"schedule":true},
+      {"from":"retain_host_resources","to":"register","schedule":false},
+      {"from":"retain_host_resources","to":"wait_service","schedule":false},
+      {"from":"retain_host_resources","to":"events","schedule":false},
+      {"from":"retain_host_resources","to":"results","schedule":false},
+      {"from":"retain_host_resources","to":"announce_end","schedule":false},
+      {"from":"retain_host_resources","to":"prepare_end_pull","schedule":false}
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.task.finished",
+        "cardinality": "exactly_one",
+        "display_name": "Service和所属通信分支均已实际退出",
+        "as": "service_finished"
+      }
+    ]
+  }
+}

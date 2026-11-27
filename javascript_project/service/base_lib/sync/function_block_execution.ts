@@ -126,12 +126,16 @@ export function prepareFunctionApi(
   const plan: any = state.work.plan;
   const step: any = state.work.step;
   const frame = state.functionFrame!;
+  // 草稿楼层尚未进入宿主来源依据；沿用当前阶段已构造的候选事实。
+  // 已有真实消息仍以宿主依据为准，不把计划正文当作宿主已写入。
   const sourceMessages = new Map(
-    state.sourceBasis!.messages.map((item) => [item.messageId, item]),
+    [...step.dispatchContext.messages, ...state.sourceBasis!.messages].map(
+      (item: any) => [item.messageId, item],
+    ),
   );
   const messages = plan.messages.map((item: any) => ({
     ...sourceMessages.get(item.messageId),
-    schemaVersion: 1,
+    schemaVersion: 2,
     messageId: item.messageId,
     role: item.role,
     activeText: item.content.text,

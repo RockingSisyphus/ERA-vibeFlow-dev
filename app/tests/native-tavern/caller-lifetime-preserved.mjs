@@ -1,4 +1,5 @@
-/** 通过真实主 Service AOT 验证跨 Node 的作者调用，不能用直接 Capability 调用代替。 */
+import {encodePacket,decodePacket} from '../../../base_lib/workflow_values/codec.mjs';
+/** 通过真实主 Service AOT 验证跨 Node 的作者调用。 */
 import assert from 'node:assert/strict';
 import { nativeG3 } from './g3-fixture.mjs';
 import { realService, deferred } from './native-fixture.mjs';
@@ -10,54 +11,14 @@ let holdNotifications = false;
 const fake = await nativeG3(
   {
     runWorkflowAsync: (inputs, options) => {
-      const functions = options.capabilities['era.tavern.functions'];
-      const port = options.capabilities['vibeflow.port'];
-      return realService(inputs, {
-        ...options,
-        capabilities: {
-          ...options.capabilities,
-          'vibeflow.port': {
-            ...port,
-            // 同步业务本身不发通知；在真实发送Node的能力边界放入一个受控通知，验证其信号寿命。
-            send: (input, callOptions) =>
-              port.send(
-                holdNotifications && input.value?.kind === 'batch-result'
-                  ? {
-                      ...input,
-                      value: {
-                        ...input.value,
-                        notifications: [...input.value.notifications, { type: 'native-probe-notification', args: [] }],
-                      },
-                    }
-                  : input,
-                callOptions,
-              ),
-          },
-          'era.tavern.functions': {
-            ...functions,
-            begin: (input, callOptions) => {
-              const result = functions.begin(input, callOptions);
-              observedCall = owner.session.functionCalls.get(input.id);
-              return result;
-            },
-            next: async (input, callOptions) => {
-              try {
-                return await functions.next(input, callOptions);
-              } catch (error) {
-                console.error('作者调用失败现场', {
-                  active: observedCall?.active,
-                  aborted: observedCall?.signal.aborted,
-                  reason: observedCall?.signal.reason,
-                  sourceBasis: observedCall?.sourceBasis,
-                  actualMessages: owner.api.getChatMessages('0--1', { include_swipes: true }),
-                });
-                console.error(error);
-                throw error;
-              }
-            },
-          },
-        },
-      });
+      const native=options.workflowSession;
+      return realService(inputs,{...options,workflowSession:{
+        ...native,
+        invoke_sync:(request,callOptions)=>{const input=decodePacket(request.inputs.wire_request),result=native.invoke_sync(request,callOptions);if(input.capability==='era.tavern.functions'&&input.operation==='begin')observedCall=owner.session.functionCalls.get(input.input.id);return result;},
+        // 在真实原生Send边界注入受控通知，保持同一消息身份与接收工作流。
+        send:(request,callOptions)=>{let payload=decodePacket(request.payload);if(holdNotifications&&payload.value?.kind==='batch-result')payload={...payload,value:{...payload.value,notifications:[...payload.value.notifications,{type:'native-probe-notification',args:[]}]}};return native.send({...request,payload:encodePacket(payload)},callOptions);}
+      }});
+
     },
   },
   trace,
@@ -83,6 +44,8 @@ owner.session.createFunctionFacade = (submit, assertActive) => ({
 owner.api.SillyTavern.ToolManager = {
   invokeFunctionTool: async (_name, args) => {
     invoked++;
+    assert.equal(observedCall?.active,true);
+    assert.equal(observedCall?.signal.aborted,false);
     retained = owner.client.forCall(args);
     const result = await retained.commit([{ insert: { nativeLifetimeProbe: { value: 11 } } }]);
     assert.equal(result.status, 'completed');

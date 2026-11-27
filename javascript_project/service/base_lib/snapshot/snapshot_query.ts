@@ -23,7 +23,6 @@ export {
   calculateStatForward,
   calculateStatAt,
   calculateAllStatsBetweenMks,
-  findLatestNewValue,
   type EraSnapshotQueryType,
   type EraSnapshotVariables,
   type EraSnapshotMessageContext,

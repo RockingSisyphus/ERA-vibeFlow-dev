@@ -145,10 +145,7 @@ export function classifySourceBlock(input: PositionState): {
   const state = forkPosition(input),
     plan: any = state.state.work.plan,
     p = state.position;
-  const blocks = parseMessageBlocks({
-    content: p.text,
-    traditionalToSimplified: plan.execution.traditionalToSimplified,
-  });
+  const blocks = parseMessageBlocks({ content: p.text });
   const block = blocks[plan.execution.blockIndex];
   p.block = block;
   p.blocks = blocks;

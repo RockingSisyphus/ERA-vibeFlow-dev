@@ -8,7 +8,6 @@ export const era_api_validate_commit = defineNode({
   "contract": {"requires":[{"type":"era.api.commit.inspected","cardinality":"exactly_one","display_name":"已识别内容和消息范围的提交请求"}],"provides":[{"key":"commit_admission_route","type":"era.api.commit.admission.route","display_name":"提交应执行、跳过或失败的方向"},{"key":"facade_commit_validated","type":"era.api.commit.validated","display_name":"已确认允许应用的有序操作"},{"key":"facade_commit_validation_failure","type":"era.api.commit.failure_context","display_name":"本次提交不能执行的原因及原请求"}],"params_schema":{},"params_defaults":{},"input_semantics":{"era.api.commit.inspected":["包含本次变量提交及允许处理范围，供草稿转换和执行许可检查使用。"]},"output_semantics":{"commit_admission_route":["记录本次变量提交的实际许可结论，供应用操作或直接返回原因。"],"facade_commit_validated":["包含通过提交检查的变量和函数操作及目标范围，供统一消息流程按原顺序计算。"],"facade_commit_validation_failure":["保存跳过或失败的具体依据，供接口向原调用方返回准确说明。"]}},
   "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/api/facade_nodes.ts","export":"validateCommitNode"}}],
   "base_libs": ["era.service.facade_api_engine","era.service.sidecar_binding","era.service.sync_contracts","era.service.sync_result_policy","era.service.sync_work_preparation","era.service.task_continuation","era.service.types","era.service.working_state","era.workbench.context"],
-  "capabilities": [],
   "tags": ["公共 Facade"],
   "rulesets": ["vibeflow.process"],
   "id": "era.api.validate_commit",
@@ -23,25 +22,9 @@ export const era_api_identify_task_request = defineNode({
   "contract": {"requires":[{"type":"era.step.request.routed","cardinality":"exactly_one","display_name":"当前任务及已读取的聊天资料"},{"type":"era.batch.execution.state","cardinality":"exactly_one","display_name":"当前批次的任务进度与累计结果"},{"type":"era.task.continuation.context","cardinality":"exactly_one","display_name":"执行后回告所需的原任务资料"}],"provides":[{"key":"facade_request","type":"era.api.request","display_name":"脚本或界面提出的操作请求"},{"key":"facade_route","type":"era.api.route","display_name":"变量提交或历史重算的选择"},{"key":"facade_execution_state","type":"era.batch.execution.state","display_name":"当前批次的任务进度与累计结果"},{"key":"facade_continuation","type":"era.task.continuation.context","display_name":"执行后回告所需的原任务资料"}],"params_schema":{},"params_defaults":{},"input_semantics":{"era.step.request.routed":["包含本批正在处理的任务、它对应的原事件和已确认聊天资料，供选定的业务流程执行并返回结果。"],"era.batch.execution.state":["记录本批有序任务、当前执行位置、已有处理确认和消息进度，任务完成后会继续合入同一批次。"],"era.task.continuation.context":["保留原任务、事件来源和所属批次，使各类执行结果最终能回到正确请求。"]},"output_semantics":{"facade_request":["包含变量提交或历史重算要求及原请求资料，供任务准备和最终回告。"],"facade_route":["标明接口请求需要直接提交操作，还是依据聊天历史重新计算。"],"facade_execution_state":["记录本批有序任务、当前执行位置、已有处理确认和消息进度，任务完成后会继续合入同一批次。"],"facade_continuation":["保留原任务、事件来源和所属批次，使各类执行结果最终能回到正确请求。"]}},
   "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/api/facade_nodes.ts","export":"identifyTaskRequest"}}],
   "base_libs": ["era.service.facade_api_engine","era.service.sidecar_binding","era.service.sync_contracts","era.service.sync_result_policy","era.service.sync_work_preparation","era.service.task_continuation","era.service.types","era.service.working_state","era.workbench.context"],
-  "capabilities": [],
   "tags": ["服务任务"],
   "rulesets": ["vibeflow.process"],
   "id": "era.api.identify_task_request",
-  "node_type": "vibeflow.node"
-});
-
-export const era_api_inspect_submission = defineNode({
-  "display_name": "识别提交的是操作清单还是编辑草稿",
-  "description": "读取本次允许处理的聊天消息范围，查看提交内容是明确的有序操作，还是变量、函数工作台的编辑草稿。草稿先转成可执行操作，之后再统一检查能否提交。",
-  "version": "1.0.0",
-  "flow_kind": "decision",
-  "contract": {"requires":[{"type":"era.api.request.selected","cardinality":"exactly_one","display_name":"已经选中的接口请求"},{"type":"era.batch.execution.state","cardinality":"exactly_one","display_name":"当前批次的任务进度与累计结果"}],"provides":[{"key":"commit_inspected","type":"era.api.commit.inspected","display_name":"已识别内容和消息范围的提交请求"},{"key":"workbench_request_kind","type":"era.workbench.request_kind","display_name":"提交内容属于操作清单还是编辑草稿"}],"params_schema":{},"params_defaults":{},"input_semantics":{"era.api.request.selected":["保留当前分支要处理的原请求，供检查和准备明确执行资料。"],"era.batch.execution.state":["记录本批有序任务、当前执行位置、已有处理确认和消息进度，任务完成后会继续合入同一批次。"]},"output_semantics":{"commit_inspected":["包含本次变量提交及允许处理范围，供草稿转换和执行许可检查使用。"],"workbench_request_kind":["用来选择直接检查有序操作，或先比较工作台草稿再生成操作。"]}},
-  "implementations": [{"language":"typescript","targets":["browser"],"completion":"suspend","source":{"kind":"file","ref":"nodes/api/facade_nodes.ts","export":"inspectSubmission"}}],
-  "base_libs": ["era.service.facade_api_engine","era.service.sidecar_binding","era.service.sync_contracts","era.service.sync_result_policy","era.service.sync_work_preparation","era.service.task_continuation","era.service.types","era.service.working_state","era.workbench.context"],
-  "capabilities": [{"id":"era.tavern.messages","operations":["read_context"]},{"id":"era.tavern.identity","operations":["read"]},{"id":"era.tavern.sidecar","operations":["read_working"]}],
-  "tags": ["服务任务"],
-  "rulesets": ["vibeflow.process"],
-  "id": "era.api.inspect_submission",
   "node_type": "vibeflow.node"
 });
 
@@ -53,25 +36,9 @@ export const era_api_prepare_commit_continuation = defineNode({
   "contract": {"requires":[{"type":"era.api.request","cardinality":"exactly_one","display_name":"脚本或界面提出的操作请求"},{"type":"era.batch.execution.state","cardinality":"exactly_one","display_name":"当前批次的任务进度与累计结果"},{"type":"era.task.continuation.context","cardinality":"exactly_one","display_name":"执行后回告所需的原任务资料"}],"provides":[{"key":"prepare_commit_continuation_prepared_task","type":"era.task.prepared","display_name":"已备齐的执行请求或直接返回结论"}],"params_schema":{},"params_defaults":{},"input_semantics":{"era.api.request":["包含变量提交或历史重算要求及原请求资料，供任务准备和最终回告。"],"era.batch.execution.state":["记录本批有序任务、当前执行位置、已有处理确认和消息进度，任务完成后会继续合入同一批次。"],"era.task.continuation.context":["保留原任务、事件来源和所属批次，使各类执行结果最终能回到正确请求。"]},"output_semantics":{"prepare_commit_continuation_prepared_task":["说明当前任务可执行的请求及所需资料，或已经确定的无变化、失败等结果，供执行选择使用。"]}},
   "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/api/facade_nodes.ts","export":"prepareCommitContinuation"}}],
   "base_libs": ["era.service.facade_api_engine","era.service.sidecar_binding","era.service.sync_contracts","era.service.sync_result_policy","era.service.sync_work_preparation","era.service.task_continuation","era.service.types","era.service.working_state","era.workbench.context"],
-  "capabilities": [],
   "tags": ["核心执行"],
   "rulesets": ["vibeflow.process"],
   "id": "era.api.prepare_commit_continuation",
-  "node_type": "vibeflow.node"
-});
-
-export const era_api_prepare_application = defineNode({
-  "display_name": "为变量提交确定目标消息和起点",
-  "description": "将已确认允许执行的操作组成当前消息要处理的内容，读取真实目标消息并建立执行起点。交给统一消息流程按原顺序计算，后续再安排保存和显示更新。",
-  "version": "1.0.0",
-  "flow_kind": "process",
-  "contract": {"requires":[{"type":"era.api.commit.validated","cardinality":"exactly_one","display_name":"已确认允许应用的有序操作"}],"provides":[{"key":"block_step_state","type":"era.sync.block.step.state","display_name":"当前消息位置及待处理变量指令"}],"params_schema":{},"params_defaults":{},"input_semantics":{"era.api.commit.validated":["包含通过提交检查的变量和函数操作及目标范围，供统一消息流程按原顺序计算。"]},"output_semantics":{"block_step_state":["记录正文当前位置、变量、函数及变更历史，供本轮处理指令、作者函数或消息结束。"]}},
-  "implementations": [{"language":"typescript","targets":["browser"],"completion":"suspend","source":{"kind":"file","ref":"nodes/api/facade_nodes.ts","export":"prepareApplication"}}],
-  "base_libs": ["era.service.facade_api_engine","era.service.sidecar_binding","era.service.sync_contracts","era.service.sync_result_policy","era.service.sync_work_preparation","era.service.task_continuation","era.service.types","era.service.working_state","era.workbench.context"],
-  "capabilities": [{"id":"era.tavern.messages","operations":["read_context"]},{"id":"era.tavern.identity","operations":["read"]},{"id":"era.tavern.sidecar","operations":["read_working"]}],
-  "tags": ["服务任务"],
-  "rulesets": ["vibeflow.process"],
-  "id": "era.api.prepare_application",
   "node_type": "vibeflow.node"
 });
 
@@ -83,25 +50,9 @@ export const era_api_prepare_history_sync = defineNode({
   "contract": {"requires":[{"type":"era.api.request","cardinality":"exactly_one","display_name":"脚本或界面提出的操作请求"},{"type":"era.batch.execution.state","cardinality":"exactly_one","display_name":"当前批次的任务进度与累计结果"},{"type":"era.task.continuation.context","cardinality":"exactly_one","display_name":"执行后回告所需的原任务资料"}],"provides":[{"key":"sync_prepared","type":"era.task.prepared","display_name":"已备齐的执行请求或直接返回结论"}],"params_schema":{},"params_defaults":{},"input_semantics":{"era.api.request":["包含变量提交或历史重算要求及原请求资料，供任务准备和最终回告。"],"era.batch.execution.state":["记录本批有序任务、当前执行位置、已有处理确认和消息进度，任务完成后会继续合入同一批次。"],"era.task.continuation.context":["保留原任务、事件来源和所属批次，使各类执行结果最终能回到正确请求。"]},"output_semantics":{"sync_prepared":["说明当前任务可执行的请求及所需资料，或已经确定的无变化、失败等结果，供执行选择使用。"]}},
   "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/api/facade_nodes.ts","export":"prepareHistorySync"}}],
   "base_libs": ["era.service.facade_api_engine","era.service.sidecar_binding","era.service.sync_contracts","era.service.sync_result_policy","era.service.sync_work_preparation","era.service.task_continuation","era.service.types","era.service.working_state","era.workbench.context"],
-  "capabilities": [],
   "tags": ["服务任务"],
   "rulesets": ["vibeflow.process"],
   "id": "era.api.prepare_history_sync",
-  "node_type": "vibeflow.node"
-});
-
-export const era_api_return_application_result = defineNode({
-  "display_name": "返回变量提交在内存中的应用结果",
-  "description": "将消息流程算出的变量、函数、历史记录和问题整理为本次提交的处理结果。调用方据此继续安排实际保存和显示更新；本环节报告的是已经计算得到的应用结果。",
-  "version": "1.0.0",
-  "flow_kind": "process",
-  "contract": {"requires":[{"type":"era.sync.block.step.state.next","cardinality":"exactly_one","display_name":"本段正文处理后的变量和消息进度"}],"provides":[{"key":"applied_facade_result","type":"era.api.facade.result","display_name":"变量接口的实际处理确认"}],"params_schema":{},"params_defaults":{},"input_semantics":{"era.sync.block.step.state.next":["包含这一段已算出的变量、函数、历史及下一位置，供消息循环继续处理剩余正文。"]},"output_semantics":{"applied_facade_result":["记录本次操作在内存的应用、跳过或失败结论，调用方再按相应任务流程安排保存。"]}},
-  "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/api/facade_nodes.ts","export":"returnApplicationResult"}}],
-  "base_libs": ["era.service.facade_api_engine","era.service.sidecar_binding","era.service.sync_contracts","era.service.sync_result_policy","era.service.sync_work_preparation","era.service.task_continuation","era.service.types","era.service.working_state","era.workbench.context"],
-  "capabilities": [{"id":"era.lifecycle.admission","operations":["schedule"]},{"id":"era.tavern.sidecar","operations":["read_working"]}],
-  "tags": ["服务任务"],
-  "rulesets": ["vibeflow.process"],
-  "id": "era.api.return_application_result",
   "node_type": "vibeflow.node"
 });
 
@@ -113,7 +64,6 @@ export const era_api_return_immediate_result = defineNode({
   "contract": {"requires":[{"type":"era.api.commit.validated","cardinality":"optional_one","display_name":"已确认允许应用的有序操作"},{"type":"era.api.commit.failure_context","cardinality":"optional_one","display_name":"本次提交不能执行的原因及原请求"},{"type":"era.api.commit.admission.route","cardinality":"optional_one","display_name":"提交应执行、跳过或失败的方向"},{"type":"era.workbench.preparation_route","cardinality":"optional_one","display_name":"草稿可继续提交还是需要返回问题"}],"provides":[{"key":"immediate_facade_result","type":"era.api.facade.result","display_name":"变量接口的实际处理确认"}],"params_schema":{},"params_defaults":{},"input_semantics":{"era.api.commit.validated":["包含通过提交检查的变量和函数操作及目标范围，供统一消息流程按原顺序计算。"],"era.api.commit.failure_context":["保存跳过或失败的具体依据，供接口向原调用方返回准确说明。"],"era.api.commit.admission.route":["记录本次变量提交的实际许可结论，供应用操作或直接返回原因。"],"era.workbench.preparation_route":["记录草稿准备的检查结论，供进入提交许可检查或失败回告。"]},"output_semantics":{"immediate_facade_result":["记录本次操作在内存的应用、跳过或失败结论，调用方再按相应任务流程安排保存。"]}},
   "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/api/facade_nodes.ts","export":"returnImmediateResult"}}],
   "base_libs": ["era.service.facade_api_engine","era.service.sidecar_binding","era.service.sync_contracts","era.service.sync_result_policy","era.service.sync_work_preparation","era.service.task_continuation","era.service.types","era.service.working_state","era.workbench.context"],
-  "capabilities": [],
   "tags": ["服务任务"],
   "rulesets": ["vibeflow.process"],
   "id": "era.api.return_immediate_result",

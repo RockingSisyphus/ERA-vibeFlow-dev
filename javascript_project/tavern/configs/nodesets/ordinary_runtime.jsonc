@@ -8,7 +8,8 @@
       "type": "era.tavern.call.frame",
       "cardinality": "exactly_one",
       "display_name": "协同运行五条职责并统一等待退出的请求和已有进度"
-    }
+    },
+    {"type":"era.workflow.host_resources","cardinality":"exactly_one","display_name":"所属 ERA 实例的本地资源"}
   ],
   "provides": [
     {
@@ -25,9 +26,10 @@
         "type": "era.tavern.call.frame",
         "display_name": "协同运行五条职责并统一等待退出的请求和已有进度",
         "required": true
-      }
+      },
+      {"key":"host_resources","type":"era.workflow.host_resources","required":true,"display_name":"所属 ERA 实例的本地资源"}
     ],
-    "max_steps": 20,
+    "max_steps": 21,
     "nodes": [
       {
         "id": "start",
@@ -191,13 +193,11 @@
         "display_name": "结束协同运行五条职责并统一等待退出",
         "description": "标明“协同运行五条职责并统一等待退出”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
         "definition_id": "era.tavern.initialize.end"
-      }
+      },
+      {"id":"retain_host_resources","definition_id":"era.tavern.retain_host_resources","display_name":"保留所属实例的资源","description":"先取出本次运行或本轮迭代收到的本地资源，供下面需要组织工作流通信的步骤使用。资源不写入业务消息。"}
     ],
     "edges": [
-      [
-        "start",
-        "dispatch"
-      ],
+      {"from":"start","to":"dispatch","schedule":true},
       [
         "dispatch",
         "resources"
@@ -241,7 +241,11 @@
       [
         "collect",
         "end"
-      ]
+      ],
+      ["start","retain_host_resources"],
+      {"from":"retain_host_resources","to":"dispatch","schedule":true},
+      {"from":"retain_host_resources","to":"resources","schedule":false},
+      {"from":"retain_host_resources","to":"service","schedule":false}
     ],
     "outputs": [
       {

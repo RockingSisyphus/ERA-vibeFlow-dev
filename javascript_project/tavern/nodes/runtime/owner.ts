@@ -3,7 +3,7 @@ import {deferred,abortable,linkedSignals} from "../../base_lib/resources.ts";
 
 /** 仅持有实际资源；队列分类、任务启动和结算均在外部原生流程中。 */
 export async function HoldResources(inputs:any,params:any,context:any):Promise<any> {
-  const f=takeFrame(inputs),s=f.session,pending=new Set<Promise<any>>(),releases=new Set<()=>void>();
+  const s=inputs["era.tavern.call.frame"].value.session,pending=new Set<Promise<any>>(),releases=new Set<()=>void>();
   let live=true;
   const errors:any[]=[];
   const track=(value:any)=>{
@@ -64,6 +64,8 @@ export async function HoldResources(inputs:any,params:any,context:any):Promise<a
     context.signal.removeEventListener("abort",onAbort);
     s.lifecycle.signal.removeEventListener("abort",onAbort);
     try {s.dispatch.stopPrefix({session:s,input:{reason:context.signal.reason??"runtime-ended"}});}catch(error){errors.push(error);}
+    try {await inputs["era.workflow.host_resources"].value.cleanup({});}catch(error){errors.push(error);}
+    if(s.communicationJoin&&!context.signal.aborted){try{await abortable(()=>s.communicationJoin.promise,linkedSignals([context.signal]));}catch(error){if(!context.signal.aborted)errors.push(error);}}
     releaseAll();
     // Pending contains actual IO and its compiled continuation, including non-cancellable operations.
     while(pending.size)await Promise.allSettled([...pending]);
@@ -90,13 +92,6 @@ export async function WaitOwner(inputs:any,params:any,context:any):Promise<any> 
 }
 export function BindSession(inputs:any,params:any):any {
   const f=takeFrame(inputs);f.session.dispatch.bindSession(f);return emit({frame:f},params);
-}
-export async function RunService(inputs:any,params:any,context:any):Promise<any> {
-  const f=takeFrame(inputs),s=f.session,linked=linkedSignals([context.signal,s.lifecycle.signal]);
-  try {await s.dispatch.runService({}, {signal:linked.signal});}
-  catch(error){if(!linked.signal.aborted)throw error;}
-  finally {linked.cleanup();s.dispatch.stopPrefix({session:s,input:{reason:"service-ended"}});}
-  return emit({frame:{status:"service-ended"}},params);
 }
 export function ClaimClose(inputs:any,params:any):any {
   const f=takeFrame(inputs),s=f.session,existing=s.cleanupStarted===true;

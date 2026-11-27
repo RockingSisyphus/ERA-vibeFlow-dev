@@ -7,11 +7,12 @@
     "messageId",
     "role",
     "activeText",
-    "swipeIndex"
+    "swipeIndex",
+    "candidate"
   ],
   "properties": {
     "schemaVersion": {
-      "const": 1
+      "const": 2
     },
     "messageId": {
       "type": "integer",
@@ -34,6 +35,53 @@
           "type": "null"
         }
       ]
+    },
+    "candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "exists",
+        "generation",
+        "phase",
+        "predecessor"
+      ],
+      "properties": {
+        "exists": {
+          "type": "boolean"
+        },
+        "generation": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "phase": {
+          "type": "string",
+          "enum": [
+            "idle",
+            "preparing",
+            "generating",
+            "completed",
+            "cancelled"
+          ]
+        },
+        "predecessor": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
     }
   }
 }

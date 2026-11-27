@@ -3,7 +3,7 @@ import {
   type EraDispatchClassV1,
   type EraDispatchContextV3,
   type EraFailureV1,
-  type EraTavernMessageV1,
+  type EraTavernMessageV2,
   type EraMessageSourceBasisV1,
 } from "@era/vibeflow-contracts";
 import {
@@ -25,7 +25,8 @@ export interface DispatchCanonicalContextV1 {
   readonly schemaVersion: 1;
   readonly seed: DispatchSeedV1;
   readonly status: "ready" | "failed";
-  readonly messages: readonly EraTavernMessageV1[];
+  readonly messages: readonly EraTavernMessageV2[];
+  readonly sourceMessages?: readonly EraTavernMessageV2[];
   readonly identity: Readonly<Record<string, unknown>>;
   readonly meta: Readonly<Record<string, unknown>>;
   readonly placeholder: { readonly enabled: boolean; readonly value: string };
@@ -36,9 +37,9 @@ export interface DispatchPreparationPlanV1 {
   readonly schemaVersion: 1;
   readonly seed: DispatchSeedV1;
   readonly status: "ready" | "failed";
-  readonly messages: readonly EraTavernMessageV1[];
+  readonly messages: readonly EraTavernMessageV2[];
   readonly identity: Readonly<Record<string, unknown>>;
-  readonly processingMessage: EraTavernMessageV1 | null;
+  readonly processingMessage: EraTavernMessageV2 | null;
   readonly processingMk: string | null;
   readonly messageUpdate: null | {
     readonly messageId: number;
@@ -49,6 +50,7 @@ export interface DispatchPreparationPlanV1 {
   readonly variableWriteRequired: boolean;
   readonly failure: EraFailureV1 | null;
   readonly sourceBasis?: EraMessageSourceBasisV1;
+  readonly statusbarPlaceholder?: string;
 }
 
 export interface DispatchPreparationOutcomeV1 extends DispatchPreparationPlanV1 {
@@ -336,7 +338,7 @@ function planPreparation(
     !recordedText.includes(context.placeholder.value)
       ? `${recordedText.trimEnd()}\n${context.placeholder.value}`
       : recordedText;
-  const preparedLatest: EraTavernMessageV1 = {
+  const preparedLatest: EraTavernMessageV2 = {
     ...latest,
     activeText: preparedText,
   };
@@ -386,6 +388,9 @@ export function planDispatchPreparation(
     return plan;
   return {
     ...plan,
+    ...(context.placeholder.enabled && context.placeholder.value.length > 0
+      ? { statusbarPlaceholder: context.placeholder.value }
+      : {}),
     sourceBasis: {
       identity: {
         characterId:
@@ -398,7 +403,7 @@ export function planDispatchPreparation(
             ? context.identity.groupId
             : null,
       },
-      messages: context.messages,
+      messages: context.sourceMessages ?? context.messages,
     },
   };
 }
@@ -438,6 +443,12 @@ export function dispatchContextOf(
           mk: outcome.processingMk,
         }
       : null;
+  const pendingUpdates = new Map<number, {messageId:number;content:string}>();
+  for(const message of outcome.messages){
+    const source=outcome.sourceBasis?.messages.find(source=>source.messageId===message.messageId);
+    if(source&&source.activeText!==message.activeText)pendingUpdates.set(message.messageId,{messageId:message.messageId,content:message.activeText});
+  }
+  if(outcome.messageUpdate!==null&&!outcome.messageChanged)pendingUpdates.set(outcome.messageUpdate.messageId,outcome.messageUpdate);
   return {
     schemaVersion: 3,
     status: outcome.status,
@@ -451,11 +462,11 @@ export function dispatchContextOf(
     failure: outcome.failure,
     generationCycleIdentity,
     floorIdentity,
-    stagedMessageUpdates:
-      outcome.messageUpdate === null || outcome.messageChanged
-        ? []
-        : [outcome.messageUpdate],
+    stagedMessageUpdates: [...pendingUpdates.values()],
     agentFloorCandidate: null,
+    ...(outcome.statusbarPlaceholder === undefined
+      ? {}
+      : { statusbarPlaceholder: outcome.statusbarPlaceholder }),
     ...(outcome.sourceBasis === undefined
       ? {}
       : {

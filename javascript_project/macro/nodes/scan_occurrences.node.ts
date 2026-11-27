@@ -8,7 +8,6 @@ export const era_macro_scan_occurrences = defineNode({
   "contract": {"requires":[{"type":"era.macro.substring.for_replace","cardinality":"exactly_one","display_name":"含本次需要替换标记的文字"},{"type":"era.macro.snapshot","cardinality":"exactly_one","display_name":"本次整段文字共用的变量快照"}],"provides":[{"key":"macro.occurrence_plan","type":"era.macro.occurrence_plan","display_name":"各个宏在原文中的位置和识别结果"}],"params_schema":{},"params_defaults":{},"input_semantics":{"era.macro.substring.for_replace":["宏扫描和拼接均以这段文字为准，其他内容保持原样。"],"era.macro.snapshot":["同一轮宏替换均从此处取值，区分资料缺失与变量本身缺项。"]},"output_semantics":{"macro.occurrence_plan":["供按正确位置读取变量并填回，损坏延迟标记保留原文。"]}},
   "implementations": [{"language":"typescript","targets":["browser","node"],"source":{"kind":"file","ref":"nodes/scan_occurrences.ts","export":"run"}}],
   "base_libs": ["era.macro.runtime"],
-  "capabilities": [],
   "tags": ["宏处理"],
   "rulesets": ["vibeflow.process"],
   "id": "era.macro.scan_occurrences",

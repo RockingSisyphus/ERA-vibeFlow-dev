@@ -1,15 +1,15 @@
 import {takeFrame, emit, route, assertRunning} from "../../base_lib/frames.ts";
 import {record} from "../../base_lib/browser.ts";
 import {persistenceFacts} from "../../base_lib/messages/persistence.ts";
-import {assertCurrentMessageBasis, assertExpectedSidecarPointer} from "../../base_lib/messages/target.ts";
+import {assertCurrentMessageBasis, assertExpectedSidecarPointer, assertMessageNotEditing, assertWritableCandidates} from "../../base_lib/messages/target.ts";
 import {startResource} from "../../base_lib/resources.ts";
 export function CheckTarget(inputs: any, params: any): any {
   const f = takeFrame(inputs);
   assertRunning(f.session); f.options?.signal?.throwIfAborted();
-  if (f.input.sourceBasis !== undefined) assertCurrentMessageBasis(f.session.api, f.input.sourceBasis);
+  if (f.input.sourceBasis !== undefined) assertCurrentMessageBasis(f.session.api, f.input.sourceBasis, f.session);
   assertExpectedSidecarPointer(f.session.api, f.input);
   f.persistence = persistenceFacts(f.session.api, f.input);
-  f.hostUpdates = []; f.affectedMessageIds = new Set(); f.itemIndex = 0;
+  f.hostUpdates = []; f.messageEchoes = []; f.affectedMessageIds = new Set(); f.itemIndex = 0;
   f.session.internalMessageWrites ??= new Map();
   f.messageRefresh = f.input.refresh === "affected" || f.input.refresh === "all" ? f.input.refresh : "none";
   return emit({frame: f}, params);
@@ -40,12 +40,14 @@ export function PrepareItem(inputs: any, params: any): any {
   if (record(update)) {
     const id = update.message_id ?? update.messageId;
     if (Number.isSafeInteger(id) && id >= 0) {
-      const current = record(update.extra) || Array.isArray(update.swipes) && typeof (update.message ?? update.mes) !== "string"
+      // 全候选视图用于定位候选正文；当前候选视图才按 Helper 合同提供 extra。
+      const swiped = Array.isArray(update.swipes) && typeof (update.message ?? update.mes) !== "string"
         ? f.session.api.getChatMessages(id, {include_swipes: true})[0] : null;
-      const text = update.message ?? update.mes ?? (Array.isArray(update.swipes) ? update.swipes[Number(current?.swipe_id ?? 0)] : undefined);
-      if (typeof text === "string") f.session.internalMessageWrites.set(id, text);
+      const active = record(update.extra) ? f.session.api.getChatMessages(id)[0] : null;
+      const text = update.message ?? update.mes ?? (Array.isArray(update.swipes) ? update.swipes[Number(swiped?.swipe_id ?? 0)] : undefined);
+      if(typeof text==="string")f.messageEchoes.push([id,text]);
       f.affectedMessageIds.add(id);
-      f.hostUpdates.push(record(update.extra) ? {...update, extra: {...(record(current?.extra) ? current.extra : {}), ...update.extra}} : update);
+      f.hostUpdates.push(record(update.extra) ? {...update, extra: {...(record(active?.extra) ? active.extra : {}), ...update.extra}} : update);
     }
   }
   return emit({frame: f, done: false}, params);
@@ -53,9 +55,13 @@ export function PrepareItem(inputs: any, params: any): any {
 export function EmptyItem(inputs: any, params: any): any { return emit({frame: takeFrame(inputs), done: true}, params); }
 export function StartWrite(inputs: any, params: any): any {
   const f = takeFrame(inputs);
-  if (f.input.sourceBasis !== undefined) assertCurrentMessageBasis(f.session.api, f.input.sourceBasis);
+  assertWritableCandidates(f.session.api, f.session, f.hostUpdates);
+  if (f.input.sourceBasis !== undefined) assertCurrentMessageBasis(f.session.api, f.input.sourceBasis, f.session);
   assertExpectedSidecarPointer(f.session.api, f.input);
-  f.operationResource = startResource(f, () => f.session.api.setChatMessages(f.hostUpdates, {refresh: f.messageRefresh}), resource => f.session.dispatch.finishCapability({...f, operationResource: resource}));
+  if (f.input.purpose === "era-facade-commit")
+    for (const update of f.hostUpdates) assertMessageNotEditing(f.session.api, update.message_id);
+  for (const [id,text] of f.messageEchoes) f.session.internalMessageWrites.set(id,text);
+  f.operationResource = startResource(f, () => f.session.api.setChatMessages(f.hostUpdates, {refresh: f.messageRefresh}));
   f.publicPromise = f.operationResource.publicPromise;
   return emit({frame: f}, params);
 }

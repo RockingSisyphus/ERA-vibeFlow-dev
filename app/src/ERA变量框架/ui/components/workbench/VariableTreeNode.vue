@@ -32,6 +32,7 @@
         :key="childKey"
         :label="childKey"
         :value="objectValue[childKey]"
+        :root="root"
         :path="[...path, childKey]"
         :depth="depth + 1"
         :filter="filter"
@@ -45,12 +46,14 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+import { variableRuleAt } from '@era/vibeflow-workbench';
 
 defineOptions({ name: 'VariableTreeNode' });
 
 const props = defineProps<{
   label: string;
   value: unknown;
+  root: unknown;
   path: readonly string[];
   depth: number;
   filter: string;
@@ -101,15 +104,14 @@ const summary = computed(() => {
   return String(props.value);
 });
 const protectedLabel = computed(() => {
-  const meta =
-    isObject.value && objectValue.value.$meta && typeof objectValue.value.$meta === 'object'
-      ? (objectValue.value.$meta as Record<string, unknown>)
-      : null;
+  const meta = variableRuleAt(props.root, props.path);
   if (!meta) return '';
   const labels = [];
   if (meta.updatable === false) labels.push('禁改');
   if (typeof meta.necessary === 'string') labels.push(`必需:${meta.necessary}`);
   if (typeof meta.unInsertAble === 'string') labels.push(`禁增:${meta.unInsertAble}`);
+  if (typeof meta.min === 'number') labels.push(`≥ ${meta.min}`);
+  if (typeof meta.max === 'number') labels.push(`≤ ${meta.max}`);
   return labels.join(' · ');
 });
 </script>

@@ -1,14 +1,3 @@
 import {defineNode} from "@vibeflow/plugin";
 
-export const era_tavern_frame_receive_return_event = defineNode({
-  "display_name": "将取得的队首事件交给主服务",
-  "description": "接收已从队列取出或等待得到的事件，按主服务需要的形式交回。事件内容仍要由服务检查和规划，取得事件不代表任务已经执行。",
-  "version": "0.1.0",
-  "flow_kind": "process",
-  "contract": {"requires":[{"type":"era.tavern.frame.frame_receive.await_event","cardinality":"exactly_one","display_name":"将取得的队首事件交给主服务的请求和已有进度"}],"provides":[{"key":"era_tavern_frame_receive_return_event_frame","type":"era.tavern.call.frame","display_name":"将取得的队首事件交给主服务的处理进度及结果"}],"params_schema":{"outputKeys":{"type":"object"}},"params_defaults":{"outputKeys":{"frame":"era_tavern_frame_receive_return_event_frame"}},"input_semantics":{"era.tavern.frame.frame_receive.await_event":["保留“将取得的队首事件交给主服务”对应的实例、请求及已经形成的进度，供本步骤处理并延续同一次请求。"]},"output_semantics":{"era_tavern_frame_receive_return_event_frame":["保留“将取得的队首事件交给主服务”对应的实例、请求及已经形成的进度，交给后续处理或结果返回。"]}},
-  "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/flow.ts","export":"Pass"}}],
-  "rulesets": ["vibeflow.process"],
-  "base_libs": ["era.tavern.frames"],
-  "id": "era.tavern.frame_receive.return_event",
-  "node_type": "vibeflow.node"
-});
+export const era_tavern_frame_receive_return_event=defineNode({"display_name": "将取得的队首事件交给主服务", "description": "接收已从队列取出或等待得到的事件，按主服务需要的形式交回。事件内容仍要由服务检查和规划，取得事件不代表任务已经执行。", "version": "0.1.0", "flow_kind": "process", "contract": {"requires": [], "provides": [{"key": "era_tavern_frame_receive_return_event_frame", "type": "era.tavern.call.frame", "display_name": "将取得的队首事件交给主服务的处理进度及结果"}], "params_schema": {"outputKeys": {"type": "object"}}, "params_defaults": {"outputKeys": {"frame": "era_tavern_frame_receive_return_event_frame"}}, "input_semantics": {}, "output_semantics": {"era_tavern_frame_receive_return_event_frame": ["保留“将取得的队首事件交给主服务”对应的实例、请求及已经形成的进度，交给后续处理或结果返回。"]}}, "implementations": [{"language": "typescript", "targets": ["browser", "node"], "completion": "immediate", "source": {"kind": "file", "ref": "nodes/flow.ts", "export": "Pass"}}], "rulesets": ["vibeflow.process"], "base_libs": ["era.tavern.frames"], "id": "era.tavern.frame_receive.return_event", "node_type": "vibeflow.node"});

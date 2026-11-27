@@ -3,7 +3,6 @@ import {defineNode} from "@vibeflow/plugin";
 export const era_agent_form_session_transition = defineNode({
   "version": "1.0.0",
   "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/agent/finish_stage_blocks.ts","export":"FormSessionTransitionNode"}}],
-  "capabilities": [],
   "display_name": "决定生成结果还需怎样保存或同步",
   "description": "查看本次生成及其指令应用结果，判断还需同步消息历史、确认消息标识，还是已经可以直接返回。保留原任务和可处理的消息范围，供后续把生成结果完成结算。",
   "flow_kind": "process",
@@ -23,24 +22,9 @@ export const era_agent_prepare_stage_handoff = defineNode({
   "contract": {"requires":[{"type":"era.agent.candidate.outcome","cardinality":"exactly_one","display_name":"生成尝试结束后的完整结果"}],"provides":[{"key":"handoff_outcome","type":"era.agent.generation.outcome","display_name":"本次生成及指令应用后的结论"}],"params_schema":{},"params_defaults":{},"input_semantics":{"era.agent.candidate.outcome":["记录生成及文字指令处理的最终结论，供后续整理阶段交接和原请求确认。"]},"output_semantics":{"handoff_outcome":["包含生成阶段实际结果、已应用指令情况及下一步安排，供阶段交接和任务结算使用。"]}},
   "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/agent/finish_stage_blocks.ts","export":"PrepareStageHandoffNode"}}],
   "base_libs": ["era.service.agent_flow_policy","era.service.agent_flow_types","era.service.agent_generation_session","era.service.agent_session_binding","era.service.agent_stage_handoff","era.service.mk_engine","era.service.types"],
-  "capabilities": [],
   "tags": ["故事生成会话"],
   "rulesets": ["vibeflow.process"],
   "id": "era.agent.prepare_stage_handoff",
   "node_type": "vibeflow.node"
 });
 
-export const era_lifecycle_finish_stage_blocks = defineNode({
-  "display_name": "整理生成文字中指令的执行结果",
-  "description": "接收本次模型文字里变量及函数指令的执行结果，更新生成阶段的正文和进度。可重试错误会恢复本次尝试前的状态；重试结束仍失败时保留更早阶段的成果，并返回本次失败原因。",
-  "version": "1.0.0",
-  "flow_kind": "process",
-  "contract": {"requires":[{"type":"era.sync.block.step.state.next","cardinality":"exactly_one","display_name":"本段正文处理后的变量和消息进度"}],"provides":[{"key":"applied_generation_outcome","type":"era.agent.generation.outcome","display_name":"本次生成及指令应用后的结论"}],"params_schema":{},"params_defaults":{},"input_semantics":{"era.sync.block.step.state.next":["包含这一段已算出的变量、函数、历史及下一位置，供消息循环继续处理剩余正文。"]},"output_semantics":{"applied_generation_outcome":["包含生成阶段实际结果、已应用指令情况及下一步安排，供阶段交接和任务结算使用。"]}},
-  "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/agent/finish_stage_blocks.ts","export":"FinishStageBlocksNode"}}],
-  "base_libs": ["era.service.agent_flow_policy","era.service.agent_flow_types","era.service.agent_generation_session","era.service.agent_session_binding","era.service.agent_stage_handoff","era.service.mk_engine","era.service.types"],
-  "capabilities": [{"id":"era.tavern.agent","operations":["read_session_binding","write_session","clear_session"]},{"id":"era.tavern.sidecar","operations":["read_working","write_working"]},{"id":"era.lifecycle.admission","operations":["schedule"]}],
-  "tags": ["内存生命周期"],
-  "rulesets": ["vibeflow.process"],
-  "id": "era.lifecycle.finish_stage_blocks",
-  "node_type": "vibeflow.node"
-});

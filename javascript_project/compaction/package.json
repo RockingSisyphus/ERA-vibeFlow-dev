@@ -1,12 +1,18 @@
 {
   "name": "@era/vibeflow-command-compaction",
-  "version": "0.4.6",
+  "version": "0.4.7",
   "private": true,
   "type": "module",
   "exports": {
     "./engine": {
       "types": "./generated/release/engine.d.ts",
       "default": "./generated/release/engine.js"
+    },
+    "./workflow": {
+      "types": "./generated/release/workflow.d.ts",
+      "browser": "./generated/release/browser.js",
+      "node": "./generated/release/node.js",
+      "default": "./generated/release/workflow.js"
     }
   },
   "engines": {
@@ -28,7 +34,7 @@
     "@era/vibeflow-expression": ">=0.3.0 <1"
   },
   "devDependencies": {
-    "@era/vibeflow-expression": "file:../expression/era-vibeflow-expression-0.3.3.tgz",
+    "@era/vibeflow-expression": "file:../expression/era-vibeflow-expression-0.3.4.tgz",
     "esbuild": "^0.28.1",
     "typescript": "^7.0.2"
   },

@@ -1,4 +1,10 @@
-import { AgentFunctionCallFailure, executeAgentFunctionCalls } from './native-workflow-fixture.ts';
+import { businessWorkflowNode } from './business-workflow-node';
+import {
+  AgentFunctionCallFailure,
+  executeAgentFunctionCalls,
+  prepareAgentSessionNode,
+  generationStepFixture,
+} from './native-workflow-fixture';
 import { createCandidateRunner } from './agent-candidate-fixture';
 import { describe, expect, it, vi } from 'vitest';
 import {
@@ -17,29 +23,16 @@ import {
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Service 纯领域函数的行为测试必须读取真实 VibeFlow 源码。
   // @ts-ignore TypeScript 会对 app rootDir 外的 VibeFlow 源码报告 TS6059。
 } from '../../../javascript_project/service/base_lib/agent/agent_generation_session';
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment -- 节点测试必须调用正式 VibeFlow Node source。
-// @ts-ignore app tsconfig 不声明 Service Node 的跨 root 类型。
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment -- 节点测试必须经过正式的 V2 准备节点。
-// @ts-ignore app tsconfig 不声明 Service Node 的跨 root 类型。
-import { prepareAgentSessionNode, generationStepFixture } from './native-workflow-fixture';
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- 节点测试读取真实 Service 编排边界。
 // @ts-ignore app rootDir 外的 Node source。
 import {
   ClassifyGenerationEventNode as classifyGenerationNode,
   PrepareGenerationPhaseNode as prepareGenerationNode,
+  BuildSettingsResultNode as buildSettingsNode,
 } from '../../../javascript_project/service/nodes/agent/shared_agent_flow_adapters.ts';
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- 节点测试读取真实 Service 编排边界。
 // @ts-ignore app rootDir 外的 Node source。
 import { FormSessionTransitionNode as formTransitionNode } from '../../../javascript_project/service/nodes/agent/finish_stage_blocks.ts';
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment -- 节点测试读取真实 Service 编排边界。
-// @ts-ignore app rootDir 外的 Node source。
-import { run as prepareSettingsNode } from '../../../javascript_project/service/nodes/agent/prepare_settings_request';
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment -- 节点测试读取真实 Service 编排边界。
-// @ts-ignore app rootDir 外的 Node source。
-import { run as executeSettingsNode } from '../../../javascript_project/service/nodes/agent/execute_settings_command';
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment -- 节点测试读取真实 Service 编排边界。
-// @ts-ignore app rootDir 外的 Node source。
-import { BuildSettingsResultNode as buildSettingsNode } from '../../../javascript_project/service/nodes/agent/shared_agent_flow_adapters.ts';
 async function runAgentSessionNode(
   inputs: {
     'era.step.request.routed': {
@@ -62,8 +55,9 @@ async function runAgentSessionNode(
     };
   };
   if (step.task?.primaryEvent?.type === 'era.ui.agent_configuration') {
-    const prepared = await prepareSettingsNode(inputs, params, runtime as never);
-    const executed = await executeSettingsNode(
+    const prepared = await businessWorkflowNode('era.agent.prepare_settings_request', inputs, params, runtime as never);
+    const executed = await businessWorkflowNode(
+      'era.agent.execute_settings_command',
       { 'era.agent.settings.request': { value: prepared.settings_request } },
       params,
       runtime as never,
@@ -296,7 +290,10 @@ describe('retry failure boundaries', () => {
     });
     await running;
     expect(generate).toHaveBeenCalledOnce();
-    expect(native).toHaveBeenCalledWith({ chatId: 'retry-chat', executionId: 'retry-event' });
+    expect(native).toHaveBeenCalledWith(
+      { chatId: 'retry-chat', executionId: 'retry-event' },
+      expect.objectContaining({ signal: expect.any(Object) }),
+    );
     native.mockClear();
     await execute(
       'planning',
@@ -508,31 +505,37 @@ describe('AgentGenerationSession pure contracts', () => {
         },
       },
     );
-    expect(upsertConnectionProfile).toHaveBeenCalledWith({
-      name: 'Fixture API',
-      apiUrl: 'http://127.0.0.1:19002',
-      sourceId: null,
-      id: null,
-      status: 'created',
-      keyMode: 'replace-if-nonempty-otherwise-preserve',
-      keyReference: undefined,
-    });
-    expect(writeConfiguration).toHaveBeenCalledWith({
-      configuration: expect.objectContaining({
-        planning: expect.objectContaining({
-          attempts: [
-            expect.objectContaining({
-              modelSource: {
-                kind: 'custom-profile',
-                profileId: 'profile-created-by-host',
-                profileNameHint: 'Fixture API',
-                model: 'fixture-model',
-              },
-            }),
-          ],
+    expect(upsertConnectionProfile).toHaveBeenCalledWith(
+      {
+        name: 'Fixture API',
+        apiUrl: 'http://127.0.0.1:19002',
+        sourceId: null,
+        id: null,
+        status: 'created',
+        keyMode: 'replace-if-nonempty-otherwise-preserve',
+        keyReference: undefined,
+      },
+      expect.objectContaining({ signal: expect.any(Object) }),
+    );
+    expect(writeConfiguration).toHaveBeenCalledWith(
+      {
+        configuration: expect.objectContaining({
+          planning: expect.objectContaining({
+            attempts: [
+              expect.objectContaining({
+                modelSource: {
+                  kind: 'custom-profile',
+                  profileId: 'profile-created-by-host',
+                  profileNameHint: 'Fixture API',
+                  model: 'fixture-model',
+                },
+              }),
+            ],
+          }),
         }),
-      }),
-    });
+      },
+      expect.objectContaining({ signal: expect.any(Object) }),
+    );
     expect(result.agent_transition).toMatchObject({ status: 'committed' });
   });
   it('sanitizes embedded presets to prompts and common sampling values', () => {
@@ -727,7 +730,10 @@ describe('AgentGenerationSession pure contracts', () => {
         },
       },
     );
-    expect(clearSession).toHaveBeenCalledWith({ chatKey: 'chat-agent-stop' });
+    expect(clearSession).toHaveBeenCalledWith(
+      { chatKey: 'chat-agent-stop' },
+      expect.objectContaining({ signal: expect.any(Object) }),
+    );
     expect(result.agent_transition).toMatchObject({
       mode: 'legacy-ignore',
       status: 'committed',

@@ -1,3 +1,6 @@
+import { resourceClient } from './native-resource-client.mjs';
+import * as expression from '../../../javascript_project/expression/generated/release/node.js';
+import * as compaction from '../../../javascript_project/compaction/generated/release/node.js';
 import assert from 'node:assert/strict';
 import { fileURLToPath, URL as ResourceURL } from 'node:url';
 import { createRequire } from 'node:module';
@@ -5,11 +8,53 @@ const require = createRequire(import.meta.url);
 const { importGeneratedService } = require('../../scripts/import-generated-service.mjs');
 import { setTimeout as delay } from 'node:timers/promises';
 const bundleRoot = new ResourceURL(process.env.ERA_NATIVE_AOT_ROOT ?? '../../../generated/', import.meta.url);
-const { runWorkflow: sync } = require(fileURLToPath(new ResourceURL('era-tavern/sync/workflow.js', bundleRoot).href));
-const { runWorkflowAsync: asyncEntry } = require(
-  fileURLToPath(new ResourceURL('era-tavern/async/workflow.js', bundleRoot).href),
-);
-const { runWorkflowAsync: realService } = await stageService();
+const syncModule = require(fileURLToPath(new ResourceURL('era-tavern/sync/workflow.js', bundleRoot).href));
+const loadTavern = name => require(fileURLToPath(new ResourceURL(`era-tavern/${name}/workflow.js`, bundleRoot).href));
+const operationModule = loadTavern('operation');
+const runtimeModule = loadTavern('runtime');
+const parallelReadsModule = loadTavern('parallel_reads');
+const serviceModule = await stageService();
+const realService = serviceModule.runWorkflowAsync;
+// 仅测试原始入口的分段合同：由测试驱动显式启动一次真实异步入口，并复用该次结果。
+// 正式生产接线和Service通信不经过此适配。
+const prepared = new WeakMap();
+const resource = frame => frame?.operationResource ?? frame?.modelResource ?? frame?.publicPromise;
+function sync(inputs, options) {
+  const output = syncModule.runWorkflow(inputs, options),
+    frame = output.result;
+  if (!inputs.wire_request && frame?.action === 'capability' && frame.publicPromise && frame.session?.dispatch) {
+    const key = resource(frame),
+      work = frame.session.dispatch.async(frame);
+    prepared.set(key, {
+      work,
+      session: frame.session,
+      action: frame.action,
+      family: frame.family,
+      operation: frame.operation,
+    });
+    work.catch(error => {
+      (frame.operationResource ?? frame.modelResource)?.completion.reject(error);
+    });
+  }
+  return output;
+}
+function asyncEntry(inputs, options) {
+  const frame = inputs.request,
+    key = resource(frame),
+    record = key && prepared.get(key);
+  return record &&
+    record.session === frame.session &&
+    record.action === frame.action &&
+    record.family === frame.family &&
+    record.operation === frame.operation
+    ? record.work.then(result => ({ result }))
+    : (options.entry === 'runtime' || options.entry === 'protocol_runtime'
+      ? runtimeModule
+      : options.entry === 'protocol_parallel_reads'
+        ? parallelReadsModule
+        : operationModule
+    ).runWorkflowAsync(inputs, options);
+}
 const { runEra } = require(
   fileURLToPath(new ResourceURL('../../../javascript_project/tavern/generated/bindings.mjs', import.meta.url).href),
 );
@@ -78,31 +123,104 @@ export async function fixture(serviceEntry, options = {}) {
   }
   /** @type {Record<string, any>} */
   let caps = {};
+  const publicWaits = new Map();
   let client,
     session,
-    disposed = 0;
-  const service = async (_inputs, { signal, capabilities }) => {
-    caps = capabilities;
+    disposed = 0,
+    activeReceives = 0,
+    maxReceives = 0;
+  const service = async (inputs, runOptions) => {
+    const { signal, workflowSession: native } = runOptions;
+    const workflowSession = {
+      ...native,
+      receive: async (...args) => {
+        activeReceives++;
+        maxReceives = Math.max(maxReceives, activeReceives);
+        try {
+          return await native.receive(...args);
+        } finally {
+          activeReceives--;
+        }
+      },
+    };
+    caps = resourceClient(workflowSession, inputs.host_resources, token => {
+      const promise = publicWaits.get(token);
+      publicWaits.delete(token);
+      return promise;
+    });
     if (serviceEntry) {
       if (options.readyOnEntry) ready.resolve();
-      return await serviceEntry(_inputs, { signal, capabilities });
+      return (await serviceEntry(inputs, { ...runOptions, workflowSession })) ?? {};
     }
-    if (options.manualStartup) capabilities['era.tavern.identity'].read({});
-    else capabilities['era.tavern.startup_gate'].activate({ route: 'allow', warn: false });
+    if (options.manualStartup) caps['era.tavern.identity'].read({});
+    else caps['era.tavern.startup_gate'].activate({ route: 'allow', warn: false });
     ready.resolve();
     await new Promise(resolve => {
       signal.addEventListener('abort', resolve, { once: true });
       if (signal.aborted) resolve();
     });
+    return {};
   };
-  const recordingAsync = (inputs, runOptions) =>
-    asyncEntry(inputs, runOptions.entry === 'runtime' ? { ...runOptions, ...options.runtimeOptions } : runOptions);
-  const recordingSync = inputs => {
-    session = inputs.request.session ?? session;
-    return sync(inputs);
+  const recordingAsync = (inputs, runOptions) => {
+    if (options.observeProtocol && inputs.host_resources) {
+      const resources = inputs.host_resources;
+      inputs = {
+        ...inputs,
+        host_resources: {
+          ...resources,
+          project: request => {
+            options.observeProtocol(request);
+            return resources.project(request);
+          },
+        },
+      };
+    }
+    const work = asyncEntry(
+      inputs,
+      runOptions.entry === 'protocol_runtime' ? { ...runOptions, ...options.runtimeOptions } : runOptions,
+    );
+    if (options.observeFailure) work.catch(options.observeFailure);
+    else if (process.env.ERA_NATIVE_DEBUG_OWNER) work.catch(error => console.dir(error, { depth: 10 }));
+    return work;
+  };
+  const recordingSync = (inputs, runOptions) => {
+    const resources = inputs.host_resources;
+    if (!resources) return sync(inputs, runOptions);
+    return sync({
+      ...inputs,
+      host_resources: {
+        ...resources,
+        restore: request => {
+          const frame = resources.restore(request);
+          session = frame.session ?? session;
+          return frame;
+        },
+        project: request => {
+          const output = resources.project(request),
+            token = output.result?.pending,
+            promise = request.value.publicPromise;
+          if (token && promise) {
+            publicWaits.set(token, { promise, controller: request.value.operationScope.controller });
+            promise.then(
+              () => publicWaits.delete(token),
+              () => publicWaits.delete(token),
+            );
+          }
+          return output;
+        },
+      },
+    }, runOptions);
   };
   const work = runEra(
-    { sync: recordingSync, async: recordingAsync, service },
+    {
+      sync: { ...syncModule, runWorkflow: recordingSync },
+      operation: { ...operationModule, runWorkflowAsync: recordingAsync },
+      runtime: { ...runtimeModule, runWorkflowAsync: recordingAsync },
+      parallelReads: { ...parallelReadsModule, runWorkflowAsync: recordingAsync },
+      service: { ...serviceModule, runWorkflowAsync: service },
+      expression,
+      compaction,
+    },
     {
       ...options,
       api: env.api,
@@ -119,6 +237,10 @@ export async function fixture(serviceEntry, options = {}) {
     },
   );
   work.catch(ready.reject);
+  work.then(
+    () => publicWaits.clear(),
+    () => publicWaits.clear(),
+  );
   await ready.promise;
   await delay(0);
   return {
@@ -133,6 +255,7 @@ export async function fixture(serviceEntry, options = {}) {
     },
     work,
     disposed: () => disposed,
+    transport: () => ({ activeReceives, maxReceives }),
   };
 }
 export { sync, asyncEntry, realService, runEra };

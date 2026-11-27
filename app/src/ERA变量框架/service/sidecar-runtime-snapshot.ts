@@ -2,7 +2,7 @@
  * @file 当前页面实例的工作状态与Sidecar投影
  * @description 负责保存Service发布的页面内状态及只读投影；不执行变量规则，所有写入依赖Service的受限能力。
  *
- * 它为宏和 API 同步投影当前工作状态；聊天记录与 Sidecar 在批次结束时持久化。写入者必须是 Service 通过受限 Host capability；身份不匹配
+ * 它为宏和 API 同步投影最近一次完整应用结果。正在逐块计算的记录单独暂存，聊天记录与 Sidecar 在批次结束时持久化。写入者必须是 Service 通过受限 Host capability；身份不匹配
  * 时读者一律得到空状态，绝不回退到聊天变量或上一聊天快照。
  */
 export const SIDECAR_PROMPT_EVENT = 'era-sidecar-binding-prompt';
@@ -15,7 +15,7 @@ export interface SidecarRuntimeIdentity {
 }
 
 /**
- * 宏和 API 可读取的工作状态投影；内存应用即时刷新，保存完成后才通知订阅者。
+ * 宏和 API 可读取的完整应用投影。批次保存成功时通知已有订阅者。
  */
 export interface SidecarRuntimeSnapshot {
   readonly identity: SidecarRuntimeIdentity;
@@ -94,6 +94,7 @@ export interface EraWorkingState {
   readonly work: Record<string, unknown> | null;
   readonly sourceBasis: Record<string, unknown> | null;
   readonly dirty: boolean;
+  readonly nativeCandidate?: Record<string, unknown> | null;
   readonly stage?: Record<string, unknown> | null;
 }
 
@@ -109,11 +110,12 @@ export function readWorkingState(identity: SidecarRuntimeIdentity): EraWorkingSt
   return working ? structuredClone(working) : null;
 }
 
+/** 按聊天保存工作状态副本；原生候选仍有待写内容时保留旧批次，防止切换聊天丢失其结算依据。 */
 export function storeWorkingState(state: EraWorkingState): void {
   const key = workingKey(state.identity);
   // 已保存的非当前聊天可从Sidecar重新加载；仅保留确有待保存内容的旧批次。
   for (const [other, previous] of workingByChat) {
-    if (other !== key && !previous.dirty) workingByChat.delete(other);
+    if (other !== key && !previous.dirty && !previous.nativeCandidate) workingByChat.delete(other);
   }
   workingByChat.set(key, structuredClone(state));
 }

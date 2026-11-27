@@ -7,7 +7,8 @@
       "type": "era.sync.position.state",
       "cardinality": "exactly_one",
       "display_name": "正文当前位置、变量和待保存内容"
-    }
+    },
+    {"type":"era.workflow.host_resources","cardinality":"exactly_one","display_name":"所属 ERA 实例的本地资源"}
   ],
   "provides": [
     {
@@ -24,9 +25,10 @@
         "type": "era.sync.position.state",
         "display_name": "正文当前位置、变量和待保存内容",
         "required": true
-      }
+      },
+      {"key":"host_resources","type":"era.workflow.host_resources","required":true,"display_name":"所属 ERA 实例的本地资源"}
     ],
-    "max_steps": 35,
+    "max_steps": 36,
     "nodes": [
       {
         "id": "start",
@@ -44,31 +46,31 @@
         "id": "begin_call",
         "display_name": "检查并启动消息中的作者函数",
         "description": "在“在消息当前位置启动或接续作者函数”流程中，读取正文中声明的作者自定义 JavaScript 函数及参数，检查后启动这次调用。无效调用或启动失败会记下原因并交回消息处理；有效函数可以继续提出变量提交或结束请求。",
-        "definition_id": "era.sync.begin_author_call"
+        "definition_id": "era.communication.sync_begin_author_call"
       },
       {
         "id": "receive_event",
         "display_name": "确认上次提交并等待作者函数下一步",
         "description": "在“在消息当前位置启动或接续作者函数”流程中，把上次已经应用的变量操作结果回告正在运行的作者函数，然后等待它继续提交、要求同步或结束。收到后选择对应动作；等待或回告失败时带回具体原因。",
-        "definition_id": "era.sync.receive_author_event"
+        "definition_id": "era.communication.sync_receive_author_event"
       },
       {
         "id": "prepare_commit",
         "display_name": "把作者函数提交的操作接到当前位置",
         "description": "在“在消息当前位置启动或接续作者函数”流程中，检查运行中的作者函数要求提交的变量操作，有效内容插入它所在的消息位置，交给统一指令流程按顺序计算。可立即答复的请求直接回告，其他结果在应用完成后确认。",
-        "definition_id": "era.sync.prepare_author_commit"
+        "definition_id": "era.communication.sync_prepare_author_commit"
       },
       {
         "id": "answer_sync",
         "display_name": "回告运行中作者函数的历史同步请求",
         "description": "在“在消息当前位置启动或接续作者函数”流程中，作者函数正在一条消息内部执行时，按现有接口规则拒绝它提出的历史同步要求，并返回具体说明，让函数继续完成当前调用。回告本身失败时记录错误，供消息流程处理。",
-        "definition_id": "era.sync.answer_author_sync"
+        "definition_id": "era.communication.sync_answer_author_sync"
       },
       {
         "id": "finish_call",
         "display_name": "结束作者函数并整理正文记录",
         "description": "在“在消息当前位置启动或接续作者函数”流程中，作者函数完成、失败或当前消息范围结束时，整理调用结果并更新正文中的调用标记，释放本次运行资料。将最终进度交回消息流程，供继续处理后面的正文。",
-        "definition_id": "era.sync.finish_author_call"
+        "definition_id": "era.communication.sync_finish_author_call"
       },
       {
         "id": "complete_author_step",
@@ -81,13 +83,11 @@
         "display_name": "结束在消息当前位置启动或接续作者函数",
         "description": "标明“在消息当前位置启动或接续作者函数”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
         "definition_id": "era.service.terminal"
-      }
+      },
+      {"id":"retain_host_resources","definition_id":"era.service.retain_host_resources","display_name":"保留所属实例的资源","description":"先取出本次运行或本轮迭代收到的本地资源，供下面需要组织工作流通信的步骤使用。资源不写入业务消息。"}
     ],
     "edges": [
-      [
-        "start",
-        "route_author_lifecycle"
-      ],
+      {"from":"start","to":"route_author_lifecycle","schedule":true},
       {
         "from": "route_author_lifecycle",
         "to": "finish_call",
@@ -147,7 +147,14 @@
       [
         "complete_author_step",
         "end"
-      ]
+      ],
+      ["start","retain_host_resources"],
+      {"from":"retain_host_resources","to":"route_author_lifecycle","schedule":true},
+      {"from":"retain_host_resources","to":"finish_call","schedule":false},
+      {"from":"retain_host_resources","to":"begin_call","schedule":false},
+      {"from":"retain_host_resources","to":"receive_event","schedule":false},
+      {"from":"retain_host_resources","to":"prepare_commit","schedule":false},
+      {"from":"retain_host_resources","to":"answer_sync","schedule":false}
     ],
     "outputs": [
       {

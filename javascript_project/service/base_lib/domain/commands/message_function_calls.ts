@@ -7,11 +7,10 @@
  */
 
 import {
-  parsePositionedMessageCommands,
-  type EraCommandParseInput,
+  readCommandBlocks,
   type EraCrudCommand,
   type EraCrudDiagnostic,
-} from "./crud_parser.ts";
+} from "../../../../../base_lib/command_payload/command_payload.ts";
 
 /** 规范写法首字母大写；解析大小写不敏感。 */
 export const ERA_FUNCTION_CALL_TAG = "EraFCall";
@@ -81,9 +80,9 @@ export type EraMessageBlock =
 
 /** 六类指令块的字节范围，用于判定调用块是否被嵌套在指令块内部。 */
 function commandBlockRanges(
-  input: EraCommandParseInput,
+  input: { readonly content: string },
 ): readonly { readonly start: number; readonly end: number }[] {
-  return parsePositionedMessageCommands(input).map((command) => ({
+  return readCommandBlocks(input.content).map((command) => ({
     start: command.start,
     end: command.end,
   }));
@@ -290,18 +289,9 @@ interface CommandBlockRange {
 
 /** 复用既有解析器的块字节范围，保证块序列与重放语义完全一致。 */
 function parseCommandBlocks(
-  input: EraCommandParseInput,
+  input: { readonly content: string },
 ): readonly CommandBlockRange[] {
-  return parsePositionedMessageCommands(input)
-    .filter(
-      (command) =>
-        command.type === "insert" ||
-        command.type === "edit" ||
-        command.type === "delete" ||
-        command.type === "function-insert" ||
-        command.type === "function-edit" ||
-        command.type === "function-delete",
-    )
+  return readCommandBlocks(input.content)
     .map((command) => ({
       start: command.start,
       end: command.end,
@@ -324,7 +314,7 @@ function regionOf(
  * 操作区内部的操作块与原文操作块同权：同样出现在列表中，只是带归属信息。
  */
 export function parseMessageBlocks(
-  input: EraCommandParseInput,
+  input: { readonly content: string },
 ): readonly EraMessageBlock[] {
   const content = input?.content ?? "";
   if (typeof content !== "string" || content.length === 0) return [];
@@ -451,7 +441,7 @@ export function hasAppliedBlockRecords(content: string): boolean {
  * `appliedCommandPrefix` 个指令开始，就已提交的块不会被算第二遍。返回值直接就是既有
  * `applyMessageCommands` 的 `commandRange.fromIndex` 口径。
  */
-export function appliedCommandPrefix(input: EraCommandParseInput): number {
+export function appliedCommandPrefix(input: { readonly content: string }): number {
   const content = input?.content ?? "";
   if (typeof content !== "string" || content.length === 0) return 0;
   const regions = collectOperationsRegions(content);

@@ -1,0 +1,212 @@
+{
+  "type_key": "era.tavern.workflow.events_step",
+  "display_name": "向Service逐条交接已准入事件",
+  "description": "按本实例先进先出队列顺序逐次发送；Service编号确认后才交接，停止时退出等待。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.call.frame",
+      "cardinality": "exactly_one",
+      "display_name": "当前酒馆实例的本地资源与生命周期"
+    },
+    {"type":"era.workflow.host_resources","cardinality":"exactly_one","display_name":"所属 ERA 实例的本地资源"}
+  ],
+  "provides": [
+    {
+      "key": "next_frame",
+      "type": "era.tavern.transport.next",
+      "display_name": "本地酒馆实例"
+    },
+    {
+      "key": "done",
+      "type": "era.workflow.runtime.done",
+      "display_name": "本分支是否结束"
+    },
+    {"key":"retained_host_resources","type":"era.workflow.host_resources","display_name":"所属 ERA 实例的本地资源"}
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.call.frame",
+        "required": true,
+        "display_name": "当前酒馆实例的本地资源与生命周期"
+      },
+      {"key":"host_resources","type":"era.workflow.host_resources","required":true,"display_name":"所属 ERA 实例的本地资源"}
+    ],
+    "max_steps": 21,
+    "nodes": [
+      {
+        "id": "start",
+        "definition_id": "era.tavern.initialize.start",
+        "display_name": "开始本段通信",
+        "description": "标明本段通信范围；实际结果由中间业务和官方通信步骤提供。"
+      },
+      {
+        "id": "take_event",
+        "display_name": "等下一条已准入事件或实例结束",
+        "description": "沿原先进先出队列和容量限制取得最早事件，等待已登记的Service实例号；实例结束时正常结束本循环，不再从队列取新事件。",
+        "definition_id": "era.tavern.communication.events.take_event"
+      },
+      {
+        "id": "encode_message",
+        "definition_id": "era.workflow.encode_message",
+        "display_name": "保留事件或结果原值，再交给官方发送",
+        "description": "在此处保留大数、负零、数组空位和缺失值，使独立流程收到与原调用相同的业务值。此转换只处理消息，当前业务进度仍通过图内数据连接保留。"
+      },
+      {
+        "id": "send",
+        "display_name": "Send：把本次事件交给主服务",
+        "description": "发送到Service实例的era.service.in端口；只交接事件，不确认该事件已执行业务。",
+        "definition_id": "era.workflow.send_event",
+        "config": {
+          "expected_workflows": [
+            {
+              "root": "era-service",
+              "path": "configs/era.service.jsonc"
+            }
+          ]
+        }
+      },
+      {
+        "id": "advance",
+        "display_name": "继续取下一事件",
+        "description": "完成本次交接后继续原先进先出队列；保留本地引用和业务回执，直到服务的对应终态确认才释放。",
+        "definition_id": "era.tavern.communication.events.advance"
+      },
+      {
+        "id": "closed",
+        "display_name": "停止转交新事件",
+        "description": "实例停止或主服务已结束，交出本分支退出确认；未确认业务请求沿原关闭结算路径处理。",
+        "definition_id": "era.tavern.communication.events.closed"
+      },
+      {
+        "id": "end",
+        "definition_id": "era.tavern.initialize.end",
+        "display_name": "完成本段通信",
+        "description": "标明本段通信范围；实际结果由中间业务和官方通信步骤提供。"
+      },
+      {
+        "id": "retain",
+        "display_name": "保留本地实例后等待取件",
+        "description": "当前实例的资源仅在本图保留；官方邮箱中只传取件请求和事件数据。",
+        "definition_id": "era.tavern.communication.events.retain",
+        "join_policy": "all"
+      },
+      {
+        "id": "receive_pull",
+        "definition_id": "era.workflow.receive",
+        "display_name": "Receive：等待主服务请求下一事件",
+        "description": "主服务准备好处理下一事件才发送取件请求，保持原有队列容量与串行消费。",
+        "config": {
+          "port": "era.service.pull",
+          "expected_workflows": [
+            {
+              "root": "era-service",
+              "path": "configs/era.service.jsonc"
+            },
+            {
+              "root": "era-tavern",
+              "path": "configs/era.tavern.runtime.jsonc",
+              "entry": "protocol_runtime"
+            }
+          ]
+        }
+      },
+      {
+        "id": "check_pull",
+        "display_name": "核对取件请求或结束通知",
+        "description": "只接受当前主服务的取件请求，或本运行实例发送的结束通知；其他发送方和内容报告错误。",
+        "definition_id": "era.tavern.communication.events.check_pull"
+      },
+      {
+        "id": "closed_control",
+        "display_name": "结束取件等待",
+        "description": "主服务已经结束，不从原队列取新事件，确认本事件交接分支结束。",
+        "definition_id": "era.tavern.communication.events.closed_control"
+      },
+      {"id":"retain_host_resources","definition_id":"era.tavern.retain_host_resources","display_name":"保留所属实例的资源","description":"先取出本次运行或本轮迭代收到的本地资源，供下面需要组织工作流通信的步骤使用。资源不写入业务消息。"}
+    ],
+    "edges": [
+      {"from":"start","to":"retain","schedule":true},
+      {
+        "from": "take_event",
+        "to": "encode_message",
+        "when": "has_event == true"
+      },
+      {
+        "from": "take_event",
+        "to": "closed",
+        "when": "has_event == false"
+      },
+      [
+        "send",
+        "advance"
+      ],
+      [
+        "advance",
+        "end"
+      ],
+      [
+        "closed",
+        "end"
+      ],
+      [
+        "encode_message",
+        "send"
+      ],
+      [
+        "retain",
+        "receive_pull"
+      ],
+      [
+        "receive_pull",
+        "check_pull"
+      ],
+      {
+        "from": "retain",
+        "to": "check_pull",
+        "schedule": false
+      },
+      {
+        "from": "check_pull",
+        "to": "take_event",
+        "when": "should_pull == true"
+      },
+      {
+        "from": "check_pull",
+        "to": "closed_control",
+        "when": "should_pull == false"
+      },
+      [
+        "closed_control",
+        "end"
+      ],
+      {
+        "from": "take_event",
+        "to": "send",
+        "schedule": false
+      },
+      ["start","retain_host_resources"],
+      {"from":"retain_host_resources","to":"retain","transfer":false,"schedule":true},
+      {"from":"retain_host_resources","to":"check_pull","schedule":false},
+      {"from":"retain_host_resources","to":"take_event","schedule":false}
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.transport.next",
+        "cardinality": "exactly_one",
+        "display_name": "本地酒馆实例",
+        "as": "next_frame"
+      },
+      {
+        "type": "era.workflow.runtime.done",
+        "cardinality": "exactly_one",
+        "display_name": "本分支是否结束",
+        "as": "done"
+      },
+      {"type":"era.workflow.host_resources","as":"retained_host_resources","cardinality":"exactly_one","display_name":"所属 ERA 实例的本地资源"}
+    ]
+  }
+}

@@ -1,10 +1,14 @@
+import { businessWorkflowNode } from './business-workflow-node';
 import { describe, expect, it, vi } from 'vitest';
-import { run as execute } from '../../../javascript_project/service/nodes/agent/execute_generation_session';
 import { PrepareStageHandoffNode as handoff } from '../../../javascript_project/service/nodes/agent/finish_stage_blocks.ts';
 import { normalizeAgentConfiguration } from '../../../javascript_project/service/base_lib/agent/agent_generation_session';
-
 /** 按真实阶段恢复入口推进，明确在两次 Node 执行之间改变宿主事实。 */
-function fixture(options: { settlement?: boolean; planningDraft?: string } = {}) {
+function fixture(
+  options: {
+    settlement?: boolean;
+    planningDraft?: string;
+  } = {},
+) {
   const configuration = normalizeAgentConfiguration({
     schemaVersion: '2',
     planning: { enabled: true },
@@ -58,14 +62,18 @@ function fixture(options: { settlement?: boolean; planningDraft?: string } = {})
       identity,
       identityError: null,
     };
-    const out = await execute({ 'era.agent.generation.request': { value: request } }, {}, {
-      capabilities: { 'era.tavern.agent': capability },
-    } as never);
+    const out = await businessWorkflowNode(
+      'era.agent.execute_session_v2',
+      { 'era.agent.generation.request': { value: request } },
+      {},
+      {
+        capabilities: { 'era.tavern.agent': capability },
+      } as never,
+    );
     return handoff({ 'era.agent.candidate.outcome': { value: out.generation_outcome } }).handoff_outcome;
   };
   return { step, state, latest, generate, identity, clearSession };
 }
-
 describe('actual Agent stage continuation', () => {
   it('关闭独立结算时，最终正文仍保存已执行的规划操作', async () => {
     const draft = '<VariableEdit>{"hp":80}</VariableEdit><EraFCall name="old" status="done"/>';
@@ -131,7 +139,10 @@ describe('actual Agent stage continuation', () => {
     const story = await f.step();
     const result = await f.step(story.handoff.completionId, true);
     expect(result.value).toEqual({ status: 'generation-cancelled' });
-    expect(f.clearSession).toHaveBeenCalledWith({ chatKey: 'chat' });
+    expect(f.clearSession).toHaveBeenCalledWith(
+      { chatKey: 'chat' },
+      expect.objectContaining({ signal: expect.any(Object) }),
+    );
     expect(f.generate).not.toHaveBeenCalled();
   });
 });

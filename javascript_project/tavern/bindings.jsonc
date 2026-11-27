@@ -1,6 +1,6 @@
 {
-  "status": "implemented_owned_lifetime",
-  "binding_policy": "generated_native_workflow_calls_only",
+  "status": "implemented_native_coordination",
+  "binding_policy": "official_coordinator_with_local_resource_tokens",
   "capabilities": [
     {
       "capability": "era.tavern.agent",
@@ -24,7 +24,7 @@
         ]
       },
       "resume": {
-        "workflow": "configs/era.tavern.async.jsonc",
+        "workflow": "configs/era.tavern.operation.jsonc",
         "action": "capability",
         "nodeset": "era.tavern.flow.cap_async_agent",
         "forward": "entire_prepared_frame",
@@ -80,7 +80,7 @@
         ]
       },
       "resume": {
-        "workflow": "configs/era.tavern.async.jsonc",
+        "workflow": "configs/era.tavern.operation.jsonc",
         "action": "capability",
         "nodeset": "era.tavern.flow.cap_async_agent",
         "forward": "entire_prepared_frame",
@@ -168,7 +168,7 @@
         ]
       },
       "resume": {
-        "workflow": "configs/era.tavern.async.jsonc",
+        "workflow": "configs/era.tavern.operation.jsonc",
         "action": "capability",
         "nodeset": "era.tavern.flow.cap_async_agent",
         "forward": "entire_prepared_frame",
@@ -205,7 +205,7 @@
         ]
       },
       "resume": {
-        "workflow": "configs/era.tavern.async.jsonc",
+        "workflow": "configs/era.tavern.operation.jsonc",
         "action": "capability",
         "nodeset": "era.tavern.flow.cap_async_agent",
         "forward": "entire_prepared_frame",
@@ -242,7 +242,7 @@
         ]
       },
       "resume": {
-        "workflow": "configs/era.tavern.async.jsonc",
+        "workflow": "configs/era.tavern.operation.jsonc",
         "action": "capability",
         "nodeset": "era.tavern.flow.cap_async_agent",
         "forward": "entire_prepared_frame",
@@ -279,7 +279,7 @@
         ]
       },
       "resume": {
-        "workflow": "configs/era.tavern.async.jsonc",
+        "workflow": "configs/era.tavern.operation.jsonc",
         "action": "capability",
         "nodeset": "era.tavern.flow.agent_list_connection_models_finish",
         "forward": "entire_prepared_frame",
@@ -312,7 +312,7 @@
         ]
       },
       "resume": {
-        "workflow": "configs/era.tavern.async.jsonc",
+        "workflow": "configs/era.tavern.operation.jsonc",
         "action": "capability",
         "nodeset": "era.tavern.flow.agent_list_connection_models_draft_finish",
         "forward": "entire_prepared_frame",
@@ -341,7 +341,7 @@
         "nodeset": "era.tavern.flow.agent_generate"
       },
       "resume": {
-        "workflow": "configs/era.tavern.async.jsonc",
+        "workflow": "configs/era.tavern.operation.jsonc",
         "action": "capability",
         "nodeset": "era.tavern.flow.agent_generate_finish",
         "forward": "entire_prepared_frame"
@@ -365,7 +365,7 @@
         "nodeset": "era.tavern.flow.agent_generate_story"
       },
       "resume": {
-        "workflow": "configs/era.tavern.async.jsonc",
+        "workflow": "configs/era.tavern.operation.jsonc",
         "action": "capability",
         "nodeset": "era.tavern.flow.agent_generate_story_finish",
         "forward": "entire_prepared_frame"
@@ -439,7 +439,7 @@
         ]
       },
       "resume": {
-        "workflow": "configs/era.tavern.async.jsonc",
+        "workflow": "configs/era.tavern.operation.jsonc",
         "action": "capability",
         "nodeset": "era.tavern.flow.cap_async_agent",
         "forward": "entire_prepared_frame",
@@ -510,7 +510,7 @@
         ]
       },
       "resume": {
-        "workflow": "configs/era.tavern.async.jsonc",
+        "workflow": "configs/era.tavern.operation.jsonc",
         "action": "capability",
         "nodeset": "era.tavern.flow.character_patch_single_floor_finish",
         "forward": "entire_prepared_frame",
@@ -543,7 +543,7 @@
         ]
       },
       "resume": {
-        "workflow": "configs/era.tavern.async.jsonc",
+        "workflow": "configs/era.tavern.operation.jsonc",
         "action": "capability",
         "nodeset": "era.tavern.flow.character_patch_external_statusbar_finish",
         "forward": "entire_prepared_frame",
@@ -576,7 +576,7 @@
         ]
       },
       "resume": {
-        "workflow": "configs/era.tavern.async.jsonc",
+        "workflow": "configs/era.tavern.operation.jsonc",
         "action": "capability",
         "nodeset": "era.tavern.flow.cap_async_character",
         "forward": "entire_prepared_frame",
@@ -613,7 +613,7 @@
         ]
       },
       "resume": {
-        "workflow": "configs/era.tavern.async.jsonc",
+        "workflow": "configs/era.tavern.operation.jsonc",
         "action": "capability",
         "nodeset": "era.tavern.flow.character_write_main_greeting_finish",
         "forward": "entire_prepared_frame",
@@ -663,7 +663,7 @@
         ]
       },
       "resume": {
-        "workflow": "configs/era.tavern.async.jsonc",
+        "workflow": "configs/era.tavern.operation.jsonc",
         "action": "capability",
         "nodeset": "era.tavern.flow.character_apply_greeting_refresh_finish",
         "forward": "entire_prepared_frame",
@@ -709,7 +709,7 @@
         ]
       },
       "resume": {
-        "workflow": "configs/era.tavern.async.jsonc",
+        "workflow": "configs/era.tavern.operation.jsonc",
         "action": "capability",
         "nodeset": "era.tavern.flow.functions_next_finish",
         "forward": "entire_prepared_frame",
@@ -843,7 +843,7 @@
         "nodeset": "era.tavern.flow.messages_update_content"
       },
       "resume": {
-        "workflow": "configs/era.tavern.async.jsonc",
+        "workflow": "configs/era.tavern.operation.jsonc",
         "action": "capability",
         "nodeset": "era.tavern.flow.messages_update_content_finish",
         "forward": "entire_prepared_frame",
@@ -868,7 +868,7 @@
         "nodeset": "era.tavern.flow.messages_refresh"
       },
       "resume": {
-        "workflow": "configs/era.tavern.async.jsonc",
+        "workflow": "configs/era.tavern.operation.jsonc",
         "action": "capability",
         "nodeset": "era.tavern.flow.cap_async_messages",
         "forward": "entire_prepared_frame",
@@ -919,7 +919,7 @@
         ]
       },
       "resume": {
-        "workflow": "configs/era.tavern.async.jsonc",
+        "workflow": "configs/era.tavern.operation.jsonc",
         "action": "capability",
         "nodeset": "era.tavern.flow.regex_upsert_finish",
         "forward": "entire_prepared_frame",
@@ -970,7 +970,7 @@
         ]
       },
       "resume": {
-        "workflow": "configs/era.tavern.async.jsonc",
+        "workflow": "configs/era.tavern.operation.jsonc",
         "action": "capability",
         "nodeset": "era.tavern.flow.sidecar_read_record_finish",
         "forward": "entire_prepared_frame",
@@ -999,7 +999,7 @@
         "nodeset": "era.tavern.flow.sidecar_write_record"
       },
       "resume": {
-        "workflow": "configs/era.tavern.async.jsonc",
+        "workflow": "configs/era.tavern.operation.jsonc",
         "action": "capability",
         "nodeset": "era.tavern.flow.cap_async_sidecar",
         "forward": "entire_prepared_frame",
@@ -1202,7 +1202,7 @@
         ]
       },
       "resume": {
-        "workflow": "configs/era.tavern.async.jsonc",
+        "workflow": "configs/era.tavern.operation.jsonc",
         "action": "capability",
         "nodeset": "era.tavern.flow.cap_async_worldbook",
         "forward": "entire_prepared_frame",
@@ -1239,7 +1239,7 @@
         ]
       },
       "resume": {
-        "workflow": "configs/era.tavern.async.jsonc",
+        "workflow": "configs/era.tavern.operation.jsonc",
         "action": "capability",
         "nodeset": "era.tavern.flow.cap_async_worldbook",
         "forward": "entire_prepared_frame",
@@ -1276,7 +1276,7 @@
         ]
       },
       "resume": {
-        "workflow": "configs/era.tavern.async.jsonc",
+        "workflow": "configs/era.tavern.operation.jsonc",
         "action": "capability",
         "nodeset": "era.tavern.flow.cap_async_worldbook",
         "forward": "entire_prepared_frame",
@@ -1314,7 +1314,7 @@
         ]
       },
       "resume": {
-        "workflow": "configs/era.tavern.async.jsonc",
+        "workflow": "configs/era.tavern.operation.jsonc",
         "action": "capability",
         "nodeset": "era.tavern.flow.cap_async_worldbook",
         "forward": "entire_prepared_frame",
@@ -1328,22 +1328,6 @@
         "route_replace_entries__check_request",
         "route_replace_entries__start_operation"
       ]
-    },
-    {
-      "capability": "vibeflow.port",
-      "operation": "receive",
-      "completion": "suspend",
-      "workflow": "configs/era.tavern.async.jsonc",
-      "action": "receive",
-      "nodeset": "era.tavern.flow.frame_receive"
-    },
-    {
-      "capability": "vibeflow.port",
-      "operation": "send",
-      "completion": "immediate",
-      "workflow": "configs/era.tavern.sync.jsonc",
-      "action": "send",
-      "nodeset": "era.tavern.flow.frame_send"
     }
   ],
   "lifecycle": [
@@ -1369,41 +1353,10 @@
     },
     {
       "action": "wait_through",
-      "workflow": "configs/era.tavern.async.jsonc"
+      "workflow": "configs/era.tavern.operation.jsonc"
     }
   ],
-  "mechanical_sequence": "各函数配方固定调用同步 AOT；仅真实等待操作转交同实例 prepared frame 给异步 AOT。同步完成的 suspend 接口由生成 async 函数转交结果/异常；不在接线中判断分支或管理资源。",
-  "port_recipes": {
-    "receive": {
-      "prepare_action": "prepare_receive",
-      "resume_action": "receive"
-    },
-    "waitThrough": {
-      "prepare_action": "prepare_wait_through",
-      "resume_action": "wait_through"
-    }
-  },
-  "model_completion_callback": {
-    "status": "implemented",
-    "trigger": "raw_model_terminal",
-    "first": {
-      "workflow": "configs/era.tavern.sync.jsonc",
-      "action": "auxiliary_terminal"
-    },
-    "then": {
-      "workflow": "configs/era.tavern.async.jsonc",
-      "forward": "completed_prepared_frame",
-      "action": "capability"
-    },
-    "policy": "generated_parameter_forwarding_only; public cancellation does not invoke the terminal callback"
-  },
-  "capability_completion_callback": {
-    "status": "implemented",
-    "trigger": "raw_operation_terminal",
-    "workflow": "configs/era.tavern.async.jsonc",
-    "forward": "same_prepared_frame",
-    "policy": "generated_parameter_forwarding_only; public cancellation does not discard the raw result or execute a Node implementation directly"
-  },
+  "mechanical_sequence": "跨workflow使用官方InvokeSync、Call、Wait、Kill和邮箱，固定接线只转交请求；资源寻址与实际IO清理由本实例边界提供。",
   "function_context_callbacks": {
     "status": "implemented",
     "lookup": {
@@ -1429,26 +1382,26 @@
       "action": "subscription_control"
     },
     "publish": {
-      "workflow": "configs/era.tavern.async.jsonc",
+      "workflow": "configs/era.tavern.operation.jsonc",
       "action": "subscription_publish"
     },
     "policy": "generated_parameter_forwarding_only; resources and sequential listener scheduling owned by native Nodes and Loop"
   },
   "generation_receipt_callback": {
     "status": "implemented",
-    "workflow": "configs/era.tavern.async.jsonc",
+    "workflow": "configs/era.tavern.operation.jsonc",
     "action": "generation_receipt",
     "policy": "native receipt and handoff wait; no then/branch policy in generated binding"
   },
   "handoff_callback": {
     "status": "implemented",
-    "workflow": "configs/era.tavern.async.jsonc",
+    "workflow": "configs/era.tavern.operation.jsonc",
     "action": "generation_handoff",
     "policy": "fixed native workflow invocation; public notification cancellation does not discard raw handoff continuation"
   },
   "startup_wait_callback": {
     "status": "implemented",
-    "workflow": "configs/era.tavern.async.jsonc",
+    "workflow": "configs/era.tavern.operation.jsonc",
     "action": "wait_startup",
     "policy": "fixed native startup wait; no Promise/resource management in App binding"
   },
@@ -1468,30 +1421,6 @@
         {
           "entry": "async",
           "projection": "frame"
-        }
-      ]
-    },
-    {
-      "name": "finishCapability",
-      "steps": [
-        {
-          "entry": "async",
-          "projection": "value"
-        }
-      ]
-    },
-    {
-      "name": "modelComplete",
-      "steps": [
-        {
-          "entry": "sync",
-          "action": "auxiliary_terminal",
-          "projection": "frame"
-        },
-        {
-          "entry": "async",
-          "action": "capability",
-          "projection": "value"
         }
       ]
     },
@@ -1626,11 +1555,10 @@
   ],
   "native_entry": {
     "export": "runEra",
-    "entry": "async",
+    "entry": "runtime",
     "policy": "角色卡局部脚本仅调用一次原生运行入口；初始化、主Service并发和卸载清理均由原生流程拥有，不导出start/stop对象。",
     "binding_callback": "bindSession",
-    "service_callback": "runService",
-    "workflow_entry": "runtime"
+    "workflow_entry": "protocol_runtime"
   },
   "presentation_client": {
     "admit_action": "admit",

@@ -15,7 +15,7 @@ export const era_tavern_sidecar_read_working_execute = defineNode({
 
 export const era_tavern_sidecar_write_working_check_request = defineNode({
   "display_name": "检查内存状态更新的归属和版本",
-  "description": "核对本次工作记录所属聊天、状态文件、目标消息及预期版本，准备递增版本的内存状态。资料已变化时拒绝旧更新，避免覆盖其他任务的新进度。",
+  "description": "核对聊天、状态文件、目标消息和预期版本，准备递增版本的内存状态。恢复旧基线时用expectedSourceBasis严格核对当前候选。普通暂存只对Service已声明的待写原生候选接受同一生成周期的正文追加，保留原计算来源和待写前缀；其他来源变化仍拒绝。此步骤不写宿主正文或文件，实际保存仍逐字核对来源。",
   "version": "0.1.0",
   "flow_kind": "data_store",
   "contract": {"requires":[{"type":"era.tavern.call.frame","cardinality":"exactly_one","display_name":"检查内存状态更新的归属和版本的请求和已有进度"}],"provides":[{"key":"era_tavern_sidecar_write_working_check_request_frame","type":"era.tavern.frame.sidecar_write_working.check_request","display_name":"检查内存状态更新的归属和版本的处理进度及结果"}],"params_schema":{"outputKeys":{"type":"object"}},"params_defaults":{"outputKeys":{"frame":"era_tavern_sidecar_write_working_check_request_frame"}},"input_semantics":{"era.tavern.call.frame":["保留“检查内存状态更新的归属和版本”对应的实例、请求及已经形成的进度，供本步骤处理并延续同一次请求。"]},"output_semantics":{"era_tavern_sidecar_write_working_check_request_frame":["保留“检查内存状态更新的归属和版本”对应的实例、请求及已经形成的进度，交给后续处理或结果返回。"]}},

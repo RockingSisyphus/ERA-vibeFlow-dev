@@ -1,6 +1,25 @@
 /** 原始 API 和只读数据转换。无队列、回执、重试或流程驱动。 */
 export function browserApi(): any { return globalThis; }
 
+/** 原生 debounce 只安排保存；等宿主实际保存成功的通知，取消时释放监听。 */
+export function saveTavernSettings(tavern: any, signal: AbortSignal): Promise<void> {
+  signal.throwIfAborted();
+  return new Promise<void>((resolve, reject) => {
+    const source = tavern.eventSource;
+    const event = tavern.eventTypes.SETTINGS_UPDATED;
+    const cleanup = () => {
+      source.removeListener(event, complete);
+      signal.removeEventListener("abort", cancel);
+    };
+    const complete = () => { cleanup(); resolve(); };
+    const cancel = () => { cleanup(); reject(signal.reason); };
+    source.on(event, complete);
+    signal.addEventListener("abort", cancel, {once: true});
+    try { tavern.saveSettingsDebounced(); }
+    catch (error) { cleanup(); reject(error); }
+  });
+}
+
 export function browserHosts(api: any): any[] {
   return [...new Set([api.window?.top, api.window?.parent, api.window, api].filter(Boolean))];
 }

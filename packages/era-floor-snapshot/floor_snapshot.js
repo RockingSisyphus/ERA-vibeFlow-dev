@@ -4,7 +4,7 @@ export function messageMk(text) {
     const block = text.match(/<era_data>(\{[\s\S]*?\})<\/era_data>/iu)?.[1];
     return block?.match(/"era-message-key"\s*=\s*"([^"]+)"/u)?.[1] ?? null;
 }
-import { selectedMks } from './data_view.js';
+import { pathSegments, selectedMks } from './data_view.js';
 export { selectedMks, transformEraData, removeMetaFields } from './data_view.js';
 export { projectPublicState } from './public_state.js';
 /**
@@ -33,15 +33,8 @@ function parseLog(raw) {
         return [];
     }
 }
-function pathSegments(path) {
-    if (Array.isArray(path))
-        return path.map(String);
-    const result = [];
-    String(path).replace(/[^.[\]]+|\[(?:(-?\d+(?:\.\d+)?)|(["'])((?:(?!\2)[^\\]|\\.)*?)\2)\]|(?=(?:\.|\[\])(?:\.|\[\]|$))/gu, (match, number, quote, substring) => {
-        result.push(quote ? substring.replace(/\\(\\)?/gu, '$1') : number || match);
-        return match;
-    });
-    return result;
+function floorLogPathSegments(path) {
+    return Array.isArray(path) ? path.map(String) : pathSegments(String(path), false);
 }
 function canTraverse(value) {
     return value !== null && typeof value === 'object';
@@ -55,7 +48,7 @@ function define(target, key, value) {
 function setAtPath(target, path, value) {
     if (!canTraverse(target))
         return;
-    const segments = pathSegments(path);
+    const segments = floorLogPathSegments(path);
     if (segments.length === 0)
         return;
     let cursor = target;
@@ -78,7 +71,7 @@ function setAtPath(target, path, value) {
 function unsetAtPath(target, path) {
     if (!canTraverse(target))
         return;
-    const segments = pathSegments(path);
+    const segments = floorLogPathSegments(path);
     if (segments.length === 0)
         return;
     let cursor = target;

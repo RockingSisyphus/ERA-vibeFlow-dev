@@ -5,7 +5,6 @@ import {deferred, linkedSignals} from "../base_lib/resources.ts";
 export function CheckFrame(inputs: any, params: any): any {
   const f = takeFrame(inputs);
   const s = f.session;
-  assertRunning(s, false);
   if (f.input?.port !== s.outboundPort) throw new EraServiceHostError("ERA_HOST_PORT_UNKNOWN", `出站 Port 必须是 ${s.outboundPort}。`);
   const frame = f.input.value;
   if (!frame || typeof frame !== "object" || Array.isArray(frame) || typeof frame.frameId !== "string" || !frame.frameId)
@@ -16,6 +15,8 @@ export function CheckFrame(inputs: any, params: any): any {
   if (previous !== undefined && previous !== f.fingerprint)
     throw new EraServiceHostError("ERA_HOST_FRAME_CONFLICT", `frameId ${frame.frameId} 对应的内容发生冲突。`);
   f.duplicate = previous !== undefined;
+  // 已成功处理的同一帧可在清理期间确认重放；新帧仍须通过运行状态检查。
+  if (!f.duplicate) assertRunning(s, false);
   return emit({frame: f}, params);
 }
 export function ChooseFrame(inputs: any, params: any): any {

@@ -8,7 +8,6 @@ export const era_workbench_apply_protection_choice = defineNode({
   "contract": {"requires":[{"type":"era.workbench.operation_plan","cardinality":"exactly_one","display_name":"根据编辑差异安排的操作清单"}],"provides":[{"key":"protected_preparation_result","type":"era.workbench.preparation_result","display_name":"草稿转换出的操作或检查问题"}],"params_schema":{},"params_defaults":{},"input_semantics":{"era.workbench.operation_plan":["列出草稿需要的增删改及保护处理，尚待正式提交许可和执行。"]},"output_semantics":{"protected_preparation_result":["包含有序操作和提交依据，或要求重读、修改、重新选择保护方式的原因。"]}},
   "implementations": [{"language":"typescript","targets":["browser"],"completion":"immediate","source":{"kind":"file","ref":"nodes/api/workbench_apply_protection.ts","export":"run"}}],
   "base_libs": ["era.workbench.context","era.workbench.operations","era.workbench.protection"],
-  "capabilities": [],
   "tags": ["工作台提交"],
   "rulesets": ["vibeflow.process"],
   "id": "era.workbench.apply_protection_choice",

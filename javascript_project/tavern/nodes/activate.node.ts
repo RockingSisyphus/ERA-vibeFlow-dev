@@ -2,7 +2,7 @@ import {defineNode} from "@vibeflow/plugin";
 
 export const era_tavern_activate_branch_allow = defineNode({
   "display_name": "安装本实例的聊天和按钮监听",
-  "description": "接收允许启用的实例，为聊天变化、生成事件和 ERA 按钮安装监听，并连接内部内容的显示处理。已安装时沿用同一组监听；登记失败会撤销本次已装部分，供后续安全启动。",
+  "description": "接收允许启用的实例，按事件目录将原生来源绑定到 ERA 输入类型，并安装聊天、生成和按钮监听。生成入口监听酒馆通过命令处理后的信号，避免把仅执行斜杠命令当作待生成候选。一同启用 ERA 技术内容呈现模块，集中登记宿主显示文本处理、报告容器和模型提示处理。资源归当前实例，登记失败撤销本次已装部分。",
   "version": "0.1.0",
   "flow_kind": "data_store",
   "contract": {"requires":[{"type":"era.tavern.frame.activate.choose_scope","cardinality":"exactly_one","display_name":"安装本实例的聊天和按钮监听的请求和已有进度"}],"provides":[{"key":"era_tavern_activate_branch_allow_frame","type":"era.tavern.frame.activate.choose_scope","display_name":"安装本实例的聊天和按钮监听的处理进度及结果"}],"params_schema":{"outputKeys":{"type":"object"}},"params_defaults":{"outputKeys":{"frame":"era_tavern_activate_branch_allow_frame"}},"input_semantics":{"era.tavern.frame.activate.choose_scope":["保留“安装本实例的聊天和按钮监听”对应的实例、请求及已经形成的进度，供本步骤处理并延续同一次请求。"]},"output_semantics":{"era_tavern_activate_branch_allow_frame":["保留“安装本实例的聊天和按钮监听”对应的实例、请求及已经形成的进度，交给后续处理或结果返回。"]}},

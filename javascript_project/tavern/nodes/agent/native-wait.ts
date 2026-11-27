@@ -1,3 +1,4 @@
+import {readAgentMessages} from "../../base_lib/agent/facts.ts";
 import {takeFrame,emit} from "../../base_lib/frames.ts";
 import {identity,record} from "../../base_lib/browser.ts";
 import {startResource,resourceValue,abortable,linkedSignals,syncCall} from "../../base_lib/resources.ts";
@@ -14,8 +15,7 @@ export function StartOperation(inputs:any,params:any):any {
   const nonNative=record(session)&&session.nativeGeneration===false;
   const current=cycle?.identity.chatId===f.input.chatId&&cycle.identity.executionId===f.input.executionId;
   f.operationResource=startResource(f,signal=>nonNative?{status:"not-native"}:
-    current?abortable(()=>cycle.promise,linkedSignals([signal])):{status:"cancelled",reason:"generation-not-current"},
-    resource=>s.dispatch.finishCapability({...f,operationResource:resource}));
+    current?abortable(()=>cycle.promise,linkedSignals([signal])):{status:"cancelled",reason:"generation-not-current"});
   f.publicPromise=f.operationResource.publicPromise;return emit({frame:f},params);
 }
 export async function WaitTerminal(inputs:any,params:any):Promise<any> {
@@ -28,7 +28,7 @@ export function ReadCurrent(inputs:any,params:any):any {
     return structuredClone({...f.nativeTerminal,
       executionId:record(current)&&record(current.execution)?current.execution.id:null,
       identity:{...identity(api),characterName:api.getCurrentCharacterName(),isGroup:Boolean(api.SillyTavern.groupId),scriptId:api.getScriptId(),lifecycleToken:s.lifecycleToken},
-      latestMessage:api.getChatMessages(-1,{include_swipes:false})[0]??null});
+      latestMessage:readAgentMessages(api,-1)[0]??null});
   });
   return emit({frame:f},params);
 }

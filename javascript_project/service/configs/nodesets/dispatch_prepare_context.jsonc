@@ -1,13 +1,14 @@
 {
   "type_key": "era.dispatch.prepare_context",
   "display_name": "为当前任务读取聊天并准备消息身份",
-  "description": "先判断任务需要哪些资料，再读取当前消息、回复和状态绑定，准备关联变量历史的消息标识及显示占位。普通同步暂存正文变化，单独标识任务按需保存；最后交出可执行任务或读取失败原因。",
+  "description": "读取真实聊天与候选状态，在内存准备消息身份和记录，交给统一候选保存流程；派发准备阶段不再单独写回正文。",
   "requires": [
     {
       "type": "era.batch.execution.state",
       "cardinality": "exactly_one",
       "display_name": "当前批次的任务进度与累计结果"
-    }
+    },
+    {"type":"era.workflow.host_resources","cardinality":"exactly_one","display_name":"所属 ERA 实例的本地资源"}
   ],
   "provides": [
     {
@@ -39,9 +40,10 @@
         "type": "era.batch.execution.state",
         "display_name": "当前批次的任务进度与累计结果",
         "required": true
-      }
+      },
+      {"key":"host_resources","type":"era.workflow.host_resources","required":true,"display_name":"所属 ERA 实例的本地资源"}
     ],
-    "max_steps": 18,
+    "max_steps": 19,
     "nodes": [
       {
         "id": "start",
@@ -53,7 +55,8 @@
         "id": "select_step",
         "display_name": "取出当前批次接下来的一项任务",
         "description": "在“为当前任务读取聊天并准备消息身份”流程中，根据批次进度取出下一项任务，连同原事件及所属批次交给准备流程。保持规划好的先后顺序，前一项的处理结果可供后续任务使用。",
-        "definition_id": "era.service.select_step"
+        "definition_id": "era.service.select_step",
+        "join_policy": "all"
       },
       {
         "id": "classify_context",
@@ -71,25 +74,19 @@
         "id": "read_canonical_context",
         "display_name": "读取当前任务真正需要的聊天资料",
         "description": "在“为当前任务读取聊天并准备消息身份”流程中，按任务需要，从酒馆读取当前聊天、消息正文和所选回复，连同状态文件绑定、历史记录及显示占位设置。整理成同一份任务资料，供后续确定处理范围和执行起点。",
-        "definition_id": "era.dispatch.read_canonical_context"
+        "definition_id": "era.communication.dispatch_read_canonical_context"
       },
       {
         "id": "stage_message_preparation",
-        "display_name": "为消息补齐历史标识和显示位置",
-        "description": "在“为当前任务读取聊天并准备消息身份”流程中，接收目标消息、内部记录和状态栏设置，为消息准备关联变量历史的身份标识及必要的显示占位。普通同步暂存正文变化，单独标识任务形成写入计划，供后续统一处理。",
+        "display_name": "识别候选状态并暂存消息身份",
+        "description": "保留宿主提供的候选存在性与生成周期事实，准备消息身份但不在派发阶段写回正文。已有候选和原生预留位置均交给统一保存流程，避免标记预提交提前扩长swipes。源：base_lib/dispatch_preparation.ts。",
         "definition_id": "era.dispatch.plan_message_preparation"
       },
       {
         "id": "preserve_prepared_context",
-        "display_name": "保留任务已准备的正文及读取结果",
-        "description": "在“为当前任务读取聊天并准备消息身份”流程中，接收已准备的消息正文、内部记录和待保存内容，连同读取问题一起继续传递。后续任务可以沿用同一份资料，知道哪些内容待保存、哪些读取已经失败。",
+        "display_name": "交出候选身份及待写记录",
+        "description": "将准备的身份、源聊天依据和待写记录交给后续任务；预留候选的身份准备不会把已经保存的变量基线标成未保存。源：base_lib/dispatch_preparation.ts。",
         "definition_id": "era.dispatch.preserve_prepared_context"
-      },
-      {
-        "id": "commit_preparation",
-        "display_name": "保存消息标识及必要的显示占位",
-        "description": "在“为当前任务读取聊天并准备消息身份”流程中，接收单独更新消息标识任务准备的正文和内部记录，逐项写入并确认结果。消息标识用于关联消息与变量历史；无法确认写入状态时返回停止原因，供后续避免继续使用不确定数据。",
-        "definition_id": "era.dispatch.commit_preparation"
       },
       {
         "id": "finalize_dispatch_context",
@@ -102,13 +99,11 @@
         "display_name": "结束为当前任务读取聊天并准备消息身份",
         "description": "标明“为当前任务读取聊天并准备消息身份”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
         "definition_id": "era.service.terminal"
-      }
+      },
+      {"id":"retain_host_resources","definition_id":"era.service.retain_host_resources","display_name":"保留所属实例的资源","description":"先取出本次运行或本轮迭代收到的本地资源，供下面需要组织工作流通信的步骤使用。资源不写入业务消息。"}
     ],
     "edges": [
-      [
-        "start",
-        "select_step"
-      ],
+      {"from":"start","to":"select_step","schedule":true},
       [
         "select_step",
         "classify_context"
@@ -127,16 +122,6 @@
         "read_canonical_context",
         "stage_message_preparation"
       ],
-      {
-        "from": "stage_message_preparation",
-        "to": "preserve_prepared_context",
-        "when": "precommit_route == 'no-op'"
-      },
-      {
-        "from": "stage_message_preparation",
-        "to": "commit_preparation",
-        "when": "precommit_route == 'commit'"
-      },
       [
         "build_no_host_context",
         "finalize_dispatch_context"
@@ -146,13 +131,16 @@
         "finalize_dispatch_context"
       ],
       [
-        "commit_preparation",
-        "finalize_dispatch_context"
-      ],
-      [
         "finalize_dispatch_context",
         "end"
-      ]
+      ],
+      [
+        "stage_message_preparation",
+        "preserve_prepared_context"
+      ],
+      ["start","retain_host_resources"],
+      {"from":"retain_host_resources","to":"select_step","transfer":false,"schedule":true},
+      {"from":"retain_host_resources","to":"read_canonical_context","schedule":false}
     ],
     "outputs": [
       {

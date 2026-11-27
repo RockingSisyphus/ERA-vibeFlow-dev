@@ -8,7 +8,6 @@ export const era_command_compaction_terminal = defineNode({
   "contract": {"requires":[],"provides":[],"params_schema":{},"params_defaults":{},"input_semantics":{},"output_semantics":{}},
   "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/terminal.ts","export":"run"}}],
   "base_libs": [],
-  "capabilities": [],
   "tags": ["ERA 命令压缩"],
   "rulesets": ["vibeflow.process"],
   "id": "era.command_compaction.terminal",

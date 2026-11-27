@@ -1,0 +1,118 @@
+{
+  "type_key": "era.service.workflow.receive_event",
+  "display_name": "Receive：接收酒馆交来的下一事件",
+  "description": "从当前Service实例邮箱接收酒馆runtime已准入的事件，再核对发信身份与信封。先进先出队列容量、事件引用和业务收集规则保持原有职责。",
+  "expand": true,
+  "requires": [{"type":"era.workflow.host_resources","cardinality":"exactly_one","display_name":"所属 ERA 实例的本地资源"}],
+  "provides": [
+    {
+      "key": "transport_event_raw",
+      "type": "era.transport.event.raw",
+      "display_name": "酒馆交来的待核对事件"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [{"key":"host_resources","type":"era.workflow.host_resources","required":true,"display_name":"所属 ERA 实例的本地资源"}],
+    "max_steps": 13,
+    "nodes": [
+      {
+        "id": "start",
+        "definition_id": "era.service.terminal",
+        "display_name": "开始本段通信",
+        "description": "本步骤用于“Receive：接收酒馆交来的下一事件”：标明本段通信范围；实际结果由中间业务和官方通信步骤提供。"
+      },
+      {
+        "id": "receive",
+        "display_name": "Receive：等待酒馆事件消息",
+        "description": "本步骤用于“Receive：接收酒馆交来的下一事件”：等待酒馆runtime交来的已准入事件；只收纯数据，保留发信实例身份。",
+        "definition_id": "era.workflow.receive",
+        "config": {
+          "port": "era.service.in",
+          "expected_workflows": [
+            {
+              "root": "era-tavern",
+              "path": "configs/era.tavern.runtime.jsonc",
+              "entry": "protocol_runtime"
+            }
+          ]
+        }
+      },
+      {
+        "id": "decode",
+        "display_name": "核对酒馆身份并取出事件",
+        "description": "先核对本实例绑定的发送方、端口和请求身份，再恢复消息里的大数、缺失值与数组空位。本步骤用于“Receive：接收酒馆交来的下一事件”：确认消息来自本实例绑定的酒馆runtime、端口和事件类型正确，再交给原格式、大小与业务收集检查。",
+        "definition_id": "era.workflow.service.workflow_receive_event.decode"
+      },
+      {
+        "id": "end",
+        "definition_id": "era.service.terminal",
+        "display_name": "完成本段通信",
+        "description": "本步骤用于“Receive：接收酒馆交来的下一事件”：标明本段通信范围；实际结果由中间业务和官方通信步骤提供。"
+      },
+      {
+        "id": "prepare_pull",
+        "display_name": "请求酒馆交出下一条事件",
+        "description": "主服务准备好接收时请求一条事件，酒馆才从原有限容量队列取件，忙于处理时不会持续搬空队列。",
+        "definition_id": "era.workflow.service.prepare_pull",
+        "join_policy": "all"
+      },
+      {
+        "id": "encode_pull",
+        "definition_id": "era.workflow.encode_message",
+        "display_name": "封装取件请求",
+        "description": "保留取件控制消息内容，再交给官方发送。"
+      },
+      {
+        "id": "send_pull",
+        "definition_id": "era.workflow.send",
+        "display_name": "Send：通知酒馆主服务准备取件",
+        "description": "向当前酒馆运行实例的取件端口发送一次请求。",
+        "config": {
+          "expected_workflows": [
+            {
+              "root": "era-tavern",
+              "path": "configs/era.tavern.runtime.jsonc",
+              "entry": "protocol_runtime"
+            }
+          ]
+        }
+      },
+      {"id":"retain_host_resources","definition_id":"era.service.retain_host_resources","display_name":"保留所属实例的资源","description":"先取出本次运行或本轮迭代收到的本地资源，供下面需要组织工作流通信的步骤使用。资源不写入业务消息。"}
+    ],
+    "edges": [
+      {"from":"start","to":"prepare_pull","schedule":true},
+      [
+        "receive",
+        "decode"
+      ],
+      [
+        "decode",
+        "end"
+      ],
+      [
+        "prepare_pull",
+        "encode_pull"
+      ],
+      [
+        "encode_pull",
+        "send_pull"
+      ],
+      [
+        "send_pull",
+        "receive"
+      ],
+      ["start","retain_host_resources"],
+      {"from":"retain_host_resources","to":"prepare_pull","transfer":false,"schedule":true},
+      {"from":"retain_host_resources","to":"decode","schedule":false}
+    ],
+    "outputs": [
+      {
+        "type": "era.transport.event.raw",
+        "cardinality": "exactly_one",
+        "display_name": "酒馆交来的待核对事件",
+        "as": "transport_event_raw"
+      }
+    ]
+  }
+}

@@ -1,0 +1,146 @@
+{
+  "type_key": "era.tavern.workflow.read_slot.worldbook",
+  "display_name": "读取世界书并等待实际IO结束",
+  "description": "沿用原世界书读取参数、返回合同及资源原语；与本组其他实际读取共同运行。取消或出错也等待已启动IO和清理结束，不启动图外完成回调工作流。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.read_slot",
+      "cardinality": "exactly_one",
+      "display_name": "世界书读取要求与所属资源"
+    }
+  ],
+  "provides": [
+    {
+      "key": "reply_worldbook",
+      "type": "era.tavern.read_slot.reply",
+      "display_name": "世界书的实际读取结果"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "slot",
+        "type": "era.tavern.read_slot",
+        "required": true,
+        "display_name": "本次单项读取要求与资源"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.read_slot.reply",
+        "cardinality": "exactly_one",
+        "as": "reply",
+        "display_name": "这项读取的实际结果"
+      }
+    ],
+    "max_steps": 18,
+    "nodes": [
+      {
+        "id": "start",
+        "definition_id": "era.tavern.initialize.start",
+        "display_name": "开始读取世界书并等待实际IO结束",
+        "description": "接收本次请求并进入“读取世界书并等待实际IO结束”；具体结果由后续实际处理步骤给出。"
+      },
+      {
+        "id": "prepare",
+        "display_name": "读取世界书并等待实际IO结束：准备",
+        "description": "沿用原世界书读取参数、返回合同及资源原语；与本组其他实际读取共同运行。取消或出错也等待已启动IO和清理结束，不启动图外完成回调工作流。",
+        "definition_id": "era.tavern.workflow.read_slot.worldbook.prepare"
+      },
+      {
+        "id": "prefix_route_read__check_request",
+        "display_name": "检查“读取世界书”的调用是否有效",
+        "description": "在“分派世界书操作”流程中，接收“读取世界书”的请求，确认当前实例仍可运行、调用未取消，且输入确实是一份操作资料。通过后交给对应业务步骤，失败时按实际原因结束。",
+        "definition_id": "era.tavern.worldbook_read.check_request"
+      },
+      {
+        "id": "prefix_route_read__start_operation",
+        "display_name": "读取世界书名称、绑定并查询条目",
+        "description": "在“分派世界书操作”流程中，先取得已有世界书和当前角色绑定，按请求名称或角色主世界书发起条目读取。后续等待结果，供初始化比较现有 ERA 规则资源。",
+        "definition_id": "era.tavern.worldbook_read.start_operation"
+      },
+      {
+        "id": "classify",
+        "display_name": "读取世界书并等待实际IO结束：确认是否等待",
+        "description": "沿用原世界书读取参数、返回合同及资源原语；与本组其他实际读取共同运行。取消或出错也等待已启动IO和清理结束，不启动图外完成回调工作流。",
+        "definition_id": "era.tavern.workflow.read_slot.worldbook.classify"
+      },
+      {
+        "id": "suffix_route_read__execute",
+        "display_name": "返回已读取的世界书及条目",
+        "description": "在“完成世界书操作”流程中，等待指定世界书内容读取完成，连同名称列表、角色绑定和实际读取对象返回。主服务据此决定是否需要建立或更新资源。",
+        "definition_id": "era.tavern.worldbook_read.execute"
+      },
+      {
+        "id": "suffix_route_read__return_result",
+        "display_name": "交回“读取世界书”的实际结果",
+        "description": "在“完成世界书操作”流程中，接收“读取世界书”已经执行得到的结果，复核实例和本次调用尚未取消后交回发起者。调用方据此继续业务或显示结果，取消时按实际原因结束等待。",
+        "definition_id": "era.tavern.worldbook_read.return_result"
+      },
+      {
+        "id": "project_wait",
+        "display_name": "读取世界书并等待实际IO结束：整理等待结果",
+        "description": "沿用原世界书读取参数、返回合同及资源原语；与本组其他实际读取共同运行。取消或出错也等待已启动IO和清理结束，不启动图外完成回调工作流。",
+        "definition_id": "era.tavern.workflow.read_slot.worldbook.project_wait"
+      },
+      {
+        "id": "project_immediate",
+        "display_name": "读取世界书并等待实际IO结束：整理即时结果",
+        "description": "沿用原世界书读取参数、返回合同及资源原语；与本组其他实际读取共同运行。取消或出错也等待已启动IO和清理结束，不启动图外完成回调工作流。",
+        "definition_id": "era.tavern.workflow.read_slot.worldbook.project_immediate"
+      },
+      {
+        "id": "end",
+        "definition_id": "era.tavern.initialize.end",
+        "display_name": "完成读取世界书并等待实际IO结束",
+        "description": "本段所选路径已经结束，向调用方交回实际结果或结束确认。"
+      }
+    ],
+    "edges": [
+      [
+        "prepare",
+        "prefix_route_read__check_request"
+      ],
+      [
+        "prefix_route_read__check_request",
+        "prefix_route_read__start_operation"
+      ],
+      [
+        "prefix_route_read__start_operation",
+        "classify"
+      ],
+      {
+        "from": "classify",
+        "to": "suffix_route_read__execute",
+        "when": "read_route == 'wait'"
+      },
+      {
+        "from": "classify",
+        "to": "project_immediate",
+        "when": "read_route == 'immediate'"
+      },
+      [
+        "suffix_route_read__execute",
+        "suffix_route_read__return_result"
+      ],
+      [
+        "suffix_route_read__return_result",
+        "project_wait"
+      ],
+      [
+        "start",
+        "prepare"
+      ],
+      [
+        "project_immediate",
+        "end"
+      ],
+      [
+        "project_wait",
+        "end"
+      ]
+    ]
+  }
+}

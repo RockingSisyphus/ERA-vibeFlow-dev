@@ -17,7 +17,8 @@
       "type": "era.task.continuation.context",
       "cardinality": "exactly_one",
       "display_name": "执行后回告所需的原任务资料"
-    }
+    },
+    {"type":"era.workflow.host_resources","cardinality":"exactly_one","display_name":"所属 ERA 实例的本地资源"}
   ],
   "provides": [
     {
@@ -46,9 +47,10 @@
         "type": "era.task.continuation.context",
         "display_name": "执行后回告所需的原任务资料",
         "required": true
-      }
+      },
+      {"key":"host_resources","type":"era.workflow.host_resources","required":true,"display_name":"所属 ERA 实例的本地资源"}
     ],
-    "max_steps": 15,
+    "max_steps": 16,
     "nodes": [
       {
         "id": "start",
@@ -60,13 +62,15 @@
         "id": "carry_candidate_inputs",
         "display_name": "保留生成尝试对应的原请求",
         "description": "在“选择生成阶段并准备可靠起点”流程中，取出原生成任务、所属批次和事件来源，交给生成起点准备。后续模型结果和失败重试都可以准确回到这次请求。",
-        "definition_id": "era.task.carry_candidate_inputs"
+        "definition_id": "era.task.carry_candidate_inputs",
+        "join_policy": "all"
       },
       {
         "id": "prepare_auxiliary_execution_request",
         "display_name": "准备生成资料并按需还原变量起点",
         "description": "本环节用于“选择生成阶段并准备可靠起点”：读取当前正文、配置和生成进度，判断重试仍否有效，以及哪些较早阶段应保留。需要重建时按只读历史流程重算变量，成功后交出下一阶段起点，失败时保留原因。",
-        "definition_id": "era.agent.prepare_generation_facts"
+        "definition_id": "era.agent.prepare_generation_facts",
+        "join_policy": "all"
       },
       {
         "id": "classify_generation_event",
@@ -84,7 +88,7 @@
         "id": "seed_candidate",
         "display_name": "准备本次生成尝试及失败恢复起点",
         "description": "在“选择生成阶段并准备可靠起点”流程中，接收即将执行的模型生成请求，记住原任务、所属批次和本次允许保留的历史。替换旧阶段时先恢复较早阶段已经完成的变量与函数；恢复失败就返回原因，避免在错误起点上继续生成。",
-        "definition_id": "era.agent.candidate_seed"
+        "definition_id": "era.communication.agent_candidate_seed"
       },
       {
         "id": "prepare_candidate_continuation",
@@ -97,17 +101,12 @@
         "display_name": "结束选择生成阶段并准备可靠起点",
         "description": "标明“选择生成阶段并准备可靠起点”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
         "definition_id": "era.service.terminal"
-      }
+      },
+      {"id":"retain_host_resources","definition_id":"era.service.retain_host_resources","display_name":"保留所属实例的资源","description":"先取出本次运行或本轮迭代收到的本地资源，供下面需要组织工作流通信的步骤使用。资源不写入业务消息。"}
     ],
     "edges": [
-      [
-        "start",
-        "carry_candidate_inputs"
-      ],
-      [
-        "start",
-        "prepare_auxiliary_execution_request"
-      ],
+      {"from":"start","to":"carry_candidate_inputs","schedule":true},
+      {"from":"start","to":"prepare_auxiliary_execution_request","schedule":true},
       [
         "prepare_auxiliary_execution_request",
         "classify_generation_event"
@@ -137,7 +136,11 @@
         "from": "carry_candidate_inputs",
         "to": "prepare_candidate_continuation",
         "schedule": true
-      }
+      },
+      ["start","retain_host_resources"],
+      {"from":"retain_host_resources","to":"carry_candidate_inputs","transfer":false,"schedule":true},
+      {"from":"retain_host_resources","to":"prepare_auxiliary_execution_request","transfer":false,"schedule":true},
+      {"from":"retain_host_resources","to":"seed_candidate","schedule":false}
     ],
     "outputs": [
       {

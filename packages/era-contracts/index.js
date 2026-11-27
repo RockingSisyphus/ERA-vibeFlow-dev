@@ -96,7 +96,7 @@ function isFiniteNumber(value) {
 }
 
 /** 判断消息是否为严格的 ERA 当前激活文本投影。 */
-export function isEraTavernMessageV1(value) {
+export function isEraTavernMessageV2(value) {
   return (
     hasOnlyKeys(value, [
       "schemaVersion",
@@ -104,12 +104,18 @@ export function isEraTavernMessageV1(value) {
       "role",
       "activeText",
       "swipeIndex",
+      "candidate",
     ]) &&
-    value.schemaVersion === 1 &&
+    value.schemaVersion === 2 &&
     isSafeIntegerAtLeast(value.messageId, 0) &&
     isNonEmptyString(value.role) &&
     typeof value.activeText === "string" &&
-    (value.swipeIndex === null || isSafeIntegerAtLeast(value.swipeIndex, 0))
+    (value.swipeIndex === null || isSafeIntegerAtLeast(value.swipeIndex, 0)) &&
+    hasOnlyKeys(value.candidate, ["exists", "generation", "predecessor", "phase"]) &&
+    typeof value.candidate.exists === "boolean" &&
+    (value.candidate.generation === null || isSafeIntegerAtLeast(value.candidate.generation, 1)) &&
+    (value.candidate.predecessor === null || isSafeIntegerAtLeast(value.candidate.predecessor, 1)) &&
+    ["idle", "preparing", "generating", "completed", "cancelled"].includes(value.candidate.phase)
   );
 }
 
@@ -119,7 +125,7 @@ export function isEraTavernMessageContextV2(value) {
     hasOnlyKeys(value, ["schemaVersion", "messages"]) &&
     value.schemaVersion === 2 &&
     Array.isArray(value.messages) &&
-    value.messages.every(isEraTavernMessageV1)
+    value.messages.every(isEraTavernMessageV2)
   );
 }
 
@@ -147,10 +153,10 @@ export function isEraDispatchContextV2(value) {
       value.requirement,
     ) ||
     !Array.isArray(value.messages) ||
-    !value.messages.every(isEraTavernMessageV1) ||
+    !value.messages.every(isEraTavernMessageV2) ||
     !(
       value.processingMessage === null ||
-      isEraTavernMessageV1(value.processingMessage)
+      isEraTavernMessageV2(value.processingMessage)
     ) ||
     !(value.processingMk === null || isNonEmptyString(value.processingMk)) ||
     typeof value.messageChanged !== "boolean" ||
@@ -249,14 +255,14 @@ export function isEraDispatchContextV3(value) {
       "floorIdentity",
       "stagedMessageUpdates",
       "agentFloorCandidate",
-    ], ["sourceBasis"]) ||
+    ], ["sourceBasis", "statusbarPlaceholder"]) ||
     value.schemaVersion !== 3 ||
     !["ready", "failed"].includes(value.status) ||
     !["initialize", "sync", "api", "update-mk", "ignore"].includes(value.dispatchClass) ||
     !["none", "latest-message", "latest-message-with-mk"].includes(value.requirement) ||
     !Array.isArray(value.messages) ||
-    !value.messages.every(isEraTavernMessageV1) ||
-    !(value.processingMessage === null || isEraTavernMessageV1(value.processingMessage)) ||
+    !value.messages.every(isEraTavernMessageV2) ||
+    !(value.processingMessage === null || isEraTavernMessageV2(value.processingMessage)) ||
     !(value.processingMk === null || isNonEmptyString(value.processingMk)) ||
     typeof value.messageChanged !== "boolean" ||
     typeof value.variablesChanged !== "boolean" ||
@@ -266,13 +272,15 @@ export function isEraDispatchContextV3(value) {
     !Array.isArray(value.stagedMessageUpdates) ||
     !value.stagedMessageUpdates.every(isStagedMessageUpdateV1) ||
     !(value.agentFloorCandidate === null || isAgentFloorCandidateV1(value.agentFloorCandidate)) ||
+    !(value.statusbarPlaceholder === undefined ||
+      (typeof value.statusbarPlaceholder === "string" && value.statusbarPlaceholder.length > 0)) ||
     !(value.sourceBasis === undefined || (
       hasOnlyKeys(value.sourceBasis, ["identity", "messages"]) &&
       hasOnlyKeys(value.sourceBasis.identity, ["characterId", "chatId", "groupId"]) &&
       (value.sourceBasis.identity.characterId === null || typeof value.sourceBasis.identity.characterId === "string") &&
       typeof value.sourceBasis.identity.chatId === "string" &&
       (value.sourceBasis.identity.groupId === null || typeof value.sourceBasis.identity.groupId === "string") &&
-      Array.isArray(value.sourceBasis.messages) && value.sourceBasis.messages.every(isEraTavernMessageV1)
+      Array.isArray(value.sourceBasis.messages) && value.sourceBasis.messages.every(isEraTavernMessageV2)
     ))
   ) return false;
   if (value.status === "ready" && value.failure !== null) return false;
@@ -863,7 +871,7 @@ export function isEraTaskResultV1(value) {
       ["status", "settlements", "notifications", "diagnostics"],
       ["stateUpdate"],
     ) &&
-    ["committed", "no-op", "failed", "fatal"].includes(value.status) &&
+    ["committed", "deferred", "no-op", "failed", "fatal"].includes(value.status) &&
     Array.isArray(value.settlements) &&
     value.settlements.length <= 128 &&
     value.settlements.every(isEraSettlementV1) &&

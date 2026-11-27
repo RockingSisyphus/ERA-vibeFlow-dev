@@ -1,7 +1,6 @@
 /*
- * 模块职责：为消息显示与模型提示提供同一套 ERA 技术块识别和纯投影。
- * 模块边界：只改变渲染 DOM 或 GENERATE_AFTER_DATA 的临时出站副本；
- * 不写聊天消息、Sidecar，也不参与历史同步和 Agent 领域状态机。
+ * 在酒馆排版前清理显示副本，在正文旁挂载 ERA 报告，并投影发往模型的文本。
+ * 由 Tavern 启用节点成对管理资源；聊天原文、酒馆正文及作者 iframe 由原有入口管理。
  */
 
 import { TavernListeners } from './tavern-listeners';
@@ -11,27 +10,44 @@ import { runEraMacroWorkflow } from '../macro/vibeflow-adapter';
 import { currentTavernIdentityMatches } from './public-state';
 import { readActiveSidecarRuntimeSnapshot } from './sidecar-runtime-snapshot';
 import { agentExecutionRecords, currentAgentRecordChat } from './agent-execution-records';
-import {
-  mountReportViewer,
-  createReportDetails,
-  releaseReportApps,
-  createStoryViewer,
-  createSettlementViewer,
-  registerAgentRequestObservation,
-  hydrateReportViewers,
-} from './agent-report-host';
+import { registerAgentRequestObservation } from './agent-report-host';
+import { createReportPresentation } from './technical-report-presentation';
+import { stripEraTechnicalBlocks } from './technical-block-syntax';
 
-import {
-  parseEraTechnicalProjection,
-  stripEraTechnicalBlocks,
-  type EraTechnicalProjection,
-  type EraTechnicalSegment,
-} from './technical-block-syntax';
-export { parseEraTechnicalProjection, stripEraTechnicalBlocks } from './technical-block-syntax';
-export type { EraTechnicalProjection, EraTechnicalSegment } from './technical-block-syntax';
+const reportStyles = `
+    .era-technical-report {
+      margin: .45rem 0;
+      padding: .35rem .55rem;
+      border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+      border-radius: .65rem;
+      background: color-mix(in srgb, currentColor 5%, transparent);
+      font-size: .88em;
+    }
+    .era-technical-report > summary { cursor: pointer; user-select: none; opacity: .8; }
+    .era-technical-report > :not(summary) { margin: .45rem 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .era-stage-toolbar { display: flex; flex-wrap: wrap; gap: .35rem; margin: .4rem 0; }
+    .era-stage-toolbar button, .era-stage-toolbar select { color: inherit; background: transparent; border: 1px solid currentColor; border-radius: .4rem; padding: .3rem .5rem; }
+    .era-stage-toolbar button:disabled { opacity: .5; }
+    .era-stage-viewer pre { white-space: pre-wrap; max-height: 28rem; overflow: auto; }
+  `;
 
-const DISPLAY_PROJECTION_VERSION = 'era-technical-projection-v2';
-const projectedStories = new WeakMap<HTMLElement, string>();
+const formatterOwnerKey = Symbol.for('ERA.messageFormatter.presentation');
+type TavernWindow = Window & { readonly SillyTavern?: typeof SillyTavern };
+type FormatterSlot = { release?: () => void; display?: (text: string) => string };
+
+/** 酒馆 1.19 没有单个 hook 的注销接口，页内只登记一次，卸载时解除本实例回调。 */
+function formatterSlot(host: TavernWindow): FormatterSlot {
+  const existing = Reflect.get(host, formatterOwnerKey) as FormatterSlot | undefined;
+  if (existing) return existing;
+  const formatter = host.SillyTavern?.getContext?.().messageFormatter;
+  if (!formatter) throw new Error('ERA 技术内容显示需要 SillyTavern 1.19.0 或更新版本的 MessageFormatter。');
+  const slot: FormatterSlot = {};
+  formatter.addHook((text, context) => (context.isReasoning ? text : (slot.display?.(text) ?? text)), {
+    stage: formatter.stage.BEFORE_REGEX,
+  });
+  Reflect.set(host, formatterOwnerKey, slot);
+  return slot;
+}
 
 /**
  * 复制出站消息及多模态文本项，避免提示清理反向改写聊天历史；图片、工具调用与其他字段保持原值。
@@ -57,209 +73,62 @@ export function projectEraPromptMessages(
   });
 }
 
-/**
- * 显示失效只取决于可见正文和报告，不取决于隐藏的业务日志。
- * API 的 refresh:none 会追加 era_tx；若仍以完整原文判定失效，随后任意
- * DOM mutation 都会意外重建消息和作者 iframe，必须避免这种隐式刷新。
- * 纯技术块之间的空白没有显示内容。
- */
-export function eraTechnicalDisplaySource(projection: EraTechnicalProjection): string {
-  const visible = projection.segments.filter(
-    segment => segment.kind === 'folded' || (segment.kind === 'story' && segment.text.trim() !== ''),
-  );
-  const text = JSON.stringify(
-    visible.map((segment, index) => {
-      if (segment.kind !== 'story') return [segment.kind, segment.name, segment.text];
-      // 末尾隐藏 MK/事务前追加的换行只是技术分隔符，不是正文变化。
-      // 仅规范末个可见片段的行尾；正文内部换行、空格和报告边界仍参与比较。
-      const story = index === visible.length - 1 ? segment.text.replace(/[\r\n]+$/u, '') : segment.text;
-      return ['story', story];
-    }),
-  );
-  let hash = 0x811c9dc5;
-  for (let index = 0; index < text.length; index += 1) {
-    hash ^= text.charCodeAt(index);
-    hash = Math.imul(hash, 0x01000193);
-  }
-  return `${text.length}-${(hash >>> 0).toString(16)}`;
-}
+const statefulDisplay = 'pre, iframe, audio, video, canvas, form, input, button, select, textarea';
 
-function appendFormattedStory(
-  hostDocument: Document,
-  fragment: DocumentFragment,
-  text: string,
-  messageId: number,
-): void {
-  if (text.length === 0) return;
-  const template = hostDocument.createElement('template');
-  template.innerHTML = formatAsDisplayedMessage(text, { message_id: messageId });
-  fragment.append(template.content);
-}
-
-function createProjectedBlock(
-  hostDocument: Document,
-  segment: Exclude<EraTechnicalSegment, { kind: 'story' }>,
-  messageId: number,
-): HTMLElement {
-  if (segment.kind === 'hidden') {
-    const hidden = hostDocument.createElement('span');
-    hidden.dataset.eraProjectionVersion = DISPLAY_PROJECTION_VERSION;
-    hidden.dataset.eraTechnicalBlock = segment.name;
-    hidden.hidden = true;
-    hidden.setAttribute('aria-hidden', 'true');
-    hidden.textContent = segment.source;
-    return hidden;
-  }
-
-  const stage = segment.name === 'era_update' ? 'settlement' : 'planning';
-  const details = createReportDetails(hostDocument, stage, messageId, segment.label ?? 'ERA 技术报告');
-  details.dataset.eraProjectionVersion = DISPLAY_PROJECTION_VERSION;
-  details.dataset.eraTechnicalBlock = segment.name;
-  details.append(mountReportViewer(hostDocument, segment.text, stage, messageId));
-  return details;
-}
-
-function currentRawMessage(messageId: number): string | null {
-  const message = SillyTavern.chat?.[messageId];
-  return typeof message?.mes === 'string' ? message.mes : null;
-}
-
-function announceProjectedMessageRendered(messageId: number): void {
-  const message = SillyTavern.chat?.[messageId];
-  if (!message || typeof eventEmit !== 'function') return;
-  // Tavern Helper 只会在宿主的 rendered 生命周期中把 html code block 挂成
-  // message iframe。ERA 替换 `.mes_text` 后必须补回同一个正式生命周期事件；
-  // dataset 指纹已经在触发前写入，因此 ERA 自己的末位监听不会重复投影。
-  const emitted = message.is_user
-    ? eventEmit(tavern_events.USER_MESSAGE_RENDERED, messageId)
-    : eventEmit(tavern_events.CHARACTER_MESSAGE_RENDERED, messageId, 'era-technical-projection');
-  void emitted.catch(error => console.error(`ERA 消息 #${messageId} 投影后的宿主渲染事件失败。`, error));
-}
-
-/**
- * SillyTavern 会把消息编辑器挂在现有楼层 DOM 内。编辑期间替换 `.mes_text`
- * 会移除宿主 textarea，并留下仍然可见的确认/取消按钮。显示投影因此必须把
- * 编辑器视为宿主所有的临时状态，等 MESSAGE_UPDATED 或后续 DOM 变化再重建。
- */
-export function isDisplayedMessageBeingEdited(root: Element): boolean {
-  const message = root.closest('.mes[mesid]');
-  return Boolean(
-    root.matches('#curEditTextarea, .edit_textarea') ||
-    root.querySelector('#curEditTextarea, .edit_textarea') ||
-    message?.querySelector('#curEditTextarea, .edit_textarea'),
-  );
-}
-
-/**
- * 从权威消息构造显示副本。必须先格式化普通故事、再用 textContent 创建报告，
- * 否则宿主正则会再次删除报告，或把模型报告当成任意 HTML 注入页面。
- */
-function replaceReportsInPlace(
-  root: HTMLElement,
-  projection: EraTechnicalProjection,
-  messageId: number,
-  story: string,
-): boolean {
-  const document = root.ownerDocument;
-  const folded = projection.segments.filter(
-    (segment): segment is Exclude<EraTechnicalSegment, { kind: 'story' }> => segment.kind === 'folded',
-  );
-  const reports = [...root.querySelectorAll<HTMLElement>(':scope > details[data-era-technical-block]')];
+/** 原生恢复先排版后启动角色卡脚本。补做已显示的正文时只替换前端界面之间的内容。 */
+function projectExistingBody(body: HTMLElement, rendered: DocumentFragment): void {
+  const partition = (parent: ParentNode) => {
+    const anchors: { element: Element; kind: string }[] = [];
+    const paragraphs: ChildNode[][] = [[]];
+    for (const node of parent.childNodes) {
+      const element = node.nodeType === 1 ? (node as Element) : null;
+      const stateful = element?.matches(statefulDisplay) ? element : element?.querySelector(statefulDisplay);
+      if (element && stateful) {
+        // Helper 把原生 pre 包在呈现容器中。容器和文件内容仍由 Helper 管理。
+        anchors.push({ element, kind: stateful.tagName });
+        paragraphs.push([]);
+      } else paragraphs.at(-1)!.push(node);
+    }
+    return { anchors, paragraphs };
+  };
+  const before = partition(body);
+  const after = partition(rendered);
+  // 两边的界面位置不对应时，逐段替换可能把正文移到错误的作者控件旁。
   if (
-    reports.length !== folded.length ||
-    reports.some((report, index) => report.dataset.eraTechnicalBlock !== folded[index].name)
+    before.anchors.length !== after.anchors.length ||
+    before.anchors.some(({ kind }, index) => kind !== after.anchors[index].kind)
   )
-    return false;
-  reports.forEach((report, index) => {
-    const replacement = createProjectedBlock(document, folded[index], messageId);
-    if (report.hasAttribute('open')) replacement.setAttribute('open', '');
-    report.replaceWith(replacement);
-  });
-  const previous = root.querySelector(':scope > [data-era-story-viewer]');
-  const viewer = createStoryViewer(document, messageId, story);
-  if (previous && viewer) previous.replaceWith(viewer);
-  else if (viewer) root.append(viewer);
-  const oldSettlement = root.querySelector(':scope > [data-era-settlement-viewer]');
-  const settlement = createSettlementViewer(document, messageId);
-  if (oldSettlement && settlement) oldSettlement.replaceWith(settlement);
-  else if (settlement) root.append(settlement);
-  else oldSettlement?.remove();
-  releaseReportApps();
-  return true;
-}
-
-/** 首次呈现才格式化故事；将宿主片段装配与是否刷新判断分开。 */
-function displayedMessageFragment(
-  document: Document,
-  projection: EraTechnicalProjection,
-  messageId: number,
-  story: string,
-): DocumentFragment {
-  const fragment = document.createDocumentFragment();
-  for (const segment of projection.segments) {
-    if (segment.kind === 'story') appendFormattedStory(document, fragment, segment.text, messageId);
-    else fragment.append(createProjectedBlock(document, segment, messageId));
-  }
-  const viewer = createStoryViewer(document, messageId, story);
-  if (viewer) fragment.append(viewer);
-  const settlement = createSettlementViewer(document, messageId);
-  if (settlement) fragment.append(settlement);
-  return fragment;
-}
-
-/** 只有故事本身变化才重建宿主显示，否则仅更新 ERA 自有报告节点。 */
-function projectDisplayedMessage(messageId: number): void {
-  const rawMessage = currentRawMessage(messageId);
-  if (rawMessage === null) return;
-  const projection = parseEraTechnicalProjection(rawMessage);
-  if (!projection.valid || projection.technicalBlockCount === 0) return;
-
-  const root = retrieveDisplayedMessage(messageId).get(0);
-  if (!root) return;
-  if (isDisplayedMessageBeingEdited(root)) return;
-  hydrateReportViewers(root);
-  const fingerprint = eraTechnicalDisplaySource(projection);
-  const hasProjectedContent = root.querySelector(`[data-era-projection-version="${DISPLAY_PROJECTION_VERSION}"]`);
-  if (
-    root.dataset.eraProjectionVersion === DISPLAY_PROJECTION_VERSION &&
-    root.dataset.eraProjectionSource === fingerprint &&
-    hasProjectedContent
-  ) {
     return;
+  for (const [index, current] of before.paragraphs.entries()) {
+    const projected = after.paragraphs[index];
+    if (current.length === projected.length && current.every((node, i) => node.isEqualNode(projected[i]))) continue;
+    const fragment = body.ownerDocument.createDocumentFragment();
+    fragment.append(...projected);
+    body.insertBefore(fragment, before.anchors[index]?.element ?? null);
+    for (const node of current) node.remove();
   }
-
-  const hostDocument = root.ownerDocument;
-  const storySource = eraTechnicalDisplaySource({
-    ...projection,
-    segments: projection.segments.filter(segment => segment.kind === 'story'),
-  });
-  // 重新解析变量只改变 ERA 报告。保留 Tavern Helper 的故事节点与 iframe，
-  // 不把查看器更新误变成作者加载脚本的第二次执行。
-  // 宿主重绘会保留 root/dataset，却清空投影子节点。此时必须重建完整投影，
-  // 否则纯技术消息会不断替换报告并由 MutationObserver 再次触发自身。
-  if (
-    hasProjectedContent &&
-    projectedStories.get(root) === storySource &&
-    replaceReportsInPlace(root, projection, messageId, stripEraTechnicalBlocks(rawMessage))
-  ) {
-    root.dataset.eraProjectionSource = fingerprint;
-    return;
-  }
-  const fragment = displayedMessageFragment(hostDocument, projection, messageId, stripEraTechnicalBlocks(rawMessage));
-  root.replaceChildren(fragment);
-  root.dataset.eraProjectionVersion = DISPLAY_PROJECTION_VERSION;
-  root.dataset.eraProjectionSource = fingerprint;
-  projectedStories.set(root, storySource);
-  announceProjectedMessageRendered(messageId);
 }
 
-/**
- * ERA 以 refresh=none 写回权威消息时，宿主不会重建该楼层 DOM；写入能力必须显式调用
- * 此投影入口，否则新加入的规划和结算报告只能存在于消息文件中而不会显示。
- */
-export function refreshDisplayedEraTechnicalBlocks(messageIds: readonly number[]): void {
-  if (typeof document === 'undefined') return;
-  for (const messageId of new Set(messageIds)) projectDisplayedMessage(messageId);
+/** 恢复旧聊天时原生排版先发生，已在屏幕上的正文需补做一次显示投影。 */
+function projectMessagesAlreadyOnScreen(document: Document): void {
+  for (const row of document.querySelectorAll<HTMLElement>('#chat > .mes[mesid]')) {
+    const messageId = Number(row.getAttribute('mesid'));
+    const message = SillyTavern.chat[messageId];
+    const body = row.querySelector<HTMLElement>('.mes_text');
+    if (!message || !body) continue;
+    const text = message.extra?.display_text ?? message.mes;
+    const projected = stripEraTechnicalBlocks(text);
+    if (projected === text) continue;
+    const template = document.createElement('template');
+    template.innerHTML = SillyTavern.messageFormatting(
+      projected,
+      message.name,
+      message.is_system,
+      message.is_user,
+      messageId,
+    );
+    projectExistingBody(body, template.content);
+  }
 }
 
 function displayedMessageId(node: Node): number | null {
@@ -300,12 +169,13 @@ type ProjectionScheduler = {
   readonly clear: () => void;
 };
 
-/** 合并同一轮 DOM 变化，避免宿主一次渲染产生的多个 mutation 重复格式化同一楼层。 */
-function createProjectionScheduler(): ProjectionScheduler {
+/** 合并同一轮 DOM 变化，避免宿主一次渲染触发多次同楼报告更新。 */
+function createProjectionScheduler(refresh: (messageId: number) => void): ProjectionScheduler {
   const pending = new Set<number>();
   let flushScheduled = false;
+  let released = false;
   const scheduleMessage = (messageId: number): void => {
-    if (!Number.isSafeInteger(messageId) || messageId < 0) return;
+    if (released || !Number.isSafeInteger(messageId) || messageId < 0) return;
     pending.add(messageId);
     if (flushScheduled) return;
     flushScheduled = true;
@@ -313,7 +183,7 @@ function createProjectionScheduler(): ProjectionScheduler {
       flushScheduled = false;
       const messageIds = [...pending];
       pending.clear();
-      for (const id of messageIds) projectDisplayedMessage(id);
+      for (const id of messageIds) refresh(id);
     });
   };
   return {
@@ -323,43 +193,35 @@ function createProjectionScheduler(): ProjectionScheduler {
         scheduleMessage(messageId);
       }
     },
-    clear: () => pending.clear(),
+    clear: () => {
+      released = true;
+      pending.clear();
+    },
   };
 }
 
 /**
- * 随 Tavern adapter 生命周期登记显示投影和最后提示投影。返回幂等清理函数是为了热重载时
- * 不残留 observer、样式或重复监听；非浏览器合同测试环境直接返回空清理器。
+ * Tavern 启用时配对登记宿主排版和提示处理。热重载必须释放旧实例的资源，避免重复投影或重复响应消息事件。
  */
-export function registerEraTechnicalBlockProjection(): () => void {
-  if (typeof document === 'undefined') return () => undefined;
-  const hostDocument = window.parent?.document ?? document;
+function mountTechnicalPresentation(): { scheduleMessage: (messageId: number) => void; release: () => void } {
+  const host = window.parent as TavernWindow;
+  const hostDocument = host.document;
+  const slot = formatterSlot(host);
+  slot.release?.();
   const HostMutationObserver = hostDocument.defaultView?.MutationObserver;
-  if (!HostMutationObserver) return () => undefined;
+  if (!HostMutationObserver) throw new Error('ERA 报告无法监听酒馆楼层。');
   const style = hostDocument.createElement('style');
-  style.dataset.eraProjectionVersion = DISPLAY_PROJECTION_VERSION;
-  style.textContent = `
-    .era-technical-report {
-      margin: .45rem 0;
-      padding: .35rem .55rem;
-      border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
-      border-radius: .65rem;
-      background: color-mix(in srgb, currentColor 5%, transparent);
-      font-size: .88em;
-    }
-    .era-technical-report > summary { cursor: pointer; user-select: none; opacity: .8; }
-    .era-technical-report > :not(summary) { margin: .45rem 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
-    .era-stage-toolbar { display: flex; flex-wrap: wrap; gap: .35rem; margin: .4rem 0; }
-    .era-stage-toolbar button, .era-stage-toolbar select { color: inherit; background: transparent; border: 1px solid currentColor; border-radius: .4rem; padding: .3rem .5rem; }
-    .era-stage-toolbar button:disabled { opacity: .5; }
-    .era-stage-viewer pre { white-space: pre-wrap; max-height: 28rem; overflow: auto; }
-  `;
+  style.dataset.eraTechnicalReportStyle = '';
+  style.textContent = reportStyles;
 
-  const scheduler = createProjectionScheduler();
+  const reports = createReportPresentation();
+  const scheduler = createProjectionScheduler(reports.refresh);
 
   const observer = new HostMutationObserver(records => {
-    releaseReportApps();
-    for (const messageId of mutationMessageIds(records)) scheduler.scheduleMessage(messageId);
+    reports.releaseDetached();
+    // 报告自身的 Vue 更新也会触发观察器，必须排除以免再次生成同一报告。
+    const hostChanges = records.filter(record => !reports.ownsMutation(record.target));
+    for (const messageId of mutationMessageIds(hostChanges)) scheduler.scheduleMessage(messageId);
   });
 
   const messageHandler = (messageId: number) => scheduler.scheduleMessage(messageId);
@@ -373,6 +235,7 @@ export function registerEraTechnicalBlockProjection(): () => void {
   const promptHandler = (generateData: { prompt: SillyTavern.SendingMessage[] }, dryRun = false) => {
     if (!Array.isArray(generateData.prompt)) return;
     const snapshot = readActiveSidecarRuntimeSnapshot();
+    // 切换聊天期间旧快照可能还在内存，确认归属才能把其中的变量带入提示词。
     const macroSnapshot = createEraMacroSnapshot(
       snapshot && currentTavernIdentityMatches(snapshot) ? snapshot.statData : {},
     );
@@ -385,15 +248,22 @@ export function registerEraTechnicalBlockProjection(): () => void {
   const stop = () => {
     if (stopped) return;
     stopped = true;
+    if (slot.release === stop) {
+      slot.display = undefined;
+      slot.release = undefined;
+    }
     observer.disconnect();
     listeners.release();
     stopRequestObservation?.();
     scheduler.clear();
-    releaseReportApps(true);
+    reports.release();
     style.remove();
   };
   try {
+    slot.display = stripEraTechnicalBlocks;
+    slot.release = stop;
     hostDocument.head.append(style);
+    projectMessagesAlreadyOnScreen(hostDocument);
     observer.observe(hostDocument.documentElement, { childList: true, subtree: true });
     for (const eventType of displayEvents) listeners.register(eventType, messageHandler, 'last');
     listeners.register(tavern_events.MORE_MESSAGES_LOADED, allMessagesHandler, 'last');
@@ -401,9 +271,27 @@ export function registerEraTechnicalBlockProjection(): () => void {
     listeners.register(tavern_events.GENERATE_AFTER_DATA, promptHandler, 'last');
     stopRequestObservation = registerAgentRequestObservation();
     scheduler.scheduleAllMessages();
-    return stop;
+    return { scheduleMessage: scheduler.scheduleMessage, release: stop };
   } catch (error) {
     stop();
     throw error;
   }
+}
+
+/** Tavern 启用节点拥有展示资源，避免消息写回节点各自登记监听或接管楼层 DOM。 */
+export function createEraTechnicalPresentation() {
+  let mounted: ReturnType<typeof mountTechnicalPresentation> | undefined;
+  return {
+    activate: () => {
+      mounted = mountTechnicalPresentation();
+      const current = mounted;
+      return () => {
+        if (mounted === current) mounted = undefined;
+        current.release();
+      };
+    },
+    updateReports: (messageIds: readonly number[]) => {
+      for (const messageId of messageIds) mounted?.scheduleMessage(messageId);
+    },
+  };
 }

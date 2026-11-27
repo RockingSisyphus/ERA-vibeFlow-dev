@@ -1,0 +1,94 @@
+{
+  "type_key": "era.tavern.workflow.async_runtime_body",
+  "display_name": "ERA实例的完整运行与清理",
+  "description": "建立并运行本实例，等待资源、主服务、作者、通知、计时及通信分支实际退出。 与消息封装分开复用，不启动隐藏的第二份AOT。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.call.frame",
+      "cardinality": "exactly_one",
+      "display_name": "本次酒馆操作的本地请求与所属实例"
+    },
+    {"type":"era.workflow.host_resources","cardinality":"exactly_one","display_name":"所属 ERA 实例的本地资源"}
+  ],
+  "provides": [
+    {
+      "key": "result",
+      "type": "era.tavern.call.result",
+      "display_name": "本次业务流程实际返回的结果"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "request",
+        "type": "era.tavern.call.frame",
+        "display_name": "酒馆异步操作与实例运行的请求和已有进度",
+        "required": true
+      },
+      {"key":"host_resources","type":"era.workflow.host_resources","required":true,"display_name":"所属 ERA 实例的本地资源"}
+    ],
+    "max_steps": 20,
+    "nodes": [
+      {
+        "id": "runtime_begin",
+        "display_name": "接收本次 ERA 实例运行资料",
+        "description": "接收已经建立的 ERA 实例，交给五条长期职责分支共同运行。资源、主服务、作者、通知和计时都属于这一实例。",
+        "definition_id": "era.tavern.entry_runtime.begin"
+      },
+      {
+        "id": "runtime_initialize_script",
+        "display_name": "建立当前页面的 ERA 运行实例",
+        "description": "本环节用于“酒馆异步操作与实例运行”：读取容量和告警设置，建立事件、生成和资源运行资料，以及脚本启用决定的等待。返回同一实例给后续启动和操作使用，长期监听与清理由运行职责分支负责。",
+        "definition_id": "era.tavern.flow.initialize",
+        "join_policy": "all"
+      },
+      {
+        "id": "runtime_bind_script_session",
+        "display_name": "把当前实例交给主服务的酒馆操作入口",
+        "description": "在“酒馆异步操作与实例运行”流程中，将本次已准备的实例关联到主服务使用的酒馆操作入口。后续消息、变量和生成请求都使用这份实例资料，保证事件队列和资源归属一致。",
+        "definition_id": "era.tavern.owned.bind_script_session"
+      },
+      {
+        "id": "runtime_runtime_scope",
+        "display_name": "协同运行五条职责并统一等待退出",
+        "description": "本环节用于“酒馆异步操作与实例运行”：让同一实例的资源管理、主服务、串行作者调用、通知收尾和计时等待共同运行。任一停止要求触发统一清理，末尾等五条分支都实际退出才返回实例停止确认。",
+        "definition_id": "era.tavern.flow.ordinary_runtime"
+      },
+      {
+        "id": "runtime_finish",
+        "display_name": "返回实例全部停止的确认",
+        "description": "五条长期职责分支及实际资源清理已经结束后，返回本实例已停止的确认。调用方据此知道这次运行已经退出。",
+        "definition_id": "era.tavern.entry_runtime.finish"
+      },
+      {"id":"retain_host_resources","definition_id":"era.tavern.retain_host_resources","display_name":"转交本实例的资源","description":"将本地资源单独交给后续运行分支。请求资料仍由绑定会话的步骤交付。"}
+    ],
+    "edges": [
+      {"from":"runtime_begin","to":"runtime_initialize_script","schedule":true},
+      [
+        "runtime_initialize_script",
+        "runtime_bind_script_session"
+      ],
+      [
+        "runtime_bind_script_session",
+        "runtime_runtime_scope"
+      ],
+      [
+        "runtime_runtime_scope",
+        "runtime_finish"
+      ],
+      {"from":"retain_host_resources","to":"runtime_runtime_scope","schedule":false},
+      {"from":"runtime_begin","to":"retain_host_resources","schedule":true},
+      {"from":"retain_host_resources","to":"runtime_initialize_script","schedule":true,"transfer":false}
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.call.result",
+        "cardinality": "exactly_one",
+        "display_name": "本次酒馆操作返回给调用方的结果",
+        "as": "result"
+      }
+    ]
+  }
+}

@@ -19,10 +19,11 @@ export const era_command_operation_traversal = defineBaseLib({
     }
   ],
   "dependencies": [
+    "era.data_view",
     "era.command.operation_state",
     "era.crud.mutations",
-    "era.snapshot.history",
-    "era.crud.parser"
+    "era.crud.parser",
+    "era.variable.write"
   ],
   "external_packages": [],
   "rulesets": [

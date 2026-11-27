@@ -20,7 +20,8 @@
       "type": "era.batch.execution.state",
       "cardinality": "exactly_one",
       "display_name": "当前批次的任务进度与累计结果"
-    }
+    },
+    {"type":"era.workflow.host_resources","cardinality":"exactly_one","display_name":"所属 ERA 实例的本地资源"}
   ],
   "provides": [
     {
@@ -43,9 +44,10 @@
         "type": "era.batch.execution.state",
         "display_name": "当前批次的任务进度与累计结果",
         "required": true
-      }
+      },
+      {"key":"host_resources","type":"era.workflow.host_resources","required":true,"display_name":"所属 ERA 实例的本地资源"}
     ],
-    "max_steps": 27,
+    "max_steps": 28,
     "nodes": [
       {
         "id": "start",
@@ -57,7 +59,8 @@
         "id": "read_sync_context",
         "display_name": "读取历史同步需要的消息与状态资料",
         "description": "在“按当前聊天历史恢复变量并保存”流程中，读取当前聊天历史、处理进度、要求重算的位置及独立状态文件绑定和迁移资料。整理为历史同步的输入，读取失败时返回原因，供后续决定恢复范围。",
-        "definition_id": "era.tavern.sync_read"
+        "definition_id": "era.communication.tavern_sync_read",
+        "join_policy": "all"
       },
       {
         "id": "sidecar_store_prepare",
@@ -67,8 +70,8 @@
       },
       {
         "id": "prepare_block_step",
-        "display_name": "恢复需要重算的消息历史起点",
-        "description": "在“按当前聊天历史恢复变量并保存”流程中，根据本次聊天变化确定重算范围，撤回相应旧变更记录，带入当前变量、函数、消息身份及随机使用记录。形成按正文顺序重新执行的起点；无需处理或无法准备时交出对应结论。",
+        "display_name": "对齐原生正文与本候选待保存记录",
+        "description": "同步时识别候选仍被原生生成持有、已完成或已失效。完成后仅合并匹配聊天、候选和周期的待写记录，保留真实新正文及其他候选；沿既有历史引擎对齐状态，已确认操作与作者副作用不重复执行。取消或换候选撤销其未保存效果。源：nodes/sync/prepare_block_step.ts与base_lib/working_state.ts。",
         "definition_id": "era.sync.prepare_block_step"
       },
       {
@@ -80,7 +83,8 @@
             "type": "era.sync.block.step.state",
             "cardinality": "exactly_one",
             "display_name": "当前消息位置及待处理变量指令"
-          }
+          },
+          {"type":"era.workflow.host_resources","cardinality":"exactly_one","display_name":"所属 ERA 实例的本地资源"}
         ],
         "provides": [
           {
@@ -101,7 +105,8 @@
               "from": "era.sync.block.step.state",
               "as": "block_step_state",
               "update": "block_step_state_after"
-            }
+            },
+            {"from":"era.workflow.host_resources","as":"host_resources","update":"retained_host_resources"}
           ],
           "outputs": [
             {
@@ -120,26 +125,26 @@
       },
       {
         "id": "persist_batch_state",
-        "display_name": "保存消息和变量状态并确认结果",
-        "description": "在“按当前聊天历史恢复变量并保存”流程中，先保存并确认当前批次的消息正文，再写入独立状态文件并检查版本和聊天绑定。消息来源变化时要求重新计算；部分保存或结果无法确认时保留真实进度及恢复、停止原因。",
-        "definition_id": "era.tavern.variables_commit"
+        "display_name": "按原生候选状态保存或保留本批记录",
+        "description": "读取本批实际写回目标的原生候选事实。可写时复用现有消息先行、Sidecar后置保存；生成未完则保留现有工作状态及记录并返回，目标失效沿历史恢复撤销旧效果。",
+        "definition_id": "era.native_candidate.persist"
       },
       {
         "id": "settle_saved_batch",
         "display_name": "汇总保存结果并决定是否需要恢复",
         "description": "在“按当前聊天历史恢复变量并保存”流程中，合并消息保存与指令执行的真实结论，保留失败原因。消息来源变化时安排重算，没有待保存内容时清除多余定时安排，使后续知道继续、恢复还是停止。",
-        "definition_id": "era.lifecycle.settle_saved_batch"
+        "definition_id": "era.communication.lifecycle_settle_saved_batch"
       },
       {
         "id": "present_finalized_floor",
         "display_name": "保存确认后刷新消息显示",
         "description": "在“按当前聊天历史恢复变量并保存”流程中，消息和变量保存已经确认、且目标消息仍匹配时，请页面刷新相关显示；无需提交时沿用已有刷新要求。显示问题单独记录，让调用方区分保存结果与呈现结果。",
-        "definition_id": "era.sync.present_finalized_floor"
+        "definition_id": "era.communication.sync_present_finalized_floor"
       },
       {
         "id": "build_sync_notification",
-        "display_name": "返回同步保存的实际结果",
-        "description": "在“按当前聊天历史恢复变量并保存”流程中，根据消息和独立状态文件的实际保存结论，为原事件生成确认、页面通知及问题说明。明确区分成功、无变化、失败和需要停止服务的情况，并带回最新消息进度。",
+        "display_name": "返回保存、暂存或失效的实际结论",
+        "description": "将消息与变量实际保存、原生候选待保存、失效或失败的不同结论交回原事件。待保存表示内存工作仍保留，不能发出已落盘或首次显示成功的结论；生成屏障只等待当前处理结束。",
         "definition_id": "era.sync.build_notification"
       },
       {
@@ -159,13 +164,11 @@
         "display_name": "结束按当前聊天历史恢复变量并保存",
         "description": "标明“按当前聊天历史恢复变量并保存”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
         "definition_id": "era.service.terminal"
-      }
+      },
+      {"id":"retain_host_resources","definition_id":"era.service.retain_host_resources","display_name":"保留所属实例的资源","description":"先取出本次运行或本轮迭代收到的本地资源，供下面需要组织工作流通信的步骤使用。资源不写入业务消息。"}
     ],
     "edges": [
-      [
-        "start",
-        "read_sync_context"
-      ],
+      {"from":"start","to":"read_sync_context","schedule":true},
       [
         "read_sync_context",
         "sidecar_store_prepare"
@@ -220,7 +223,14 @@
       [
         "settle_saved_batch",
         "present_finalized_floor"
-      ]
+      ],
+      ["start","retain_host_resources"],
+      {"from":"retain_host_resources","to":"read_sync_context","transfer":false,"schedule":true},
+      {"from":"retain_host_resources","to":"sidecar_store_prepare","schedule":false},
+      {"from":"retain_host_resources","to":"process_message_blocks","schedule":false},
+      {"from":"retain_host_resources","to":"persist_batch_state","schedule":false},
+      {"from":"retain_host_resources","to":"settle_saved_batch","schedule":false},
+      {"from":"retain_host_resources","to":"present_finalized_floor","schedule":false}
     ],
     "outputs": [
       {

@@ -4,7 +4,7 @@ import {assertCurrentMessageBasis} from "../../base_lib/messages/target.ts";
 import {startResource, resourceValue} from "../../base_lib/resources.ts";
 export function CheckBasis(inputs: any, params: any): any {
   const f = takeFrame(inputs); assertRunning(f.session); f.options?.signal?.throwIfAborted();
-  if (f.input.sourceBasis !== undefined) assertCurrentMessageBasis(f.session.api, f.input.sourceBasis);
+  if (f.input.sourceBasis !== undefined) assertCurrentMessageBasis(f.session.api, f.input.sourceBasis, f.session);
   return emit({frame: f}, params);
 }
 export function ChooseRefresh(inputs: any, params: any): any { const f = takeFrame(inputs); return emit(route(f, f.input.mode === "all" ? "all" : "one"), params); }
@@ -16,7 +16,7 @@ export function SelectOne(inputs: any, params: any): any {
 export function SelectAll(inputs: any, params: any): any { const f = takeFrame(inputs); f.refreshKind = "all"; return emit({frame: f}, params); }
 export function StartRefresh(inputs: any, params: any): any {
   const f = takeFrame(inputs);
-  f.operationResource = startResource(f, () => f.refreshKind === "all" ? currentTavern(f.session.api).reloadCurrentChat() : f.session.api.refreshOneMessage(f.messageId), resource => f.session.dispatch.finishCapability({...f, operationResource: resource}));
+  f.operationResource = startResource(f, () => f.refreshKind === "all" ? currentTavern(f.session.api).reloadCurrentChat() : f.session.api.refreshOneMessage(f.messageId));
   f.publicPromise = f.operationResource.publicPromise;
   return emit({frame: f}, params);
 }

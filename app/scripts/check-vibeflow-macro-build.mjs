@@ -27,10 +27,10 @@ function normalizePublicInterface(source, name) {
     .replace(/;+$/g, '');
 }
 
-assert(manifest.format === 'vibeflow.aot-build.v4', 'Macro build manifest 格式错误');
+assert(manifest.format === 'vibeflow.aot-build.v6', 'Macro build manifest 格式错误');
 assert(manifest.project_target === 'javascript', 'Macro 必须使用 JavaScript Target');
-assert(manifest.abi_version === 'vibeflow.workflow.v10', 'Macro Workflow ABI 错误');
-assert(target.plugin_abi_version === 'vibeflow.plugin.v4', 'Macro Plugin ABI 错误');
+assert(manifest.abi_version === 'vibeflow.workflow.v12', 'Macro Workflow ABI 错误');
+assert(target.plugin_abi_version === 'vibeflow.plugin.v5', 'Macro Plugin ABI 错误');
 assert(manifest.entry === 'era-macro.js', 'Macro 入口文件名错误');
 assert(manifest.entry_mode === 'sync', 'Macro 必须保持同步入口');
 assert(

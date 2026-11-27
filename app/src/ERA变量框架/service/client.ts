@@ -1,3 +1,7 @@
+/**
+ * 连接展示层与唯一原生 Service 客户端，转交命令、当前位置接口、生成订阅和回执等待。
+ * 客户端依赖宿主生命周期完成安装与注销；领域状态和实际任务执行由原生工作流负责。
+ */
 import type { EraAdmissionAccepted, EraAdmissionResult, EraEventSource, EraServiceIngress } from './types';
 
 let activeClient: EraNativeClient | null = null;
@@ -40,6 +44,11 @@ export function requestEraService(
 export function captureEraLifecycleToken(): number {
   if (!activeClient) throw new Error('ERA_APP_SERVICE_UNAVAILABLE: ERA Service client 尚未连接。');
   return activeClient.currentLifecycleToken();
+}
+
+/** 复用宿主现有高水位等待；尚未安装客户端时仍由原状态订阅等待初始化。 */
+export async function waitForEraCurrentWork(): Promise<void> {
+  if (activeClient) await activeClient.waitForCurrentWork();
 }
 
 export function requireAccepted(result: EraAdmissionResult): EraAdmissionAccepted {

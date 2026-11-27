@@ -6,6 +6,7 @@
  */
 
 import { cloneEraPortableJsonV1 } from "@era/vibeflow-contracts";
+import { pathSegments } from "../../../../base_lib/data_view/data_view.js";
 
 export type EraSnapshotQueryType =
   | "getCurrentVars"
@@ -117,21 +118,8 @@ export function parseEditLog(raw: unknown): readonly unknown[] {
   }
 }
 
-function pathSegments(path: unknown): string[] {
-  if (Array.isArray(path)) return path.map((segment) => String(segment));
-  const source = String(path);
-  const result: string[] = [];
-  if (source.charCodeAt(0) === 46) result.push("");
-  source.replace(
-    /[^.[\]]+|\[(?:(-?\d+(?:\.\d+)?)|(["'])((?:(?!\2)[^\\]|\\.)*?)\2)\]|(?=(?:\.|\[\])(?:\.|\[\]|$))/g,
-    (match: string, number: string, quote: string, substring: string) => {
-      result.push(
-        quote ? substring.replace(/\\(\\)?/g, "$1") : number || match,
-      );
-      return match;
-    },
-  );
-  return result;
+function historyLogPathSegments(path: unknown): string[] {
+  return Array.isArray(path) ? path.map(String) : pathSegments(String(path));
 }
 
 function isArrayIndex(value: string): boolean {
@@ -157,7 +145,7 @@ function readOwn(
 
 function setAtPath(target: unknown, path: unknown, value: unknown): void {
   if (!canTraverse(target)) return;
-  const segments = pathSegments(path);
+  const segments = historyLogPathSegments(path);
   if (segments.length === 0) return;
   let cursor: Record<string, unknown> | unknown[] = target;
   for (let index = 0; index < segments.length; index += 1) {
@@ -183,7 +171,7 @@ function setAtPath(target: unknown, path: unknown, value: unknown): void {
 
 function unsetAtPath(target: unknown, path: unknown): void {
   if (!canTraverse(target)) return;
-  const segments = pathSegments(path);
+  const segments = historyLogPathSegments(path);
   if (segments.length === 0) return;
   let cursor: Record<string, unknown> | unknown[] = target;
   for (let index = 0; index < segments.length - 1; index += 1) {
@@ -192,30 +180,6 @@ function unsetAtPath(target: unknown, path: unknown): void {
     cursor = child;
   }
   delete (cursor as Record<string, unknown>)[segments[segments.length - 1]];
-}
-
-function hasAtPath(target: unknown, path: unknown): boolean {
-  if (!canTraverse(target)) return false;
-  const segments = pathSegments(path);
-  if (segments.length === 0) return false;
-  let cursor: unknown = target;
-  for (const segment of segments) {
-    if (!canTraverse(cursor)) return false;
-    if (!Object.prototype.hasOwnProperty.call(cursor, segment)) return false;
-    cursor = (cursor as Record<string, unknown>)[segment];
-  }
-  return true;
-}
-
-function getAtPath(target: unknown, path: unknown): unknown {
-  if (!canTraverse(target)) return undefined;
-  const segments = pathSegments(path);
-  let cursor: unknown = target;
-  for (const segment of segments) {
-    if (!canTraverse(cursor)) return undefined;
-    cursor = readOwn(cursor, segment);
-  }
-  return cursor;
 }
 
 function editEntry(value: unknown): EraEditLogEntry | null {
@@ -358,39 +322,4 @@ export function calculateAllStatsBetweenMks(
     });
   }
   return results;
-}
-
-/** 向前追溯指定路径最近一次写入后的值。 */
-export function findLatestNewValue(
-  path: string,
-  startMessageId: number,
-  selectedMks: readonly (string | null)[],
-  allLogs: Readonly<Record<string, unknown>>,
-): unknown {
-  if (startMessageId < 0 || startMessageId > selectedMks.length) return null;
-  for (let index = startMessageId - 1; index >= 0; index -= 1) {
-    const mk = selectedMks[index];
-    if (!mk) continue;
-    const log = parseEditLog(allLogs[mk]);
-    for (let entryIndex = log.length - 1; entryIndex >= 0; entryIndex -= 1) {
-      const entry = editEntry(log[entryIndex]);
-      if (!entry || !entry.path) continue;
-      const entryPath = String(entry.path);
-      if (entryPath === path) {
-        return entry.op === "delete"
-          ? null
-          : cloneSnapshotValue(entry.value_new);
-      }
-      if (path.startsWith(`${entryPath}.`)) {
-        const subPath = path.substring(entryPath.length + 1);
-        if (
-          isPlainRecord(entry.value_new) &&
-          hasAtPath(entry.value_new, subPath)
-        ) {
-          return cloneSnapshotValue(getAtPath(entry.value_new, subPath));
-        }
-      }
-    }
-  }
-  return null;
 }

@@ -7,7 +7,7 @@ export function StartRead(inputs: any, params: any): any {
   const bindings = structuredClone(api.getCharWorldbookNames("current"));
   const requestedName = typeof f.input.name === "string" ? f.input.name : bindings.primary;
   f.worldbookFacts = {names, bindings, requestedName};
-  f.operationResource = startResource(f, () => requestedName ? api.getWorldbook(requestedName) : [], resource => f.session.dispatch.finishCapability({...f, operationResource: resource}));
+  f.operationResource = startResource(f, () => requestedName ? api.getWorldbook(requestedName) : []);
   f.publicPromise = f.operationResource.publicPromise;
   return emit({frame: f}, params);
 }
@@ -20,7 +20,7 @@ export function StartCreate(inputs: any, params: any): any {
   const f = takeFrame(inputs);
   if (typeof f.input.name !== "string" || !f.input.name) throw new TypeError("世界书创建请求缺少 name。");
   f.worldbookName = f.input.name;
-  f.operationResource = startResource(f, () => f.session.api.createWorldbook(f.worldbookName), resource => f.session.dispatch.finishCapability({...f, operationResource: resource}));
+  f.operationResource = startResource(f, () => f.session.api.createWorldbook(f.worldbookName));
   f.publicPromise = f.operationResource.publicPromise;
   return emit({frame: f}, params);
 }
@@ -35,7 +35,7 @@ export function StartBind(inputs: any, params: any): any {
   const tavern = currentTavern(f.session.api), id = Number(tavern.characterId);
   if (!Number.isSafeInteger(id) || id < 0) throw new TypeError("当前聊天没有可写入世界书绑定的角色索引。");
   f.worldbookName = f.input.name;
-  f.operationResource = startResource(f, () => tavern.writeExtensionField(id, "world", f.worldbookName), resource => f.session.dispatch.finishCapability({...f, operationResource: resource}));
+  f.operationResource = startResource(f, () => tavern.writeExtensionField(id, "world", f.worldbookName));
   f.publicPromise = f.operationResource.publicPromise;
   return emit({frame: f}, params);
 }
@@ -56,7 +56,7 @@ export function StartReplace(inputs: any, params: any): any {
   if (typeof f.input.name !== "string" || !Array.isArray(f.input.entries)) throw new TypeError("世界书写入请求缺少 name 或 entries。");
   f.worldbookName = f.input.name;
   f.worldbookEntries = structuredClone(f.input.entries);
-  f.operationResource = startResource(f, () => f.session.api.replaceWorldbook(f.worldbookName, f.worldbookEntries), resource => f.session.dispatch.finishCapability({...f, operationResource: resource}));
+  f.operationResource = startResource(f, () => f.session.api.replaceWorldbook(f.worldbookName, f.worldbookEntries));
   f.publicPromise = f.operationResource.publicPromise;
   return emit({frame: f}, params);
 }

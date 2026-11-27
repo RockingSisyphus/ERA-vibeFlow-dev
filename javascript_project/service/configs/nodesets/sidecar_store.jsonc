@@ -9,7 +9,8 @@
       "type": "era.sync.context",
       "cardinality": "exactly_one",
       "display_name": "本次历史同步需要的消息和文件资料"
-    }
+    },
+    {"type":"era.workflow.host_resources","cardinality":"exactly_one","display_name":"所属 ERA 实例的本地资源"}
   ],
   "provides": [
     {
@@ -31,9 +32,10 @@
         "type": "era.sync.context",
         "display_name": "本次历史同步需要的消息和文件资料",
         "required": true
-      }
+      },
+      {"key":"host_resources","type":"era.workflow.host_resources","required":true,"display_name":"所属 ERA 实例的本地资源"}
     ],
-    "max_steps": 10,
+    "max_steps": 11,
     "nodes": [
       {
         "id": "start",
@@ -45,7 +47,8 @@
         "id": "inspect_current",
         "display_name": "确认当前聊天应使用哪份状态",
         "description": "在“加载聊天状态或引导用户解决文件问题”流程中，读取聊天绑定的独立状态文件及其归属，检查可否沿用同一聊天的内存变量、函数和历史。也识别尚需恢复的生成起点，供后续选择继续、修复或请用户确认。",
-        "definition_id": "era.sidecar_binding.inspect_current"
+        "definition_id": "era.communication.sidecar_binding_inspect_current",
+        "join_policy": "all"
       },
       {
         "id": "resolve_choice",
@@ -57,26 +60,24 @@
         "id": "publish_choice_prompt",
         "display_name": "显示状态文件冲突或损坏的处理选项",
         "description": "在“加载聊天状态或引导用户解决文件问题”流程中，根据当前聊天身份、状态文件归属和版本，向页面显示需要用户决定的处理方案。已有有效选择时沿用该选择，供后续规划绑定或修复。",
-        "definition_id": "era.sidecar_binding.publish_choice_prompt"
+        "definition_id": "era.communication.sidecar_binding_publish_choice_prompt"
       },
       {
         "id": "apply_resolution",
         "display_name": "按选定方案新建、迁移或修复状态文件",
         "description": "在“加载聊天状态或引导用户解决文件问题”流程中，接收已确定的独立状态文件处理方案，先完成必要消息修改，再保存文件和聊天绑定。过程中检查聊天身份及文件版本，记录实际完成部分和失败原因，供同步或恢复判断。",
-        "definition_id": "era.sidecar_binding.apply_resolution"
+        "definition_id": "era.communication.sidecar_binding_apply_resolution"
       },
       {
         "id": "end",
         "display_name": "结束加载聊天状态或引导用户解决文件问题",
         "description": "标明“加载聊天状态或引导用户解决文件问题”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
         "definition_id": "era.service.terminal"
-      }
+      },
+      {"id":"retain_host_resources","definition_id":"era.service.retain_host_resources","display_name":"保留所属实例的资源","description":"先取出本次运行或本轮迭代收到的本地资源，供下面需要组织工作流通信的步骤使用。资源不写入业务消息。"}
     ],
     "edges": [
-      [
-        "start",
-        "inspect_current"
-      ],
+      {"from":"start","to":"inspect_current","schedule":true},
       [
         "inspect_current",
         "resolve_choice"
@@ -102,7 +103,11 @@
       [
         "apply_resolution",
         "end"
-      ]
+      ],
+      ["start","retain_host_resources"],
+      {"from":"retain_host_resources","to":"inspect_current","transfer":false,"schedule":true},
+      {"from":"retain_host_resources","to":"publish_choice_prompt","schedule":false},
+      {"from":"retain_host_resources","to":"apply_resolution","schedule":false}
     ],
     "outputs": [
       {

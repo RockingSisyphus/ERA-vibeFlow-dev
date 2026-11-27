@@ -19,6 +19,7 @@ export const era_crud_mutations = defineBaseLib({
     }
   ],
   "dependencies": [
+    "era.data_view",
     "era.crud.parser"
   ],
   "external_packages": [],

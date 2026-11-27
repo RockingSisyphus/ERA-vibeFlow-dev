@@ -391,6 +391,16 @@ declare namespace SillyTavern {
  * 你也可以在酒馆页面按 f12, 在控制台中输入 `window.SillyTavern.getContext()` 来查看当前酒馆所提供的接口
  */
 declare const SillyTavern: {
+  /** 1.19 的原生显示管道。当前只使用正则前的同步文本处理。 */
+  readonly getContext: () => Pick<typeof SillyTavern, 'characterId' | 'characters' | 'writeExtensionField'> & {
+    readonly messageFormatter?: {
+      readonly stage: { readonly BEFORE_REGEX: 'beforeRegex' };
+      addHook(
+        transform: (text: string, context: { readonly isReasoning: boolean }) => string,
+        options: { readonly stage: 'beforeRegex' },
+      ): void;
+    };
+  };
   readonly accountStorage: any;
   readonly chat: Array<SillyTavern.ChatMessage>;
   readonly characters: SillyTavern.v1CharData[];
@@ -409,7 +419,8 @@ declare const SillyTavern: {
   };
   readonly reloadCurrentChat: () => Promise<void>;
   readonly renameChat: (old_name: string, new_name: string) => Promise<void>;
-  readonly saveSettingsDebounced: () => Promise<void>;
+  /** 安排原生设置保存；实际保存成功由 SETTINGS_UPDATED 通知。 */
+  readonly saveSettingsDebounced: () => void;
   readonly onlineStatus: string;
   readonly maxContext: number;
   /** chat_metadata */

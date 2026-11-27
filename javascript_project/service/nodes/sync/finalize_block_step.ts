@@ -23,6 +23,7 @@ export function finalize(inputs: any): any {
       ...request,
       sourceBasis: state.sourceBasis ?? request.sourceBasis,
       syncCursor: null,
+      ...(prefix ? { messageRefresh: "none" as const } : {}),
       initialPresentation: prefix ? null : request.initialPresentation,
       blockStepState: state,
     },

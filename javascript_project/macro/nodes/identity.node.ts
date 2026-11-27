@@ -8,7 +8,6 @@ export const era_macro_identity = defineNode({
   "contract": {"requires":[{"type":"era.macro.substring.checked","cardinality":"exactly_one","display_name":"按本次用途整理并检查后的文字"}],"provides":[{"key":"macro.replacement.identity","type":"era.macro.replacement.candidate","display_name":"本次分支得到的最终文字"}],"params_schema":{},"params_defaults":{},"input_semantics":{"era.macro.substring.checked":["已完成模式检查，提示词中的内部操作内容可能已清理，供直接返回或继续宏替换。"]},"output_semantics":{"macro.replacement.identity":["可能来自直接保留或宏替换分支，每次实际采用其中一份。"]}},
   "implementations": [{"language":"typescript","targets":["browser","node"],"source":{"kind":"file","ref":"nodes/identity.ts","export":"run"}}],
   "base_libs": [],
-  "capabilities": [],
   "tags": ["宏处理"],
   "rulesets": ["vibeflow.process"],
   "id": "era.macro.identity",

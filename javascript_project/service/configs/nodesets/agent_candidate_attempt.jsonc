@@ -7,7 +7,8 @@
       "type": "era.agent.candidate.state",
       "cardinality": "exactly_one",
       "display_name": "本次生成尝试的请求和恢复起点"
-    }
+    },
+    {"type":"era.workflow.host_resources","cardinality":"exactly_one","display_name":"所属 ERA 实例的本地资源"}
   ],
   "provides": [
     {
@@ -24,7 +25,8 @@
       "key": "candidate_outcome",
       "type": "era.agent.candidate.outcome",
       "display_name": "生成尝试结束后的完整结果"
-    }
+    },
+    {"key":"retained_host_resources","type":"era.workflow.host_resources","display_name":"所属 ERA 实例的本地资源"}
   ],
   "pipeline": {
     "entry_mode": "async",
@@ -34,9 +36,10 @@
         "type": "era.agent.candidate.state",
         "required": true,
         "display_name": "本次生成尝试的请求和恢复起点"
-      }
+      },
+      {"key":"host_resources","type":"era.workflow.host_resources","required":true,"display_name":"所属 ERA 实例的本地资源"}
     ],
-    "max_steps": 12,
+    "max_steps": 13,
     "nodes": [
       {
         "id": "start",
@@ -48,19 +51,20 @@
         "id": "unpack_candidate",
         "display_name": "取出下一次模型生成需要的请求",
         "description": "在“完成一次模型生成与指令检查”流程中，从当前生成尝试的状态中，取出模型请求、原任务和所属批次。下一次模型调用据此继续，确保重试仍属于同一次生成任务。",
-        "definition_id": "era.agent.candidate_unpack"
+        "definition_id": "era.agent.candidate_unpack",
+        "join_policy": "all"
       },
       {
         "id": "execute_agent_phase_v2",
         "display_name": "执行本次规划、正文或结算生成",
         "description": "在“完成一次模型生成与指令检查”流程中，根据当前生成阶段和聊天进度，向模型请求规划或结算内容，或接续酒馆已经生成的正文。把得到的文字、变量指令和函数调用交给消息处理流程；取消、过期请求或失败会带着具体原因返回。",
-        "definition_id": "era.agent.execute_session_v2"
+        "definition_id": "era.communication.agent_execute_session_v2"
       },
       {
         "id": "prepare_stage_blocks",
         "display_name": "准备执行模型文字里的变量和函数指令",
         "description": "在“完成一次模型生成与指令检查”流程中，将模型本次生成的文字整理成按顺序执行的消息内容，并保存尝试失败时要恢复的起点。规划阶段使用预定的 AI 消息位置，其他阶段使用已确认的目标消息，供共享指令流程逐项处理。",
-        "definition_id": "era.lifecycle.prepare_stage_blocks"
+        "definition_id": "era.communication.lifecycle_prepare_stage_blocks"
       },
       {
         "id": "apply_stage_blocks",
@@ -71,7 +75,8 @@
             "type": "era.sync.block.step.state",
             "cardinality": "exactly_one",
             "display_name": "当前消息位置及待处理变量指令"
-          }
+          },
+          {"type":"era.workflow.host_resources","cardinality":"exactly_one","display_name":"所属 ERA 实例的本地资源"}
         ],
         "provides": [
           {
@@ -92,7 +97,8 @@
               "from": "era.sync.block.step.state",
               "as": "block_step_state",
               "update": "block_step_state_after"
-            }
+            },
+            {"from":"era.workflow.host_resources","as":"host_resources","update":"retained_host_resources"}
           ],
           "outputs": [
             {
@@ -107,7 +113,7 @@
         "id": "finish_stage_blocks",
         "display_name": "整理生成文字中指令的执行结果",
         "description": "在“完成一次模型生成与指令检查”流程中，接收本次模型文字里变量及函数指令的执行结果，更新生成阶段的正文和进度。可重试错误会恢复本次尝试前的状态；重试结束仍失败时保留更早阶段的成果，并返回本次失败原因。",
-        "definition_id": "era.lifecycle.finish_stage_blocks"
+        "definition_id": "era.communication.lifecycle_finish_stage_blocks"
       },
       {
         "id": "finish_candidate",
@@ -120,13 +126,11 @@
         "display_name": "结束完成一次模型生成与指令检查",
         "description": "标明“完成一次模型生成与指令检查”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
         "definition_id": "era.service.terminal"
-      }
+      },
+      {"id":"retain_host_resources","definition_id":"era.service.retain_host_resources","display_name":"保留所属实例的资源","description":"先取出本次运行或本轮迭代收到的本地资源，供下面需要组织工作流通信的步骤使用。资源不写入业务消息。"}
     ],
     "edges": [
-      [
-        "start",
-        "unpack_candidate"
-      ],
+      {"from":"start","to":"unpack_candidate","schedule":true},
       [
         "unpack_candidate",
         "execute_agent_phase_v2"
@@ -156,7 +160,13 @@
       [
         "finish_candidate",
         "end"
-      ]
+      ],
+      ["start","retain_host_resources"],
+      {"from":"retain_host_resources","to":"unpack_candidate","transfer":false,"schedule":true},
+      {"from":"retain_host_resources","to":"execute_agent_phase_v2","schedule":false},
+      {"from":"retain_host_resources","to":"prepare_stage_blocks","schedule":false},
+      {"from":"retain_host_resources","to":"apply_stage_blocks","schedule":false},
+      {"from":"retain_host_resources","to":"finish_stage_blocks","schedule":false}
     ],
     "outputs": [
       {
@@ -176,7 +186,8 @@
         "cardinality": "exactly_one",
         "as": "candidate_outcome",
         "display_name": "生成尝试结束后的完整结果"
-      }
+      },
+      {"type":"era.workflow.host_resources","as":"retained_host_resources","cardinality":"exactly_one","display_name":"所属 ERA 实例的本地资源"}
     ]
   }
 }

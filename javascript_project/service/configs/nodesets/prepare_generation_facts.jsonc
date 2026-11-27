@@ -7,7 +7,8 @@
       "type": "era.step.request.routed",
       "cardinality": "exactly_one",
       "display_name": "当前任务及已读取的聊天资料"
-    }
+    },
+    {"type":"era.workflow.host_resources","cardinality":"exactly_one","display_name":"所属 ERA 实例的本地资源"}
   ],
   "provides": [
     {
@@ -24,9 +25,10 @@
         "type": "era.step.request.routed",
         "display_name": "当前任务及已读取的聊天资料",
         "required": true
-      }
+      },
+      {"key":"host_resources","type":"era.workflow.host_resources","required":true,"display_name":"所属 ERA 实例的本地资源"}
     ],
-    "max_steps": 35,
+    "max_steps": 37,
     "nodes": [
       {
         "id": "start",
@@ -38,7 +40,7 @@
         "id": "read_facts",
         "display_name": "确认生成阶段及应保留的正文",
         "description": "在“准备生成资料并按需还原变量起点”流程中，读取当前生成配置、会话进度和工作正文，检查重试请求是否仍对应同一次生成。确定应保留哪些正文和消息身份，判断下一阶段是否需要先重建变量起点。",
-        "definition_id": "era.prepare_generation_facts.read_facts"
+        "definition_id": "era.communication.prepare_generation_facts_read_facts"
       },
       {
         "id": "prepare_preview",
@@ -56,7 +58,8 @@
             "type": "era.sync.preview.state",
             "cardinality": "exactly_one",
             "display_name": "只读历史重算的当前位置和变量"
-          }
+          },
+          {"type":"era.workflow.host_resources","cardinality":"exactly_one","display_name":"所属 ERA 实例的本地资源"}
         ],
         "provides": [
           {
@@ -77,7 +80,8 @@
               "from": "era.sync.preview.state",
               "as": "preview_state",
               "update": "state_next"
-            }
+            },
+            {"from":"era.workflow.host_resources","as":"host_resources","update":"retained_host_resources"}
           ],
           "outputs": [
             {
@@ -104,13 +108,11 @@
         "definition_id": "era.service.terminal",
         "display_name": "结束准备生成资料并按需还原变量起点",
         "description": "标明“准备生成资料并按需还原变量起点”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。"
-      }
+      },
+      {"id":"retain_host_resources","definition_id":"era.service.retain_host_resources","display_name":"保留所属实例的资源","description":"先取出本次运行或本轮迭代收到的本地资源，供下面需要组织工作流通信的步骤使用。资源不写入业务消息。"}, {"id":"retain_host_resources_signal","definition_id":"era.service.forward_resource_signal","display_name":"转交本段的资源就绪确认","description":"把资源已转交的确认交给下一步。下一步继续使用入口收到的同一资源，不重复接收资源句柄。"}
     ],
     "edges": [
-      [
-        "start",
-        "read_facts"
-      ],
+      {"from":"start","to":"read_facts","schedule":true},
       {
         "from": "read_facts",
         "to": "prepare_preview",
@@ -142,7 +144,10 @@
       [
         "finish_direct",
         "end"
-      ]
+      ],
+      ["start","retain_host_resources"],
+      {"from":"retain_host_resources_signal","to":"read_facts","schedule":true},
+      {"from":"retain_host_resources","to":"preview_history","schedule":false}, {"from":"retain_host_resources","to":"retain_host_resources_signal","schedule":true}
     ],
     "outputs": [
       {

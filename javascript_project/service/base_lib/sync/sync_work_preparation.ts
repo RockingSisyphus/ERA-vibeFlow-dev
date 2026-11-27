@@ -16,7 +16,7 @@ import {
   successfulPlan,
   errorMessage,
 } from "./sync_contracts.ts";
-import { type EraMkMessageV1, type EraMkSeedV1 } from "../domain/mk_engine.ts";
+import { readMessageKey, type EraMkMessageV1, type EraMkSeedV1 } from "../domain/mk_engine.ts";
 import { type PlannedStepV1 } from "../service_types.ts";
 import type {
   EraActionsTakenV1,
@@ -44,7 +44,7 @@ export function normalizeMessage(
   index: number,
 ): EraMkMessageV1 {
   if (!isRecord(value)) throw new TypeError(`消息 #${index} 不是对象。`);
-  if (value.schemaVersion !== 1)
+  if (value.schemaVersion !== 2)
     throw new TypeError(`消息 #${index} 缺少严格投影版本。`);
   const rawId = value.messageId;
   if (!Number.isSafeInteger(rawId) || Number(rawId) < 0) {
@@ -262,7 +262,8 @@ export function planSyncWork(
             const messageIndex = preparedMessages.findIndex(
               (message) => message.messageId === update.messageId,
             );
-            if (messageIndex < 0 || prepared.processingMk === null) {
+            const mk=messageIndex<0?null:readMessageKey({...preparedMessages[messageIndex]!,content:{kind:'text',text:update.content}});
+            if (messageIndex < 0 || mk === null) {
               throw new TypeError(
                 "暂存消息更新缺少可验证的消息位置或 processing MK。",
               );
@@ -271,7 +272,7 @@ export function planSyncWork(
               kind: "update-message-content" as const,
               messageId: update.messageId,
               messageIndex,
-              mk: prepared.processingMk,
+              mk,
               content: { kind: "text" as const, text: update.content },
             };
           })

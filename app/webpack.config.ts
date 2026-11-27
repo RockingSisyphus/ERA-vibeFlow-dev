@@ -532,7 +532,9 @@ function parse_configuration(entry: Entry, is_release = false): (_env: any, argv
           '../javascript_project/tavern/generated/bindings.mjs',
         ),
         '@era/vibeflow-tavern-sync$': path.resolve(import.meta.dirname, '../generated/era-tavern/sync/workflow.js'),
-        '@era/vibeflow-tavern-async$': path.resolve(import.meta.dirname, '../generated/era-tavern/async/workflow.js'),
+        '@era/vibeflow-tavern-operation$': path.resolve(import.meta.dirname, '../generated/era-tavern/operation/workflow.js'),
+        '@era/vibeflow-tavern-runtime$': path.resolve(import.meta.dirname, '../generated/era-tavern/runtime/workflow.js'),
+        '@era/vibeflow-tavern-parallel-reads$': path.resolve(import.meta.dirname, '../generated/era-tavern/parallel_reads/workflow.js'),
       },
     },
     plugins: (is_release
@@ -682,6 +684,8 @@ function parse_configuration(entry: Entry, is_release = false): (_env: any, argv
       if (
         request === '@era/vibeflow-expression' ||
         request.startsWith('@era/vibeflow-expression/') ||
+        request === '@era/vibeflow-command-compaction' ||
+        request.startsWith('@era/vibeflow-command-compaction/') ||
         request === '@era/vibeflow-macro-syntax' ||
         request.startsWith('@era/vibeflow-macro-syntax/') ||
         request === '@era/vibeflow-workbench' ||

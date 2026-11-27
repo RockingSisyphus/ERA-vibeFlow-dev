@@ -139,7 +139,6 @@ export function buildAppend(transaction: unknown) {
       content,
       refresh: "none",
       purpose: "era-facade-commit",
-      projectTechnicalBlocks: false,
     },
   };
 }

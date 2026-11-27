@@ -31,7 +31,7 @@ export function InjectOnce(inputs:any,params:any):any {
 export function StartErrorMessage(inputs:any,params:any):any {
   const f=takeFrame(inputs);
   if(typeof f.input.message!=="string")throw new TypeError("Agent 错误消息缺少 message。");
-  f.operationResource=startResource(f,()=>f.session.api.createChatMessages([{role:"system",message:f.input.message,extra:{era_agent:{status:"planning-failed",swipeLocked:true}}}],{insert_before:"end",refresh:"affected"}),resource=>f.session.dispatch.finishCapability({...f,operationResource:resource}));
+  f.operationResource=startResource(f,()=>f.session.api.createChatMessages([{role:"system",message:f.input.message,extra:{era_agent:{status:"planning-failed",swipeLocked:true}}}],{insert_before:"end",refresh:"affected"}));
   f.publicPromise=f.operationResource.publicPromise;return emit({frame:f},params);
 }
 export async function AwaitErrorMessage(inputs:any,params:any):Promise<any> {

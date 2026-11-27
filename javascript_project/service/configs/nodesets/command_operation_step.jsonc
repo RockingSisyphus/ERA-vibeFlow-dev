@@ -7,6 +7,11 @@
       "type": "era.command.operation.state",
       "cardinality": "exactly_one",
       "display_name": "有序操作、当前变量和函数及随机进度"
+    },
+    {
+      "type": "era.workflow.host_resources",
+      "cardinality": "exactly_one",
+      "display_name": "所属 ERA 实例的本地资源"
     }
   ],
   "provides": [
@@ -19,6 +24,11 @@
       "key": "operation_done",
       "type": "era.command.operation.done",
       "display_name": "本范围的有序操作是否全部结束"
+    },
+    {
+      "key": "retained_host_resources",
+      "type": "era.workflow.host_resources",
+      "display_name": "所属 ERA 实例的本地资源"
     }
   ],
   "pipeline": {
@@ -29,9 +39,15 @@
         "type": "era.command.operation.state",
         "display_name": "有序操作、当前变量和函数及随机进度",
         "required": true
+      },
+      {
+        "key": "host_resources",
+        "type": "era.workflow.host_resources",
+        "required": true,
+        "display_name": "所属 ERA 实例的本地资源"
       }
     ],
-    "max_steps": 35,
+    "max_steps": 36,
     "nodes": [
       {
         "id": "start",
@@ -42,38 +58,38 @@
       {
         "id": "select_operation",
         "display_name": "选择下一项要执行的变量或函数操作",
-        "description": "在“按原顺序处理一项变量或函数操作”流程中，按消息指令原有顺序和字段进度，选择新增、修改、删除变量，整组修改函数，或执行阶段函数调用。没有剩余内容时形成完整结果，使同一指令清单按顺序执行到结束。",
+        "description": "在“按原顺序处理一项变量或函数操作”流程中，按消息指令原有顺序和字段进度，选择新增、修改、删除变量，整组修改函数，或执行阶段函数调用。没有剩余内容时形成完整结果，使同一指令清单按顺序执行到结束。 按当前数组重新判断下标和父级字段规则，保持有序执行；已占用的新增位置及越界操作交给跳过分支。",
         "definition_id": "era.command.select_business_operation"
       },
       {
         "id": "apply_insert",
         "display_name": "新增变量并补齐需要的模板字段",
-        "description": "在“按原顺序处理一项变量或函数操作”流程中，按指令选择新增位置，补齐模板要求的字段，加入新值并记录可回退的历史。对象内字段按既定顺序继续处理，供后续指令使用新增结果。",
+        "description": "在“按原顺序处理一项变量或函数操作”流程中，按指令选择新增位置，补齐模板要求的字段，加入新值并记录可回退的历史。对象内字段按既定顺序继续处理，供后续指令使用新增结果。 依父级字段及共有元素规则检查新增，应用新建模板；数组只允许在下一个可用下标写入，并记下整个受影响数组的前后值。",
         "definition_id": "era.command.apply_insert_action"
       },
       {
         "id": "apply_edit",
-        "display_name": "修改变量或计算它的新值",
-        "description": "在“按原顺序处理一项变量或函数操作”流程中，读取当前指令指定的变量，直接赋值或计算公式后更新本轮状态，并记录变更。公式使用执行到此处的变量、历史起点和随机进度；无效操作保留原因，供继续处理及历史回退。",
-        "definition_id": "era.command.apply_edit_action"
+        "display_name": "修改变量，公式交给独立计算流程",
+        "description": "先判断当前修改是字段遍历、直接赋值还是公式。前两类不启动公式流程；需要公式时整理变量、函数及随机起点，并保留本地变更记录。 展开后可查看准备、原生同步调用、结果接回和继续判断。",
+        "definition_id": "era.migration.service.apply_edit.workflow"
       },
       {
         "id": "apply_delete",
         "display_name": "删除指定变量并留下可回退记录",
-        "description": "在“按原顺序处理一项变量或函数操作”流程中，按当前指令删除目标变量或指定子字段，记录删除前的内容，供以后切换回复或回退历史恢复。需要检查的子字段按原顺序继续处理，无效目标带回具体原因。",
+        "description": "在“按原顺序处理一项变量或函数操作”流程中，按当前指令删除目标变量或指定子字段，记录删除前的内容，供以后切换回复或回退历史恢复。需要检查的子字段按原顺序继续处理，无效目标带回具体原因。 按父级规则确认能否移除目标；数组项删除后收拢，完整记录变动前后的最外层受影响数组。",
         "definition_id": "era.command.apply_delete_action"
       },
       {
         "id": "apply_function_group",
-        "display_name": "整组检查并应用函数库修改",
-        "description": "在“按原顺序处理一项变量或函数操作”流程中，在当前自定义函数库的临时副本上，依序处理本组新增、修改、删除和属性变化。完整检查通过才整组采用并记录历史；有错误则保留原函数库和具体问题，避免只改成一半。",
-        "definition_id": "era.command.apply_function_group_action"
+        "display_name": "整组修改函数并调用公式流程校验",
+        "description": "按原顺序准备整组函数候选，处理元数据和删除分支；只有候选需要验证时才提出公式请求。原函数库和采用或撤销责任留在本流程。 展开后可查看准备、原生同步调用、结果接回和继续判断。",
+        "definition_id": "era.migration.service.apply_function_group.workflow"
       },
       {
         "id": "apply_stage_call",
-        "display_name": "计算生成阶段安排的函数调用",
-        "description": "在“按原顺序处理一项变量或函数操作”流程中，接收规划或结算阶段指定的一项函数调用，使用当前变量、函数、历史起点和随机进度计算并收集结果。失败时记录原因并将阶段调用标为失败，供生成阶段决定后续处理。",
-        "definition_id": "era.command.apply_stage_call_action"
+        "display_name": "由独立公式流程计算阶段函数结果",
+        "description": "把当前阶段的一项函数调用、参数、已提交快照和随机起点整理为公式请求；函数位置及失败表留在当前流程。 展开后可查看准备、原生同步调用、结果接回和继续判断。",
+        "definition_id": "era.migration.service.apply_stage_call.workflow"
       },
       {
         "id": "skip_operation",
@@ -98,13 +114,20 @@
         "display_name": "结束按原顺序处理一项变量或函数操作",
         "description": "标明“按原顺序处理一项变量或函数操作”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
         "definition_id": "era.service.terminal"
+      },
+      {
+        "id": "retain_host_resources",
+        "definition_id": "era.service.retain_host_resources",
+        "display_name": "保留所属实例的资源",
+        "description": "先取出本次运行或本轮迭代收到的本地资源，供下面需要组织工作流通信的步骤使用。资源不写入业务消息。"
       }
     ],
     "edges": [
-      [
-        "start",
-        "select_operation"
-      ],
+      {
+        "from": "start",
+        "to": "select_operation",
+        "schedule": true
+      },
       {
         "from": "select_operation",
         "to": "apply_insert",
@@ -171,7 +194,31 @@
       [
         "complete_operations",
         "end"
-      ]
+      ],
+      [
+        "start",
+        "retain_host_resources"
+      ],
+      {
+        "from": "retain_host_resources",
+        "to": "select_operation",
+        "schedule": true
+      },
+      {
+        "from": "retain_host_resources",
+        "to": "apply_edit",
+        "schedule": false
+      },
+      {
+        "from": "retain_host_resources",
+        "to": "apply_function_group",
+        "schedule": false
+      },
+      {
+        "from": "retain_host_resources",
+        "to": "apply_stage_call",
+        "schedule": false
+      }
     ],
     "outputs": [
       {
@@ -185,6 +232,12 @@
         "cardinality": "exactly_one",
         "display_name": "本范围的有序操作是否全部结束",
         "as": "operation_done"
+      },
+      {
+        "type": "era.workflow.host_resources",
+        "as": "retained_host_resources",
+        "cardinality": "exactly_one",
+        "display_name": "所属 ERA 实例的本地资源"
       }
     ]
   }

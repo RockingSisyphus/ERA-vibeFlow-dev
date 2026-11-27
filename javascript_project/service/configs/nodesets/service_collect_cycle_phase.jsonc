@@ -15,7 +15,8 @@
       "type": "era.service.cycle.routed",
       "cardinality": "exactly_one",
       "display_name": "已选择阶段的服务状态"
-    }
+    },
+    {"type":"era.workflow.host_resources","cardinality":"exactly_one","display_name":"所属 ERA 实例的本地资源"}
   ],
   "provides": [
     {
@@ -32,9 +33,10 @@
         "type": "era.service.cycle.routed",
         "display_name": "已选择阶段的服务状态",
         "required": true
-      }
+      },
+      {"key":"host_resources","type":"era.workflow.host_resources","required":true,"display_name":"所属 ERA 实例的本地资源"}
     ],
-    "max_steps": 8,
+    "max_steps": 9,
     "nodes": [
       {
         "id": "start",
@@ -44,9 +46,10 @@
       },
       {
         "id": "collect_phase",
-        "display_name": "接收并合并一个聊天或脚本事件",
-        "description": "本环节用于“收一轮事件并决定等待还是开始批次”：等待聊天变化、脚本请求或到期事件，检查后合入当前收集范围。根据期限和容量决定继续等相关事件还是组批，并交出需要启动或取消的计时要求。",
-        "definition_id": "era.service.collect_phase"
+        "display_name": "收集聊天变化及原生候选结束事实",
+        "description": "接收原生生成结束、停止及已有聊天事件，沿统一事件目录交给主Service。生成结束只唤醒本聊天待保存候选，不重复触发作者副作用；无待保存项时保持普通结算。源：configs/nodesets/service_collect_phase.jsonc与base_lib/domain/event_catalog.ts。",
+        "definition_id": "era.service.collect_phase",
+        "join_policy": "all"
       },
       {
         "id": "route_collection",
@@ -71,13 +74,11 @@
         "display_name": "结束收一轮事件并决定等待还是开始批次",
         "description": "标明“收一轮事件并决定等待还是开始批次”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
         "definition_id": "era.service.terminal"
-      }
+      },
+      {"id":"retain_host_resources","definition_id":"era.service.retain_host_resources","display_name":"保留所属实例的资源","description":"先取出本次运行或本轮迭代收到的本地资源，供下面需要组织工作流通信的步骤使用。资源不写入业务消息。"}
     ],
     "edges": [
-      [
-        "start",
-        "collect_phase"
-      ],
+      {"from":"start","to":"collect_phase","schedule":true},
       [
         "collect_phase",
         "route_collection"
@@ -111,7 +112,10 @@
       [
         "prepare_batch",
         "end"
-      ]
+      ],
+      ["start","retain_host_resources"],
+      {"from":"retain_host_resources","to":"collect_phase","transfer":false,"schedule":true},
+      {"from":"retain_host_resources","to":"prepare_batch","schedule":false}
     ],
     "outputs": [
       {

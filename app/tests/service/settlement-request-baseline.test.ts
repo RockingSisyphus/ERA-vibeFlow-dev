@@ -1,4 +1,4 @@
-import { run as seedCandidate } from '../../../javascript_project/service/nodes/agent/candidate_seed';
+import { businessWorkflowNode } from './business-workflow-node';
 import { recordFor } from '../../../javascript_project/service/base_lib/sidecar_binding';
 import { sidecarId, contextWith, identity } from './memory-lifecycle-fixture';
 import { classifyGeneration } from '../../../javascript_project/service/base_lib/agent/agent_flow_policy';
@@ -87,7 +87,8 @@ it.each([
     expect(result.generation_facts.identity.mk).not.toBe((base.meta.SelectedMks as string[])[1]);
   let working: any = { version: 3, dirty: false, record: recordFor(sidecarId, identity, original.state, null) };
   let savedSession: any;
-  const seeded = seedCandidate(
+  const seeded = await businessWorkflowNode(
+    'era.agent.candidate_seed',
     {
       'era.agent.generation.request': { value: { phase: 'execute', context: result.generation_facts.context } },
       'era.step.request.routed': { value: step },

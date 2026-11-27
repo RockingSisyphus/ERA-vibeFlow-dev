@@ -1,17 +1,21 @@
 // Generated from Service base_lib/workbench; do not edit.
 /** 工作台共享纯计算；生产 Service 节点与 UI 预览由同一源码构建。 */
 import { isRecord, jsonEqual, valueAtPath, operation } from './workbench_operations.js';
+import { variableRuleSource } from './variable_write.js';
+export { variableRuleAt } from './variable_write.js';
 function metaAt(value) {
     return isRecord(value) && isRecord(value.$meta) ? value.$meta : {};
 }
 /** 将一层祖先元数据投影为最多一个阻断事实，避免同一锁重复解锁。 */
 function protectionAtDepth(root, path, kind, depth) {
     const ancestorPath = path.slice(0, depth);
-    const meta = metaAt(valueAtPath(root, ancestorPath));
+    const { rule: meta } = variableRuleSource(root, ancestorPath);
+    if (!meta)
+        return null;
     if (kind === 'edit' && meta.updatable === false) {
         return { path: ancestorPath, field: 'updatable', value: false };
     }
-    if (kind === 'insert' && meta.unInsertAble === 'all') {
+    if (kind === 'insert' && depth < path.length && meta.unInsertAble === 'all') {
         return { path: ancestorPath, field: 'unInsertAble', value: 'all' };
     }
     if (kind === 'insert' && depth === path.length - 1 && meta.unInsertAble === 'self') {
@@ -47,10 +51,10 @@ export function variablePlanProtections(root, plan) {
         .filter((item, index, items) => items.findIndex(other => other.field === item.field && jsonEqual(other.path, item.path)) === index);
 }
 function metaEdit(path, field, value) {
-    return operation('edit', path, { $meta: { [field]: value } });
+    return operation('edit', path, { [field]: value });
 }
 function metaDelete(path, field) {
-    return operation('delete', path, { $meta: { [field]: {} } });
+    return operation('delete', path, { [field]: {} });
 }
 /** 删除或替换掉承载元数据的对象后不能恢复旧锁，否则会重建已删除实体。 */
 function variableProtectionSurvives(operations, path) {
@@ -72,19 +76,20 @@ function variableProtectionSurvives(operations, path) {
     return survives;
 }
 /** 解锁与可选恢复必须包在同一次 commit，否则中间失败会留下意外解锁状态。 */
-export function wrapVariableProtection(operations, protections, choice) {
+export function wrapVariableProtection(operations, protections, choice, root) {
     if (choice === 'temporary' && protections.some(item => item.field === 'necessary'))
         throw new TypeError('necessary 保护不能临时解除。');
     const unlocks = [];
     const restores = [];
     for (const protection of protections) {
+        const rulePath = variableRuleSource(root, protection.path).path;
         if (protection.field === 'necessary') {
-            unlocks.push(metaDelete(protection.path, protection.field));
+            unlocks.push(metaDelete(rulePath, protection.field));
             continue;
         }
-        unlocks.push(metaEdit(protection.path, protection.field, protection.field === 'updatable' ? true : null));
-        if (choice === 'temporary' && variableProtectionSurvives(operations, protection.path)) {
-            restores.unshift(metaEdit(protection.path, protection.field, protection.value));
+        unlocks.push(metaEdit(rulePath, protection.field, protection.field === 'updatable' ? true : null));
+        if (choice === 'temporary' && variableProtectionSurvives(operations, rulePath)) {
+            restores.unshift(metaEdit(rulePath, protection.field, protection.value));
         }
     }
     return [...unlocks, ...operations, ...restores];

@@ -8,6 +8,6 @@ export function PresentPrompt(inputs:any,params:any):any {
   dispatchUi(f.session.api,"era-sidecar-binding-prompt",structuredClone(f.input.prompt));f.result={status:"presented"};return emit({frame:f},params);
 }
 export function ClearPrompt(inputs:any,params:any):any {
-  const f=takeFrame(inputs);if(f.input.sourceBasis!==undefined)assertCurrentMessageBasis(f.session.api,f.input.sourceBasis);assertExpectedSidecarPointer(f.session.api,f.input);
+  const f=takeFrame(inputs);if(f.input.sourceBasis!==undefined)assertCurrentMessageBasis(f.session.api, f.input.sourceBasis, f.session);assertExpectedSidecarPointer(f.session.api,f.input);
   dispatchUi(f.session.api,"era-sidecar-binding-prompt",null);f.result={status:"cleared"};return emit({frame:f},params);
 }

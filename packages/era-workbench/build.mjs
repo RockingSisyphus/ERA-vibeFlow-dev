@@ -6,8 +6,9 @@ const require = createRequire(new URL('../../app/package.json', import.meta.url)
 const ts = require('typescript');
 const names = ['operations', 'draft', 'protection'];
 const sources = names.map(name => fileURLToPath(new URL(`../../javascript_project/service/base_lib/workbench/workbench_${name}.ts`, import.meta.url)));
+sources.push(fileURLToPath(new URL('../../base_lib/variable_write/variable_write.ts', import.meta.url)));
 const program = ts.createProgram(sources, { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022, strict: true, skipLibCheck: true, declaration: true, types: [] });
 const diagnostics = ts.getPreEmitDiagnostics(program);
 if (diagnostics.length) throw new Error(ts.formatDiagnosticsWithColorAndContext(diagnostics, { getCanonicalFileName: p => p, getCurrentDirectory: () => process.cwd(), getNewLine: () => '\n' }));
-program.emit(undefined, (name, content) => writeFileSync(new URL(basename(name), import.meta.url), '// Generated from Service base_lib/workbench; do not edit.\n' + content));
+program.emit(undefined, (name, content) => writeFileSync(new URL(basename(name), import.meta.url), '// Generated from Service base_lib/workbench; do not edit.\n' + content.replaceAll('../../../../base_lib/variable_write/variable_write.js', './variable_write.js')));
 for (const ext of ['js', 'd.ts']) writeFileSync(new URL(`index.${ext}`, import.meta.url), '// Generated exports; do not edit.\n' + names.map(name => `export * from './workbench_${name}.js';`).join('\n') + '\n');

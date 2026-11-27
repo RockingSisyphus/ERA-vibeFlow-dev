@@ -38,7 +38,12 @@ export function CleanupWatchdog(inputs: any, params: any): any {
   const f = takeFrame(inputs);
   const s = f.session;
   if (f.watchdog !== undefined && s.watchdogs.delete(f.watchdog)) f.watchdog.controller.abort("barrier-completed");
-  for (const sequence of s.failureLedger.keys()) if (sequence <= f.barrier.sequence) s.failureLedger.delete(sequence);
+  // 普通只读等待不消费生成屏障尚未报告的失败。
+  if (f.generationBarrier) for (const sequence of s.failureLedger.keys()) if (sequence <= f.barrier.sequence) s.failureLedger.delete(sequence);
+  // 在已有异步屏障完整收尾后交还原生生成，不在同步事件节点安排后续回调。
+  const requestId = f.input.nativeCandidateRequestId;
+  if (f.generationBarrier && requestId != null && s.nativeCandidate?.requestId === requestId && s.nativeCandidate.phase === "preparing")
+    s.nativeCandidate = {...s.nativeCandidate, phase: "generating"};
   return emit({frame: f}, params);
 }
 

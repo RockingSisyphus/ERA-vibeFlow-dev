@@ -1,20 +1,5 @@
 import {defineNode} from "@vibeflow/plugin";
 
-export const era_installation_scope_activate_ingress = defineNode({
-  "display_name": "启用本实例的聊天监听和界面呈现",
-  "description": "接收已经确定的脚本启用范围，在酒馆页面安装聊天事件监听及显示规则。按安装位置选择呈现目标，聊天界面重建后重新连接，让后续事件能够进入 ERA 服务。",
-  "version": "1.0.0",
-  "flow_kind": "process",
-  "contract": {"requires":[{"type":"era.installation.scope.decision","cardinality":"exactly_one","display_name":"脚本启用范围和启动说明"}],"provides":[],"params_schema":{},"params_defaults":{},"input_semantics":{"era.installation.scope.decision":["说明当前实例应运行哪些业务或保持休眠，以及对应安装位置和原因。"]},"output_semantics":{}},
-  "implementations": [{"language":"typescript","targets":["browser"],"completion":"immediate","source":{"kind":"file","ref":"nodes/initialize/shared_pure_adapters.ts","export":"ActivateTavernIngressNode"}}],
-  "base_libs": [],
-  "capabilities": [{"id":"era.tavern.startup_gate","operations":["activate"]}],
-  "tags": ["服务生命周期"],
-  "rulesets": ["vibeflow.process"],
-  "id": "era.installation.scope.activate_ingress",
-  "node_type": "vibeflow.node"
-});
-
 export const era_agent_candidate_finish = defineNode({
   "display_name": "判断生成尝试结束还是需要重试",
   "description": "检查本次模型输出及指令应用后的结论。有可执行的重试要求时带着现有进度进入下一尝试，否则交出最终成功、取消或失败结果，供生成阶段结算。",
@@ -23,7 +8,6 @@ export const era_agent_candidate_finish = defineNode({
   "contract": {"requires":[{"type":"era.agent.candidate.state","cardinality":"exactly_one","display_name":"本次生成尝试的请求和恢复起点"},{"type":"era.agent.generation.outcome","cardinality":"exactly_one","display_name":"本次生成及指令应用后的结论"}],"provides":[{"key":"candidate_state_after","type":"era.agent.candidate.state.next","display_name":"本次尝试后的进度与重试要求"},{"key":"candidate_done","type":"era.agent.candidate.done","display_name":"本次生成尝试循环是否结束"},{"key":"candidate_outcome","type":"era.agent.candidate.outcome","display_name":"生成尝试结束后的完整结果"}],"params_schema":{},"params_defaults":{},"input_semantics":{"era.agent.candidate.state":["记录本次模型尝试的请求、原任务及出错后应恢复的状态，供生成、指令应用和允许的重试共同使用。"],"era.agent.generation.outcome":["包含生成阶段实际结果、已应用指令情况及下一步安排，供阶段交接和任务结算使用。"]},"output_semantics":{"candidate_state_after":["未结束时作为下一次生成的起点，结束时供交出最终生成结果。"],"candidate_done":["说明本阶段已经成功、取消或无法再重试，供循环停止判断。"],"candidate_outcome":["记录生成及文字指令处理的最终结论，供后续整理阶段交接和原请求确认。"]}},
   "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/initialize/shared_pure_adapters.ts","export":"CandidateFinishNode"}}],
   "base_libs": [],
-  "capabilities": [],
   "tags": ["Agent候选"],
   "rulesets": ["vibeflow.process"],
   "id": "era.agent.candidate_finish",
@@ -38,42 +22,12 @@ export const era_agent_candidate_unpack = defineNode({
   "contract": {"requires":[{"type":"era.agent.candidate.state","cardinality":"exactly_one","display_name":"本次生成尝试的请求和恢复起点"}],"provides":[{"key":"generation_request","type":"era.agent.generation.request","display_name":"本次模型生成要求与聊天起点"},{"key":"routed_step","type":"era.step.request.routed","display_name":"当前任务及已读取的聊天资料"},{"key":"execution_state","type":"era.batch.execution.state","display_name":"当前批次的任务进度与累计结果"}],"params_schema":{},"params_defaults":{},"input_semantics":{"era.agent.candidate.state":["记录本次模型尝试的请求、原任务及出错后应恢复的状态，供生成、指令应用和允许的重试共同使用。"]},"output_semantics":{"generation_request":["包含当前生成阶段、模型设置、提示资料及所属聊天，供本次模型调用和文字指令处理使用。"],"routed_step":["包含本批正在处理的任务、它对应的原事件和已确认聊天资料，供选定的业务流程执行并返回结果。"],"execution_state":["记录本批有序任务、当前执行位置、已有处理确认和消息进度，任务完成后会继续合入同一批次。"]}},
   "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/initialize/shared_pure_adapters.ts","export":"CandidateUnpackNode"}}],
   "base_libs": [],
-  "capabilities": [],
   "tags": ["Agent候选"],
   "rulesets": ["vibeflow.process"],
   "id": "era.agent.candidate_unpack",
   "node_type": "vibeflow.node"
 });
 
-export const era_mk_route_commit = defineNode({
-  "display_name": "判断消息标识是否需要保存",
-  "description": "检查消息身份标识是否准备成功，以及正文或内部记录是否变化。确有改动时交给保存分支，无变化或准备失败时直接保留相应结论，供任务返回处理确认。",
-  "version": "1.0.0",
-  "flow_kind": "decision",
-  "contract": {"requires":[{"type":"era.mk.candidate","cardinality":"exactly_one","display_name":"消息历史身份及建议修改"}],"provides":[{"key":"mk_commit_route","type":"era.mk.route","display_name":"消息标识需要提交或直接结算"},{"key":"routed_mk_candidate","type":"era.mk.candidate.routed","display_name":"已选保存方向的消息标识资料"}],"params_schema":{},"params_defaults":{},"input_semantics":{"era.mk.candidate":["包含拟采用的消息标识、正文或内部记录变化，仍需判断和确认保存。"]},"output_semantics":{"mk_commit_route":["根据准备结果是否有变化及有无错误选择处理路径。"],"routed_mk_candidate":["供标识保存、无变化或失败分支使用同一份消息修改依据。"]}},
-  "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/initialize/shared_pure_adapters.ts","export":"RouteMkCommitNode"}}],
-  "base_libs": [],
-  "capabilities": [],
-  "tags": ["消息密钥路由"],
-  "rulesets": ["vibeflow.process"],
-  "id": "era.mk.route_commit",
-  "node_type": "vibeflow.node"
-});
-
-export const era_installation_scope_publish_dormant = defineNode({
-  "display_name": "向页面说明脚本为何处于休眠",
-  "description": "接收脚本安装位置的休眠决定，向酒馆页面发布对应提示。当前实例随后结束启动分支，使用户能知道为什么它没有开始处理聊天。",
-  "version": "1.0.0",
-  "flow_kind": "process",
-  "contract": {"requires":[{"type":"era.installation.scope.decision","cardinality":"exactly_one","display_name":"脚本启用范围和启动说明"}],"provides":[],"params_schema":{},"params_defaults":{},"input_semantics":{"era.installation.scope.decision":["说明当前实例应运行哪些业务或保持休眠，以及对应安装位置和原因。"]},"output_semantics":{}},
-  "implementations": [{"language":"typescript","targets":["browser"],"completion":"immediate","source":{"kind":"file","ref":"nodes/initialize/shared_pure_adapters.ts","export":"PublishDormantStartupNode"}}],
-  "base_libs": [],
-  "capabilities": [{"id":"era.tavern.startup_gate","operations":["dormant"]}],
-  "tags": ["服务生命周期"],
-  "rulesets": ["vibeflow.process"],
-  "id": "era.installation.scope.publish_dormant",
-  "node_type": "vibeflow.node"
-});
 
 export const era_service_route_fatal = defineNode({
   "display_name": "判断返回结果后是否必须停止服务",
@@ -83,7 +37,6 @@ export const era_service_route_fatal = defineNode({
   "contract": {"requires":[{"type":"era.batch.fatal","cardinality":"exactly_one","display_name":"本批是否存在必须停止的严重问题"}],"provides":[{"key":"fatal_route","type":"era.fatal.route","display_name":"回告结果后继续服务还是停止"}],"params_schema":{},"params_defaults":{},"input_semantics":{"era.batch.fatal":["记录无法安全继续服务的原因，供先回告原事件再结束服务。"]},"output_semantics":{"fatal_route":["说明当前已发布结论要求恢复收集事件，还是结束实例执行。"]}},
   "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/initialize/shared_pure_adapters.ts","export":"RouteFatalNode"}}],
   "base_libs": [],
-  "capabilities": [],
   "tags": ["批次发布"],
   "rulesets": ["vibeflow.process"],
   "id": "era.service.route_fatal",
@@ -98,7 +51,6 @@ export const era_service_adapt_api_task_result = defineNode({
   "contract": {"requires":[{"type":"era.api.task.result","cardinality":"exactly_one","display_name":"脚本接口任务产生的处理结果"}],"provides":[{"key":"api_task_result_common","type":"era.task.result","display_name":"本项任务对应原事件的处理结果"}],"params_schema":{},"params_defaults":{},"input_semantics":{"era.api.task.result":["保留接口约定的实际结果，供转换为批次通用确认并回告。"]},"output_semantics":{"api_task_result_common":["包含实际成功、无变化、失败或取消，以及通知和问题说明，供批次集中回告发起者。"]}},
   "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/initialize/shared_pure_adapters.ts","export":"AdaptApiTaskResultNode"}}],
   "base_libs": [],
-  "capabilities": [],
   "tags": ["公共 Facade"],
   "rulesets": ["vibeflow.process"],
   "id": "era.service.adapt_api_task_result",
@@ -113,7 +65,6 @@ export const era_service_terminal = defineNode({
   "contract": {"requires":[],"provides":[],"params_schema":{},"params_defaults":{},"input_semantics":{},"output_semantics":{}},
   "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/initialize/shared_pure_adapters.ts","export":"TerminalNode"}}],
   "base_libs": [],
-  "capabilities": [],
   "tags": ["服务生命周期"],
   "rulesets": ["vibeflow.process"],
   "id": "era.service.terminal",
@@ -128,7 +79,6 @@ export const era_agent_route_transition = defineNode({
   "contract": {"requires":[{"type":"era.agent.session.transition","cardinality":"exactly_one","display_name":"生成后需要继续的消息处理"},{"type":"era.batch.execution.state","cardinality":"exactly_one","display_name":"当前批次的任务进度与累计结果"}],"provides":[{"key":"agent_route","type":"era.agent.session.route","display_name":"生成结果后续应走的方向"},{"key":"agent_transition_routed","type":"era.agent.session.transition","display_name":"生成后需要继续的消息处理"},{"key":"agent_execution_state_routed","type":"era.batch.execution.state","display_name":"当前批次的任务进度与累计结果"}],"params_schema":{},"params_defaults":{},"input_semantics":{"era.agent.session.transition":["记录生成阶段是否还需历史同步、消息标识确认或直接返回，供外层选择相应流程。"],"era.batch.execution.state":["记录本批有序任务、当前执行位置、已有处理确认和消息进度，任务完成后会继续合入同一批次。"]},"output_semantics":{"agent_route":["标明历史同步、消息标识或直接返回，供统一消息结算使用。"],"agent_transition_routed":["记录生成阶段是否还需历史同步、消息标识确认或直接返回，供外层选择相应流程。"],"agent_execution_state_routed":["记录本批有序任务、当前执行位置、已有处理确认和消息进度，任务完成后会继续合入同一批次。"]}},
   "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/initialize/shared_pure_adapters.ts","export":"RouteTransitionNode"}}],
   "base_libs": [],
-  "capabilities": [],
   "tags": ["故事生成会话"],
   "rulesets": ["vibeflow.process"],
   "id": "era.agent.route_transition",
@@ -143,7 +93,6 @@ export const era_installation_scope_choose_startup = defineNode({
   "contract": {"requires":[{"type":"era.installation.scope.facts","cardinality":"exactly_one","display_name":"当前脚本及各安装位置的启用情况"}],"provides":[{"key":"installation_scope_decision","type":"era.installation.scope.decision","display_name":"脚本启用范围和启动说明"},{"key":"installation_scope_route","type":"era.installation.scope.route","display_name":"当前实例应启用还是休眠"}],"params_schema":{},"params_defaults":{},"input_semantics":{"era.installation.scope.facts":["来自酒馆的真实脚本资料，供主服务判断启用或休眠。"]},"output_semantics":{"installation_scope_decision":["说明当前实例应运行哪些业务或保持休眠，以及对应安装位置和原因。"],"installation_scope_route":["决定继续连接聊天与界面，或显示休眠说明并结束本次启动。"]}},
   "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/initialize/shared_pure_adapters.ts","export":"ChooseStartupNode"}}],
   "base_libs": [],
-  "capabilities": [],
   "tags": ["服务任务"],
   "rulesets": ["vibeflow.process"],
   "id": "era.installation.scope.choose_startup",
@@ -158,7 +107,6 @@ export const era_initialize_adapt_startup_sync_step = defineNode({
   "contract": {"requires":[{"type":"era.initialize.startup.sync.step","cardinality":"exactly_one","display_name":"资源就绪后需要执行的历史同步"},{"type":"era.batch.execution.state","cardinality":"exactly_one","display_name":"当前批次的任务进度与累计结果"}],"provides":[{"key":"routed_startup_sync_step","type":"era.step.request.routed","display_name":"当前任务及已读取的聊天资料"},{"key":"routed_startup_execution_state","type":"era.batch.execution.state","display_name":"当前批次的任务进度与累计结果"}],"params_schema":{},"params_defaults":{},"input_semantics":{"era.initialize.startup.sync.step":["将原初始化请求接入统一消息同步，供恢复当前聊天变量。"],"era.batch.execution.state":["记录本批有序任务、当前执行位置、已有处理确认和消息进度，任务完成后会继续合入同一批次。"]},"output_semantics":{"routed_startup_sync_step":["包含本批正在处理的任务、它对应的原事件和已确认聊天资料，供选定的业务流程执行并返回结果。"],"routed_startup_execution_state":["记录本批有序任务、当前执行位置、已有处理确认和消息进度，任务完成后会继续合入同一批次。"]}},
   "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/initialize/shared_pure_adapters.ts","export":"AdaptStartupSyncStepNode"}}],
   "base_libs": [],
-  "capabilities": [],
   "tags": ["初始化事务"],
   "rulesets": ["vibeflow.process"],
   "id": "era.initialize.adapt_startup_sync_step",
@@ -173,7 +121,6 @@ export const era_initialize_build_commit = defineNode({
   "contract": {"requires":[{"type":"era.initialize.changes","cardinality":"exactly_one","display_name":"已经比较出的资源变化或无变化结论"}],"provides":[{"key":"resource_commit_request","type":"era.initialize.commit.request","display_name":"需要实际安装或修改的资源计划"}],"params_schema":{},"params_defaults":{},"input_semantics":{"era.initialize.changes":["供写入请求组装沿用现有计划，实际保存仍在执行环节完成。"]},"output_semantics":{"resource_commit_request":["包含明确的设置、世界书、正则和开场白改动，供酒馆逐项执行。"]}},
   "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/initialize/shared_pure_adapters.ts","export":"BuildInitializationCommitNode"}}],
   "base_libs": [],
-  "capabilities": [],
   "tags": ["初始化事务"],
   "rulesets": ["vibeflow.process"],
   "id": "era.initialize.build_commit",
@@ -188,7 +135,6 @@ export const era_initialize_carry_execution_state = defineNode({
   "contract": {"requires":[{"type":"era.batch.execution.state","cardinality":"exactly_one","display_name":"当前批次的任务进度与累计结果"}],"provides":[{"key":"initialize_execution_state","type":"era.batch.execution.state","display_name":"当前批次的任务进度与累计结果"}],"params_schema":{},"params_defaults":{},"input_semantics":{"era.batch.execution.state":["记录本批有序任务、当前执行位置、已有处理确认和消息进度，任务完成后会继续合入同一批次。"]},"output_semantics":{"initialize_execution_state":["记录本批有序任务、当前执行位置、已有处理确认和消息进度，任务完成后会继续合入同一批次。"]}},
   "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/initialize/shared_pure_adapters.ts","export":"CarryExecutionStateNode"}}],
   "base_libs": [],
-  "capabilities": [],
   "tags": ["初始化事务"],
   "rulesets": ["vibeflow.process"],
   "id": "era.initialize.carry_execution_state",
@@ -203,7 +149,6 @@ export const era_initialize_compute = defineNode({
   "contract": {"requires":[{"type":"era.initialize.plan","cardinality":"exactly_one","display_name":"尚待执行的初始化资源变更"}],"provides":[{"key":"computed_resource_changes","type":"era.initialize.changes","display_name":"已经比较出的资源变化或无变化结论"}],"params_schema":{},"params_defaults":{},"input_semantics":{"era.initialize.plan":["描述拟修改哪些 ERA 资源以及准备问题，实际完成情况由后续执行确认。"]},"output_semantics":{"computed_resource_changes":["供写入请求组装沿用现有计划，实际保存仍在执行环节完成。"]}},
   "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/initialize/shared_pure_adapters.ts","export":"ComputeInitializationNode"}}],
   "base_libs": [],
-  "capabilities": [],
   "tags": ["初始化规划"],
   "rulesets": ["vibeflow.process"],
   "id": "era.initialize.compute",
@@ -218,7 +163,6 @@ export const era_initialize_finalize_direct_result = defineNode({
   "contract": {"requires":[{"type":"era.initialize.direct.result","cardinality":"exactly_one","display_name":"无需继续同步的初始化结论"}],"provides":[{"key":"initialize_direct_task_result","type":"era.task.result","display_name":"本项任务对应原事件的处理结果"}],"params_schema":{},"params_defaults":{},"input_semantics":{"era.initialize.direct.result":["供本次只操作资源或发生失败时直接向原任务回告。"]},"output_semantics":{"initialize_direct_task_result":["包含实际成功、无变化、失败或取消，以及通知和问题说明，供批次集中回告发起者。"]}},
   "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/initialize/shared_pure_adapters.ts","export":"FinalizeDirectInitializationNode"}}],
   "base_libs": [],
-  "capabilities": [],
   "tags": ["初始化事务"],
   "rulesets": ["vibeflow.process"],
   "id": "era.initialize.finalize_direct_result",
@@ -233,24 +177,9 @@ export const era_initialize_no_change = defineNode({
   "contract": {"requires":[{"type":"era.initialize.plan","cardinality":"exactly_one","display_name":"尚待执行的初始化资源变更"}],"provides":[{"key":"preserved_resource_changes","type":"era.initialize.changes","display_name":"已经比较出的资源变化或无变化结论"}],"params_schema":{},"params_defaults":{},"input_semantics":{"era.initialize.plan":["描述拟修改哪些 ERA 资源以及准备问题，实际完成情况由后续执行确认。"]},"output_semantics":{"preserved_resource_changes":["供写入请求组装沿用现有计划，实际保存仍在执行环节完成。"]}},
   "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/initialize/shared_pure_adapters.ts","export":"PreserveInitializationNode"}}],
   "base_libs": [],
-  "capabilities": [],
   "tags": ["初始化规划"],
   "rulesets": ["vibeflow.process"],
   "id": "era.initialize.no_change",
   "node_type": "vibeflow.node"
 });
 
-export const era_installation_scope_inspect = defineNode({
-  "display_name": "读取当前脚本及各处启用情况",
-  "description": "读取当前脚本身份，以及角色卡、全局和预设中启用的脚本资料。启动判断据此确定本实例是否应处理聊天、呈现界面或保持休眠。",
-  "version": "1.0.0",
-  "flow_kind": "process",
-  "contract": {"requires":[],"provides":[{"key":"installation_scope_facts","type":"era.installation.scope.facts","display_name":"当前脚本及各安装位置的启用情况"}],"params_schema":{},"params_defaults":{},"input_semantics":{},"output_semantics":{"installation_scope_facts":["来自酒馆的真实脚本资料，供主服务判断启用或休眠。"]}},
-  "implementations": [{"language":"typescript","targets":["browser"],"completion":"immediate","source":{"kind":"file","ref":"nodes/initialize/shared_pure_adapters.ts","export":"InspectInstallationScopeNode"}}],
-  "base_libs": [],
-  "capabilities": [{"id":"era.tavern.installation_scope","operations":["read"]}],
-  "tags": ["服务生命周期"],
-  "rulesets": ["vibeflow.process"],
-  "id": "era.installation.scope.inspect",
-  "node_type": "vibeflow.node"
-});

@@ -1,3 +1,5 @@
+import { generationStepFixture } from './workflow-input-fixture';
+import { runWithIoMocks } from './workflow-io-sandbox.mjs';
 import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
 import type {
@@ -34,10 +36,7 @@ async function execute(name: string, inputs: any, context: any = {}) {
     // 与原生探针共用加载器：保留App依赖解析、跳过再次转译，watch重建后加载新实例。
     modules.set(name, { source, module: importBuiltWorkflow(new URL('workflow.js', directory).href) });
   }
-  return (await modules.get(name)!.module).runWorkflowAsync(inputs, {
-    capabilities: context.capabilities ?? {},
-    trace: 'off',
-  });
+  return runWithIoMocks(await modules.get(name)!.module, inputs, { ...context, entry: name });
 }
 
 export async function applyOperations(state: any, context: any = {}) {
@@ -127,62 +126,11 @@ export async function applySealedCommandCompaction(plan: any): Promise<EraSyncPl
     })
   ).plan;
 }
-/** 给生成场景提供完整入口 DTO；用例只指定它要观察的事件与消息事实。 */
-export function generationStepFixture(partial: any) {
-  const envelope = (event: any) => ({
-    schemaVersion: 1,
-    occurredAt: 1,
-    source: 'tavern',
-    args: [],
-    encodedBytes: 2,
-    ...event,
-  });
-  const event = envelope(partial.task.primaryEvent);
-  const events = [event];
-  const dispatch = partial.dispatchContext ?? {
-    schemaVersion: 3,
-    generationCycleIdentity: null,
-    floorIdentity: null,
-    stagedMessageUpdates: [],
-    agentFloorCandidate: null,
-    status: 'ready',
-    dispatchClass: 'sync',
-    requirement: 'none',
-    messages: [],
-    processingMessage: null,
-    processingMk: null,
-    messageChanged: false,
-    variablesChanged: false,
-    failure: null,
-  };
-  return {
-    stepId: 'generation-step',
-    index: 0,
-    sourceSequences: [event.sequence],
-    ...partial,
-    events,
-    sources: [{ relation: 'primary', event }],
-    task: {
-      id: 'generation-task',
-      kind: 'sync',
-      reason: 'manual',
-      target: { kind: 'auto' },
-      fullRebuild: false,
-      context: dispatch.requirement,
-      ...partial.task,
-      primaryEvent: event,
-      sourceEvents: events,
-    },
-    dispatchContext: {
-      ...dispatch,
-      messages: dispatch.messages.map((message: any) => ({ schemaVersion: 1, ...message })),
-    },
-  };
-}
+export { generationStepFixture } from './workflow-input-fixture';
 export async function prepareAgentSessionNode(inputs: any, _params: any, runtime: any) {
   return execute(
     'generation',
-    { 'era.step.request.routed': inputs['era.step.request.routed'].value },
+    { 'era.step.request.routed': generationStepFixture(inputs['era.step.request.routed'].value) },
     { capabilities: { 'era.tavern.sidecar': { read_working: () => ({ working: null }) }, ...runtime.capabilities } },
   );
 }

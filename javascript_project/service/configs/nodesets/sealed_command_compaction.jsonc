@@ -7,7 +7,8 @@
       "type": "era.expression.command.result",
       "cardinality": "exactly_one",
       "display_name": "消息处理后待核对的历史压缩资料"
-    }
+    },
+    {"type":"era.workflow.host_resources","cardinality":"exactly_one","display_name":"所属 ERA 实例的本地资源"}
   ],
   "provides": [
     {
@@ -24,9 +25,10 @@
         "type": "era.expression.command.result",
         "display_name": "消息处理后待核对的历史压缩资料",
         "required": true
-      }
+      },
+      {"key":"host_resources","type":"era.workflow.host_resources","required":true,"display_name":"所属 ERA 实例的本地资源"}
     ],
-    "max_steps": 35,
+    "max_steps": 36,
     "nodes": [
       {
         "id": "start",
@@ -36,9 +38,10 @@
       },
       {
         "id": "prepare_candidates",
-        "display_name": "为已完成历史准备压缩及比较任务",
-        "description": "在“压缩已完成历史并核对实际效果”流程中，对已完成处理的历史正文生成可能更短的指令方案，保留各消息原有变量、函数和随机来源。建立逐份比较进度，供正式操作流程验证是否可以采用。",
-        "definition_id": "era.sealed_command_compaction.prepare_candidates"
+        "display_name": "调用独立压缩流程生成历史缩短方案",
+        "description": "从已封存历史按原顺序选出待尝试压缩的片段，为每段整理完整起点；没有候选时直接继续，不虚构一次压缩调用。 展开后可查看准备、原生同步调用、结果接回和继续判断。",
+        "definition_id": "era.migration.service.prepare_candidates.workflow",
+        "join_policy": "all"
       },
       {
         "id": "replay_candidates",
@@ -50,7 +53,8 @@
             "type": "era.command_compaction.replay.state",
             "cardinality": "exactly_one",
             "display_name": "当前历史压缩方案及验证进度"
-          }
+          },
+          {"type":"era.workflow.host_resources","cardinality":"exactly_one","display_name":"所属 ERA 实例的本地资源"}
         ],
         "provides": [
           {
@@ -71,7 +75,8 @@
               "from": "era.command_compaction.replay.state",
               "as": "replay_state",
               "update": "state_next"
-            }
+            },
+            {"from":"era.workflow.host_resources","as":"host_resources","update":"retained_host_resources"}
           ],
           "outputs": [
             {
@@ -92,13 +97,11 @@
         "definition_id": "era.service.terminal",
         "display_name": "结束压缩已完成历史并核对实际效果",
         "description": "标明“压缩已完成历史并核对实际效果”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。"
-      }
+      },
+      {"id":"retain_host_resources","definition_id":"era.service.retain_host_resources","display_name":"保留所属实例的资源","description":"先取出本次运行或本轮迭代收到的本地资源，供下面需要组织工作流通信的步骤使用。资源不写入业务消息。"}
     ],
     "edges": [
-      [
-        "start",
-        "prepare_candidates"
-      ],
+      {"from":"start","to":"prepare_candidates","schedule":true},
       [
         "prepare_candidates",
         "replay_candidates"
@@ -110,7 +113,10 @@
       [
         "publish_candidates",
         "end"
-      ]
+      ],
+      ["start","retain_host_resources"],
+      {"from":"retain_host_resources","to":"prepare_candidates","transfer":false,"schedule":true},
+      {"from":"retain_host_resources","to":"replay_candidates","schedule":false}
     ],
     "outputs": [
       {

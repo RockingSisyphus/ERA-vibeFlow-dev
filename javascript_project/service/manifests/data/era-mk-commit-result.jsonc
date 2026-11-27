@@ -27,6 +27,7 @@
         "type": "string",
         "enum": [
           "committed",
+          "deferred",
           "no-op",
           "failed",
           "fatal"

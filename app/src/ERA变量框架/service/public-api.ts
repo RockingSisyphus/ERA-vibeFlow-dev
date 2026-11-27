@@ -6,6 +6,7 @@ import type { EraGenerationListener, EraGenerationStage } from './generation-sub
 
 import {
   captureEraLifecycleToken,
+  waitForEraCurrentWork,
   requestEraService,
   requestEraFunctionContext,
   subscribeEraGeneration,
@@ -170,38 +171,56 @@ function publishPublicState(listener: (state: EraPublicState) => void): void {
 
 export type EraSubmit = (type: string, payload: Readonly<Record<string, unknown>>) => Promise<EraSettlement>;
 
+function assertDenseCommitArrays(value: unknown, visited: WeakSet<object>): void {
+  if (value === null || typeof value !== 'object' || visited.has(value)) return;
+  visited.add(value);
+  if (Array.isArray(value)) {
+    for (let index = 0; index < value.length; index++) {
+      if (!Object.hasOwn(value, index))
+        throw new TypeError('ERA_API_COMMIT_INVALID: 数组必须连续，空值请显式写为 null。');
+    }
+  }
+  for (const child of Object.values(value)) assertDenseCommitArrays(child, visited);
+}
+
 /** 统一构造内外来源的请求与回执，必须等实际应用成功后才返回committed。 */
-export function createCommit(transport: EraSubmit = submit) {
+export function createCommit(transport: EraSubmit = submit, readState = currentState) {
   return async (
     operations: readonly EraCommitOperation[],
     options: Readonly<{ scope?: EraCommitScope }> = {},
     sourceContext?: EraStatusbarSource,
   ): Promise<EraCommitReceipt> => {
     const scope = options.scope ?? 'message';
+    const data = structuredClone(operations);
+    assertDenseCommitArrays(data, new WeakSet());
     const settlement = await transport(ERA_FACADE_EVENT.COMMIT, {
       command: 'commit',
       scope,
-      operations: structuredClone(operations),
+      operations: data,
       windowToken: captureEraLifecycleToken(),
       ...(sourceContext ? { sourceContext: structuredClone(sourceContext) } : {}),
     });
     if (settlement.status !== 'completed') throw errorForSettlement(settlement);
     const value = record(settlement.value) ? settlement.value : {};
     const snapshot = sourceContext ? readActiveSidecarRuntimeSnapshot() : null;
+    const state =
+      sourceContext && snapshot ? projectPublicStateAtMessage(snapshot, sourceContext.messageId) : readState();
     return Object.freeze({
       status: value.status === 'skipped' ? 'skipped' : 'committed',
       scope,
-      messageId: Number(value.messageId ?? sourceContext?.messageId ?? currentState().message_id ?? -1),
-      state:
-        sourceContext && snapshot ? projectPublicStateAtMessage(snapshot, sourceContext.messageId) : currentState(),
+      messageId: Number(value.messageId ?? sourceContext?.messageId ?? state.message_id ?? -1),
+      state,
     });
   };
 }
 
 /** 显式调用来源使用同一请求和回执合同；为了避免FIFO死锁，请求交给当前调用位置的块循环。 */
-export function createFunctionFacade(transport: EraSubmit, assertActive: () => void): EraFacade {
+export function createFunctionFacade(
+  transport: EraSubmit,
+  assertActive: () => void,
+  readWorkingSnapshot: () => SidecarRuntimeSnapshot | null,
+): EraFacade {
   const facade = getInstalledEraPublicApi();
-  const commit = createCommit(transport);
   // 作者API保留上下文错误；VibeFlow的节点位置包装留在工作流日志中。
   const assertCurrent = () => {
     try {
@@ -212,20 +231,20 @@ export function createFunctionFacade(transport: EraSubmit, assertActive: () => v
       throw error;
     }
   };
+  const readState = () => projectPublicState(readWorkingSnapshot());
+  const get = () => {
+    assertCurrent();
+    return readState();
+  };
+  const commit = createCommit(transport, readState);
   return Object.freeze({
     ...facade,
     commit: async (operations: readonly EraCommitOperation[], options?: Readonly<{ scope?: EraCommitScope }>) => {
       assertCurrent();
       return commit(operations, options);
     },
-    get: (options?: EraGetOptions) => {
-      assertCurrent();
-      return facade.get(options);
-    },
-    ready: async () => {
-      assertCurrent();
-      return facade.get();
-    },
+    get,
+    ready: async () => get(),
     sync: async () => {
       assertCurrent();
       throw new Error('ERA_FUNCTION_SYNC_UNSUPPORTED：消息内函数禁止重算或回退，请在调用结束后由外部发起。');
@@ -246,6 +265,9 @@ export function createEraFacade(createStatusbar: EraStatusbarFactory): EraFacade
     generation: Object.freeze({ subscribe: subscribeEraGeneration }),
     get: () => currentState(),
     async ready() {
+      // 已接收的切换、编辑或新消息可能仍在收集窗口内，旧快照的dirty=false
+      // 不代表这些工作已经完成。只加入当前回执范围，不发出额外同步请求。
+      await waitForEraCurrentWork();
       const immediate = currentState();
       const saved = () => {
         const snapshot = readActiveSidecarRuntimeSnapshot();

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fixture } from '../native-tavern/native-fixture.mjs';
 import type { EraAdmissionResult, EraInboundEvent, EraPreparedNotification } from '../../src/ERA变量框架/service/types';
 const tick = () => new Promise(resolve => setTimeout(resolve, 0));
@@ -6,7 +6,7 @@ const owners: any[] = [];
 afterEach(async () => {
   for (const owner of owners.splice(0)) {
     owner.page.dispatchEvent(new Event('pagehide'));
-    await owner.work;
+    await finishOwner(owner);
   }
 });
 class FakeClock {
@@ -63,8 +63,16 @@ class FakeAdapter {
 }
 /** 测试调用点的错误视图：断言领域错误；单独原生入口探针验证VF包装。 */
 function domainError(error: any): any {
-  while (error?.code === 'VF_NODE_FAILED' && error.cause) error = error.cause;
+  while (typeof error?.code === 'string' && error.code.startsWith('VF_') && error.cause) error = error.cause;
   return error;
+}
+/** 注入fatal批次会令原生运行入口以该领域错误结束，必须核对原因，不能吞掉其他错误。 */
+async function finishOwner(owner: any) {
+  if (owner.expectedFailure) {
+    await expect(owner.work.catch((error: any) => Promise.reject(domainError(error)))).rejects.toMatchObject({
+      code: owner.expectedFailure,
+    });
+  } else await owner.work;
 }
 async function createFixture(adapter = new FakeAdapter(), limits: Record<string, number> = {}, manualStartup = false) {
   let owner: any;
@@ -113,13 +121,26 @@ async function createFixture(adapter = new FakeAdapter(), limits: Record<string,
   );
   const close = async (_reason?: string) => {
     owner.page.dispatchEvent(new Event('pagehide'));
-    await owner.work;
+    await finishOwner(owner);
   };
   return {
     adapter,
     owner,
     host: {
       capabilities,
+      // 只验证实际回信处理图的同步业务合同；Service邮箱行为由receive/send及原生探针另外验证。
+      applyFrame: (frame: any) => {
+        try {
+          return owner.session.dispatch.sync({
+            session: owner.session,
+            action: 'send',
+            origin: 'service',
+            input: { port: 'era.service.out', value: frame },
+          }).result;
+        } catch (error) {
+          throw domainError(error);
+        }
+      },
       stop: close,
       diagnostics: { snapshot: () => owner.direct({ action: 'diagnostics' }).result },
     },
@@ -187,7 +208,7 @@ describe('ERA 原生辅助workflow核心', () => {
     gate.activate({ route: 'allow' });
     expect(listenerCount()).toBe(count);
     owner.page.dispatchEvent(new Event('pagehide'));
-    await owner.work;
+    await finishOwner(owner);
     await host.stop();
     expect(listenerCount()).toBe(0);
     expect(adapter.sidecarPromptClearCount).toBe(1);
@@ -274,22 +295,12 @@ describe('ERA 原生辅助workflow核心', () => {
     const admission = assertAccepted(adapter.emit({ type: 'manual_sync', source: 'ui', args: [] }));
     const frame = ignoredBatch('batch:idempotent', admission, [{ type: 'era:test', args: [] }]);
 
-    host.capabilities['vibeflow.port'].send({
-      port: 'era.service.out',
-      value: frame,
-    });
-    host.capabilities['vibeflow.port'].send({
-      port: 'era.service.out',
-      value: frame,
-    });
-    expect(adapter.notifications).toHaveLength(1);
+    host.capabilities['vibeflow.port'].send({ port: 'era.service.out', value: frame });
+    await expect(admission.done).resolves.toMatchObject({ status: 'ignored' });
+    expect(() => host.applyFrame(frame)).not.toThrow();
+    await vi.waitFor(() => expect(adapter.notifications).toHaveLength(1));
 
-    expect(() =>
-      host.capabilities['vibeflow.port'].send({
-        port: 'era.service.out',
-        value: { ...frame, fatal: true },
-      }),
-    ).toThrowError(
+    expect(() => host.applyFrame({ ...frame, fatal: true })).toThrowError(
       expect.objectContaining({
         code: 'ERA_HOST_FRAME_CONFLICT',
       }),
@@ -299,7 +310,8 @@ describe('ERA 原生辅助workflow核心', () => {
   });
 
   it('致命批次先结算再锁存，阻止回执重入、挂起 Port 与 Capability 继续', async () => {
-    const { adapter, host } = await createFixture();
+    const { adapter, host, owner } = await createFixture();
+    owner.expectedFailure = 'ERA_HOST_FATAL';
     let finishRaw!: () => void;
     adapter.variables.read = () =>
       new Promise<void>(resolve => {
@@ -335,50 +347,52 @@ describe('ERA 原生辅助workflow核心', () => {
     await receive;
     const pendingReceive = port.receive({ port: 'era.service.in' });
     const pendingReceiveAssertion = expect(pendingReceive).rejects.toMatchObject({
-      code: 'ERA_HOST_FATAL',
+      code: 'VF_INSTANCE_ENDED',
     });
     const frame = fatalBatch('batch:fatal', admission, [{ type: 'era:test', args: [] }]);
 
-    port.send({ port: 'era.service.out', value: frame });
+    try {
+      port.send({ port: 'era.service.out', value: frame });
 
-    await expect(admission.done).resolves.toMatchObject({ status: 'ignored' });
-    await pendingReceiveAssertion;
-    await pendingCapabilityAssertion;
-    finishRaw();
-    expect(reentrantAdmission).toMatchObject({
-      accepted: false,
-      code: 'ERA_HOST_FATAL',
-    });
-    expect(adapter.lifecycleOrder.slice(-2)).toEqual(['settle:fatal', 'notify:era:test']);
-    expect(adapter.emit({ type: 'after-fatal', source: 'ui', args: [] })).toMatchObject({
-      accepted: false,
-      code: 'ERA_HOST_FATAL',
-    });
-    await expect(port.receive({ port: 'era.service.in' })).rejects.toMatchObject({ code: 'ERA_HOST_FATAL' });
-    expect(() => host.capabilities['era.tavern.identity'].read({})).toThrowError(
-      expect.objectContaining({ code: 'ERA_HOST_FATAL' }),
-    );
-    expect(() =>
-      port.send({
-        port: 'era.service.out',
-        value: {
-          schemaVersion: 1,
-          frameId: 'control:after-fatal',
-          kind: 'collection-control',
-          commands: [],
-        },
-      }),
-    ).toThrowError(expect.objectContaining({ code: 'ERA_HOST_FATAL' }));
+      await expect(admission.done).resolves.toMatchObject({ status: 'ignored' });
+      await pendingReceiveAssertion;
+      await pendingCapabilityAssertion;
+      expect(reentrantAdmission).toMatchObject({
+        accepted: false,
+        code: 'ERA_HOST_FATAL',
+      });
+      expect(adapter.lifecycleOrder.slice(-2)).toEqual(['settle:fatal', 'notify:era:test']);
+      expect(adapter.emit({ type: 'after-fatal', source: 'ui', args: [] })).toMatchObject({
+        accepted: false,
+        code: 'ERA_HOST_FATAL',
+      });
+      await expect(port.receive({ port: 'era.service.in' })).rejects.toMatchObject({ code: 'VF_INSTANCE_ENDED' });
+      expect(() => host.capabilities['era.tavern.identity'].read({})).toThrowError(
+        expect.objectContaining({ code: 'ERA_HOST_NOT_STARTED' }),
+      );
+      const lateFrame = {
+        schemaVersion: 1,
+        frameId: 'control:after-fatal',
+        kind: 'collection-control',
+        commands: [],
+      };
+      // Send仅将消息交到尚在清理的运行邮箱；业务处理图仍拒绝新帧。
+      port.send({ port: 'era.service.out', value: lateFrame });
+      expect(() => host.applyFrame(lateFrame)).toThrowError(expect.objectContaining({ code: 'ERA_HOST_NOT_STARTED' }));
+      await tick();
+      expect(host.diagnostics.snapshot()).toMatchObject({ timers: 0, processedFrames: 1 });
 
-    // 已成功处理的致命帧仍可安全重放为 no-op。
-    expect(() => port.send({ port: 'era.service.out', value: frame })).not.toThrow();
-    expect(adapter.notifications).toHaveLength(1);
-    expect(host.diagnostics.snapshot()).toMatchObject({
-      fatal: true,
-      pendingReceipts: 0,
-      portWaiters: 0,
-    });
-
+      // 已终结的Service不能继续发信；实际处理图仍将已成功的同一帧识别为no-op。
+      expect(() => host.applyFrame(frame)).not.toThrow();
+      expect(adapter.notifications).toHaveLength(1);
+      expect(host.diagnostics.snapshot()).toMatchObject({
+        fatal: true,
+        pendingReceipts: 0,
+        portWaiters: 0,
+      });
+    } finally {
+      finishRaw();
+    }
     await host.stop();
     expect(host.diagnostics.snapshot()).toMatchObject({
       fatal: false,
@@ -434,6 +448,7 @@ describe('ERA 原生辅助workflow核心', () => {
         fatal: false,
       },
     });
+    await Promise.all([first.done, second.done]);
     await host.stop();
   });
 
@@ -520,7 +535,7 @@ describe('ERA 原生辅助workflow核心', () => {
         commands: [{ kind: 'schedule', token: 'timer:1', dueAt: 1_010 }],
       },
     });
-    expect(host.diagnostics.snapshot().timers).toBe(1);
+    await vi.waitFor(() => expect(host.diagnostics.snapshot().timers).toBe(1));
     await tick();
     adapter.clock.advance(10);
     await tick();
@@ -540,6 +555,7 @@ describe('ERA 原生辅助workflow核心', () => {
         sequence: received.sequence,
       }),
     });
+    await vi.waitFor(() => expect(host.diagnostics.snapshot().pendingReceipts).toBe(0));
     await host.stop();
   });
 
@@ -562,10 +578,13 @@ describe('ERA 原生辅助workflow核心', () => {
     const secondReceive = host.capabilities['vibeflow.port'].receive({
       port: 'era.service.in',
     });
-    expect(host.diagnostics.snapshot()).toMatchObject({
-      notifications: 1,
-      portWaiters: 1,
-    });
+    await expect(admission.done).resolves.toMatchObject({ status: 'ignored' });
+    await vi.waitFor(() =>
+      expect(host.diagnostics.snapshot()).toMatchObject({
+        notifications: 1,
+        portWaiters: 1,
+      }),
+    );
 
     const rejectedReceive = expect(secondReceive).rejects.toBeDefined();
     let exited = false;

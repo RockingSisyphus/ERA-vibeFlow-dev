@@ -136,13 +136,13 @@ interface Context {
 function message(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
-export async function ReadInitializationContextNode(
+export function* ReadInitializationContextProgress(
   inputs: Readonly<{
     "era.step.request.routed": readinitializationcontextEnvelope<unknown>;
   }>,
   _params: Readonly<Record<string, unknown>>,
   context: Context,
-): Promise<any> {
+): Generator<any,any,any> {
   const step = inputs["era.step.request.routed"].value as PlannedStepV1;
   const dispatchContext = ("dispatchContext" in step ? step.dispatchContext : undefined) as
     Readonly<Record<string, unknown>> | undefined;
@@ -154,27 +154,8 @@ export async function ReadInitializationContextNode(
   let characterRaw: unknown = null;
   let readFailure: Readonly<Record<string, unknown>> | null = null;
   try {
-    [identityRaw, scriptVariablesRaw, worldbookRaw, regexRaw, characterRaw] =
-      await Promise.all([
-        Promise.resolve(
-          context.capabilities["era.tavern.identity"].read({
-            purpose: "era-initialize",
-          }),
-        ),
-        context.capabilities["era.tavern.variables"].read({
-          scope: { type: "script" },
-          purpose: "era-initialize",
-        }),
-        context.capabilities["era.tavern.worldbook"].read({
-          purpose: "era-initialize",
-        }),
-        context.capabilities["era.tavern.regex"].read({
-          purpose: "era-initialize",
-        }),
-        context.capabilities["era.tavern.character"].read_main_greeting({
-          purpose: "era-initialize",
-        }),
-      ]);
+    const values=yield {kind:"parallel",input:{kind:"initialization"}};
+    [identityRaw,scriptVariablesRaw,worldbookRaw,regexRaw,characterRaw]=[values.identity,values.variables,values.worldbook,values.regex,values.character];
     if (dispatchContext?.status !== "ready")
       throw new TypeError("初始化任务缺少可用的统一派发上下文。");
     messagesRaw = { schemaVersion: 2, messages: dispatchContext.messages };

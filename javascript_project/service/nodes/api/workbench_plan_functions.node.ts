@@ -8,7 +8,6 @@ export const era_workbench_plan_functions = defineNode({
   "contract": {"requires":[{"type":"era.workbench.draft","cardinality":"exactly_one","display_name":"用户尚待提交的变量或函数编辑稿"}],"provides":[{"key":"function_operation_plan","type":"era.workbench.operation_plan","display_name":"根据编辑差异安排的操作清单"}],"params_schema":{},"params_defaults":{},"input_semantics":{"era.workbench.draft":["记录用户期望的修改和编辑时的原值，供检查是否仍适用及计算差异。"]},"output_semantics":{"function_operation_plan":["列出草稿需要的增删改及保护处理，尚待正式提交许可和执行。"]}},
   "implementations": [{"language":"typescript","targets":["browser"],"completion":"immediate","source":{"kind":"file","ref":"nodes/api/workbench_plan_functions.ts","export":"run"}}],
   "base_libs": ["era.workbench.context","era.workbench.draft","era.workbench.operations"],
-  "capabilities": [],
   "tags": ["工作台提交"],
   "rulesets": ["vibeflow.process"],
   "id": "era.workbench.plan_functions",

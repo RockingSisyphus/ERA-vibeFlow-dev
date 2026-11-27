@@ -1,11 +1,10 @@
-import { rewriteSegment } from "../base_lib/compaction_stages.ts";
+/** Progress生成器只保存业务局部变量；请求交由Config中的官方节点执行，不持有Node context。 */
+import { rewriteSegmentProgress } from "../base_lib/compaction_stages.ts";
 import type { DependencyAnalysis } from "../base_lib/command_compaction_engine.ts";
-export function run(
-  inputs: Readonly<Record<string, { readonly value: unknown }>>,
-) {
-  return {
-    candidate: rewriteSegment(
-      inputs["era.command_compaction.symbols"].value as DependencyAnalysis,
-    ),
-  };
+export function* runProgress(inputs: Readonly<Record<string, {
+    readonly value: unknown;
+}>>): Generator<any, any, any> {
+    return {
+        candidate: yield* rewriteSegmentProgress(inputs["era.command_compaction.symbols"].value as DependencyAnalysis),
+    };
 }

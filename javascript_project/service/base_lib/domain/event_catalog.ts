@@ -21,6 +21,7 @@ export const EVENT_MESSAGE_DELETED = "message_deleted";
 export const EVENT_MESSAGE_UPDATED = "message_updated";
 export const EVENT_CHAT_CHANGED = "chat_id_changed";
 export const EVENT_GENERATION_STARTED = "generation_started";
+export const EVENT_GENERATION_ENDED = "generation_ended";
 export const EVENT_GENERATION_STOPPED = "generation_stopped";
 export const EVENT_MANUAL_WRITE = "manual_write";
 export const EVENT_MANUAL_SYNC = "manual_sync";
@@ -138,6 +139,7 @@ export function getInputEvents() {
     MESSAGE_UPDATED: EVENT_MESSAGE_UPDATED,
     CHAT_CHANGED: EVENT_CHAT_CHANGED,
     GENERATION_STARTED: EVENT_GENERATION_STARTED,
+    GENERATION_ENDED: EVENT_GENERATION_ENDED,
     GENERATION_STOPPED: EVENT_GENERATION_STOPPED,
     MANUAL_WRITE: EVENT_MANUAL_WRITE,
     MANUAL_SYNC: EVENT_MANUAL_SYNC,
@@ -161,6 +163,7 @@ export function getEventGroups() {
     SYNC: [
       EVENT_MANUAL_WRITE,
       EVENT_MESSAGE_RECEIVED,
+      EVENT_GENERATION_ENDED,
       EVENT_MESSAGE_DELETED,
       EVENT_MESSAGE_SWIPED,
       EVENT_CHAT_CHANGED,
@@ -196,6 +199,7 @@ export function getListenedEventTypes(): readonly string[] {
     ...getApiEventTypes(),
     EVENT_MESSAGE_SENT,
     EVENT_GENERATION_STARTED,
+    EVENT_GENERATION_ENDED,
     EVENT_GENERATION_STOPPED,
     EVENT_MESSAGE_UPDATED,
     EVENT_MESSAGE_EDITED,
@@ -253,6 +257,8 @@ export function getEventDefinition(
     };
   }
   switch (eventType) {
+    case EVENT_GENERATION_ENDED:
+      return {type:eventType,group:"SYNC",listenerOrder:"normal",awaitMode:"detached",collectionWindowMs:0,closesCollectionWindow:true};
     case EVENT_APP_READY:
       return {
         type: eventType,

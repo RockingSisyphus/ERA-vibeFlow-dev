@@ -64,7 +64,7 @@ export default [
             '^http',
             '^@era/vibeflow-macro$',
             '^@era/vibeflow-service$',
-            '^@era/vibeflow-tavern(?:-(?:sync|async|runtime))?$',
+            '^@era/vibeflow-tavern(?:-(?:sync|operation|runtime|parallel-reads))?$',
           ],
         },
       ],

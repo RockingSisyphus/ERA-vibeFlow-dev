@@ -8,7 +8,6 @@ export const era_macro_resolve_occurrences = defineNode({
   "contract": {"requires":[{"type":"era.macro.occurrence_plan","cardinality":"exactly_one","display_name":"各个宏在原文中的位置和识别结果"}],"provides":[{"key":"macro.resolved_occurrences","type":"era.macro.resolved_occurrences","display_name":"每个宏的变量值或保留、空值决定"}],"params_schema":{},"params_defaults":{},"input_semantics":{"era.macro.occurrence_plan":["供按正确位置读取变量并填回，损坏延迟标记保留原文。"]},"output_semantics":{"macro.resolved_occurrences":["已按本次快照取值，供格式化和文字拼接使用。"]}},
   "implementations": [{"language":"typescript","targets":["browser","node"],"source":{"kind":"file","ref":"nodes/resolve_occurrences.ts","export":"run"}}],
   "base_libs": ["era.macro.runtime"],
-  "capabilities": [],
   "tags": ["宏处理"],
   "rulesets": ["vibeflow.process"],
   "id": "era.macro.resolve_occurrences",

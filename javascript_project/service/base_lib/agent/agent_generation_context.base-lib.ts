@@ -19,6 +19,7 @@ export const era_service_agent_generation_context = defineBaseLib({
     }
   ],
   "dependencies": [
+    "era.service.agent_stage_layout",
     "era.service.agent_session_binding",
     "era.service.agent_configuration",
     "era.service.agent_report_text",

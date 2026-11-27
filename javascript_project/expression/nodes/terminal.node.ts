@@ -8,7 +8,6 @@ export const era_expression_terminal = defineNode({
   "contract": {"requires":[],"provides":[],"params_schema":{},"params_defaults":{},"input_semantics":{},"output_semantics":{}},
   "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/terminal.ts","export":"run"}}],
   "base_libs": [],
-  "capabilities": [],
   "tags": ["表达式工作流"],
   "rulesets": ["vibeflow.process"],
   "id": "era.expression.terminal",

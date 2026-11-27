@@ -1,22 +1,25 @@
 import {
+  applyVariableWrite,
+  arrayOperations,
+  planVariableWrite,
+  readVariablePath,
+  variablePathKey,
+  variableRuleAt,
+  type VariableOp,
+} from "../../../../../base_lib/variable_write/variable_write.ts";
+import {
   cloneCrudValue,
   isPlainRecord,
-  sanitizeArrays,
   type EraCrudDiagnostic,
 } from "./crud_parser.ts";
 import {
   getAtPath,
-  hasAtPath,
-  setAtPath,
-  unsetAtPath,
-  metaValue,
-  isEmptyRecord,
   resolveTemplate,
   inheritedTemplateContent,
   applyTemplate,
   editDiagnostic,
 } from "./crud_mutations.ts";
-import { findLatestNewValue } from "../../snapshot/snapshot_history.ts";
+import { pathSegments } from "../../../../../base_lib/data_view/data_view.js";
 import {
   forkOperation,
   type OperationState,
@@ -35,10 +38,37 @@ function writableTree(state: OperationState): any {
   else state.stat = tree;
   return tree;
 }
-function currentValue(state: OperationState, action: OperationAction): any {
-  return action.path
-    ? getAtPath(readTree(state), action.path)
-    : readTree(state);
+function actionPath(action: OperationAction) {
+  return action.arrayPath ?? (action.path ? pathSegments(action.path) : []);
+}
+
+function currentValue(state: OperationState, action: OperationAction): unknown {
+  return readVariablePath(readTree(state), actionPath(action));
+}
+
+function writeValue(state: OperationState, op: VariableOp, value?: unknown, messageStart = false): OperationState {
+  const action = state.pendingAction!;
+  const before = readTree(state);
+  const path = actionPath(action);
+  const write = planVariableWrite(before, path, op, value);
+  if (!write) return state;
+  const logPath = write.arrayPath ?? path;
+  const beforeValue = readVariablePath(before, logPath);
+  const after = writableTree(state);
+  applyVariableWrite(after, write);
+  if (state.context.localDelete) return state;
+  const newValue = readVariablePath(after, logPath);
+  const messageValue = !write.arrayPath && messageStart
+    ? readVariablePath(state.messageStartStat, logPath)
+    : undefined;
+  const oldValue = messageValue === undefined ? beforeValue : messageValue;
+  const key = variablePathKey(logPath);
+  state.context.pendingLog = beforeValue === undefined
+    ? { op: "insert", path: key, value_new: cloneCrudValue(newValue) }
+    : newValue === undefined
+      ? { op: "delete", path: key, value_old: cloneCrudValue(oldValue) }
+      : { op: "update", path: key, value_old: cloneCrudValue(oldValue), value_new: cloneCrudValue(newValue) };
+  return state;
 }
 
 /** 只取一个位置；子项栈优先，整组函数候选其次，再取下一个根对象。 */
@@ -77,12 +107,26 @@ export function takeNextOperation(input: OperationState): {
       state.rootIndex = 0;
       continue;
     }
+    const patch = command.data[state.rootIndex++];
+    if (command.type === "insert" || command.type === "edit" || command.type === "delete") {
+      const operations = arrayOperations(patch, command.type);
+      if (operations) {
+        state.stack.push(...operations.map(({ path, value }) => ({
+          kind: command.type,
+          path: variablePathKey(path),
+          arrayPath: path,
+          patch: value,
+        })).reverse());
+        action = state.stack.pop();
+        continue;
+      }
+    }
     action = {
       kind: command.type.startsWith("function-")
         ? "function-group"
         : command.type,
       path: "",
-      patch: command.data[state.rootIndex++],
+      patch,
       root: true,
       template: { inheritedContent: null, parentPath: null },
     };
@@ -101,44 +145,27 @@ export function inspectInsert(input: OperationState): {
   const state = forkOperation(input),
     a = state.pendingAction!;
   const current = currentValue(state, a);
-  const parentData =
-    a.template?.parentPath === null
-      ? null
-      : a.template?.parentPath === ""
-        ? state.stat
-        : getAtPath(state.stat, a.template?.parentPath ?? "");
-  a.localTemplate = resolveTemplate({
-    inheritedContent: a.template?.inheritedContent ?? null,
-    parentData,
-  });
+  if (a.arrayPath) return { state, route: "apply" };
+  const parentData = a.template?.parentPath === null
+    ? null
+    : a.template?.parentPath === ""
+      ? state.stat
+      : getAtPath(state.stat, a.template?.parentPath ?? "");
+  a.localTemplate = resolveTemplate({ inheritedContent: a.template?.inheritedContent ?? null, parentData });
   if (a.path && current === undefined) return { state, route: "apply" };
-  if (!isPlainRecord(current) || !isPlainRecord(a.patch))
-    return { state, route: "skip" };
-  const keys = Object.keys(a.patch);
-  if (
-    metaValue(current, "unInsertAble") === "all" &&
-    keys.length &&
-    !keys.every((k) => k === "$meta")
-  )
-    return { state, route: "skip" };
-  return { state, route: "descend" };
+  return { state, route: isPlainRecord(current) && isPlainRecord(a.patch) ? "descend" : "skip" };
 }
+
 export function inheritInsertTemplate(input: OperationState): OperationState {
   const state = forkOperation(input),
     a = state.pendingAction!;
-  a.value = sanitizeArrays(applyTemplate(a.localTemplate, a.patch));
+  a.value = applyTemplate(a.localTemplate, a.patch);
   return state;
 }
 export function applyInsert(input: OperationState): OperationState {
-  const state = forkOperation(input),
-    a = state.pendingAction!;
-  setAtPath(writableTree(state), a.path, a.value);
-  state.context.pendingLog = {
-    op: "insert",
-    path: a.path,
-    value_new: cloneCrudValue(a.value),
-  };
-  return state;
+  const state = forkOperation(input);
+  const action = state.pendingAction!;
+  return writeValue(state, "insert", action.arrayPath ? action.patch : action.value);
 }
 
 export function inspectRelativePatch(
@@ -181,7 +208,7 @@ export function inspectRelativePatch(
   return diagnostic ? { kind: "invalid", diagnostic } : { kind: "expr" };
 }
 
-/** 对象保护在递归入口检查；普通叶子赋值保持旧实现的父对象保护语义。 */
+/** 修改补丁递归到字段；显式数组路径可直接替换整个目标。 */
 export function inspectEdit(input: OperationState): {
   state: OperationState;
   route: string;
@@ -189,19 +216,9 @@ export function inspectEdit(input: OperationState): {
   const state = forkOperation(input),
     a = state.pendingAction!;
   const current = currentValue(state, a);
-  if (a.kind === "assignment")
-    return { state, route: hasAtPath(state.stat, a.path) ? "assign" : "skip" };
   if (current === undefined) return { state, route: "skip" };
-  const locked = metaValue(current, "updatable") === false;
-  if (
-    locked &&
-    !(
-      isPlainRecord(a.patch) &&
-      isPlainRecord(a.patch.$meta) &&
-      a.patch.$meta.updatable === true
-    )
-  )
-    return { state, route: "skip" };
+  if (a.kind === "assignment") return { state, route: "assign" };
+  if (a.arrayPath) return { state, route: "assign" };
   if (!isPlainRecord(a.patch)) return { state, route: "skip" };
   const relative = inspectRelativePatch(a.patch, current, a.path, state.stat);
   if (relative.kind === "invalid") {
@@ -209,107 +226,52 @@ export function inspectEdit(input: OperationState): {
     return { state, route: "skip" };
   }
   if (relative.kind === "expr") {
+    const path = actionPath(a);
+    if (path.some((_, index) => variableRuleAt(state.stat, path.slice(0, index))?.updatable === false) ||
+        variableRuleAt(state.stat, path)?.updatable === false) return { state, route: "skip" };
     a.current = current;
     return { state, route: "expr" };
   }
   return { state, route: "descend" };
 }
 export function applyAssignment(input: OperationState): OperationState {
-  const state = forkOperation(input),
-    a = state.pendingAction!;
-  let previous = findLatestNewValue(
-    a.path,
-    state.context.messageId,
-    Array.isArray(state.context.meta.SelectedMks)
-      ? state.context.meta.SelectedMks
-      : [],
-    state.context.meta.EditLogs ?? {},
-  );
-  if (previous === null) previous = getAtPath(state.stat, a.path);
-  const cleaned = sanitizeArrays(a.patch);
-  setAtPath(writableTree(state), a.path, cleaned);
-  state.context.pendingLog = {
-    op: "update",
-    path: a.path,
-    value_old: cloneCrudValue(previous),
-    value_new: cloneCrudValue(cleaned),
-  };
-  return state;
+  const state = forkOperation(input);
+  return writeValue(state, "edit", state.pendingAction!.patch, true);
+}
+
+export function applyCalculatedValue(input: OperationState): OperationState {
+  const state = forkOperation(input);
+  const value = state.pendingAction!.value;
+  return writeValue(state, "edit", Object.is(value, -0) ? 0 : value);
 }
 
 export function inspectDelete(input: OperationState): {
   state: OperationState;
   route: string;
 } {
-  const state = forkOperation(input),
-    a = state.pendingAction!,
-    current = currentValue(state, a);
-  if (
-    current === undefined ||
-    (a.root && (!isPlainRecord(a.patch) || !Object.keys(a.patch).length))
-  )
-    return { state, route: "skip" };
-  const necessary = metaValue(current, "necessary");
-  const bypass =
-    isPlainRecord(a.patch) &&
-    (isEmptyRecord(a.patch.$meta) ||
-      (isPlainRecord(a.patch.$meta) &&
-        Object.prototype.hasOwnProperty.call(a.patch.$meta, "necessary")));
-  if (isPlainRecord(a.patch) && Object.keys(a.patch).length) {
-    if (necessary === "all" && !bypass) return { state, route: "skip" };
+  const state = forkOperation(input);
+  const action = state.pendingAction!;
+  if (currentValue(state, action) === undefined) return { state, route: "skip" };
+  if (action.arrayPath) return { state, route: "apply" };
+  if (isPlainRecord(action.patch) && Object.keys(action.patch).length)
     return { state, route: "descend" };
-  }
-  return {
-    state,
-    route:
-      necessary === "self" || necessary === "all" || !a.path ? "skip" : "apply",
-  };
+  return { state, route: action.path ? "apply" : "skip" };
 }
+
 export function applyDelete(input: OperationState): OperationState {
-  const state = forkOperation(input),
-    a = state.pendingAction!;
-  const previous = cloneCrudValue(currentValue(state, a));
-  unsetAtPath(writableTree(state), a.path);
-  if (!state.context.localDelete)
-    state.context.pendingLog = {
-      op: "delete",
-      path: a.path,
-      value_old: previous,
-    };
-  return state;
+  return writeValue(forkOperation(input), "delete");
 }
 
 /** 栈只保存路径和补丁；读取当前值留到实际弹出，后项能看见前项应用的状态。 */
 export function pushChildPaths(input: OperationState): OperationState {
-  const state = forkOperation(input),
-    a = state.pendingAction!,
-    current = currentValue(state, a);
-  const necessary = metaValue(current, "necessary"),
-    protection = metaValue(current, "unInsertAble");
-  const bypass =
-    isPlainRecord(a.patch.$meta) &&
-    (isEmptyRecord(a.patch.$meta) ||
-      Object.prototype.hasOwnProperty.call(a.patch.$meta, "necessary"));
+  const state = forkOperation(input);
+  const a = state.pendingAction!;
   const children: OperationAction[] = [];
   for (const key of Object.keys(a.patch)) {
     const patch = a.patch[key];
-    if (
-      a.kind === "insert" &&
-      protection === "self" &&
-      key !== "$meta" &&
-      !Object.prototype.hasOwnProperty.call(current, key)
-    )
-      continue;
-    if (
-      a.kind === "delete" &&
-      necessary === "children" &&
-      isEmptyRecord(patch) &&
-      !(key === "$meta" && bypass)
-    )
-      continue;
     children.push({
       kind: a.kind === "edit" && !isPlainRecord(patch) ? "assignment" : a.kind,
-      path: a.path ? `${a.path}.${key}` : key,
+      path: variablePathKey([...actionPath(a), key]),
       patch,
       ...(a.kind === "insert"
         ? {

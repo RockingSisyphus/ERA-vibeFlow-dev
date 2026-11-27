@@ -1,0 +1,196 @@
+{
+  "type_key": "era.tavern.workflow.results_step",
+  "display_name": "接收并落实Service回信",
+  "description": "收到回信后仍执行现有结算、计时和通知流程，结束信封负责唤醒阻塞接收。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.call.frame",
+      "cardinality": "exactly_one",
+      "display_name": "当前酒馆实例的本地资源与生命周期"
+    },
+    {"type":"era.workflow.host_resources","cardinality":"exactly_one","display_name":"所属 ERA 实例的本地资源"}
+  ],
+  "provides": [
+    {
+      "key": "next_frame",
+      "type": "era.tavern.transport.next",
+      "display_name": "完成本次结果后的本地实例"
+    },
+    {
+      "key": "done",
+      "type": "era.workflow.runtime.done",
+      "display_name": "本分支是否结束"
+    },
+    {"key":"retained_host_resources","type":"era.workflow.host_resources","display_name":"所属 ERA 实例的本地资源"}
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "frame",
+        "type": "era.tavern.call.frame",
+        "required": true,
+        "display_name": "当前酒馆实例的本地资源与生命周期"
+      },
+      {"key":"host_resources","type":"era.workflow.host_resources","required":true,"display_name":"所属 ERA 实例的本地资源"}
+    ],
+    "max_steps": 17,
+    "nodes": [
+      {
+        "id": "start",
+        "definition_id": "era.tavern.initialize.start",
+        "display_name": "开始本段通信",
+        "description": "标明本段通信范围；实际结果由中间业务和官方通信步骤提供。"
+      },
+      {
+        "id": "retain_owner",
+        "display_name": "保留本实例资源，随后等待纯数据回信",
+        "description": "把当前页面实例留在本图内，接收步骤只从官方邮箱取得纯数据消息；收到后再与本地资源合并，执行结算、计时或结束。",
+        "definition_id": "era.tavern.communication.results.retain_owner",
+        "join_policy": "all"
+      },
+      {
+        "id": "receive",
+        "display_name": "Receive：等待Service结果或结束通知",
+        "description": "在本runtime邮箱接收批次确认、计时控制或Service结束信封；正常服务结束也明确投递结束信封，不能把空队列当成已退出。",
+        "definition_id": "era.workflow.receive",
+        "config": {
+          "port": "era.service.out",
+          "expected_workflows": [
+            {
+              "root": "era-service",
+              "path": "configs/era.service.jsonc"
+            },
+            {
+              "root": "era-tavern",
+              "path": "configs/era.tavern.runtime.jsonc",
+              "entry": "protocol_runtime"
+            }
+          ]
+        }
+      },
+      {
+        "id": "end",
+        "definition_id": "era.tavern.initialize.end",
+        "display_name": "完成本段通信",
+        "description": "标明本段通信范围；实际结果由中间业务和官方通信步骤提供。"
+      },
+      {
+        "id": "result_prepare",
+        "display_name": "核对结果身份并准备同步处理",
+        "description": "结束信封直接结束。业务回信恢复原值并关联本地实例，交由原即时流程完成回执、计时及通知。",
+        "definition_id": "era.tavern.communication.results.prepare"
+      },
+      {
+        "id": "result_complete",
+        "display_name": "确认回信业务已同步落实",
+        "description": "收回实际处理结果后释放临时资源编号，继续接收下一回信。",
+        "definition_id": "era.tavern.communication.results.complete"
+      },
+      {
+        "id": "result_closed",
+        "display_name": "结果接收分支结束",
+        "description": "主服务已结束，停止等待下一回信。",
+        "definition_id": "era.tavern.communication.results.closed"
+      },
+      {
+        "id": "result_encode",
+        "definition_id": "era.workflow.encode_request",
+        "display_name": "封装结果落实请求",
+        "description": "通过官方同步调用执行原回信处理，保持回执和通知发起在同一即时步骤完成。"
+      },
+      {
+        "id": "result_invoke",
+        "definition_id": "era.workflow.invoke_sync",
+        "display_name": "InvokeSync：由酒馆即时流程落实回信",
+        "description": "通过官方同步调用执行原回信处理，保持回执和通知发起在同一即时步骤完成。",
+        "config": {
+          "workflow": {
+            "root": "era-tavern",
+            "path": "configs/era.tavern.sync.jsonc",
+            "entry": "protocol"
+          }
+        }
+      },
+      {
+        "id": "result_decode",
+        "definition_id": "era.workflow.decode_outputs",
+        "display_name": "恢复同步落实确认",
+        "description": "通过官方同步调用执行原回信处理，保持回执和通知发起在同一即时步骤完成。"
+      },
+      {"id":"retain_host_resources","definition_id":"era.tavern.retain_host_resources","display_name":"保留所属实例的资源","description":"先取出本次运行或本轮迭代收到的本地资源，供下面需要组织工作流通信的步骤使用。资源不写入业务消息。"}
+    ],
+    "edges": [
+      {"from":"start","to":"retain_owner","schedule":true},
+      [
+        "receive",
+        "result_prepare"
+      ],
+      {
+        "from": "retain_owner",
+        "to": "result_prepare",
+        "schedule": false
+      },
+      [
+        "retain_owner",
+        "receive"
+      ],
+      {
+        "from": "result_prepare",
+        "to": "result_encode",
+        "when": "result_route == 'process'"
+      },
+      [
+        "result_encode",
+        "result_invoke"
+      ],
+      [
+        "result_invoke",
+        "result_decode"
+      ],
+      [
+        "result_decode",
+        "result_complete"
+      ],
+      {
+        "from": "result_prepare",
+        "to": "result_complete",
+        "schedule": false,
+        "when": "result_route == 'process'"
+      },
+      {
+        "from": "result_prepare",
+        "to": "result_closed",
+        "when": "result_route == 'end'"
+      },
+      [
+        "result_closed",
+        "end"
+      ],
+      [
+        "result_complete",
+        "end"
+      ],
+      ["start","retain_host_resources"],
+      {"from":"retain_host_resources","to":"retain_owner","transfer":false,"schedule":true},
+      {"from":"retain_host_resources","to":"result_prepare","schedule":false},
+      {"from":"retain_host_resources","to":"result_complete","schedule":false}
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.transport.next",
+        "cardinality": "exactly_one",
+        "display_name": "完成本次结果后的本地实例",
+        "as": "next_frame"
+      },
+      {
+        "type": "era.workflow.runtime.done",
+        "cardinality": "exactly_one",
+        "display_name": "本分支是否结束",
+        "as": "done"
+      },
+      {"type":"era.workflow.host_resources","as":"retained_host_resources","cardinality":"exactly_one","display_name":"所属 ERA 实例的本地资源"}
+    ]
+  }
+}

@@ -17,7 +17,7 @@ export function StartModels(inputs:any,params:any):any {
   f.operationResource=startResource(f,signal=>api.fetch(tavernEndpoint(api,"/api/backends/chat-completions/status"),{
     method:"POST",headers:currentTavern(api).getRequestHeaders(),cache:"no-cache",signal,
     body:JSON.stringify({reverse_proxy:profile.apiUrl,proxy_password:profile.key,chat_completion_source:"openai"}),
-  }), resource => f.session.dispatch.finishCapability({...f, operationResource: resource}));f.publicPromise = f.operationResource.publicPromise;
+  }));f.publicPromise = f.operationResource.publicPromise;
   return emit({frame:f},params);
 }
 export function StartDraftModels(inputs:any,params:any):any {
@@ -27,7 +27,7 @@ export function StartDraftModels(inputs:any,params:any):any {
     f.operationResource=startResource(f,signal=>api.fetch(tavernEndpoint(api,"/api/backends/chat-completions/status"),{
       method:"POST",headers:currentTavern(api).getRequestHeaders(),cache:"no-cache",signal,
       body:JSON.stringify({reverse_proxy:url,proxy_password:key,chat_completion_source:"openai"}),
-    }), resource => f.session.dispatch.finishCapability({...f, operationResource: resource}));f.publicPromise = f.operationResource.publicPromise;
+    }));f.publicPromise = f.operationResource.publicPromise;
   return emit({frame:f},params);
   }catch(error){return modelFailure(f,error);}
 }

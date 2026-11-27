@@ -1,3 +1,4 @@
+import {runWithIoMocks} from '../tests/service/workflow-io-sandbox.mjs';
 /// <reference types="node" />
 
 import { nativeG3 } from '../tests/native-tavern/g3-fixture.mjs';
@@ -433,7 +434,7 @@ async function probeWorkflowFrames(workflow) {
   let executionCode = null;
   let executionError = null;
   try {
-    await workflow.runWorkflowAsync(
+    await runWithIoMocks(workflow,
       {},
       {
         signal: controller.signal,
@@ -487,8 +488,8 @@ async function probeWorkflowFrames(workflow) {
 
 const stagedWorkflow = await importGeneratedWorkflow();
 const workflow = stagedWorkflow.workflow;
-assert(workflow.VIBEFLOW_WORKFLOW_ABI === 'vibeflow.workflow.v10', 'Workflow ABI 不是 v10。');
-assert(workflow.VIBEFLOW_PLUGIN_ABI === 'vibeflow.plugin.v4', 'Plugin ABI 不是 v4。');
+assert(workflow.VIBEFLOW_WORKFLOW_ABI === 'vibeflow.workflow.v12', 'Workflow ABI 不是 v12。');
+assert(workflow.VIBEFLOW_PLUGIN_ABI === 'vibeflow.plugin.v5', 'Plugin ABI 不是 v5。');
 
 const report = {
   status: 'PASS',

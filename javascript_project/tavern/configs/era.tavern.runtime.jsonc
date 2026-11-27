@@ -1,0 +1,298 @@
+{
+  "nodeset_imports": [
+    {
+      "path": "nodesets/author_tool.jsonc"
+    },
+    {
+      "path": "nodesets/initialize.jsonc"
+    },
+    {
+      "path": "nodesets/notification.jsonc"
+    },
+    {
+      "path": "nodesets/notification_finalize.jsonc"
+    },
+    {
+      "path": "nodesets/notification_report_item.jsonc"
+    },
+    {
+      "path": "nodesets/ordinary_runtime.jsonc"
+    },
+    {
+      "path": "nodesets/script_service.jsonc"
+    },
+    {
+      "path": "nodesets/timer_wait.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_async_runtime_body.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_events_step.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_results_step.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_service.jsonc"
+    }
+  ],
+  "plugins": [
+    {
+      "source": {
+        "kind": "file",
+        "ref": "plugins/contracts/plugin.ts"
+      }
+    },
+    {
+      "scope": "project",
+      "source": {
+        "kind": "file",
+        "ref": "plugins/workflow_protocol/plugin.ts"
+      }
+    },
+    {
+      "source": {
+        "kind": "file",
+        "ref": "plugins/structure_rules/plugin.ts"
+      }
+    },
+    {
+      "source": {
+        "kind": "file",
+        "ref": "plugins/protocol_resources/plugin.ts"
+      }
+    }
+  ],
+  "global_config": {
+    "config": {
+      "max_event_bytes": 262144,
+      "max_fifo_events": 256,
+      "max_fifo_bytes": 8388608,
+      "max_host_refs_per_event": 32,
+      "barrier_watchdog_ms": 5000
+    },
+    "allow_config_override": false
+  },
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "request",
+        "type": "era.tavern.call.frame",
+        "display_name": "酒馆异步操作与实例运行的请求和已有进度",
+        "required": true
+      }
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.call.result",
+        "cardinality": "exactly_one",
+        "display_name": "本次酒馆操作返回给调用方的结果",
+        "as": "result"
+      }
+    ],
+    "entries": {
+      "runtime": {
+        "start": "runtime_start",
+        "inputs": [
+          {
+            "key": "request",
+            "type": "era.tavern.call.frame",
+            "display_name": "酒馆异步操作与实例运行的请求和已有进度",
+            "required": true
+          },
+          {
+            "key": "host_resources",
+            "type": "era.workflow.host_resources",
+            "required": true,
+            "display_name": "所属 ERA 实例的本地资源"
+          }
+        ]
+      },
+      "protocol_runtime": {
+        "start": "protocol_runtime_start",
+        "inputs": [
+          {
+            "key": "wire_request",
+            "type": "era.workflow.packet",
+            "display_name": "保留原值的跨流程请求消息",
+            "required": true
+          },
+          {
+            "key": "host_resources",
+            "type": "era.workflow.host_resources",
+            "required": true,
+            "display_name": "所属 ERA 实例的本地资源"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "era.workflow.packet",
+            "cardinality": "exactly_one",
+            "display_name": "保留原值的跨流程结果消息",
+            "as": "wireResponse"
+          }
+        ]
+      }
+    },
+    "max_steps": 9,
+    "nodes": [
+      {
+        "id": "runtime_start",
+        "definition_id": "era.tavern.initialize.start",
+        "display_name": "开始实例运行原有入口",
+        "description": "标明本入口的开始或结束；本入口只运行其可达路径，其他入口不参与等待。"
+      },
+      {
+        "id": "runtime_body",
+        "definition_id": "era.tavern.workflow.async_runtime_body",
+        "display_name": "完成实例运行业务处理",
+        "description": "按本入口的原有合同处理请求并返回结果；完整处理在可展开子流程中，与通信封装分开。"
+      },
+      {
+        "id": "runtime_end",
+        "definition_id": "era.tavern.initialize.end",
+        "display_name": "结束实例运行原有入口",
+        "description": "标明本入口的开始或结束；本入口只运行其可达路径，其他入口不参与等待。"
+      },
+      {
+        "id": "protocol_runtime_start",
+        "definition_id": "era.tavern.initialize.start",
+        "display_name": "开始实例运行官方通信入口",
+        "description": "标明本入口的开始或结束；本入口只运行其可达路径，其他入口不参与等待。"
+      },
+      {
+        "id": "protocol_runtime_decode",
+        "display_name": "恢复实例运行请求与本实例资源",
+        "description": "先核对资源编号和请求身份，再恢复消息中的大数、负零、缺失项及数组空位。页面对象、回调和运行任务只在本实例内取回，不进入官方通信。根运行入口只恢复页面运行选项，再由原初始化流程创建唯一实例。 标记本次结果须走通信回信；随后把请求交给两个入口共用的处理节点。",
+        "config": {
+          "mode": "async",
+          "boundary": "protocol_runtime_decode"
+        },
+        "definition_id": "era.tavern.boundary.async.protocol_runtime_decode",
+        "join_policy": "all"
+      },
+      {
+        "id": "protocol_runtime_encode",
+        "display_name": "封装实例运行结果，保留原值再回信",
+        "description": "从本次业务结果中取出应返回调用方的资料；实际异步工作尚未完成时只交回其操作编号。页面实例、回调、运行中的任务和清理函数留在资源作用域，其他业务值作可逆封装后返回，不把空位改为null或把大数改成业务字符串。",
+        "config": {
+          "mode": "async",
+          "boundary": "protocol_runtime_encode"
+        },
+        "definition_id": "era.tavern.boundary.async.protocol_runtime_encode"
+      },
+      {
+        "id": "protocol_runtime_end",
+        "definition_id": "era.tavern.initialize.end",
+        "display_name": "交回实例运行官方通信结果",
+        "description": "标明本入口的开始或结束；本入口只运行其可达路径，其他入口不参与等待。"
+      },
+      {
+        "id": "protocol_runtime_start_retain_host_resources",
+        "definition_id": "era.tavern.retain_host_resources",
+        "display_name": "保留所属实例的资源",
+        "description": "先取出本次运行或本轮迭代收到的本地资源，供下面需要组织工作流通信的步骤使用。资源不写入业务消息。"
+      },
+      {
+        "id": "prepare_direct_request",
+        "display_name": "整理直接入口的请求",
+        "description": "取出直接入口收到的业务请求，标明结果直接返回。把同一类型的请求送进与通信入口共用的处理节点。 保留直接入口传入的本地资源并交给共享运行流程。",
+        "definition_id": "era.tavern.boundary.PrepareRuntimeRequest"
+      },
+      {
+        "id": "select_entry_return",
+        "display_name": "按进入方式交付处理结果",
+        "description": "核心处理完成后，依据入口提供的类别直接交付结果或进入协议编码。本步骤不重跑业务处理。",
+        "definition_id": "era.tavern.boundary.SelectEntryReturn"
+      }
+    ],
+    "edges": [
+      {
+        "from": "protocol_runtime_start",
+        "to": "protocol_runtime_decode",
+        "schedule": true
+      },
+      [
+        "protocol_runtime_decode",
+        "runtime_body"
+      ],
+      [
+        "protocol_runtime_encode",
+        "protocol_runtime_end"
+      ],
+      [
+        "protocol_runtime_start",
+        "protocol_runtime_start_retain_host_resources"
+      ],
+      {
+        "from": "protocol_runtime_start_retain_host_resources",
+        "to": "protocol_runtime_decode",
+        "transfer": false,
+        "schedule": true
+      },
+      {
+        "from": "protocol_runtime_start_retain_host_resources",
+        "to": "runtime_body",
+        "schedule": false
+      },
+      [
+        "runtime_start",
+        "prepare_direct_request"
+      ],
+      [
+        "prepare_direct_request",
+        "runtime_body"
+      ],
+      {
+        "from": "runtime_body",
+        "to": "select_entry_return",
+        "schedule": true,
+        "transfer": false
+      },
+      {
+        "from": "protocol_runtime_decode",
+        "to": "select_entry_return",
+        "schedule": false
+      },
+      {
+        "from": "prepare_direct_request",
+        "to": "select_entry_return",
+        "schedule": false
+      },
+      {
+        "from": "select_entry_return",
+        "to": "runtime_end",
+        "when": "return_route == 'direct'",
+        "transfer": false
+      },
+      {
+        "from": "select_entry_return",
+        "to": "protocol_runtime_encode",
+        "when": "return_route == 'protocol'"
+      },
+      {
+        "from": "runtime_body",
+        "to": "protocol_runtime_encode",
+        "schedule": false
+      }
+    ]
+  },
+  "base_lib": {
+    "modules": [
+      "era.tavern.agent_facts",
+      "era.tavern.browser",
+      "era.tavern.contracts",
+      "era.tavern.frames",
+      "era.tavern.message_facts",
+      "era.tavern.receipts",
+      "era.tavern.resources",
+      "era.tavern.sidecar_facts",
+      "era.workflow.values"
+    ]
+  },
+  "rulesets": [
+    "era.tavern.workflow_structure"
+  ]
+}

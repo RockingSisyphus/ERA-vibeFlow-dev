@@ -8,7 +8,6 @@ export const era_macro_terminal = defineNode({
   "contract": {"requires":[],"provides":[],"params_schema":{},"params_defaults":{},"input_semantics":{},"output_semantics":{}},
   "implementations": [{"language":"typescript","targets":["browser","node"],"source":{"kind":"file","ref":"nodes/terminal.ts","export":"run"}}],
   "base_libs": [],
-  "capabilities": [],
   "tags": ["宏处理"],
   "rulesets": ["vibeflow.process"],
   "id": "era.macro.terminal",

@@ -8,7 +8,7 @@ ERA为SillyTavern角色卡提供变量、表达式、消息内函数调用和历
 - [交接说明](docs/developer/交接说明.md)：当前状态和限制。
 - [文档维护指南](docs/developer/文档维护指南.md)：资料职责及更新方式。
 
-制卡使用已构建的ERA脚本，通过酒馆助手导入并启用。源码构建入口是app，业务使用VibeFlow JavaScript AOT；开发约束见[AGENTS.md](AGENTS.md)。
+使用 SillyTavern 1.19.0 或更新版本及酒馆助手，通过酒馆助手导入并启用已构建的 ERA 脚本。源码构建入口是app，业务使用VibeFlow JavaScript AOT；开发约束见[AGENTS.md](AGENTS.md)。
 
 ## 获取酒馆助手脚本包
 

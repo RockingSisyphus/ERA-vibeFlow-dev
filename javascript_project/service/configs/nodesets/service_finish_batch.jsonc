@@ -7,7 +7,8 @@
       "type": "era.batch.execution.state.after",
       "cardinality": "exactly_one",
       "display_name": "本批任务结束或计划失败后的状态"
-    }
+    },
+    {"type":"era.workflow.host_resources","cardinality":"exactly_one","display_name":"所属 ERA 实例的本地资源"}
   ],
   "provides": [
     {
@@ -24,9 +25,10 @@
         "type": "era.batch.execution.state.after",
         "display_name": "本批任务结束或计划失败后的状态",
         "required": true
-      }
+      },
+      {"key":"host_resources","type":"era.workflow.host_resources","required":true,"display_name":"所属 ERA 实例的本地资源"}
     ],
-    "max_steps": 8,
+    "max_steps": 9,
     "nodes": [
       {
         "id": "start",
@@ -38,7 +40,8 @@
         "id": "finalize_batch",
         "display_name": "为整批原事件形成最终处理确认",
         "description": "在“汇总整批结果并回告页面”流程中，汇总当前批次所有任务的实际结果，为每个原事件形成一次最终确认，并更新完成批次数。后续统一把确认和页面通知送回酒馆。",
-        "definition_id": "era.service.finalize_batch"
+        "definition_id": "era.service.finalize_batch",
+        "join_policy": "all"
       },
       {
         "id": "build_outbound",
@@ -50,25 +53,7 @@
         "id": "send_batch_result",
         "display_name": "把整批处理确认和通知发回页面",
         "description": "在“汇总整批结果并回告页面”流程中，将已结算批次的事件确认、通知、问题和停止原因送回酒馆。需要停止服务时也先发出结果，使等待中的脚本和界面能够收到具体原因。",
-        "definition_id": "era.service.port.send_batch_result",
-        "rulesets": [
-          "vibeflow.data_store",
-          {
-            "rule_id": "vibeflow.capability.allow",
-            "params": {
-              "capability": "vibeflow.port",
-              "operations": [
-                "send"
-              ],
-              "actions": [
-                {
-                  "operation": "send",
-                  "port": "era.service.out"
-                }
-              ]
-            }
-          }
-        ]
+        "definition_id": "era.service.workflow.send_batch_result"
       },
       {
         "id": "route_fatal",
@@ -99,13 +84,11 @@
         "display_name": "结束汇总整批结果并回告页面",
         "description": "标明“汇总整批结果并回告页面”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
         "definition_id": "era.service.terminal"
-      }
+      },
+      {"id":"retain_host_resources","definition_id":"era.service.retain_host_resources","display_name":"保留所属实例的资源","description":"先取出本次运行或本轮迭代收到的本地资源，供下面需要组织工作流通信的步骤使用。资源不写入业务消息。"}
     ],
     "edges": [
-      [
-        "start",
-        "finalize_batch"
-      ],
+      {"from":"start","to":"finalize_batch","schedule":true},
       [
         "finalize_batch",
         "build_outbound"
@@ -157,7 +140,10 @@
       [
         "raise_fatal",
         "end"
-      ]
+      ],
+      ["start","retain_host_resources"],
+      {"from":"retain_host_resources","to":"finalize_batch","transfer":false,"schedule":true},
+      {"from":"retain_host_resources","to":"send_batch_result","schedule":false}
     ],
     "outputs": [
       {

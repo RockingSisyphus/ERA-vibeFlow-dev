@@ -52,6 +52,10 @@
         {
           "path": "kernel",
           "purpose": "受发行清单保护的VibeFlow工具链"
+        },
+        {
+          "path": ".aws",
+          "purpose": "运行环境提供的AWS客户端配置挂载，不属于ERA业务源码或构建输入"
         }
       ]
     }

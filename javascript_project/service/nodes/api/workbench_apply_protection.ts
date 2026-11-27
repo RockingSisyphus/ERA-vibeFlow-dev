@@ -16,7 +16,7 @@ export function run(inputs: any): any {
     if (!operations.length) throw new Error('没有检测到需要保存的变化。');
     if (protections.length) {
       if (!request.choice) throw new Error('请选择如何处理 ERA 保护。');
-      operations = variable ? wrapVariableProtection(operations, protections, request.choice) : wrapFunctionPlanProtections(operations, protections as ReturnType<typeof functionPlanProtections>, request.choice);
+      operations = variable ? wrapVariableProtection(operations, protections, request.choice, state.statData) : wrapFunctionPlanProtections(operations, protections as ReturnType<typeof functionPlanProtections>, request.choice);
     }
     const inspected = { ...draft.inspected, request: { ...draft.inspected.request, detail: { ...draft.inspected.request.detail, scope: 'always', operations } } };
     return { protected_preparation_result: { route: 'ready', inspected, failure: {} } };

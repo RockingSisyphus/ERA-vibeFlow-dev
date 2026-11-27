@@ -48,9 +48,9 @@
       },
       {
         "id": "execute",
-        "display_name": "先算出原指令本来会产生什么",
-        "description": "在“为一段指令尝试缩短并比较结果”流程中，按正式变量及函数规则执行当前原文，取得应有的变量、函数、随机使用次数和问题记录。结果只存在于本次计算中，作为后续判断缩短方案是否保持效果的比较依据。",
-        "definition_id": "era.command_compaction.execute_original_semantics"
+        "display_name": "执行原指令，公式交给独立计算流程",
+        "description": "按原指令顺序推进原文重放，在每个实际公式或函数库验证位置提出下一次请求；普通变量操作仍由本地解释规则处理。 展开后可查看准备、原生同步调用、结果接回和继续判断。",
+        "definition_id": "era.migration.compaction.execute.workflow"
       },
       {
         "id": "analyze_dependencies",
@@ -60,15 +60,15 @@
       },
       {
         "id": "rewrite",
-        "display_name": "尝试生成更短的指令文字",
-        "description": "在“为一段指令尝试缩短并比较结果”流程中，根据已确认的依赖和作用范围，为可安全合并的部分提出较短指令，并保留原文及位置供比较。无法安全缩短的部分继续保留原文，提议还需经过实际重算验证。",
-        "definition_id": "era.command_compaction.rewrite_safe_regions"
+        "display_name": "生成缩短方案并取得公式改写结果",
+        "description": "按依赖与作用范围寻找可安全缩短的连续指令，只在候选需要公式计算时提出请求；不能证明安全的内容保留原文。 展开后可查看准备、原生同步调用、结果接回和继续判断。",
+        "definition_id": "era.migration.compaction.rewrite.workflow"
       },
       {
         "id": "verify",
-        "display_name": "比较当前段缩短前后的实际效果",
-        "description": "在“为一段指令尝试缩短并比较结果”流程中，从同一变量、函数和随机起点执行缩短方案，与原段结果比较。只有结果和相关问题保持一致才采用；指令格式无效、效果不同或没有合适方案时保留原文及原因。",
-        "definition_id": "era.command_compaction.verify_replay_equivalence"
+        "display_name": "重算缩短方案并比较当前段效果",
+        "description": "先处理无候选或解析失败分支，需要比较时从同一起点依次重放候选，按原位置提出公式及函数校验请求。 展开后可查看准备、原生同步调用、结果接回和继续判断。",
+        "definition_id": "era.migration.compaction.verify.workflow"
       },
       {
         "id": "advance_segment",

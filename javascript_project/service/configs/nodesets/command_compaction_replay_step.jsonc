@@ -7,7 +7,8 @@
       "type": "era.command_compaction.replay.state",
       "cardinality": "exactly_one",
       "display_name": "当前历史压缩方案及验证进度"
-    }
+    },
+    {"type":"era.workflow.host_resources","cardinality":"exactly_one","display_name":"所属 ERA 实例的本地资源"}
   ],
   "provides": [
     {
@@ -19,7 +20,8 @@
       "key": "iteration_done",
       "type": "era.command.operation.done",
       "display_name": "本范围的有序操作是否全部结束"
-    }
+    },
+    {"key":"retained_host_resources","type":"era.workflow.host_resources","display_name":"所属 ERA 实例的本地资源"}
   ],
   "pipeline": {
     "entry_mode": "async",
@@ -29,9 +31,10 @@
         "type": "era.command_compaction.replay.state",
         "display_name": "当前历史压缩方案及验证进度",
         "required": true
-      }
+      },
+      {"key":"host_resources","type":"era.workflow.host_resources","required":true,"display_name":"所属 ERA 实例的本地资源"}
     ],
-    "max_steps": 35,
+    "max_steps": 36,
     "nodes": [
       {
         "id": "start",
@@ -74,13 +77,11 @@
         "definition_id": "era.service.terminal",
         "display_name": "结束逐份比较历史指令压缩方案",
         "description": "标明“逐份比较历史指令压缩方案”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。"
-      }
+      },
+      {"id":"retain_host_resources","definition_id":"era.service.retain_host_resources","display_name":"保留所属实例的资源","description":"先取出本次运行或本轮迭代收到的本地资源，供下面需要组织工作流通信的步骤使用。资源不写入业务消息。"}
     ],
     "edges": [
-      [
-        "start",
-        "select_candidate"
-      ],
+      {"from":"start","to":"select_candidate","schedule":true},
       {
         "from": "select_candidate",
         "to": "prepare_operations",
@@ -112,7 +113,10 @@
       [
         "finish_candidates",
         "end"
-      ]
+      ],
+      ["start","retain_host_resources"],
+      {"from":"retain_host_resources","to":"select_candidate","schedule":true},
+      {"from":"retain_host_resources","to":"apply_operations","schedule":false}
     ],
     "outputs": [
       {
@@ -126,7 +130,8 @@
         "cardinality": "exactly_one",
         "display_name": "本范围的有序操作是否全部结束",
         "as": "iteration_done"
-      }
+      },
+      {"type":"era.workflow.host_resources","as":"retained_host_resources","cardinality":"exactly_one","display_name":"所属 ERA 实例的本地资源"}
     ]
   }
 }

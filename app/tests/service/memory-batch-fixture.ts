@@ -1,12 +1,10 @@
+import { businessWorkflowNode } from './business-workflow-node';
 import { run as prepareWork } from './prepare-block-work-fixture';
 import { expect } from 'vitest';
 import { contextWith, identity, sidecarId } from './memory-lifecycle-fixture';
 import { run as advance } from './message-block-fixture';
 import { prepare } from '../../../javascript_project/service/nodes/sync/prepare_block_step';
-import { PublishBlockApplicationNode as publish } from '../../../javascript_project/service/nodes/sync/shared_block_state_adapters';
 import { finalize } from '../../../javascript_project/service/nodes/sync/finalize_block_step';
-import { run as save } from '../../../javascript_project/service/nodes/sync/commit_sync';
-import { run as settle } from '../../../javascript_project/service/nodes/sync/settle_saved_batch';
 import { recordFor } from '../../../javascript_project/service/base_lib/sidecar_binding';
 import { applySealedCommandCompactionToWork } from './native-workflow-fixture';
 export async function execute(
@@ -74,17 +72,33 @@ export async function execute(
     const pending = (await advance({ 'era.sync.block.step.state': { value: state } }, {}, { capabilities }))
       .block_step_pending;
     const work = prepareWork({ 'era.sync.block.step.pending': { value: pending } }).expression_command_result;
-    state = publish(
-      { 'era.command_compaction.result': { value: await applySealedCommandCompactionToWork(work) } },
-      {},
-      { capabilities },
+    state = (
+      await businessWorkflowNode(
+        'era.lifecycle.publish_block_application',
+        { 'era.command_compaction.result': { value: await applySealedCommandCompactionToWork(work) } },
+        {},
+        { capabilities },
+      )
     ).block_step_state_after;
     expect(writes).toHaveLength(0);
     expect(saves).toHaveLength(0);
   }
   const frozen = finalize({ 'era.sync.block.step.state.next': { value: state } }).batch_save_request;
-  const saved = (await save({ 'era.tavern.commit.request': { value: frozen } }, {}, { capabilities }))
-    .sync_commit_result;
-  const outcome = settle({ 'era.tavern.commit.result': { value: saved } }, {}, { capabilities }).completed_sync_result;
+  const saved = (
+    await businessWorkflowNode(
+      'era.tavern.variables_commit',
+      { 'era.tavern.commit.request': { value: frozen } },
+      {},
+      { capabilities },
+    )
+  ).sync_commit_result;
+  const outcome = (
+    await businessWorkflowNode(
+      'era.lifecycle.settle_saved_batch',
+      { 'era.tavern.commit.result': { value: saved } },
+      {},
+      { capabilities },
+    )
+  ).completed_sync_result;
   return { state, working, snapshots, writes, saves, notifications, outcome };
 }

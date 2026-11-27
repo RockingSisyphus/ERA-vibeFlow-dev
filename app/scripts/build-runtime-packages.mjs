@@ -67,9 +67,11 @@ export function buildRuntimePackages() {
     // 显式重新安装这四个本地包；不使用update，以免重新解析无关开发依赖。
     const appManifest = resolve(root, 'app/package.json');
     const app = JSON.parse(readFileSync(appManifest, 'utf8'));
+    app.dependencies[compaction.name] = `file:../javascript_project/compaction/era-vibeflow-command-compaction-${compaction.version}.tgz`;
     app.dependencies[expression.name] = `file:../javascript_project/expression/${expressionArchive}`;
     const names = [
       expression.name,
+      compaction.name,
       examples.name,
       '@era/vibeflow-floor-snapshot',
       '@era/vibeflow-macro-syntax',

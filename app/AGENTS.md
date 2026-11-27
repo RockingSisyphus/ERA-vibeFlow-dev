@@ -4,7 +4,7 @@
 
 ## 职责与接口
 
-- 主Service决定领域规划、变量操作、历史同步与回退；`javascript_project/tavern`的原生Node执行Port、Capability、事件准入、回执和资源生命周期。App保留API发现、公共Facade、宏及展示端口，不重建图外Host或调度器。
+- 主Service决定领域规划、变量操作、历史同步与回退；`javascript_project/tavern`通过官方工作流通信交接事件和回信，由原生Node执行页面操作、事件准入、回执和资源生命周期。App保留API发现、公共Facade、宏及展示端口，不重建图外Host或调度器。
 - Tavern Helper/SillyTavern接口唯一类型参考是`@types/function/**`、`@types/iframe/**`；实际可用性须由目标酒馆页面验证。优先使用现有高层API，不因底层字段存在就绕过高层接口。
 - 公开ERA类型在`@types/iframe/exported.era.d.ts`；跨层DTO与Schema在`../packages/era-contracts`。不要复制接口或另造权威状态。
 - 修改前读取对应root的配置和Architecture。执行结构先按协同协议审核；生成物通过正式命令更新。
@@ -21,7 +21,7 @@
 
 使用Node24、pnpm10及锁文件规定的依赖。常用入口：
 
-- `pnpm --dir app build:workflows`：从同一份源码构建Service、Macro及Tavern两份AOT（async含operation/runtime命名入口）。
+- `pnpm --dir app build:workflows`：从同一份源码构建 Service、Macro 及 Tavern 的同步、异步操作、实例运行和并行读取 AOT。
 - `pnpm --dir app verify`：格式、lint、类型、AOT、质量和单元检查。
 - `pnpm --dir app test:integration:tavern`：原生辅助流程执行探针；G3/G4见package脚本。
 - `pnpm --dir app build`：需要验收分发物时构建生产bundle。

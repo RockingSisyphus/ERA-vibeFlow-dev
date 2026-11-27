@@ -12,6 +12,8 @@ export async function InvokeTool(inputs:any,params:any):Promise<any> {
       f.toolOutcome=Object.prototype.toString.call(value)==="[object Error]"?{status:"rejected",error:new Error(value.message)}:{status:"fulfilled",value};
     } catch(error){f.toolOutcome={status:"rejected",error};}
   }
+  // 作者返回时停止接收新操作，已入队的操作仍由消息流程结算。
+  f.call.acceptingSubmissions=false;
   return emit({frame:f},params);
 }
 export function RecordTerminal(inputs:any,params:any):any {

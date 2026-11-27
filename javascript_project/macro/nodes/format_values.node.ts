@@ -8,7 +8,6 @@ export const era_macro_format_values = defineNode({
   "contract": {"requires":[{"type":"era.macro.resolved_occurrences","cardinality":"exactly_one","display_name":"每个宏的变量值或保留、空值决定"}],"provides":[{"key":"macro.replacement.internal","type":"era.macro.replacement.internal","display_name":"已完成逐个宏替换的完整文字"}],"params_schema":{},"params_defaults":{},"input_semantics":{"era.macro.resolved_occurrences":["已按本次快照取值，供格式化和文字拼接使用。"]},"output_semantics":{"macro.replacement.internal":["供替换子流程交回外层统一文字出口。"]}},
   "implementations": [{"language":"typescript","targets":["browser","node"],"source":{"kind":"file","ref":"nodes/format_values.ts","export":"run"}}],
   "base_libs": ["era.macro.runtime"],
-  "capabilities": [],
   "tags": ["宏处理"],
   "rulesets": ["vibeflow.process"],
   "id": "era.macro.format_values",

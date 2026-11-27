@@ -1,8 +1,7 @@
+import { businessWorkflowNode } from './business-workflow-node';
 import * as source from '../../../javascript_project/service/nodes/sync/core_position_nodes.ts';
-import * as author from '../../../javascript_project/service/nodes/sync/core_author_nodes.ts';
 import { applyOperations } from './native-workflow-fixture';
 import { routeAuthorLifecycle } from '../../../javascript_project/service/base_lib/sync/position_author';
-
 /** 生命周期测试使用正式业务动作；正式 Config 的数据连线另由 AOT 探针和真实回归验证。 */
 export async function run(inputs: any, _params: any, context: any): Promise<any> {
   const selected = source.ChooseMessageActionNode(inputs);
@@ -12,25 +11,34 @@ export async function run(inputs: any, _params: any, context: any): Promise<any>
   if (selected.message_action === 'author') {
     const lifecycle = routeAuthorLifecycle(position).route;
     if (lifecycle === 'terminal')
-      position = author.FinishAuthorCallNode(
-        { ...authorInput(), 'era.sync.author.lifecycle.route': { value: lifecycle } },
-        {},
-        context,
-      ).finish_author_call_author_state;
-    else if (lifecycle === 'start')
-      position = author.BeginAuthorCallNode(authorInput(), {}, context).begin_author_call_author_state;
-    else {
-      const received = await author.ReceiveAuthorEventNode(authorInput(), {}, context);
-      position = received.receive_author_event_author_state;
-      if (received.author_event === 'commit')
-        position = author.PrepareAuthorCommitNode(authorInput(), {}, context).prepare_author_commit_author_state;
-      else if (received.author_event === 'unsupported')
-        position = author.AnswerAuthorSyncNode(authorInput(), {}, context).answer_author_sync_author_state;
-      else if (received.author_event !== 'complete')
-        position = author.FinishAuthorCallNode(
-          { ...authorInput(), 'era.sync.author.event.action': { value: received.author_event } },
+      position = (
+        await businessWorkflowNode(
+          'era.sync.finish_author_call',
+          { ...authorInput(), 'era.sync.author.lifecycle.route': { value: lifecycle } },
           {},
           context,
+        )
+      ).finish_author_call_author_state;
+    else if (lifecycle === 'start')
+      position = (await businessWorkflowNode('era.sync.begin_author_call', authorInput(), {}, context))
+        .begin_author_call_author_state;
+    else {
+      const received = await businessWorkflowNode('era.sync.receive_author_event', authorInput(), {}, context);
+      position = received.receive_author_event_author_state;
+      if (received.author_event === 'commit')
+        position = (await businessWorkflowNode('era.sync.prepare_author_commit', authorInput(), {}, context))
+          .prepare_author_commit_author_state;
+      else if (received.author_event === 'unsupported')
+        position = (await businessWorkflowNode('era.sync.answer_author_sync', authorInput(), {}, context))
+          .answer_author_sync_author_state;
+      else if (received.author_event !== 'complete')
+        position = (
+          await businessWorkflowNode(
+            'era.sync.finish_author_call',
+            { ...authorInput(), 'era.sync.author.event.action': { value: received.author_event } },
+            {},
+            context,
+          )
         ).finish_author_call_author_state;
     }
   } else if (selected.message_action === 'operations') {

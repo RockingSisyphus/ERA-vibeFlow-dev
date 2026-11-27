@@ -12,7 +12,8 @@
       "type": "era.batch.execution.state",
       "cardinality": "exactly_one",
       "display_name": "当前批次的任务进度与累计结果"
-    }
+    },
+    {"type":"era.workflow.host_resources","cardinality":"exactly_one","display_name":"所属 ERA 实例的本地资源"}
   ],
   "provides": [
     {
@@ -35,9 +36,10 @@
         "type": "era.batch.execution.state",
         "required": true,
         "display_name": "当前批次的任务进度与累计结果"
-      }
+      },
+      {"key":"host_resources","type":"era.workflow.host_resources","required":true,"display_name":"所属 ERA 实例的本地资源"}
     ],
-    "max_steps": 35,
+    "max_steps": 37,
     "nodes": [
       {
         "id": "start",
@@ -49,7 +51,7 @@
         "id": "inspect_submission",
         "display_name": "识别提交的是操作清单还是编辑草稿",
         "description": "在“应用脚本或界面提交的变量操作”流程中，读取本次允许处理的聊天消息范围，查看提交内容是明确的有序操作，还是变量、函数工作台的编辑草稿。草稿先转成可执行操作，之后再统一检查能否提交。",
-        "definition_id": "era.api.inspect_submission"
+        "definition_id": "era.communication.api_inspect_submission"
       },
       {
         "id": "prepare_workbench_commit",
@@ -65,9 +67,9 @@
       },
       {
         "id": "prepare_application",
-        "display_name": "为变量提交确定目标消息和起点",
-        "description": "在“应用脚本或界面提交的变量操作”流程中，将已确认允许执行的操作组成当前消息要处理的内容，读取真实目标消息并建立执行起点。交给统一消息流程按原顺序计算，后续再安排保存和显示更新。",
-        "definition_id": "era.api.prepare_application"
+        "display_name": "绑定候选并准备内存变量提交",
+        "description": "给提交绑定当前聊天、消息、候选索引和原生生成周期；按原顺序在现有WorkingState应用操作，保留待保存记录，尚未创建的候选不调用消息写入。源：nodes/api/facade_nodes.ts。",
+        "definition_id": "era.communication.api_prepare_application"
       },
       {
         "id": "apply_api_blocks",
@@ -78,7 +80,8 @@
             "type": "era.sync.block.step.state",
             "cardinality": "exactly_one",
             "display_name": "当前消息位置及待处理变量指令"
-          }
+          },
+          {"type":"era.workflow.host_resources","cardinality":"exactly_one","display_name":"所属 ERA 实例的本地资源"}
         ],
         "provides": [
           {
@@ -99,7 +102,8 @@
               "from": "era.sync.block.step.state",
               "as": "block_step_state",
               "update": "block_step_state_after"
-            }
+            },
+            {"from":"era.workflow.host_resources","as":"host_resources","update":"retained_host_resources"}
           ],
           "outputs": [
             {
@@ -118,22 +122,20 @@
       },
       {
         "id": "return_applied_result",
-        "display_name": "返回变量提交在内存中的应用结果",
-        "description": "在“应用脚本或界面提交的变量操作”流程中，将消息流程算出的变量、函数、历史记录和问题整理为本次提交的处理结果。调用方据此继续安排实际保存和显示更新；本环节报告的是已经计算得到的应用结果。",
-        "definition_id": "era.api.return_application_result"
+        "display_name": "确认稳定楼层正文并返回应用回执",
+        "description": "向已有稳定楼层外部提交时，确认酒馆当前正文已包含事务，再发布完整变量结果并交回执。正文落盘和独立状态文件仍由合并保存处理。未完成原生候选随所属生成周期结算。源：nodes/api/facade_nodes.ts。",
+        "definition_id": "era.communication.api_return_application_result"
       },
       {
         "id": "end",
         "display_name": "结束应用脚本或界面提交的变量操作",
         "description": "标明“应用脚本或界面提交的变量操作”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
         "definition_id": "era.service.terminal"
-      }
+      },
+      {"id":"retain_host_resources","definition_id":"era.service.retain_host_resources","display_name":"保留所属实例的资源","description":"先取出本次运行或本轮迭代收到的本地资源，供下面需要组织工作流通信的步骤使用。资源不写入业务消息。"}, {"id":"retain_host_resources_signal","definition_id":"era.service.forward_resource_signal","display_name":"转交本段的资源就绪确认","description":"把资源已转交的确认交给下一步。下一步继续使用入口收到的同一资源，不重复接收资源句柄。"}
     ],
     "edges": [
-      [
-        "start",
-        "inspect_submission"
-      ],
+      {"from":"start","to":"inspect_submission","schedule":true},
       {
         "from": "inspect_submission",
         "to": "validate_scope_and_operations",
@@ -179,7 +181,13 @@
       [
         "return_immediate_result",
         "end"
-      ]
+      ],
+      ["start","retain_host_resources"],
+      {"from":"retain_host_resources_signal","to":"inspect_submission","schedule":true},
+      {"from":"retain_host_resources","to":"prepare_workbench_commit","schedule":false},
+      {"from":"retain_host_resources","to":"prepare_application","schedule":false},
+      {"from":"retain_host_resources","to":"apply_api_blocks","schedule":false},
+      {"from":"retain_host_resources","to":"return_applied_result","schedule":false}, {"from":"retain_host_resources","to":"retain_host_resources_signal","schedule":true}
     ],
     "outputs": [
       {

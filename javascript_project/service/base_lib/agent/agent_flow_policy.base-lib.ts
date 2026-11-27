@@ -19,6 +19,7 @@ export const era_service_agent_flow_policy = defineBaseLib({
     }
   ],
   "dependencies": [
+    "era.service.agent_stage_layout",
     "era.service.agent_flow_types",
     "era.service.agent_configuration",
     "era.service.mk_engine",

@@ -1,0 +1,2 @@
+import {defineBaseLib} from "@vibeflow/plugin";
+export const businessProgress=defineBaseLib({id:"era.workflow.progress",display_name:"原业务算法的局部请求进度",description:"保存一次计算在原算法中的位置，接回实际结果后继续；通信、并发和停止仍由正式图负责，不保存Node context。",version:"1.0.0",implementations:[{language:"typescript",targets:["browser","node"],source:{kind:"file",ref:"base_lib/workflow_progress/progress.ts"}}],dependencies:[],rulesets:["vibeflow.base_lib"]});

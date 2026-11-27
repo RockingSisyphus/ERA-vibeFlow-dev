@@ -13,7 +13,7 @@ export const selectPosition = defineNode({
         "type": "era.sync.preview.state",
         "cardinality": "exactly_one",
         "display_name": "只读历史重算的当前位置和变量"
-      }
+      }, {"type":"era.workflow.resources_transferred","cardinality":"exactly_one","display_name":"本段实例资源已转交"}
     ],
     "provides": [
       {
@@ -32,7 +32,7 @@ export const selectPosition = defineNode({
     "input_semantics": {
       "era.sync.preview.state": [
         "记录预演正在处理的消息、正文位置、变量和函数，供按顺序还原下一生成阶段的起点。"
-      ]
+      ], "era.workflow.resources_transferred":["宿主资源已沿本图的资源边交给后继步骤，之后才展开本节点的业务分支。"]
     },
     "output_semantics": {
       "position": [

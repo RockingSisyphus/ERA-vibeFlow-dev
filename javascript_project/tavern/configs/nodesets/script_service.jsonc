@@ -8,7 +8,8 @@
       "type": "era.tavern.call.frame",
       "cardinality": "exactly_one",
       "display_name": "资源就绪后运行唯一 ERA 主服务的请求和已有进度"
-    }
+    },
+    {"type":"era.workflow.host_resources","cardinality":"exactly_one","display_name":"所属 ERA 实例的本地资源"}
   ],
   "provides": [
     {
@@ -25,9 +26,10 @@
         "type": "era.tavern.call.frame",
         "required": true,
         "display_name": "资源就绪后运行唯一 ERA 主服务的请求和已有进度"
-      }
+      },
+      {"key":"host_resources","type":"era.workflow.host_resources","required":true,"display_name":"所属 ERA 实例的本地资源"}
     ],
-    "max_steps": 6,
+    "max_steps": 7,
     "nodes": [
       {
         "id": "start",
@@ -39,26 +41,25 @@
         "id": "wait_owner",
         "display_name": "等待本实例页面资源准备就绪",
         "description": "在“资源就绪后运行唯一 ERA 主服务”流程中，等待资源管理分支完成运行资源登记，取消时结束等待。后续主服务只在同一实例资源可用后启动，避免尚未就绪就调用页面能力。",
-        "definition_id": "era.tavern.owned.wait_owner"
+        "definition_id": "era.tavern.owned.wait_owner",
+        "join_policy": "all"
       },
       {
         "id": "run_service",
         "display_name": "运行主服务并等待它真正结束",
-        "description": "在“资源就绪后运行唯一 ERA 主服务”流程中，启动本实例唯一的 ERA 主服务，连接实例与当前调用的取消。等待实际结束后发起本实例停止收尾，让其他职责分支也能退出。",
-        "definition_id": "era.tavern.owned.run_script_service"
+        "description": "展开后查看官方Call、Wait、Kill和双向消息分支；唯一主服务结束与全部通信清理完成后才返回。",
+        "definition_id": "era.tavern.flow.workflow_service"
       },
       {
         "id": "end",
         "display_name": "结束资源就绪后运行唯一 ERA 主服务",
         "description": "标明“资源就绪后运行唯一 ERA 主服务”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
         "definition_id": "era.tavern.initialize.end"
-      }
+      },
+      {"id":"retain_host_resources","definition_id":"era.tavern.retain_host_resources","display_name":"保留所属实例的资源","description":"先取出本次运行或本轮迭代收到的本地资源，供下面需要组织工作流通信的步骤使用。资源不写入业务消息。"}
     ],
     "edges": [
-      [
-        "start",
-        "wait_owner"
-      ],
+      {"from":"start","to":"wait_owner","schedule":true},
       [
         "wait_owner",
         "run_service"
@@ -66,7 +67,10 @@
       [
         "run_service",
         "end"
-      ]
+      ],
+      ["start","retain_host_resources"],
+      {"from":"retain_host_resources","to":"wait_owner","transfer":false,"schedule":true},
+      {"from":"retain_host_resources","to":"run_service","schedule":false}
     ],
     "outputs": [
       {

@@ -960,20 +960,6 @@
       "severity": "warning"
     },
     {
-      "debt": 1,
-      "fingerprint": "02194e5a4bc7c40c7dc0a9824a08ce0377543eb5e40fc44e0c48a5d38d9c1dce",
-      "objectId": "src/ERA变量框架/utils/log#function:Logger.error",
-      "ruleId": "STRUCT_DUPLICATE_FUNCTION",
-      "severity": "warning"
-    },
-    {
-      "debt": 1,
-      "fingerprint": "482058877387a555f0f7f6cb0d73a7fede80bb371f8b53a5af2122445143345f",
-      "objectId": "src/ERA变量框架/utils/log#function:Logger.warn",
-      "ruleId": "STRUCT_DUPLICATE_FUNCTION",
-      "severity": "warning"
-    },
-    {
       "debt": 3,
       "fingerprint": "818e213fa80946d8e7ed2dec2542424347345ff32cbf4e38f9979a352365df47",
       "objectId": "src/ERA变量框架/utils/data#function:parseJsonl",

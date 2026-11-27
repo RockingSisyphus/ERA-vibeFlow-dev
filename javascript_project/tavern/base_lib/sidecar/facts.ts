@@ -29,3 +29,8 @@ export function snapshotFacts(input: any): any {
   return {sidecarId: id, identity: owner, revision: snapshot.revision, statData: structuredClone(state.statData),
     statFunc: structuredClone(state.statFunc), eraMeta: structuredClone(state.eraMeta)};
 }
+/** Tavern 实例内部按指定聊天取得正在逐块更新的变量投影。 */
+export function workingSnapshot(session: any, owner: any): any {
+  const working = session.workingByChat?.get(workingKey(owner));
+  return working ? snapshotFacts({sidecarId: working.record.sidecarId, snapshot: working.record}) : null;
+}

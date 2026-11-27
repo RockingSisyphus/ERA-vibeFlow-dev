@@ -1,0 +1,113 @@
+{
+  "type_key": "era.native_candidate.persist",
+  "display_name": "按候选生命周期统一保存消息与变量",
+  "description": "读取本批实际写回目标的原生候选事实。可写时复用现有消息先行、Sidecar后置保存；生成未完则保留现有工作状态及记录并返回，目标失效沿历史恢复撤销旧效果。",
+  "requires": [
+    {
+      "type": "era.tavern.commit.request",
+      "cardinality": "exactly_one",
+      "display_name": "本批待保存的消息、变量及候选依据"
+    },
+    {"type":"era.workflow.host_resources","cardinality":"exactly_one","display_name":"所属 ERA 实例的本地资源"}
+  ],
+  "provides": [
+    {
+      "key": "sync_commit_result",
+      "type": "era.tavern.commit.result",
+      "display_name": "已经保存、候选待保存或目标失效的结论"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "request",
+        "type": "era.tavern.commit.request",
+        "required": true,
+        "display_name": "本批待保存的消息、变量及候选依据"
+      },
+      {"key":"host_resources","type":"era.workflow.host_resources","required":true,"display_name":"所属 ERA 实例的本地资源"}
+    ],
+    "max_steps": 19,
+    "nodes": [
+      {
+        "id": "start",
+        "definition_id": "era.service.terminal",
+        "display_name": "开始按候选状态处理保存",
+        "description": "接收本批消息、变量和候选来源依据。"
+      },
+      {
+        "id": "choose_candidate_write",
+        "definition_id": "era.native_candidate.plan",
+        "display_name": "判断本批目标能否实际写回",
+        "description": "只检查本批实际要写的消息，区分可写、原生未完成和目标失效；不因聊天中另有生成而阻塞其他历史楼层。"
+      },
+      {
+        "id": "write_materialized_candidate",
+        "definition_id": "era.communication.tavern_variables_commit",
+        "display_name": "保存可写候选并确认聊天和Sidecar",
+        "description": "复用现有消息先保存、Sidecar后保存的真实通信流程。宿主在副作用前再次核对目标；若此时转入原生生成，保存流程保留待写正文并直接交回尚未写入的真实结论。成功、待保存和失败均只交回该流程形成的一份结果。"
+      },
+      {
+        "id": "retain_pending_candidate",
+        "definition_id": "era.native_candidate.retain",
+        "display_name": "保留本候选待写记录并结束当前处理",
+        "description": "复用现有WorkingState保留有序记录、操作结果和来源，不新增第二份变量权威状态。等待结束事实通过下一次Service任务继续，当前任务不等待未来事件；明确返回deferred且不宣称持久化。"
+      },
+      {
+        "id": "settle_changed_candidate",
+        "definition_id": "era.native_candidate.invalid",
+        "display_name": "结算已取消或不再选中的候选",
+        "description": "目标已被取消、切换或替换时拒绝旧写回，交既有历史同步撤销其未保存效果；不把记录迁到新候选，不改变用户选择。"
+      },
+      {
+        "id": "end",
+        "definition_id": "era.service.terminal",
+        "display_name": "交回本次候选保存结论",
+        "description": "将保存成功、待保存或失效结论交回原任务。"
+      },
+      {"id":"retain_host_resources","definition_id":"era.service.retain_host_resources","display_name":"保留所属实例的资源","description":"先取出本次运行或本轮迭代收到的本地资源，供下面需要组织工作流通信的步骤使用。资源不写入业务消息。"}
+    ],
+    "edges": [
+      {"from":"start","to":"choose_candidate_write","schedule":true},
+      {
+        "from": "choose_candidate_write",
+        "to": "write_materialized_candidate",
+        "when": "candidate_write_route == 'write'"
+      },
+      {
+        "from": "choose_candidate_write",
+        "to": "retain_pending_candidate",
+        "when": "candidate_write_route == 'defer'"
+      },
+      {
+        "from": "choose_candidate_write",
+        "to": "settle_changed_candidate",
+        "when": "candidate_write_route == 'invalid'"
+      },
+      [
+        "retain_pending_candidate",
+        "end"
+      ],
+      [
+        "settle_changed_candidate",
+        "end"
+      ],
+      [
+        "write_materialized_candidate",
+        "end"
+      ],
+      ["start","retain_host_resources"],
+      {"from":"retain_host_resources","to":"choose_candidate_write","schedule":true},
+      {"from":"retain_host_resources","to":"write_materialized_candidate","schedule":false}
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.commit.result",
+        "cardinality": "exactly_one",
+        "display_name": "已经保存、候选待保存或目标失效的结论",
+        "as": "candidatePersistenceResult"
+      }
+    ]
+  }
+}

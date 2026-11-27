@@ -1,0 +1,141 @@
+{
+  "type_key": "era.migration.compaction.execute.workflow",
+  "display_name": "执行原指令，公式交给独立计算流程",
+  "description": "按原指令顺序推进原文重放，在每个实际公式或函数库验证位置提出下一次请求；普通变量操作仍由本地解释规则处理。 展开后可查看准备、原生同步调用、结果接回和继续判断。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.command_compaction.parsed",
+      "cardinality": "exactly_one",
+      "display_name": "按原顺序识别的正文和指令段"
+    }
+  ],
+  "provides": [
+    {
+      "key": "trace",
+      "type": "era.command_compaction.semantic_trace",
+      "display_name": "原指令的计算结果和依赖记录"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "sync",
+    "inputs": [
+      {
+        "key": "input0",
+        "type": "era.command_compaction.parsed",
+        "required": true,
+        "display_name": "按原顺序识别的正文和指令段"
+      }
+    ],
+    "max_steps": 8,
+    "nodes": [
+      {
+        "id": "start",
+        "definition_id": "era.command_compaction.terminal",
+        "display_name": "开始本段处理",
+        "description": "本步骤用于“执行原指令，公式交给独立计算流程”：标明本段流程的范围；业务结果由实际处理步骤提供。"
+      },
+      {
+        "id": "prepare",
+        "display_name": "准备本段工作并判断是否需要调用",
+        "description": "本步骤用于“执行原指令，公式交给独立计算流程”：按原指令顺序推进原文重放，在每个实际公式或函数库验证位置提出下一次请求；普通变量操作仍由本地解释规则处理。",
+        "definition_id": "era.migration.compaction.execute.workflow.prepare"
+      },
+      {
+        "id": "invoke_loop",
+        "display_name": "按原顺序完成本段所需的同步调用",
+        "description": "本步骤用于“执行原指令，公式交给独立计算流程”：每次只调用当前确有需要的目标，接回结果后才判断下一次；次数由实际输入决定，不并发，不预先计算后续请求。",
+        "definition_id": "vibeflow.loop.while",
+        "requires": [
+          {
+            "type": "era.migration.compaction.execute.state",
+            "cardinality": "exactly_one",
+            "display_name": "仅保留在当前工作流的业务进度"
+          }
+        ],
+        "provides": [
+          {
+            "key": "final_state",
+            "type": "era.migration.compaction.execute.final",
+            "display_name": "本段全部原生调用完成后的业务进度"
+          }
+        ],
+        "loop": {
+          "body": "era.migration.compaction.execute.workflow.request_step",
+          "max_iterations": null,
+          "stop_when": {
+            "from": "done",
+            "equals": true
+          },
+          "carry": [
+            {
+              "from": "era.migration.compaction.execute.state",
+              "as": "state",
+              "update": "next_state"
+            }
+          ],
+          "outputs": [
+            {
+              "from": "next_state",
+              "as": "final_state"
+            }
+          ]
+        }
+      },
+      {
+        "id": "skip_call",
+        "display_name": "无需跨流程调用，直接保留本段结果",
+        "description": "本步骤用于“执行原指令，公式交给独立计算流程”：普通赋值、无候选或已发现输入问题时不调用目标，按原语义继续处理或返回诊断。",
+        "definition_id": "era.migration.compaction.execute.workflow.skip_call"
+      },
+      {
+        "id": "finish",
+        "display_name": "交出本段最终业务结果",
+        "description": "本步骤用于“执行原指令，公式交给独立计算流程”：读取本地完成进度，按原合同形成变量、诊断、函数候选或压缩结果；提交、保存和是否采用仍由原调用方决定。",
+        "definition_id": "era.migration.compaction.execute.workflow.finish"
+      },
+      {
+        "id": "end",
+        "definition_id": "era.command_compaction.terminal",
+        "display_name": "完成本段处理",
+        "description": "本步骤用于“执行原指令，公式交给独立计算流程”：标明本段流程的范围；业务结果由实际处理步骤提供。"
+      }
+    ],
+    "edges": [
+      [
+        "start",
+        "prepare"
+      ],
+      {
+        "from": "prepare",
+        "to": "invoke_loop",
+        "when": "needs_call == true"
+      },
+      {
+        "from": "prepare",
+        "to": "skip_call",
+        "when": "needs_call == false"
+      },
+      [
+        "invoke_loop",
+        "finish"
+      ],
+      [
+        "skip_call",
+        "finish"
+      ],
+      [
+        "finish",
+        "end"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.command_compaction.semantic_trace",
+        "cardinality": "exactly_one",
+        "display_name": "原指令的计算结果和依赖记录",
+        "as": "trace"
+      }
+    ]
+  }
+}

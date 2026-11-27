@@ -1,13 +1,10 @@
+import { businessWorkflowNode } from './business-workflow-node';
 import { run as prepareWork } from './prepare-block-work-fixture';
 import { expect, it } from 'vitest';
 import { contextWith, identity, sidecarId } from './memory-lifecycle-fixture';
 import { recordFor } from '../../../javascript_project/service/base_lib/sidecar_binding';
-import { run as prepare } from '../../../javascript_project/service/nodes/agent/prepare_stage_blocks';
 import { run as advance } from './message-block-fixture';
-import { PublishBlockApplicationNode as publish } from '../../../javascript_project/service/nodes/sync/shared_block_state_adapters';
-import { FinishStageBlocksNode as finish } from '../../../javascript_project/service/nodes/agent/finish_stage_blocks.ts';
 import { parsePlanningOutput } from '../../../javascript_project/service/base_lib/agent/agent_generation_session';
-
 const edit = (value: unknown) => `<VariableEdit>${JSON.stringify({ hp: value })}</VariableEdit>`;
 async function execute(stage: string, text: string, extra: any = {}) {
   const context = contextWith('previous');
@@ -71,18 +68,35 @@ async function execute(stage: string, text: string, extra: any = {}) {
       },
     },
   };
-  let state = prepare({ 'era.agent.generation.raw': { value: outcome } }, {}, { capabilities }).block_step_state;
+  let state = (
+    await businessWorkflowNode(
+      'era.lifecycle.prepare_stage_blocks',
+      { 'era.agent.generation.raw': { value: outcome } },
+      {},
+      { capabilities },
+    )
+  ).block_step_state;
   for (let count = 0; !state.done; count++) {
     if (count > 100) throw new Error('candidate stalled');
     const pending = (await advance({ 'era.sync.block.step.state': { value: state } }, {}, { capabilities }))
       .block_step_pending;
     const work = prepareWork({ 'era.sync.block.step.pending': { value: pending } }).expression_command_result;
-    state = publish({ 'era.command_compaction.result': { value: work } }, {}, { capabilities }).block_step_state_after;
+    state = (
+      await businessWorkflowNode(
+        'era.lifecycle.publish_block_application',
+        { 'era.command_compaction.result': { value: work } },
+        {},
+        { capabilities },
+      )
+    ).block_step_state_after;
   }
-  const result = finish(
-    { 'era.sync.block.step.state.next': { value: state } },
-    {},
-    { capabilities },
+  const result = (
+    await businessWorkflowNode(
+      'era.lifecycle.finish_stage_blocks',
+      { 'era.sync.block.step.state.next': { value: state } },
+      {},
+      { capabilities },
+    )
   ).applied_generation_outcome;
   return { state, working, session, result, snapshots, initial };
 }
@@ -108,4 +122,13 @@ it('候选操作失败撤销已发布的前缀和日志，不执行后缀，不�
 it('规划无前缀也执行JSON calls，不跳过空块边界', async () => {
   const result = await execute('planning', '{"storyPlan":{},"calls":[{"function":"max","args":[2,5]}]}');
   expect(result.session.functionResults[0].result).toBe(5);
+});
+it('重开恢复的开头只有空行时，规划落稿不把空行当成历史变化', async () => {
+  const result = await execute('planning', '{"storyPlan":{},"calls":[]}', {
+    baseMessage: '\n',
+    planningDraft: '',
+  });
+  expect(result.result.status).not.toBe('failed');
+  expect(result.session.planningDraft).toBe('');
+  expect(result.result).toHaveProperty('stageBoundary');
 });

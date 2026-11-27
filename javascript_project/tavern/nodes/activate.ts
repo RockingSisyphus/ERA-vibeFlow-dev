@@ -21,11 +21,13 @@ export function Allow(inputs: any, params: any): any {
       releases.push(s.resources.listen(type,handler,order));
     };
     try {
-      if(s.registerTechnicalProjection)releases.push(s.resources.keep(s.registerTechnicalProjection()));
-      register(s.api.tavern_events.GENERATION_ENDED,"tavern","normal");
+      if(s.activateTechnicalPresentation)releases.push(s.resources.keep(s.activateTechnicalPresentation()));
       const buttons=[["写入变量修改","manual_write"],["手动同步状态","manual_sync"],["强制完全重算","manual_full_sync"]];
       const buttonTypes=new Set(buttons.map((b:any)=>b[1]));
-      for(const item of s.eventDefinitions)if(!buttonTypes.has(item.type))register(item.type,"tavern",item.listenerOrder);
+      for(const item of s.eventDefinitions){
+        if(buttonTypes.has(item.type))continue;
+        register(item.nativeType??item.type,"tavern",item.listenerOrder,item.type);
+      }
       for(const [label,type] of buttons)register(s.api.getButtonEvent(label),"ui","normal",type);
       s.unsubscribe=s.resources.keep(releaseAll);
     }catch(error){releaseAll();throw error;}

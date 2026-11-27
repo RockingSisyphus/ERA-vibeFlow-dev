@@ -11,8 +11,16 @@
         "document": "ARCHITECTURE.sync.jsonc"
       },
       {
-        "workflow": "configs/era.tavern.async.jsonc",
-        "document": "ARCHITECTURE.async.jsonc"
+        "workflow": "configs/era.tavern.operation.jsonc",
+        "document": "ARCHITECTURE.operation.jsonc"
+      },
+      {
+        "workflow": "configs/era.tavern.runtime.jsonc",
+        "document": "ARCHITECTURE.runtime.jsonc"
+      },
+      {
+        "workflow": "configs/era.tavern.parallel_reads.jsonc",
+        "document": "ARCHITECTURE.parallel_reads.jsonc"
       }
     ]
   }

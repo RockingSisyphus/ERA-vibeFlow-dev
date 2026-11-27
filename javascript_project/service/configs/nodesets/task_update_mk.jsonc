@@ -1,13 +1,14 @@
 {
   "type_key": "era.task.update_mk",
   "display_name": "确认消息历史身份准备的结果",
-  "description": "消息身份标识把聊天消息与变量变更记录对应起来，本流程接收任务准备阶段已有的标识、占位及写入结论。检查后向原事件返回成功、无变化或失败确认，供批次汇总。",
+  "description": "消息标记先在派发阶段准备，再与变量同步复用同一候选保存流程；原生未完成时保留标记，已有候选照常保存。",
   "requires": [
     {
       "type": "era.step.request.routed",
       "cardinality": "exactly_one",
       "display_name": "当前任务及已读取的聊天资料"
-    }
+    },
+    {"type":"era.workflow.host_resources","cardinality":"exactly_one","display_name":"所属 ERA 实例的本地资源"}
   ],
   "provides": [
     {
@@ -24,9 +25,10 @@
         "type": "era.step.request.routed",
         "display_name": "当前任务及已读取的聊天资料",
         "required": true
-      }
+      },
+      {"key":"host_resources","type":"era.workflow.host_resources","required":true,"display_name":"所属 ERA 实例的本地资源"}
     ],
-    "max_steps": 6,
+    "max_steps": 19,
     "nodes": [
       {
         "id": "start",
@@ -35,10 +37,23 @@
         "definition_id": "era.service.terminal"
       },
       {
-        "id": "consume_prepared_mk_context",
-        "display_name": "读取任务准备时已有的消息标识结果",
-        "description": "在“确认消息历史身份准备的结果”流程中，取出任务准备阶段已经生成的消息标识、显示占位和实际写入结论。将这些已有成果交给标识任务结算，避免重复计算和保存。",
-        "definition_id": "era.mk.consume_prepared"
+        "id": "prepare_mk_save",
+        "definition_id": "era.communication.candidate_identity",
+        "display_name": "把消息标记整理为统一保存请求",
+        "description": "从派发资料中取出标记、源聊天与候选身份，整理为共用保存请求；仅待写标记不会阻塞已保存变量基线的ready。",
+        "join_policy": "all"
+      },
+      {
+        "id": "persist_mk_candidate",
+        "definition_id": "era.native_candidate.persist",
+        "display_name": "与变量提交共用候选保存流程",
+        "description": "读取本批实际写回目标的原生候选事实。可写时复用现有消息先行、Sidecar后置保存；生成未完则保留现有工作状态及记录并返回，目标失效沿历史恢复撤销旧效果。"
+      },
+      {
+        "id": "prepare_mk_result",
+        "definition_id": "era.native_candidate.identity_result",
+        "display_name": "区分消息身份准备与实际保存结果",
+        "description": "将统一保存结果交给原标记任务；已保存、待保存与失效保持不同事实，生成屏障不等待未来生成结束。"
       },
       {
         "id": "build_mk_result",
@@ -51,21 +66,30 @@
         "display_name": "结束确认消息历史身份准备的结果",
         "description": "标明“确认消息历史身份准备的结果”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
         "definition_id": "era.service.terminal"
-      }
+      },
+      {"id":"retain_host_resources","definition_id":"era.service.retain_host_resources","display_name":"保留所属实例的资源","description":"先取出本次运行或本轮迭代收到的本地资源，供下面需要组织工作流通信的步骤使用。资源不写入业务消息。"}
     ],
     "edges": [
+      {"from":"start","to":"prepare_mk_save","schedule":true},
       [
-        "start",
-        "consume_prepared_mk_context"
+        "prepare_mk_save",
+        "persist_mk_candidate"
       ],
       [
-        "consume_prepared_mk_context",
+        "persist_mk_candidate",
+        "prepare_mk_result"
+      ],
+      [
+        "prepare_mk_result",
         "build_mk_result"
       ],
       [
         "build_mk_result",
         "end"
-      ]
+      ],
+      ["start","retain_host_resources"],
+      {"from":"retain_host_resources","to":"prepare_mk_save","transfer":false,"schedule":true},
+      {"from":"retain_host_resources","to":"persist_mk_candidate","schedule":false}
     ],
     "outputs": [
       {
@@ -75,5 +99,6 @@
         "as": "updateMkTaskResult"
       }
     ]
-  }
+  },
+  "nodeset_imports": []
 }

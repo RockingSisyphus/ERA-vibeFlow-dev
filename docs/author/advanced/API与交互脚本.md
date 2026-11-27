@@ -17,7 +17,7 @@
 | 接口                                       | 作用与RPG示例                                                                       |
 | ------------------------------------------ | ----------------------------------------------------------------------------------- |
 | `get(options?)`                            | 同步读快照；取得当前金币。loading时不要沿用上一聊天的数据                           |
-| `ready(options?)`                          | 等待就绪；普通接口还等待相应保存完成，函数位置接口读取当前位置，不强制落盘          |
+| `ready(options?)`                          | 等待当前已接收操作处理与保存完成；函数位置接口读取当前位置，不强制落盘          |
 | `subscribe(listener)`                      | 订阅发布的状态，返回注销函数；刷新金币文字。通知不保证每个内存中间块都单独呈现      |
 | `commit(operations,{scope?})`              | 按顺序应用操作；购买后扣钱并增加食物                                                |
 | `sync({mode?})`                            | auto默认同步、latest重算末楼、full完整重算；修复编辑后的余额                        |
@@ -31,6 +31,10 @@
 | `statusbar.clearSelection()`               | 撤销额外旧楼选择，回到范围策略                                                      |
 
 get/ready的 `force`、`overflow: 'placeholder'|'empty'|'hidden'` 用于托管历史显示。状态包含status、statData（含元数据）、stat/statWithoutMeta、statFunc、identity、revision、message_id、mk，以及日志和元数据投影；普通业务优先读取statData和statFunc，不依赖内部追踪数组自己恢复历史。
+
+普通变量提交把记录追加到消息，酒馆保持已有 iframe。外部脚本向已完成的楼层提交成功后，可立即打开该楼编辑，编辑器会读到包含事务的正文。向已经打开编辑器的目标楼层提交时，接口会返回 `ERA_API_MESSAGE_EDITING`，作者可在用户保存或取消编辑后重试。托管状态栏中的 ERA 文本宏随发布的快照原地更新。自定义界面可在 `ERA.ready()` 后用 `ERA.subscribe(render)` 更新现有节点。新回复首次缺少状态栏标记时，ERA 补写标记并请酒馆呈现该楼。
+
+外部 `ERA.get()` 在重算期间读取最近一次完整结果。作者函数通过 `ERA.forCall(parameters)` 读取执行到调用位置时的变量，等自己的 `commit` 返回后即可读到更新。函数返回后，ERA 接着处理下一块正文，整轮完成后统一保存。
 
 ## 提交与读回
 
@@ -58,7 +62,15 @@ console.log(receipt.status, ERA.get().statData.era_demo.rpg);
 
 操作项支持insert/edit/delete/functionInsert/functionEdit/functionDelete。成功回执含 `status: 'committed'|'skipped'`、scope、messageId和state。**commit成功表示操作已应用到内存，不表示聊天与Sidecar已完成持久化。** 多次不await提交仍按接收顺序处理；下一次计算依赖结果时先await。一次提交不额外承诺所有业务变化原子回滚。
 
-完整任务结束或保存窗口到期时批量保存，先聊天、后Sidecar。用户强制关闭页面后，恢复只依据已保存聊天；纯内存请求不会凭空补造。编辑、删除、Swipe、切聊天或取消会使旧目标失效，错误会通过Promise返回，不覆盖新内容。
+数组逐项写入使用相同的 `$arrayOps` 载荷。下面把已经存在的第一件装备的耐久改成 8。路径中的 0 是数组下标，若对象键的名字是 0，则写成字符串 `"0"`。数值保护和整数组日志仍按[数组与 Meta 规则](变量结构与保护.md#按位置操作数组)处理。
+
+```js
+await ERA.commit([
+  { edit: { $arrayOps: [{ path: ["装备", 0, "耐久"], value: 8 }] } },
+], { scope: "always" });
+```
+
+完整任务结束或保存窗口到期时批量保存，先聊天、后 Sidecar。外部脚本如果要在提交后马上刷新页面，可先等待 `await ERA.ready()` 确认已保存状态。用户强制关闭页面后，恢复只依据已保存聊天。编辑、删除、Swipe、切聊天或取消会使旧目标失效，错误会通过 Promise 返回。
 
 ## scope控制哪一轮允许写入
 

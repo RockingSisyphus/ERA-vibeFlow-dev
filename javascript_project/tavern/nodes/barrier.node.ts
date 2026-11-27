@@ -28,7 +28,7 @@ export const era_tavern_barrier_wait_await_receipts = defineNode({
 
 export const era_tavern_barrier_wait_cleanup_watchdog = defineNode({
   "display_name": "等待结束后清理提醒和已消费失败",
-  "description": "本次事件等待结束后，取消对应的超时告警安排，并移除本次范围内已经汇总的失败记录。避免后续生成重复报告相同问题，计时告警本身不会提前放行等待。",
+  "description": "事件等待结束后取消对应告警；仅生成屏障消费其已报告范围内的失败，普通状态读取保留这些记录供生成前报告。仅生成屏障将同一次仍处于准备阶段的候选标记为正在生成，随后由宿主接手。计时告警不提前放行等待。",
   "version": "0.1.0",
   "flow_kind": "data_store",
   "contract": {"requires":[{"type":"era.tavern.frame.barrier_wait.await_handoff","cardinality":"exactly_one","display_name":"等待结束后清理提醒和已消费失败的请求和已有进度"}],"provides":[{"key":"era_tavern_barrier_wait_cleanup_watchdog_frame","type":"era.tavern.call.frame","display_name":"等待结束后清理提醒和已消费失败的处理进度及结果"}],"params_schema":{"outputKeys":{"type":"object"}},"params_defaults":{"outputKeys":{"frame":"era_tavern_barrier_wait_cleanup_watchdog_frame"}},"input_semantics":{"era.tavern.frame.barrier_wait.await_handoff":["保留“等待结束后清理提醒和已消费失败”对应的实例、请求及已经形成的进度，供本步骤处理并延续同一次请求。"]},"output_semantics":{"era_tavern_barrier_wait_cleanup_watchdog_frame":["保留“等待结束后清理提醒和已消费失败”对应的实例、请求及已经形成的进度，交给后续处理或结果返回。"]}},
@@ -54,11 +54,11 @@ export const era_tavern_barrier_wait_report_barrier = defineNode({
 });
 
 export const era_tavern_barrier_wait_snapshot_receipts = defineNode({
-  "display_name": "确定开始生成前需要等哪些事件",
-  "description": "记录指定事件序号及之前仍在处理或曾失败的事件，保留本次等待的起点。后续只等待这段已经确定的范围，确保生成使用相关事件处理后的状态。",
+  "display_name": "固定本次读取或生成要等哪些事件",
+  "description": "捕获指定序号及之前仍在处理或已经失败的回执和等待起点。供状态读取或生成屏障等待固定范围，不加入之后才到达的事件，也不发起同步操作。",
   "version": "0.1.0",
   "flow_kind": "data_store",
-  "contract": {"requires":[{"type":"era.tavern.call.frame","cardinality":"exactly_one","display_name":"确定开始生成前需要等哪些事件的请求和已有进度"}],"provides":[{"key":"era_tavern_barrier_wait_snapshot_receipts_frame","type":"era.tavern.frame.barrier_wait.snapshot_receipts","display_name":"确定开始生成前需要等哪些事件的处理进度及结果"}],"params_schema":{"outputKeys":{"type":"object"}},"params_defaults":{"outputKeys":{"frame":"era_tavern_barrier_wait_snapshot_receipts_frame"}},"input_semantics":{"era.tavern.call.frame":["保留“确定开始生成前需要等哪些事件”对应的实例、请求及已经形成的进度，供本步骤处理并延续同一次请求。"]},"output_semantics":{"era_tavern_barrier_wait_snapshot_receipts_frame":["保留“确定开始生成前需要等哪些事件”对应的实例、请求及已经形成的进度，交给后续处理或结果返回。"]}},
+  "contract": {"requires":[{"type":"era.tavern.call.frame","cardinality":"exactly_one","display_name":"固定本次读取或生成要等哪些事件的请求和已有进度"}],"provides":[{"key":"era_tavern_barrier_wait_snapshot_receipts_frame","type":"era.tavern.frame.barrier_wait.snapshot_receipts","display_name":"固定本次读取或生成要等哪些事件的处理进度及结果"}],"params_schema":{"outputKeys":{"type":"object"}},"params_defaults":{"outputKeys":{"frame":"era_tavern_barrier_wait_snapshot_receipts_frame"}},"input_semantics":{"era.tavern.call.frame":["保留“固定本次读取或生成要等哪些事件”对应的实例、请求及已经形成的进度，供本步骤处理并延续同一次请求。"]},"output_semantics":{"era_tavern_barrier_wait_snapshot_receipts_frame":["保留“固定本次读取或生成要等哪些事件”对应的实例、请求及已经形成的进度，交给后续处理或结果返回。"]}},
   "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/barrier.ts","export":"SnapshotReceipts"}}],
   "rulesets": ["vibeflow.data_store"],
   "presentation": {"shape":"rect"},

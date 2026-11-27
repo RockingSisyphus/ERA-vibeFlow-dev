@@ -1,0 +1,146 @@
+{
+  "type_key": "era.communication.api_prepare_application",
+  "display_name": "为变量提交确定目标消息和起点",
+  "description": "将已确认允许执行的操作组成当前消息要处理的内容，读取真实目标消息并建立执行起点。交给统一消息流程按原顺序计算，后续再安排保存和显示更新。 展开后查看该段实际需要的原生酒馆调用、等待和结果接回；具体操作仍按原业务分支选择。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.api.commit.validated",
+      "cardinality": "exactly_one",
+      "display_name": "已确认允许应用的有序操作"
+    },
+    {"type":"era.workflow.host_resources","cardinality":"exactly_one","display_name":"所属 ERA 实例的本地资源"}
+  ],
+  "provides": [
+    {
+      "key": "block_step_state",
+      "type": "era.sync.block.step.state",
+      "display_name": "当前消息位置及待处理变量指令"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "input0",
+        "type": "era.api.commit.validated",
+        "required": true,
+        "display_name": "已确认允许应用的有序操作"
+      },
+      {"key":"host_resources","type":"era.workflow.host_resources","required":true,"display_name":"所属 ERA 实例的本地资源"}
+    ],
+    "max_steps": 9,
+    "nodes": [
+      {
+        "id": "start",
+        "definition_id": "era.service.terminal",
+        "display_name": "开始本段酒馆操作",
+        "description": "本步骤用于“为变量提交确定目标消息和起点”：标明该段业务操作的范围；跨工作流调用在中间明确显示。"
+      },
+      {
+        "id": "prepare",
+        "display_name": "核对外部提交目标并准备有序操作",
+        "description": "外部提交指向已存在且稳定的楼层时，先检查目标楼层是否正在编辑。编辑中的楼层返回冲突。原生生成候选和行内作者提交沿用所属流程。通过检查后再将操作交给逐块处理。",
+        "definition_id": "era.communication.api_prepare_application.prepare"
+      },
+      {
+        "id": "operation_loop",
+        "definition_id": "vibeflow.loop.while",
+        "display_name": "按业务顺序完成实际需要的酒馆操作",
+        "description": "本步骤用于“为变量提交确定目标消息和起点”：每次接回当前操作的实际结果后才准备下一项，保持原错误和取消处理；不预先并发所有可能操作。",
+        "requires": [
+          {
+            "type": "era.communication.api_prepare_application.state",
+            "cardinality": "exactly_one",
+            "display_name": "本业务段的本地计算和酒馆操作进度"
+          },
+          {"type":"era.workflow.host_resources","cardinality":"exactly_one","display_name":"所属 ERA 实例的本地资源"}
+        ],
+        "provides": [
+          {
+            "key": "ready",
+            "type": "era.communication.api_prepare_application.ready",
+            "display_name": "已完成全部酒馆操作的业务进度"
+          }
+        ],
+        "loop": {
+          "body": "era.communication.api_prepare_application.step",
+          "max_iterations": null,
+          "stop_when": {
+            "from": "done",
+            "equals": true
+          },
+          "carry": [
+            {
+              "from": "era.communication.api_prepare_application.state",
+              "as": "state",
+              "update": "next_state"
+            },
+            {"from":"era.workflow.host_resources","as":"host_resources","update":"retained_host_resources"}
+          ],
+          "outputs": [
+            {
+              "from": "next_state",
+              "as": "ready"
+            }
+          ]
+        }
+      },
+      {
+        "id": "skip",
+        "display_name": "本段无需调用酒馆，直接继续",
+        "description": "本步骤用于“为变量提交确定目标消息和起点”：当前业务分支没有实际酒馆操作，保留本地处理结果，不发出空调用。",
+        "definition_id": "era.communication.api_prepare_application.skip"
+      },
+      {
+        "id": "finish",
+        "display_name": "交出本段原合同的结果",
+        "description": "本步骤用于“为变量提交确定目标消息和起点”：业务所需操作均已完成，按原合同交出数据、诊断及结果；资源令牌和通信信封不成为公共业务输出。",
+        "definition_id": "era.communication.api_prepare_application.finish"
+      },
+      {
+        "id": "end",
+        "definition_id": "era.service.terminal",
+        "display_name": "完成本段酒馆操作",
+        "description": "本步骤用于“为变量提交确定目标消息和起点”：标明该段业务操作的范围；跨工作流调用在中间明确显示。"
+      },
+      {"id":"retain_host_resources","definition_id":"era.service.retain_host_resources","display_name":"保留所属实例的资源","description":"先取出本次运行或本轮迭代收到的本地资源，供下面需要组织工作流通信的步骤使用。资源不写入业务消息。"}
+    ],
+    "edges": [
+      {"from":"start","to":"prepare","schedule":true},
+      {
+        "from": "prepare",
+        "to": "operation_loop",
+        "when": "needs_operation == 'call'"
+      },
+      {
+        "from": "prepare",
+        "to": "skip",
+        "when": "needs_operation == 'done'"
+      },
+      [
+        "operation_loop",
+        "finish"
+      ],
+      [
+        "skip",
+        "finish"
+      ],
+      [
+        "finish",
+        "end"
+      ],
+      ["start","retain_host_resources"],
+      {"from":"retain_host_resources","to":"prepare","schedule":true},
+      {"from":"retain_host_resources","to":"operation_loop","schedule":false}
+    ],
+    "outputs": [
+      {
+        "type": "era.sync.block.step.state",
+        "cardinality": "exactly_one",
+        "display_name": "当前消息位置及待处理变量指令",
+        "as": "block_step_state"
+      }
+    ]
+  }
+}

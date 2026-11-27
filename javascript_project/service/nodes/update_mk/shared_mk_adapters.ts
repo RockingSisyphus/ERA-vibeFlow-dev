@@ -56,145 +56,6 @@ export function AdaptLegacyStepNode(
   };
 }
 
-// Original node: nodes/update_mk/build_mk_commit.ts
-interface BuildMkCommit_Envelope<T> {
-  readonly value: T;
-}
-
-interface BuildMkCommit_Candidate {
-  readonly step: PlannedStepV1;
-  readonly disposition: "ready" | "failed";
-  readonly mk: string | null;
-  readonly messageUpdate: null | {
-    readonly messageId: number;
-    readonly content: string;
-  };
-  readonly metaUpdate: Readonly<Record<string, unknown>> | null;
-  readonly messageWriteRequired: boolean;
-  readonly variableWriteRequired: boolean;
-}
-
-export function BuildMkCommitNode(
-  inputs: Readonly<{
-    "era.mk.candidate.routed": BuildMkCommit_Envelope<unknown>;
-  }>,
-): any {
-  const candidate = inputs["era.mk.candidate.routed"]
-    .value as BuildMkCommit_Candidate;
-  if (
-    candidate.disposition !== "ready" ||
-    candidate.mk === null ||
-    candidate.metaUpdate === null ||
-    (!candidate.messageWriteRequired && !candidate.variableWriteRequired)
-  ) {
-    throw new TypeError("MK 提交分支收到不可提交候选。 ");
-  }
-  if (candidate.messageWriteRequired && candidate.messageUpdate === null) {
-    throw new TypeError("MK 消息写入缺少明确文本请求。");
-  }
-  return {
-    mk_commit_request: {
-      schemaVersion: 1,
-      step: candidate.step,
-      mk: candidate.mk,
-      messageUpdate: candidate.messageUpdate,
-      metaUpdate: candidate.metaUpdate,
-      messageWriteRequired: candidate.messageWriteRequired,
-      variableWriteRequired: candidate.variableWriteRequired,
-    },
-  };
-}
-
-// Original node: nodes/update_mk/consume_prepared_context.ts
-interface ConsumePreparedContext_Envelope<T> {
-  readonly value: T;
-}
-function ConsumePreparedContext_isRecord(
-  value: unknown,
-): value is Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
-export function ConsumePreparedContextNode(
-  inputs: Readonly<{
-    "era.step.request.routed": ConsumePreparedContext_Envelope<unknown>;
-  }>,
-): any {
-  const step = inputs["era.step.request.routed"].value as PlannedStepV1;
-  if (step.kind !== "execute" || step.task.kind !== "update-mk") {
-    throw new TypeError("统一 MK 结果只接受 update-mk execute 步骤。");
-  }
-  const prepared = ConsumePreparedContext_isRecord(step.dispatchContext)
-    ? step.dispatchContext
-    : null;
-  const ready = prepared?.status === "ready";
-  const failure = ConsumePreparedContext_isRecord(prepared?.failure)
-    ? prepared.failure
-    : null;
-  return {
-    prepared_mk_outcome: {
-      schemaVersion: 1,
-      step,
-      status: ready
-        ? prepared?.messageChanged === true ||
-          prepared?.variablesChanged === true
-          ? "committed"
-          : "no-op"
-        : "failed",
-      mk:
-        typeof prepared?.processingMk === "string"
-          ? prepared.processingMk
-          : null,
-      messageChanged: prepared?.messageChanged === true,
-      variablesChanged: prepared?.variablesChanged === true,
-      failure: ready
-        ? null
-        : (failure ?? {
-            code: "ERA_UPDATE_MK_CONTEXT_FAILED",
-            message: "统一任务上下文准备失败。",
-            category: "domain",
-            retryable: false,
-          }),
-    },
-  };
-}
-
-// Original node: nodes/update_mk/preserve_mk.ts
-interface PreserveMk_Envelope<T> {
-  readonly value: T;
-}
-
-interface PreserveMk_MkFailure {
-  readonly code: string;
-  readonly message: string;
-  readonly category: "input" | "domain" | "tavern" | "cancelled";
-  readonly retryable: false;
-}
-
-interface PreserveMk_Candidate {
-  readonly step: PlannedStepV1;
-  readonly disposition: "ready" | "failed";
-  readonly mk: string | null;
-  readonly failure: PreserveMk_MkFailure | null;
-}
-
-export function PreserveMkNode(
-  inputs: Readonly<{ "era.mk.candidate.routed": PreserveMk_Envelope<unknown> }>,
-): any {
-  const candidate = inputs["era.mk.candidate.routed"]
-    .value as PreserveMk_Candidate;
-  return {
-    mk_noop_outcome: {
-      schemaVersion: 1,
-      step: candidate.step,
-      status: candidate.disposition === "failed" ? "failed" : "no-op",
-      mk: candidate.mk,
-      messageChanged: false,
-      variablesChanged: false,
-      failure: candidate.failure,
-    },
-  };
-}
-
 /** 本模块中的各导出分别由独立 Node descriptor 调用，执行分支仍由正式 Config 决定。原实现：nodes/update_mk/build_mk_result.ts。 */
 interface buildmkresultEnvelope<T> {
   readonly value: T;
@@ -210,7 +71,7 @@ interface MkFailure {
 interface CommitOutcome {
   readonly schemaVersion: 1;
   readonly step: PlannedStepV1;
-  readonly status: "committed" | "no-op" | "failed" | "fatal";
+  readonly status: "committed" | "deferred" | "no-op" | "failed" | "fatal";
   readonly mk: string | null;
   readonly messageChanged: boolean;
   readonly variablesChanged: boolean;
@@ -254,7 +115,7 @@ export function BuildMkResultNode(
   const settlements =
     step.kind === "execute"
       ? step.sources.map((source) => {
-          if (taskStatus === "committed" || taskStatus === "no-op") {
+          if (taskStatus === "committed" || taskStatus === "no-op" || taskStatus === "deferred") {
             return {
               eventId: source.event.eventId,
               sequence: source.event.sequence,

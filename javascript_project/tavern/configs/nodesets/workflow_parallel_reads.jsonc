@@ -1,0 +1,435 @@
+{
+  "type_key": "era.tavern.workflow.parallel_reads",
+  "display_name": "并行读取当前任务需要的页面资料",
+  "description": "保留初始化的五项并行读取，以及派发的两项或四项读取。只有当前Sidecar读取完成后，主Service才按其中编号另读存档；不会把原并行逻辑悄悄串行。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.read_group",
+      "cardinality": "exactly_one",
+      "display_name": "本次读取种类及本地页面资源"
+    }
+  ],
+  "provides": [
+    {
+      "key": "read_reply",
+      "type": "era.tavern.read_group.reply",
+      "display_name": "本次请求的全部实际读取结果"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "read_group",
+        "type": "era.tavern.read_group",
+        "required": true,
+        "display_name": "本次读取种类及本地页面资源"
+      }
+    ],
+    "max_steps": 33,
+    "nodes": [
+      {
+        "id": "start",
+        "definition_id": "era.tavern.initialize.start",
+        "display_name": "开始本次资料读取",
+        "description": "标明本次资料读取的范围；实际结果由读取及整理步骤提供。"
+      },
+      {
+        "id": "dispatch",
+        "display_name": "按原读取要求分发独立资料读取",
+        "description": "初始化同时读取身份、脚本变量、世界书、正则和开场白；派发按请求只读消息、身份及必要变量和Sidecar当前信息。这里只分发本次确有需要的读取，不读取未请求项目。",
+        "config": {
+          "max_concurrency": 7
+        },
+        "definition_id": "era.tavern.workflow.parallel_reads.dispatch"
+      },
+      {
+        "id": "prepare_identity",
+        "display_name": "确认本任务是否需要身份",
+        "description": "检查本次读取组是否包含身份，只为实际需要的项目准备原请求参数；其余项目明确跳过，不产生空调用。",
+        "definition_id": "era.tavern.workflow.parallel_reads.prepare_identity"
+      },
+      {
+        "id": "read_identity",
+        "display_name": "读取身份并等待实际IO结束",
+        "description": "沿用原身份读取参数、返回合同及资源原语；与本组其他实际读取共同运行。取消或出错也等待已启动IO和清理结束，不启动图外完成回调工作流。",
+        "definition_id": "era.tavern.workflow.read_slot.identity"
+      },
+      {
+        "id": "skip_identity",
+        "display_name": "本次不读取身份",
+        "description": "当前任务没有请求身份，不发起资源操作，交出未读取确认供本组汇合，不把未读取伪装为已有资料。",
+        "definition_id": "era.tavern.workflow.parallel_reads.skip_identity"
+      },
+      {
+        "id": "join_identity",
+        "display_name": "交出身份分支的唯一结果",
+        "description": "读取或跳过是互斥路径，只交出实际发生的一项确认，再参与本组全部分支的汇合。",
+        "definition_id": "era.tavern.workflow.parallel_reads.join_identity"
+      },
+      {
+        "id": "prepare_variables",
+        "display_name": "确认本任务是否需要脚本变量",
+        "description": "检查本次读取组是否包含脚本变量，只为实际需要的项目准备原请求参数；其余项目明确跳过，不产生空调用。",
+        "definition_id": "era.tavern.workflow.parallel_reads.prepare_variables"
+      },
+      {
+        "id": "read_variables",
+        "display_name": "读取脚本变量并等待实际IO结束",
+        "description": "沿用原脚本变量读取参数、返回合同及资源原语；与本组其他实际读取共同运行。取消或出错也等待已启动IO和清理结束，不启动图外完成回调工作流。",
+        "definition_id": "era.tavern.workflow.read_slot.variables"
+      },
+      {
+        "id": "skip_variables",
+        "display_name": "本次不读取脚本变量",
+        "description": "当前任务没有请求脚本变量，不发起资源操作，交出未读取确认供本组汇合，不把未读取伪装为已有资料。",
+        "definition_id": "era.tavern.workflow.parallel_reads.skip_variables"
+      },
+      {
+        "id": "join_variables",
+        "display_name": "交出脚本变量分支的唯一结果",
+        "description": "读取或跳过是互斥路径，只交出实际发生的一项确认，再参与本组全部分支的汇合。",
+        "definition_id": "era.tavern.workflow.parallel_reads.join_variables"
+      },
+      {
+        "id": "prepare_worldbook",
+        "display_name": "确认本任务是否需要世界书",
+        "description": "检查本次读取组是否包含世界书，只为实际需要的项目准备原请求参数；其余项目明确跳过，不产生空调用。",
+        "definition_id": "era.tavern.workflow.parallel_reads.prepare_worldbook"
+      },
+      {
+        "id": "read_worldbook",
+        "display_name": "读取世界书并等待实际IO结束",
+        "description": "沿用原世界书读取参数、返回合同及资源原语；与本组其他实际读取共同运行。取消或出错也等待已启动IO和清理结束，不启动图外完成回调工作流。",
+        "definition_id": "era.tavern.workflow.read_slot.worldbook"
+      },
+      {
+        "id": "skip_worldbook",
+        "display_name": "本次不读取世界书",
+        "description": "当前任务没有请求世界书，不发起资源操作，交出未读取确认供本组汇合，不把未读取伪装为已有资料。",
+        "definition_id": "era.tavern.workflow.parallel_reads.skip_worldbook"
+      },
+      {
+        "id": "join_worldbook",
+        "display_name": "交出世界书分支的唯一结果",
+        "description": "读取或跳过是互斥路径，只交出实际发生的一项确认，再参与本组全部分支的汇合。",
+        "definition_id": "era.tavern.workflow.parallel_reads.join_worldbook"
+      },
+      {
+        "id": "prepare_regex",
+        "display_name": "确认本任务是否需要正则",
+        "description": "检查本次读取组是否包含正则，只为实际需要的项目准备原请求参数；其余项目明确跳过，不产生空调用。",
+        "definition_id": "era.tavern.workflow.parallel_reads.prepare_regex"
+      },
+      {
+        "id": "read_regex",
+        "display_name": "读取正则并等待实际IO结束",
+        "description": "沿用原正则读取参数、返回合同及资源原语；与本组其他实际读取共同运行。取消或出错也等待已启动IO和清理结束，不启动图外完成回调工作流。",
+        "definition_id": "era.tavern.workflow.read_slot.regex"
+      },
+      {
+        "id": "skip_regex",
+        "display_name": "本次不读取正则",
+        "description": "当前任务没有请求正则，不发起资源操作，交出未读取确认供本组汇合，不把未读取伪装为已有资料。",
+        "definition_id": "era.tavern.workflow.parallel_reads.skip_regex"
+      },
+      {
+        "id": "join_regex",
+        "display_name": "交出正则分支的唯一结果",
+        "description": "读取或跳过是互斥路径，只交出实际发生的一项确认，再参与本组全部分支的汇合。",
+        "definition_id": "era.tavern.workflow.parallel_reads.join_regex"
+      },
+      {
+        "id": "prepare_character",
+        "display_name": "确认本任务是否需要主开场白",
+        "description": "检查本次读取组是否包含主开场白，只为实际需要的项目准备原请求参数；其余项目明确跳过，不产生空调用。",
+        "definition_id": "era.tavern.workflow.parallel_reads.prepare_character"
+      },
+      {
+        "id": "read_character",
+        "display_name": "读取主开场白并等待实际IO结束",
+        "description": "沿用原主开场白读取参数、返回合同及资源原语；与本组其他实际读取共同运行。取消或出错也等待已启动IO和清理结束，不启动图外完成回调工作流。",
+        "definition_id": "era.tavern.workflow.read_slot.character"
+      },
+      {
+        "id": "skip_character",
+        "display_name": "本次不读取主开场白",
+        "description": "当前任务没有请求主开场白，不发起资源操作，交出未读取确认供本组汇合，不把未读取伪装为已有资料。",
+        "definition_id": "era.tavern.workflow.parallel_reads.skip_character"
+      },
+      {
+        "id": "join_character",
+        "display_name": "交出主开场白分支的唯一结果",
+        "description": "读取或跳过是互斥路径，只交出实际发生的一项确认，再参与本组全部分支的汇合。",
+        "definition_id": "era.tavern.workflow.parallel_reads.join_character"
+      },
+      {
+        "id": "prepare_messages",
+        "display_name": "确认本任务是否需要当前消息",
+        "description": "检查本次读取组是否包含当前消息，只为实际需要的项目准备原请求参数；其余项目明确跳过，不产生空调用。",
+        "definition_id": "era.tavern.workflow.parallel_reads.prepare_messages"
+      },
+      {
+        "id": "read_messages",
+        "display_name": "读取当前消息并等待实际IO结束",
+        "description": "沿用原当前消息读取参数、返回合同及资源原语；与本组其他实际读取共同运行。取消或出错也等待已启动IO和清理结束，不启动图外完成回调工作流。",
+        "definition_id": "era.tavern.workflow.read_slot.messages"
+      },
+      {
+        "id": "skip_messages",
+        "display_name": "本次不读取当前消息",
+        "description": "当前任务没有请求当前消息，不发起资源操作，交出未读取确认供本组汇合，不把未读取伪装为已有资料。",
+        "definition_id": "era.tavern.workflow.parallel_reads.skip_messages"
+      },
+      {
+        "id": "join_messages",
+        "display_name": "交出当前消息分支的唯一结果",
+        "description": "读取或跳过是互斥路径，只交出实际发生的一项确认，再参与本组全部分支的汇合。",
+        "definition_id": "era.tavern.workflow.parallel_reads.join_messages"
+      },
+      {
+        "id": "prepare_current",
+        "display_name": "确认本任务是否需要当前Sidecar信息",
+        "description": "检查本次读取组是否包含当前Sidecar信息，只为实际需要的项目准备原请求参数；其余项目明确跳过，不产生空调用。",
+        "definition_id": "era.tavern.workflow.parallel_reads.prepare_current"
+      },
+      {
+        "id": "read_current",
+        "display_name": "读取当前Sidecar信息并等待实际IO结束",
+        "description": "沿用原当前Sidecar信息读取参数、返回合同及资源原语；与本组其他实际读取共同运行。取消或出错也等待已启动IO和清理结束，不启动图外完成回调工作流。",
+        "definition_id": "era.tavern.workflow.read_slot.current"
+      },
+      {
+        "id": "skip_current",
+        "display_name": "本次不读取当前Sidecar信息",
+        "description": "当前任务没有请求当前Sidecar信息，不发起资源操作，交出未读取确认供本组汇合，不把未读取伪装为已有资料。",
+        "definition_id": "era.tavern.workflow.parallel_reads.skip_current"
+      },
+      {
+        "id": "join_current",
+        "display_name": "交出当前Sidecar信息分支的唯一结果",
+        "description": "读取或跳过是互斥路径，只交出实际发生的一项确认，再参与本组全部分支的汇合。",
+        "definition_id": "era.tavern.workflow.parallel_reads.join_current"
+      },
+      {
+        "id": "collect",
+        "display_name": "等本组所有实际读取完成后交回资料",
+        "description": "等待七条互斥处理后的分支确认，按本次实际请求整理读取值。某项读取失败时本独立实例失败并取消其余分支，等待清理；主Service随后按原规则形成初始化或派发失败资料。",
+        "join_policy": "all",
+        "definition_id": "era.tavern.workflow.parallel_reads.collect"
+      },
+      {
+        "id": "end",
+        "definition_id": "era.tavern.initialize.end",
+        "display_name": "完成本次资料读取",
+        "description": "标明本次资料读取的范围；实际结果由读取及整理步骤提供。"
+      }
+    ],
+    "edges": [
+      [
+        "start",
+        "dispatch"
+      ],
+      [
+        "dispatch",
+        "prepare_identity"
+      ],
+      {
+        "from": "prepare_identity",
+        "to": "read_identity",
+        "when": "route_identity == 'read'"
+      },
+      {
+        "from": "prepare_identity",
+        "to": "skip_identity",
+        "when": "route_identity == 'skip'"
+      },
+      [
+        "read_identity",
+        "join_identity"
+      ],
+      [
+        "skip_identity",
+        "join_identity"
+      ],
+      [
+        "join_identity",
+        "collect"
+      ],
+      [
+        "dispatch",
+        "prepare_variables"
+      ],
+      {
+        "from": "prepare_variables",
+        "to": "read_variables",
+        "when": "route_variables == 'read'"
+      },
+      {
+        "from": "prepare_variables",
+        "to": "skip_variables",
+        "when": "route_variables == 'skip'"
+      },
+      [
+        "read_variables",
+        "join_variables"
+      ],
+      [
+        "skip_variables",
+        "join_variables"
+      ],
+      [
+        "join_variables",
+        "collect"
+      ],
+      [
+        "dispatch",
+        "prepare_worldbook"
+      ],
+      {
+        "from": "prepare_worldbook",
+        "to": "read_worldbook",
+        "when": "route_worldbook == 'read'"
+      },
+      {
+        "from": "prepare_worldbook",
+        "to": "skip_worldbook",
+        "when": "route_worldbook == 'skip'"
+      },
+      [
+        "read_worldbook",
+        "join_worldbook"
+      ],
+      [
+        "skip_worldbook",
+        "join_worldbook"
+      ],
+      [
+        "join_worldbook",
+        "collect"
+      ],
+      [
+        "dispatch",
+        "prepare_regex"
+      ],
+      {
+        "from": "prepare_regex",
+        "to": "read_regex",
+        "when": "route_regex == 'read'"
+      },
+      {
+        "from": "prepare_regex",
+        "to": "skip_regex",
+        "when": "route_regex == 'skip'"
+      },
+      [
+        "read_regex",
+        "join_regex"
+      ],
+      [
+        "skip_regex",
+        "join_regex"
+      ],
+      [
+        "join_regex",
+        "collect"
+      ],
+      [
+        "dispatch",
+        "prepare_character"
+      ],
+      {
+        "from": "prepare_character",
+        "to": "read_character",
+        "when": "route_character == 'read'"
+      },
+      {
+        "from": "prepare_character",
+        "to": "skip_character",
+        "when": "route_character == 'skip'"
+      },
+      [
+        "read_character",
+        "join_character"
+      ],
+      [
+        "skip_character",
+        "join_character"
+      ],
+      [
+        "join_character",
+        "collect"
+      ],
+      [
+        "dispatch",
+        "prepare_messages"
+      ],
+      {
+        "from": "prepare_messages",
+        "to": "read_messages",
+        "when": "route_messages == 'read'"
+      },
+      {
+        "from": "prepare_messages",
+        "to": "skip_messages",
+        "when": "route_messages == 'skip'"
+      },
+      [
+        "read_messages",
+        "join_messages"
+      ],
+      [
+        "skip_messages",
+        "join_messages"
+      ],
+      [
+        "join_messages",
+        "collect"
+      ],
+      [
+        "dispatch",
+        "prepare_current"
+      ],
+      {
+        "from": "prepare_current",
+        "to": "read_current",
+        "when": "route_current == 'read'"
+      },
+      {
+        "from": "prepare_current",
+        "to": "skip_current",
+        "when": "route_current == 'skip'"
+      },
+      [
+        "read_current",
+        "join_current"
+      ],
+      [
+        "skip_current",
+        "join_current"
+      ],
+      [
+        "join_current",
+        "collect"
+      ],
+      {
+        "from": "dispatch",
+        "to": "collect",
+        "schedule": false
+      },
+      [
+        "collect",
+        "end"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.read_group.reply",
+        "cardinality": "exactly_one",
+        "display_name": "本次请求的全部实际读取结果",
+        "as": "readGroup"
+      }
+    ]
+  }
+}

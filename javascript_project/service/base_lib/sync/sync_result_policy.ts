@@ -69,13 +69,13 @@ export function stateUpdateForPlan(
 
 export function settlementsFor(
   step: PlannedStepV1,
-  status: "committed" | "no-op" | "failed" | "fatal",
+  status: "committed" | "deferred" | "no-op" | "failed" | "fatal",
   failure: SyncFailureV1 | null,
 ) {
   assertUniqueSources(step);
   if (step.kind !== "execute") return [];
   return step.sources.map((source) => {
-    if (status === "committed" || status === "no-op") {
+    if (status === "committed" || status === "no-op" || status === "deferred") {
       return {
         eventId: source.event.eventId,
         sequence: source.event.sequence,

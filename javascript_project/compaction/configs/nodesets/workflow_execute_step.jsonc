@@ -1,0 +1,133 @@
+{
+  "type_key": "era.migration.compaction.execute.workflow.request_step",
+  "display_name": "完成一次原生同步调用并继续业务计算",
+  "description": "按原指令顺序推进原文重放，在每个实际公式或函数库验证位置提出下一次请求；普通变量操作仍由本地解释规则处理。 本次返回后继续原计算，直到下一次确有调用需求或本段结束。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.migration.compaction.execute.state",
+      "cardinality": "exactly_one",
+      "display_name": "仅保留在当前工作流的业务进度"
+    }
+  ],
+  "provides": [
+    {
+      "key": "next_state",
+      "type": "era.migration.compaction.execute.state",
+      "display_name": "接回本次结果后的本地业务进度"
+    },
+    {
+      "key": "done",
+      "type": "era.migration.compaction.execute.done",
+      "display_name": "本段是否已无后续调用"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "sync",
+    "inputs": [
+      {
+        "key": "state",
+        "type": "era.migration.compaction.execute.state",
+        "required": true,
+        "display_name": "仅保留在当前工作流的业务进度"
+      }
+    ],
+    "max_steps": 8,
+    "nodes": [
+      {
+        "id": "start",
+        "definition_id": "era.command_compaction.terminal",
+        "display_name": "开始本段处理",
+        "description": "本步骤用于“完成一次原生同步调用并继续业务计算”：标明本段流程的范围；业务结果由实际处理步骤提供。"
+      },
+      {
+        "id": "prepare_request",
+        "display_name": "整理当前这一项纯数据请求",
+        "description": "本步骤用于“完成一次原生同步调用并继续业务计算”：按原指令顺序推进原文重放，在每个实际公式或函数库验证位置提出下一次请求；普通变量操作仍由本地解释规则处理。 仅输出目标入口需要的纯数据字段，不传完整控制状态。",
+        "definition_id": "era.migration.compaction.execute.workflow.prepare_request"
+      },
+      {
+        "id": "encode_request",
+        "definition_id": "era.workflow.encode_request",
+        "display_name": "把业务输入转换为保留原值的消息",
+        "description": "在此处保留大数、负零、数组空位和缺失值，使独立流程收到与原调用相同的业务值。此转换只处理消息，当前业务进度仍通过图内数据连接保留。"
+      },
+      {
+        "id": "invoke_sync",
+        "definition_id": "era.workflow.invoke_sync",
+        "display_name": "InvokeSync：调用独立表达式流程",
+        "description": "本步骤用于“完成一次原生同步调用并继续业务计算”：发送当前这一项完整纯数据请求并当场接回结果；只传目标业务输入，本地进度和宿主资源不进入通信。",
+        "config": {
+          "workflow": {
+            "root": "era-expression",
+            "path": "configs/era.expression.jsonc",
+            "entry": "protocol"
+          }
+        }
+      },
+      {
+        "id": "decode_outputs",
+        "definition_id": "era.workflow.decode_outputs",
+        "display_name": "恢复目标流程返回的原始业务值",
+        "description": "在此处保留大数、负零、数组空位和缺失值，使独立流程收到与原调用相同的业务值。此转换只处理消息，当前业务进度仍通过图内数据连接保留。"
+      },
+      {
+        "id": "accept_response",
+        "display_name": "接回结果并寻找下一次调用",
+        "description": "本步骤用于“完成一次原生同步调用并继续业务计算”：把目标结果放回原计算位置，保留诊断、随机进度和原顺序；推进纯计算直到下一次需要调用，或标记整段完成。",
+        "definition_id": "era.migration.compaction.execute.workflow.accept_response"
+      },
+      {
+        "id": "end",
+        "definition_id": "era.command_compaction.terminal",
+        "display_name": "完成本段处理",
+        "description": "本步骤用于“完成一次原生同步调用并继续业务计算”：标明本段流程的范围；业务结果由实际处理步骤提供。"
+      }
+    ],
+    "edges": [
+      [
+        "start",
+        "prepare_request"
+      ],
+      [
+        "prepare_request",
+        "encode_request"
+      ],
+      [
+        "decode_outputs",
+        "accept_response"
+      ],
+      [
+        "accept_response",
+        "end"
+      ],
+      {
+        "from": "prepare_request",
+        "to": "accept_response",
+        "schedule": false
+      },
+      [
+        "encode_request",
+        "invoke_sync"
+      ],
+      [
+        "invoke_sync",
+        "decode_outputs"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.migration.compaction.execute.state",
+        "cardinality": "exactly_one",
+        "display_name": "接回本次结果后的本地业务进度",
+        "as": "next_state"
+      },
+      {
+        "type": "era.migration.compaction.execute.done",
+        "cardinality": "exactly_one",
+        "display_name": "本段是否已无后续调用",
+        "as": "done"
+      }
+    ]
+  }
+}

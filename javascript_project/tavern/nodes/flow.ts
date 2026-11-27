@@ -5,6 +5,12 @@ export function Terminal(): any { return {}; }
 
 /** 纯传递边界：不执行资源或行为。 */
 export function Pass(inputs: any, params: any): any { return emit({frame: takeFrame(inputs)}, params); }
+export function BeginRuntime(inputs: any, params: any): any {
+  return {
+    ...emit({frame:{...inputs["era.tavern.call.frame"].value}}, params),
+    runtime_entry_host_resources:inputs["era.workflow.host_resources"].value,
+  };
+}
 /** 互斥路径的严格单结果汇合。 */
 export function Join(inputs: any, params: any): any { return emit({frame: takeFrame(inputs)}, params); }
 export function ChooseSync(inputs: any, params: any): any {

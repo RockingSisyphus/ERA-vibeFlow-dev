@@ -30,6 +30,8 @@ export interface SyncFailureV1 {
 }
 
 export interface SyncContextV1 {
+  /** 读取工作状态时确认是否仍有原生候选的待写内容；普通读取可不携带。 */
+  readonly nativeCandidatePending?: boolean;
   readonly scopeWindow?: Readonly<Record<string, unknown>>;
   readonly schemaVersion: 1;
   readonly step: PlannedStepV1;
@@ -109,6 +111,8 @@ export interface SyncCommitRequestV1 {
   readonly meta: Readonly<Record<string, unknown>>;
   readonly floorIdentity: EraFloorIdentityV1 | null;
   readonly agentFloorCandidate: EraAgentFloorCandidateV1 | null;
+  /** 单楼写入首次补上状态栏标记时，由同一次写入触发宿主呈现。 */
+  readonly messageRefresh?: "none" | "affected";
   /** 本次生成的最终展示变化；非持久化，不用于普通状态更新。 */
   readonly initialPresentation: EraFloorIdentityV1 | null;
   /** 与工作项同义的块级续做游标；提交成功后由结果把它投影为任务状态更新。 */
@@ -126,7 +130,7 @@ export interface SyncMessageCommitV1 extends SyncCommitRequestV1 {
 }
 
 export interface SyncCommitResultV1 extends SyncCommitRequestV1 {
-  readonly status: "committed" | "no-op" | "failed" | "fatal";
+  readonly status: "committed" | "deferred" | "no-op" | "failed" | "fatal";
   readonly confirmedMessageWrites: number;
   readonly variablesCommitted: boolean;
   readonly failure: SyncFailureV1 | null;
@@ -187,6 +191,16 @@ export function errorMessage(error: unknown): string {
     return error.message;
   }
   return String(error);
+}
+
+/** 历史同步按当前消息重算；公开 Facade 提交不属于可丢弃的历史快照。 */
+export function isHistorySyncStep(step: PlannedStepV1): boolean {
+  if (step.kind !== "execute" || step.task.kind !== "sync" ||
+      step.task.reason === "facade-commit") return false;
+  const event = step.task.primaryEvent;
+  return event.source === "tavern" ||
+    event.source === "era-api" &&
+      (event.type === "manual_sync" || event.type === "manual_full_sync");
 }
 
 /** 为了让既有写入保护和重新同步分支读取原错误事实，解开能力及原生Node的已知包装。

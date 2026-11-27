@@ -8,7 +8,6 @@ export const era_expression_initialize_ast_frames = defineNode({
   "contract": {"requires":[{"type":"era.expression.operation.current","cardinality":"exactly_one","display_name":"当前一项公式及计算所需变量"}],"provides":[{"key":"ast_frame_state","type":"era.expression.ast_frame.state","display_name":"当前公式各步运算和函数参数的进度"}],"params_schema":{},"params_defaults":{},"input_semantics":{"era.expression.operation.current":["从有序操作中按当前位置选出，供求值后更新相应目标。"]},"output_semantics":{"ast_frame_state":["供逐步计算嵌套表达式及函数，仍保留无效输入的错误结论。"]}},
   "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/execution/initialize_ast_frames.ts","export":"run"}}],
   "base_libs": ["era.expression.execution","era.expression.types"],
-  "capabilities": [],
   "tags": ["表达式循环"],
   "rulesets": ["vibeflow.process"],
   "id": "era.expression.initialize_ast_frames",

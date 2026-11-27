@@ -74,7 +74,7 @@ function statusBarExampleHtml(): string {
     <h3>ERA 示例状态栏</h3>
     <div class="grid">
       <div class="cell"><div class="label">宏：所在楼 HP</div><div class="value" data-era-demo-source="macro" data-era-demo-field="era_demo.player.hp">{{ERA:era_demo.player.hp}}</div></div>
-      <div class="cell"><div class="label">宏：所在楼对象（含 meta）</div><div class="value" data-era-demo-source="macro-withmeta" data-era-demo-field="era_demo.player.profile">{{ERA-withmeta:era_demo.player.profile}}</div></div>
+      <div class="cell"><div class="label">宏：所在楼角色档案规则</div><div class="value" data-era-demo-source="macro-withmeta" data-era-demo-field="era_demo.player.$meta.fields.profile">{{ERA-withmeta:era_demo.player.$meta.fields.profile}}</div></div>
       <div class="cell"><div class="label">宏：数组</div><div class="value" data-era-demo-source="macro" data-era-demo-field="era_demo.player.inventory">{{ERA:era_demo.player.inventory}}</div></div>
       <div class="cell"><div class="label">宏：不存在路径</div><div class="value" data-era-demo-source="macro" data-era-demo-field="era_demo.missing">{{ERA:era_demo.missing}}</div></div>
     </div>
@@ -104,16 +104,16 @@ function statusBarExampleHtml(): string {
     <details>
       <summary>真实 ERA.commit() 示例</summary>
       <div class="actions">
-        <button data-era-demo-action="variable-insert">Variable Insert</button>
-        <button data-era-demo-action="variable-edit">Variable Edit</button>
-        <button data-era-demo-action="variable-delete">Variable Delete</button>
-        <button data-era-demo-action="function-insert">Function Insert</button>
-        <button data-era-demo-action="function-edit">Function Edit</button>
-        <button data-era-demo-action="function-writeback">函数计算并写回</button>
-        <button data-era-demo-action="function-delete">Function Delete</button>
-        <button data-era-demo-action="scope-message">message scope</button>
-        <button data-era-demo-action="scope-branch">branch scope</button>
-        <button data-era-demo-action="scope-always">always scope</button>
+        <button disabled data-era-demo-action="variable-insert">Variable Insert</button>
+        <button disabled data-era-demo-action="variable-edit">Variable Edit</button>
+        <button disabled data-era-demo-action="variable-delete">Variable Delete</button>
+        <button disabled data-era-demo-action="function-insert">Function Insert</button>
+        <button disabled data-era-demo-action="function-edit">Function Edit</button>
+        <button disabled data-era-demo-action="function-writeback">函数计算并写回</button>
+        <button disabled data-era-demo-action="function-delete">Function Delete</button>
+        <button disabled data-era-demo-action="scope-message">message scope</button>
+        <button disabled data-era-demo-action="scope-branch">branch scope</button>
+        <button disabled data-era-demo-action="scope-always">always scope</button>
       </div>
       <div class="receipt" data-era-demo-source="receipt" data-era-demo-field="latest">尚未执行</div>
     </details>
@@ -231,6 +231,8 @@ function statusBarExampleHtml(): string {
           void renderHistorical();
         });
         document.querySelectorAll('[data-era-demo-action]').forEach(button => button.addEventListener('click', () => void runManual(button.dataset.eraDemoAction)));
+        // 作者交互只在 ERA.ready 已完成并安装点击处理后开放。
+        setBusy(false);
         try { await runAutomatic(messageId); }
         catch (error) { show('auto', 'status', { status: 'failed', error: error instanceof Error ? error.message : String(error) }); }
       }).catch(error => {

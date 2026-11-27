@@ -4,14 +4,14 @@
 先沿 Architecture 的 `source` 定位真实 Config、Nodeset、SDK声明或 Node source，
 不要修改 `generated/**`，也不要在 `app/src/**` 复制 planner 逻辑。
 
-Tavern 边界：Service 只依赖运行选项接入的受限 Capability 提供的 JSON DTO，不可直接访问 DOM、
-`window`、Tavern Helper 全局函数或浏览器事件。酒馆Capability/Port实现位于
+Tavern 边界：Service 通过原生工作流调用和邮箱接收纯数据，只使用所属实例的本地地址、终态释放及宿主时钟。Service 不可直接访问 DOM、
+`window`、Tavern Helper 全局函数或浏览器事件。酒馆资源与通信边界位于
 `../tavern/`，浏览器Facade与展示端口位于`../../app/src/ERA变量框架/service/`；双方可共享的约束见
 `../../docs/developer/开发总览.md`。
 
 涉及生成、重新生成、swipe、编辑或回退时，必须阅读
 `../../docs/developer/开发总览.md`。业务 planner 决定事件组合、定向同步和回退
-目标；辅助workflow负责FIFO、receipt、生命周期与Capability执行。不要通过辅助流程特例、定时猜测或
+目标；辅助workflow负责FIFO、receipt、生命周期与原生工作流执行。不要通过辅助流程特例、定时猜测或
 宏侧补偿规避领域建模。
 
 改动 workflow、Config、edge、Node 或 Nodeset 时遵循根目录协同协议：维护变更清单、生成 review，

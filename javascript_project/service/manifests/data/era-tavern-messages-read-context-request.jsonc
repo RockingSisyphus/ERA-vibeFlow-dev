@@ -14,7 +14,7 @@
     ],
     "properties": {
       "projection": {
-        "const": "era-active-message-v1"
+        "const": "era-active-message-v2"
       },
       "range": {
         "oneOf": [

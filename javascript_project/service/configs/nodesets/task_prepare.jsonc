@@ -7,7 +7,8 @@
       "type": "era.batch.execution.state",
       "cardinality": "exactly_one",
       "display_name": "当前批次的任务进度与累计结果"
-    }
+    },
+    {"type":"era.workflow.host_resources","cardinality":"exactly_one","display_name":"所属 ERA 实例的本地资源"}
   ],
   "provides": [
     {
@@ -24,9 +25,10 @@
         "type": "era.batch.execution.state",
         "required": true,
         "display_name": "当前批次的任务进度与累计结果"
-      }
+      },
+      {"key":"host_resources","type":"era.workflow.host_resources","required":true,"display_name":"所属 ERA 实例的本地资源"}
     ],
-    "max_steps": 35,
+    "max_steps": 36,
     "nodes": [
       {
         "id": "start",
@@ -38,7 +40,8 @@
         "id": "prepare_dispatch_context",
         "display_name": "为当前任务读取聊天并准备消息身份",
         "description": "本环节用于“为当前任务选路并备齐执行资料”：先判断任务需要哪些资料，再读取当前消息、回复和状态绑定，准备关联变量历史的消息标识及显示占位。普通同步暂存正文变化，单独标识任务按需保存；最后交出可执行任务或读取失败原因。",
-        "definition_id": "era.dispatch.prepare_context"
+        "definition_id": "era.dispatch.prepare_context",
+        "join_policy": "all"
       },
       {
         "id": "route_task_entry",
@@ -81,13 +84,11 @@
         "display_name": "结束为当前任务选路并备齐执行资料",
         "description": "标明“为当前任务选路并备齐执行资料”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
         "definition_id": "era.service.terminal"
-      }
+      },
+      {"id":"retain_host_resources","definition_id":"era.service.retain_host_resources","display_name":"保留所属实例的资源","description":"先取出本次运行或本轮迭代收到的本地资源，供下面需要组织工作流通信的步骤使用。资源不写入业务消息。"}
     ],
     "edges": [
-      [
-        "start",
-        "prepare_dispatch_context"
-      ],
+      {"from":"start","to":"prepare_dispatch_context","schedule":true},
       [
         "prepare_dispatch_context",
         "route_task_entry"
@@ -136,7 +137,11 @@
       [
         "prepare_simple_task",
         "end"
-      ]
+      ],
+      ["start","retain_host_resources"],
+      {"from":"retain_host_resources","to":"prepare_dispatch_context","transfer":false,"schedule":true},
+      {"from":"retain_host_resources","to":"task_initialize","schedule":false},
+      {"from":"retain_host_resources","to":"task_agent_generation_session","schedule":false}
     ],
     "outputs": [
       {

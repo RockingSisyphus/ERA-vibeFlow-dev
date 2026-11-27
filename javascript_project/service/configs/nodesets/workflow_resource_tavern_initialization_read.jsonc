@@ -1,0 +1,150 @@
+{
+  "type_key": "era.communication.tavern_initialization_read",
+  "display_name": "读取角色当前的 ERA 初始化资源",
+  "description": "从酒馆读取角色和聊天资料、相关设置、世界书、正则、开场白及外置配置。把当前资源交给初始化比较，未指定模式时采用传统模式。 原有并行读取放在独立酒馆读取实例中，依赖读取仍按原顺序进行。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.step.request.routed",
+      "cardinality": "exactly_one",
+      "display_name": "当前任务及已读取的聊天资料"
+    },
+    {"type":"era.workflow.host_resources","cardinality":"exactly_one","display_name":"所属 ERA 实例的本地资源"}
+  ],
+  "provides": [
+    {
+      "key": "initialization_context",
+      "type": "era.initialize.context",
+      "display_name": "初始化读取到的当前角色资源"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "input0",
+        "type": "era.step.request.routed",
+        "required": true,
+        "display_name": "当前任务及已读取的聊天资料"
+      },
+      {"key":"host_resources","type":"era.workflow.host_resources","required":true,"display_name":"所属 ERA 实例的本地资源"}
+    ],
+    "max_steps": 10,
+    "nodes": [
+      {
+        "id": "start",
+        "definition_id": "era.service.terminal",
+        "display_name": "开始本次资料读取",
+        "description": "标明本次资料读取的范围；实际结果由读取及整理步骤提供。"
+      },
+      {
+        "id": "prepare_group",
+        "display_name": "准备初始化的五项并行读取",
+        "description": "保留原读取分组与请求顺序；初始化先完成读取再检查原派发上下文，派发按是否只需最新消息决定读取范围。原输入保留在主Service，不作为页面资源或权威状态发给酒馆。",
+        "definition_id": "era.communication.tavern_initialization_read.prepare_group",
+        "join_policy": "all"
+      },
+      {
+        "id": "encode_request",
+        "display_name": "保留读取请求原值后交给官方通信",
+        "description": "把本次读取种类与资源编号封装，其他本地业务进度不进入消息。",
+        "definition_id": "era.workflow.encode_request",
+        "config": {}
+      },
+      {
+        "id": "call_reads",
+        "display_name": "Call：并行读取本任务所需页面资料",
+        "description": "启动独立酒馆读取实例；实际并行分支在目标工作流中可展开查看。",
+        "definition_id": "era.workflow.call",
+        "config": {
+          "workflow": {
+            "root": "era-tavern",
+            "path": "configs/era.tavern.parallel_reads.jsonc",
+            "entry": "protocol_parallel_reads"
+          },
+          "launch": {
+            "kind": "in_process"
+          },
+          "allow_background": false
+        }
+      },
+      {
+        "id": "wait_reads",
+        "display_name": "Wait；中断时Kill并等本组读取清理",
+        "description": "等整组实际完成；取消或失败时停止所拥有的读取实例并等待所有已启动IO清理。",
+        "definition_id": "era.workflow.wait_owned",
+        "config": {
+          "workflow": {
+            "root": "era-tavern",
+            "path": "configs/era.tavern.parallel_reads.jsonc",
+            "entry": "protocol_parallel_reads"
+          }
+        }
+      },
+      {
+        "id": "decode_reads",
+        "display_name": "恢复本组实际读取的结果原值",
+        "description": "保留独立实例真实终态，恢复读取结果中的大数、缺失项和数组空位。",
+        "definition_id": "era.workflow.decode_terminal",
+        "config": {}
+      },
+      {
+        "id": "finish",
+        "display_name": "整理五项读取和初始化上下文，保留原失败结果",
+        "description": "本组成功后按原顺序核对派发上下文，交出身份、脚本变量、世界书、正则和主开场白；失败时使用原ERA_INITIALIZE_READ_FAILED类别及原错误内容，不启动后续初始化提交。",
+        "definition_id": "era.communication.tavern_initialization_read.finish"
+      },
+      {
+        "id": "end",
+        "definition_id": "era.service.terminal",
+        "display_name": "完成本次资料读取",
+        "description": "标明本次资料读取的范围；实际结果由读取及整理步骤提供。"
+      },
+      {"id":"retain_host_resources","definition_id":"era.service.retain_host_resources","display_name":"保留所属实例的资源","description":"先取出本次运行或本轮迭代收到的本地资源，供下面需要组织工作流通信的步骤使用。资源不写入业务消息。"}
+    ],
+    "edges": [
+      {"from":"start","to":"prepare_group","schedule":true},
+      [
+        "prepare_group",
+        "encode_request"
+      ],
+      [
+        "encode_request",
+        "call_reads"
+      ],
+      [
+        "call_reads",
+        "wait_reads"
+      ],
+      [
+        "wait_reads",
+        "decode_reads"
+      ],
+      [
+        "decode_reads",
+        "finish"
+      ],
+      {
+        "from": "prepare_group",
+        "to": "finish",
+        "schedule": false
+      },
+      [
+        "finish",
+        "end"
+      ],
+      ["start","retain_host_resources"],
+      {"from":"retain_host_resources","to":"prepare_group","transfer":false,"schedule":true},
+      {"from":"retain_host_resources","to":"wait_reads","schedule":false},
+      {"from":"retain_host_resources","to":"finish","schedule":false}
+    ],
+    "outputs": [
+      {
+        "type": "era.initialize.context",
+        "cardinality": "exactly_one",
+        "display_name": "初始化读取到的当前角色资源",
+        "as": "initialization_context"
+      }
+    ]
+  }
+}

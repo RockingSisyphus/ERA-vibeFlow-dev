@@ -25,7 +25,8 @@
       "type": "era.batch.execution.state",
       "cardinality": "exactly_one",
       "display_name": "当前批次的任务进度与累计结果"
-    }
+    },
+    {"type":"era.workflow.host_resources","cardinality":"exactly_one","display_name":"所属 ERA 实例的本地资源"}
   ],
   "provides": [
     {
@@ -54,9 +55,10 @@
         "type": "era.batch.execution.state",
         "display_name": "当前批次的任务进度与累计结果",
         "required": true
-      }
+      },
+      {"key":"host_resources","type":"era.workflow.host_resources","required":true,"display_name":"所属 ERA 实例的本地资源"}
     ],
-    "max_steps": 8,
+    "max_steps": 9,
     "nodes": [
       {
         "id": "start",
@@ -93,13 +95,11 @@
         "display_name": "结束完成消息标识、生成设置或忽略任务",
         "description": "标明“完成消息标识、生成设置或忽略任务”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
         "definition_id": "era.service.terminal"
-      }
+      },
+      {"id":"retain_host_resources","definition_id":"era.service.retain_host_resources","display_name":"保留所属实例的资源","description":"先取出本次运行或本轮迭代收到的本地资源，供下面需要组织工作流通信的步骤使用。资源不写入业务消息。"}
     ],
     "edges": [
-      [
-        "start",
-        "route_simple_task"
-      ],
+      {"from":"start","to":"route_simple_task","schedule":true},
       {
         "from": "route_simple_task",
         "to": "task_update_mk",
@@ -126,7 +126,11 @@
       [
         "task_ignore",
         "end"
-      ]
+      ],
+      ["start","retain_host_resources"],
+      {"from":"retain_host_resources","to":"route_simple_task","schedule":true},
+      {"from":"retain_host_resources","to":"task_update_mk","schedule":false},
+      {"from":"retain_host_resources","to":"task_agent_settings","schedule":false}
     ],
     "outputs": [
       {

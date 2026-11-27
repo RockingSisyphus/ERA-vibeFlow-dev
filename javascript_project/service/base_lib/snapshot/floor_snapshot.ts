@@ -4,7 +4,7 @@ export function messageMk(text: string): string | null {
   return block?.match(/"era-message-key"\s*=\s*"([^"]+)"/u)?.[1] ?? null;
 }
 export type { EraDataTransformDirection } from '../../../../base_lib/data_view/data_view.js';
-import { selectedMks } from '../../../../base_lib/data_view/data_view.js';
+import { pathSegments, selectedMks } from '../../../../base_lib/data_view/data_view.js';
 export { selectedMks, transformEraData, removeMetaFields } from '../../../../base_lib/data_view/data_view.js';
 export { projectPublicState } from './public_state.js';
 export interface EraFloorSnapshot {
@@ -48,17 +48,8 @@ function parseLog(raw: unknown): unknown[] {
   }
 }
 
-function pathSegments(path: unknown): string[] {
-  if (Array.isArray(path)) return path.map(String);
-  const result: string[] = [];
-  String(path).replace(
-    /[^.[\]]+|\[(?:(-?\d+(?:\.\d+)?)|(["'])((?:(?!\2)[^\\]|\\.)*?)\2)\]|(?=(?:\.|\[\])(?:\.|\[\]|$))/gu,
-    (match, number, quote, substring) => {
-      result.push(quote ? substring.replace(/\\(\\)?/gu, '$1') : number || match);
-      return match;
-    },
-  );
-  return result;
+function floorLogPathSegments(path: unknown): string[] {
+  return Array.isArray(path) ? path.map(String) : pathSegments(String(path), false);
 }
 
 function canTraverse(value: unknown): value is Record<string, unknown> {
@@ -75,7 +66,7 @@ function define(target: Record<string, unknown>, key: string, value: unknown): v
 
 function setAtPath(target: unknown, path: unknown, value: unknown): void {
   if (!canTraverse(target)) return;
-  const segments = pathSegments(path);
+  const segments = floorLogPathSegments(path);
   if (segments.length === 0) return;
   let cursor = target;
   for (let index = 0; index < segments.length; index += 1) {
@@ -96,7 +87,7 @@ function setAtPath(target: unknown, path: unknown, value: unknown): void {
 
 function unsetAtPath(target: unknown, path: unknown): void {
   if (!canTraverse(target)) return;
-  const segments = pathSegments(path);
+  const segments = floorLogPathSegments(path);
   if (segments.length === 0) return;
   let cursor = target;
   for (let index = 0; index < segments.length - 1; index += 1) {

@@ -167,6 +167,40 @@ export const logContext = {
   mk: '',
 };
 
+/** 将已有错误原因写入正常日志文本；不展开业务对象，也不改变错误及取消结果。 */
+function errorCauseText(value: unknown): string {
+  const lines: string[] = [];
+  const seen = new Set<object>();
+  const visit = (error: unknown, relation: string): void => {
+    if (error === null || error === undefined) return;
+    if (typeof error !== 'object') {
+      lines.push(`${relation}${String(error)}`);
+      return;
+    }
+    if (seen.has(error)) return;
+    seen.add(error);
+    const item = error as {
+      name?: unknown;
+      code?: unknown;
+      message?: unknown;
+      cause?: unknown;
+      errors?: unknown;
+      cleanup_errors?: unknown;
+      cleanupErrors?: unknown;
+    };
+    if (typeof item.message !== 'string') return;
+    const code = typeof item.code === 'string' ? item.code : typeof item.name === 'string' ? item.name : 'Error';
+    lines.push(`${relation}[${code}] ${item.message}`);
+    visit(item.cause, '原因：');
+    if (Array.isArray(item.errors)) for (const child of item.errors) visit(child, '并列错误：');
+    for (const children of [item.cleanup_errors, item.cleanupErrors]) {
+      if (Array.isArray(children)) for (const child of children) visit(child, '清理错误：');
+    }
+  };
+  visit(value, '');
+  return lines.join('\n');
+}
+
 export class Logger {
   private moduleName: string;
 
@@ -258,7 +292,8 @@ export class Logger {
   }
 
   error(funcName: string, message: any, errorObj?: any) {
-    const formattedMessage = this.formatMessage(funcName, message);
+    const detail = errorCauseText(errorObj);
+    const formattedMessage = this.formatMessage(funcName, detail ? `${String(message)}\n${detail}` : message);
     if (errorObj !== undefined) {
       console.error(`%c${formattedMessage}`, 'color: #e74c3c; font-weight: bold;', errorObj);
     } else {

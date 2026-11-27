@@ -24,3 +24,24 @@ export function modelNames(payload:any):string[] {
   const values=payload.data.map((item:any)=>{if(!record(item))return "";const value=item.id??item.name;return typeof value==="string"?value.trim():"";}).filter(Boolean);
   return [...new Set<string>(values)].sort().slice(0,2048);
 }
+
+/** Agent只接收当前消息正文、候选身份及ERA阶段标记；Helper的生成日期等页面元数据留在宿主。
+ * 当前候选直接持有的ERA标记优先；原生swipe信息封套中的extra只作其未直接持有标记时的来源。
+ */
+export function agentMessage(value:any):any {
+  if(!record(value))return null;
+  const swipe=Number.isSafeInteger(value.swipe_id)?value.swipe_id:0;
+  const info=value.extra??(Array.isArray(value.swipes_info)?value.swipes_info[swipe]:null);
+  const marker=record(info?.era_agent)?info.era_agent:info?.extra?.era_agent;
+  const reserved=Array.isArray(value.swipes)&&value.swipes.length>0&&swipe===value.swipes.length;
+  return {message_id:value.message_id,name:value.name,role:value.role,is_hidden:value.is_hidden,swipe_id:swipe,
+    message:reserved?"":typeof value.message==="string"?value.message:value.swipes?.[swipe]??"",
+    extra:record(marker)?{era_agent:structuredClone(marker)}:{}};
+}
+
+/** 当前正文及附加资料来自Helper默认视图，完整视图只保留候选索引与预留位置事实。 */
+export function readAgentMessages(api:any,range:string|number):any[] {
+  const current=new Map(api.getChatMessages(range).map((message:any)=>[message.message_id,message]));
+  return api.getChatMessages(range,{include_swipes:true}).map((message:any)=>
+    agentMessage({...message,...(current.get(message.message_id) as any)}));
+}

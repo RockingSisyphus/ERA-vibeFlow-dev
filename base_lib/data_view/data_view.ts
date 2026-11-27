@@ -42,3 +42,16 @@ export function removeMetaFields<T>(value: T): T {
 export function selectedMks(meta: Readonly<Record<string, unknown>>): (string | null)[] {
   return Array.isArray(meta.SelectedMks) ? meta.SelectedMks.map(value => typeof value === "string" ? value : null) : [];
 }
+/** 将点号和方括号写法转换为对象键。旧楼层日志忽略开头点号产生的空键。 */
+export function pathSegments(path: string, preserveLeadingEmpty = true): string[] {
+  const result: string[] = [];
+  if (preserveLeadingEmpty && path.startsWith('.')) result.push('');
+  path.replace(
+    /[^.[\]]+|\[(?:(-?\d+(?:\.\d+)?)|(["'])((?:(?!\2)[^\\]|\\.)*?)\2)\]|(?=(?:\.|\[\])(?:\.|\[\]|$))/g,
+    (match: string, number: string, quote: string, substring: string) => {
+      result.push(quote ? substring.replace(/\\(\\)?/g, '$1') : number || match);
+      return match;
+    },
+  );
+  return result;
+}

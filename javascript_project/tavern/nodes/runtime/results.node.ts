@@ -239,7 +239,7 @@ export const era_tavern_runtime_dispatch = defineNode({
         "type": "era.tavern.call.frame",
         "cardinality": "exactly_one",
         "display_name": "让五条职责分支使用同一实例的请求和已有进度"
-      }
+      }, {"type":"era.workflow.resources_transferred","cardinality":"exactly_one","display_name":"本段实例资源已转交"}
     ],
     "provides": [
       {
@@ -261,7 +261,7 @@ export const era_tavern_runtime_dispatch = defineNode({
     "input_semantics": {
       "era.tavern.call.frame": [
         "保留“让五条职责分支使用同一实例”对应的实例、请求及已经形成的进度，供本步骤处理并延续同一次请求。"
-      ]
+      ], "era.workflow.resources_transferred":["宿主资源已沿本图的资源边交给后继步骤，之后才展开本节点的业务分支。"]
     },
     "output_semantics": {
       "era_tavern_runtime_dispatch_frame": [

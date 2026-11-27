@@ -18,7 +18,7 @@ export const era_command_compaction_interpreter = defineBaseLib({
       }
     }
   ],
-  "dependencies": [],
+  "dependencies": ["era.command.payload", "era.variable.write"],
   "external_packages": [
     "@era/vibeflow-expression"
   ],

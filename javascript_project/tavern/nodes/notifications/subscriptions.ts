@@ -21,8 +21,8 @@ export function Register(inputs:any,params:any):any {
   if(stages?.some((stage:any)=>!["planning","story","settlement"].includes(stage)))throw new TypeError("未知生成阶段。");
   const item={owner:s,listener:f.input.listener,stages:stages?[...stages]:undefined,lifecycle:new AbortController(),waiting:new Set<any>()};
   s.subscriptions??=new Set();s.subscriptionCycles??=new Set();s.subscriptions.add(item);
-  const stop=()=>s.dispatch.subscriptionControl({session:s,action:"subscription_control",operation:"stop",input:{item}});
-  f.result=Object.assign(stop,{cancelPending:()=>s.dispatch.subscriptionControl({session:s,action:"subscription_control",operation:"stop",input:{item,cancelPending:true}})});
+  const stop=()=>s.resources&&s.dispatch.subscriptionControl({session:s,action:"subscription_control",operation:"stop",input:{item}});
+  f.result=Object.assign(stop,{cancelPending:()=>s.resources&&s.dispatch.subscriptionControl({session:s,action:"subscription_control",operation:"stop",input:{item,cancelPending:true}})});
   return emit({frame:f},params);
 }
 export function Stop(inputs:any,params:any):any {

@@ -43,10 +43,10 @@ function batch(owner, records, id, notifications = []) {
   assert.equal(first.sequence, 1);
   assert.equal(a.session.refs.size, 1);
   const receiving = port.receive({ port: 'era.service.in' });
-  assert.equal(a.session.queue.length, 0);
-  const second = a.client.enqueue('same-stack', 'era-api', []);
-  assert.equal(second.accepted, true, 'receive removes FIFO head before yielding');
   const event = (await receiving).value;
+  assert.equal(a.session.queue.length, 0);
+  const second = a.client.enqueue('after-receive', 'era-api', []);
+  assert.equal(second.accepted, true, '官方Receive取得事件后释放原FIFO占位');
   assert.equal(event.args[0].kind, 'host-ref');
   assert.equal(a.session.refs.get(event.args[0].token)(), 42);
   assert.equal(event.args[1].kind, 'undefined');

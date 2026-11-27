@@ -1,0 +1,177 @@
+{
+  "type_key": "era.communication.dispatch_read_canonical_context",
+  "display_name": "读取当前任务真正需要的聊天资料",
+  "description": "按任务需要，从酒馆读取当前聊天、消息正文和所选回复，连同状态文件绑定、历史记录及显示占位设置。整理成同一份任务资料，供后续确定处理范围和执行起点。 原有并行读取放在独立酒馆读取实例中，依赖读取仍按原顺序进行。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.dispatch.seed",
+      "cardinality": "exactly_one",
+      "display_name": "任务资料准备的输入依据"
+    },
+    {"type":"era.workflow.host_resources","cardinality":"exactly_one","display_name":"所属 ERA 实例的本地资源"}
+  ],
+  "provides": [
+    {
+      "key": "canonical_dispatch_context",
+      "type": "era.dispatch.canonical_context",
+      "display_name": "当前任务统一读取到的聊天上下文"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "input0",
+        "type": "era.dispatch.seed",
+        "required": true,
+        "display_name": "任务资料准备的输入依据"
+      },
+      {"key":"host_resources","type":"era.workflow.host_resources","required":true,"display_name":"所属 ERA 实例的本地资源"}
+    ],
+    "max_steps": 12,
+    "nodes": [
+      {
+        "id": "start",
+        "definition_id": "era.service.terminal",
+        "display_name": "开始本次资料读取",
+        "description": "标明本次资料读取的范围；实际结果由读取及整理步骤提供。"
+      },
+      {
+        "id": "prepare_group",
+        "display_name": "按派发要求选择两项或四项并行读取",
+        "description": "保留原读取分组与请求顺序；初始化先完成读取再检查原派发上下文，派发按是否只需最新消息决定读取范围。原输入保留在主Service，不作为页面资源或权威状态发给酒馆。",
+        "definition_id": "era.communication.dispatch_read_canonical_context.prepare_group",
+        "join_policy": "all"
+      },
+      {
+        "id": "encode_request",
+        "display_name": "保留读取请求原值后交给官方通信",
+        "description": "把本次读取种类与资源编号封装，其他本地业务进度不进入消息。",
+        "definition_id": "era.workflow.encode_request",
+        "config": {}
+      },
+      {
+        "id": "call_reads",
+        "display_name": "Call：并行读取本任务所需页面资料",
+        "description": "启动独立酒馆读取实例；实际并行分支在目标工作流中可展开查看。",
+        "definition_id": "era.workflow.call",
+        "config": {
+          "workflow": {
+            "root": "era-tavern",
+            "path": "configs/era.tavern.parallel_reads.jsonc",
+            "entry": "protocol_parallel_reads"
+          },
+          "launch": {
+            "kind": "in_process"
+          },
+          "allow_background": false
+        }
+      },
+      {
+        "id": "wait_reads",
+        "display_name": "Wait；中断时Kill并等本组读取清理",
+        "description": "等整组实际完成；取消或失败时停止所拥有的读取实例并等待所有已启动IO清理。",
+        "definition_id": "era.workflow.wait_owned",
+        "config": {
+          "workflow": {
+            "root": "era-tavern",
+            "path": "configs/era.tavern.parallel_reads.jsonc",
+            "entry": "protocol_parallel_reads"
+          }
+        }
+      },
+      {
+        "id": "decode_reads",
+        "display_name": "恢复本组实际读取的结果原值",
+        "description": "保留独立实例真实终态，恢复读取结果中的大数、缺失项和数组空位。",
+        "definition_id": "era.workflow.decode_terminal",
+        "config": {}
+      },
+      {
+        "id": "inspect_group",
+        "display_name": "读取完成后确认是否需要按编号读取Sidecar存档",
+        "description": "只需最新消息时直接整理消息与身份；完整派发先检查刚读到的当前Sidecar编号，有有效编号才继续读取该存档。读取失败按原派发失败或取消类别返回，不采用部分资料。",
+        "definition_id": "era.communication.dispatch_read_canonical_context.inspect_group"
+      },
+      {
+        "id": "read_record",
+        "definition_id": "era.communication.dispatch_read_canonical_context.record",
+        "display_name": "按刚确认的Sidecar编号读取存档",
+        "description": "此处依赖当前Sidecar读取完成；需要时才读取指定存档并整理最终派发资料，不能提前并行读取未知编号的存档。"
+      },
+      {
+        "id": "finish_without_record",
+        "display_name": "交回无需继续读存档的派发资料",
+        "description": "最新消息任务不额外读存档；当前资料没有有效存档编号时按原规则构造空变量视图；读取失败时保留原错误与重试类别。",
+        "definition_id": "era.communication.dispatch_read_canonical_context.finish_without_record"
+      },
+      {
+        "id": "end",
+        "definition_id": "era.service.terminal",
+        "display_name": "完成本次资料读取",
+        "description": "标明本次资料读取的范围；实际结果由读取及整理步骤提供。"
+      },
+      {"id":"retain_host_resources","definition_id":"era.service.retain_host_resources","display_name":"保留所属实例的资源","description":"先取出本次运行或本轮迭代收到的本地资源，供下面需要组织工作流通信的步骤使用。资源不写入业务消息。"}
+    ],
+    "edges": [
+      {"from":"start","to":"prepare_group","schedule":true},
+      [
+        "prepare_group",
+        "encode_request"
+      ],
+      [
+        "encode_request",
+        "call_reads"
+      ],
+      [
+        "call_reads",
+        "wait_reads"
+      ],
+      [
+        "wait_reads",
+        "decode_reads"
+      ],
+      [
+        "decode_reads",
+        "inspect_group"
+      ],
+      {
+        "from": "prepare_group",
+        "to": "inspect_group",
+        "schedule": false
+      },
+      {
+        "from": "inspect_group",
+        "to": "read_record",
+        "when": "record_route == 'read'"
+      },
+      {
+        "from": "inspect_group",
+        "to": "finish_without_record",
+        "when": "record_route == 'finish'"
+      },
+      [
+        "read_record",
+        "end"
+      ],
+      [
+        "finish_without_record",
+        "end"
+      ],
+      ["start","retain_host_resources"],
+      {"from":"retain_host_resources","to":"prepare_group","transfer":false,"schedule":true},
+      {"from":"retain_host_resources","to":"wait_reads","schedule":false},
+      {"from":"retain_host_resources","to":"inspect_group","schedule":false},
+      {"from":"retain_host_resources","to":"read_record","schedule":false}
+    ],
+    "outputs": [
+      {
+        "type": "era.dispatch.canonical_context",
+        "cardinality": "exactly_one",
+        "display_name": "当前任务统一读取到的聊天上下文",
+        "as": "canonical_dispatch_context"
+      }
+    ]
+  }
+}

@@ -8,7 +8,6 @@ import {
   calculateStatAt,
   calculateStatForward,
   executeSnapshotQuery,
-  findLatestNewValue,
   parseEditLog,
   removeMetaFields,
   rollbackStatToMK,
@@ -225,9 +224,6 @@ describe('ERA 快照查询公开行为回归', () => {
     );
     expect(rollbackStatToMK('mk-array', 'mk-ignored', finalExpected, selectedMks, logs)).toEqual(
       expectedBehavior.rollbackStatToMK('mk-array', 'mk-ignored', finalExpected, selectedMks, logs),
-    );
-    expect(findLatestNewValue('player.hp', selectedMks.length, selectedMks, logs)).toEqual(
-      expectedBehavior.findLatestNewValue('player.hp', selectedMks.length, selectedMks, logs),
     );
     for (const raw of [logs['mk-array'], logs['mk-object'], logs['mk-fenced'], logs['mk-ignored'], null]) {
       expect(parseEditLog(raw)).toEqual(expectedBehavior.parseEditLog(raw));

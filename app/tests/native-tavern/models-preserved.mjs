@@ -141,7 +141,7 @@ for (const f of owners) {
 const report = {
   status: 'PASS',
   evidence:
-    'compiled Browser AOT sync auxiliary_terminal and existing async result branches; mechanical callback invokes compiled workflows only',
+    'compiled Browser AOT protocol operation waits actual IO, releases its lease and returns the original result',
   cases: [
     'same-stack raw request and lease',
     'sampling and current route',

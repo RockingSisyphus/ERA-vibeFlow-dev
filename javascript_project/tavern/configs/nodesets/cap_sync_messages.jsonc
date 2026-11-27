@@ -57,8 +57,8 @@
       },
       {
         "id": "route_read_context__execute",
-        "display_name": "读取指定范围的消息及各个回复",
-        "description": "在“分派聊天消息操作”流程中，按请求范围读取聊天消息及回复分支，整理出主服务需要的消息身份、正文和相关资料。供历史同步判断当前选中的回复及应恢复的变量状态。",
+        "display_name": "读取消息正文及原生候选状态",
+        "description": "用getChatMessages读取真实消息，除文字及索引外保留候选是否已存在、宿主是否仍在生成和该周期身份；预留位置继续投影为空正文，但不丢失其不可写事实。源：nodes/messages/read.ts与base_lib/messages/projection.ts。",
         "definition_id": "era.tavern.messages_read_context.execute"
       },
       {

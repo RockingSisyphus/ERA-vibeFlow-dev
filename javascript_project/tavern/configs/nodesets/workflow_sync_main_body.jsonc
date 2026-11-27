@@ -1,0 +1,461 @@
+{
+  "type_key": "era.tavern.workflow.sync_main_body",
+  "display_name": "酒馆即时操作的业务处理",
+  "description": "执行本次酒馆即时操作，包括读取、准入、启动实际IO和原有结果整理。 与消息封装分开复用，不启动隐藏的第二份AOT。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.call.frame",
+      "cardinality": "exactly_one",
+      "display_name": "本次酒馆操作的本地请求与所属实例"
+    }
+  ],
+  "provides": [
+    {
+      "key": "result",
+      "type": "era.tavern.call.result",
+      "display_name": "本次业务流程实际返回的结果"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "sync",
+    "inputs": [
+      {
+        "key": "request",
+        "type": "era.tavern.call.frame",
+        "display_name": "酒馆即时操作的请求和已有进度",
+        "required": true
+      }
+    ],
+    "max_steps": 32,
+    "nodes": [
+      {
+        "id": "begin",
+        "display_name": "接收本次即时酒馆操作",
+        "description": "接收本次酒馆操作、参数及所属实例，交给操作选择。后续执行读取、事件接收准备、写入发起或停止等实际动作。",
+        "definition_id": "era.tavern.entry_sync.begin"
+      },
+      {
+        "id": "choose",
+        "display_name": "按请求选择即时酒馆操作",
+        "description": "在“酒馆即时操作”流程中，识别本次请求是初始化、事件接收、服务输出处理、计时、订阅、停止，还是某类酒馆读写。操作种类明确后只选择相应路径，未知请求报告原因。",
+        "definition_id": "era.tavern.sync_entry.choose"
+      },
+      {
+        "id": "route_initialize",
+        "display_name": "建立当前页面的 ERA 运行实例",
+        "description": "本环节用于“酒馆即时操作”：读取容量和告警设置，建立事件、生成和资源运行资料，以及脚本启用决定的等待。返回同一实例给后续启动和操作使用，长期监听与清理由运行职责分支负责。",
+        "definition_id": "era.tavern.flow.initialize"
+      },
+      {
+        "id": "route_event",
+        "display_name": "把酒馆事件整理成 ERA 输入",
+        "description": "本环节用于“酒馆即时操作”：接收聊天回调，识别辅助生成和内部写入回声，更新过期生成及作者调用的状态。普通事件按序入队，需要生成前等待的事件继续等待相关处理，返回对应回调结果。",
+        "definition_id": "era.tavern.flow.event_ingress"
+      },
+      {
+        "id": "route_admit",
+        "display_name": "检查新事件并按序交给主服务",
+        "description": "本环节用于“酒馆即时操作”：接收聊天、界面、脚本或到期事件，检查实例状态、内容和容量。有效事件登记序号及结果等待，交给服务或进入队列；拒绝时返回具体原因，不进入队列。",
+        "definition_id": "era.tavern.flow.admission"
+      },
+      {
+        "id": "route_send",
+        "display_name": "执行主服务回传的确认、计时和通知",
+        "description": "本环节用于“酒馆即时操作”：接收主服务输出，检查身份并避免重复处理。计时清单按序执行，批次结果核对后逐项回告原事件，再发起页面通知并登记完成等待，返回本次输出处理确认。",
+        "definition_id": "era.tavern.flow.frame_send"
+      },
+      {
+        "id": "route_stop_accepting",
+        "display_name": "关闭新请求并取消生成相关等待",
+        "description": "本环节用于“酒馆即时操作”：将实例立即标为停止，唤醒作者、通知及计时分支，取消生成进度、订阅与阶段交接。返回入口已关闭确认，实际运行和资源释放仍由统一收尾等待完成。",
+        "definition_id": "era.tavern.flow.stop_accepting"
+      },
+      {
+        "id": "route_diagnostics",
+        "display_name": "查看实例运行状态和有效期标记",
+        "description": "本环节用于“酒馆即时操作”：按请求读取当前实例的运行、队列、未确认事件和计时等概况，或交出页面有效期标记。提供只读诊断结果，供界面判断旧操作是否仍适用。",
+        "definition_id": "era.tavern.flow.diagnostics"
+      },
+      {
+        "id": "route_prepare_wait_through",
+        "display_name": "固定回执等待的范围和提醒",
+        "description": "本环节用于“酒馆即时操作”：根据指定事件序号捕获本次状态读取或生成所需的回执范围，沿用既有等待与告警。只等待已确定范围，不发起新同步、不等待未来事件；告警不代替处理完成。",
+        "definition_id": "era.tavern.flow.barrier_prefix"
+      },
+      {
+        "id": "route_prepare_stop",
+        "display_name": "解除实例监听、计时和剩余等待",
+        "description": "本环节用于“酒馆即时操作”：接收实例停止要求，取消接收与业务等待，解除监听，撤销计时，逐项取消未确认事件并关闭状态文件提示。首次与重复停止按已有进度处理，实际异步操作由资源分支等待清理。",
+        "definition_id": "era.tavern.flow.stop_prefix"
+      },
+      {
+        "id": "route_function_submit",
+        "display_name": "接收作者函数提出的变量操作",
+        "description": "本环节用于“酒馆即时操作”：确认作者函数仍有效，读取上下文时交出它的接口，提交操作时分配编号、加入本次调用请求队列并唤醒消息流程。返回对应结果等待，实际变量计算由主服务在原正文位置完成。",
+        "definition_id": "era.tavern.flow.function_submit"
+      },
+      {
+        "id": "route_timer_fired",
+        "display_name": "处理有效到期或报告等待过久",
+        "description": "本环节用于“酒馆即时操作”：接收计时到达事实，检查安排是否仍有效。业务期限转换为队列事件，等待告警只报告未完成事件，旧计时直接忽略；返回本次实际处理结论。",
+        "definition_id": "era.tavern.flow.timer_fired"
+      },
+      {
+        "id": "route_cap_admission",
+        "display_name": "分派延迟事件操作",
+        "description": "本环节用于“酒馆即时操作”：接收延迟事件请求，按操作种类选择读取、修改或异步请求的发起流程。各分支分别保持自己的目标检查和实际结果，最后把本次选中操作的唯一结果交给调用方。",
+        "definition_id": "era.tavern.flow.cap_sync_admission"
+      },
+      {
+        "id": "route_cap_agent",
+        "display_name": "分派模型生成和生成设置操作",
+        "description": "本环节用于“酒馆即时操作”：接收模型生成和生成设置请求，按操作种类选择读取、修改或异步请求的发起流程。各分支分别保持自己的目标检查和实际结果，最后把本次选中操作的唯一结果交给调用方。",
+        "definition_id": "era.tavern.flow.cap_sync_agent"
+      },
+      {
+        "id": "route_cap_character",
+        "display_name": "分派角色卡和显示设置操作",
+        "description": "本环节用于“酒馆即时操作”：接收角色卡和显示设置请求，按操作种类选择读取、修改或异步请求的发起流程。各分支分别保持自己的目标检查和实际结果，最后把本次选中操作的唯一结果交给调用方。",
+        "definition_id": "era.tavern.flow.cap_sync_character"
+      },
+      {
+        "id": "route_cap_functions",
+        "display_name": "分派消息中的作者函数操作",
+        "description": "本环节用于“酒馆即时操作”：接收消息中的作者函数请求，按操作种类选择读取、修改或异步请求的发起流程。各分支分别保持自己的目标检查和实际结果，最后把本次选中操作的唯一结果交给调用方。",
+        "definition_id": "era.tavern.flow.cap_sync_functions"
+      },
+      {
+        "id": "route_cap_identity",
+        "display_name": "分派聊天与脚本身份操作",
+        "description": "本环节用于“酒馆即时操作”：接收聊天与脚本身份请求，按操作种类选择读取、修改或异步请求的发起流程。各分支分别保持自己的目标检查和实际结果，最后把本次选中操作的唯一结果交给调用方。",
+        "definition_id": "era.tavern.flow.cap_sync_identity"
+      },
+      {
+        "id": "route_cap_installation_scope",
+        "display_name": "分派脚本启用位置操作",
+        "description": "本环节用于“酒馆即时操作”：接收脚本启用位置请求，按操作种类选择读取、修改或异步请求的发起流程。各分支分别保持自己的目标检查和实际结果，最后把本次选中操作的唯一结果交给调用方。",
+        "definition_id": "era.tavern.flow.cap_sync_installation_scope"
+      },
+      {
+        "id": "route_cap_messages",
+        "display_name": "分派聊天消息操作",
+        "description": "本环节用于“酒馆即时操作”：接收聊天消息请求，按操作种类选择读取、修改或异步请求的发起流程。各分支分别保持自己的目标检查和实际结果，最后把本次选中操作的唯一结果交给调用方。",
+        "definition_id": "era.tavern.flow.cap_sync_messages"
+      },
+      {
+        "id": "route_cap_regex",
+        "display_name": "分派角色正则规则操作",
+        "description": "本环节用于“酒馆即时操作”：接收角色正则规则请求，按操作种类选择读取、修改或异步请求的发起流程。各分支分别保持自己的目标检查和实际结果，最后把本次选中操作的唯一结果交给调用方。",
+        "definition_id": "era.tavern.flow.cap_sync_regex"
+      },
+      {
+        "id": "route_cap_sidecar",
+        "display_name": "分派独立状态文件和变量快照操作",
+        "description": "本环节用于“酒馆即时操作”：接收独立状态文件和变量快照请求，按操作种类选择读取、修改或异步请求的发起流程。各分支分别保持自己的目标检查和实际结果，最后把本次选中操作的唯一结果交给调用方。",
+        "definition_id": "era.tavern.flow.cap_sync_sidecar"
+      },
+      {
+        "id": "route_cap_startup_gate",
+        "display_name": "分派实例启用决定操作",
+        "description": "本环节用于“酒馆即时操作”：接收实例启用决定请求，按操作种类选择读取、修改或异步请求的发起流程。各分支分别保持自己的目标检查和实际结果，最后把本次选中操作的唯一结果交给调用方。",
+        "definition_id": "era.tavern.flow.cap_sync_startup_gate"
+      },
+      {
+        "id": "route_cap_variables",
+        "display_name": "分派酒馆变量操作",
+        "description": "本环节用于“酒馆即时操作”：接收酒馆变量请求，按操作种类选择读取、修改或异步请求的发起流程。各分支分别保持自己的目标检查和实际结果，最后把本次选中操作的唯一结果交给调用方。",
+        "definition_id": "era.tavern.flow.cap_sync_variables"
+      },
+      {
+        "id": "route_cap_worldbook",
+        "display_name": "分派世界书操作",
+        "description": "本环节用于“酒馆即时操作”：接收世界书请求，按操作种类选择读取、修改或异步请求的发起流程。各分支分别保持自己的目标检查和实际结果，最后把本次选中操作的唯一结果交给调用方。",
+        "definition_id": "era.tavern.flow.cap_sync_worldbook"
+      },
+      {
+        "id": "join_return",
+        "display_name": "交接酒馆即时操作的选中结果",
+        "description": "在“酒馆即时操作”流程中，在“酒馆即时操作”中，接收本次实际选择的分支所产生的唯一结果，交给后续步骤或调用方。每次只允许一份实际结果，避免把互斥分支误当成多个都已执行。",
+        "definition_id": "era.tavern.era_tavern_sync.join_return"
+      },
+      {
+        "id": "route_function_release",
+        "display_name": "结束作者调用并释放相关等待",
+        "description": "本环节用于“酒馆即时操作”：先使当前作者调用失效，逐项以过期原因结束未确认请求，再解除参数和取消监听并唤醒等待者。返回释放确认，让消息流程能完整收尾。",
+        "definition_id": "era.tavern.flow.functions_release"
+      },
+      {
+        "id": "route_subscription_control",
+        "display_name": "管理作者的生成阶段订阅",
+        "description": "本环节用于“酒馆即时操作”：接收登记、停止或取消要求，检查订阅归属及关注阶段，在当前实例内更新回调记录。返回可注销的订阅或完成确认，供后续阶段按正确名单执行。",
+        "definition_id": "era.tavern.flow.subscription_control"
+      },
+      {
+        "id": "route_native_stop_retry",
+        "display_name": "命令阶段结束后补做一次生成停止",
+        "description": "本环节用于“酒馆即时操作”：检查此前登记的单次延后停止是否仍属于当前实例。有效时先解除监听再尝试停止酒馆生成，过期时直接结束，返回本次实际结果。",
+        "definition_id": "era.tavern.flow.native_stop_retry"
+      },
+      {
+        "id": "return",
+        "display_name": "交回当前即时操作或异步发起的结果",
+        "description": "在“酒馆即时操作”流程中，接收本次选中操作返回的实际内容，交给同步入口出口。完整读取结果可以立即使用；异步请求的发起结果仍需由对应等待流程确认完成。",
+        "definition_id": "era.tavern.sync_entry.return"
+      },
+      {
+        "id": "finish",
+        "display_name": "交出即时酒馆请求的结果",
+        "description": "将本次立即完成的操作结果，或已经登记的异步等待，返回外部调用方。请求发起时的确认与稍后实际完成的结果按对应流程分别处理。",
+        "definition_id": "era.tavern.entry_sync.finish"
+      }
+    ],
+    "edges": [
+      [
+        "begin",
+        "choose"
+      ],
+      {
+        "from": "choose",
+        "to": "route_initialize",
+        "when": "era_tavern_sync_entry_choose_route == 'initialize'"
+      },
+      [
+        "route_initialize",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_event",
+        "when": "era_tavern_sync_entry_choose_route == 'event'"
+      },
+      [
+        "route_event",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_admit",
+        "when": "era_tavern_sync_entry_choose_route == 'admit'"
+      },
+      [
+        "route_admit",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_send",
+        "when": "era_tavern_sync_entry_choose_route == 'send'"
+      },
+      [
+        "route_send",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_stop_accepting",
+        "when": "era_tavern_sync_entry_choose_route == 'stop_accepting'"
+      },
+      [
+        "route_stop_accepting",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_diagnostics",
+        "when": "era_tavern_sync_entry_choose_route == 'diagnostics'"
+      },
+      [
+        "route_diagnostics",
+        "join_return"
+      ],
+      [
+        "return",
+        "finish"
+      ],
+      [
+        "join_return",
+        "return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_prepare_wait_through",
+        "when": "era_tavern_sync_entry_choose_route == 'prepare_wait_through'"
+      },
+      [
+        "route_prepare_wait_through",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_prepare_stop",
+        "when": "era_tavern_sync_entry_choose_route == 'prepare_stop'"
+      },
+      [
+        "route_prepare_stop",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_function_submit",
+        "when": "era_tavern_sync_entry_choose_route == 'function_submit'"
+      },
+      [
+        "route_function_submit",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_timer_fired",
+        "when": "era_tavern_sync_entry_choose_route == 'timer_fired'"
+      },
+      [
+        "route_timer_fired",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_cap_admission",
+        "when": "era_tavern_sync_entry_choose_route == 'cap_admission'"
+      },
+      [
+        "route_cap_admission",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_cap_agent",
+        "when": "era_tavern_sync_entry_choose_route == 'cap_agent'"
+      },
+      [
+        "route_cap_agent",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_cap_character",
+        "when": "era_tavern_sync_entry_choose_route == 'cap_character'"
+      },
+      [
+        "route_cap_character",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_cap_functions",
+        "when": "era_tavern_sync_entry_choose_route == 'cap_functions'"
+      },
+      [
+        "route_cap_functions",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_cap_identity",
+        "when": "era_tavern_sync_entry_choose_route == 'cap_identity'"
+      },
+      [
+        "route_cap_identity",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_cap_installation_scope",
+        "when": "era_tavern_sync_entry_choose_route == 'cap_installation_scope'"
+      },
+      [
+        "route_cap_installation_scope",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_cap_messages",
+        "when": "era_tavern_sync_entry_choose_route == 'cap_messages'"
+      },
+      [
+        "route_cap_messages",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_cap_regex",
+        "when": "era_tavern_sync_entry_choose_route == 'cap_regex'"
+      },
+      [
+        "route_cap_regex",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_cap_sidecar",
+        "when": "era_tavern_sync_entry_choose_route == 'cap_sidecar'"
+      },
+      [
+        "route_cap_sidecar",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_cap_startup_gate",
+        "when": "era_tavern_sync_entry_choose_route == 'cap_startup_gate'"
+      },
+      [
+        "route_cap_startup_gate",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_cap_variables",
+        "when": "era_tavern_sync_entry_choose_route == 'cap_variables'"
+      },
+      [
+        "route_cap_variables",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_cap_worldbook",
+        "when": "era_tavern_sync_entry_choose_route == 'cap_worldbook'"
+      },
+      [
+        "route_cap_worldbook",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_function_release",
+        "when": "era_tavern_sync_entry_choose_route == 'function_release'"
+      },
+      [
+        "route_function_release",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_subscription_control",
+        "when": "era_tavern_sync_entry_choose_route == 'subscription_control'"
+      },
+      [
+        "route_subscription_control",
+        "join_return"
+      ],
+      {
+        "from": "choose",
+        "to": "route_native_stop_retry",
+        "when": "era_tavern_sync_entry_choose_route == 'native_stop_retry'"
+      },
+      [
+        "route_native_stop_retry",
+        "join_return"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.call.result",
+        "cardinality": "exactly_one",
+        "display_name": "本次酒馆操作返回给调用方的结果",
+        "as": "result"
+      }
+    ]
+  }
+}

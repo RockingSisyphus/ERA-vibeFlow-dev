@@ -12,7 +12,8 @@
       "type": "era.collection.reduction",
       "cardinality": "exactly_one",
       "display_name": "新事件合并后的等待与组批决定"
-    }
+    },
+    {"type":"era.workflow.host_resources","cardinality":"exactly_one","display_name":"所属 ERA 实例的本地资源"}
   ],
   "provides": [
     {
@@ -29,9 +30,10 @@
         "type": "era.collection.reduction",
         "display_name": "新事件合并后的等待与组批决定",
         "required": true
-      }
+      },
+      {"key":"host_resources","type":"era.workflow.host_resources","required":true,"display_name":"所属 ERA 实例的本地资源"}
     ],
-    "max_steps": 12,
+    "max_steps": 13,
     "nodes": [
       {
         "id": "start",
@@ -43,7 +45,8 @@
         "id": "plan_batch",
         "display_name": "把收齐的事件安排成有序任务",
         "description": "在“把就绪事件排成可执行的有序批次”流程中，接收已收齐的聊天变化和脚本请求，安排初始化、历史同步、消息标识、生成或忽略任务。保留每个任务对应的原事件，让同批相关变化按顺序处理并逐一返回确认。",
-        "definition_id": "era.service.plan_batch"
+        "definition_id": "era.service.plan_batch",
+        "join_policy": "all"
       },
       {
         "id": "validate_coverage",
@@ -74,13 +77,11 @@
         "display_name": "结束把就绪事件排成可执行的有序批次",
         "description": "标明“把就绪事件排成可执行的有序批次”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
         "definition_id": "era.service.terminal"
-      }
+      },
+      {"id":"retain_host_resources","definition_id":"era.service.retain_host_resources","display_name":"保留所属实例的资源","description":"先取出本次运行或本轮迭代收到的本地资源，供下面需要组织工作流通信的步骤使用。资源不写入业务消息。"}
     ],
     "edges": [
-      [
-        "start",
-        "plan_batch"
-      ],
+      {"from":"start","to":"plan_batch","schedule":true},
       [
         "plan_batch",
         "validate_coverage"
@@ -106,7 +107,10 @@
       [
         "finish_invalid_batch",
         "end"
-      ]
+      ],
+      ["start","retain_host_resources"],
+      {"from":"retain_host_resources","to":"plan_batch","transfer":false,"schedule":true},
+      {"from":"retain_host_resources","to":"finish_invalid_batch","schedule":false}
     ],
     "outputs": [
       {

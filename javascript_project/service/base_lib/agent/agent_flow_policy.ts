@@ -2,10 +2,7 @@ import {
   normalizeAgentConfiguration,
   isAgentEnabled,
 } from "./agent_configuration.ts";
-import {
-  formatMessageKeyBlock,
-  stripEraDataBlocks,
-} from "../domain/mk_engine.ts";
+import { composeCanonicalFloor } from "./agent_stage_layout.ts";
 import type { PlannedStepV1 } from "../service_types.ts";
 import type {
   EraAgentFloorCandidateV1,
@@ -69,23 +66,6 @@ function floorIdentity(step: PlannedStepV1): EraFloorIdentityV1 {
   return identity;
 }
 
-function canonicalFloorContent(
-  content: string,
-  identity: EraFloorIdentityV1,
-  keepStatusPlaceholder: boolean,
-): string {
-  const story = stripEraDataBlocks(content)
-    .replace(/<StatusPlaceHolderImpl\s*\/>/giu, "")
-    .trimEnd();
-  return [
-    story,
-    formatMessageKeyBlock(identity.mk, "assistant"),
-    keepStatusPlaceholder ? "<StatusPlaceHolderImpl/>" : "",
-  ]
-    .filter(Boolean)
-    .join("\n");
-}
-
 export function withFloorCandidate(
   step: PlannedStepV1,
   rawCandidate: EraAgentFloorCandidateV1,
@@ -120,9 +100,9 @@ export function withFloorCandidate(
     dispatchContext.processingMessage?.activeText.includes(
       "<StatusPlaceHolderImpl/>",
     ) === true;
-  const content = canonicalFloorContent(
+  const content = composeCanonicalFloor(
     rawCandidate.content,
-    identity,
+    identity.mk,
     keepStatusPlaceholder,
   );
   const candidate: EraAgentFloorCandidateV1 = {

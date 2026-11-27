@@ -1,0 +1,206 @@
+[
+  {
+    "entry": "era.installation.scope.activate_ingress",
+    "definition_id": "era.communication.installation_scope_activate_ingress",
+    "file": "javascript_project/service/nodes/initialize/shared_pure_adapters.ts",
+    "export": "ActivateTavernIngressNode"
+  },
+  {
+    "entry": "era.installation.scope.publish_dormant",
+    "definition_id": "era.communication.installation_scope_publish_dormant",
+    "file": "javascript_project/service/nodes/initialize/shared_pure_adapters.ts",
+    "export": "PublishDormantStartupNode"
+  },
+  {
+    "entry": "era.installation.scope.inspect",
+    "definition_id": "era.communication.installation_scope_inspect",
+    "file": "javascript_project/service/nodes/initialize/shared_pure_adapters.ts",
+    "export": "InspectInstallationScopeNode"
+  },
+  {
+    "entry": "era.tavern.initialization_commit",
+    "definition_id": "era.communication.tavern_initialization_commit",
+    "file": "javascript_project/service/nodes/initialize/commit_initialization.ts",
+    "export": "run"
+  },
+  {
+    "entry": "era.workbench.read_baseline",
+    "definition_id": "era.communication.workbench_read_baseline",
+    "file": "javascript_project/service/nodes/api/workbench_read_baseline.ts",
+    "export": "run"
+  },
+  {
+    "entry": "era.api.inspect_submission",
+    "definition_id": "era.communication.api_inspect_submission",
+    "file": "javascript_project/service/nodes/api/facade_nodes.ts",
+    "export": "inspectSubmission"
+  },
+  {
+    "entry": "era.api.prepare_application",
+    "definition_id": "era.communication.api_prepare_application",
+    "file": "javascript_project/service/nodes/api/facade_nodes.ts",
+    "export": "prepareApplication"
+  },
+  {
+    "entry": "era.api.return_application_result",
+    "definition_id": "era.communication.api_return_application_result",
+    "file": "javascript_project/service/nodes/api/facade_nodes.ts",
+    "export": "returnApplicationResult"
+  },
+  {
+    "entry": "era.lifecycle.settle_saved_batch",
+    "definition_id": "era.communication.lifecycle_settle_saved_batch",
+    "file": "javascript_project/service/nodes/sync/settle_saved_batch.ts",
+    "export": "run"
+  },
+  {
+    "entry": "era.tavern.variables_commit",
+    "definition_id": "era.communication.tavern_variables_commit",
+    "file": "javascript_project/service/nodes/sync/commit_sync.ts",
+    "export": "run"
+  },
+  {
+    "entry": "era.lifecycle.publish_block_application",
+    "definition_id": "era.communication.lifecycle_publish_block_application",
+    "file": "javascript_project/service/nodes/sync/shared_block_state_adapters.ts",
+    "export": "PublishBlockApplicationNode"
+  },
+  {
+    "entry": "era.tavern.sync_read",
+    "definition_id": "era.communication.tavern_sync_read",
+    "file": "javascript_project/service/nodes/sync/read_sync_context.ts",
+    "export": "run"
+  },
+  {
+    "entry": "era.sync.present_finalized_floor",
+    "definition_id": "era.communication.sync_present_finalized_floor",
+    "file": "javascript_project/service/nodes/sync/present_finalized_floor.ts",
+    "export": "run"
+  },
+  {
+    "entry": "era.sync.answer_author_sync",
+    "definition_id": "era.communication.sync_answer_author_sync",
+    "file": "javascript_project/service/nodes/sync/core_author_nodes.ts",
+    "export": "AnswerAuthorSyncNode"
+  },
+  {
+    "entry": "era.sync.begin_author_call",
+    "definition_id": "era.communication.sync_begin_author_call",
+    "file": "javascript_project/service/nodes/sync/core_author_nodes.ts",
+    "export": "BeginAuthorCallNode"
+  },
+  {
+    "entry": "era.sync.finish_author_call",
+    "definition_id": "era.communication.sync_finish_author_call",
+    "file": "javascript_project/service/nodes/sync/core_author_nodes.ts",
+    "export": "FinishAuthorCallNode"
+  },
+  {
+    "entry": "era.sync.prepare_author_commit",
+    "definition_id": "era.communication.sync_prepare_author_commit",
+    "file": "javascript_project/service/nodes/sync/core_author_nodes.ts",
+    "export": "PrepareAuthorCommitNode"
+  },
+  {
+    "entry": "era.sync.receive_author_event",
+    "definition_id": "era.communication.sync_receive_author_event",
+    "file": "javascript_project/service/nodes/sync/core_author_nodes.ts",
+    "export": "ReceiveAuthorEventNode"
+  },
+  {
+    "entry": "era.agent.execute_settings_command",
+    "definition_id": "era.communication.agent_execute_settings_command",
+    "file": "javascript_project/service/nodes/agent/execute_settings_command.ts",
+    "export": "run"
+  },
+  {
+    "entry": "era.agent.candidate_seed",
+    "definition_id": "era.communication.agent_candidate_seed",
+    "file": "javascript_project/service/nodes/agent/candidate_seed.ts",
+    "export": "run"
+  },
+  {
+    "entry": "era.lifecycle.finish_stage_blocks",
+    "definition_id": "era.communication.lifecycle_finish_stage_blocks",
+    "file": "javascript_project/service/nodes/agent/finish_stage_blocks.ts",
+    "export": "FinishStageBlocksNode"
+  },
+  {
+    "entry": "era.agent.execute_session_v2",
+    "definition_id": "era.communication.agent_execute_session_v2",
+    "file": "javascript_project/service/nodes/agent/execute_generation_session.ts",
+    "export": "run"
+  },
+  {
+    "entry": "era.prepare_generation_facts.read_facts",
+    "definition_id": "era.communication.prepare_generation_facts_read_facts",
+    "file": "javascript_project/service/nodes/agent/prepare_generation_facts.ts",
+    "export": "readFacts"
+  },
+  {
+    "entry": "era.lifecycle.prepare_stage_blocks",
+    "definition_id": "era.communication.lifecycle_prepare_stage_blocks",
+    "file": "javascript_project/service/nodes/agent/prepare_stage_blocks.ts",
+    "export": "run"
+  },
+  {
+    "entry": "era.agent.prepare_settings_request",
+    "definition_id": "era.communication.agent_prepare_settings_request",
+    "file": "javascript_project/service/nodes/agent/prepare_settings_request.ts",
+    "export": "run"
+  },
+  {
+    "entry": "era.sidecar_binding.publish_choice_prompt",
+    "definition_id": "era.communication.sidecar_binding_publish_choice_prompt",
+    "file": "javascript_project/service/nodes/sidecar/shared_choice_adapters.ts",
+    "export": "PublishChoicePromptNode"
+  },
+  {
+    "entry": "era.sidecar_binding.inspect_current",
+    "definition_id": "era.communication.sidecar_binding_inspect_current",
+    "file": "javascript_project/service/nodes/sidecar/inspect_current.ts",
+    "export": "run"
+  },
+  {
+    "entry": "era.sidecar_binding.apply_resolution",
+    "definition_id": "era.communication.sidecar_binding_apply_resolution",
+    "file": "javascript_project/service/nodes/sidecar/apply_resolution.ts",
+    "export": "run"
+  },
+  {
+    "entry": "era.command.apply_edit_action",
+    "definition_id": "era.migration.service.apply_edit.workflow",
+    "file": "javascript_project/service/nodes/sync/core_operation_nodes.ts",
+    "export": "ApplyEditActionNode"
+  },
+  {
+    "entry": "era.command.apply_function_group_action",
+    "definition_id": "era.migration.service.apply_function_group.workflow",
+    "file": "javascript_project/service/nodes/sync/core_operation_nodes.ts",
+    "export": "ApplyFunctionGroupActionNode"
+  },
+  {
+    "entry": "era.command.apply_stage_call_action",
+    "definition_id": "era.migration.service.apply_stage_call.workflow",
+    "file": "javascript_project/service/nodes/sync/core_operation_nodes.ts",
+    "export": "ApplyStageCallActionNode"
+  },
+  {
+    "entry": "era.workbench.plan_variables",
+    "definition_id": "era.migration.service.plan_variables.workflow",
+    "file": "javascript_project/service/nodes/api/workbench_plan_variables.ts",
+    "export": "run"
+  },
+  {
+    "entry": "era.sealed_command_compaction.prepare_candidates",
+    "definition_id": "era.migration.service.prepare_candidates.workflow",
+    "file": "javascript_project/service/nodes/sync/compaction_replay.ts",
+    "export": "prepareCandidates"
+  },
+  {
+    "entry": "era.dispatch.read_canonical_context",
+    "definition_id": "era.communication.dispatch_read_canonical_context",
+    "file": "javascript_project/service/nodes/dispatch/read_canonical_context.ts",
+    "export": "run"
+  }
+]

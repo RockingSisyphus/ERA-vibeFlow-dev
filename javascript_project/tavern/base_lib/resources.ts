@@ -81,15 +81,14 @@ export function syncCall(frame: any, operation: (signal: AbortSignal) => any): a
 }
 
 /** 只捕获一次已发起 IO 的结果。等待、分类和收尾由 Node 执行。 */
-export function startResource(frame: any, operation: (signal: AbortSignal) => any, callback: (resource: any) => Promise<any>): any {
+export function startResource(frame: any, operation: (signal: AbortSignal) => any): any {
   const resource = completionResource(frame);
   resource.publicPromise = resource.promise;
-  const raw = deferred();
-  resource.promise = raw.promise;
-  observeCompletion(resource, async () => await operation(resource.signal), outcome => {
-    raw.resolve(outcome);
-    return callback(resource);
-  });
+  let work;
+  try {work=Promise.resolve(operation(resource.signal));} catch(error){work=Promise.reject(error);}
+  resource.actual=work.then(value=>({status:"fulfilled",value}),error=>({status:"rejected",error}));
+  resource.promise=resource.actual;
+  frame.session.resources.track(resource.actual);
   return resource;
 }
 
@@ -121,7 +120,9 @@ export function completionResource(frame: any, signals?: (AbortSignal | undefine
   const promise = abortable(() => completion.promise, linked);
   s.resources.track(completion.promise);
   s.resources.track(promise);
-  return {owner: s, completion, signal: linked.signal, promise};
+  const resource = {owner: s, completion, signal: linked.signal, promise};
+  frame.operationScope?.resources.add(resource);
+  return resource;
 }
 /** 一次原始 IO 的完成只转交已给定回调；这里不处理成功/失败、不归还租约。 */
 export function observeCompletion(resource: any, operation: () => Promise<any>, callback: (outcome: any) => Promise<any>): void {
@@ -145,4 +146,14 @@ export async function rawCall(frame: any, operation: (signal: AbortSignal) => an
     : linkedSignals([frame.session.lifecycle.signal, frame.session.operational.signal, frame.options?.signal]);
   try { return await operation(linked.signal); }
   finally { linked.cleanup(); }
+}
+
+/** 原有限容量FIFO的单次出队或等待；准入、容量检查和事件决定仍由原Node负责。 */
+export function dequeueEvent(s:any, signal?:AbortSignal):any {
+  if(s.pendingReceive)throw new Error("ERA_HOST_PORT_CONCURRENT_RECEIVE");
+  const event=s.queue.shift();
+  if(event){s.queueBytes-=event.encodedBytes;return {value:event};}
+  const linked=linkedSignals([s.lifecycle.signal,s.operational.signal,signal]);
+  const pending=waitResource(linked,()=>{if(s.pendingReceive===pending)s.pendingReceive=null;});
+  s.pendingReceive=pending;return pending.promise;
 }

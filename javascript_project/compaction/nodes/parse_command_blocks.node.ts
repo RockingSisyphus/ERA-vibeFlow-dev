@@ -8,7 +8,6 @@ export const era_command_compaction_parse_command_blocks = defineNode({
   "contract": {"requires":[{"type":"era.command_compaction.request","cardinality":"exactly_one","display_name":"原消息、变量起点和指令压缩要求"}],"provides":[{"key":"parsed","type":"era.command_compaction.parsed","display_name":"按原顺序识别的正文和指令段"}],"params_schema":{},"params_defaults":{},"input_semantics":{"era.command_compaction.request":["供在同一起点比较原文与较短指令的实际效果。"]},"output_semantics":{"parsed":["保留各段作用范围及位置，供逐段尝试缩短。"]}},
   "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/parse_command_blocks.ts","export":"run"}}],
   "base_libs": ["era.command_compaction.stages"],
-  "capabilities": [],
   "tags": ["ERA 命令压缩"],
   "rulesets": ["vibeflow.process"],
   "id": "era.command_compaction.parse_command_blocks",

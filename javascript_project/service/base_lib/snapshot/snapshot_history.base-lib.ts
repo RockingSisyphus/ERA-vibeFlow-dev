@@ -18,7 +18,7 @@ export const era_snapshot_history = defineBaseLib({
       }
     }
   ],
-  "dependencies": [],
+  "dependencies": ["era.data_view"],
   "external_packages": [
     "@era/vibeflow-contracts"
   ],

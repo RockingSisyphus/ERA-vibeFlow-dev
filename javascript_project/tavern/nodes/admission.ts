@@ -7,11 +7,13 @@ export function CheckEvent(inputs: any, params: any): any {
   const s = f.session;
   const input = f.input;
   // 展示连接随实例关闭而失效；保留其原拒绝码，直接宿主调用仍使用下面的宿主状态码。
-  if (f.origin === "presentation" && (!s?.started || s.stopping || s.lifecycle.signal.aborted))
+  // 致命态在实际资源清理完成前保持原领域拒绝码；关闭前缀不能盖掉故障原因。
+  if (s && (s.fatalTransitioning || s.fatalLatched))
+    f.rejected = rejection("ERA_HOST_FATAL", "ERA 服务宿主已进入致命态，不再接纳新事件。");
+  else if (f.origin === "presentation" && (!s?.started || s.stopping || s.lifecycle.signal.aborted))
     f.rejected = rejection("ERA_APP_SERVICE_UNAVAILABLE", "ERA 服务未启动或正在停止。");
   else if (!s?.started) f.rejected = rejection("ERA_HOST_NOT_STARTED", "ERA 服务宿主尚未启动。");
   else if (s.stopping || s.lifecycle.signal.aborted) f.rejected = rejection("ERA_HOST_STOPPING", "ERA 服务宿主正在停止，不再接纳新事件。");
-  else if (s.fatalTransitioning || s.fatalLatched) f.rejected = rejection("ERA_HOST_FATAL", "ERA 服务宿主已进入致命态，不再接纳新事件。");
   else if (!input || typeof input.type !== "string" || !input.type || !["tavern", "ui", "era-api", "timer"].includes(input.source)
     || ((input.source === "timer") !== (input.type === ERA_COLLECTION_TIMER_EVENT_TYPE))
     || (input.occurredAt !== undefined && !Number.isFinite(input.occurredAt))

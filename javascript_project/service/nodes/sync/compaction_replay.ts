@@ -1,71 +1,50 @@
-import {
-  identifySealedLayers,
-  compactEachSegment,
-  candidateCanReplay,
-  prepareCandidateOperations,
-  compareCandidateReplay,
-  writeSingleScopeSegments,
-  updateCompactionMarkers,
-  type ServiceCompactionContext,
-} from "../../base_lib/sync/command_compaction.ts";
-
+/** Progress生成器只保存业务局部变量；请求交由Config中的官方节点执行，不持有Node context。 */
+import { identifySealedLayers, compactEachSegmentProgress, candidateCanReplay, prepareCandidateOperations, compareCandidateReplay, writeSingleScopeSegments, updateCompactionMarkers, type ServiceCompactionContext, } from "../../base_lib/sync/command_compaction.ts";
 interface ReplayState {
-  context: ServiceCompactionContext;
-  index: number;
+    context: ServiceCompactionContext;
+    index: number;
 }
-export function prepareCandidates(inputs: any) {
-  return {
-    candidates: {
-      context: compactEachSegment(
-        identifySealedLayers(inputs["era.expression.command.result"].value),
-      ),
-      index: 0,
-    },
-  };
+export function* prepareCandidatesProgress(inputs: any): Generator<any, any, any> {
+    return {
+        candidates: {
+            context: yield* compactEachSegmentProgress(identifySealedLayers(inputs["era.expression.command.result"].value)),
+            index: 0,
+        },
+    };
 }
 export function selectCandidate(inputs: any) {
-  const state: ReplayState =
-    inputs["era.command_compaction.replay.state"].value;
-  const index = state.context.candidates.findIndex(
-    (_, i) => i >= state.index && candidateCanReplay(state.context, i),
-  );
-  return {
-    candidate: { ...state, index },
-    route: index < 0 ? ("done" as const) : ("replay" as const),
-  };
+    const state: ReplayState = inputs["era.command_compaction.replay.state"].value;
+    const index = state.context.candidates.findIndex((_, i) => i >= state.index && candidateCanReplay(state.context, i));
+    return {
+        candidate: { ...state, index },
+        route: index < 0 ? ("done" as const) : ("replay" as const),
+    };
 }
 export function prepareOperations(inputs: any) {
-  const state: ReplayState =
-    inputs["era.command_compaction.replay.state"].value;
-  return {
-    operations: { ...prepareCandidateOperations(state.context, state.index) },
-  };
+    const state: ReplayState = inputs["era.command_compaction.replay.state"].value;
+    return {
+        operations: { ...prepareCandidateOperations(state.context, state.index) },
+    };
 }
 export function compareCandidate(inputs: any) {
-  const state: ReplayState =
-    inputs["era.command_compaction.replay.state"].value;
-  const context = compareCandidateReplay(
-    state.context,
-    state.index,
-    inputs["era.command.operation.result"].value,
-  );
-  return {
-    compared_state: { context, index: state.index + 1 },
-    compared_done: false,
-  };
+    const state: ReplayState = inputs["era.command_compaction.replay.state"].value;
+    const context = compareCandidateReplay(state.context, state.index, inputs["era.command.operation.result"].value);
+    return {
+        compared_state: { context, index: state.index + 1 },
+        compared_done: false,
+    };
 }
 export function finishCandidates(inputs: any) {
-  return {
-    finished_state: inputs["era.command_compaction.replay.state"].value,
-    finished_done: true,
-  };
+    return {
+        finished_state: inputs["era.command_compaction.replay.state"].value,
+        finished_done: true,
+    };
 }
 export function publishCandidates(inputs: any) {
-  const state: ReplayState =
-    inputs["era.command_compaction.replay.state.next"].value;
-  return {
-    command_compaction_result: {
-      ...updateCompactionMarkers(writeSingleScopeSegments(state.context)),
-    },
-  };
+    const state: ReplayState = inputs["era.command_compaction.replay.state.next"].value;
+    return {
+        command_compaction_result: {
+            ...updateCompactionMarkers(writeSingleScopeSegments(state.context)),
+        },
+    };
 }

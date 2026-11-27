@@ -1,7 +1,10 @@
-import { fixture, sync as start, asyncEntry as finish } from './native-fixture.mjs';
+import { deferred, fixture, sync as start } from './native-fixture.mjs';
 import assert from 'node:assert/strict';
+import { EventEmitter } from 'node:events';
 const calls = [];
-let saveResolve,
+const eventSource = new EventEmitter();
+const settingsUpdated = 'settings_updated';
+let saveStarted = deferred(),
   responseStatus = 200,
   payload = { data: [{ id: 'b' }, { id: ' a ' }, { name: 'b' }, null] },
   jsonError;
@@ -11,15 +14,20 @@ const tavern = {
   getCurrentChatId: () => 'chat-a',
   characters: [{ data: { extensions: { era_agent: { version: 2 } } } }],
   extensionSettings: {},
+  eventSource,
+  eventTypes: { SETTINGS_UPDATED: settingsUpdated },
   writeExtensionField: async (id, key, value) => calls.push(['field', id, key, value]),
   getRequestHeaders: () => ({}),
   saveSettingsDebounced: () => {
     calls.push('save');
-    return new Promise(r => {
-      saveResolve = r;
-    });
+    saveStarted.resolve();
   },
 };
+async function finishSettingsSave() {
+  await saveStarted.promise;
+  saveStarted = deferred();
+  eventSource.emit(settingsUpdated);
+}
 const api = {
   location: { origin: 'http://tavern.test' },
   SillyTavern: tavern,
@@ -45,7 +53,24 @@ const api = {
 };
 const nativeOwner = await fixture(undefined, { api });
 const s = nativeOwner.session;
-s.activeSnapshot = { revision: 2, statData: { hp: 4 }, statFunc: {}, eraMeta: {} };
+const sidecarId = 'era_chat_native-probe';
+const published = start({
+  request: {
+    session: s,
+    action: 'capability',
+    family: 'sidecar',
+    operation: 'publish_snapshot',
+    input: {
+      sidecarId,
+      snapshot: {
+        owner: { characterId: 'card', chatId: 'chat-a', groupId: null },
+        revision: 2,
+        state: { statData: { hp: 4 }, statFunc: {}, eraMeta: {} },
+      },
+    },
+  },
+}).result.result;
+assert.equal(published.status, 'published');
 const capture = (operation, input = {}) =>
   start({ request: { session: s, action: 'capability', family: 'agent', operation, input } }).result;
 const immediate = (operation, input) => capture(operation, input).result;
@@ -79,8 +104,9 @@ const pending = suspended('upsert_connection_profile', {
 });
 assert.equal(tavern.extensionSettings.era_agent.connectionProfiles['profile-a'].key, 'private-key');
 assert.equal(keyReads, 1);
+await saveStarted.promise;
 assert.equal(calls.at(-1), 'save');
-saveResolve();
+await finishSettingsSave();
 const saved = await pending;
 assert.equal(saved.profile.hasKey, true);
 assert.equal(JSON.stringify(saved).includes('private-key'), false);
@@ -94,7 +120,7 @@ const empty = suspended('upsert_connection_profile', {
   keyProvider: () => '',
   status: 'updated',
 });
-saveResolve();
+await finishSettingsSave();
 await empty;
 assert.equal(tavern.extensionSettings.era_agent.connectionProfiles['profile-a'].key, 'private-key');
 const state = immediate('read_connection_state', { id: 'profile-a' });
@@ -103,10 +129,9 @@ assert.equal(state.entryExists, true);
 assert.equal(state.profile.hasKey, true);
 assert.equal(Object.hasOwn(state.profile, 'key'), false);
 assert.equal(immediate('read_configuration_sources').connectionProfiles[0].hasKey, true);
-const models = suspended('list_connection_models', { id: 'profile-a' });
+const listed = await suspended('list_connection_models', { id: 'profile-a' });
 assert.equal(calls.at(-1)[0], 'fetch');
 assert.equal(calls.at(-1)[2].proxy_password, 'private-key');
-const listed = await models;
 assert.deepEqual(listed.models, ['a', 'b']);
 assert.equal(JSON.stringify(listed).includes('private-key'), false);
 s.refs.set('secret-ref', () => 'closed-over-private');
@@ -159,11 +184,11 @@ assert.throws(
 );
 const clear = suspended('clear_connection_profile_key', { id: 'profile-a', name: 'A', apiUrl: 'https://api.test' });
 assert.equal(tavern.extensionSettings.era_agent.connectionProfiles['profile-a'].key, '');
-saveResolve();
+await finishSettingsSave();
 assert.equal((await clear).profile.hasKey, false);
 const deleted = suspended('delete_connection_profile', { id: 'profile-a' });
 assert.equal(Object.hasOwn(tavern.extensionSettings.era_agent.connectionProfiles, 'profile-a'), false);
-saveResolve();
+await finishSettingsSave();
 assert.equal((await deleted).status, 'deleted');
 tavern.groupId = 'group';
 assert.equal(immediate('read_context').configuration, null);
@@ -179,11 +204,11 @@ const report = {
     'context clone and Sidecar facts',
     'preset sampling projection excludes secret',
     'same-stack configuration write',
-    'same-stack profile/key preparation and save wait',
+    'profile/key preparation and asynchronous save confirmation',
     'empty key keeps existing secret',
     'redacted connection state',
     'configuration sources summaries',
-    'same-stack model status and redacted response',
+    'model request and redacted response',
     'draft endpoint and one secret provider',
     'HTTP failure stable diagnostic',
     'invalid provider payload rejected',

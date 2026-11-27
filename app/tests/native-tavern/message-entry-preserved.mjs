@@ -1,4 +1,4 @@
-import { fixture, sync as start, asyncEntry as finish } from './native-fixture.mjs';
+import { fixture, sync as start } from './native-fixture.mjs';
 import assert from 'node:assert/strict';
 const calls = [];
 let chatId = 'chat-a',
@@ -42,7 +42,11 @@ const api = {
   SillyTavern: tavern,
   getCurrentCharacterId: () => 'card',
   getVariables: () => ({}),
-  getChatMessages: range => (typeof range === 'number' ? (chat[range] ? [chat[range]] : []) : chat),
+  getChatMessages: range =>
+    (typeof range === 'number' ? (chat[range] ? [chat[range]] : []) : chat).map(message => ({
+      ...message,
+      message: message.mes,
+    })),
   setChatMessages: async (updates, options) => {
     calls.push(['set', structuredClone(updates), options]);
     for (const u of updates) {
@@ -71,21 +75,30 @@ const api = {
 };
 const nativeOwner = await fixture(undefined, { api });
 const s = nativeOwner.session;
-s.projectTechnicalBlocks = ids => calls.push(['project', ids]);
+s.updateTechnicalReports = ids => calls.push(['project', ids]);
 const capture = (operation, input) =>
   start({ request: { session: s, action: 'capability', family: 'messages', operation, input } }).result;
 const run = async (operation, input) => {
   const p = capture(operation, input);
   return p.publicPromise;
 };
-const read = capture('read_context', { projection: 'era-active-message-v1' }).result;
+const read = capture('read_context', { projection: 'era-active-message-v2' }).result;
 assert.deepEqual(read, {
   schemaVersion: 2,
-  messages: [{ schemaVersion: 1, messageId: 0, role: 'user', activeText: 'old', swipeIndex: 0 }],
+  messages: [
+    {
+      schemaVersion: 2,
+      messageId: 0,
+      role: 'user',
+      activeText: 'old',
+      swipeIndex: 0,
+      candidate: { exists: true, generation: null, predecessor: null, phase: 'idle' },
+    },
+  ],
 });
 assert.throws(() => capture('read_context', {}));
 chat[0].swipe_id = 1;
-assert.equal(capture('read_context', { projection: 'era-active-message-v1' }).result.messages[0].activeText, '');
+assert.equal(capture('read_context', { projection: 'era-active-message-v2' }).result.messages[0].activeText, '');
 chat[0].swipe_id = 0;
 let basis = { identity: { characterId: 'card', chatId: 'chat-a', groupId: null }, messages: read.messages };
 const firstFrame = capture('update_content', { messageId: 0, content: 'new', sourceBasis: basis });
@@ -98,6 +111,7 @@ assert.deepEqual(
   ['set', 'save', 'fetch', 'project'],
 );
 assert.deepEqual(calls[0][1], [{ message_id: 0, message: 'new' }]);
+assert.deepEqual(calls.at(-1), ['project', [0]]);
 assert.throws(
   () => capture('update_content', { messageId: 0, content: 'stale', sourceBasis: basis }),
   error => error.cause?.code === 'ERA_MESSAGE_WRITE_TARGET_CHANGED',

@@ -8,7 +8,6 @@ export const era_expression_guard_random_compaction = defineNode({
   "contract": {"requires":[{"type":"era.expression.symbolic.layer","cardinality":"exactly_one","display_name":"相对起始变量表达的变化方案"}],"provides":[{"key":"random_guarded_symbolic_layer","type":"era.expression.symbolic.layer","display_name":"相对起始变量表达的变化方案"}],"params_schema":{},"params_defaults":{},"input_semantics":{"era.expression.symbolic.layer":["记录可用较短公式表示的最终变化及不安全部分，供进一步简化而非直接保存。"]},"output_semantics":{"random_guarded_symbolic_layer":["记录可用较短公式表示的最终变化及不安全部分，供进一步简化而非直接保存。"]}},
   "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/guard_random_compaction.ts","export":"run"}}],
   "base_libs": ["era.expression.execution","era.expression.types"],
-  "capabilities": [],
   "tags": ["表达式工作流"],
   "rulesets": ["vibeflow.process"],
   "id": "era.expression.guard_random_compaction",

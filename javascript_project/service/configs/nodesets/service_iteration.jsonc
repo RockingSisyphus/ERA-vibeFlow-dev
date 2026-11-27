@@ -7,14 +7,16 @@
       "type": "era.service.cycle.state",
       "cardinality": "exactly_one",
       "display_name": "服务当前处于收集还是执行及相应进度"
-    }
+    },
+    {"type":"era.workflow.host_resources","cardinality":"exactly_one","display_name":"所属 ERA 实例的本地资源"}
   ],
   "provides": [
     {
       "key": "cycle_state_next",
       "type": "era.service.cycle.state",
       "display_name": "服务当前处于收集还是执行及相应进度"
-    }
+    },
+    {"key":"retained_host_resources","type":"era.workflow.host_resources","display_name":"所属 ERA 实例的本地资源"}
   ],
   "pipeline": {
     "entry_mode": "async",
@@ -24,9 +26,10 @@
         "type": "era.service.cycle.state",
         "display_name": "服务当前处于收集还是执行及相应进度",
         "required": true
-      }
+      },
+      {"key":"host_resources","type":"era.workflow.host_resources","required":true,"display_name":"所属 ERA 实例的本地资源"}
     ],
-    "max_steps": 35,
+    "max_steps": 36,
     "nodes": [
       {
         "id": "start",
@@ -79,7 +82,8 @@
             "type": "era.agent.candidate.state.selected",
             "cardinality": "exactly_one",
             "display_name": "本次选中的模型请求和恢复起点"
-          }
+          },
+          {"type":"era.workflow.host_resources","cardinality":"exactly_one","display_name":"所属 ERA 实例的本地资源"}
         ],
         "provides": [
           {
@@ -100,7 +104,8 @@
               "from": "era.agent.candidate.state.selected",
               "as": "candidate_state",
               "update": "candidate_state_after"
-            }
+            },
+            {"from":"era.workflow.host_resources","as":"host_resources","update":"retained_host_resources"}
           ],
           "outputs": [
             {
@@ -158,13 +163,11 @@
         "display_name": "结束完成一轮事件收集或任务执行",
         "description": "标明“完成一轮事件收集或任务执行”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
         "definition_id": "era.service.terminal"
-      }
+      },
+      {"id":"retain_host_resources","definition_id":"era.service.retain_host_resources","display_name":"保留所属实例的资源","description":"先取出本次运行或本轮迭代收到的本地资源，供下面需要组织工作流通信的步骤使用。资源不写入业务消息。"}
     ],
     "edges": [
-      [
-        "start",
-        "route_phase"
-      ],
+      {"from":"start","to":"route_phase","schedule":true},
       {
         "from": "route_phase",
         "to": "collect_cycle_phase",
@@ -284,7 +287,17 @@
         "to": "complete_task",
         "when": "followup_route == 'direct'",
         "transfer": false
-      }
+      },
+      ["start","retain_host_resources"],
+      {"from":"retain_host_resources","to":"route_phase","schedule":true},
+      {"from":"retain_host_resources","to":"collect_cycle_phase","schedule":false},
+      {"from":"retain_host_resources","to":"prepare_task","schedule":false},
+      {"from":"retain_host_resources","to":"execute_commit","schedule":false},
+      {"from":"retain_host_resources","to":"candidate_loop","schedule":false},
+      {"from":"retain_host_resources","to":"execute_sync","schedule":false},
+      {"from":"retain_host_resources","to":"execute_simple_task","schedule":false},
+      {"from":"retain_host_resources","to":"settle_step","schedule":false},
+      {"from":"retain_host_resources","to":"execute_agent_mk","schedule":false}
     ],
     "outputs": [
       {
@@ -292,7 +305,8 @@
         "cardinality": "exactly_one",
         "display_name": "服务当前处于收集还是执行及相应进度",
         "as": "cycleStateNext"
-      }
+      },
+      {"type":"era.workflow.host_resources","as":"retained_host_resources","cardinality":"exactly_one","display_name":"所属 ERA 实例的本地资源"}
     ]
   },
   "nodeset_imports": [

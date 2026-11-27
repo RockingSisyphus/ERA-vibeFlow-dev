@@ -42,7 +42,7 @@ s.dispatch.handoff = f => {
 const deliveries = [];
 const subscribe = listener =>
   control({ request: { session: s, operation: 'register', input: { listener } } }).result.result;
-const send = (notifications, signal) => {
+const send = async (notifications, signal) => {
   const receiving = nativeOwner.caps['vibeflow.port'].receive({ port: 'era.service.in' });
   deliveries.push(receiving);
   const admitted = nativeOwner.client.enqueue('notification-probe', 'era-api');
@@ -64,7 +64,10 @@ const send = (notifications, signal) => {
     diagnostics: [],
     fatal: false,
   };
+  // 模拟Service先实际收到事件再回信；官方Send只确认入队，原回执确认同步处理已完成。
+  await bounded(receiving, 'event delivery');
   nativeOwner.caps['vibeflow.port'].send({ port: 'era.service.out', value: outputFrame }, { signal });
+  assert.equal((await bounded(admitted.done, 'result delivery')).status, 'completed');
   return { result: null };
 };
 const running = nativeOwner.work;
@@ -75,15 +78,17 @@ handler = type => {
   return type === 'slow' ? slow.promise : fast.promise;
 };
 assert.equal(
-  send([
-    { type: 'slow', args: [] },
-    { type: 'fast', args: [] },
-  ]).result,
+  (
+    await send([
+      { type: 'slow', args: [] },
+      { type: 'fast', args: [] },
+    ])
+  ).result,
   null,
 );
 assert.deepEqual(order, ['slow', 'fast']);
 assert.equal(s.activeNotifications.size, 1);
-cases.push('synchronous notification start preserves same-stack callback order and group count');
+cases.push('synchronous result handling preserves callback start order and group count after native delivery');
 const group = [...s.activeNotifications][0];
 fast.resolve();
 await tick();
@@ -96,7 +101,7 @@ handler = type => {
   if (type === 'bad1') throw new Error('first');
   return Promise.reject(new Error('second'));
 };
-send([
+await send([
   { type: 'bad1', args: [] },
   { type: 'bad2', args: [] },
 ]);
@@ -112,7 +117,7 @@ const original = defer();
 s.handoffs.set('stage', { ...original });
 const executionSignal = new AbortController();
 handler = () => undefined;
-send(
+await send(
   [
     {
       type: 'era.agent.stage_completed',
@@ -162,7 +167,7 @@ const cancelledCallbacks = defer();
 subscribe(() => cancelledCallbacks.promise);
 const cancelledStage = defer();
 s.handoffs.set('cancelled', { ...cancelledStage });
-send([
+await send([
   {
     type: 'era.agent.stage_completed',
     args: [{ completionId: 'cancelled', executionId: 'execution', stage: 'planning', result: { plan: {} } }],

@@ -102,7 +102,22 @@ export function buildSyncCommitRequest(work: SyncWorkV1): SyncCommitRequestV1 {
   const finalWrite = messageWrites.find(
     (write) => write.messageId === floorIdentity?.messageId,
   );
-  // MK 本身不改变显示；只有本次收到的最终正文/占位符发生变化才补一次呈现。
+  const completedGeneration =
+    task?.kind === "sync" &&
+    task.primaryEvent.type === "generation_ended" &&
+    original?.candidate.phase === "completed";
+  const marker = prepared.statusbarPlaceholder;
+  const addedStatusbar =
+    (received || completedGeneration) &&
+    original?.role === "assistant" &&
+    finalWrite !== undefined &&
+    marker !== undefined &&
+    !original.activeText.includes(marker) &&
+    finalWrite.content.includes(marker);
+  // affected 会重绘输入中的所有楼层。单楼补标记随写入呈现，多楼提交只在保存后呈现目标楼。
+  const refreshWithWrite =
+    addedStatusbar && agentFloorCandidate === null && messageWrites.length === 1;
+  // MK 本身不改变显示；多阶段最终楼层和发生展示变化的单楼仍使用既有呈现边界。
   const nativeDisplayChanged =
     received &&
     original?.role === "assistant" &&
@@ -110,8 +125,10 @@ export function buildSyncCommitRequest(work: SyncWorkV1): SyncCommitRequestV1 {
     stripEraDataBlocks(original.activeText).trimEnd() !==
       stripEraDataBlocks(finalWrite.content).trimEnd();
   const initialPresentation =
-    agentFloorCandidate?.requiresInitialPresentation === true ||
-    nativeDisplayChanged
+    !refreshWithWrite &&
+    (agentFloorCandidate?.requiresInitialPresentation === true ||
+      nativeDisplayChanged ||
+      addedStatusbar)
       ? floorIdentity
       : null;
   return {
@@ -125,6 +142,7 @@ export function buildSyncCommitRequest(work: SyncWorkV1): SyncCommitRequestV1 {
     meta: cloneSyncJson(plan.meta),
     floorIdentity,
     agentFloorCandidate,
+    messageRefresh: refreshWithWrite ? "affected" : "none",
     initialPresentation,
     ...(work.syncCursor === undefined ? {} : { syncCursor: work.syncCursor }),
     ...(work.blockStepState === undefined

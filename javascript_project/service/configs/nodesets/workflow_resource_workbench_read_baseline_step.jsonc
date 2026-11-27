@@ -1,0 +1,261 @@
+{
+  "type_key": "era.communication.workbench_read_baseline.step",
+  "display_name": "逐项完成“读取编辑草稿要对照的当前数据”所需的酒馆操作",
+  "description": "读取当前聊天所绑定的独立状态文件，以及可用的内存变量和函数。把这份当前数据交给草稿检查和差异比较，确保编辑建立在真实现状上。 原生调用和异步等待在图中分开显示。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.communication.workbench_read_baseline.state",
+      "cardinality": "exactly_one",
+      "display_name": "本业务段的本地计算和酒馆操作进度"
+    },
+    {"type":"era.workflow.host_resources","cardinality":"exactly_one","display_name":"所属 ERA 实例的本地资源"}
+  ],
+  "provides": [
+    {
+      "key": "next_state",
+      "type": "era.communication.workbench_read_baseline.state",
+      "display_name": "继续计算后的本地进度"
+    },
+    {
+      "key": "done",
+      "type": "era.communication.workbench_read_baseline.done",
+      "display_name": "本段是否已经完成"
+    },
+    {"key":"retained_host_resources","type":"era.workflow.host_resources","display_name":"所属 ERA 实例的本地资源"}
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "state",
+        "type": "era.communication.workbench_read_baseline.state",
+        "required": true,
+        "display_name": "本业务段的本地进度"
+      },
+      {"key":"host_resources","type":"era.workflow.host_resources","required":true,"display_name":"所属 ERA 实例的本地资源"}
+    ],
+    "max_steps": 17,
+    "nodes": [
+      {
+        "id": "start",
+        "definition_id": "era.service.terminal",
+        "display_name": "开始本段酒馆操作",
+        "description": "本步骤用于“逐项完成“读取编辑草稿要对照的当前数据”所需的酒馆操作”：标明该段业务操作的范围；跨工作流调用在中间明确显示。"
+      },
+      {
+        "id": "prepare_request",
+        "display_name": "准备下一项酒馆操作的纯数据请求",
+        "description": "本步骤用于“逐项完成“读取编辑草稿要对照的当前数据”所需的酒馆操作”：继续原业务顺序，取出当前真正需要的一项酒馆操作。仅传资源令牌、操作名称、纯数据参数和请求号，本地实例、函数、运行中的异步任务、取消信号对象及释放器留在资源作用域。",
+        "definition_id": "era.communication.workbench_read_baseline.prepare_request",
+        "join_policy": "all"
+      },
+      {
+        "id": "encode_request",
+        "definition_id": "era.workflow.encode_request",
+        "display_name": "把业务输入转换为保留原值的消息",
+        "description": "在此处保留大数、负零、数组空位和缺失值，使独立流程收到与原调用相同的业务值。此转换只处理消息，当前业务进度仍通过图内数据连接保留。"
+      },
+      {
+        "id": "invoke_sync_host_turn",
+        "definition_id": "era.workflow.yield_host_turn",
+        "display_name": "让宿主处理一轮事件再继续",
+        "description": "在异步Service发出下一项同步子流程请求前，等待所属酒馆实例完成一轮可取消的宿主事件调度，让界面、生成事件和取消通知获得执行机会；随后原样交出当前请求，由下游原InvokeSync执行。保持请求顺序、目标、参数和结果，不处理消息或变量，也不延长业务等待上限。实现源：nodes/workflow/protocol.mjs，宿主原语位于Tavern protocol_resources。"
+      },
+      {
+        "id": "invoke_sync",
+        "definition_id": "era.workflow.invoke_sync",
+        "display_name": "InvokeSync：执行酒馆即时操作或登记异步操作",
+        "description": "本步骤用于“逐项完成“读取编辑草稿要对照的当前数据”所需的酒馆操作”：同页调用酒馆sync工作流；即时结果直接返回，实际异步操作只返回资源作用域内登记的等待令牌，不跨通信传运行中的异步任务。",
+        "config": {
+          "workflow": {
+            "root": "era-tavern",
+            "path": "configs/era.tavern.sync.jsonc",
+            "entry": "protocol"
+          }
+        }
+      },
+      {
+        "id": "decode_outputs",
+        "definition_id": "era.workflow.decode_outputs",
+        "display_name": "恢复目标流程返回的原始业务值",
+        "description": "在此处保留大数、负零、数组空位和缺失值，使独立流程收到与原调用相同的业务值。此转换只处理消息，当前业务进度仍通过图内数据连接保留。"
+      },
+      {
+        "id": "inspect_result",
+        "display_name": "区分即时结果和仍需等待的操作",
+        "description": "本步骤用于“逐项完成“读取编辑草稿要对照的当前数据”所需的酒馆操作”：按原操作合同识别即时纯数据结果或异步等待令牌。即时结果接回原计算位置；等待令牌须交给异步入口确认，不能当成业务已经完成。",
+        "definition_id": "era.communication.workbench_read_baseline.inspect_result"
+      },
+      {
+        "id": "prepare_wait",
+        "display_name": "准备等待令牌对应的异步入口请求",
+        "description": "本步骤用于“逐项完成“读取编辑草稿要对照的当前数据”所需的酒馆操作”：把资源令牌、操作等待令牌及请求号装为纯数据，只选择原生异步operation入口；原始IO和取消控制仍归Tavern资源。",
+        "definition_id": "era.communication.workbench_read_baseline.prepare_wait"
+      },
+      {
+        "id": "encode_wait_request",
+        "definition_id": "era.workflow.encode_wait_request",
+        "display_name": "把业务输入转换为保留原值的消息",
+        "description": "在此处保留大数、负零、数组空位和缺失值，使独立流程收到与原调用相同的业务值。此转换只处理消息，当前业务进度仍通过图内数据连接保留。"
+      },
+      {
+        "id": "call_operation",
+        "definition_id": "era.workflow.call",
+        "display_name": "Call：启动本次酒馆异步等待流程",
+        "description": "本步骤用于“逐项完成“读取编辑草稿要对照的当前数据”所需的酒馆操作”：在同页启动酒馆operation入口，返回这一轮等待流程的实例号；资源作用域登记其归属，取消后仍须等待实际IO清理。",
+        "config": {
+          "workflow": {
+            "root": "era-tavern",
+            "path": "configs/era.tavern.operation.jsonc",
+            "entry": "protocol_operation"
+          },
+          "launch": {
+            "kind": "in_process"
+          },
+          "allow_background": false
+        }
+      },
+      {
+        "id": "wait_operation",
+        "definition_id": "era.workflow.wait_owned",
+        "display_name": "Wait；等待中断时Kill并等操作清理",
+        "description": "本步骤用于“逐项完成“读取编辑草稿要对照的当前数据”所需的酒馆操作”：等待本次酒馆操作的真实终态；若等待被取消或发生故障，停止本次独立操作并等待实际执行与清理结束，再交回取消或失败。不会把仅取消等待当作操作已经退出。",
+        "config": {
+          "workflow": {
+            "root": "era-tavern",
+            "path": "configs/era.tavern.operation.jsonc",
+            "entry": "protocol_operation"
+          }
+        }
+      },
+      {
+        "id": "decode_terminal",
+        "definition_id": "era.workflow.decode_terminal",
+        "display_name": "恢复实际完成后的酒馆操作结果",
+        "description": "在此处保留大数、负零、数组空位和缺失值，使独立流程收到与原调用相同的业务值。此转换只处理消息，当前业务进度仍通过图内数据连接保留。"
+      },
+      {
+        "id": "accept_terminal",
+        "display_name": "核对请求号并接回实际完成结果",
+        "description": "本步骤用于“逐项完成“读取编辑草稿要对照的当前数据”所需的酒馆操作”：检查实例终态、资源归属和请求号，按原合同返回完成结果或业务错误；实际清理仍须由原资源作用域完成。",
+        "definition_id": "era.communication.workbench_read_baseline.accept_terminal"
+      },
+      {
+        "id": "accept_immediate",
+        "display_name": "接回即时酒馆结果",
+        "description": "本步骤用于“逐项完成“读取编辑草稿要对照的当前数据”所需的酒馆操作”：此操作无需异步等待，直接把普通结果接回原业务位置，不启动额外流程。",
+        "definition_id": "era.communication.workbench_read_baseline.accept_immediate"
+      },
+      {
+        "id": "advance",
+        "display_name": "继续本段业务，判断下一项酒馆操作",
+        "description": "本步骤用于“逐项完成“读取编辑草稿要对照的当前数据”所需的酒馆操作”：仅在本次结果已到达后推进原业务计算，保留原顺序、错误与清理语义；若后续还需酒馆操作则继续循环，否则结束本段。",
+        "definition_id": "era.communication.workbench_read_baseline.advance"
+      },
+      {
+        "id": "end",
+        "definition_id": "era.service.terminal",
+        "display_name": "完成本段酒馆操作",
+        "description": "本步骤用于“逐项完成“读取编辑草稿要对照的当前数据”所需的酒馆操作”：标明该段业务操作的范围；跨工作流调用在中间明确显示。"
+      },
+      {"id":"retain_host_resources","definition_id":"era.service.retain_host_resources","display_name":"保留所属实例的资源","description":"先取出本次运行或本轮迭代收到的本地资源，供下面需要组织工作流通信的步骤使用。资源不写入业务消息。"}
+    ],
+    "edges": [
+      {"from":"start","to":"prepare_request","schedule":true},
+      [
+        "prepare_request",
+        "encode_request"
+      ],
+      [
+        "decode_outputs",
+        "inspect_result"
+      ],
+      {
+        "from": "inspect_result",
+        "to": "prepare_wait",
+        "when": "wait_route == 'wait'"
+      },
+      {
+        "from": "inspect_result",
+        "to": "accept_immediate",
+        "when": "wait_route == 'immediate'"
+      },
+      [
+        "prepare_wait",
+        "encode_wait_request"
+      ],
+      [
+        "call_operation",
+        "wait_operation"
+      ],
+      [
+        "decode_terminal",
+        "accept_terminal"
+      ],
+      [
+        "accept_terminal",
+        "advance"
+      ],
+      [
+        "accept_immediate",
+        "advance"
+      ],
+      [
+        "advance",
+        "end"
+      ],
+      {
+        "from": "prepare_request",
+        "to": "inspect_result",
+        "schedule": false
+      },
+      {
+        "from": "inspect_result",
+        "to": "accept_terminal",
+        "schedule": false
+      },
+      [
+        "encode_request",
+        "invoke_sync_host_turn"
+      ],
+      [
+        "invoke_sync",
+        "decode_outputs"
+      ],
+      [
+        "encode_wait_request",
+        "call_operation"
+      ],
+      [
+        "wait_operation",
+        "decode_terminal"
+      ],
+      [
+        "invoke_sync_host_turn",
+        "invoke_sync"
+      ],
+      ["start","retain_host_resources"],
+      {"from":"retain_host_resources","to":"prepare_request","transfer":false,"schedule":true},
+      {"from":"retain_host_resources","to":"invoke_sync_host_turn","schedule":false},
+      {"from":"retain_host_resources","to":"prepare_wait","schedule":false},
+      {"from":"retain_host_resources","to":"wait_operation","schedule":false},
+      {"from":"retain_host_resources","to":"accept_terminal","schedule":false}
+    ],
+    "outputs": [
+      {
+        "type": "era.communication.workbench_read_baseline.state",
+        "cardinality": "exactly_one",
+        "display_name": "本地业务进度",
+        "as": "next_state"
+      },
+      {
+        "type": "era.communication.workbench_read_baseline.done",
+        "cardinality": "exactly_one",
+        "display_name": "本段是否已经完成",
+        "as": "done"
+      },
+      {"type":"era.workflow.host_resources","as":"retained_host_resources","cardinality":"exactly_one","display_name":"所属 ERA 实例的本地资源"}
+    ]
+  }
+}

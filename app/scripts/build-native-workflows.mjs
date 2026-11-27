@@ -1,6 +1,7 @@
-/** 按依赖顺序重建公开包与四个原生入口，全部成功后安装AOT候选。 */
+/** 按依赖顺序重建公开包与六个原生构建目标，全部成功后安装AOT候选。 */
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync, rmSync, renameSync } from 'node:fs';
+import { closeSync, mkdirSync, mkdtempSync, openSync, readFileSync, writeFileSync, rmSync, renameSync } from 'node:fs';
+import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildRuntimePackages } from './build-runtime-packages.mjs';
 import { generateBindings } from '../../javascript_project/tavern/scripts/generate-bindings.mjs';
@@ -19,8 +20,13 @@ function candidate(destination) {
   return staged;
 }
 function execute(command, args, name) {
-  const result = spawnSync(command, args, { cwd: root, env: buildEnv, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
-  writeFileSync(`${reportRoot}${name}.log`, (result.stdout ?? '') + (result.stderr ?? ''));
+  const log = openSync(`${reportRoot}${name}.log`, 'w');
+  let result;
+  try {
+    result = spawnSync(command, args, { cwd: root, env: buildEnv, stdio: ['ignore', log, log] });
+  } finally {
+    closeSync(log);
+  }
   if (result.error) throw result.error;
   if (result.status !== 0) throw new Error(`${name} 构建失败，详见 ${reportRoot}${name}.log`);
   console.log(`${name}: complete`);
@@ -31,7 +37,7 @@ try {
   const declaration = JSON.parse(readFileSync(`${root}javascript_project/tavern/bindings.jsonc`, 'utf8'));
   writeFileSync(`${root}javascript_project/tavern/generated/bindings.mjs`, generateBindings(declaration));
   console.log('bindings: complete');
-  for (const entry of ['sync', 'async'])
+  for (const entry of ['sync', 'operation', 'runtime', 'parallel_reads'])
     execute(
       'python',
       [
@@ -95,6 +101,7 @@ try {
 
   // 所有入口构建成功后才安装候选；旧ABI产物不作为构建失败的回退。
   for (const { staged, destination } of pending) {
+    mkdirSync(dirname(destination), { recursive: true });
     rmSync(destination, { recursive: true, force: true });
     renameSync(staged, destination);
   }

@@ -19,7 +19,7 @@ export const era_service_message_function_calls = defineBaseLib({
     }
   ],
   "dependencies": [
-    "era.crud.parser"
+    "era.command.payload"
   ],
   "external_packages": [],
   "rulesets": [

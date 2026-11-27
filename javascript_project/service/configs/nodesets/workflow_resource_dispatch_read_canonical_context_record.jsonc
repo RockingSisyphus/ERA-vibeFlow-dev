@@ -1,0 +1,242 @@
+{
+  "type_key": "era.communication.dispatch_read_canonical_context.record",
+  "display_name": "按确认编号读取Sidecar并整理派发资料",
+  "description": "此读取依赖当前Sidecar查询完成，不能与未知编号的读取并行；发起、等待、取消与合并均在图中明确显示。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.communication.dispatch_read_canonical_context.ready",
+      "cardinality": "exactly_one",
+      "display_name": "已取得的派发资料与存档编号"
+    },
+    {"type":"era.workflow.host_resources","cardinality":"exactly_one","display_name":"所属 ERA 实例的本地资源"}
+  ],
+  "provides": [
+    {
+      "key": "record_context",
+      "type": "era.dispatch.canonical_context",
+      "display_name": "当前任务统一读取到的聊天上下文"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "ready",
+        "type": "era.communication.dispatch_read_canonical_context.ready",
+        "required": true,
+        "display_name": "已取得的派发资料与存档编号"
+      },
+      {"key":"host_resources","type":"era.workflow.host_resources","required":true,"display_name":"所属 ERA 实例的本地资源"}
+    ],
+    "max_steps": 16,
+    "nodes": [
+      {
+        "id": "start",
+        "definition_id": "era.service.terminal",
+        "display_name": "开始本次资料读取",
+        "description": "标明本次资料读取的范围；实际结果由读取及整理步骤提供。"
+      },
+      {
+        "id": "prepare_record",
+        "display_name": "整理已确认编号的Sidecar存档读取请求",
+        "description": "使用前一步实际读到的编号，准备原sidecar.read_record请求；消息、身份和变量资料留在Service以供最终合并。",
+        "definition_id": "era.communication.dispatch_read_canonical_context.prepare_record",
+        "join_policy": "all"
+      },
+      {
+        "id": "encode_request",
+        "display_name": "保留存档请求原值后发送",
+        "description": "只转换消息，不改变存档编号和调用顺序。",
+        "definition_id": "era.workflow.encode_request",
+        "config": {}
+      },
+      {
+        "id": "start_record_host_turn",
+        "definition_id": "era.workflow.yield_host_turn",
+        "display_name": "让宿主处理一轮事件再继续",
+        "description": "在异步Service发出下一项同步子流程请求前，等待所属酒馆实例完成一轮可取消的宿主事件调度，让界面、生成事件和取消通知获得执行机会；随后原样交出当前请求，由下游原InvokeSync执行。保持请求顺序、目标、参数和结果，不处理消息或变量，也不延长业务等待上限。实现源：nodes/workflow/protocol.mjs，宿主原语位于Tavern protocol_resources。"
+      },
+      {
+        "id": "start_record",
+        "display_name": "InvokeSync：启动指定Sidecar存档读取",
+        "description": "在同页酒馆入口发起原存档读取，立即取得结果或操作编号。",
+        "definition_id": "era.workflow.invoke_sync",
+        "config": {
+          "workflow": {
+            "root": "era-tavern",
+            "path": "configs/era.tavern.sync.jsonc",
+            "entry": "protocol"
+          }
+        }
+      },
+      {
+        "id": "decode_start",
+        "display_name": "恢复读取发起结果或等待编号",
+        "description": "恢复业务值，区分实际完成和仍需等待。",
+        "definition_id": "era.workflow.decode_outputs",
+        "config": {}
+      },
+      {
+        "id": "choose_wait",
+        "display_name": "区分已完成读取与仍需等待的存档操作",
+        "description": "即时结果直接合并；返回等待编号时必须继续启动异步等待并取得实际终态，不能把发起确认当存档资料。",
+        "definition_id": "era.communication.dispatch_read_canonical_context.choose_wait"
+      },
+      {
+        "id": "prepare_wait",
+        "display_name": "准备本次存档操作的等待请求",
+        "description": "只携带本实例资源编号、存档操作编号及原请求身份；不重复发起存档IO。",
+        "definition_id": "era.communication.dispatch_read_canonical_context.prepare_wait"
+      },
+      {
+        "id": "encode_wait",
+        "display_name": "保留等待请求原值后发送",
+        "description": "只转换等待请求，不传页面对象。",
+        "definition_id": "era.workflow.encode_wait_request",
+        "config": {}
+      },
+      {
+        "id": "call_wait",
+        "display_name": "Call：等待本次Sidecar存档读取完成",
+        "description": "启动酒馆独立操作入口，接续已发起的存档读取。",
+        "definition_id": "era.workflow.call",
+        "config": {
+          "workflow": {
+            "root": "era-tavern",
+            "path": "configs/era.tavern.operation.jsonc",
+            "entry": "protocol_operation"
+          },
+          "launch": {
+            "kind": "in_process"
+          },
+          "allow_background": false
+        }
+      },
+      {
+        "id": "wait_record",
+        "display_name": "Wait；中断时Kill并等存档操作清理",
+        "description": "等实际存档读取及清理完成，取消时停止本次所拥有的等待实例。",
+        "definition_id": "era.workflow.wait_owned",
+        "config": {
+          "workflow": {
+            "root": "era-tavern",
+            "path": "configs/era.tavern.operation.jsonc",
+            "entry": "protocol_operation"
+          }
+        }
+      },
+      {
+        "id": "decode_record",
+        "display_name": "恢复实际读到的Sidecar存档值",
+        "description": "保留实例终态并恢复原变量、函数和数组结构。",
+        "definition_id": "era.workflow.decode_terminal",
+        "config": {}
+      },
+      {
+        "id": "merge_async",
+        "display_name": "合并存档，交出统一派发上下文",
+        "description": "使用实际存档检查当前Sidecar绑定，构造原变量视图并交出消息、身份和资料；失败保持原派发错误或取消结果。",
+        "definition_id": "era.communication.dispatch_read_canonical_context.merge_async"
+      },
+      {
+        "id": "merge_immediate",
+        "display_name": "合并已即时取得的存档并返回派发资料",
+        "description": "按原Sidecar绑定检查与变量视图规则整理完整上下文；失败保持原诊断，不覆盖成空成功。",
+        "definition_id": "era.communication.dispatch_read_canonical_context.merge_immediate"
+      },
+      {
+        "id": "end",
+        "definition_id": "era.service.terminal",
+        "display_name": "完成本次资料读取",
+        "description": "标明本次资料读取的范围；实际结果由读取及整理步骤提供。"
+      },
+      {"id":"retain_host_resources","definition_id":"era.service.retain_host_resources","display_name":"保留所属实例的资源","description":"先取出本次运行或本轮迭代收到的本地资源，供下面需要组织工作流通信的步骤使用。资源不写入业务消息。"}
+    ],
+    "edges": [
+      {"from":"start","to":"prepare_record","schedule":true},
+      [
+        "prepare_record",
+        "encode_request"
+      ],
+      [
+        "encode_request",
+        "start_record_host_turn"
+      ],
+      [
+        "start_record",
+        "decode_start"
+      ],
+      [
+        "decode_start",
+        "choose_wait"
+      ],
+      {
+        "from": "prepare_record",
+        "to": "choose_wait",
+        "schedule": false
+      },
+      {
+        "from": "choose_wait",
+        "to": "prepare_wait",
+        "when": "wait_route == 'wait'"
+      },
+      {
+        "from": "choose_wait",
+        "to": "merge_immediate",
+        "when": "wait_route == 'immediate'"
+      },
+      [
+        "prepare_wait",
+        "encode_wait"
+      ],
+      [
+        "encode_wait",
+        "call_wait"
+      ],
+      [
+        "call_wait",
+        "wait_record"
+      ],
+      [
+        "wait_record",
+        "decode_record"
+      ],
+      [
+        "decode_record",
+        "merge_async"
+      ],
+      {
+        "from": "choose_wait",
+        "to": "merge_async",
+        "schedule": false
+      },
+      [
+        "merge_async",
+        "end"
+      ],
+      [
+        "merge_immediate",
+        "end"
+      ],
+      [
+        "start_record_host_turn",
+        "start_record"
+      ],
+      ["start","retain_host_resources"],
+      {"from":"retain_host_resources","to":"prepare_record","transfer":false,"schedule":true},
+      {"from":"retain_host_resources","to":"start_record_host_turn","schedule":false},
+      {"from":"retain_host_resources","to":"prepare_wait","schedule":false},
+      {"from":"retain_host_resources","to":"wait_record","schedule":false},
+      {"from":"retain_host_resources","to":"merge_async","schedule":false}
+    ],
+    "outputs": [
+      {
+        "type": "era.dispatch.canonical_context",
+        "cardinality": "exactly_one",
+        "display_name": "当前任务统一读取到的聊天上下文",
+        "as": "canonical_dispatch_context"
+      }
+    ]
+  }
+}

@@ -24,7 +24,7 @@
     "quality:baseline": "node scripts/era-quality/cli.ts --write-baseline",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
-    "test:contract": "vitest run tests/macro/frozen-contract.test.ts tests/service/contracts-v1-2.test.ts tests/service/dispatch-context-and-safety.test.ts",
+    "test:contract": "vitest run tests/macro/frozen-contract.test.ts",
     "test:integration:macro": "vitest run tests/macro/vibeflow-registration.test.ts",
     "test:integration:service": "node scripts/service-g3-runtime-probe.mjs",
     "test:integration": "pnpm test:integration:macro && pnpm test:integration:service && node scripts/service-g4-collection-runtime-probe.mjs",
@@ -115,7 +115,8 @@
   },
   "dependencies": {
     "@era/example-resources": "file:../packages/era-example-resources/era-example-resources-0.1.1.tgz",
-    "@era/vibeflow-expression": "file:../javascript_project/expression/era-vibeflow-expression-0.3.3.tgz",
+    "@era/vibeflow-command-compaction": "file:../javascript_project/compaction/era-vibeflow-command-compaction-0.4.7.tgz",
+    "@era/vibeflow-expression": "file:../javascript_project/expression/era-vibeflow-expression-0.3.4.tgz",
     "@era/vibeflow-floor-snapshot": "file:../packages/era-floor-snapshot/era-vibeflow-floor-snapshot-0.1.4.tgz",
     "@era/vibeflow-macro-syntax": "file:../packages/era-macro-syntax/era-vibeflow-macro-syntax-0.1.1.tgz",
     "@era/vibeflow-workbench": "file:../packages/era-workbench/era-vibeflow-workbench-0.1.1.tgz",

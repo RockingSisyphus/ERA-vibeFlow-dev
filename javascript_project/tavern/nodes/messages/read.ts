@@ -1,14 +1,16 @@
 import {takeFrame, emit} from "../../base_lib/frames.ts";
 import {syncCall} from "../../base_lib/resources.ts";
-import {projectMessage} from "../../base_lib/messages/projection.ts";
+import {readProjectedMessages} from "../../base_lib/messages/projection.ts";
+import {assertMessageNotEditing} from "../../base_lib/messages/target.ts";
 export function ReadContext(inputs: any, params: any): any {
   const f = takeFrame(inputs);
-  if (f.input.projection !== "era-active-message-v1") throw new TypeError("消息读取请求必须指定 projection=era-active-message-v1。");
+  if (f.input.projection !== "era-active-message-v2") throw new TypeError("消息读取请求必须指定 projection=era-active-message-v2。");
   f.result = syncCall(f, () => {
     const range = typeof f.input.range === "string" || typeof f.input.range === "number" ? f.input.range : "0--1";
-    const raw = f.session.api.getChatMessages(range, {include_swipes: true});
-    if (!Array.isArray(raw)) throw new TypeError("ERA 消息投影失败：Tavern 返回值不是数组。");
-    return {schemaVersion: 2, messages: raw.map(projectMessage)};
+    if (Number.isSafeInteger(f.input.requireClosedEditorFor)) {
+      assertMessageNotEditing(f.session.api, f.input.requireClosedEditorFor);
+    }
+    return {schemaVersion: 2, messages: readProjectedMessages(f.session.api, f.session, range)};
   });
   return emit({frame: f}, params);
 }

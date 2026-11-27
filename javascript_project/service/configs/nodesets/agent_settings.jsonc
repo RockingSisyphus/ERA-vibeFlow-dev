@@ -7,7 +7,8 @@
       "type": "era.step.request.routed",
       "cardinality": "exactly_one",
       "display_name": "当前任务及已读取的聊天资料"
-    }
+    },
+    {"type":"era.workflow.host_resources","cardinality":"exactly_one","display_name":"所属 ERA 实例的本地资源"}
   ],
   "provides": [
     {
@@ -24,9 +25,10 @@
         "type": "era.step.request.routed",
         "required": true,
         "display_name": "当前任务及已读取的聊天资料"
-      }
+      },
+      {"key":"host_resources","type":"era.workflow.host_resources","required":true,"display_name":"所属 ERA 实例的本地资源"}
     ],
-    "max_steps": 8,
+    "max_steps": 9,
     "nodes": [
       {
         "id": "start",
@@ -38,13 +40,14 @@
         "id": "prepare_settings_request",
         "display_name": "整理本次生成设置操作所需资料",
         "description": "在“读取和管理多阶段生成设置”流程中，接收用户的生成设置请求，读取这项操作需要的当前配置、预设或连接资料。将明确的操作及原请求一起交给执行步骤，使结果能够对应回发起者。",
-        "definition_id": "era.agent.prepare_settings_request"
+        "definition_id": "era.communication.agent_prepare_settings_request",
+        "join_policy": "all"
       },
       {
         "id": "execute_settings_command",
         "display_name": "读取或修改多阶段生成设置",
         "description": "在“读取和管理多阶段生成设置”流程中，接收生成设置命令，按要求读取或修改角色的生成配置、预设、连接方案或模型列表。通过酒馆完成实际操作，再将真正取得的结果或失败原因交回设置任务。",
-        "definition_id": "era.agent.execute_settings_command"
+        "definition_id": "era.communication.agent_execute_settings_command"
       },
       {
         "id": "build_settings_result",
@@ -57,13 +60,11 @@
         "display_name": "结束读取和管理多阶段生成设置",
         "description": "标明“读取和管理多阶段生成设置”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
         "definition_id": "era.service.terminal"
-      }
+      },
+      {"id":"retain_host_resources","definition_id":"era.service.retain_host_resources","display_name":"保留所属实例的资源","description":"先取出本次运行或本轮迭代收到的本地资源，供下面需要组织工作流通信的步骤使用。资源不写入业务消息。"}
     ],
     "edges": [
-      [
-        "start",
-        "prepare_settings_request"
-      ],
+      {"from":"start","to":"prepare_settings_request","schedule":true},
       [
         "prepare_settings_request",
         "execute_settings_command"
@@ -81,7 +82,10 @@
       [
         "build_settings_result",
         "end"
-      ]
+      ],
+      ["start","retain_host_resources"],
+      {"from":"retain_host_resources","to":"prepare_settings_request","transfer":false,"schedule":true},
+      {"from":"retain_host_resources","to":"execute_settings_command","schedule":false}
     ],
     "outputs": [
       {

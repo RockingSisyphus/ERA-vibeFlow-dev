@@ -18,7 +18,7 @@ export const era_crud_parser = defineBaseLib({
       }
     }
   ],
-  "dependencies": [],
+  "dependencies": ["era.command.payload"],
   "external_packages": [
     "opencc-js",
     "@era/vibeflow-contracts"

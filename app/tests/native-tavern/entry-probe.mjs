@@ -34,6 +34,7 @@ const checks = [];
   assert.equal(outcome.sequence, admission.sequence);
   assert.equal(outcome.status, 'ignored');
   assert.equal(outcome.reason, 'unknown-native-probe 没有对应的领域任务');
+  assert.equal(f.transport().maxReceives,1,'真实Service图只能串行等待下一事件');
   f.page.dispatchEvent(new Event('pagehide'));
   await f.work;
   assert.equal(
@@ -57,19 +58,17 @@ const checks = [];
   const ac = new AbortController(),
     pending = port.receive({ port: 'era.service.in' }, { signal: ac.signal });
   pending.catch(() => {});
+  await delay(0);
   assert.equal(f.client.diagnostics().portWaiters, 1);
-  await assert.rejects(
-    port.receive({ port: 'era.service.in' }),
-    e => e.cause?.code === 'ERA_HOST_PORT_CONCURRENT_RECEIVE',
-  );
   ac.abort('one receive');
   await assert.rejects(pending);
-  assert.equal(f.client.diagnostics().portWaiters, 0);
+  // 官方邮箱取消当前等待；酒馆取件由唯一事件职责拥有，实例结束时一并退出。
   f.page.dispatchEvent(new Event('pagehide'));
   await f.work;
   assert.equal((await a.done).status, 'cancelled');
   assert.equal((await b.done).status, 'cancelled');
-  checks.push('三条实际生产入口保持同步容量边界、FIFO序号、并发receive拒绝和单次等待取消');
+  assert.equal(f.session.pendingReceive,null);
+  checks.push('同步容量和FIFO序号保持；官方Receive取消与实例取件清理分别验收');
 }
 {
   const raw = deferred();

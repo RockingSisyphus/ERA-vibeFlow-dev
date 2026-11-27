@@ -51,8 +51,8 @@
       },
       {
         "id": "await_persistence",
-        "display_name": "确认仍在原聊天后保存消息",
-        "description": "在“等待消息更新并核实已经保存”流程中，消息更新完成后，检查仍是原目标聊天并等待聊天保存。没有实际正文变化时直接完成；保存或聊天切换出错时记下原因，供后续准确返回写入状态。",
+        "display_name": "确认正文写入并决定是否立即保存",
+        "description": "已有保存请求沿用强制保存与回读。外部提交先核实酒馆当前候选正文已更新，再让现有保存流程合并持久化。确认结果及失败原因交回主服务。",
         "definition_id": "era.tavern.messages_update_content.await_persistence"
       },
       {

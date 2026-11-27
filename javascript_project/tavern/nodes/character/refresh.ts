@@ -5,7 +5,7 @@ export function StartRefresh(inputs:any,params:any):any {
   const f=takeFrame(inputs),t=currentTavern(f.session.api);f.refreshTavern=t;
   if(f.input.kind==="empty")t.chat.push({name:t.name2,is_user:false,is_system:false,mes:f.input.next,extra:{}});
   else{const message=t.chat[0];message.mes=f.input.updated;if(Array.isArray(message.swipes))message.swipes[0]=f.input.updated;}
-  f.operationResource=startResource(f,()=>t.eventSource.emit(t.eventTypes.MESSAGE_RECEIVED,0,"first_message"),r=>f.session.dispatch.finishCapability({...f,operationResource:r}));
+  f.operationResource=startResource(f,()=>t.eventSource.emit(t.eventTypes.MESSAGE_RECEIVED,0,"first_message"));
   f.publicPromise=f.operationResource.publicPromise;return emit({frame:f},params);
 }
 export async function AwaitReceived(inputs:any,params:any):Promise<any> {const f=takeFrame(inputs);await resourceValue(f);return emit({frame:f},params);}

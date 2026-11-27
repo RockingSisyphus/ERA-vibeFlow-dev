@@ -1,5 +1,7 @@
 /** 工作台共享纯计算；生产 Service 节点与 UI 预览由同一源码构建。 */
 import { isRecord, jsonEqual, valueAtPath, operation, type EraCommitOperation, type VariableMutationKind, type VariableProtection, type VariablePlan, type ProtectionChoice } from './workbench_operations.js';
+import { variableRuleSource } from '../../../../base_lib/variable_write/variable_write.js';
+export { variableRuleAt } from '../../../../base_lib/variable_write/variable_write.js';
 import type { FunctionPlan } from './workbench_draft.js';
 function metaAt(value: unknown): Record<string, unknown> {
   return isRecord(value) && isRecord(value.$meta) ? value.$meta : {};
@@ -13,11 +15,12 @@ function protectionAtDepth(
   depth: number,
 ): VariableProtection | null {
   const ancestorPath = path.slice(0, depth);
-  const meta = metaAt(valueAtPath(root, ancestorPath));
+  const { rule: meta } = variableRuleSource(root, ancestorPath);
+  if (!meta) return null;
   if (kind === 'edit' && meta.updatable === false) {
     return { path: ancestorPath, field: 'updatable', value: false };
   }
-  if (kind === 'insert' && meta.unInsertAble === 'all') {
+  if (kind === 'insert' && depth < path.length && meta.unInsertAble === 'all') {
     return { path: ancestorPath, field: 'unInsertAble', value: 'all' };
   }
   if (kind === 'insert' && depth === path.length - 1 && meta.unInsertAble === 'self') {
@@ -71,11 +74,11 @@ export function variablePlanProtections(root: unknown, plan: VariablePlan): Vari
 }
 
 function metaEdit(path: readonly string[], field: string, value: unknown): EraCommitOperation {
-  return operation('edit', path, { $meta: { [field]: value } });
+  return operation('edit', path, { [field]: value });
 }
 
 function metaDelete(path: readonly string[], field: string): EraCommitOperation {
-  return operation('delete', path, { $meta: { [field]: {} } });
+  return operation('delete', path, { [field]: {} });
 }
 
 /** 删除或替换掉承载元数据的对象后不能恢复旧锁，否则会重建已删除实体。 */
@@ -101,18 +104,20 @@ export function wrapVariableProtection(
   operations: readonly EraCommitOperation[],
   protections: readonly VariableProtection[],
   choice: ProtectionChoice,
+  root: unknown,
 ): readonly EraCommitOperation[] {
   if (choice === 'temporary' && protections.some(item => item.field === 'necessary')) throw new TypeError('necessary 保护不能临时解除。');
   const unlocks: EraCommitOperation[] = [];
   const restores: EraCommitOperation[] = [];
   for (const protection of protections) {
+    const rulePath = variableRuleSource(root, protection.path).path as readonly string[];
     if (protection.field === 'necessary') {
-      unlocks.push(metaDelete(protection.path, protection.field));
+      unlocks.push(metaDelete(rulePath, protection.field));
       continue;
     }
-    unlocks.push(metaEdit(protection.path, protection.field, protection.field === 'updatable' ? true : null));
-    if (choice === 'temporary' && variableProtectionSurvives(operations, protection.path)) {
-      restores.unshift(metaEdit(protection.path, protection.field, protection.value));
+    unlocks.push(metaEdit(rulePath, protection.field, protection.field === 'updatable' ? true : null));
+    if (choice === 'temporary' && variableProtectionSurvives(operations, rulePath)) {
+      restores.unshift(metaEdit(rulePath, protection.field, protection.value));
     }
   }
   return [...unlocks, ...operations, ...restores];

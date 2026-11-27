@@ -1,0 +1,215 @@
+{
+  "nodeset_imports": [
+    {
+      "path": "nodesets/workflow_parallel_reads.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_read_slot_character.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_read_slot_current.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_read_slot_identity.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_read_slot_messages.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_read_slot_regex.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_read_slot_variables.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_read_slot_worldbook.jsonc"
+    }
+  ],
+  "plugins": [
+    {
+      "source": {
+        "kind": "file",
+        "ref": "plugins/contracts/plugin.ts"
+      }
+    },
+    {
+      "scope": "project",
+      "source": {
+        "kind": "file",
+        "ref": "plugins/workflow_protocol/plugin.ts"
+      }
+    },
+    {
+      "source": {
+        "kind": "file",
+        "ref": "plugins/structure_rules/plugin.ts"
+      }
+    },
+    {
+      "source": {
+        "kind": "file",
+        "ref": "plugins/protocol_resources/plugin.ts"
+      }
+    }
+  ],
+  "global_config": {
+    "config": {
+      "max_event_bytes": 262144,
+      "max_fifo_events": 256,
+      "max_fifo_bytes": 8388608,
+      "max_host_refs_per_event": 32,
+      "barrier_watchdog_ms": 5000
+    },
+    "allow_config_override": false
+  },
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "wire_request",
+        "type": "era.workflow.packet",
+        "required": true,
+        "display_name": "保留原值的并行读取请求"
+      },
+      {
+        "key": "host_resources",
+        "type": "era.workflow.host_resources",
+        "required": true,
+        "display_name": "所属 ERA 实例的本地资源"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "era.workflow.packet",
+        "cardinality": "exactly_one",
+        "display_name": "保留原值的并行读取结果",
+        "as": "wireResponse"
+      }
+    ],
+    "entries": {
+      "protocol_parallel_reads": {
+        "start": "protocol_parallel_reads_start",
+        "inputs": [
+          {
+            "key": "wire_request",
+            "type": "era.workflow.packet",
+            "required": true,
+            "display_name": "保留原值的并行读取请求"
+          },
+          {
+            "key": "host_resources",
+            "type": "era.workflow.host_resources",
+            "required": true,
+            "display_name": "所属 ERA 实例的本地资源"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "era.workflow.packet",
+            "cardinality": "exactly_one",
+            "display_name": "保留原值的并行读取结果",
+            "as": "wireResponse"
+          }
+        ]
+      }
+    },
+    "max_steps": 7,
+    "nodes": [
+      {
+        "id": "protocol_parallel_reads_start",
+        "definition_id": "era.tavern.initialize.start",
+        "display_name": "开始本次资料读取",
+        "description": "标明本次资料读取的范围；实际结果由读取及整理步骤提供。"
+      },
+      {
+        "id": "protocol_parallel_reads_decode",
+        "display_name": "恢复本次并行读取要求与本实例资源",
+        "description": "核对资源编号，恢复初始化或派发要求；只恢复所需页面资源，不接收主Service的权威变量状态，也不在此读取尚未确认的Sidecar存档。",
+        "config": {
+          "mode": "async",
+          "boundary": "protocol_parallel_reads_decode"
+        },
+        "definition_id": "era.tavern.boundary.async.protocol_parallel_reads_decode",
+        "join_policy": "all"
+      },
+      {
+        "id": "protocol_parallel_reads_body",
+        "definition_id": "era.tavern.workflow.parallel_reads",
+        "display_name": "并行完成本任务真正需要的读取",
+        "description": "保留初始化的五项并行读取，以及派发的两项或四项读取。只有当前Sidecar读取完成后，主Service才按其中编号另读存档；不会把原并行逻辑悄悄串行。"
+      },
+      {
+        "id": "protocol_parallel_reads_encode",
+        "display_name": "保留读取结果原值，再回信给主Service",
+        "description": "将本次完成的读取结果作可逆封装，保留大数、负零和缺失项；页面资源不进入回信。主Service仍负责解释和采用这些资料。",
+        "config": {
+          "mode": "async",
+          "boundary": "protocol_parallel_reads_encode"
+        },
+        "definition_id": "era.tavern.boundary.async.protocol_parallel_reads_encode"
+      },
+      {
+        "id": "protocol_parallel_reads_end",
+        "definition_id": "era.tavern.initialize.end",
+        "display_name": "完成本次资料读取",
+        "description": "标明本次资料读取的范围；实际结果由读取及整理步骤提供。"
+      },
+      {
+        "id": "protocol_parallel_reads_start_retain_host_resources",
+        "definition_id": "era.tavern.retain_host_resources",
+        "display_name": "保留所属实例的资源",
+        "description": "先取出本次运行或本轮迭代收到的本地资源，供下面需要组织工作流通信的步骤使用。资源不写入业务消息。"
+      }
+    ],
+    "edges": [
+      {
+        "from": "protocol_parallel_reads_start",
+        "to": "protocol_parallel_reads_decode",
+        "schedule": true
+      },
+      [
+        "protocol_parallel_reads_decode",
+        "protocol_parallel_reads_body"
+      ],
+      [
+        "protocol_parallel_reads_body",
+        "protocol_parallel_reads_encode"
+      ],
+      [
+        "protocol_parallel_reads_encode",
+        "protocol_parallel_reads_end"
+      ],
+      [
+        "protocol_parallel_reads_start",
+        "protocol_parallel_reads_start_retain_host_resources"
+      ],
+      {
+        "from": "protocol_parallel_reads_start_retain_host_resources",
+        "to": "protocol_parallel_reads_decode",
+        "transfer": false,
+        "schedule": true
+      },
+      {
+        "from": "protocol_parallel_reads_start_retain_host_resources",
+        "to": "protocol_parallel_reads_encode",
+        "schedule": false
+      }
+    ]
+  },
+  "base_lib": {
+    "modules": [
+      "era.tavern.agent_facts",
+      "era.tavern.browser",
+      "era.tavern.contracts",
+      "era.tavern.frames",
+      "era.tavern.message_facts",
+      "era.tavern.receipts",
+      "era.tavern.resources",
+      "era.tavern.sidecar_facts",
+      "era.workflow.values"
+    ]
+  },
+  "rulesets": [
+    "era.tavern.workflow_structure"
+  ]
+}

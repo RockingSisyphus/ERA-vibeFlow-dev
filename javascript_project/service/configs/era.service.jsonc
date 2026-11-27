@@ -17,6 +17,231 @@
     },
     {
       "path": "nodesets/prepare_generation_facts.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_apply_edit.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_apply_edit_step.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_apply_function_group.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_apply_function_group_step.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_apply_stage_call.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_apply_stage_call_step.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_plan_variables.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_plan_variables_step.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_prepare_candidates.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_prepare_candidates_step.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_receive_event.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_send_batch_result.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_send_collection_control.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_dispatch_read_canonical_context.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_installation_scope_activate_ingress.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_installation_scope_activate_ingress_step.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_installation_scope_publish_dormant.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_installation_scope_publish_dormant_step.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_installation_scope_inspect.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_installation_scope_inspect_step.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_tavern_initialization_commit.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_tavern_initialization_commit_step.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_tavern_initialization_read.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_workbench_read_baseline.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_workbench_read_baseline_step.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_api_inspect_submission.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_api_inspect_submission_step.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_api_prepare_application.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_api_prepare_application_step.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_api_return_application_result.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_api_return_application_result_step.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_lifecycle_settle_saved_batch.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_lifecycle_settle_saved_batch_step.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_tavern_variables_commit.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_tavern_variables_commit_step.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_lifecycle_publish_block_application.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_lifecycle_publish_block_application_step.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_tavern_sync_read.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_tavern_sync_read_step.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_sync_present_finalized_floor.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_sync_present_finalized_floor_step.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_sync_answer_author_sync.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_sync_answer_author_sync_step.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_sync_begin_author_call.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_sync_begin_author_call_step.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_sync_finish_author_call.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_sync_finish_author_call_step.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_sync_prepare_author_commit.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_sync_prepare_author_commit_step.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_sync_receive_author_event.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_sync_receive_author_event_step.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_agent_execute_settings_command.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_agent_execute_settings_command_step.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_agent_candidate_seed.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_agent_candidate_seed_step.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_lifecycle_finish_stage_blocks.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_lifecycle_finish_stage_blocks_step.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_agent_execute_session_v2.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_agent_execute_session_v2_step.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_prepare_generation_facts_read_facts.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_prepare_generation_facts_read_facts_step.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_lifecycle_prepare_stage_blocks.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_lifecycle_prepare_stage_blocks_step.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_agent_prepare_settings_request.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_agent_prepare_settings_request_step.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_sidecar_binding_publish_choice_prompt.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_sidecar_binding_publish_choice_prompt_step.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_sidecar_binding_inspect_current.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_sidecar_binding_inspect_current_step.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_sidecar_binding_apply_resolution.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_sidecar_binding_apply_resolution_step.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_dispatch_read_canonical_context_record.jsonc"
+    },
+    {
+      "path": "nodesets/native_candidate_persistence.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_candidate_identity.jsonc"
+    },
+    {
+      "path": "nodesets/workflow_resource_candidate_identity_step.jsonc"
     }
   ],
   "global_config": {
@@ -34,8 +259,8 @@
   },
   "pipeline": {
     "entry_mode": "async",
-    "inputs": [],
-    "max_steps": 35,
+    "inputs": [{"key":"host_resources","type":"era.workflow.host_resources","required":true,"display_name":"所属 ERA 实例的本地资源"}],
+    "max_steps": 36,
     "nodes": [
       {
         "id": "start",
@@ -47,7 +272,8 @@
         "id": "inspect_current_script_scope",
         "display_name": "读取当前脚本及各处启用情况",
         "description": "在“ERA 主服务”流程中，读取当前脚本身份，以及角色卡、全局和预设中启用的脚本资料。启动判断据此确定本实例是否应处理聊天、呈现界面或保持休眠。",
-        "definition_id": "era.installation.scope.inspect"
+        "definition_id": "era.communication.installation_scope_inspect",
+        "join_policy": "all"
       },
       {
         "id": "choose_startup",
@@ -59,13 +285,13 @@
         "id": "activate_tavern_ingress",
         "display_name": "启用本实例的聊天监听和界面呈现",
         "description": "在“ERA 主服务”流程中，接收已经确定的脚本启用范围，在酒馆页面安装聊天事件监听及显示规则。按安装位置选择呈现目标，聊天界面重建后重新连接，让后续事件能够进入 ERA 服务。",
-        "definition_id": "era.installation.scope.activate_ingress"
+        "definition_id": "era.communication.installation_scope_activate_ingress"
       },
       {
         "id": "publish_dormant_startup",
         "display_name": "向页面说明脚本为何处于休眠",
         "description": "在“ERA 主服务”流程中，接收脚本安装位置的休眠决定，向酒馆页面发布对应提示。当前实例随后结束启动分支，使用户能知道为什么它没有开始处理聊天。",
-        "definition_id": "era.installation.scope.publish_dormant"
+        "definition_id": "era.communication.installation_scope_publish_dormant"
       },
       {
         "id": "begin_service",
@@ -82,7 +308,8 @@
             "type": "era.service.cycle.state",
             "cardinality": "exactly_one",
             "display_name": "服务当前处于收集还是执行及相应进度"
-          }
+          },
+          {"type":"era.workflow.host_resources","cardinality":"exactly_one","display_name":"所属 ERA 实例的本地资源"}
         ],
         "loop": {
           "body": "era.service.iteration",
@@ -92,7 +319,8 @@
               "from": "era.service.cycle.state",
               "as": "cycle_state",
               "update": "cycleStateNext"
-            }
+            },
+            {"from":"era.workflow.host_resources","as":"host_resources","update":"retained_host_resources"}
           ]
         },
         "provides": [],
@@ -103,13 +331,11 @@
         "display_name": "结束ERA 主服务",
         "description": "标明“ERA 主服务”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
         "definition_id": "era.service.terminal"
-      }
+      },
+      {"id":"retain_host_resources","definition_id":"era.service.retain_host_resources","display_name":"保留所属实例的资源","description":"先取出本次运行或本轮迭代收到的本地资源，供下面需要组织工作流通信的步骤使用。资源不写入业务消息。"}
     ],
     "edges": [
-      [
-        "start",
-        "inspect_current_script_scope"
-      ],
+      {"from":"start","to":"inspect_current_script_scope","schedule":true},
       [
         "inspect_current_script_scope",
         "choose_startup"
@@ -139,7 +365,12 @@
       [
         "publish_dormant_startup",
         "end"
-      ]
+      ],
+      ["start","retain_host_resources"],
+      {"from":"retain_host_resources","to":"inspect_current_script_scope","transfer":false,"schedule":true},
+      {"from":"retain_host_resources","to":"activate_tavern_ingress","schedule":false},
+      {"from":"retain_host_resources","to":"publish_dormant_startup","schedule":false},
+      {"from":"retain_host_resources","to":"service_loop","schedule":false}
     ],
     "outputs": []
   },
@@ -156,6 +387,13 @@
         "ref": "plugins/structure_rules/plugin.ts",
         "export": "plugin"
       }
+    },
+    {
+      "scope": "project",
+      "source": {
+        "kind": "file",
+        "ref": "plugins/workflow_protocol/plugin.ts"
+      }
     }
   ],
   "rulesets": [
@@ -163,6 +401,8 @@
   ],
   "base_lib": {
     "modules": [
+      "era.command.payload",
+      "era.variable.write",
       "era.data_view",
       "era.command.operation_expressions",
       "era.command.operation_functions",
@@ -182,6 +422,7 @@
       "era.service.agent_session_binding",
       "era.service.agent_settings_policy",
       "era.service.agent_stage_handoff",
+      "era.service.agent_stage_layout",
       "era.service.agent_stage_program",
       "era.service.agent_stage_text",
       "era.service.agent_task_result",
@@ -222,7 +463,9 @@
       "era.workbench.draft",
       "era.workbench.operations",
       "era.workbench.protection",
-      "era.service.readonly_preview"
+      "era.service.readonly_preview",
+      "era.workflow.values",
+      "era.workflow.progress"
     ]
   }
 }

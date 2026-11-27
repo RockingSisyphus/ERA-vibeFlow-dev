@@ -8,9 +8,9 @@
   },
   "dependencies": {
     "@era/example-resources": "file:../../packages/era-example-resources/era-example-resources-0.1.1.tgz",
-    "@era/vibeflow-command-compaction": "file:../compaction/era-vibeflow-command-compaction-0.4.6.tgz",
-    "@era/vibeflow-contracts": "file:../../packages/era-contracts/era-vibeflow-contracts-1.11.0.tgz",
-    "@era/vibeflow-expression": "file:../expression/era-vibeflow-expression-0.3.3.tgz",
+    "@era/vibeflow-command-compaction": "file:../compaction/era-vibeflow-command-compaction-0.4.7.tgz",
+    "@era/vibeflow-contracts": "file:../../packages/era-contracts/era-vibeflow-contracts-1.12.0.tgz",
+    "@era/vibeflow-expression": "file:../expression/era-vibeflow-expression-0.3.4.tgz",
     "@stdlib/math-base-special-gamma": "^0.3.1",
     "lodash": "^4.18.1",
     "mathjs": "^15.2.0",

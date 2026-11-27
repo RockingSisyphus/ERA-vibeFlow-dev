@@ -1,0 +1,141 @@
+{
+  "type_key": "era.migration.compaction.rewrite.workflow",
+  "display_name": "生成缩短方案并取得公式改写结果",
+  "description": "按依赖与作用范围寻找可安全缩短的连续指令，只在候选需要公式计算时提出请求；不能证明安全的内容保留原文。 展开后可查看准备、原生同步调用、结果接回和继续判断。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.command_compaction.symbols",
+      "cardinality": "exactly_one",
+      "display_name": "变量、函数、随机结果的依赖与改写限制"
+    }
+  ],
+  "provides": [
+    {
+      "key": "candidate",
+      "type": "era.command_compaction.candidate",
+      "display_name": "当前段提出的缩短指令方案"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "sync",
+    "inputs": [
+      {
+        "key": "input0",
+        "type": "era.command_compaction.symbols",
+        "required": true,
+        "display_name": "变量、函数、随机结果的依赖与改写限制"
+      }
+    ],
+    "max_steps": 8,
+    "nodes": [
+      {
+        "id": "start",
+        "definition_id": "era.command_compaction.terminal",
+        "display_name": "开始本段处理",
+        "description": "本步骤用于“生成缩短方案并取得公式改写结果”：标明本段流程的范围；业务结果由实际处理步骤提供。"
+      },
+      {
+        "id": "prepare",
+        "display_name": "准备本段工作并判断是否需要调用",
+        "description": "本步骤用于“生成缩短方案并取得公式改写结果”：按依赖与作用范围寻找可安全缩短的连续指令，只在候选需要公式计算时提出请求；不能证明安全的内容保留原文。",
+        "definition_id": "era.migration.compaction.rewrite.workflow.prepare"
+      },
+      {
+        "id": "invoke_loop",
+        "display_name": "按原顺序完成本段所需的同步调用",
+        "description": "本步骤用于“生成缩短方案并取得公式改写结果”：每次只调用当前确有需要的目标，接回结果后才判断下一次；次数由实际输入决定，不并发，不预先计算后续请求。",
+        "definition_id": "vibeflow.loop.while",
+        "requires": [
+          {
+            "type": "era.migration.compaction.rewrite.state",
+            "cardinality": "exactly_one",
+            "display_name": "仅保留在当前工作流的业务进度"
+          }
+        ],
+        "provides": [
+          {
+            "key": "final_state",
+            "type": "era.migration.compaction.rewrite.final",
+            "display_name": "本段全部原生调用完成后的业务进度"
+          }
+        ],
+        "loop": {
+          "body": "era.migration.compaction.rewrite.workflow.request_step",
+          "max_iterations": null,
+          "stop_when": {
+            "from": "done",
+            "equals": true
+          },
+          "carry": [
+            {
+              "from": "era.migration.compaction.rewrite.state",
+              "as": "state",
+              "update": "next_state"
+            }
+          ],
+          "outputs": [
+            {
+              "from": "next_state",
+              "as": "final_state"
+            }
+          ]
+        }
+      },
+      {
+        "id": "skip_call",
+        "display_name": "无需跨流程调用，直接保留本段结果",
+        "description": "本步骤用于“生成缩短方案并取得公式改写结果”：普通赋值、无候选或已发现输入问题时不调用目标，按原语义继续处理或返回诊断。",
+        "definition_id": "era.migration.compaction.rewrite.workflow.skip_call"
+      },
+      {
+        "id": "finish",
+        "display_name": "交出本段最终业务结果",
+        "description": "本步骤用于“生成缩短方案并取得公式改写结果”：读取本地完成进度，按原合同形成变量、诊断、函数候选或压缩结果；提交、保存和是否采用仍由原调用方决定。",
+        "definition_id": "era.migration.compaction.rewrite.workflow.finish"
+      },
+      {
+        "id": "end",
+        "definition_id": "era.command_compaction.terminal",
+        "display_name": "完成本段处理",
+        "description": "本步骤用于“生成缩短方案并取得公式改写结果”：标明本段流程的范围；业务结果由实际处理步骤提供。"
+      }
+    ],
+    "edges": [
+      [
+        "start",
+        "prepare"
+      ],
+      {
+        "from": "prepare",
+        "to": "invoke_loop",
+        "when": "needs_call == true"
+      },
+      {
+        "from": "prepare",
+        "to": "skip_call",
+        "when": "needs_call == false"
+      },
+      [
+        "invoke_loop",
+        "finish"
+      ],
+      [
+        "skip_call",
+        "finish"
+      ],
+      [
+        "finish",
+        "end"
+      ]
+    ],
+    "outputs": [
+      {
+        "type": "era.command_compaction.candidate",
+        "cardinality": "exactly_one",
+        "display_name": "当前段提出的缩短指令方案",
+        "as": "candidate"
+      }
+    ]
+  }
+}

@@ -1,0 +1,110 @@
+{
+  "type_key": "era.tavern.workflow.read_slot.variables",
+  "display_name": "读取脚本变量并等待实际IO结束",
+  "description": "沿用原脚本变量读取参数、返回合同及资源原语；与本组其他实际读取共同运行。取消或出错也等待已启动IO和清理结束，不启动图外完成回调工作流。",
+  "expand": true,
+  "requires": [
+    {
+      "type": "era.tavern.read_slot",
+      "cardinality": "exactly_one",
+      "display_name": "脚本变量读取要求与所属资源"
+    }
+  ],
+  "provides": [
+    {
+      "key": "reply_variables",
+      "type": "era.tavern.read_slot.reply",
+      "display_name": "脚本变量的实际读取结果"
+    }
+  ],
+  "pipeline": {
+    "entry_mode": "async",
+    "inputs": [
+      {
+        "key": "slot",
+        "type": "era.tavern.read_slot",
+        "required": true,
+        "display_name": "本次单项读取要求与资源"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "era.tavern.read_slot.reply",
+        "cardinality": "exactly_one",
+        "as": "reply",
+        "display_name": "这项读取的实际结果"
+      }
+    ],
+    "max_steps": 18,
+    "nodes": [
+      {
+        "id": "start",
+        "definition_id": "era.tavern.initialize.start",
+        "display_name": "开始读取脚本变量并等待实际IO结束",
+        "description": "接收本次请求并进入“读取脚本变量并等待实际IO结束”；具体结果由后续实际处理步骤给出。"
+      },
+      {
+        "id": "prepare",
+        "display_name": "读取脚本变量并等待实际IO结束：准备",
+        "description": "沿用原脚本变量读取参数、返回合同及资源原语；与本组其他实际读取共同运行。取消或出错也等待已启动IO和清理结束，不启动图外完成回调工作流。",
+        "definition_id": "era.tavern.workflow.read_slot.variables.prepare"
+      },
+      {
+        "id": "prefix_route_read__check_request",
+        "display_name": "检查“读取酒馆变量”的调用是否有效",
+        "description": "在“分派酒馆变量操作”流程中，接收“读取酒馆变量”的请求，确认当前实例仍可运行、调用未取消，且输入确实是一份操作资料。通过后交给对应业务步骤，失败时按实际原因结束。",
+        "definition_id": "era.tavern.variables_read.check_request"
+      },
+      {
+        "id": "prefix_route_read__execute",
+        "display_name": "读取请求指定范围的酒馆变量",
+        "description": "在“分派酒馆变量操作”流程中，按请求选择聊天、脚本等允许范围，复制该范围的现有变量并返回。主服务据此准备设置或状态操作，调用取消时按原因结束。",
+        "definition_id": "era.tavern.variables_read.execute"
+      },
+      {
+        "id": "prefix_route_read__return_result",
+        "display_name": "交回“读取酒馆变量”的实际结果",
+        "description": "在“分派酒馆变量操作”流程中，接收“读取酒馆变量”已经执行得到的结果，复核实例和本次调用尚未取消后交回发起者。调用方据此继续业务或显示结果，取消时按实际原因结束等待。",
+        "definition_id": "era.tavern.variables_read.return_result"
+      },
+      {
+        "id": "project_immediate",
+        "display_name": "读取脚本变量并等待实际IO结束：整理即时结果",
+        "description": "沿用原脚本变量读取参数、返回合同及资源原语；与本组其他实际读取共同运行。取消或出错也等待已启动IO和清理结束，不启动图外完成回调工作流。",
+        "definition_id": "era.tavern.workflow.read_slot.variables.project_immediate"
+      },
+      {
+        "id": "end",
+        "definition_id": "era.tavern.initialize.end",
+        "display_name": "完成读取脚本变量并等待实际IO结束",
+        "description": "本段所选路径已经结束，向调用方交回实际结果或结束确认。"
+      }
+    ],
+    "edges": [
+      [
+        "prepare",
+        "prefix_route_read__check_request"
+      ],
+      [
+        "prefix_route_read__check_request",
+        "prefix_route_read__execute"
+      ],
+      [
+        "prefix_route_read__execute",
+        "prefix_route_read__return_result"
+      ],
+      [
+        "prefix_route_read__return_result",
+        "project_immediate"
+      ],
+      [
+        "start",
+        "prepare"
+      ],
+      [
+        "project_immediate",
+        "end"
+      ]
+    ]
+  }
+}

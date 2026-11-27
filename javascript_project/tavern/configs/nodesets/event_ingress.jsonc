@@ -37,14 +37,14 @@
       },
       {
         "id": "read_event_facts",
-        "display_name": "识别聊天事件是否由 ERA 自己触发",
-        "description": "在“把酒馆事件整理成 ERA 输入”流程中，读取酒馆事件及已登记规则，区分辅助模型生成、ERA 内部消息写入和普通聊天变化。记录酒馆生成结束事实，供后续决定忽略内部事件还是交给主服务。",
+        "display_name": "读取原生候选生命周期事实",
+        "description": "读取原生生成开始、结束、停止与当前聊天事实，维护现有宿主生成周期。生成结束在更新原生等待者后仍交给主Service，供其完成待保存记录；辅助生成仍按原边界排除。源：nodes/event_ingress.ts。",
         "definition_id": "era.tavern.event_ingress.read_event_facts"
       },
       {
         "id": "choose_event",
-        "display_name": "选择忽略、普通入队或等待处理后生成",
-        "description": "在“把酒馆事件整理成 ERA 输入”流程中，根据事件性质和生成时机，选择忽略内部回声、普通入队，或接收后等待相关处理完成。模拟生成检查不会误走真实生成的等待路径，后续按选定方式准备事件。",
+        "display_name": "区分生成屏障、结束入队及内部回声",
+        "description": "辅助生成和内部消息回声保持忽略；原生generation_ended走普通非阻塞入队；generation_started保持既有高水位生成屏障。领域保存及失效判断由Service完成。源：nodes/event_ingress.ts。",
         "definition_id": "era.tavern.event_ingress.choose_event"
       },
       {
@@ -55,14 +55,14 @@
       },
       {
         "id": "branch_enqueue_prepare",
-        "display_name": "准备普通聊天变化交给主服务",
-        "description": "在“把酒馆事件整理成 ERA 输入”流程中，接收普通聊天事件，更新当前聊天及生成状态，清理已过期的作者调用和阶段等待。将该事件交给统一入队流程，后续处理不阻塞当前普通回调。",
+        "display_name": "将普通聊天变化及生成结束交给Service",
+        "description": "更新当前聊天和回复的生成状态，再将事件入队交给主 Service。结束事件入队后即返回。停止或换聊天时清理旧资源并取消尚未完成的生成，已完成的回复可在切回原聊天后继续保存。源：nodes/event_ingress.ts。",
         "definition_id": "era.tavern.event_ingress.branch_enqueue_prepare"
       },
       {
         "id": "branch_ignore",
-        "display_name": "结束无需交给主服务的内部事件",
-        "description": "在“把酒馆事件整理成 ERA 输入”流程中，事件已被识别为辅助生成、ERA 自己写消息的回声或仅用于记录生成结束时，直接结束本次回调。相关结束事实已在读取阶段更新，不再重复排入业务队列。",
+        "display_name": "结束无需交给Service的内部回声",
+        "description": "仅结束辅助生成及ERA自己写入的内部回声，不再吞掉需要Service处理的原生生成结束事实。源：nodes/event_ingress.ts。",
         "definition_id": "era.tavern.event_ingress.branch_ignore"
       },
       {

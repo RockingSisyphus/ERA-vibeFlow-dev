@@ -1,14 +1,12 @@
+import { businessWorkflowNode } from './business-workflow-node';
 import { workingCapabilityFixture } from './working-capability-fixture';
 import { describe, expect, it } from 'vitest';
-import { run as apply } from '../../../javascript_project/service/nodes/sidecar/apply_resolution';
-import { run as inspect } from '../../../javascript_project/service/nodes/sidecar/inspect_current';
 import {
   inspectSidecar,
   recordFor,
   resolveSidecar,
 } from '../../../javascript_project/service/base_lib/sidecar_binding';
 import { assertMessageWriteTargets } from '../../src/ERA变量框架/service/message-write-target';
-
 const id = 'era_chat_12345678';
 const targetId = 'era_chat_87654321';
 const original = { characterId: 'card', groupId: null, chatId: 'chat-a' };
@@ -137,8 +135,9 @@ function fixture(choice: 'migrate' | 'copy' | 'independent' | 'repair' | null = 
     observed,
     context,
     sync,
-    run: () =>
-      apply(
+    run: async () =>
+      await businessWorkflowNode(
+        'era.sidecar_binding.apply_resolution',
         {
           'era.sidecar.binding.input': { value: { sync } },
           'era.sidecar.binding.resolution': { value: { facts, route: 'apply', choice } },
@@ -175,7 +174,6 @@ function fixture(choice: 'migrate' | 'copy' | 'independent' | 'repair' | null = 
     },
   };
 }
-
 describe('真实 Sidecar Node 的来源与保存顺序', () => {
   it.each(['migrate', 'copy'] as const)('%s 保留严格正文，已确认恢复更新依据并消耗暂存写入', async choice => {
     const f = fixture(choice);
@@ -184,9 +182,15 @@ describe('真实 Sidecar Node 的来源与保存顺序', () => {
     expect(f.calls).toEqual(['message', 'file', 'pointer', 'clear']);
     expect(f.observed[0].content).toMatch(/^原文<era_data>mk<\/era_data>/);
     expect(result.sidecar_applied_context.step.dispatchContext.stagedMessageUpdates).toEqual([]);
-    expect((f.observed[1].sourceBasis as { messages: { activeText: string }[] }).messages[0].activeText).toBe(
-      f.observed[0].content,
-    );
+    expect(
+      (
+        f.observed[1].sourceBasis as {
+          messages: {
+            activeText: string;
+          }[];
+        }
+      ).messages[0].activeText,
+    ).toBe(f.observed[0].content);
   });
   it.each(['switchChat', 'switchSwipe', 'edit', 'rebind'] as const)('%s 后不发出实际写入', async action => {
     const f = fixture();
@@ -239,7 +243,12 @@ describe('真实 Sidecar Node 的来源与保存顺序', () => {
   it('读取文件期间切聊形成失败上下文，选择器不再弹出绑定选择', async () => {
     const f = fixture();
     f.afterRead(f.switchChat);
-    const result = await inspect({ 'era.sync.context': { value: f.sync } }, {}, f.context);
+    const result = await businessWorkflowNode(
+      'era.sidecar_binding.inspect_current',
+      { 'era.sync.context': { value: f.sync } },
+      {},
+      f.context,
+    );
     expect(result.sidecar_binding_input.sync.status).toBe('failed');
     expect(resolveSidecar(result.sidecar_binding_facts, result.sidecar_binding_input.sync).route).toBe('continue');
     expect(f.calls).toEqual([]);

@@ -1,6 +1,6 @@
 import {takeFrame,emit,route} from "../../base_lib/frames.ts";
 import {currentTavern} from "../../base_lib/browser.ts";
-import {connectionStore,completionResource,observeCompletion} from "../../base_lib/resources.ts";
+import {connectionStore,startResource} from "../../base_lib/resources.ts";
 import {profileId,profileRecord} from "../../base_lib/agent/profiles.ts";
 
 function requestChat(api:any):string {return JSON.stringify([api.SillyTavern.characterId,api.SillyTavern.groupId,api.SillyTavern.getCurrentChatId()]);}
@@ -29,7 +29,8 @@ export function PrepareStory(inputs:any,params:any):any {
 export function EnterAuxiliary(inputs:any,params:any):any {
   const f=takeFrame(inputs),s=f.session;
   s.auxiliaryGenerationDepth=(s.auxiliaryGenerationDepth??0)+1;s.modelLeases??=new Set();
-  f.generationLease={owner:s,held:true};s.modelLeases.add(f.generationLease);return emit({frame:f},params);
+  f.generationLease={owner:s,held:true,actual:undefined,release(){if(this.held){this.held=false;s.auxiliaryGenerationDepth=Math.max(0,(s.auxiliaryGenerationDepth??0)-1);s.modelLeases.delete(this);}}};
+  s.modelLeases.add(f.generationLease);const lease=f.generationLease;s.resources.keep(async()=>{await lease.actual;lease.release();});return emit({frame:f},params);
 }
 /** 临时请求对象只停留在本次 Node 的原始 API 闭包，不把密钥写入跨入口帧。 */
 function auxiliaryRequest(f:any):any {
@@ -47,26 +48,19 @@ function auxiliaryRequest(f:any):any {
       max_tokens:settings.maxTokens,temperature:settings.temperature,frequency_penalty:settings.frequencyPenalty,presence_penalty:settings.presencePenalty,top_p:settings.topP,top_k:settings.topK}};
 }
 export function StartGenerate(inputs:any,params:any):any {
-  const f=takeFrame(inputs),resource=completionResource(f);f.modelResource=resource;
-  observeCompletion(resource,async()=>{const request=auxiliaryRequest(f);f.modelApiStarted=true;return await f.session.api.generateRaw(request);},outcome=>f.session.dispatch.modelComplete({...f,modelOutcome:outcome}));
-  f.publicPromise=resource.promise;f.result=resource.promise;return emit({frame:f},params);
+  const f=takeFrame(inputs);
+  const resource=startResource(f,async()=>{const request=auxiliaryRequest(f);f.modelApiStarted=true;return await f.session.api.generateRaw(request);});f.modelResource=resource;f.generationLease.actual=resource.actual;
+  f.publicPromise=resource.publicPromise;f.result=resource.publicPromise;return emit({frame:f},params);
 }
 export function StartStory(inputs:any,params:any):any {
-  const f=takeFrame(inputs),resource=completionResource(f);f.modelResource=resource;
+  const f=takeFrame(inputs);
   const config={generation_id:f.requestId,user_input:f.storyInput,should_stream:true,should_silence:false,
     ...(f.storyInjection.length>0?{injects:[{role:"system",content:f.storyInjection,position:"in_chat",depth:0,should_scan:false}]}:{})};
-  observeCompletion(resource,async()=>await f.session.api.generate(config),outcome=>f.session.dispatch.modelComplete({...f,modelOutcome:outcome}));
-  f.publicPromise=resource.promise;f.result=resource.promise;return emit({frame:f},params);
+  const resource=startResource(f,async()=>await f.session.api.generate(config));f.modelResource=resource;f.generationLease.actual=resource.actual;
+  f.publicPromise=resource.publicPromise;f.result=resource.publicPromise;return emit({frame:f},params);
 }
-/** 真实终态由机械回调进入本同步 Node；计数变更从不在 Promise 回调中执行。 */
-export function ReleaseAuxiliary(inputs:any,params:any):any {
-  const f=takeFrame(inputs),lease=f.generationLease;
-  if(lease?.owner!==f.session)throw new TypeError("辅助生成租约不属于当前实例。");
-  if(lease.held){lease.held=false;f.session.auxiliaryGenerationDepth=Math.max(0,(f.session.auxiliaryGenerationDepth??0)-1);f.session.modelLeases.delete(lease);}
-  return emit({frame:f},params);
-}
-export function ReadModelOutcome(inputs:any,params:any):any {
-  const f=takeFrame(inputs),o=f.modelOutcome;
+export async function ReadModelOutcome(inputs:any,params:any):Promise<any> {
+  const f=takeFrame(inputs);if(f.modelResource?.owner!==f.session||f.generationLease?.owner!==f.session)throw new TypeError("模型请求及租约不属于当前实例。");try{f.modelOutcome=await f.modelResource.actual;}finally{f.generationLease.release();}const o=f.modelOutcome;
   if(!o||f.modelResource?.owner!==f.session)throw new TypeError("缺少本次真实模型终态。");
   if(f.operation==="generate"&&o.status==="rejected"&&f.modelApiStarted&&!f.modelResource.signal.aborted) {
     const message=f.modelRoute?.kind==="custom-profile"?`ERA_AGENT_AUXILIARY_REQUEST_FAILED：本机方案“${f.modelRoute.profileName}”请求失败。`:"ERA_AGENT_AUXILIARY_REQUEST_FAILED：酒馆当前连接请求失败。";

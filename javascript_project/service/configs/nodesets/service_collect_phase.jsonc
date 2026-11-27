@@ -7,7 +7,8 @@
       "type": "era.service.cycle.routed",
       "cardinality": "exactly_one",
       "display_name": "已选择阶段的服务状态"
-    }
+    },
+    {"type":"era.workflow.host_resources","cardinality":"exactly_one","display_name":"所属 ERA 实例的本地资源"}
   ],
   "provides": [
     {
@@ -24,9 +25,10 @@
         "type": "era.service.cycle.routed",
         "display_name": "已选择阶段的服务状态",
         "required": true
-      }
+      },
+      {"key":"host_resources","type":"era.workflow.host_resources","required":true,"display_name":"所属 ERA 实例的本地资源"}
     ],
-    "max_steps": 16,
+    "max_steps": 17,
     "nodes": [
       {
         "id": "start",
@@ -38,80 +40,43 @@
         "id": "unpack_service_state",
         "display_name": "取出本轮事件收集的进度",
         "description": "在“接收并合并一个聊天或脚本事件”流程中，从服务状态中取出已等待的事件、当前事件序号及定时安排，供下一次事件合并使用。保持同一批收集过程的连续性。",
-        "definition_id": "era.service.cycle.unpack_collect"
+        "definition_id": "era.service.cycle.unpack_collect",
+        "join_policy": "all"
       },
       {
         "id": "receive_event",
         "display_name": "等待并取入下一个聊天事件",
         "description": "在“接收并合并一个聊天或脚本事件”流程中，从页面的先进先出队列接收一条聊天变化、脚本请求或到期事件。没有事件时等待，收到后交给检查和收集流程，为统一任务规划提供输入。",
-        "definition_id": "era.service.port.receive_event",
-        "rulesets": [
-          "vibeflow.data_store",
-          {
-            "rule_id": "vibeflow.capability.allow",
-            "params": {
-              "capability": "vibeflow.port",
-              "operations": [
-                "receive"
-              ],
-              "actions": [
-                {
-                  "operation": "receive",
-                  "port": "era.service.in"
-                }
-              ]
-            }
-          }
-        ]
+        "definition_id": "era.service.workflow.receive_event"
       },
       {
         "id": "validate_transport",
-        "display_name": "检查页面送来的事件是否可处理",
-        "description": "在“接收并合并一个聊天或脚本事件”流程中，检查新事件的结构、大小和所附资料引用，整理成服务可读取的业务事件。无法处理的输入保留具体问题，供事件收集和调用方获知原因。",
+        "display_name": "识别合法的原生结束及已有输入事件",
+        "description": "按统一输入目录接收原生generation_ended及已有事件，保留真实来源和参数；外部输入的边界校验不改变。源：base_lib/domain/event_catalog.ts及现有传输校验实现。",
         "definition_id": "era.service.validate_transport"
       },
       {
         "id": "reduce_collection",
-        "display_name": "合并新事件并判断何时组成一批",
-        "description": "在“接收并合并一个聊天或脚本事件”流程中，将新收到的事件加入等待集合，结合事件先后顺序、等待期限和容量决定继续收集还是开始执行。输出更新后的事件集合及定时安排，使相关聊天变化可以统一规划。",
+        "display_name": "合并输入并安排候选完成后的保存任务",
+        "description": "原生结束以非阻塞事件进入既有批次，生成开始仍保留原组合窗口与高水位屏障；无待写记录不重复执行作者副作用。源：base_lib/domain/event_planner.ts及现有事件收集归并实现。",
         "definition_id": "era.service.reduce_collection"
       },
       {
         "id": "send_collection_control",
         "display_name": "把事件收集的计时安排交给页面",
         "description": "在“接收并合并一个聊天或脚本事件”流程中，接收本轮收集阶段决定的定时要求，通知页面启动、取消或保留相应计时。到期事件会重新进入服务，帮助等待中的事件按期限组成批次。",
-        "definition_id": "era.service.port.send_collection_control",
-        "rulesets": [
-          "vibeflow.data_store",
-          {
-            "rule_id": "vibeflow.capability.allow",
-            "params": {
-              "capability": "vibeflow.port",
-              "operations": [
-                "send"
-              ],
-              "actions": [
-                {
-                  "operation": "send",
-                  "port": "era.service.out"
-                }
-              ]
-            }
-          }
-        ]
+        "definition_id": "era.service.workflow.send_collection_control"
       },
       {
         "id": "end",
         "display_name": "结束接收并合并一个聊天或脚本事件",
         "description": "标明“接收并合并一个聊天或脚本事件”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
         "definition_id": "era.service.terminal"
-      }
+      },
+      {"id":"retain_host_resources","definition_id":"era.service.retain_host_resources","display_name":"保留所属实例的资源","description":"先取出本次运行或本轮迭代收到的本地资源，供下面需要组织工作流通信的步骤使用。资源不写入业务消息。"}
     ],
     "edges": [
-      [
-        "start",
-        "unpack_service_state"
-      ],
+      {"from":"start","to":"unpack_service_state","schedule":true},
       {
         "from": "unpack_service_state",
         "to": "receive_event",
@@ -138,7 +103,11 @@
         "from": "send_collection_control",
         "to": "end",
         "transfer": false
-      }
+      },
+      ["start","retain_host_resources"],
+      {"from":"retain_host_resources","to":"unpack_service_state","transfer":false,"schedule":true},
+      {"from":"retain_host_resources","to":"receive_event","schedule":false},
+      {"from":"retain_host_resources","to":"send_collection_control","schedule":false}
     ],
     "outputs": [
       {

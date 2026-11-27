@@ -5,22 +5,11 @@
  * 不读取时间或随机数，也不在模块级保存 Converter、RegExp 或可变业务状态。
  */
 
+import { readCommandBlocks, type EraCrudCommand, type EraCrudDiagnostic } from "../../../../../base_lib/command_payload/command_payload.ts";
+export type { EraCrudCommand, EraCrudCommandType, EraCrudDiagnostic, EraCrudDiagnosticCode } from "../../../../../base_lib/command_payload/command_payload.ts";
 import { Converter } from "opencc-js";
 import { cloneEraPortableJsonV1 } from "@era/vibeflow-contracts";
 
-
-export type EraCrudCommandType =
-  | "insert"
-  | "edit"
-  | "delete"
-  | "function-insert"
-  | "function-edit"
-  | "function-delete";
-
-export interface EraCrudCommand {
-  readonly type: EraCrudCommandType;
-  readonly data: readonly unknown[];
-}
 
 export type EraCrudEditLog =
   | {
@@ -63,14 +52,6 @@ export interface EraCrudResult {
   readonly editLog: readonly EraCrudEditLog[];
   readonly finalStatFunc?: Readonly<Record<string, unknown>>;
   readonly functionEditLog?: readonly EraFunctionEditLog[];
-}
-
-export type EraCrudDiagnosticCode = string;
-
-export interface EraCrudDiagnostic {
-  readonly code: EraCrudDiagnosticCode;
-  readonly message: string;
-  readonly path: string;
 }
 
 export interface EraCommandParseInput {
@@ -133,10 +114,6 @@ export interface EraApplyMessageCommandsResult extends EraCrudResult {
   /** Present when `randomSourceKey` was supplied; remains an in-memory replay result only. */
   readonly randomDrawsConsumed?: number;
   readonly nextRandomDrawOffset?: number;
-}
-
-interface PositionedCommand extends EraCrudCommand {
-  readonly index: number;
 }
 
 export interface TemplateContext {
@@ -229,26 +206,6 @@ function escapeVariableCommandData<T>(value: T): T {
   return (typeof value === "string" ? escapeString(value) : value) as T;
 }
 
-/**
- * 保持候选实现的数组净化规则：数组中的对象或数组转成 JSON 字符串，null 保留；
- * 普通对象则继续递归处理其属性。
- */
-export function sanitizeArrays(value: unknown): unknown {
-  if (Array.isArray(value)) {
-    return value.map((item) =>
-      Array.isArray(item) || isPlainRecord(item) ? JSON.stringify(item) : item,
-    );
-  }
-  if (isPlainRecord(value)) {
-    const result: Record<string, unknown> = {};
-    for (const key of Object.keys(value)) {
-      defineOwn(result, key, sanitizeArrays(value[key]));
-    }
-    return result;
-  }
-  return value;
-}
-
 function mergeValues(base: unknown, patch: unknown): unknown {
   if (Array.isArray(base) || Array.isArray(patch)) {
     return cloneCrudValue(patch);
@@ -277,99 +234,9 @@ export function mergeReplaceArray(base: unknown, patch: unknown): unknown {
   return mergeValues(initial, patch);
 }
 
-function stripComments(source: string): string {
-  if (!source) return "";
-  let result = "";
-  let inString = false;
-  for (let index = 0; index < source.length; index += 1) {
-    const character = source[index];
-    if (character === '"' && (index === 0 || source[index - 1] !== "\\")) {
-      inString = !inString;
-    }
-    if (inString) {
-      result += character;
-      continue;
-    }
-    const next = source[index + 1];
-    if (character === "/" && next === "/") {
-      const end = source.indexOf("\n", index + 2);
-      if (end === -1) break;
-      result += "\n";
-      index = end;
-      continue;
-    }
-    if (character === "/" && next === "*") {
-      const end = source.indexOf("*/", index + 2);
-      if (end === -1) break;
-      index = end + 1;
-      continue;
-    }
-    if (character === "<" && source.substring(index, index + 4) === "<!--") {
-      const end = source.indexOf("-->", index + 4);
-      if (end === -1) break;
-      index = end + 2;
-      continue;
-    }
-    result += character;
-  }
-  return result;
-}
-
-/** 解析候选实现接受的串联 JSON 对象，并忽略字符串字面量外的注释。 */
-export function parseJsonl(source: string): unknown[] {
-  const objects: unknown[] = [];
-  if (!source || typeof source !== "string") return objects;
-  const content = stripComments(source).trim();
-  let braceCount = 0;
-  let startIndex = -1;
-  let inString = false;
-  for (let index = 0; index < content.length; index += 1) {
-    const character = content[index];
-    if (character === '"' && (index === 0 || content[index - 1] !== "\\")) {
-      inString = !inString;
-    }
-    if (inString) continue;
-    if (character === "{") {
-      if (braceCount === 0) startIndex = index;
-      braceCount += 1;
-    } else if (character === "}" && braceCount > 0) {
-      braceCount -= 1;
-      if (braceCount === 0 && startIndex !== -1) {
-        try {
-          objects.push(JSON.parse(content.substring(startIndex, index + 1)));
-        } catch {
-          // 候选实现跳过当前损坏片段并继续寻找后续对象。
-        }
-        startIndex = -1;
-      }
-    }
-  }
-  return objects;
-}
-
-function stripCodeFence(source: string): string {
-  if (!source) return source;
-  let result = String(source).trim();
-  result = result.replace(/^\s*(?:```|~~~)[a-zA-Z0-9_-]*\s*\r?\n/, "");
-  result = result.replace(/\r?\n(?:```|~~~)\s*$/, "");
-  return result.trim();
-}
-
 function convertTraditionalToSimplified(source: string): string {
   const converter = Converter({ from: "tw", to: "cn" });
   return converter(source);
-}
-
-function parseBlockContent(source: string): unknown[] {
-  let parsed = parseJsonl(source);
-  if (parsed.length > 0) return parsed;
-  try {
-    const single: unknown = JSON.parse(source);
-    parsed = Array.isArray(single) ? single : [single];
-  } catch {
-    return [];
-  }
-  return parsed;
 }
 
 /** 从混合消息中按原始出现位置提取六类 ERA 指令，并保留每个块的原文字节范围。
@@ -387,43 +254,19 @@ export function parsePositionedMessageCommands(
   readonly end: number;
 })[] {
   if (!input || typeof input.content !== "string" || !input.content) return [];
-  const commands: (PositionedCommand & { readonly end: number })[] = [];
-  const commandPattern =
-    /<((?:Variable|Function)(?:Insert|Edit|Delete))>\s*(?=[\s\S]*?\S[\s\S]*?<\/\1>)((?:(?!<(?:era_data|Variable(?:Think|Insert|Edit|Delete)|Function(?:Insert|Edit|Delete))>|<\/\1>)[\s\S])*?)\s*<\/\1>/gi;
-  let match: RegExpExecArray | null;
-  while ((match = commandPattern.exec(input.content)) !== null) {
-    const cleaned = stripCodeFence((match[2] ?? "").trim());
-    if (!cleaned) continue;
-    const parseSource = input.traditionalToSimplified
-      ? convertTraditionalToSimplified(cleaned)
-      : cleaned;
-    const parsed = parseBlockContent(parseSource);
-    if (parsed.length === 0) continue;
-    const tagName = (match[1] ?? "").toLowerCase();
-    let type: EraCrudCommandType;
-    if (tagName === "variableinsert") type = "insert";
-    else if (tagName === "variableedit") type = "edit";
-    else if (tagName === "variabledelete") type = "delete";
-    else if (tagName === "functioninsert") type = "function-insert";
-    else if (tagName === "functionedit") type = "function-edit";
-    else if (tagName === "functiondelete") type = "function-delete";
-    else continue;
-    commands.push({
-      type,
-      data: type.startsWith("function-")
-        ? cloneCrudValue(parsed)
-        : escapeVariableCommandData(parsed),
-      index: match.index,
-      end: match.index + match[0].length,
-    });
-  }
-  commands.sort((left, right) => left.index - right.index);
-  return commands.map((command) => ({
-    type: command.type,
-    data: cloneCrudValue(command.data),
-    start: command.index,
-    end: command.end,
+  return readCommandBlocks(
+    input.content,
+    input.traditionalToSimplified ? convertTraditionalToSimplified : undefined,
+  ).map((command) => ({
+    ...command,
+    data: prepareCommandData(command),
   }));
+}
+
+export function prepareCommandData(command: EraCrudCommand): readonly unknown[] {
+  return cloneCrudValue(
+    command.type.startsWith("function-") ? command.data : escapeVariableCommandData(command.data),
+  );
 }
 
 /** 从混合消息中按原始出现位置提取六类 ERA 指令。

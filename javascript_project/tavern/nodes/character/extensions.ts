@@ -9,7 +9,7 @@ export function StartExtension(inputs:any,params:any):any {
   else{f.extensionKey="era_external_statusbar";const old=f.extensionCharacter.data?.extensions?.era_external_statusbar;const c=record(old)?old:{};f.extensionValue={version:1,enabled:c.enabled===true,html:typeof c.html==="string"?c.html:"",...f.input.patch};f.extensionValue.version=1;}
   f.extensionJson=f.extensionCharacter.json_data?JSON.parse(f.extensionCharacter.json_data):undefined;
   if(f.extensionJson){f.extensionJson.data??={};f.extensionJson.data.extensions??={};f.extensionJson.data.extensions[f.extensionKey]=f.extensionValue;}
-  f.operationResource=startResource(f,signal=>api.fetch(tavernEndpoint(api,"/api/characters/merge-attributes"),{method:"POST",headers:t.getRequestHeaders(),signal,body:JSON.stringify({avatar:f.extensionCharacter.avatar,data:{extensions:{[f.extensionKey]:f.extensionValue}}})}),r=>f.session.dispatch.finishCapability({...f,operationResource:r}));
+  f.operationResource=startResource(f,signal=>api.fetch(tavernEndpoint(api,"/api/characters/merge-attributes"),{method:"POST",headers:t.getRequestHeaders(),signal,body:JSON.stringify({avatar:f.extensionCharacter.avatar,data:{extensions:{[f.extensionKey]:f.extensionValue}}})}));
   f.publicPromise=f.operationResource.publicPromise;return emit({frame:f},params);
 }
 export async function AwaitExtension(inputs:any,params:any):Promise<any> {const f=takeFrame(inputs);f.response=await resourceValue(f);return emit({frame:f},params);}

@@ -69,6 +69,7 @@ interface EraApi {
   /** 操作已应用到当前内存状态后返回；批量持久化随后完成。 */
   commit(operations: readonly EraCommitOperation[], options?: { scope?: EraCommitScope }): Promise<EraCommitReceipt>;
   get(options?: { force?: boolean; overflow?: 'placeholder' | 'empty' | 'hidden' }): EraState;
+  /** 等待当前已接收操作处理与保存完成；函数位置接口读取当前位置，不等待自身任务。 */
   ready(options?: { force?: boolean; overflow?: 'placeholder' | 'empty' | 'hidden' }): Promise<EraState>;
   subscribe(listener: (state: EraState) => void): () => void;
   sync(options?: { mode?: 'auto' | 'latest' | 'full'; rollbackTo?: number }): Promise<EraState>;

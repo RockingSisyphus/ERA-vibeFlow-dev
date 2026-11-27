@@ -13,7 +13,7 @@ export const selectCandidate = defineNode({
         "type": "era.command_compaction.replay.state",
         "cardinality": "exactly_one",
         "display_name": "当前历史压缩方案及验证进度"
-      }
+      }, {"type":"era.workflow.resources_transferred","cardinality":"exactly_one","display_name":"本段实例资源已转交"}
     ],
     "provides": [
       {
@@ -32,7 +32,7 @@ export const selectCandidate = defineNode({
     "input_semantics": {
       "era.command_compaction.replay.state": [
         "保存候选原始起点、已比较记录和当前位置，供逐份重算。"
-      ]
+      ], "era.workflow.resources_transferred":["宿主资源已沿本图的资源边交给后继步骤，之后才展开本节点的业务分支。"]
     },
     "output_semantics": {
       "candidate": [

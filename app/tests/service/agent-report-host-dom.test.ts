@@ -4,7 +4,6 @@ import { nextTick } from 'vue';
 import {
   mountReportViewer,
   createStoryViewer,
-  hydrateReportViewers,
   releaseReportApps,
 } from '../../src/ERA变量框架/service/agent-report-host';
 import { agentExecutionRecords } from '../../src/ERA变量框架/service/agent-execution-records';
@@ -185,7 +184,6 @@ describe('report lifetime across native message HTML replacement', () => {
       await nextTick();
       expect(root.querySelector('pre')!.textContent).toContain('\n  "attempts": [');
       expect(root.querySelector('pre')!.textContent).toContain('"response": {');
-      expect(JSON.parse(decodeURIComponent(root.dataset.eraReportView!)).report).toBeUndefined();
     },
   );
   it('copies through the button document rather than the hidden script realm', async () => {
@@ -250,7 +248,6 @@ describe('report lifetime across native message HTML replacement', () => {
     await nextTick();
     expect(root.querySelector('pre')!.textContent).toContain('ACTUAL-RETRY-PROMPT');
     expect(root.querySelector('pre')!.textContent).toContain('上一尝试失败原因');
-    expect(decodeURIComponent(root.dataset.eraReportView!)).not.toContain('ACTUAL-RETRY-PROMPT');
     await click('函数结果');
     expect(root.querySelector('pre')!.textContent).toContain('12');
     await click('AI 响应');
@@ -269,35 +266,6 @@ describe('report lifetime across native message HTML replacement', () => {
     agentExecutionRecords.clear();
     await click('提示词');
     expect(root.querySelector('pre')!.textContent).toContain('记录已释放');
-    expect(JSON.parse(decodeURIComponent(root.dataset.eraReportView!)).report).toBeUndefined();
     expect(mocks.request).not.toHaveBeenCalled();
-  });
-  it('rehydrates only its own cloned container and restores one real click handler', async () => {
-    vi.stubGlobal('SillyTavern', {
-      characterId: '0',
-      groupId: null,
-      getCurrentChatId: () => 'chat',
-      chat: [{ mes: '<era_data>{"era-message-key"="floor-one"}</era_data>' }],
-    });
-    const message = document.createElement('div');
-    document.body.append(message);
-    const author = document.createElement('iframe');
-    message.append(author);
-    const report = JSON.stringify({ attempts: [{ status: 'passed', requestId: 'plan', response: '{{ERA:hp}}' }] });
-    const original = mountReportViewer(document, report, 'planning', 0);
-    message.append(original);
-    await nextTick();
-    expect(original.dataset.eraReportView).not.toContain('{{ERA:');
-    const clone = original.cloneNode(true) as HTMLElement;
-    original.replaceWith(clone);
-    hydrateReportViewers(message);
-    hydrateReportViewers(message);
-    await nextTick();
-    clone.querySelector<HTMLButtonElement>('#era-report-retry-planning')!.click();
-    await nextTick();
-    expect(mocks.request).toHaveBeenCalledTimes(1);
-    expect(clone.textContent).toContain('fixture refusal');
-    expect(message.querySelector('iframe')).toBe(author);
-    expect(clone.querySelectorAll('.era-stage-viewer')).toHaveLength(1);
   });
 });

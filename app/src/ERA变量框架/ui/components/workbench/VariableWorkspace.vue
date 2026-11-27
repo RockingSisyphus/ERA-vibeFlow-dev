@@ -15,6 +15,7 @@
         :key="key"
         :label="key"
         :value="root[key]"
+        :root="root"
         :path="[key]"
         :depth="0"
         :filter="filter"
@@ -391,7 +392,7 @@ const preview = computed<readonly EraCommitOperation[]>(() => {
   try {
     const operations = basePlan();
     if (!protections.value.length || !protectionChoice.value) return operations;
-    return wrapVariableProtection(operations, protections.value, protectionChoice.value);
+    return wrapVariableProtection(operations, protections.value, protectionChoice.value, root.value);
   } catch {
     return [];
   }

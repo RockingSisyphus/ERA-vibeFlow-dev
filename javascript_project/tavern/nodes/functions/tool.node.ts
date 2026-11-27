@@ -2,7 +2,7 @@ import {defineNode} from "@vibeflow/plugin";
 
 export const era_tavern_author_tool_invoke_tool = defineNode({
   "display_name": "执行作者注册的 JavaScript 函数",
-  "description": "使用本次函数名称和参数调用酒馆注册的作者工具，并等待它实际结束。调用已取消或抛错时保留失败，后续统一记录完成状态并唤醒消息流程。",
+  "description": "使用本次函数名称和参数调用酒馆注册的作者工具。实际调用结束时关闭新操作的入口，保留已接收操作的结算。调用已取消或抛错时保留失败，供消息流程处理。",
   "version": "0.1.0",
   "flow_kind": "data_store",
   "contract": {"requires":[{"type":"era.tavern.frame.author_tool.read_call","cardinality":"exactly_one","display_name":"执行作者注册的 JavaScript 函数的请求和已有进度"}],"provides":[{"key":"era_tavern_author_tool_invoke_tool_frame","type":"era.tavern.frame.author_tool.invoke_tool","display_name":"执行作者注册的 JavaScript 函数的处理进度及结果"}],"params_schema":{"outputKeys":{"type":"object"}},"params_defaults":{"outputKeys":{"frame":"era_tavern_author_tool_invoke_tool_frame"}},"input_semantics":{"era.tavern.frame.author_tool.read_call":["保留“执行作者注册的 JavaScript 函数”对应的实例、请求及已经形成的进度，供本步骤处理并延续同一次请求。"]},"output_semantics":{"era_tavern_author_tool_invoke_tool_frame":["保留“执行作者注册的 JavaScript 函数”对应的实例、请求及已经形成的进度，交给后续处理或结果返回。"]}},

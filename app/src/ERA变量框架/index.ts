@@ -5,10 +5,14 @@
  */
 'use strict';
 
-import { runWorkflowAsync as service } from '@era/vibeflow-service';
+import * as service from '@era/vibeflow-service';
 import { runEra } from '@era/vibeflow-tavern';
-import { runWorkflow as sync } from '@era/vibeflow-tavern-sync';
-import { runWorkflowAsync as asyncEntry } from '@era/vibeflow-tavern-async';
+import * as sync from '@era/vibeflow-tavern-sync';
+import * as operation from '@era/vibeflow-tavern-operation';
+import * as runtime from '@era/vibeflow-tavern-runtime';
+import * as parallelReads from '@era/vibeflow-tavern-parallel-reads';
+import * as expression from '@era/vibeflow-expression/workflow';
+import * as compaction from '@era/vibeflow-command-compaction/workflow';
 import { INPUT_EVENT, EVENT_CATALOG } from './events/catalog';
 import { agentExecutionRecords, type AgentRequestContext } from './service/agent-execution-records';
 import { observeAgentReceipt, observeAgentSession } from './service/agent-session-observation';
@@ -22,10 +26,7 @@ import {
 } from './service/sidecar-runtime-snapshot';
 import { refreshSingleFloorSelection } from './service/single-floor-configuration';
 import { verifyEraStatusbarCommitSource, createEraStatusbarRuntime } from './service/statusbar-runtime';
-import {
-  refreshDisplayedEraTechnicalBlocks,
-  registerEraTechnicalBlockProjection,
-} from './service/technical-block-projection';
+import { createEraTechnicalPresentation } from './service/technical-block-projection';
 import type { EraStartupGateDecision, EraWaitThroughResult } from './service/types';
 import { initEraSettings } from './utils/era_data';
 import { Logger } from './utils/log';
@@ -37,7 +38,7 @@ import { startSingleFloor } from './service/single-floor-runtime';
 
 const logger = new Logger();
 
-/** 等待启动回执后挂载宏与页面展示；卸载若先发生，信号检查阻止旧续体晚挂载。
+/** 先挂载接收初始化提示的界面，启动回执结束后再挂载宏与状态栏；卸载若先发生，信号检查阻止旧续体晚挂载。
  * 部分挂载失败会释放已创建的展示，返回的释放器由辅助workflow资源Node持有。 */
 export async function mountEraPresentation(client: EraNativeClient, signal: AbortSignal): Promise<() => void> {
   const releases: Array<() => void> = [];
@@ -56,15 +57,15 @@ export async function mountEraPresentation(client: EraNativeClient, signal: Abor
     signal.throwIfAborted();
     releases.push(installEraServiceClient(client));
     releases.push(installEraPublicApi(createEraStatusbarRuntime));
+    initEraSettings();
+    const ui = startEraUi();
+    releases.push(() => ui.stop());
     const admission = client.enqueue(INPUT_EVENT.APP_READY, 'tavern', []);
     if (admission.accepted)
       await admission.done.catch(error => new Logger().warn('startupAdmission', '启动回执异常。', error));
     else new Logger().warn('startupAdmission', '启动初始化事件未被接纳。', admission);
     signal.throwIfAborted();
-    initEraSettings();
     releases.push(startEraMacroSubsystem());
-    const ui = startEraUi();
-    releases.push(() => ui.stop());
     releases.push(startExternalStatusbar());
     releases.push(startSingleFloor());
     return release;
@@ -130,8 +131,9 @@ function observeRequest(
 /** 为了保持单次入口与资源归属，只配置展示端口并调用辅助workflow，不保存运行实例或提供停止管理。
  * 测试Loader必须等旧实例完成清理后再复用入口，避免反复导入整份模块而累积浏览器缓存。 */
 export function runEraScript(): Promise<unknown> {
+  const technicalPresentation = createEraTechnicalPresentation();
   const completion = runEra(
-    { sync, async: asyncEntry, service },
+    { sync, operation, runtime, parallelReads, service, expression, compaction },
     {
       eventDefinitions: [...EVENT_CATALOG.values()],
       onActivated: (client: EraNativeClient, signal: AbortSignal) => {
@@ -144,8 +146,8 @@ export function runEraScript(): Promise<unknown> {
       publishSnapshot: publishSidecarRuntimeSnapshot,
       storeWorkingState,
       verifyStatusbarSource: verifyEraStatusbarCommitSource,
-      projectTechnicalBlocks: refreshDisplayedEraTechnicalBlocks,
-      registerTechnicalProjection: registerEraTechnicalBlockProjection,
+      activateTechnicalPresentation: technicalPresentation.activate,
+      updateTechnicalReports: technicalPresentation.updateReports,
       refreshSingleFloor: refreshSingleFloorSelection,
       refreshExternalStatusbar: refreshExternalStatusbarSelection,
       observeAgentSession,

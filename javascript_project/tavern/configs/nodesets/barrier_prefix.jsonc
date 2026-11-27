@@ -1,20 +1,20 @@
 {
   "type_key": "era.tavern.flow.barrier_prefix",
-  "display_name": "确定生成前要等待的事件及提醒",
-  "description": "根据指定事件序号捕获应等待的处理确认，按设置为未完成项登记告警。将固定范围交给异步等待；告警只说明现状，不代替事件完成。",
+  "display_name": "固定回执等待的范围和提醒",
+  "description": "根据指定事件序号捕获本次状态读取或生成所需的回执范围，沿用既有等待与告警。只等待已确定范围，不发起新同步、不等待未来事件；告警不代替处理完成。",
   "expand": true,
   "requires": [
     {
       "type": "era.tavern.call.frame",
       "cardinality": "exactly_one",
-      "display_name": "确定生成前要等待的事件及提醒的请求和已有进度"
+      "display_name": "固定回执等待的范围和提醒的请求和已有进度"
     }
   ],
   "provides": [
     {
       "key": "era_tavern_flow_barrier_prefix_frame",
       "type": "era.tavern.frame.barrier_wait.register_watchdog",
-      "display_name": "确定生成前要等待的事件及提醒的处理进度及结果"
+      "display_name": "固定回执等待的范围和提醒的处理进度及结果"
     }
   ],
   "pipeline": {
@@ -23,7 +23,7 @@
       {
         "key": "frame",
         "type": "era.tavern.call.frame",
-        "display_name": "确定生成前要等待的事件及提醒的请求和已有进度",
+        "display_name": "固定回执等待的范围和提醒的请求和已有进度",
         "required": true
       }
     ],
@@ -32,33 +32,33 @@
         "type": "era.tavern.frame.barrier_wait.register_watchdog",
         "cardinality": "exactly_one",
         "as": "frame",
-        "display_name": "确定生成前要等待的事件及提醒的处理进度及结果"
+        "display_name": "固定回执等待的范围和提醒的处理进度及结果"
       }
     ],
     "max_steps": 8,
     "nodes": [
       {
         "id": "start",
-        "display_name": "开始确定生成前要等待的事件及提醒",
-        "description": "标明“确定生成前要等待的事件及提醒”的开始位置。根据指定事件序号捕获应等待的处理确认，按设置为未完成项登记告警。将固定范围交给异步等待；告警只说明现状，不代替事件完成。",
+        "display_name": "开始固定回执等待的范围和提醒",
+        "description": "标明“固定回执等待的范围和提醒”的开始位置。根据指定事件序号捕获本次状态读取或生成所需的回执范围，沿用既有等待与告警。只等待已确定范围，不发起新同步、不等待未来事件；告警不代替处理完成。",
         "definition_id": "era.tavern.initialize.start"
       },
       {
         "id": "snapshot_receipts",
-        "display_name": "确定开始生成前需要等哪些事件",
-        "description": "在“确定生成前要等待的事件及提醒”流程中，记录指定事件序号及之前仍在处理或曾失败的事件，保留本次等待的起点。后续只等待这段已经确定的范围，确保生成使用相关事件处理后的状态。",
+        "display_name": "固定本次读取或生成要等哪些事件",
+        "description": "在“固定回执等待的范围和提醒”流程中，固定指定序号及之前的回执范围及等待起点，交给后续异步等待。普通状态读取和生成屏障复用此步骤，不加入之后才到达的事件。",
         "definition_id": "era.tavern.barrier_wait.snapshot_receipts"
       },
       {
         "id": "register_watchdog",
         "display_name": "为仍未完成的生成前等待登记告警",
-        "description": "在“确定生成前要等待的事件及提醒”流程中，生成前还有事件未确认且配置允许提醒时，登记一次等待告警期限。到期仅报告仍在等待哪些事件，不会自动放行生成或替代处理确认。",
+        "description": "在“固定回执等待的范围和提醒”流程中，生成前还有事件未确认且配置允许提醒时，登记一次等待告警期限。到期仅报告仍在等待哪些事件，不会自动放行生成或替代处理确认。",
         "definition_id": "era.tavern.barrier_wait.register_watchdog"
       },
       {
         "id": "end",
-        "display_name": "结束确定生成前要等待的事件及提醒",
-        "description": "标明“确定生成前要等待的事件及提醒”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
+        "display_name": "结束固定回执等待的范围和提醒",
+        "description": "标明“固定回执等待的范围和提醒”的结束位置，便于识别本段执行范围。处理结果和状态由本段实际业务步骤提供。",
         "definition_id": "era.tavern.initialize.end"
       }
     ],

@@ -7,14 +7,16 @@ export function ReadCurrent(inputs: any, params: any): any {
   const f = takeFrame(inputs);
   f.result = syncCall(f, () => {
     const variables = structuredClone(f.session.api.getVariables({type:"chat"}));
-    return {identity: currentIdentity(f.session.api), meta: record(variables.ERAMetaData) ? structuredClone(variables.ERAMetaData) : null,
+    const current=currentIdentity(f.session.api);
+    const working=f.session.workingByChat?.get(workingKey(current));
+    return {identity: current, working:working?structuredClone(working):null, meta: record(variables.ERAMetaData) ? structuredClone(variables.ERAMetaData) : null,
       stat: record(variables) && Object.hasOwn(variables,"stat_data") ? structuredClone(variables.stat_data) : null};
   });
   return emit({frame:f},params);
 }
 export function CheckPointer(inputs: any, params: any): any {
   const f=takeFrame(inputs),api=f.session.api; f.sidecarId=sidecarId(f.input.sidecarId);
-  if(f.input.sourceBasis!==undefined)assertCurrentMessageBasis(api,f.input.sourceBasis);
+  if(f.input.sourceBasis!==undefined)assertCurrentMessageBasis(api, f.input.sourceBasis, f.session);
   assertExpectedSidecarPointer(api,f.input);
   if(record(f.input.snapshot))assertMessageWriteTargets(runtimeIdentity(f.input.snapshot.owner),runtimeIdentity(currentIdentity(api)),[],()=>null);
   return emit({frame:f},params);

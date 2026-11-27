@@ -96,7 +96,7 @@ export function requireRequest(value: unknown): ApiRequest {
 function messagesFrom(value: unknown) {
   if (!isEraTavernMessageContextV2(value)) {
     throw new TypeError(
-      "消息 Capability 未返回严格 era-active-message-v1 上下文。",
+      "消息 Capability 未返回严格 era-active-message-v2 上下文。",
     );
   }
   return value.messages;

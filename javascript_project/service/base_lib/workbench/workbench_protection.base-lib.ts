@@ -19,7 +19,8 @@ export const era_workbench_protection = defineBaseLib({
   ],
   "dependencies": [
     "era.workbench.operations",
-    "era.workbench.draft"
+    "era.workbench.draft",
+    "era.variable.write"
   ],
   "external_packages": [],
   "rulesets": [

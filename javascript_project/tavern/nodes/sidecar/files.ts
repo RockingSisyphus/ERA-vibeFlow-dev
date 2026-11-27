@@ -6,7 +6,7 @@ import {assertCurrentMessageBasis, assertExpectedSidecarPointer} from "../../bas
 function headers(api:any):any {return typeof api.SillyTavern.getRequestHeaders==="function"?api.SillyTavern.getRequestHeaders():{"Content-Type":"application/json"};}
 export function StartRead(inputs:any,params:any):any {
   const f=takeFrame(inputs),api=f.session.api;f.sidecarId=sidecarId(f.input.sidecarId);
-  f.operationResource=startResource(f,signal=>api.fetch(tavernEndpoint(api,filePath(f.sidecarId)),{headers:headers(api),signal}), resource => f.session.dispatch.finishCapability({...f, operationResource: resource}));f.publicPromise = f.operationResource.publicPromise;
+  f.operationResource=startResource(f,signal=>api.fetch(tavernEndpoint(api,filePath(f.sidecarId)),{headers:headers(api),signal}));f.publicPromise = f.operationResource.publicPromise;
   return emit({frame:f},params);
 }
 export async function AwaitRead(inputs:any,params:any):Promise<any> {const f=takeFrame(inputs);f.response=await resourceValue(f);return emit({frame:f},params);}
@@ -27,7 +27,7 @@ export function CheckRecord(inputs:any,params:any):any {
   f.fileRecord=structuredClone(f.input.record);return emit({frame:f},params);
 }
 export function CheckTarget(inputs:any,params:any):any {
-  const f=takeFrame(inputs);if(f.input.sourceBasis!==undefined)assertCurrentMessageBasis(f.session.api,f.input.sourceBasis);
+  const f=takeFrame(inputs);if(f.input.sourceBasis!==undefined)assertCurrentMessageBasis(f.session.api, f.input.sourceBasis, f.session);
   assertExpectedSidecarPointer(f.session.api,f.input);return emit({frame:f},params);
 }
 export function EncodeFile(inputs:any,params:any):any {
@@ -35,8 +35,8 @@ export function EncodeFile(inputs:any,params:any):any {
 }
 export function StartWrite(inputs:any,params:any):any {
   const f=takeFrame(inputs),api=f.session.api;
-  if(f.input.sourceBasis!==undefined)assertCurrentMessageBasis(api,f.input.sourceBasis);assertExpectedSidecarPointer(api,f.input);
-  f.operationResource=startResource(f,signal=>api.fetch(tavernEndpoint(api,"/api/files/upload"),{method:"POST",headers:headers(api),signal,body:JSON.stringify(f.fileUpload)}), resource => f.session.dispatch.finishCapability({...f, operationResource: resource}));f.publicPromise = f.operationResource.publicPromise;
+  if(f.input.sourceBasis!==undefined)assertCurrentMessageBasis(api, f.input.sourceBasis, f.session);assertExpectedSidecarPointer(api,f.input);
+  f.operationResource=startResource(f,signal=>api.fetch(tavernEndpoint(api,"/api/files/upload"),{method:"POST",headers:headers(api),signal,body:JSON.stringify(f.fileUpload)}));f.publicPromise = f.operationResource.publicPromise;
   return emit({frame:f},params);
 }
 export async function AwaitWrite(inputs:any,params:any):Promise<any> {

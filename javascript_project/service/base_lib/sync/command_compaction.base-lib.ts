@@ -19,6 +19,7 @@ export const era_service_command_compaction = defineBaseLib({
     }
   ],
   "dependencies": [
+    "era.workflow.progress",
     "era.service.command_compaction_marker",
     "era.service.mk_engine",
     "era.service.sync_contracts",

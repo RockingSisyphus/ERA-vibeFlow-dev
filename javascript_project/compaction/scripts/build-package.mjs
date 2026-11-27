@@ -5,7 +5,6 @@ import {
   rm,
   symlink,
   copyFile,
-  readFile,
   writeFile,
 } from "node:fs/promises";
 import path from "node:path";
@@ -91,23 +90,21 @@ try {
       "false",
       "--declaration",
       "--emitDeclarationOnly",
+      "--rootDir",
+      repository,
       "--outDir",
       declarations,
     ],
     { cwd: root, env: buildEnv, stdio: "pipe" },
   );
-  const types = await readFile(
-    path.join(declarations, "base_lib/command_compaction_engine.d.ts"),
-    "utf8",
-  );
   await copyFile(
-    path.join(declarations, "base_lib/command_compaction_interpreter.d.ts"),
+    path.join(declarations, "javascript_project/compaction/base_lib/command_compaction_interpreter.d.ts"),
     path.join(output, "command_compaction_interpreter.d.ts"),
   );
   await writeFile(
     path.join(output, "engine.d.ts"),
     'import type { CommandCompactionResponse } from "./command_compaction_interpreter.ts";\n' +
-      types +
+      'export type {CommandCompactionResponse} from "./command_compaction_interpreter.ts";\n' +
       "\nexport declare function compactCommandLayer(input: unknown): CommandCompactionResponse;\n",
   );
 } finally {

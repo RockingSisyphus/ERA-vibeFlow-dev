@@ -8,7 +8,6 @@ export const era_sidecar_binding_build_applied_result = defineNode({
   "contract": {"requires":[{"type":"era.sync.context","cardinality":"exactly_one","display_name":"本次历史同步需要的消息和文件资料"}],"provides":[{"key":"sidecar_binding_applied_result","type":"era.task.result","display_name":"本项任务对应原事件的处理结果"}],"params_schema":{},"params_defaults":{},"input_semantics":{"era.sync.context":["包含已选状态、处理范围及可能的绑定修复结果，供恢复消息执行起点。"]},"output_semantics":{"sidecar_binding_applied_result":["包含实际成功、无变化、失败或取消，以及通知和问题说明，供批次集中回告发起者。"]}},
   "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/sidecar/shared_choice_adapters.ts","export":"BuildAppliedResultNode"}}],
   "base_libs": ["era.service.sidecar_binding","era.service.sync_contracts","era.service.sync_result_policy"],
-  "capabilities": [],
   "tags": ["Sidecar 绑定"],
   "rulesets": ["vibeflow.process"],
   "id": "era.sidecar_binding.build_applied_result",
@@ -23,25 +22,9 @@ export const era_sidecar_binding_build_blocked_result = defineNode({
   "contract": {"requires":[{"type":"era.sync.context","cardinality":"exactly_one","display_name":"本次历史同步需要的消息和文件资料"}],"provides":[{"key":"sidecar_binding_blocked_result","type":"era.task.result","display_name":"本项任务对应原事件的处理结果"}],"params_schema":{},"params_defaults":{},"input_semantics":{"era.sync.context":["包含已选状态、处理范围及可能的绑定修复结果，供恢复消息执行起点。"]},"output_semantics":{"sidecar_binding_blocked_result":["包含实际成功、无变化、失败或取消，以及通知和问题说明，供批次集中回告发起者。"]}},
   "implementations": [{"language":"typescript","targets":["browser","node"],"completion":"immediate","source":{"kind":"file","ref":"nodes/sidecar/shared_choice_adapters.ts","export":"BuildBlockedResultNode"}}],
   "base_libs": ["era.service.sidecar_binding","era.service.sync_contracts","era.service.sync_result_policy"],
-  "capabilities": [],
   "tags": ["Sidecar 绑定"],
   "rulesets": ["vibeflow.process"],
   "id": "era.sidecar_binding.build_blocked_result",
-  "node_type": "vibeflow.node"
-});
-
-export const era_sidecar_binding_publish_choice_prompt = defineNode({
-  "display_name": "显示状态文件冲突或损坏的处理选项",
-  "description": "根据当前聊天身份、状态文件归属和版本，向页面显示需要用户决定的处理方案。已有有效选择时沿用该选择，供后续规划绑定或修复。",
-  "version": "1.0.0",
-  "flow_kind": "process",
-  "contract": {"requires":[{"type":"era.sidecar.binding.resolution","cardinality":"exactly_one","display_name":"本次已选定的文件绑定或修复方案"}],"provides":[],"params_schema":{},"params_defaults":{},"input_semantics":{"era.sidecar.binding.resolution":["包含要执行的明确文件及聊天修改，或需要等待选择的原因。"]},"output_semantics":{}},
-  "implementations": [{"language":"typescript","targets":["browser"],"completion":"immediate","source":{"kind":"file","ref":"nodes/sidecar/shared_choice_adapters.ts","export":"PublishChoicePromptNode"}}],
-  "base_libs": ["era.service.sidecar_binding","era.service.sync_contracts","era.service.sync_result_policy"],
-  "capabilities": [{"id":"era.tavern.sidecar","operations":["present_prompt"]}],
-  "tags": ["Sidecar 绑定"],
-  "rulesets": ["vibeflow.process"],
-  "id": "era.sidecar_binding.publish_choice_prompt",
   "node_type": "vibeflow.node"
 });
 
